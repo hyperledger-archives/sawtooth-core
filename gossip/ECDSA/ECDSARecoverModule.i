@@ -8,7 +8,7 @@
 
 using namespace std;
 
-%exception recoverPubKeyFromSig {
+%exception recover_pubkey {
    try {
       $action
    } catch (std::invalid_argument &e) {
@@ -22,4 +22,4 @@ using namespace std;
       return NULL;
    }
 }
-string recoverPubKeyFromSig(string msghash, string sig_r, string sig_s, int yBit);
+string recover_pubkey(string msghash, string sig_r, string sig_s, int yBit);

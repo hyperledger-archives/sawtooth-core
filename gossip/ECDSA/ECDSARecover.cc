@@ -43,7 +43,7 @@ using namespace std;
  * @param yBit: y recovery value as defined in Certicom Sec 1 v2.
  * @return Returns point Q (public key) as a serialized x,y pair.
  */
-string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
+string RecoverPubKey(Integer e, Integer r, Integer s, int yBit) {
     // use private key constructor to get the curve params
     ECDSA<ECP, SHA256>::PrivateKey tmp;
     tmp.Initialize(ASN1::secp256k1(), 2); 
@@ -108,7 +108,6 @@ string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
         }                               // If not then interate thru loop again
 
     }
-
 
     if(!curve.VerifyPoint(R)){          // Validate computed point is on curve
         string error = "Recover Pub Key: Computed point is not on curve.\n";
@@ -197,7 +196,7 @@ string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
 // Should have created an r,s:
 // r:73822833206246044331228008262087004113076292229679808334250850393445001014761
 // s:58995174607243353628346858794753620798088291196940745194581481841927132845752
-void test(Integer e, Integer r, Integer s){
+void Test(Integer e, Integer r, Integer s){
     ECDSA<ECP, SHA256>::PrivateKey tmp;
     tmp.Initialize(ASN1::secp256k1(), 2); //use private key constructor to get the curve params
 
@@ -245,7 +244,7 @@ void test(Integer e, Integer r, Integer s){
     }
 }
 
-string recoverPubKeyFromSig(string msgHash, string sig_r, string sig_s, int yBit) {
+string recover_pubkey(string msgHash, string sig_r, string sig_s, int yBit) {
     if (msgHash.empty() || sig_r.empty() || sig_s.empty() || yBit > 3 || yBit < 0)
         throw std::invalid_argument("Empty string or invalid yBit value.\n");
     try {
@@ -263,7 +262,7 @@ string recoverPubKeyFromSig(string msgHash, string sig_r, string sig_s, int yBit
 #ifdef TEST_PUBKRECOVER
         test(e, r, s);
 #endif
-        return recoverPubKeyFromSig(e, r, s, yBit);
+        return RecoverPubKey(e, r, s, yBit);
     }
     catch (std::domain_error e) {
         throw(e);

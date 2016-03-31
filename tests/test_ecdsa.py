@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+﻿# Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ class TestPKRecover(unittest.TestCase):
         v, r, s = pbt.ecdsa_raw_sign(msghash, d)
         yBit = v - 27
         with self.assertRaises(ValueError) as context:
-            result = ecnative.recoverPubKeyFromSig(
+            result = ecnative.recover_pubkey(
                 str(z), str(""), str(s),
                 int(yBit))
 
@@ -80,7 +80,7 @@ class TestPKRecover(unittest.TestCase):
         badval = "58995174607243353628346858794753620798088291196940745194" \
             "58148184192713284575299999999999999h"
         with self.assertRaises(ValueError) as context:
-            result = ecnative.recoverPubKeyFromSig(
+            result = ecnative.recover_pubkey(
                 str(z), str(badval), str(s),
                 int(yBit))
 
@@ -97,7 +97,7 @@ class TestPKRecover(unittest.TestCase):
         v, r, s = pbt.ecdsa_raw_sign(msghash, d)
         yBit = v - 27
         with self.assertRaises(ValueError) as context:
-            result = ecnative.recoverPubKeyFromSig(
+            result = ecnative.recover_pubkey(
                 str(z), str(r), str(s),
                 int(yBit))
 
