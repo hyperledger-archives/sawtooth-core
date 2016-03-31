@@ -1302,8 +1302,8 @@ def parse_script_file(filename):
 
 
 def verify_key(creator, key):
-    keyAddr = pybitcointools.pubtoaddr(pybitcointools.privtopub(key))
-    if keyAddr != creator['address']:
+    key_addr = pybitcointools.pubtoaddr(pybitcointools.privtopub(key))
+    if key_addr != creator['address']:
         print "Participant signing key mismatch."
         print "The key loaded does not match the key the participant was " \
               "created with."
@@ -1374,8 +1374,11 @@ def local_main(config):
 
     script = config.get("ScriptFile", [])
     if script:
+        echo = config["Echo"]
         cmdlines = parse_script_file(script)
         for cmdline in cmdlines:
+            if echo:
+                print cmdline
             if controller.onecmd(cmdline):
                 return
 
