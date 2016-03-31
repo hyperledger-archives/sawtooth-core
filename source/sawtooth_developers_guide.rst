@@ -9,4 +9,5 @@ Distributed Ledger Developer's Guide
    sawtooth_developers_guide/sawtooth-vagrant
    sawtooth_developers_guide/release_process
    sawtooth_api/modules
+   sawtooth_developers_guide/web_api/index
 

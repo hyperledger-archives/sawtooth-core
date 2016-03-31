@@ -12,6 +12,5 @@ Intel Proprietary Information.  Intel Confidential.
    mktplace_developers_guide.rst
    sysadmin_guide.rst
    packaging.rst
-   web_api/index.rst
 
 
