@@ -34,7 +34,8 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinxcontrib.httpdomain',
 ]
 
 # Autodoc settings
