@@ -1,0 +1,509 @@
+{
+    "$schema" : "http://json-schema.org/schema#",
+
+    "title" : "Digital Market Transactions",
+    "id" : "http://tradenet.org/transactions#",
+
+    "definitions" :
+    {
+        "Participant" :
+        {
+            "id" : "#Participant",
+            "description" : "a person or organization, granted the right to create assets and asset types",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the participant, taken from the identifier of the transaction that created the participant",
+                    "type" : "string",
+                    "format" :  "IDENTIFIER",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "object",
+                    "required" : false
+                },
+
+                "address" :
+                {
+                    "description" : "encoded verifying key for the private key this participant will used to sign transactions",
+                    "type" : "string",
+                    "format" :  "ADDRESS",
+                    "required" : true
+                }
+            }
+        },
+
+        "Asset" :
+        {
+            "id" : "#Asset",
+            "description" : "a thing",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the asset, taken from the identifier of the transaction that created the asset",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "restricted" :
+                {
+                    "description" : "flag to indicate that the creator of the asset is the only participant who can create holdings asset instances",
+                    "type" : "boolean",
+                    "default" : true,
+                    "required" : false
+                },
+
+                "consumable" :
+                {
+                    "description" : "flag to indicate that assets transfered amongst holdings must be replaced",
+                    "type" : "boolean",
+                    "default" : true,
+                    "required" : false
+                },
+
+                "divisible" :
+                {
+                    "description" : "flag to indicate that factional portions of an asset are acceptable",
+                    "type" : "boolean",
+                    "default" : false,
+                    "required" : false
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "asset-type" :
+                {
+                    "description" : "a unique identifier for the type of the asset",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#AssetType",
+                    "required" : true
+                }
+            }
+        },
+
+        "AssetType" :
+        {
+            "id" : "#AssetType",
+            "description" : "the type of a thing",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "a unique identifier for the asset type take from the identifier of the transaction that created the asset",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "restricted" :
+                {
+                    "description" : "flag to indicate that only the creator of the asset type may create assets of the type",
+                    "type" : "boolean",
+                    "default" : true,
+                    "required" : false
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "Account" :
+        {
+            "id" : "#Account",
+            "description" : "container for managing holdings, liabilities, and offers",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the account, taken from the identifier of the transaction that created the participant",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "Holding" :
+        {
+            "id" : "#Holding",
+            "description" : "stocks, property, and other financial assets in the possession of a participant",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the holding, taken from the identifer of the transaction that created the holding",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "asset" :
+                {
+                    "description" : "a unique identifier for the asset referenced by the holding",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Asset",
+                    "required" : true
+                },
+
+                "instance-count" :
+                {
+                    "description" : "the number of instances of the asset",
+                    "type" : integer,
+                    "required" : true
+                },
+
+                "account" :
+                {
+                    "description" : "unique identifier for the account that manages the holding",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Account",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "comment" : "i hope this is not necessary",
+
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "Liability" :
+        {
+            "id" : "#Liability",
+            "description" : "a thing for which someone is responsible, especially a debt or financial obligation",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the liability, taken from the identifer of the transaction that created the liability",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "asset-type" :
+                {
+                    "description" : "a unique identifier for the asset type",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#AssetType",
+                    "required" : true
+                },
+
+                "instance-count" :
+                {
+                    "description" : "the number of instances of the asset-type",
+                    "type" : integer,
+                    "required" : true
+                },
+
+                "guarantor" :
+                {
+                    "description" : "unique identifier for the participant that backs the liability",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "account" :
+                {
+                    "description" : "unique identifier for the account that manages the liability",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Account",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+        
+        "ExchangeOffer" :
+        {
+            "id" : "#ExchangeOffer",
+            "description" : "an offer to exchange liability of one form for a liability of another form",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the offer, taken from the identifer of the transaction that created the offer",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "input" :
+                {
+                    "description" : "a unique identifier for the liability into which payment is made",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "output" :
+                {
+                    "description" : "a unique identifier for the liability from which payment is made",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "ratio" :
+                {
+                    "description" : "the count of instances of the input liability type required to recieve one output liability type",
+                    "type" : float,
+                    "required" : true
+                },
+
+                "minimum" :
+                {
+                    "description" : "the minimum number of input instances",
+                    "type" : int,
+                    "required" : false
+                },
+
+                "maximum" :
+                {
+                    "description" : "the maximum number of input instances",
+                    "type" : int,
+                    "required" : false
+                },
+
+                "execution" :
+                {
+                    "description" : "Modifier for offer execution",
+                    "type" : "string",
+                    "oneOf" : [ "ExecuteOnce", "ExecuteOncePerParticipant", "Any" ],
+                    "required" : false
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+
+            }
+        },
+
+        "SellOffer" :
+        {
+            "id" : "#SellOffer",
+            "description" : "an offer to exchange liability of one form for ownership of assets in a holding",
+            "type" : "object",
+            "properties" :
+            {
+                "identifier" :
+                {
+                    "description" : "unique identifier for the sell off, taken from the identifer of the transaction that created the sell offer",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type to be created, creator-identifier/name must be unique",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the specific asset instance such as location, size, serial number",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "input-liability" :
+                {
+                    "description" : "a unique identifier for the liability into which payment is made",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : ["#Liability" "#Holding"],
+                    "required" : true
+                },
+
+                "output-holding" :
+                {
+                    "description" : "a unique identifier for the holding from which assets are transferred",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Holding",
+                    "required" : true
+                },
+
+                "ratio" :
+                {
+                    "description" : "the count of instances of the input liability type required to recieve one output asset",
+                    "type" : float,
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant responsible for creating the asset type record",
+                    "type" : "string",
+                    "format" : "IDENTIFIER",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        }
+    }
+}

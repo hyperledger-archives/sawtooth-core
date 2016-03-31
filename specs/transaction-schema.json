@@ -1,0 +1,782 @@
+{
+    "$schema" : "http://json-schema.org/schema#",
+
+    "title" : "Digital Market Transactions",
+    "id" : "http://tradenet.org/transactions#",
+
+    "definitions" :
+    {
+        "MarketPlaceTransaction" :
+        {
+            "id" : "#MarketPlaceTransaction",
+            "description" : "Transaction recorded in the marketplace digital ledger",
+            "type" : "object",
+            "properties" :
+            {
+                "TransactionType" :
+                {
+                    "description" : "the transaction family, always /MarketPlaceTransaction",
+                    "type" : "string",
+                    "required" : true
+                },
+
+                "Signature" :
+                {
+                    "description" : "ECDSA signature for the body of the transaction",
+                    "type" : "string",
+                    "required" : true
+                },
+
+                "Nonce" :
+                {
+                    "description" : "**TEMPORARY** a float used to uniqueify the transaction",
+                    "type" : float,
+                    "required" : false
+                },
+                
+                "Dependencies" :
+                {
+                    "description" : "a list of transaction identifiers that must be committed to the ledger before this transaction",
+                    "type" : "array",
+                    "items" : {
+                        "type" : "string",
+                        "format" : "ADDRESS",
+                        "$ref" : "#MarketPlaceTransaction"
+                    },
+                    "minItems" : 0,
+                    "uniqueItems" : true,
+                    "required" : false
+                },
+
+                "Update" :
+                {
+                    "description" : "an object containing details about the actual update to perform",
+                    "type" : "object",
+                    "oneOf" : [
+                        { "$ref" : "#ParticipantUpdate/Register" },
+                        { "$ref" : "#ParticipantUpdate/Unegister" },
+                        { "$ref" : "#AccountUpdate/Register" },
+                        { "$ref" : "#AccountUpdate/Unegister" },
+                        { "$ref" : "#AssetTypeUpdate/Register" },
+                        { "$ref" : "#AssetTypeUpdate/Unegister" },
+                        { "$ref" : "#AssetUpdate/Register" },
+                        { "$ref" : "#AssetUpdate/Unegister" },
+                        { "$ref" : "#HoldingUpdate/Register" },
+                        { "$ref" : "#HoldingUpdate/Unegister" },
+                        { "$ref" : "#LiabilityUpdate/Register" },
+                        { "$ref" : "#LiabilityUpdate/Unegister" },
+                        { "$ref" : "#SellOfferUpdate/Register" },
+                        { "$ref" : "#SellOfferUpdate/Unegister" },
+                        { "$ref" : "#ExchangeOfferUpdate/Register" },
+                        { "$ref" : "#ExchangeOfferUpdate/Unegister" },
+                        { "$ref" : "#ExchangeUpdate/Exchange" }
+                    ],
+                    "required" : true
+                }
+            }
+        },
+
+        "ParticipantUpdate/Register" :
+        {
+            "id" : "#ParticipantUpdateRegister",
+            "description" : "Transaction used to register a new participant",
+            "type" : "object",
+            "properties" :
+            {
+                "name" :
+                {
+                    "description" : "human readable name for the participant ",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the participant",
+                    "type" : "object",
+                    "required" : false
+                }
+            }
+        },
+
+        "ParticipantUpdate/Unregister" :
+        {
+            "id" : "#ParticipantUpdateUnegister",
+            "description" : "Transaction used to unregister an existing participant",
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the participant to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "AccountUpdate/Register" :
+        {
+            "id" : "#AccountUpdateRegister",
+            "description" : "Transaction used to register a new account",
+            "type" : "object",
+            "properties" :
+            {
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant creating the account",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the account",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the account",
+                    "type" : "object",
+                    "required" : false
+                }
+            }
+        },
+
+        "AccountUpdate/Unregister" :
+        {
+            "id" : "#AccountUpdateUnegister",
+            "description" : "Transaction used to unregister an existing account",
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the account to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Account",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "AssetTypeUpdate/Register" :
+        {
+            "id" : "#AssetTypeUpdateRegister",
+            "description" : "Transaction used to register a new asset type",
+            "type" : "object",
+            "properties" :
+            {
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant creating the asset type",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "restricted" :
+                {
+                    "description" : "flag to indicate that only the creator of the asset type may create assets of the type",
+                    "type" : "boolean",
+                    "default" : true,
+                    "required" : false
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset type",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the asset type",
+                    "type" : "object",
+                    "required" : false
+                }
+            }
+        },
+
+        "AssetTypeUpdate/Unregister" :
+        {
+            "id" : "#AssetTypeUpdateUnegister",
+            "description" : "Transaction used to unregister an existing asset type",
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the asset type to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#AssetType",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "AssetUpdate/Register" :
+        {
+            "id" : "#AssetUpdateRegister",
+            "description" : "Transaction used to register a new asset",
+            "type" : "object",
+            "properties" :
+            {
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant creating the asset",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "restricted" :
+                {
+                    "description" : "flag to indicate that the creator of the asset is the only participant who can create asset instances",
+                    "type" : "boolean",
+                    "default" : true,
+                    "required" : false
+                },
+
+                "consumable" :
+                {
+                    "description" : "flag to indicate that assets transfered amongst holdings must be replaced",
+                    "type" : "boolean",
+                    "default" : true,
+                    "required" : false
+                },
+
+                "divisible" :
+                {
+                    "description" : "flag to indicate that factional portions of an asset are acceptable",
+                    "type" : "boolean",
+                    "default" : false,
+                    "required" : false
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the asset",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the asset",
+                    "type" : "object",
+                    "required" : false
+                },
+
+                "asset-type" :
+                {
+                    "description" : "a unique identifier for the type of the asset",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#AssetType",
+                    "required" : true
+                }
+            }
+        },
+
+        "AssetUpdate/Unregister" :
+        {
+            "id" : "#AssetUpdateUnegister",
+            "description" : "Transaction used to unregister an existing asset",
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the asset to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Asset",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant that created the asset originally",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "HoldingUpdate/Register" :
+        {
+            "id" : "#HoldingUpdateRegister",
+            "description" : "Transaction used to register a new holding",
+            "type" : "object",
+            "properties" :
+            {
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant creating the holding",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the holding",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the holding",
+                    "type" : "object",
+                    "required" : false
+                },
+
+                "account" :
+                {
+                    "description" : "a unique identifier for the holding account",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Account",
+                    "required" : true
+                },
+
+                "asset" :
+                {
+                    "description" : "a unique identifier for the asset contained in the holding",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Asset",
+                    "required" : true
+                },
+
+                "count" :
+                {
+                    "description" : "the count of instances of the asset",
+                    "type" : integer,
+                    "default" : 0,
+                    "required" : false
+                }
+            }
+        },
+
+        "HoldingUpdate/Unregister" :
+        {
+            "id" : "#HoldingUpdateUnegister",
+            "description" : "Transaction used to unregister an existing holding",,
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the holding to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Holding",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant that created the holding originally",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "LiabilityUpdate/Register" :
+        {
+            "id" : "#LiabilityUpdateRegister",
+            "description" : "Transaction used to register a new holding",
+            "type" : "object",
+            "properties" :
+            {
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant creating the holding",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the holding",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the holding",
+                    "type" : "object",
+                    "required" : false
+                },
+
+                "account" :
+                {
+                    "description" : "a unique identifier for the holding account",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Account",
+                    "required" : true
+                },
+
+                "guarantor" :
+                {
+                    "description" : "a unique identifier for the participant who guarantees the liability",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "asset-type" :
+                {
+                    "description" : "a unique identifier for the asset type contained in the liability",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#AssetType",
+                    "required" : true
+                },
+
+                "count" :
+                {
+                    "description" : "the count of instances of the asset",
+                    "type" : integer,
+                    "default" : 0,
+                    "required" : false
+                }
+            }
+        },
+
+        "LiabilityUpdate/Unregister" :
+        {
+            "id" : "#LiabilityUpdateUnegister",
+            "description" : "Transaction used to unregister an existing liability",,
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the liability to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Liability",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant that created the liability originally",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "SellOfferUpdate/Register" :
+        {
+            "id" : "#SellOfferUpdateRegister",
+            "description" : "Transaction used to register a new sell offer",
+            "type" : "object",
+            "properties" :
+            {
+                "CreatorID" :
+                {
+                    "description" : "unique identifier for the participant creating the sell offer",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "Name" :
+                {
+                    "description" : "human readable name for the sell offer",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "Description" :
+                {
+                    "description" : "information about the sell offer",
+                    "type" : "object",
+                    "required" : false
+                },
+
+                "InputID" :
+                {
+                    "description" : "a unique identifier for the liability into which payment is made",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "OutputID" :
+                {
+                    "description" : "a unique identifier for the holding from which assets are transferred",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Holding",
+                    "required" : true
+                },
+
+                "Ratio" :
+                {
+                    "description" : "the count of instances of the input liability type required to recieve one output asset",
+                    "type" : float,
+                    "required" : true
+                },
+
+                "Minimum" :
+                {
+                    "description" : "the minimum number of input instances",
+                    "type" : int,
+                    "required" : false
+                },
+
+                "Maximum" :
+                {
+                    "description" : "the maximum number of input instances",
+                    "type" : int,
+                    "required" : false
+                },
+
+                "Execution" :
+                {
+                    "description" : "Modifier for offer execution",
+                    "type" : "string",
+                    "oneOf" : [ "ExecuteOnce", "ExecuteOncePerParticipant", "Any" ],
+                    "required" : false
+                }
+            }
+        },
+
+        "SellOfferUpdate/Unregister" :
+        {
+            "id" : "#SellOfferUpdateUnegister",
+            "description" : "Transaction used to unregister an existing sell offer",,
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the sell offer to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#SellOffer",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant that created the sell offer originally",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "ExchangeOfferUpdate/Register" :
+        {
+            "id" : "#ExchangeOfferUpdateRegister",
+            "description" : "Transaction used to register a new exchange offer",
+            "type" : "object",
+            "properties" :
+            {
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant creating the exchange offer",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                },
+
+                "name" :
+                {
+                    "description" : "human readable name for the exchange offer",
+                    "type" : "string",
+                    "required" : false
+                },
+
+                "description" :
+                {
+                    "description" : "information about the exchange offer",
+                    "type" : "object",
+                    "required" : false
+                },
+
+                "input-liability" :
+                {
+                    "description" : "a unique identifier for the liability into which payment is made",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "output-liability" :
+                {
+                    "description" : "a unique identifier for the liability from which payment is made",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "ratio" :
+                {
+                    "description" : "the count of instances of the input liability type required to recieve one output asset",
+                    "type" : float,
+                    "required" : true
+                }
+            }
+        },
+
+        "ExchangeOfferUpdate/Unregister" :
+        {
+            "id" : "#ExchangeOfferUpdateUnegister",
+            "description" : "Transaction used to unregister an existing exchange offer",,
+            "type" : "object",
+            "properties" :
+            {
+                "objectid" :
+                {
+                    "description" : "unique identifier for the exchange offer to unregister",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#ExchangeOffer",
+                    "required" : true
+                },
+
+                "creator" :
+                {
+                    "description" : "unique identifier for the participant that created the exchange offer originally",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "$ref" : "#Participant",
+                    "required" : true
+                }
+            }
+        },
+
+        "ExchangeUpdate/Exchange" :
+        {
+            "id" : "#ExchangeUpdateExchange",
+            "description" : "Transaction used to transfer assets amongst holdings and liabilities",
+            "type" : "object",
+            "properties" :
+            {
+                "final-liability" :
+                {
+                    "description" : "a unique identifier for the liability into which payment is made",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "initial-liability" :
+                {
+                    "description" : "a unique identifier for the liability from which payment is made",
+                    "type" : "string",
+                    "format" : "ADDRESS",
+                    "oneOf" : [
+                        { "$ref" : "#Liability"},
+                        { "$ref" : "#Holding" }
+                    ],
+                    "required" : true
+                },
+
+                "offer-list" :
+                {
+                    "description" : "an ordered list of offers to process while transfering assets",
+                    "type" : "array",
+                    "items" : {
+                        "type" : "string",
+                        "format" : "ADDRESS",
+                        "oneOf" : [
+                            { "$ref" : "#SellOffer"},
+                            { "$ref" : "#ExchangeOffer"}
+                        ]
+                    },
+                    "minItems" : 0,
+                    "uniqueItems" : true,
+                    "required" : true
+                },
+
+                "initial-count" :
+                {
+                    "description" : "the count of instances of the ininitial liability to transfer",
+                    "type" : integer,
+                    "required" : true
+                }
+            }
+        }
+    }
+}

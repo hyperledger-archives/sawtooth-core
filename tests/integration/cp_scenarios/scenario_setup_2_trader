@@ -1,0 +1,10 @@
+echo Running: scenario_setup_2_trader
+participant reg --name BANK-trader --description "BANK-trader Participant"
+account reg --name /account
+holding reg --name /USD --count 0 --account /account --asset //mkt/asset/currency/USD
+holding reg --name /paper --count 10 --account /account --description "par=100000.0;cost=99387.5;maturity=30;discount=0.0735;" --asset //mkt/asset/commercialpaper/note
+holding reg --name /holding/token --count 1 --account /account --asset //marketplace/asset/token
+waitforcommit
+exchange --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
+waitforcommit
+exit

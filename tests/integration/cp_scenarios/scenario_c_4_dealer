@@ -1,0 +1,5 @@
+echo Running: scenario_c_4_dealer
+exchange --src /paper-scenario-c --dst /USD --offers //BANK-trader/offer-c-trader --count 1 --waitforcommit
+holdings --creator //BANK-trader
+holdings --creator //BANK-dealer
+exit
