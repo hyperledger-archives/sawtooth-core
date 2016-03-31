@@ -1278,7 +1278,10 @@ identifiers, ///$name
         """
         return True
 
-    def do_eof(self, args):
+    # pylint: disable=invalid-name
+    # EOF handler is expected to be caps to match the symbol Cmd sends
+    # when the EOF character is sent.
+    def do_EOF(self, args):
         """
         exit -- shutdown the simulator and exit the command loop
         """
