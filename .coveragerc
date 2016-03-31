@@ -1,0 +1,5 @@
+[run]
+branch = True
+
+omit = setup.py, tests/*
+

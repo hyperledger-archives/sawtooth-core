@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+directories="$(find . -maxdepth 2 -name __init__.py | awk -F/ '{print $2}') tests"
+
+files=""
+for dir in $directories
+do
+    for file in $(find $dir -name \*.py)
+    do
+        [ $file = "gossip/ECDSA/ECDSARecoverModule.py" ] && continue
+        [ $file = "journal/consensus/poet/Enclave/EnclaveModule.py" ] && continue
+        [ $file = "journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.py" ] && continue
+        files="$files $file"
+    done
+done
+
+pep8 --config=.pep8-enforced
+python setup.py -q lint \
+    --lint-rcfile=.pylintrc-enforced \
+    --lint-reports=no \
+    --lint-packages=$(echo $files | sed -e 's/ /,/g')

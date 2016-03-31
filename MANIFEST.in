@@ -1,0 +1,4 @@
+recursive-include gossip *.py
+recursive-include journal *.py
+recursive-include ledger *.py
+include journal/consensus/poet/poet_enclave_simulator/*
