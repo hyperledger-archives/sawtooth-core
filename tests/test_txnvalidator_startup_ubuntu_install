@@ -11,11 +11,11 @@ if [ $? = 0 ]; then
     exit 1
 fi
 
-if $(dpkg -l | grep -q python-sawtoothlake); then
+if $(dpkg -l | grep -q python-sawtooth); then
     dpkg -P \
-	python-sawtoothlakeledger \
-	python-sawtoothlakemarket \
-	python-sawtoothlakevalidator \
+	python-sawtooth-core \
+	python-sawtooth-mktplace \
+	python-sawtooth-validator \
 	|| exit 1
 fi
 
@@ -42,14 +42,14 @@ if [ $? = 0 ]; then
 fi
 
 dpkg -P \
-    python-sawtoothlakeledger \
-    python-sawtoothlakemarket \
-    python-sawtoothlakevalidator \
+    python-sawtooth-core \
+    python-sawtooth-mktplace \
+    python-sawtooth-validator \
     || exit 1
 
-dpkg -l | grep -q python-sawtoothlake
+dpkg -l | grep -q python-sawtooth
 if [ $? = 0 ]; then
-    echo "ERROR: sawtoothlake debian packages still exist"
+    echo "ERROR: sawtooth debian packages still exist"
     exit 1
 fi
 
