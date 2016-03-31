@@ -36,32 +36,32 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 
 
 class MktPlaceLoad:
-    def __init__(self, numTraders, iterations, urls, testDir):
+    def __init__(self, num_traders, iterations, urls, test_dir):
         self.Actors = []
         self.state = None
-        self.count = numTraders
+        self.count = num_traders
         self.urls = urls
         self.iterations = iterations
-        self.testDir = testDir
+        self.testDir = test_dir
 
     def wait_for_transaction_commits(self):
         to = TimeOut(120)
-        txnCnt = 1
+        txn_cnt = 1
         with Progress("Waiting for transactions to commit") as p:
-            while not to() and txnCnt > 0:
+            while not to() and txn_cnt > 0:
                 p.step()
                 time.sleep(1)
-                txnCnt = 0
+                txn_cnt = 0
                 for a in self.Actors:
-                    txnCnt += a.has_uncommitted_transactions()
+                    txn_cnt += a.has_uncommitted_transactions()
 
-        if txnCnt != 0:
+        if txn_cnt != 0:
             for a in self.Actors:
                 if len(a.transactions) != 0:
                     print "Uncommitted transactions: ", a.Name, a.transactions
 
             raise Exception("{} transactions failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
+                txn_cnt, to.WaitTime))
 
     def setup(self):
         self.state = mktplace_state.MarketPlaceState(self.urls[0])
@@ -93,6 +93,7 @@ class MktPlaceLoad:
         with Progress("Registering holdings") as p:
             for a in self.Actors:
                 a.update()
+                a.offers = []
                 for a2 in self.Actors:
                     count = 0
                     if a is a2:
@@ -119,8 +120,8 @@ class MktPlaceLoad:
             while rem != 0 and not to():
                 for a in self.Actors:
                     a.update()
-                    if (a.iteration < self.iterations
-                            and not a.has_uncommitted_transactions()):
+                    if (a.iteration < self.iterations and not
+                            a.has_uncommitted_transactions()):
                         a.iteration += 1
                         for a2 in self.Actors:
                             if a is not a2:
@@ -128,34 +129,33 @@ class MktPlaceLoad:
                                 ):  # my assets (paying with)
                                     for ast2 in a2.assets.keys(
                                     ):  # Their assets (purchasing)
-                                        txnId = a.register_exchange_offer(
-                                            ast2, 1, ast, 1
-                                        )  # create exchange offer
+                                        txn_id = a.register_exchange_offer(
+                                            ast2, 1, ast, 1)
+                                        a2.offers.append(txn_id)
                                         print "{} Offering {} for {} txn: " \
                                               "{}".format(a.Name, ast2, ast,
-                                                          txnId)
+                                                          txn_id)
 
                 for a in self.Actors:
                     # Find any exchange offers for one of my assets.
                     if not a.has_uncommitted_transactions():
                         for ast, astId in a.assets.iteritems():
-                            bytype = mktplace_state.Filters.matchtype(
+                            by_type = mktplace_state.Filters.matchtype(
                                 'Holding')
-                            byasset = mktplace_state.Filters.matchvalue(
+                            by_asset = mktplace_state.Filters.matchvalue(
                                 'asset', astId)
-                            holdingids = self.state.lambdafilter(
-                                bytype, byasset)
+                            holding_ids = self.state.lambdafilter(
+                                by_type, by_asset)
 
                             filters = [mktplace_state.Filters.offers(),
                                        mktplace_state.Filters.references(
-                                           'input', holdingids)]
+                                           'input', holding_ids)]
                             offerids = a.state.lambdafilter(*filters)
                             for o in offerids:
-                                if o in a.state.State:  # it is possible that
-                                    # the block
-                                    # with this offer is not at this
-                                    # actors validator yet.
+                                if o in a.state.State and \
+                                        o in a.offers:
                                     txn = a.exchange(o)
+                                    a.offers.remove(o)
                                     print "{} accepting offer: {} with txn: " \
                                           "{}".format(a.Name, o, txn)
 
@@ -170,11 +170,11 @@ class MktPlaceLoad:
                     transactions += a.transactions
 
                 filters = [mktplace_state.Filters.offers()]
-                offerIds = self.state.lambdafilter(*filters)
+                offer_ids = self.state.lambdafilter(*filters)
                 print "Agents remaining: {}, offers remaining: {}, " \
                       "unvalidated transactions: {}" \
-                    .format(rem, len(offerIds), transactions)
-                rem += len(offerIds) + len(transactions)
+                    .format(rem, len(offer_ids), transactions)
+                rem += len(offer_ids) + len(transactions)
                 if rem:
                     time.sleep(1)
 
@@ -189,7 +189,7 @@ class MktPlaceLoad:
 
         except Exception as e:
             print "Exception: ", e
-            raise e
+            raise
 
         self.wait_for_transaction_commits()
 
@@ -198,16 +198,16 @@ class MktPlaceLoad:
         self.state.fetch()
 
         # for each iteration each agent is paid one and pays for another.
-        expectedCount = self.iterations * 2
+        expected_count = self.iterations * 2
 
         filters = [mktplace_state.Filters.holdings()]
-        holdingIds = self.state.lambdafilter(*filters)
-        for holdingId in holdingIds:
-            holding = self.state.State[holdingId]
-            if holding['count'] != expectedCount:
+        holding_ids = self.state.lambdafilter(*filters)
+        for holding_id in holding_ids:
+            holding = self.state.State[holding_id]
+            if holding['count'] != expected_count:
                 print "Incorrect holding value: {0:<8} {1} {2}".format(
-                    holding['count'], self.state.i2n(holdingId), holdingId)
-            assert holding['count'] == expectedCount
+                    holding['count'], self.state.i2n(holding_id), holding_id)
+            assert holding['count'] == expected_count
 
 
 class TestSmoke(unittest.TestCase):
@@ -219,18 +219,19 @@ class TestSmoke(unittest.TestCase):
             vnm_config = defaultValidatorConfig.copy()
             vnm_config['TransactionFamilies'].append(
                 'mktplace.transactions.market_place')
+            vnm_config['LogLevel'] = 'DEBUG'
             vnm = ValidatorNetworkManager(
                 httpPort=9500, udpPort=9600, cfg=vnm_config)
             vnm.launch_network(5)
 
             print "Testing transaction load."
-            testCase = MktPlaceLoad(numTraders=5,
-                                    iterations=1,
-                                    urls=vnm.urls(),
-                                    testDir=vnm.DataDir)
-            testCase.setup()
-            testCase.run()
-            testCase.validate()
+            test_case = MktPlaceLoad(num_traders=5,
+                                     iterations=1,
+                                     urls=vnm.urls(),
+                                     test_dir=vnm.DataDir)
+            test_case.setup()
+            test_case.run()
+            test_case.validate()
 
             vnm.shutdown()
         except:

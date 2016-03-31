@@ -1,4 +1,5 @@
 echo Running: scenario_setup_2_trader
+dump --name //marketplace/asset/token
 participant reg --name BANK-trader --description "BANK-trader Participant"
 account reg --name /account
 holding reg --name /USD --count 0 --account /account --asset //mkt/asset/currency/USD
@@ -7,4 +8,6 @@ holding reg --name /holding/token --count 1 --account /account --asset //marketp
 waitforcommit
 exchange --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
 waitforcommit
+holdings
+offers
 exit

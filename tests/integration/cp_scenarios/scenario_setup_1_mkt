@@ -1,4 +1,5 @@
 echo Running: scenario_setup_1_mkt
+dump --name //marketplace/asset/token
 participant reg --name mkt --description "mkt Participant"
 account reg --name /market/account
 assettype reg --name /asset-type/currency --description "Currency asset type"
@@ -10,4 +11,6 @@ holding reg --name /market/holding/token --count 1 --account /market/account --a
 waitforcommit
 selloffer reg --name /offer/provision/USD --minimum 1 --maximum 1 --modifier ExecuteOncePerParticipant --output /market/holding/currency/USD --input /market/holding/token --ratio 1 1000000
 waitforcommit
+holdings
+offers
 exit

@@ -7,4 +7,6 @@ holding reg --name /holding/token --count 1 --account /account --asset //marketp
 waitforcommit
 exchange --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
 waitforcommit
+holdings
+offers
 exit
