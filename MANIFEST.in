@@ -1,0 +1,4 @@
+include txnserver/*.py
+include etc/txnvalidator.js
+include etc/systemd/sawtooth-validator.service
+include etc/default/sawtooth-validator

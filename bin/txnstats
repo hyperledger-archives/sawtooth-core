@@ -1,0 +1,200 @@
+#!/usr/bin/env python
+
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+import argparse
+import json
+import logging
+import os
+import sys
+import time
+import urllib2
+
+from gossip.config import ArgparseOptionsConfig
+from gossip.config import ConfigFileNotFound
+from gossip.config import InvalidSubstitutionKey
+from gossip.messages import gossip_debug, shutdown_message
+from txnserver import log_setup
+from txnserver.config import get_validator_configuration
+
+logger = logging.getLogger(__name__)
+
+
+def _sendmsg(baseurl, msgtype, info):
+    data = json.dumps(info)
+    datalen = len(data)
+    url = baseurl + msgtype
+
+    request = urllib2.Request(url, data, {'Content-Type': 'application/json',
+                                          'Content-Length': datalen})
+
+    try:
+        response = urllib2.urlopen(request)
+    except urllib2.HTTPError as err:
+        logger.error('operation failed with response: %s', err.code)
+        return False
+    except urllib2.URLError as err:
+        logger.error('operation failed for %s: %s', baseurl, err.reason)
+        return False
+    except:
+        logger.error('no response from server')
+        return False
+
+    content = response.read()
+    headers = response.info()
+    response.close()
+
+    is_json = ('Content-Type' in headers and
+               headers['Content-Type'] == 'application/json')
+    if is_json:
+        msg = json.loads(content)
+        logger.info('stat, %s, %s', msgtype, msg['__MESSAGEID__'][:8])
+
+    return True
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def reset_stats(baseurl, metrics=[]):
+    _sendmsg(
+        baseurl,
+        gossip_debug.ResetStatsMessage.MessageType,
+        {'MetricList': metrics})
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def collect_peer_stats(baseurl, metrics=[]):
+    _sendmsg(baseurl, gossip_debug.DumpPeerStatsMessage.MessageType,
+             {'MetricList': metrics})
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def collect_node_stats(baseurl, metrics=[]):
+    _sendmsg(baseurl, gossip_debug.DumpNodeStatsMessage.MessageType,
+             {'MetricList': metrics})
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def dump_connections(baseurl):
+    _sendmsg(baseurl, gossip_debug.DumpConnectionsMessage.MessageType, {})
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def dump_blocks(baseurl, blocks):
+    pass
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def shutdown(baseurl):
+    _sendmsg(baseurl, shutdown_message.ShutdownMessage.MessageType, {})
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def parse_command_line(args):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--config',
+                        help='configuration file',
+                        default=['stats.js'],
+                        nargs='+')
+    parser.add_argument('--loglevel', help='Logging level')
+    parser.add_argument('--conf-dir', help='Name of the config directory')
+    parser.add_argument('--log-dir', help='Name of the log directory')
+    parser.add_argument(
+        '--logfile',
+        help='Name of the log file, __screen__ for standard output')
+    parser.add_argument('--url', help='Default url for connection')
+    parser.add_argument('--interval',
+                        help='Average interval between transactions',
+                        type=float)
+    parser.add_argument('--count',
+                        help='Number of stat intervals to collect',
+                        type=int)
+    parser.add_argument('--blocks', help='Number of blocks to dump', type=int)
+
+    return parser.parse_args(args)
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def get_configuration(args):
+    options = parse_command_line(args)
+
+    options_config = ArgparseOptionsConfig(
+        [
+            ('conf_dir', 'ConfigDirectory'),
+            ('blocks', 'Blocks'),
+            ('count', 'Count'),
+            ('interval', 'Interval'),
+            ('log_dir', 'LogDirectory'),
+            ('logfile', 'LogFile'),
+            ('loglevel', 'LogLevel'),
+            ('url', 'LedgerURL'),
+        ], options)
+
+    if "LogLevel" in options_config:
+        options_config["LogLevel"] = options_config["LogLevel"].upper()
+
+    return get_validator_configuration(options.config, options_config)
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def path_substitute(fmtstring, config):
+    pathsubs = {
+        'host': os.environ.get("HOSTNAME", "localhost"),
+        'conf_dir': config.get('ConfigDirectory'),
+        'log_dir': config.get('LogDirectory')
+    }
+
+    return fmtstring.format(**pathsubs)
+
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+def main():
+    try:
+        cfg = get_configuration(sys.argv[1:])
+    except ConfigFileNotFound, e:
+        print >> sys.stderr, str(e)
+        sys.exit(1)
+    except InvalidSubstitutionKey, e:
+        print >> sys.stderr, str(e)
+        sys.exit(1)
+
+    log_setup.setup_loggers(cfg)
+
+    logger.warn('start stats collection')
+
+    reset_stats(cfg["URL"])
+    for statpass in range(0, cfg["Count"]):
+        time.sleep(cfg["Interval"])
+        collect_node_stats(cfg["URL"])
+
+    dump_blocks(cfg["URL"], cfg["Blocks"])
+    dump_connections(cfg["URL"])
+
+    logger.warn('stats collection complete')
+
+
+if __name__ == '__main__':
+    main()

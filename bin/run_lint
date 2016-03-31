@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+
+directories="$(find . -maxdepth 2 -name __init__.py | awk -F/ '{print $2}') tests"
+
+files=""
+for dir in $directories
+do
+    for file in $(find $dir -name \*.py)
+    do
+        files="$files $file"
+    done
+done
+
+
+pep8 --config=.pep8-enforced
+python setup.py -q lint \
+    --lint-rcfile=.pylintrc-enforced \
+    --lint-reports=no \
+    --lint-packages=$(echo $files | sed -e 's/ /,/g')
