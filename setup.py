@@ -99,7 +99,7 @@ ecdsamod = Extension('_ECDSARecoverModule',
                      library_dirs=library_dirs)
 
 setup(name='sawtooth-core',
-      version=version('1.1.0'),
+      version=version('1.1.1'),
       description='Intel Labs Distributed ledger testbed',
       author='Mic Bowman, Intel Labs',
       author_email='mic.bowman@intel.com',
