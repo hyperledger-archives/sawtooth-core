@@ -75,7 +75,6 @@ setup(
     description='Intel Labs Distributed Market transaction modules for '
                 'the Sawtooth Lake ledger',
     author='Mic Bowman, Intel Labs',
-    author_email='mic.bowman@intel.com',
     url='http://www.intel.com',
     packages=find_packages(),
     install_requires=['sawtooth-core', 'cbor>=0.1.23', 'colorlog'],
