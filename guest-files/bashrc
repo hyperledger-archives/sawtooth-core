@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cd /project
+
+if [ -e /project/sawtooth-dev-tools/guest-files/bashrc-local ]; then
+    source /project/sawtooth-dev-tools/guest-files/bashrc-local
+fi
+

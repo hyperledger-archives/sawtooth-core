@@ -1,0 +1,31 @@
+#!/bin/bash
+
+. /vagrant/guest-files/local-env.sh
+
+BASE_PYTHONPATH=$PYTHONPATH
+
+function do_test() {
+    for file in $(find . -name \*.py | grep -v ./build | grep -v ./deb_dist | grep -v egg/)
+    do
+       # Modfy PYTHONPATH for relative imports
+       PYTHONPATH=$BASE_PYTHONPATH:$(dirname $file)
+
+       grep "^import " $file | python
+       if [ $? = 1 ]; then
+           echo "^^----> $file"
+           grep "^import " $file | sed -e 's/^/  | /'
+           echo
+       fi
+
+       grep "^from.*import " $file | python
+       if [ $? = 1 ]; then
+           echo "^^----> $file"
+           grep "^from.*import " $file | sed -e 's/^/  | /'
+           echo
+       fi
+    done
+}
+
+cd /project/sawtooth && do_test
+cd /project/sawtooth-validator && do_test
+cd /project/mktplace && do_test

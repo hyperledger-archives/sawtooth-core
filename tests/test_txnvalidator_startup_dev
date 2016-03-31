@@ -1,0 +1,72 @@
+#!/bin/bash
+
+. /vagrant/guest-files/local-env.sh
+export CURRENCYBASE=10
+
+env | grep CURRENCY
+
+dpkg -l | grep -q sawtooth
+if [ $? = 0 ]; then 
+    echo "ERROR: sawtooth debian packages installed"
+    exit 1
+fi
+
+ps -ef | grep -v grep | grep -q "python.*txnvalidator "
+if [ $? = 0 ]; then 
+    echo "ERROR: txnvalidator already running"
+    exit 1
+fi
+
+cd /project/sawtooth || exit 1
+python setup.py clean --all || exit 1
+python setup.py build || exit 1
+cd /project/sawtooth/gossip/ECDSA || exit 1
+make || exit 1
+cd /project/sawtooth/journal/consensus/poet/Enclave|| exit 1
+make || exit 1
+
+cd /project/sawtooth-validator || exit 1
+python setup.py clean --all || exit 1
+python setup.py build || exit 1
+cd /project/mktplace || exit 1
+python setup.py clean --all || exit 1
+python setup.py build || exit 1
+
+cd $CURRENCYHOME || exit 1
+
+rm -f logs/*.log
+
+./scripts/txnkeygen --force --keydir=keys base000 || exit 1
+
+sed -i.bak \
+    -e "s/AdministrationNode.*/AdministrationNode\" : \"$(cat keys/base000.addr)\",/" \
+    etc/simple.js
+
+./bin/simple.sh -m 10 || exit 1
+
+count=$(ps -ef | grep -v grep | grep "python.*txnvalidator " | wc -l)
+if [ $count != 16 ]; then
+    echo "ERROR: Unexpected txnvalidator count: $count != 16"
+    exit 1
+fi
+
+./scripts/txnload --count 10 || exit 1
+
+grep -q "load generation complete" logs/load-localhost.log
+if [ $? != 0 ]; then
+    echo "ERROR: could not verify log contained 'load generation complete'"
+    exit 1
+fi
+
+echo "shutdown" | ./scripts/txnadmin
+
+echo "Waiting for shutdown..."
+sleep 10
+
+count=$(ps -ef | grep -v grep | grep "python.*txnvalidator " | wc -l)
+if [ $count != 0 ]; then
+    echo "ERROR: Unexpected txnvalidator count: $count != 0"
+    exit 1
+fi
+
+echo "SUCCESS"

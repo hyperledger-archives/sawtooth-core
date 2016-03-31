@@ -1,0 +1,4 @@
+.vagrant/
+/cache/
+conf-local.sh
+bashrc-local

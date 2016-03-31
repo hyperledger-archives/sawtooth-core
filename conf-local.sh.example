@@ -1,0 +1,19 @@
+
+#export INSTALL_TYPE=setup.py
+export INSTALL_TYPE=none
+
+# Setting INSTALL_SPHINX to yes will add over 700MB to the vagrant image.
+# This installs the dependencies to build sphinx docs and make PDF targets.
+#export INSTALL_SPHINX=yes
+
+# Automatically set you the project HOME env variables and add them to the PYTHONPATH
+export SETUP_SAWTOOTH_ENVIRONMENT=yes
+#export SETUP_SAWTOOTH_ENVIRONMENT=no
+
+# Add the project bin dirs to the PATH
+#export SETUP_SAWTOOTH_PATH=yes
+export SETUP_SAWTOOTH_PATH=no
+
+#export START_TXNVALIDATOR=no
+#export START_TXNVALIDATOR=yes
+
