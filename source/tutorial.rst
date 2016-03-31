@@ -24,7 +24,7 @@ The following tools are required:
 
 On Windows, you will also need to install:
 
-* `Git for Windows <http://git-scm.com/download/win>`_ 
+* `Git for Windows <http://git-scm.com/download/win>`_
 
 Git for Windows will provide not only git to clone the repositories, but also
 ssh which is required by Vagrant. During installation, accept all defaults.
@@ -128,10 +128,15 @@ Running txnvalidator
 To start txnvalidator, login to the development environment with 'vagrant ssh'
 and run the following command:
 
+.. note::
+    There are two underscores before and after the word screen in the command below.
+
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
    $ ./bin/txnvalidator --logfile=__screen__ --http 8800
+
+
 
 This will startup txnvalidator and logging output will be printed to the
 terminal window.
