@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class MessageException(Exception):
     """
-    A class to capture communication exceptions when accessing the marketplace
+    A class to capture communication exceptions when accessing the validator
     """
     pass
 
@@ -52,8 +52,8 @@ class LedgerWebClient(object):
         url = self.LedgerURL + '/store' + txntype.TransactionTypeName
         if key:
             url += '/' + key
-        url = urlparse.urljoin(url, urlparse.urlparse(url).path.replace('//',
-                                                                        '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
         if blockid:
             url += '?blockid={0}'.format(blockid)
@@ -73,8 +73,8 @@ class LedgerWebClient(object):
         if field:
             url += '/' + field
 
-        url = urlparse.urljoin(
-            url, urlparse.urlparse(url).path.replace('//', '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
 
         return url
@@ -89,8 +89,8 @@ class LedgerWebClient(object):
         """
         url = self.LedgerURL + '/block'
 
-        url = urlparse.urljoin(url, urlparse.urlparse(url).path.replace('//',
-                                                                        '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
 
         if count:
@@ -112,8 +112,8 @@ class LedgerWebClient(object):
         if field:
             url += '/' + field
 
-        url = urlparse.urljoin(url, urlparse.urlparse(url).path.replace('//',
-                                                                        '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
 
         return url
@@ -128,8 +128,8 @@ class LedgerWebClient(object):
         """
         url = self.LedgerURL + '/transaction'
 
-        url = urlparse.urljoin(url, urlparse.urlparse(url).path.replace('//',
-                                                                        '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
 
         if count:
@@ -143,8 +143,8 @@ class LedgerWebClient(object):
         validator, the message will be sent on to the gossip network
         """
         url = self.LedgerURL + '/forward'
-        url = urlparse.urljoin(url, urlparse.urlparse(url).path.replace('//',
-                                                                        '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
 
         return url
 
@@ -154,8 +154,8 @@ class LedgerWebClient(object):
         to a validator that will sign and forward the message
         """
         url = self.LedgerURL + "/initiate"
-        url = urlparse.urljoin(url, urlparse.urlparse(url).path.replace('//',
-                                                                        '/'))
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
 
         return url
 
