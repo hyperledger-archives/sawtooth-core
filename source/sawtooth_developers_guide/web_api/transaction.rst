@@ -3,13 +3,15 @@
 =================================================================
 
 
-Transaction IDs are always ordered from the newest committed transaction id to the oldest.
+Transaction IDs are always ordered from the newest committed transaction ID
+to the oldest.
 
 .. http:get:: /transaction
 
    Returns a list of the committed transaction IDs.
 
-   :query blockcount: Returns the transaction IDs from up to `blockcount` blocks.
+   :query blockcount: Returns the transaction IDs from up to
+   `blockcount` blocks.
 
 .. http:get:: /transaction/{transaction_id}
 
@@ -25,8 +27,8 @@ Transaction IDs are always ordered from the newest committed transaction id to t
 
 .. http:get:: /transaction/{transaction_id}/{key}
 
-   Returns the value associated with key `key` within transaction `transaction_id`.
-
+   Returns the value associated with key `key` within transaction
+   `transaction_id`.
 
 
 **Example request**:
@@ -131,5 +133,3 @@ Transaction IDs are always ordered from the newest committed transaction id to t
 .. sourcecode:: javascript
 
     "32ec280dab040d00"
-
-

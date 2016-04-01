@@ -3,7 +3,7 @@
 =================================================================
 
 
-Block IDs are always ordered from the newest committed block id to the oldest.
+Block IDs are always ordered from the newest committed block ID to the oldest.
 
 .. http:get:: /block
 
