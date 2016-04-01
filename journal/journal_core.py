@@ -89,7 +89,7 @@ class Journal(gossip_core.Gossip):
     """
 
     # For storage management, minimum blocks to keep cached
-    MaximumBlocksToKeep = 10
+    MaximumBlocksToKeep = 50
 
     # Minimum number of transactions per block
     MinimumTransactionsPerBlock = 10
@@ -268,6 +268,43 @@ class Journal(gossip_core.Gossip):
 
         return blockids
 
+    def compute_chain_root(self):
+        """
+        Compute the most reasonable candidate for the root of the chain. This
+        is only called if we cannot determine the root from the previously
+        saved state information.
+        """
+
+        # this function uses a little bit of dynamic programming to save depths
+        # of chains for re-use in later probes. not pretty but its better than
+        # the n^2 naive approach
+
+        depths = dict()
+        depths[common.NullIdentifier] = 0
+
+        for blockid in self.BlockStore.iterkeys():
+            count = 0
+            blkid = blockid
+            while blkid in self.BlockStore:
+                if blkid in depths:
+                    count += depths[blkid]
+                    break
+
+                blkid = self.BlockStore[blkid].PreviousBlockID
+                count += 1
+
+            depths[blockid] = count
+            while blkid in self.BlockStore:
+                blkid = self.BlockStore[blkid].PreviousBlockID
+                if blkid in depths:
+                    break
+
+                count -= 1
+                depths[blkid] = count
+
+        blocklist = sorted(list(depths), key=lambda blkid: depths[blkid])
+        return blocklist[-1]
+
     def initialization_complete(self):
         """Processes all invocations that arrived while the ledger was
         being initialized.
@@ -279,12 +316,18 @@ class Journal(gossip_core.Gossip):
         # this is a very special case where the ledger is started with an
         # existing database but no validation network. the situation can (and
         # has) occurred with deployments where all validators fail. so this is
-        # really the solutin of last resort, it assumes that all databases are
+        # really the solution of last resort, it assumes that all databases are
         # successfully restored
         if self.GenesisLedger and self.Restore:
             logger.warn('restore ledger state from the backup data stores')
-            self.MostRecentCommitedBlockID = \
-                self.ChainStore['MostRecentBlockID']
+            try:
+                self.MostRecentCommitedBlockID = \
+                    self.chain_store['MostRecentBlockID']
+            except KeyError:
+                logger.warn('unable to load the most recent block id, '
+                            'recomputing')
+                self.MostRecentCommitedBlockID = self.compute_chain_store()
+
             self.post_initialize()
             return
 
@@ -994,10 +1037,12 @@ class Journal(gossip_core.Gossip):
         # of blocks kept in memory less than 2 * self.MaximumBlocksToKeep
         if self.MostRecentCommitedBlock.BlockNum \
                 % self.MaximumBlocksToKeep == 0:
+            logger.info('compress global state for block number %s',
+                        self.MostRecentCommitedBlock.BlockNum)
             depth = 0
             blockid = self.MostRecentCommitedBlockID
-            while (blockid != common.NullIdentifier
-                    and depth < self.MaximumBlocksToKeep):
+            while (blockid != common.NullIdentifier and
+                   depth < self.MaximumBlocksToKeep):
                 blockid = self.BlockStore[blockid].PreviousBlockID
                 depth += 1
 

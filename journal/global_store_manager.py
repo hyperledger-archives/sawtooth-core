@@ -116,6 +116,40 @@ class GlobalStoreManager(object):
         self._persistmap[blockid] = dict2cbor(blockstore.dump_block())
         self._persistmap.sync()
 
+    def _require_store(self, blockid):
+        """Ensure that the store for this block (including all dependent
+        blocks) is loaded into the _blockmap
+        :param str blockid: identifier to associate with the block
+        """
+
+        # this is all about removing recursion... yes, recursion is a useful
+        # thing... however python is not really very friendly to deep recursion
+        # and since this might go through the entire chain of blocks... seems
+        # like avoiding recursion is a very useful thing
+
+        # pass 1... build the list of blocks that we need to load in order
+        # to load the current block
+        blocklist = []
+        while blockid not in self._blockmap:
+            logger.debug('load storage for block %s from persistent '
+                         'block store', blockid)
+            blocklist[0] = blockid
+
+            if blockid not in self._persistmap:
+                raise KeyError('unknown block', blockid)
+
+            blockinfo = cbor2dict(self._persistmap[blockid])
+            blockid = blockinfo['PreviousBlockID']
+
+        # pass 2... starting with the oldest block, begin to load
+        # the stores
+        for blockid in blocklist:
+            blockinfo = cbor2dict(self._persistmap[blockid])
+            prevstore = self._blockmap[blockinfo['PreviousBlockID']]
+            blockstore = prevstore.CloneBlock(blockinfo)
+            blockstore.CommitBlock(blockid)
+            self._blockmap[blockid] = blockstore
+
     def get_block_store(self, blockid):
         """Gets the blockstore associated with a particular blockid.
 
@@ -128,20 +162,8 @@ class GlobalStoreManager(object):
         Returns:
             BlockStore: The blockstore associated with the identifier.
         """
-        if blockid not in self._blockmap:
-            logger.debug(
-                'load storage for block %s from persistent block store',
-                blockid)
 
-            if blockid not in self._persistmap:
-                raise KeyError('unknown block', blockid)
-
-            blockinfo = cbor2dict(self._persistmap[blockid])
-            prevstore = self.get_block_store(blockinfo['PreviousBlockID'])
-            blockstore = prevstore.clone_block(blockinfo)
-            blockstore.commit_block(blockid)
-            self._blockmap[blockid] = blockstore
-
+        self._require_store(blockid)
         return self._blockmap[blockid]
 
     def flush_block_store(self, blockid):
@@ -178,8 +200,6 @@ class GlobalStoreManager(object):
         blockstore = self._blockmap[blockid]
 
         blockstore.flatten()
-        self._persistmap[blockid] = dict2cbor(blockstore.dump_block())
-        self._persistmap.sync()
 
         self.flush_block_store(blockstore.PreviousBlockID)
 
