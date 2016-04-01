@@ -36,8 +36,12 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                 cls.url = os.environ['TEST_VALIDATOR_URL']
             else:
                 vnm_config = defaultValidatorConfig.copy()
-                vnm_config['TransactionFamilies'].append(
-                    'mktplace.transactions.market_place')
+                if 'mktplace.transactions.market_place' not in \
+                        vnm_config['TransactionFamilies']:
+                    vnm_config['TransactionFamilies'].append(
+                        'mktplace.transactions.market_place')
+                vnm_config['LogLevel'] = 'DEBUG'
+                print vnm_config
                 cls.vnm = ValidatorNetworkManager(
                     httpPort=9500, udpPort=9600, cfg=vnm_config)
                 cls.vnm.launch_network(5)
@@ -47,11 +51,13 @@ class TestCommercialPaperScenarios(unittest.TestCase):
             os.environ['CURRENCYHOME'] = os.path.join(
                 os.path.dirname(__file__), "cp_scenarios")
 
+            cls.scenarios_path = os.path.join(os.path.dirname(__file__),
+                                              'cp_scenarios')
             client_cli.main(args=["--name", "mkt",
                                   "--script",
-                                  os.path.join(os.path.dirname(__file__),
-                                               "cp_scenarios",
+                                  os.path.join(cls.scenarios_path,
                                                "scenario_setup_1_mkt"),
+                                  "--echo",
                                   "--url",
                                   cls.url
                                   ])
@@ -62,15 +68,16 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                       os.path.join(os.path.dirname(__file__),
                                    "cp_scenarios",
                                    "scenario_setup_2_trader"),
+                      "--echo",
                       "--url",
                       cls.url
                       ])
 
             client_cli.main(args=["--name", "BANK-agent",
                                   "--script",
-                                  os.path.join(os.path.dirname(__file__),
-                                               "cp_scenarios",
+                                  os.path.join(cls.scenarios_path,
                                                "scenario_setup_3_agent"),
+                                  "--echo",
                                   "--url",
                                   cls.url
                                   ])
@@ -78,9 +85,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
             client_cli.main(
                 args=["--name", "BANK-dealer",
                       "--script",
-                      os.path.join(os.path.dirname(__file__),
-                                   "cp_scenarios",
+                      os.path.join(cls.scenarios_path,
                                    "scenario_setup_4_dealer"),
+                      "--echo",
                       "--url",
                       cls.url
                       ])
@@ -143,6 +150,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                   "--script", os.path.join(os.path.dirname(__file__),
                                            "cp_scenarios",
                                            "scenario_a_1_trader"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -153,9 +161,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         client_cli.main(args=["--name", "BANK-agent",
                               "--script",
-                              os.path.join(os.path.dirname(__file__),
-                                           "cp_scenarios",
+                              os.path.join(self.scenarios_path,
                                            "scenario_a_2_agent"),
+                              "--echo",
                               "--url",
                               self.url
                               ])
@@ -196,9 +204,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         client_cli.main(
             args=["--name", "BANK-trader",
                   "--script",
-                  os.path.join(os.path.dirname(__file__),
-                               "cp_scenarios",
+                  os.path.join(self.scenarios_path,
                                "scenario_b_1_trader"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -211,9 +219,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         client_cli.main(
             args=["--name", "BANK-dealer",
                   "--script",
-                  os.path.join(os.path.dirname(__file__),
-                               "cp_scenarios",
+                  os.path.join(self.scenarios_path,
                                "scenario_b_2_dealer"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -259,9 +267,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         client_cli.main(
             args=["--name", "BANK-trader",
                   "--script",
-                  os.path.join(os.path.dirname(__file__),
-                               "cp_scenarios",
+                  os.path.join(self.scenarios_path,
                                "scenario_c_1_trader"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -274,9 +282,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         client_cli.main(
             args=["--name", "BANK-dealer",
                   "--script",
-                  os.path.join(os.path.dirname(__file__),
-                               "cp_scenarios",
+                  os.path.join(self.scenarios_path,
                                "scenario_c_2_dealer"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -292,9 +300,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         client_cli.main(args=["--name", "BANK-agent",
                               "--script",
-                              os.path.join(os.path.dirname(__file__),
-                                           "cp_scenarios",
+                              os.path.join(self.scenarios_path,
                                            "scenario_c_3_agent"),
+                              "--echo",
                               "--url",
                               self.url
                               ])
@@ -319,9 +327,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         client_cli.main(
             args=["--name", "BANK-dealer",
                   "--script",
-                  os.path.join(os.path.dirname(__file__),
-                               "cp_scenarios",
+                  os.path.join(self.scenarios_path,
                                "scenario_c_4_dealer"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -371,9 +379,9 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         client_cli.main(
             args=["--name", "BANK-trader",
                   "--script",
-                  os.path.join(os.path.dirname(__file__),
-                               "cp_scenarios",
+                  os.path.join(self.scenarios_path,
                                "scenario_d_1_trader"),
+                  "--echo",
                   "--url",
                   self.url
                   ])
@@ -385,8 +393,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         client_cli.main(args=["--name", "BANK-agent",
                               "--script",
-                              os.path.join(os.path.dirname(__file__),
-                                           "cp_scenarios",
+                              os.path.join(self.scenarios_path,
                                            "scenario_d_2_agent"),
                               "--url",
                               self.url
