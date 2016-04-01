@@ -274,20 +274,21 @@ def _prepare_genesis_transactions(journal):
 
 
 class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
-    def __init__(self, prevstore=None, storeinfo=None):
-        super(MarketPlaceGlobalStore, self).__init__(prevstore, storeinfo)
+    def __init__(self, prevstore=None, storeinfo=None, readonly=False):
+        super(MarketPlaceGlobalStore, self).__init__(prevstore, storeinfo,
+                                                     readonly)
 
         self._namemapinitialized = False
         self._namemap = {}
 
-    def clone_store(self, storeinfo=None):
+    def clone_store(self, storeinfo=None, readonly=False):
         """
         Create a new checkpoint that can be modified
 
         :return: a new checkpoint that extends the current store
         :rtype: KeyValueStore
         """
-        return MarketPlaceGlobalStore(self, storeinfo)
+        return MarketPlaceGlobalStore(self, storeinfo, readonly)
 
     def _initnamemap(self):
         """
