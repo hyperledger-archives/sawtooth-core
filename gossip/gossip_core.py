@@ -502,8 +502,8 @@ class Gossip(object, DatagramProtocol):
         if now < self.NextCleanup:
             return
 
-        logger.debug("clean up processing %d unacked packets",
-                     len(self.PendingAckMap))
+        if len(self.PendingAckMap):
+            logger.debug("clean up processing %d unacked packets", len(self.PendingAckMap))
 
         self.NextCleanup = now + self.CleanupInterval
 
