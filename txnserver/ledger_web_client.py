@@ -15,6 +15,7 @@
 
 import logging
 import sys
+import urllib
 import urllib2
 import urlparse
 
@@ -38,7 +39,7 @@ class LedgerWebClient(object):
         self.LedgerURL = url
         self.ProxyHandler = urllib2.ProxyHandler({})
 
-    def store_url(self, txntype, key='', blockid=''):
+    def store_url(self, txntype, key='', blockid='', delta=False):
         """
         store_url -- create a url to access a value store from the ledger
 
@@ -57,6 +58,14 @@ class LedgerWebClient(object):
         url = url.rstrip('/')
         if blockid:
             url += '?blockid={0}'.format(blockid)
+
+        if blockid or delta:
+            params = dict()
+        if blockid:
+            params['blockid'] = blockid
+        if delta:
+            params['delta'] = '1'
+            url += '?' + urllib.urlencode(params)
 
         return url
 
@@ -159,7 +168,7 @@ class LedgerWebClient(object):
 
         return url
 
-    def get_store(self, txntype, key='', blockid=''):
+    def get_store(self, txntype, key='', blockid='', delta=False):
         """
         Send a request to the ledger web server transaction store and return
         the parsed response, return the value of the specified key within the
@@ -169,7 +178,7 @@ class LedgerWebClient(object):
             txntype -- type of the transaction store to contact
             key -- a specific identifier to retrieve
         """
-        return self._geturl(self.store_url(txntype, key, blockid))
+        return self._geturl(self.store_url(txntype, key, blockid, delta))
 
     def get_block(self, blockid, field=None):
         """
