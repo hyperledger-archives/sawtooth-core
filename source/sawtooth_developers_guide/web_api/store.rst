@@ -8,7 +8,8 @@
 
 .. http:get:: /store/{tf_name}
 
-   Returns a list of keys within `tf_name`. The "tf" is short for Transaction Family.
+   Returns a list of keys within `tf_name`. The "tf" is short for Transaction
+   Family.
 
 .. http:get:: /store/{tf_name}/*
 
@@ -18,8 +19,9 @@
 
    Returns the value associated with key `key` within store `tf_name`.
 
-   :query blockid: Uses the version of the store resulting from the commitment of block `blockid`.
-                   When omitted, defaults to the version of the store associated with the last committed block.
+   :query blockid: Uses the version of the store resulting from the commitment
+                   of block `blockid`. When omitted, defaults to the version
+                   of the store associated with the last committed block.
 
 **Example request**:
 
@@ -98,9 +100,13 @@
 
     {"SYM0": 0}
 
-Note that after block `1f8fc8250cd26fb3` was committed, the `IntegerKeyTransaction`
-store only contained the SYM0 key. The block id was obtained by using the block API
-(see :any:`/block`).
+Note that after block `1f8fc8250cd26fb3` was committed, the
+`IntegerKeyTransaction` store only contained the SYM0 key. The "SYM1",
+"SYM2" and "SYM3" keys were added in later blocks.
+
+.. note::
+
+   The block id was obtained by using the block API (see :any:`/block`).
 
 
 
