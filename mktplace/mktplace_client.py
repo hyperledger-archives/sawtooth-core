@@ -100,7 +100,10 @@ class MarketPlaceClient(MarketPlaceCommunication):
         self.LastTransaction = None
 
         self.CurrentState = state or MarketPlaceState(self.BaseURL)
-        self.CurrentState.fetch()
+
+        # fetch the current state if it has not already be fetched.
+        if 0 == len(self.CurrentState.State.keys()):
+            self.CurrentState.fetch()
 
         self.TokenStore = tokenstore
 
