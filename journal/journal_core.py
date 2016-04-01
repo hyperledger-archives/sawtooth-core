@@ -1026,7 +1026,7 @@ class Journal(gossip_core.Gossip):
         high probability no longer going to change, clean out the bulk of the
         memory used to store the block and the corresponding transactions
         """
-
+        self.ChainStore.sync()
         self.TransactionStore.sync()
         self.BlockStore.sync()
 
