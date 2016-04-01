@@ -1,5 +1,4 @@
 echo Running: scenario_setup_1_mkt
-dump --name //marketplace/asset/token
 participant reg --name mkt --description "mkt Participant"
 account reg --name /market/account
 assettype reg --name /asset-type/currency --description "Currency asset type"
