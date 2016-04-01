@@ -101,10 +101,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
 
         self.CurrentState = state or MarketPlaceState(self.BaseURL)
 
-        # fetch the current state if it has not already be fetched.
-        if 0 == len(self.CurrentState.State.keys()):
-            self.CurrentState.fetch()
-
         self.TokenStore = tokenstore
 
         # set up the signing key
