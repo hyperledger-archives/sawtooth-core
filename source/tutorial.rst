@@ -158,10 +158,6 @@ and perform an exchange.
 We will setup a couple participants, Alice and Bob, who will exchange goods
 (in this case, cookies) for currency (US Dollars).
 
-We will be using multiple terminal windows within the VM. If you are familiar
-with the "screen" program, please start that in the VM. Otherwise, we will
-instruct you below to open a second SSH session into the VM.
-
 Configure txnvalidator.js and Start txnvalidator
 ------------------------------------------------
 
@@ -185,8 +181,7 @@ To test the changes, startup txnvalidator:
    $ ./bin/txnvalidator --logfile=__screen__ --http 8800
 
 Keep txnvalidator running while we interact with it using mktclient below.
-If you are running "screen", open a new terminal window in the VM using
-"CTRL-a c". Otherwise, open a new terminal in your host OS and type:
+Open a new terminal in your **host** OS and type:
 
 .. code-block:: console
 
