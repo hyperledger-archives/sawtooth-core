@@ -1,5 +1,4 @@
 echo Running: scenario_setup_2_trader
-dump --name //marketplace/asset/token
 participant reg --name BANK-trader --description "BANK-trader Participant"
 account reg --name /account
 holding reg --name /USD --count 0 --account /account --asset //mkt/asset/currency/USD
