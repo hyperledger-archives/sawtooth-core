@@ -29,7 +29,7 @@ def setup_loggers(config):
 
     if 'LogFile' in config and config['LogFile'] != '__screen__':
         logfile = config['LogFile']
-        if not os.path.isdir(os.path.dirname(logfile)):
+        if not os.path.isdir(os.path.abspath(os.path.dirname(logfile))):
             warnings.warn("Logging directory {0} does not exist".format(
                 os.path.abspath(os.path.dirname(logfile))))
             sys.exit(-1)
