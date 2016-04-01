@@ -14,8 +14,10 @@
 # ------------------------------------------------------------------------------
 
 import anydbm
-import copy
 import logging
+import copy
+
+import cbor
 
 from gossip.common import cbor2dict, dict2cbor, NullIdentifier
 
@@ -60,12 +62,13 @@ class GlobalStoreManager(object):
         self._persistmap = anydbm.open(blockstorefile, dbmode)
 
         rootstore = BlockStore()
-        rootstore.commit_block(self.RootBlockID)
+        rootstore.commit_block(self.RootBlockID, )
         self._blockmap[self.RootBlockID] = rootstore
-        self._persistmap[self.RootBlockID] = dict2cbor(rootstore.dump_block())
+        self._persistmap[self.RootBlockID] = \
+            dict2cbor(rootstore.dump_block(True))
         self._persistmap.sync()
 
-        logger.debug('the persitent block store has %s keys',
+        logger.debug('the persistent block store has %s keys',
                      len(self._persistmap))
 
     def close(self):
@@ -92,7 +95,8 @@ class GlobalStoreManager(object):
 
         rootstore.commit_block(self.RootBlockID)
         self._blockmap[self.RootBlockID] = rootstore
-        self._persistmap[self.RootBlockID] = dict2cbor(rootstore.dump_block())
+        self._persistmap[self.RootBlockID] = \
+            dict2cbor(rootstore.dump_block(True))
         self._persistmap.sync()
 
     def commit_block_store(self, blockid, blockstore):
@@ -113,8 +117,42 @@ class GlobalStoreManager(object):
 
         blockstore.commit_block(blockid)
         self._blockmap[blockid] = blockstore
-        self._persistmap[blockid] = dict2cbor(blockstore.dump_block())
+        self._persistmap[blockid] = dict2cbor(blockstore.dump_block(True))
         self._persistmap.sync()
+
+    def require_store(self, blockid):
+        """Ensure that the store for this block (including all dependent
+        blocks) is loaded into the _blockmap
+        :param str blockid: identifier to associate with the block
+        """
+
+        # this is all about removing recursion... yes, recursion is a useful
+        # thing... however python is not really very friendly to deep recursion
+        # and since this might go through the entire chain of blocks... seems
+        # like avoiding recursion is a very useful thing
+
+        # pass 1... build the list of blocks that we need to load in order
+        # to load the current block
+        blocklist = []
+        while blockid not in self._blockmap:
+            logger.info('add block %s to the queue for loading', blockid)
+            blocklist.insert(0, blockid)
+
+            if blockid not in self._persistmap:
+                raise KeyError('unknown block', blockid)
+
+            blockinfo = cbor2dict(self._persistmap[blockid])
+            blockid = blockinfo['PreviousBlockID']
+
+        # pass 2... starting with the oldest block, begin to load
+        # the stores
+        for blockid in blocklist:
+            logger.info('load block %s from storage', blockid)
+            blockinfo = cbor.loads(self._persistmap[blockid])
+            prevstore = self._blockmap[blockinfo['PreviousBlockID']]
+            blockstore = prevstore.CloneBlock(blockinfo, True)
+            blockstore.CommitBlock(blockid)
+            self._blockmap[blockid] = blockstore
 
     def get_block_store(self, blockid):
         """Gets the blockstore associated with a particular blockid.
@@ -128,20 +166,8 @@ class GlobalStoreManager(object):
         Returns:
             BlockStore: The blockstore associated with the identifier.
         """
-        if blockid not in self._blockmap:
-            logger.debug(
-                'load storage for block %s from persistent block store',
-                blockid)
 
-            if blockid not in self._persistmap:
-                raise KeyError('unknown block', blockid)
-
-            blockinfo = cbor2dict(self._persistmap[blockid])
-            prevstore = self.get_block_store(blockinfo['PreviousBlockID'])
-            blockstore = prevstore.clone_block(blockinfo)
-            blockstore.commit_block(blockid)
-            self._blockmap[blockid] = blockstore
-
+        self.require_store(blockid)
         return self._blockmap[blockid]
 
     def flush_block_store(self, blockid):
@@ -154,15 +180,16 @@ class GlobalStoreManager(object):
             blockid (str): Identifier associated with the block.
         """
 
-        if blockid == self.RootBlockID:
-            return
+        blocklist = []
+        while blockid != self.RootBlockID:
+            blockstore = self._blockmap.get(blockid)
+            if blockstore is None:
+                break
+            blocklist.insert(0, blockid)
+            blockid = blockstore.PreviousBlockID
 
-        blockstore = self._blockmap.get(blockid)
-        if blockstore is None:
-            return
-
-        self.flush_block_store(blockstore.PreviousBlockID)
-        del self._blockmap[blockid]
+        for blockid in blocklist:
+            del self._blockmap[blockid]
 
     def flatten_block_store(self, blockid):
         """Collapses the history of this blockstore into a single blockstore.
@@ -175,11 +202,9 @@ class GlobalStoreManager(object):
         Args:
             blockid (str): Identifier associated with the block.
         """
-        blockstore = self._blockmap[blockid]
 
+        blockstore = self.GetBlockStore(blockid)
         blockstore.flatten()
-        self._persistmap[blockid] = dict2cbor(blockstore.dump_block())
-        self._persistmap.sync()
 
         self.flush_block_store(blockstore.PreviousBlockID)
 
@@ -203,7 +228,7 @@ class BlockStore(object):
             this block store.
     """
 
-    def __init__(self, prevblock=None, blockinfo=None):
+    def __init__(self, prevblock=None, blockinfo=None, readonly=False):
         """Initializes a new BlockStore.
 
         Args:
@@ -222,7 +247,7 @@ class BlockStore(object):
                 storeinfo = blockinfo['TransactionStores'][
                     tname] if blockinfo else None
                 self.add_transaction_store(
-                    tname, tstore.clone_store(storeinfo))
+                    tname, tstore.clone_store(storeinfo, readonly))
 
     @property
     def PreviousBlockID(self):
@@ -255,14 +280,14 @@ class BlockStore(object):
         """
         return self.TransactionStores[tname]
 
-    def clone_block(self, blockinfo=None):
+    def clone_block(self, blockinfo=None, readonly=False):
         """Create a copy of the ledger by creating and registering a copy
         of each store in the current ledger.
 
         Args:
             blockinfo (dict): Optional output of the dump() method.
         """
-        return BlockStore(self, blockinfo)
+        return BlockStore(self, blockinfo, readonly)
 
     def commit_block(self, blockid):
         """Persist the state of the store to disk.
@@ -283,7 +308,7 @@ class BlockStore(object):
         for tstore in self.TransactionStores.itervalues():
             tstore.flatten()
 
-    def dump_block(self):
+    def dump_block(self, readonly=True):
         """Serialize the stores associated with this block.
 
         Returns:
@@ -295,7 +320,7 @@ class BlockStore(object):
         result['PreviousBlockID'] = self.PreviousBlockID
         result['TransactionStores'] = {}
         for tname, tstore in self.TransactionStores.iteritems():
-            result['TransactionStores'][tname] = tstore.dump()
+            result['TransactionStores'][tname] = tstore.dump(readonly)
 
         return result
 
@@ -313,7 +338,7 @@ class KeyValueStore(object):
         PrevStore (KeyValueStore): The previous checkpoint of the store.
     """
 
-    def __init__(self, prevstore=None, storeinfo=None):
+    def __init__(self, prevstore=None, storeinfo=None, readonly=False):
         """Initialize a new KeyValueStore object.
 
         Args:
@@ -325,15 +350,16 @@ class KeyValueStore(object):
 
         self.ReadOnly = False
         self.PrevStore = prevstore
+        copyfn = copy.copy if readonly else copy.deepcopy
 
         if storeinfo:
-            self._store = copy.deepcopy(storeinfo['Store'])
+            self._store = copyfn(storeinfo['Store'])
             self._deletedkeys = set(storeinfo['DeletedKeys'])
         else:
             self._store = dict()
             self._deletedkeys = set()
 
-    def clone_store(self, storeinfo=None):
+    def clone_store(self, storeinfo=None, readonly=False):
         """Creates a new checkpoint that can be modified.
 
         Args:
@@ -343,7 +369,7 @@ class KeyValueStore(object):
             KeyValueStore: A new checkpoint that extends the current
                 store.
         """
-        return KeyValueStore(self, storeinfo)
+        return KeyValueStore(self, storeinfo, readonly)
 
     def commit(self):
         """Marks the store as read only.
@@ -369,14 +395,19 @@ class KeyValueStore(object):
         """
         copyfn = copy.copy if readonly else copy.deepcopy
 
-        result = self.PrevStore.compose() if self.PrevStore else dict()
+        storelist = []
+        store = self
+        while store:
+            storelist.insert(0, store)
+            store = store.PrevStore
 
-        # copy our dictionary into the result
-        result.update(copyfn(self._store))
-
-        # remove the deleted keys from the store
-        for k in self._deletedkeys:
-            result.pop(k, None)
+        result = dict()
+        for store in storelist:
+            # copy our dictionary into the result
+            result.update(copyfn(store._store))
+            # remove the deleted keys from the store
+            for k in store._deletedkeys:
+                result.pop(k, None)
 
         # it would be possible to flatten the store here since
         # we've already done all the work; however, that would still
@@ -522,14 +553,16 @@ class KeyValueStore(object):
 
         return self.PrevStore and self.PrevStore.__contains__(key)
 
-    def dump(self):
+    def dump(self, readonly=False):
         """Returns a dict containing information about the store.
 
         Returns:
             dict: A dict containing information about the store.
         """
+        copyfn = copy.copy if readonly else copy.deepcopy
+
         result = dict()
-        result['Store'] = copy.deepcopy(self._store)
+        result['Store'] = copyfn(self._store)
         result['DeletedKeys'] = list(self._deletedkeys)
 
         return result

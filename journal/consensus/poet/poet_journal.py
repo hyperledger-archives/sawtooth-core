@@ -51,7 +51,8 @@ class PoetJournal(journal_core.Journal):
         self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
 
         # propagate the maximum blocks to keep
-        self.MaximumBlocksToKeep = WaitTimer.CertificateSampleLength
+        self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
+                                       WaitTimer.CertificateSampleLength)
 
     def build_transaction_block(self, force=False):
         """Builds a transaction block that is specific to this particular
