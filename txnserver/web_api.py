@@ -47,8 +47,7 @@ class RootPage(Resource):
         self.GetPageMap = {
             'store': self._handlestorerequest,
             'block': self._handleblkrequest,
-            'transaction': self._handletxnrequest,
-            'market': self._handlemktrequest
+            'transaction': self._handletxnrequest
         }
 
         self.PostPageMap = {
@@ -375,40 +374,6 @@ class RootPage(Resource):
                         'unknown transaction field {0}'.format(field))
 
         return tinfo[field]
-
-    def _handlemktrequest(self, pathcomponents, args, testonly):
-        if not pathcomponents:
-            raise Error(http.BAD_REQUEST, 'misformed market object name')
-
-        cname = pathcomponents.pop(0)
-        cobj = None
-        cid = None
-        for oid, obj in self.Ledger.GlobalStore.TransactionStores[
-                '/MarketPlaceTransaction'].iteritems():
-            if obj.get('name') == cname:
-                cid = oid
-                cobj = obj
-                break
-
-        if not cid:
-            raise Error(http.NOT_FOUND, 'unknown creator {0}'.format(cname))
-
-        if not pathcomponents:
-            cobj = cobj.copy()
-            cobj['identifier'] = cid
-            return cobj
-
-        oname = '/' + '/'.join(pathcomponents)
-        for oid, obj in self.Ledger.GlobalStore.TransactionStores[
-                '/MarketPlaceTransaction'].iteritems():
-            if obj.get('name') == oname and obj.get('creator') == cid:
-                obj = obj.copy()
-                obj['identifier'] = oid
-                return obj
-
-        raise Error(http.NOT_FOUND,
-                    'no object named {0} found for creator {1}'.format(
-                        oname, cname))
 
 
 class ApiSite(Site):
