@@ -36,9 +36,12 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                 cls.url = os.environ['TEST_VALIDATOR_URL']
             else:
                 vnm_config = defaultValidatorConfig.copy()
-                vnm_config['TransactionFamilies'].append(
-                    'mktplace.transactions.market_place')
+                if 'mktplace.transactions.market_place' not in \
+                        vnm_config['TransactionFamilies']:
+                    vnm_config['TransactionFamilies'].append(
+                        'mktplace.transactions.market_place')
                 vnm_config['LogLevel'] = 'DEBUG'
+                print vnm_config
                 cls.vnm = ValidatorNetworkManager(
                     httpPort=9500, udpPort=9600, cfg=vnm_config)
                 cls.vnm.launch_network(5)

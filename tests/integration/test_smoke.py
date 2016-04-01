@@ -217,9 +217,12 @@ class TestSmoke(unittest.TestCase):
         try:
             print "Launching validator network."
             vnm_config = defaultValidatorConfig.copy()
-            vnm_config['TransactionFamilies'].append(
-                'mktplace.transactions.market_place')
+            if 'mktplace.transactions.market_place' not in \
+                    vnm_config['TransactionFamilies']:
+                vnm_config['TransactionFamilies'].append(
+                    'mktplace.transactions.market_place')
             vnm_config['LogLevel'] = 'DEBUG'
+            print vnm_config
             vnm = ValidatorNetworkManager(
                 httpPort=9500, udpPort=9600, cfg=vnm_config)
             vnm.launch_network(5)
