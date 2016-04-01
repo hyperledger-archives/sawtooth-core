@@ -43,8 +43,8 @@
  * @param yBit: y recovery value as defined in Certicom Sec 1 v2.
  * @return Returns point Q (public key) as a serialized x,y pair.
 */
-std::string recoverPubKeyFromSig(std::string msgHash, std::string sig_r, std::string sig_s, int yBit);
+std::string recover_pubkey(std::string msgHash, std::string sig_r, std::string sig_s, int yBit);
 
 //Internally it calls a big integer version.  This header is intended for swig
 //so we don't expose that method here.
-//string recoverPubKeyFromSig(Integer msgHash, Integer sig_r, Integer sig_s, int yBit);
+//string RecoverPubKey(Integer msgHash, Integer sig_r, Integer sig_s, int yBit);

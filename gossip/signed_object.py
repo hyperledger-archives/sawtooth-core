@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+﻿# Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ def get_verifying_key(serialized_msg, serialized_sig):
     z = pybitcointools.hash_to_int(msghash)
     yBit = v - 27
     try:
-        pubkey = nativeECDSA.recoverPubKeyFromSig(
+        pubkey = nativeECDSA.recover_pubkey(
             str(z), str(r), str(s), int(yBit))
     except Exception as ex:
         logger.warn('Unable to extract public key from signature' + ex.args[0])

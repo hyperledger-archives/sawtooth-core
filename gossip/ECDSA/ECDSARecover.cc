@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// ------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 
 /*
@@ -24,7 +24,8 @@
 * Given an ECDSA Signature: (r,s) and message hash, e
 * Return public key, Q, as Q = r^-1(sr-eG)
 * where G is the group Generator.
-* Specifically written for secp256k1 curve with sha256. Should not be used with other curves or hash functions.
+* Specifically written for secp256k1 curve with sha256. 
+* Should not be used with other curves or hash functions.
 */
 
 #include "ECDSARecover.h"
@@ -42,26 +43,30 @@ using namespace std;
  * @param yBit: y recovery value as defined in Certicom Sec 1 v2.
  * @return Returns point Q (public key) as a serialized x,y pair.
  */
-string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
-#ifdef DEBUG_PUBKRECOVER
-    cout << endl << "Enter recoverPubKeyFromSig(...)" << endl;
-#endif
+string RecoverPubKey(Integer e, Integer r, Integer s, int yBit) {
+    // use private key constructor to get the curve params
     ECDSA<ECP, SHA256>::PrivateKey tmp;
-    tmp.Initialize(ASN1::secp256k1(), 2); //use private key constructor to get the curve params
+    tmp.Initialize(ASN1::secp256k1(), 2); 
 
-    //Setup variables   
+    // Setup variables (lower case scalars, upper case Points)
+    // p: Field modulus. #Fp
+    // n: Curve modulus. #E(p)=n < #Fp=p
+    // G: Curve generator
+    // R: Point to be recovered from signature; initializd off curve for safety
+    // x, y, exp: used for recovering point R
     Integer h(tmp.GetGroupParameters().GetCofactor());
     Integer a(tmp.GetGroupParameters().GetCurve().GetA());
     Integer b(tmp.GetGroupParameters().GetCurve().GetB());
-    Integer p(tmp.GetGroupParameters().GetCurve().GetField().GetModulus()); //Field modulus
-    Integer n(tmp.GetGroupParameters().GetSubgroupOrder());                 //Curve modulus. #E(p)=n < #Fp=p
-    ECPPoint G(tmp.GetGroupParameters().GetSubgroupGenerator());            //Curve generator
-    ECPPoint R(1,1);                    //Point to be recovered from signature; initialized off curve for safety.
-    Integer x(0L), y(0L), exp(0L);      //x, y, and exponentiation term used for recovering point R.
+    Integer p(tmp.GetGroupParameters().GetCurve().GetField().GetModulus()); 
+    Integer n(tmp.GetGroupParameters().GetSubgroupOrder());                 
+    ECPPoint G(tmp.GetGroupParameters().GetSubgroupGenerator());
+    ECPPoint R(1,1);                    
+    Integer x(0L), y(0L), exp(0L);      
 
-    ECP curve(p, a, b);	                //manually specify params for secp256k1 extracted from ECDSA class above. 
+    ECP curve(p, a, b);	                // specify params for secp256k1
 
-    if (r > n || r < 0) {               //Check inputs.
+    // Check inputs.
+    if (r > n || r < 0) {               
         string error = "Invalid signature. r exceeds group size.\n";
         throw std::domain_error(error);
         return "";
@@ -71,65 +76,71 @@ string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
         throw std::domain_error(error);
         return "";
     }
-    if (e.BitCount() > 256 || e < 0) {   //e may be larger than n, but may not exceed sha256 bit length.
+    if (e.BitCount() > 256 || e < 0) {   //e may be >n, but not >sha256 length
         string error = "Invalid signature. Message hash value out of range.\n";
         throw std::domain_error(error);
         return "";
     }
 
-    //Use r (the x coordinate of R=kG) to compute y
-    for (int i = 0; i < (h + 1); i++) { //Iterate over the cofactor to try multiple possible x deriving from r.
-        x = r + i*n;                    //x may be between n and p and ~shrunken when set to r = x mod n.
-        if (x>p) {
-            string error = "Invalid signature. Recovered R.x exceeds field modulus.\n";
+    // Use r (the x coordinate of R=kG) to compute y
+    // Iterate over the cofactor to try multiple possible x deriving from r.
+    // x may be between n and p and ~shrunken when set to r = x mod n.
+    // But x could never have been larger than the field modulus, p.
+    for (int i = 0; i < (h + 1); i++) { 
+        x = r + i*n; 
+        if (x>p) {  
+            string error = "Invalid signature: R.x exceeds field modulus.\n";
             throw std::domain_error(error);
-            return "";                  //x could never have been larger than the field modulus, p.
+            return "";                  
         }
         
-        y = (x * x * x + 7) % p;        //computes y^2 hardcoded to secp256k params a=0, b=7;
-        exp = (p + 1) / 4;              //Exponentiation rule for finding sqrt when p = 3 mod 4 (see HAC 3.36)...
-        y = a_exp_b_mod_c(y, exp, p);   //...find sqrt of y^2
+        y = (x * x * x + 7) % p;        // computes y^2 hardcoded to secp256k
+        exp = (p + 1) / 4;              // Exponentiation rule for sqrt...
+        y = a_exp_b_mod_c(y, exp, p);   // ...when p = 3 mod 4 (see HAC 3.36)
 
-        if ((yBit % 2) ^ (y % 2)) {     //yBit indicates if we expect y to be odd. If there's a mismatch then we need the other y.
-            y = p - y;                  //sqrt(y^2) = {y,-y} if yBit trips then must select -y
+        if ((yBit % 2) ^ (y % 2)) {     // yBit says if we expect y to be odd
+            y = p - y;                  // sqrt(y^2)=+/-y: so may need -y
         }
 
         R.x = x; R.y = y;
-        if (curve.VerifyPoint(R)) {     //Check if this point is on the curve.
-            break;                      //If so jump out of the cofactor loop
-        }                               //If not maybe we have another loop iteration to find it.
+        if (curve.VerifyPoint(R)) {     // Check if this point is on the curve
+            break;                      // If so jump out of the cofactor loop
+        }                               // If not then interate thru loop again
 
     }
 
-
-    if(!curve.VerifyPoint(R)){          //Validate final computed point is on the curve
-        string error = "Recover Pub Key from Sig: Computed point is not on curve.\n";
+    if(!curve.VerifyPoint(R)){          // Validate computed point is on curve
+        string error = "Recover Pub Key: Computed point is not on curve.\n";
         throw std::domain_error(error);
         return "";
     }
 
-    //Compute Q=r^-1(sR-eG) mod p
-    ECPPoint sR(curve.Multiply(s, R));  //compute s*R
-    ECPPoint eG(curve.Multiply(e, G));  //compute e*G
-    ECPPoint sR_eG(curve.Subtract(sR, eG));//compute sR-eG
-    Integer rInv = r.InverseMod(n);     //Compute modular inverse of r
-    ECPPoint Q(curve.Multiply(rInv, sR_eG));//Apply r_inverse to sR-eG
+    //Compute pulic key, Q, as Q=r^(-1)(sR-eG) mod p
+    ECPPoint sR(curve.Multiply(s, R));       // compute s*R
+    ECPPoint eG(curve.Multiply(e, G));       // compute e*G
+    ECPPoint sR_eG(curve.Subtract(sR, eG));  // compute sR-eG
+    Integer rInv = r.InverseMod(n);          // Compute modular inverse of r
+    ECPPoint Q(curve.Multiply(rInv, sR_eG)); // Apply r_inverse to sR-eG
 
-    /* 
-     * Check that Q actually validates the message. For optimization this can probably be removed.
-     * Crypto++ takes the message not a digest as input. We only have access to the digest.
-     * i.e.: verifier.VerifyMessage((const byte*)message.data(), message.size(), (const byte*)signature.data(), signature.size());
-     * Instead do signature verification from scratch.
-     */
+     
+    // Check that Q actually verifies the message. 
+    // (For optimization this can probably be removed.)
+    // The Crypto++ verify method takes the message not a digest as input. 
+    // We only have access to the digest.
+    // So do signature verification from scratch.
+
     //If Q or QP is the identity or if it isn't on the curve then fail
-    if ((Q == curve.Identity()) || (curve.Multiply(p, Q) == curve.Identity()) || (!curve.VerifyPoint(Q))) {
-        string error = "Recover Pub Key from Sig: Calculated Q fails basic criteria.\n";
+    if ( (Q == curve.Identity()) 
+         || (curve.Multiply(p, Q) == curve.Identity()) 
+         || (!curve.VerifyPoint(Q))) {
+        string error = "Recover Pub Key:" 
+                       " Calculated key fails basic criteria.\n";
         throw std::domain_error(error);
         return "";
     }
 
     //Compute ewG + rwQ; x component of sum should equal r for sig to verify
-    Integer w(s.InverseMod(n));             //Calculate s^-1
+    Integer w(s.InverseMod(n));             // Calculate s^-1
     Integer u1(a_times_b_mod_c(e, w, n));   // u1 = ew mod n
     Integer u2(a_times_b_mod_c(r, w, n));   // u2 = rw mod n
     ECPPoint u1G(curve.Multiply(u1, G));    // u1*G
@@ -138,12 +149,13 @@ string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
     if (!curve.VerifyPoint(X1)) { 
         string error = "x1 did not verify as a point on the curve.\n"; 
         throw std::domain_error(error);
-        return ""; 
+        return "";
     }
 
     Integer x1 = X1.x % n;                  // take x coordinate mod n
-    if (r != x1) {                          // if r == x1 then signature verifies
-        string error = "Failed to recover pubkey from signature. Recovered key fails to verify signature\n";
+    if (r != x1) {                          // if r == x1 signature verifies
+        string error = "Failed to recover pubkey."
+                       " Recovered key fails to verify signature.\n";
         throw std::domain_error(error); 
         return "";
     }
@@ -163,13 +175,16 @@ string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
     cout << "Computed x1: " << x1 << endl;
 #endif
 
+    // Format output 
     std::stringstream xss, yss, stream;
     xss << std::hex << Q.x;                   //Get hex strings of points
     yss << std::hex << Q.y;
-    string xstr = xss.str(); xstr.resize(xstr.size()-1); //  xstr.pop_back(); //Strip off cryptopp's hex "h" tag.
-    string ystr = yss.str(); ystr.resize(ystr.size()-1); // ystr.pop_back();
-    stream << std::setw(64) << std::setfill('0') << xstr; //Pad out 64 nibbles
-    stream << std::setw(64) << std::setfill('0') << ystr; //Pad out 64 nibbles
+
+    // Strip off cryptopp's hex "h" tag.
+    string xstr = xss.str(); xstr.resize(xstr.size()-1);  // xstr.pop_back(); 
+    string ystr = yss.str(); ystr.resize(ystr.size()-1);  // ystr.pop_back();
+    stream << std::setw(64) << std::setfill('0') << xstr; // Pad out 64 nibbles
+    stream << std::setw(64) << std::setfill('0') << ystr; // Pad out 64 nibbles
     return stream.str();
 }
 
@@ -181,7 +196,7 @@ string recoverPubKeyFromSig(Integer e, Integer r, Integer s, int yBit) {
 // Should have created an r,s:
 // r:73822833206246044331228008262087004113076292229679808334250850393445001014761
 // s:58995174607243353628346858794753620798088291196940745194581481841927132845752
-void test(Integer e, Integer r, Integer s){
+void Test(Integer e, Integer r, Integer s){
     ECDSA<ECP, SHA256>::PrivateKey tmp;
     tmp.Initialize(ASN1::secp256k1(), 2); //use private key constructor to get the curve params
 
@@ -189,10 +204,10 @@ void test(Integer e, Integer r, Integer s){
     Integer h(tmp.GetGroupParameters().GetCofactor());
     Integer a(tmp.GetGroupParameters().GetCurve().GetA());
     Integer b(tmp.GetGroupParameters().GetCurve().GetB());
-    Integer p(tmp.GetGroupParameters().GetCurve().GetField().GetModulus()); //Field modulus
-    Integer n(tmp.GetGroupParameters().GetSubgroupOrder());                 //Curve modulus. #E(p)=n < #Fp=p
-    ECPPoint G(tmp.GetGroupParameters().GetSubgroupGenerator());            //Curve generator
-    ECP curve(p, a, b); //manually specify params for secp256k extracted from ECDSA class above.
+    Integer p(tmp.GetGroupParameters().GetCurve().GetField().GetModulus());
+    Integer n(tmp.GetGroupParameters().GetSubgroupOrder());
+    ECPPoint G(tmp.GetGroupParameters().GetSubgroupGenerator());
+    ECP curve(p, a, b);
     Integer d("2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7aeh");
 
     //derive k
@@ -229,7 +244,7 @@ void test(Integer e, Integer r, Integer s){
     }
 }
 
-string recoverPubKeyFromSig(string msgHash, string sig_r, string sig_s, int yBit) {
+string recover_pubkey(string msgHash, string sig_r, string sig_s, int yBit) {
     if (msgHash.empty() || sig_r.empty() || sig_s.empty() || yBit > 3 || yBit < 0)
         throw std::invalid_argument("Empty string or invalid yBit value.\n");
     try {
@@ -247,7 +262,7 @@ string recoverPubKeyFromSig(string msgHash, string sig_r, string sig_s, int yBit
 #ifdef TEST_PUBKRECOVER
         test(e, r, s);
 #endif
-        return recoverPubKeyFromSig(e, r, s, yBit);
+        return RecoverPubKey(e, r, s, yBit);
     }
     catch (std::domain_error e) {
         throw(e);
@@ -257,75 +272,4 @@ string recoverPubKeyFromSig(string msgHash, string sig_r, string sig_s, int yBit
         throw(e);
         return "";
     }
-}
-
-string recoverPubKeyFromSig_Base32(string msgHash, string sig_r, string sig_s, int yBit) {
-    Integer e, r, s;
-    byte tmp[32];
-    word64 size;
-
-    Base32Decoder decoderA;
-
-    decoderA.Put((byte*)msgHash.data(), msgHash.size());
-    decoderA.MessageEnd();
-    size = decoderA.MaxRetrievable();
-
-    if (size && size <= SIZE_MAX)
-    {
-        decoderA.Get(tmp, 32);
-        e.Decode(tmp, 32);
-        cout << "decoded e: " << e << endl;
-    }
-    else {
-        string error = "Invalid sized msg hash to recoverPubkeyFromSig\n";
-        throw std::invalid_argument(error);
-        return "";
-    }
-    //decoder.Initialize();
-    Base32Decoder decoderB;
-    decoderB.Put((byte*)sig_r.data(), sig_r.size());
-    decoderB.MessageEnd();
-    size = decoderB.MaxRetrievable();
-    if (size && size <= SIZE_MAX)
-    {
-        decoderB.Get(tmp, 32);
-        r.Decode(tmp, 32);
-        cout << "decoded r: " << r << endl;
-    }
-    else {
-        string error = "Invalid sized sig_r to recoverPubkeyFromSig\n";
-        throw std::invalid_argument(error);
-        return "";
-    }
-    //decoder.Initialize();
-    Base32Decoder decoderC;
-    decoderC.Put((byte*)sig_s.data(), sig_s.size());
-    decoderC.MessageEnd();
-    size = decoderC.MaxRetrievable();
-    if (size && size <= SIZE_MAX)
-    {
-        decoderC.Get(tmp, 32);
-        s.Decode(tmp, 32);
-        cout << "decoded s: " << s << endl;
-    }
-    else {
-        string error = "Invalid sized sig_s to recoverPubkeyFromSig\n";
-        throw std::invalid_argument(error);
-        return "";
-    }
-//TODO: Pulled the base32 return format out of the main recovery function.  Need to do that here.  Something like this:
-/*  byte buffer[64];
-    Q.x.Encode(&buffer[0], 32);
-    Q.y.Encode(&buffer[32], 32);
-
-    Base32Encoder encoder(NULL, false);
-    encoder.Put(buffer, 64);
-    encoder.MessageEnd();
-
-    string encoded;
-    encoded.resize(encoder.MaxRetrievable());
-    encoder.Get((byte *)encoded.data(), encoded.size());
-*/
-    return recoverPubKeyFromSig(e, r, s, yBit);
-
 }
