@@ -162,7 +162,14 @@ Configure txnvalidator.js and Start txnvalidator
 ------------------------------------------------
 
 By default, the validator is not configured to support the MarketPlace
-transaction family.  Edit the /project/sawtooth-validator/etc/txnvalidator.js
+transaction family or operate efficiently as a single node network. 
+The default validator config is in: sawtooth-validator/etc/. 
+
+Let's instead work with a config file specific to this tutorial. 
+Most of the the edits are done already, but let's add the marketplace 
+transaction family. 
+
+Edit /project/sawtooth-docs/source/tutorial/txnvalidator.js
 and add "mktplace.transactions.market_place" to the list of transaction
 families:
 
@@ -178,7 +185,7 @@ To test the changes, startup txnvalidator:
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
-   $ ./bin/txnvalidator --logfile=__screen__ --http 8800
+   $ ./bin/txnvalidator --logfile=__screen__ --config /project/sawtooth-docs/txnvalidator.js
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
