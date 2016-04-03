@@ -130,7 +130,8 @@ and run the following command:
 
 .. note::
 
-    There are two underscores before and after the word screen in the command below.
+    There are two underscores before and after the word screen in the command
+    below.
 
 .. code-block:: console
 
@@ -185,7 +186,7 @@ Open a new terminal in your **host** OS and type:
 
 .. code-block:: console
 
-   $ cd /sawtooth-dev-tools
+   $ cd $HOME/project/sawtooth-dev-tools
    $ vagrant ssh
 
 Key Generation
