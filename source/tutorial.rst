@@ -337,6 +337,7 @@ Alice's initalization is the same as Bob's:
    //UNKNOWN> participant reg --name alice
    //alice> account reg --name /account
    //alice> holding reg --name /USD --account /account --asset //mkt/asset/currency/USD
+   //alice> holding reg --name /holding/token --count 1 --account /account --asset //marketplace/asset/token
    //alice> waitforcommit
    //alice> exchange --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
    //alice> holding reg --name /jars/choc_chip --account /account --asset //mkt/asset/cookie/choc_chip
