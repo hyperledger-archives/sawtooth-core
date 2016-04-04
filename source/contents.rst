@@ -6,7 +6,7 @@ Intel Proprietary Information.  Intel Confidential.
 
 .. toctree::
 
-   overview.rst
+   introduction.rst
    tutorial.rst
    sawtooth_developers_guide.rst
    mktplace_developers_guide.rst
