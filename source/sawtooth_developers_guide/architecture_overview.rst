@@ -2,7 +2,7 @@ Architecture Overview
 *********************
 
 What is the Sawtooth Lake Distributed Ledger?
-============================================
+=============================================
 
 The Sawtooth Lake Distributed Ledger is a software framework for
 constructing decentralized ledgers with extensible transaction
