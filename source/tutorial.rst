@@ -32,14 +32,16 @@ ssh which is required by Vagrant. During installation, accept all defaults.
 Clone Repositories
 ==================
 
-All four repositories (sawtooth-vagrant, sawtooth-core, sawtooth-validator, and
-sawtooth-mktplace) must be cloned into the same parent directory as follows:
+All five repositories (sawtooth-core, sawtooth-dev-tools, sawtooth-docs,
+sawtooth-mktplace, and sawtooth-validator) must be cloned into the same parent
+directory as follows:
 
 .. code-block:: console
 
   project/
     sawtooth-core/
     sawtooth-dev-tools/
+    sawtooth-docs/
     sawtooth-mktplace/
     sawtooth-validator/
 
@@ -52,6 +54,7 @@ This can be done by opening up a terminal and running the following:
    % cd project
    % git clone https://github.com/IntelLedger/sawtooth-core.git
    % git clone https://github.com/IntelLedger/sawtooth-dev-tools.git
+   % git clone https://github.com/IntelLedger/sawtooth-docs.git
    % git clone https://github.com/IntelLedger/sawtooth-mktplace.git
    % git clone https://github.com/IntelLedger/sawtooth-validator.git
 
@@ -163,7 +166,14 @@ Configure txnvalidator.js and Start txnvalidator
 ------------------------------------------------
 
 By default, the validator is not configured to support the MarketPlace
-transaction family.  Edit the /project/sawtooth-validator/etc/txnvalidator.js
+transaction family or operate efficiently as a single node network. 
+The default validator config is in: sawtooth-validator/etc/. 
+
+Let's instead work with a config file specific to this tutorial. 
+Most of the the edits are done already, but let's add the marketplace 
+transaction family. 
+
+Edit /project/sawtooth-docs/source/tutorial/txnvalidator.js
 and add "mktplace.transactions.market_place" to the list of transaction
 families:
 
@@ -179,7 +189,7 @@ To test the changes, startup txnvalidator:
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
-   $ ./bin/txnvalidator --logfile=__screen__ --http 8800
+   $ ./bin/txnvalidator --logfile=__screen__ --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
