@@ -2,8 +2,6 @@
 Table of Contents
 =================
 
-Intel Proprietary Information.  Intel Confidential.
-
 .. toctree::
 
    overview.rst
