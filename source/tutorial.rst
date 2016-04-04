@@ -410,7 +410,7 @@ mktclient:
 Accept the Exchange Offer
 -------------------------
 
-Alice has decided to purchase some cookies and has decide to accept Bob's
+Alice has decided to purchase some cookies and has decided to accept Bob's
 exchange offer.
 
 .. code-block:: console
@@ -440,5 +440,5 @@ cookies.  Let's see what the resulting holdings look like:
    1        //alice/holding/token
    12       //alice/jars/choc_chip
 
-Fantastic!  Bob has more USD and less cookies.  Alice has less USD and more
+Fantastic!  Bob has more USD and fewer cookies.  Alice has less USD and more
 cookies.
