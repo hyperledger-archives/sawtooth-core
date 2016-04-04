@@ -1,21 +1,21 @@
 Architecture Overview
 *********************
 
-What is the SawtoothLake Distributed Ledger?
+What is the Sawtooth Lake Distributed Ledger?
 ============================================
 
-The SawtoothLake Distributed Ledger is a software framework for
+The Sawtooth Lake Distributed Ledger is a software framework for
 constructing decentralized ledgers with extensible transaction
 types. It is comparable to the blockchain ledger that underlies
-Bitcoin. SawtoothLake uses a unique mechanism for reaching consensus
+Bitcoin. Sawtooth Lake uses a unique mechanism for reaching consensus
 on the validity of the ledger based on trusted code running inside a
 hardware-protected Intel Software Guard Extensions (SGX) enclave.
 
-One of the initial transaction families supported by SawtoothLake is
+One of the initial transaction families supported by Sawtooth Lake is
 the MarketPlace. The MarketPlace Transaction Family establishes the
 concepts of participants, accounts, assets, holdings, liabilities,
 and offers in a decentralized ledger to facilitate the exchange of
-digital assets. The SawtoothLake architecture allows the definition
+digital assets. The Sawtooth Lake architecture allows the definition
 of additional transaction families or the consumption of an existing
 asset­type agnostic transaction family (like MarketPlace) to meet
 domain­specific needs.
@@ -50,7 +50,7 @@ Transaction Family.
 Core Architecture
 =================
 
-The SawtoothLake Distributed Ledger consists of three major
+The Sawtooth Lake Distributed Ledger consists of three major
 architectural layers: the Ledger layer, the Journal layer, and the
 Communication Layer.
 
@@ -101,13 +101,13 @@ sawtooth-core repository.
 Consensus Mechanisms
 ~~~~~~~~~~~~~~~~~~~~
 
-SawtoothLake contains two consensus implementations: PoET and Quorum
+Sawtooth Lake contains two consensus implementations: PoET and Quorum
 Voting.
 
 PoET and SGX
 ::::::::::::
 
-The SawtoothLake Distributed Ledger provides a unique mechanism to
+The Sawtooth Lake Distributed Ledger provides a unique mechanism to
 ensure fairness in the node lottery. Instead of a Proof-of-Work
 competition amongst nodes, Sawtooth Lake implements a
 Proof-of-Elapsed-Time (PoET) algorithm for distributed consensus.
