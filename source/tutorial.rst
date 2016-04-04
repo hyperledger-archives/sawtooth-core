@@ -32,14 +32,16 @@ ssh which is required by Vagrant. During installation, accept all defaults.
 Clone Repositories
 ==================
 
-All four repositories (sawtooth-vagrant, sawtooth-core, sawtooth-validator, and
-sawtooth-mktplace) must be cloned into the same parent directory as follows:
+All five repositories (sawtooth-core, sawtooth-dev-tools, sawtooth-docs,
+sawtooth-mktplace, and sawtooth-validator) must be cloned into the same parent
+directory as follows:
 
 .. code-block:: console
 
   project/
     sawtooth-core/
     sawtooth-dev-tools/
+    sawtooth-docs/
     sawtooth-mktplace/
     sawtooth-validator/
 
@@ -52,6 +54,7 @@ This can be done by opening up a terminal and running the following:
    % cd project
    % git clone https://github.com/IntelLedger/sawtooth-core.git
    % git clone https://github.com/IntelLedger/sawtooth-dev-tools.git
+   % git clone https://github.com/IntelLedger/sawtooth-docs.git
    % git clone https://github.com/IntelLedger/sawtooth-mktplace.git
    % git clone https://github.com/IntelLedger/sawtooth-validator.git
 
