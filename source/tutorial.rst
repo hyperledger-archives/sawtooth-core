@@ -188,7 +188,7 @@ To test the changes, startup txnvalidator:
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
-   $ ./bin/txnvalidator --logfile=__screen__ --config /project/sawtooth-docs/txnvalidator.js
+   $ ./bin/txnvalidator --logfile=__screen__ --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
