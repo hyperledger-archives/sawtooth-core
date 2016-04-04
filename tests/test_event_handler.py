@@ -16,14 +16,15 @@
 from gossip.event_handler import EventHandler
 
 
-class TestEventHandler:
+class TestEventHandler(object):
     def __init__(self):
         pass
 
     def call1(self, ival):
         return ival < 5
 
-    def call2(self, ival):
+    @staticmethod
+    def call2(ival):
         return ival < 10
 
     def test_event_handler(self):

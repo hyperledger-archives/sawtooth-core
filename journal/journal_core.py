@@ -21,10 +21,10 @@ from collections import OrderedDict
 from gossip import common, event_handler, gossip_core, stats
 from journal import transaction, transaction_block
 from journal.global_store_manager import GlobalStoreManager
-from journal.messages import transaction_message
-from journal.messages import transaction_block_message
-from journal.messages import journal_transfer
 from journal.messages import journal_debug
+from journal.messages import journal_transfer
+from journal.messages import transaction_block_message
+from journal.messages import transaction_message
 
 logger = logging.getLogger(__name__)
 
@@ -322,11 +322,11 @@ class Journal(gossip_core.Gossip):
             logger.warn('restore ledger state from the backup data stores')
             try:
                 self.MostRecentCommitedBlockID = \
-                    self.chain_store['MostRecentBlockID']
+                    self.ChainStore['MostRecentBlockID']
             except KeyError:
                 logger.warn('unable to load the most recent block id, '
                             'recomputing')
-                self.MostRecentCommitedBlockID = self.compute_chain_store()
+                self.MostRecentCommitedBlockID = self.compute_chain_root()
 
             self.post_initialize()
             return
@@ -495,9 +495,10 @@ class Journal(gossip_core.Gossip):
         """
         now = time.time()
 
-        if (blockid in self.RequestedBlocks
-                and now < self.RequestedBlocks[blockid]):
+        if blockid in self.RequestedBlocks and now < self.RequestedBlocks[
+                blockid]:
             return
+
         self.RequestedBlocks[blockid] = now + self.MissingRequestInterval
 
         # if the request for the missing block came from another node, then
@@ -527,9 +528,10 @@ class Journal(gossip_core.Gossip):
         """
         now = time.time()
 
-        if (txnid in self.RequestedTransactions
-                and now < self.RequestedTransactions[txnid]):
+        if txnid in self.RequestedTransactions and now < \
+                self.RequestedTransactions[txnid]:
             return
+
         self.RequestedTransactions[txnid] = now + self.MissingRequestInterval
 
         # if the request for the missing block came from another node, then

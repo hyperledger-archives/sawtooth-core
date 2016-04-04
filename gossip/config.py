@@ -23,6 +23,7 @@ class ConfigFileNotFound(Exception):
     """Exception thrown when config files are expected but not found."""
 
     def __init__(self, config_files, search_path):
+        super(ConfigFileNotFound, self).__init__(self)
         self.config_files = config_files
         self.search_path = search_path
 
@@ -36,6 +37,7 @@ class InvalidSubstitutionKey(Exception):
     """Exception raised when a config uses invalid substitution key."""
 
     def __init__(self, key, config_key, config_value, source):
+        super(InvalidSubstitutionKey, self).__init__(self)
         self.key = key
         self.config_key = config_key
         self.config_value = config_value
@@ -85,7 +87,7 @@ class Config(dict):
         cfg = {}
         for key, value in self.iteritems():
             if isinstance(value, str):
-                for i in xrange(self.substitution_max_iterations):
+                for _ in xrange(self.substitution_max_iterations):
                     try:
                         new_value = value.format(**pathsubs)
                     except KeyError, e:

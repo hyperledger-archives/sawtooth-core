@@ -175,7 +175,7 @@ class AssetRegistryTransaction(transaction.Transaction):
                 self.Updates.append(Update(update))
 
     def __str__(self):
-        return " and ".join(map(lambda u: str(u), self.Updates))
+        return " and ".join([str(u) for u in self.Updates])
 
     def is_valid(self, store):
         """Determines if the transaction is valid.
