@@ -17,8 +17,8 @@ concepts of participants, accounts, assets, holdings, liabilities,
 and offers in a decentralized ledger to facilitate the exchange of
 digital assets. The Sawtooth Lake architecture allows the definition
 of additional transaction families or the consumption of an existing
-asset­type agnostic transaction family (like MarketPlace) to meet
-domain­specific needs.
+asset-type agnostic transaction family (like MarketPlace) to meet
+domain-specific needs.
 
 Repository Structure
 ====================
