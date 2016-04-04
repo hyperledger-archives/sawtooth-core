@@ -267,6 +267,8 @@ class RootPage(Resource):
 
         key = pathcomponents[0]
         if key == '*':
+            if 'delta' in args and args.get('delta').pop(0) == '1':
+                return store.dump(True)
             return store.compose()
 
         if key not in store:
