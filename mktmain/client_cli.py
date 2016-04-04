@@ -1328,7 +1328,7 @@ def local_main(config):
     creator = None
     if 'ParticipantId' in config:
         id = config['ParticipantId']
-        creator = state.n2i('///' + id)
+        creator = state.n2i(id)
 
         if creator in state.State:
             ptxn = state.State[creator]

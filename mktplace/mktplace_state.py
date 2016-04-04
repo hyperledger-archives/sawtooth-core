@@ -92,12 +92,19 @@ class MarketPlaceState(MarketPlaceCommunication):
 
     """
 
-    def __init__(self, baseurl, creator=None):
+    def __init__(self, baseurl, creator=None, creator_name=None):
         super(MarketPlaceState, self).__init__(baseurl)
 
-        self.CreatorID = creator
+        self._state = None
+        self.State = None
+        self.ScratchState = None
+        self.CurrentBlockID = None
 
-        self.State = MarketPlaceGlobalStore()
+        self.fetch()
+
+        self.CreatorID = creator
+        if not self.CreatorID and creator_name:
+            self.CreatorID = self.State.n2i('//' + creator_name)
 
     def bind(self, name, objectid):
         """
@@ -106,6 +113,7 @@ class MarketPlaceState(MarketPlaceCommunication):
         :param str name: fully qualified object name
         :param id objectid: object identifier
         """
+
         return self.State.bind(name, objectid)
 
     def unbind(self, name):
@@ -165,11 +173,36 @@ class MarketPlaceState(MarketPlaceCommunication):
 
         logger.debug('fetch state from %s/%s/*', self.BaseURL, store)
 
-        state = self.getmsg("/store/{0}/*".format(store))
-        self.State = MarketPlaceGlobalStore(prevstore=None,
-                                            storeinfo={'Store': state,
-                                                       'DeletedKeys': []})
-        self.State._initnamemap()
+        blockids = self.getmsg('/block?blockcount=10')
+        blockid = blockids[0]
+
+        if blockid == self.CurrentBlockID:
+            return
+
+        if self.CurrentBlockID in blockids:
+            fetchlist = blockids[:blockids.index(self.CurrentBlockID)]
+            for fetchid in reversed(fetchlist):
+                logger.debug('only fetch delta of state for block %s', fetchid)
+                delta = self.getmsg(
+                    '/store/{0}/*?delta=1&blockid={1}'.format(store, fetchid))
+                self._state = self._state.clone_store(delta)
+        else:
+            logger.debug('full fetch of state for block %s', blockid)
+            state = self.getmsg(
+                "/store/{0}/*?blockid={1}".format(store, blockid))
+            self._state = \
+                MarketPlaceGlobalStore(prevstore=None,
+                                       storeinfo={
+                                           'Store': state, 'DeletedKeys': []
+                                       }
+                                       )
+
+        # State is actually a clone of the block state, this is a free
+        # operation because of the copy on write implementation of the global
+        #  store. This way market clients can update the state speculatively
+        # without corrupting the synchronized storage
+        self.State = self._state.clone_store()
+        self.CurrentBlockID = blockid
 
     def path(self, path):
         """

@@ -51,7 +51,6 @@ class MktActor:
         self.state = state
         if self.state is None:
             self.state = mktplace_state.MarketPlaceState(ledger_url)
-            self.state.fetch()
 
         # create keys
         # Generate key for validator
@@ -107,7 +106,6 @@ class MktActor:
 
     def update(self):
         self.state.fetch()
-        pass
 
     def get_state_object(self, name):  # Fully qualified name to object
         id = self.state.n2i(name)
