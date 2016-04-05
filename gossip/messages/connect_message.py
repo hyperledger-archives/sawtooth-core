@@ -78,7 +78,7 @@ class ConnectRequestMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/ConnectMessage/ConnectRequest"
+    MessageType = "/gossip.messages.ConnectMessage/ConnectRequest"
 
     def __init__(self, minfo={}):
         """Constructor for the ConnectRequestMessage class.
@@ -165,7 +165,7 @@ class ConnectReplyMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/ConnectMessage/ConnectReply"
+    MessageType = "/gossip.messages.ConnectMessage/ConnectReply"
 
     def __init__(self, minfo={}):
         """Constructor for the ConnectReplyMessage class.
@@ -283,7 +283,7 @@ class KeepAliveMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/ConnectMessage/KeepAlive"
+    MessageType = "/gossip.messages.ConnectMessage/KeepAlive"
 
     def __init__(self, minfo={}):
         """Constructor for the KeepAliveMessage class.
