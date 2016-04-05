@@ -27,97 +27,97 @@ logger = logging.getLogger(__name__)
 NullIdentifier = '0' * 16
 
 
-def pretty_print_dict(input):
+def pretty_print_dict(dictionary):
     """Generates a pretty-print formatted version of the input JSON.
 
     Args:
-        input (str): the JSON string to format.
+        dictionary (str): the JSON string to format.
 
     Returns:
         str: pretty-print formatted string.
     """
-    return json.dumps(_ascii_encode_dict(input), indent=2, sort_keys=True)
+    return json.dumps(_ascii_encode_dict(dictionary), indent=2, sort_keys=True)
 
 
-def json2dict(input):
+def json2dict(dictionary):
     """Deserializes JSON into a dictionary.
 
     Args:
-        input (str): the JSON string to deserialize.
+        dictionary (str): the JSON string to deserialize.
 
     Returns:
         dict: a dictionary object reflecting the structure of the JSON.
     """
-    return _ascii_encode_dict(json.loads(input))
+    return _ascii_encode_dict(json.loads(dictionary))
 
 
-def dict2json(input):
+def dict2json(dictionary):
     """Serializes a dictionary into JSON.
 
     Args:
-        input (dict): a dictionary object to serialize into JSON.
+        dictionary (dict): a dictionary object to serialize into JSON.
 
     Returns:
         str: a JSON string reflecting the structure of the input dict.
     """
-    return json.dumps(_ascii_encode_dict(input))
+    return json.dumps(_ascii_encode_dict(dictionary))
 
 
-def cbor2dict(input):
+def cbor2dict(dictionary):
     """Deserializes CBOR into a dictionary.
 
     Args:
-        input (bytes): the CBOR object to deserialize.
+        dictionary (bytes): the CBOR object to deserialize.
 
     Returns:
         dict: a dictionary object reflecting the structure of the CBOR.
     """
 
-    return _ascii_encode_dict(cbor.loads(input))
+    return _ascii_encode_dict(cbor.loads(dictionary))
 
 
-def dict2cbor(input):
+def dict2cbor(dictionary):
     """Serializes a dictionary into CBOR.
 
     Args:
-        input (dict): a dictionary object to serialize into CBOR.
+        dictionary (dict): a dictionary object to serialize into CBOR.
 
     Returns:
         bytes: a CBOR object reflecting the structure of the input dict.
     """
 
-    return cbor.dumps(_unicode_encode_dict(input), sort_keys=True)
+    return cbor.dumps(_unicode_encode_dict(dictionary), sort_keys=True)
 
 
-def _ascii_encode_dict(input):
+def _ascii_encode_dict(item):
     """
     Support method to ensure that JSON is converted to ascii since unicode
     identifiers, in particular, can cause problems
     """
-    if isinstance(input, dict):
+    if isinstance(item, dict):
         return OrderedDict(
-            (_ascii_encode_dict(key), _ascii_encode_dict(input[key]))
-            for key in sorted(input.keys()))
-    elif isinstance(input, list):
-        return [_ascii_encode_dict(element) for element in input]
-    elif isinstance(input, unicode):
-        return input.encode('ascii')
+            (_ascii_encode_dict(key), _ascii_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [_ascii_encode_dict(element) for element in item]
+    elif isinstance(item, unicode):
+        return item.encode('ascii')
     else:
-        return input
+        return item
 
 
-def _unicode_encode_dict(input):
+def _unicode_encode_dict(item):
     """
     Support method to ensure that JSON is converted to ascii since unicode
     identifiers, in particular, can cause problems
     """
-    if isinstance(input, dict):
+    if isinstance(item, dict):
         return OrderedDict(
-            (_unicode_encode_dict(key), _unicode_encode_dict(input[key]))
-            for key in sorted(input.keys()))
-    elif isinstance(input, list):
-        return [_unicode_encode_dict(element) for element in input]
-    elif isinstance(input, str):
-        return unicode(input)
+            (_unicode_encode_dict(key), _unicode_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [_unicode_encode_dict(element) for element in item]
+    elif isinstance(item, str):
+        return unicode(item)
     else:
-        return input
+        return item

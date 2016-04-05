@@ -16,9 +16,9 @@
 import collections
 import logging
 
-from journal.consensus.poet import poet_transaction_block
 from gossip import common, stats
 from journal import journal_core
+from journal.consensus.poet import poet_transaction_block
 from journal.consensus.poet.wait_certificate import WaitTimer
 
 logger = logging.getLogger(__name__)

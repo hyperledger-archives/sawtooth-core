@@ -257,6 +257,10 @@ class Node(object):
 
 
 class RoundTripEstimator(object):
+    """The RoundTripEstimator estimates round trip message time based on
+       measured round-trip time.
+    """
+
     # Minimum and Maximum RTO measured in seconds
     MinimumRTO = 1.0
     MaximumRTO = 60.0
@@ -294,7 +298,8 @@ class RoundTripEstimator(object):
         self.RTO = max(self.MinimumRTO, min(self.MaximumRTO, self.RTO))
 
     def backoff(self):
-        """
+        """Increases the round-trip estimate by a factor of BackoffRate
+        (until reaching MaximumRTO).
         """
         self._SRTT = 0.0
         self._RTTVAR = 0.0
@@ -322,7 +327,7 @@ class TransmissionQueue(object):
             idlist = idlist[:4]
             idlist.append('...')
 
-        return '[' + ', '.join(map(lambda id: id[:8], idlist)) + ']'
+        return '[' + ', '.join([ident[:8] for ident in idlist]) + ']'
 
     def enqueue_message(self, msg, timetosend):
         """Adds a message to the transmission queue.

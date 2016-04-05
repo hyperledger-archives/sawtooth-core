@@ -89,6 +89,9 @@ class Gossip(object, DatagramProtocol):
                 transmission.
             RetryInterval (float): The time between retries, in seconds.
         """
+
+        super(Gossip, self).__init__()
+
         if 'MinimumRetries' in kwargs:
             self.MinimumRetries = kwargs['MinimumRetries']
         if 'RetryInterval' in kwargs:
@@ -191,7 +194,8 @@ class Gossip(object, DatagramProtocol):
             list: A list of Node identifiers considered peers.
 
         """
-        return map(lambda p: p.Identifier, self.peer_list(allflag, exceptions))
+
+        return [p.Identifier for p in self.peer_list(allflag, exceptions)]
 
     def next_sequence_number(self):
         """Increments the sequence number and returns it.

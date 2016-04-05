@@ -129,7 +129,7 @@ class Metric(object):
             args (list): a list of arguments to append to the logger
                entry.
         """
-        logger.info("metric, %s", ", ".join(map(lambda x: str(x), args)))
+        logger.info("metric, %s", ", ".join([str(x) for x in args]))
 
     def dump_metric(self, identifier):
         """Writes a logger entry containing the provided identifier and

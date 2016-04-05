@@ -40,6 +40,8 @@ class SerializationError(Exception):
                 error occurred.
             msg (str): The explanation of the error.
         """
+
+        super(SerializationError, self).__init__(self)
         self.TransactionType = txntype
         self.Message = msg
 
@@ -99,7 +101,7 @@ class Transaction(signed_object.SignedObject):
         self._data = None
 
     def __str__(self):
-        return " and ".join(map(lambda u: str(u), self.Updates))
+        return self.TransactionTypeName
 
     def apply(self, store):
         pass

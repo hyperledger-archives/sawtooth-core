@@ -71,20 +71,20 @@ class QuorumAdvertisementMessage(message.Message):
     MessageType = "/" + __name__ + "/Quorum/Advertisement"
 
     @staticmethod
-    def create_from_node(node):
+    def create_from_node(nd):
         """Creates a QuorumAdvertisementMessage from a node.
 
         Args:
-            node (Node): The node to create the message from.
+            nd (Node): The node to create the message from.
 
         Returns:
             QuorumAdvertisementMessage: The new message.
         """
         msg = QuorumAdvertisementMessage()
-        msg.Identifier = node.Identifier
-        msg.NetHost = node.NetHost
-        msg.NetPort = node.NetPort
-        msg.Name = node.Name
+        msg.Identifier = nd.Identifier
+        msg.NetHost = nd.NetHost
+        msg.NetPort = nd.NetPort
+        msg.Name = nd.Name
         return msg
 
     def __init__(self, minfo={}):

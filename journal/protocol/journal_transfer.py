@@ -21,14 +21,20 @@ from collections import OrderedDict
 
 from twisted.internet import reactor
 
-from journal.messages.journal_transfer import BlockListReplyMessage
 from journal.messages.journal_transfer import BlockListRequestMessage
-from journal.messages.journal_transfer import BlockReplyMessage
+from journal.messages.journal_transfer import BlockListReplyMessage
+
 from journal.messages.journal_transfer import BlockRequestMessage
-from journal.messages.journal_transfer import TransactionReplyMessage
+from journal.messages.journal_transfer import BlockReplyMessage
+
 from journal.messages.journal_transfer import TransactionRequestMessage
-from journal.messages.journal_transfer import TransferFailedMessage
+from journal.messages.journal_transfer import TransactionReplyMessage
+
+from journal.messages.journal_transfer import UncommitedListRequestMessage
 from journal.messages.journal_transfer import UncommitedListReplyMessage
+
+from journal.messages.journal_transfer import TransferFailedMessage
+
 
 logger = logging.getLogger(__name__)
 
@@ -180,9 +186,9 @@ class JournalTransfer(object):
             return
 
         # kick off retrieval of the uncommited transactions
-        request = UncommitedListRequestMessage()
-        request.TransactionListIndex = 0
-        self.Journal.send_message(request, self.Peer.Identifier)
+        request2 = UncommitedListRequestMessage()
+        request2.TransactionListIndex = 0
+        self.Journal.send_message(request2, self.Peer.Identifier)
 
     def _txnlistreplyhandler(self, msg, journal):
         logger.debug('request %s, recieved %d uncommited transactions from %s',

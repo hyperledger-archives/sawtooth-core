@@ -1,3 +1,3 @@
 [pep8]
 ignore=W503
-exclude=build,doc,ECDSARecoverModule.py,EnclaveModule.py,poet_enclave_simulator.py
+exclude=build,doc,ECDSARecoverModule.py,poet_enclave_simulator.py
