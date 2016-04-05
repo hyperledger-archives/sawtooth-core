@@ -54,7 +54,7 @@ class PingMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/Ping"
+    MessageType = "/gossip.messages.GossipDebug/Ping"
 
     def __init__(self, minfo={}):
         """Constructor for the PingMessage class.
@@ -94,7 +94,7 @@ class DumpConnectionsMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/DumpConnections"
+    MessageType = "/gossip.messages.GossipDebug/DumpConnections"
 
     def __init__(self, minfo={}):
         """Constructor for the DumpConnectionsMessage class.
@@ -150,7 +150,7 @@ class DumpPeerStatsMessage(message.Message):
         PeerIDList (list): A list of peers to dump stats for.
         MetricIDList (list): A list of stats to dump.
     """
-    MessageType = "/" + __name__ + "/DumpPeerStats"
+    MessageType = "/gossip.messages.GossipDebug/DumpPeerStats"
 
     def __init__(self, minfo={}):
         """Constructor for the DumpPeerStatsMessage class.
@@ -211,7 +211,7 @@ class ResetPeerStatsMessage(message.Message):
         PeerIDList (list): A list of peers to reset stats for.
         MetricIDList (list): A list of stats to reset.
     """
-    MessageType = "/" + __name__ + "/ResetPeerStats"
+    MessageType = "/gossip.messages.GossipDebug/ResetPeerStats"
 
     def __init__(self, minfo={}):
         """Constructor for the ResetPeerStatsMessage class.
@@ -272,7 +272,7 @@ class DumpNodeStatsMessage(message.Message):
         DomainList (list): A list of domains to dump stats for.
         MetricList (list): A list of stats to dump.
     """
-    MessageType = "/" + __name__ + "/DumpNodeStats"
+    MessageType = "/gossip.messages.GossipDebug/DumpNodeStats"
 
     def __init__(self, minfo={}):
         """Constructor for the DumpNodeStatsMessage class.
@@ -331,7 +331,7 @@ class ResetStatsMessage(message.Message):
         DomainList (list): A list of domains to reset stats for.
         MetricList (list): A list of stats to reset.
     """
-    MessageType = "/" + __name__ + "/ResetStats"
+    MessageType = "/gossip.messages.GossipDebug/ResetStats"
 
     def __init__(self, minfo={}):
         """Constructor for the ResetStatsMessage class.

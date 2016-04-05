@@ -52,7 +52,8 @@ class DumpQuorumMessage(message.Message):
         IsReliable (bool): Whether or not this message should
             use reliable delivery.
     """
-    MessageType = "/" + __name__ + "/Quorum/DumpQuorum"
+    MessageType = \
+        "/journal.consensus.quorum.messages.QuorumDebug/Quorum/DumpQuorum"
 
     def __init__(self, minfo={}):
         """Constructor for DumpQuorumMessage class.

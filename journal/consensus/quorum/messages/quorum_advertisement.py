@@ -68,7 +68,8 @@ class QuorumAdvertisementMessage(message.Message):
         TimeToLive (int): The number of hops for the message to
             live.
     """
-    MessageType = "/" + __name__ + "/Quorum/Advertisement"
+    MessageType = "/journal.consensus.quorum.messages.QuorumAdvertisement" \
+        "/Quorum/Advertisement"
 
     @staticmethod
     def create_from_node(nd):

@@ -60,7 +60,7 @@ class DumpJournalBlocksMessage(message.Message):
             use reliable delivery.
         Count (int): The number of journal blocks to dump.
     """
-    MessageType = "/" + __name__ + "/DumpJournalBlocks"
+    MessageType = "/journal.messages.JournalDebug/DumpJournalBlocks"
 
     def __init__(self, minfo={}):
         """Constructor for DumpJournalBlocksMessage class.
@@ -131,7 +131,7 @@ class DumpJournalValueMessage(message.Message):
         TransactionType (type): The type of transaction.
         Name (str): The name of the transaction.
     """
-    MessageType = "/" + __name__ + "/DumpJournalValue"
+    MessageType = "/journal.messages.JournalDebug/DumpJournalValue"
 
     def __init__(self, minfo={}):
         """Constructor for the DumpJournalValueMessage class.

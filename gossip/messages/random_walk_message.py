@@ -76,7 +76,7 @@ class RandomWalkMessage(message.Message):
             is decremented and the message is retransmitted from the
             receving node. This continues until TimeToLive reaches zero.
     """
-    MessageType = "/" + __name__ + "/Topology/RandomWalk"
+    MessageType = "/gossip.messages.RandomWalkMessage/Topology/RandomWalk"
 
     def __init__(self, minfo={}):
         """Constructor for the RandomWalkMessage class.

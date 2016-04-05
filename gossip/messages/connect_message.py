@@ -78,7 +78,7 @@ class ConnectRequestMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/ConnectRequest"
+    MessageType = "/ConnectMessage/ConnectRequest"
 
     def __init__(self, minfo={}):
         """Constructor for the ConnectRequestMessage class.
@@ -165,7 +165,7 @@ class ConnectReplyMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/ConnectReply"
+    MessageType = "/ConnectMessage/ConnectReply"
 
     def __init__(self, minfo={}):
         """Constructor for the ConnectReplyMessage class.
@@ -225,7 +225,7 @@ class DisconnectRequestMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/DisconnectRequest"
+    MessageType = "/ConnectMessage/DisconnectRequest"
 
     def __init__(self, minfo={}):
         """Constructor for the DisconnectRequestMessage class.
@@ -283,7 +283,7 @@ class KeepAliveMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/KeepAlive"
+    MessageType = "/ConnectMessage/KeepAlive"
 
     def __init__(self, minfo={}):
         """Constructor for the KeepAliveMessage class.

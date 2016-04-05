@@ -54,7 +54,7 @@ class ShutdownMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/ShutdownMessage"
+    MessageType = "/gossip.messages.ShutdownMessage/ShutdownMessage"
 
     def __init__(self, minfo={}):
         """Constructor for the ShutdownMessage class.

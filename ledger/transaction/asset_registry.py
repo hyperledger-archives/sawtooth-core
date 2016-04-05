@@ -43,7 +43,7 @@ class AssetRegistryTransactionMessage(transaction_message.TransactionMessage):
         Transaction (AssetRegistryTransaction): The transaction the
             message is associated with.
     """
-    MessageType = "/" + __name__ + "/Transaction"
+    MessageType = "/ledger.transaction.AssetRegistry/Transaction"
 
     def __init__(self, minfo={}):
         """Constructor for the AssetRegistryTransactionMessage class.

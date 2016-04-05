@@ -191,7 +191,7 @@ class Message(SignedObject):
         TimeToLive (int): The configured number of hops that the message
             is considered alive.
     """
-    MessageType = "/" + __name__ + "/MessageBase"
+    MessageType = "/gossip.Message/MessageBase"
     DefaultTimeToLive = 2 ** 31
 
     def __init__(self, minfo={}):
