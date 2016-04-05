@@ -16,7 +16,7 @@ do
     done
 done
 
-pep8 --config=.pep8-enforced
+pep8 --config=.pep8
 python setup.py -q lint \
     --lint-rcfile=.pylintrc-enforced \
     --lint-reports=no \
