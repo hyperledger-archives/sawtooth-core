@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class Payment(object):
-    PaymentType = '/' + __name__ + '/Payment'
+    PaymentType = '/mktplace.transactions.Payment/Payment'
     CreatorType = participant_update.ParticipantObject
 
     def __init__(self, transaction=None, minfo={}):
@@ -65,7 +65,7 @@ class Payment(object):
 
 
 class PayFromHolding(Payment):
-    PaymentType = '/' + __name__ + '/PayFromHolding'
+    PaymentType = '/mktplace.transactions.Payment/PayFromHolding'
     ValidationTokenAssetID = None
 
     def __init__(self, transaction=None, minfo={}):

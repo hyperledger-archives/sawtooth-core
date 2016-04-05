@@ -56,7 +56,7 @@ class ParticipantObject(market_place_object_update.MarketPlaceObject):
 
 
 class Register(market_place_object_update.Register):
-    UpdateType = '/' + __name__ + '/Register'
+    UpdateType = '/mktplace.transactions.ParticipantUpdate/Register'
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
@@ -101,7 +101,7 @@ class Register(market_place_object_update.Register):
 
 
 class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/' + __name__ + '/Unregister'
+    UpdateType = '/mktplace.transactions.ParticipantUpdate/Unregister'
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
