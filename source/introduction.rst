@@ -4,15 +4,14 @@ Introduction
 
 .. caution::
 
-    This project includes a consensus algorithm, PoET (Proof
-    of Elapsed Time), designed to run in a secure enclave like
+    This project includes a consensus algorithm, PoET (Proof of Elapsed Time),
+    which is intended to run in a Trusted Execution Environment (TEE), such as
     `Intel® Software Guard Extensions (SGX)
     <https://software.intel.com/en-us/isa-extensions/intel-sgx>`_.
-    The version included in this project is intended to provide
-    the same functional characteristics, but runs **unprotected**.
-    It does **not** provide security in this mode.  This project
-    is intended for experimental usage. Do not use this project
-    for security sensitive applications.
+    This release includes software which runs outside of SGX and simulates the
+    behavior of the PoET algorithm. It does **not** provide security in this
+    mode. This project is intended for experimental usage and we recommend
+    against using it for security sensitive applications.
 
 This project, called "Sawtooth Lake" is a highly modular platform for
 building, deploying and running distributed ledgers. Distributed ledgers
