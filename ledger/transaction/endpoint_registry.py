@@ -44,7 +44,7 @@ class EndpointRegistryTransactionMessage(
         Transaction (EndpointRegistryTransaction): The transaction the
             message is associated with.
     """
-    MessageType = "/" + __name__ + "/Transaction"
+    MessageType = "/ledger.transaction.EndpointRegistry/Transaction"
 
     def __init__(self, minfo={}):
         super(EndpointRegistryTransactionMessage, self).__init__(minfo)

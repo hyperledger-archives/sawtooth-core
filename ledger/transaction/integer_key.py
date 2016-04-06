@@ -42,7 +42,7 @@ class IntegerKeyTransactionMessage(transaction_message.TransactionMessage):
         Transaction (IntegerKeyTransaction): The transaction the
             message is associated with.
     """
-    MessageType = "/" + __name__ + "/Transaction"
+    MessageType = "/ledger.transaction.IntegerKey/Transaction"
 
     def __init__(self, minfo={}):
         super(IntegerKeyTransactionMessage, self).__init__(minfo)

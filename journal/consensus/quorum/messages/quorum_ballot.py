@@ -52,7 +52,8 @@ class QuorumBallotMessage(message.Message):
         TransactionIDs (list): The list of transactions to appear on
             the ballot.
     """
-    MessageType = "/" + __name__ + "/Quorum/Ballot"
+    MessageType = \
+        "/journal.consensus.quorum.messages.QuorumBallot/Quorum/Ballot"
 
     def __init__(self, minfo={}):
         """Constructor for QuorumBallotMessage.
@@ -120,7 +121,8 @@ class QuorumInitiateVoteMessage(message.Message):
             reliable delivery.
         BlockNumber (int): The number of the block.
     """
-    MessageType = "/" + __name__ + "/Quorum/InitiateVote"
+    MessageType = \
+        "/journal.consensus.quorum.messages.QuorumBallot/Quorum/InitiateVote"
 
     def __init__(self, minfo={}):
         """Constructor for QuorumInitiateVoteMessage.
@@ -178,7 +180,8 @@ class QuorumCompleteVoteMessage(message.Message):
         TransactionIDs (list): The list of transactions which are
             a part of the vote.
     """
-    MessageType = "/" + __name__ + "/Quorum/CompleteVote"
+    MessageType = \
+        "/journal.consensus.quorum.messages.QuorumBallot/Quorum/CompleteVote"
 
     def __init__(self, minfo={}):
         """Constructor for QuorumCompleteVoteMessage.

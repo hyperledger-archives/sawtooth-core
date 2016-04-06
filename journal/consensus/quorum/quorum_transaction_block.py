@@ -42,7 +42,8 @@ class QuorumTransactionBlockMessage(
     Attributes:
         MessageType (str): The class name of the message.
     """
-    MessageType = "/" + __name__ + "/TransactionBlock"
+    MessageType = \
+        "/journal.consensus.quorum.QuorumTransactionBlock/TransactionBlock"
 
     def __init__(self, minfo={}):
         """Constructor for QuorumTransactionBlockMessage.

@@ -28,7 +28,7 @@ def register_message_handlers(journal):
 
 
 class TransactionMessage(message.Message):
-    MessageType = "/" + __name__ + "/Transaction"
+    MessageType = "/journal.messages.TransactionMessage/Transaction"
 
     def __init__(self, minfo={}):
         super(TransactionMessage, self).__init__(minfo)
@@ -67,7 +67,7 @@ def transaction_message_handler(msg, journal):
 
 
 class TransactionRequestMessage(message.Message):
-    MessageType = "/" + __name__ + "/TransactionRequest"
+    MessageType = "/journal.messages.TransactionMessage/TransactionRequest"
 
     def __init__(self, minfo={}):
         super(TransactionRequestMessage, self).__init__(minfo)

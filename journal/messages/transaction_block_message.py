@@ -46,7 +46,7 @@ class TransactionBlockMessage(message.Message):
         TransactionBlock (TransactionBlock): The block associated
             with the message.
     """
-    MessageType = "/" + __name__ + "/TransactionBlock"
+    MessageType = "/journal.messages.TransactionBlockMessage/TransactionBlock"
 
     def __init__(self, minfo={}):
         """Constructor for the TransactionBlockMessage class.
@@ -110,7 +110,7 @@ class BlockRequestMessage(message.Message):
             use reliable delivery.
         BlockID (str): The id of the requested block.
     """
-    MessageType = "/" + __name__ + "/BlockRequest"
+    MessageType = "/journal.messages.TransactionBlockMessage/BlockRequest"
 
     def __init__(self, minfo={}):
         """Constructor for the BlockRequestMessage class.

@@ -43,7 +43,8 @@ class PoetTransactionBlockMessage(
     Attributes:
         MessageType (str): The class name of the message.
     """
-    MessageType = "/" + __name__ + "/TransactionBlock"
+    MessageType = \
+        "/journal.consensus.poet.PoetTransactionBlock/TransactionBlock"
 
     def __init__(self, minfo={}):
         super(PoetTransactionBlockMessage, self).__init__(minfo)

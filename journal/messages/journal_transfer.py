@@ -34,7 +34,7 @@ def register_message_handlers(journal):
 
 
 class BlockListRequestMessage(message.Message):
-    MessageType = "/" + __name__ + "/BlockListRequest"
+    MessageType = "/journal.messages.JournalTransfer/BlockListRequest"
 
     def __init__(self, minfo={}):
         super(BlockListRequestMessage, self).__init__(minfo)
@@ -87,7 +87,7 @@ def _blocklistrequesthandler(msg, journal):
 
 
 class BlockListReplyMessage(message.Message):
-    MessageType = "/" + __name__ + "/BlockListReply"
+    MessageType = "/journal.messages.JournalTransfer/BlockListReply"
 
     def __init__(self, minfo={}):
         super(BlockListReplyMessage, self).__init__(minfo)
@@ -118,7 +118,7 @@ class BlockListReplyMessage(message.Message):
 
 
 class UncommitedListRequestMessage(message.Message):
-    MessageType = "/" + __name__ + "/UncommitedListRequest"
+    MessageType = "/journal.messages.JournalTransfer/UncommitedListRequest"
 
     def __init__(self, minfo={}):
         super(UncommitedListRequestMessage, self).__init__(minfo)
@@ -170,7 +170,7 @@ def _uncommitedlistrequesthandler(msg, journal):
 
 
 class UncommitedListReplyMessage(message.Message):
-    MessageType = "/" + __name__ + "/UncommitedListReply"
+    MessageType = "/journal.messages.JournalTransfer/UncommitedListReply"
 
     def __init__(self, minfo={}):
         super(UncommitedListReplyMessage, self).__init__(minfo)
@@ -196,7 +196,7 @@ class UncommitedListReplyMessage(message.Message):
 
 
 class BlockRequestMessage(message.Message):
-    MessageType = "/" + __name__ + "/BlockRequest"
+    MessageType = "/journal.messages.JournalTransfer/BlockRequest"
 
     def __init__(self, minfo={}):
         super(BlockRequestMessage, self).__init__(minfo)
@@ -240,7 +240,7 @@ def _blockrequesthandler(msg, journal):
 
 
 class BlockReplyMessage(message.Message):
-    MessageType = "/" + __name__ + "/BlockReply"
+    MessageType = "/journal.messages.JournalTransfer/BlockReply"
 
     def __init__(self, minfo={}):
         super(BlockReplyMessage, self).__init__(minfo)
@@ -264,7 +264,7 @@ class BlockReplyMessage(message.Message):
 
 
 class TransactionRequestMessage(message.Message):
-    MessageType = "/" + __name__ + "/TransactionRequest"
+    MessageType = "/journal.messages.JournalTransfer/TransactionRequest"
 
     def __init__(self, minfo={}):
         super(TransactionRequestMessage, self).__init__(minfo)
@@ -311,7 +311,7 @@ def _txnrequesthandler(msg, journal):
 
 
 class TransactionReplyMessage(message.Message):
-    MessageType = "/" + __name__ + "/TransactionReply"
+    MessageType = "/journal.messages.JournalTransfer/TransactionReply"
 
     def __init__(self, minfo={}):
         super(TransactionReplyMessage, self).__init__(minfo)
@@ -334,7 +334,7 @@ class TransactionReplyMessage(message.Message):
 
 
 class TransferFailedMessage(message.Message):
-    MessageType = "/" + __name__ + "/TransferFailed"
+    MessageType = "/journal.messages.JournalTransfer/TransferFailed"
 
     def __init__(self, minfo={}):
         super(TransferFailedMessage, self).__init__(minfo)

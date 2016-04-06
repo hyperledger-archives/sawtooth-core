@@ -92,7 +92,7 @@ class TopologyRequestMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/" + __name__ + "/ToplogyRequest"
+    MessageType = "/gossip.messages.TopologyMessage/ToplogyRequest"
 
     def __init__(self, minfo={}):
         """Constructor for the TopologyRequestMessage class.
@@ -166,7 +166,7 @@ class TopologyReplyMessage(message.Message):
         InReplyTo (str): The identifier of the associated topology
             request message.
     """
-    MessageType = "/" + __name__ + "/TopologyReply"
+    MessageType = "/gossip.messages.TopologyMessage/TopologyReply"
 
     def __init__(self, minfo={}):
         super(TopologyReplyMessage, self).__init__(minfo)
