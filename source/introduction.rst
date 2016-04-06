@@ -144,9 +144,17 @@ the robustness of the consensus algorithm.
 
 Our “proof of processor” algorithm scales to thousands of participants
 and will run efficiently on any Intel processor that supports SGX.
+
 **As noted in the caution above, the current implementation simulates
 the behavior of the PoET algorithm running in a trusted execution environment
-and is not secure.**
+and is not secure.** There are some benefits to using a simulator:
+
+    * It does not require you to have a processor which supports SGX
+      in order to experiment with Sawtooth Lake.
+
+    * It allows running many validators (nodes) on a single system. An SGX
+      implementation of PoET will allow only a single node per CPU socket.
+
 
 Getting Sawtooth Lake
 =====================
