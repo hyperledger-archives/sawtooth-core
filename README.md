@@ -16,3 +16,10 @@ Documentation
 =============
 
 Documentation is available at: http://intelledger.github.io/.
+
+Contents
+========
+
+This repository contains the Vagrant environment configuration. A tutorial
+for using this repository can be found
+[here](http://intelledger.github.io/tutorial.html).
