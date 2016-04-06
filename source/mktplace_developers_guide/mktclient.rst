@@ -1,6 +1,6 @@
 
 **********************
-The Marketplace Client
+The MarketPlace Client
 **********************
 
 Prerequisites
@@ -8,27 +8,36 @@ Prerequisites
 
 To use the marketplace, you need the following:
 
-* The sawtooth distribution installed on one or more machines, and know the url and port the validators are running on. 
+    * The sawtooth distribution installed on one or more machines
+    * You must know the url and port a validator is listening on
 
 The mktclient
-=========================
+=============
 
-The mktclient application provides an interactive shell interface that can be used to interact with a Sawtooth validator network. 
+The mktclient application provides an interactive shell interface that can
+be used to interact with a Sawtooth validator network.
 
 
 Configuring the mktclient
 =========================
-The market client needs 2 pieces of configuration to connect to a validator network,
-#. A valid key - these can be generated with txnkeygen
-#. The url of a Sawtooth validator on the network. 
+
+The market client needs 2 pieces of configuration to connect to a validator
+network:
+    #. A valid key - these can be generated with txnkeygen.
+    #. The url of a Sawtooth validator on the network.
 
 An example command line would be:
-./mktclient --keyfile <path to key>/key.wif --url http://localhost:8800
+
+    .. code-block:: console
+
+       % ./mktclient --keyfile <path to key>/key.wif --url http://localhost:8800
+
 
 Using the mktclient
-=========================
+===================
 
-The following steps can be used to start the mktclient, create assets, and exchange them. Details on each of these commands are in the "Sawtooth Lake Distributed Marketplace" document. 
+The following steps can be used to start the mktclient, create assets,
+and exchange them.
 
 #. Register as a participant on the network
 
@@ -54,7 +63,7 @@ The following steps can be used to start the mktclient, create assets, and excha
 
       asset reg --name /theasset --type /kellysassets
 
-#. Create holdings of an asset 
+#. Create holdings of an asset
 
    .. code-block:: none
 
@@ -74,5 +83,6 @@ The following steps can be used to start the mktclient, create assets, and excha
       dump --name /kellysholdingoftheasset
       dump --name /kellysholdingoftheasset2
 
-This will show "/kellysholdingoftheasset" with 2 and "/kellysholdingoftheasset2" with 3.
+This will show "/kellysholdingoftheasset" with 2 and
+"/kellysholdingoftheasset2" with 3.
 
