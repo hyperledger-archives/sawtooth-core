@@ -16,3 +16,9 @@ Documentation
 =============
 
 Documentation is available at: http://intelledger.github.io/.
+
+Contents
+========
+
+This repository contains the implementation of the validator process
+which runs on each node.
