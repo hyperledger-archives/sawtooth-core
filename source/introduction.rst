@@ -4,15 +4,14 @@ Introduction
 
 .. caution::
 
-    This project includes a consensus algorithm, PoET (Proof
-    of Elapsed Time), designed to run in a secure enclave like
+    This project includes a consensus algorithm, PoET (Proof of Elapsed Time),
+    which is intended to run in a Trusted Execution Environment (TEE), such as
     `Intel® Software Guard Extensions (SGX)
     <https://software.intel.com/en-us/isa-extensions/intel-sgx>`_.
-    The version included in this project is intended to provide
-    the same functional characteristics, but runs **unprotected**.
-    It does **not** provide security in this mode.  This project
-    is intended for experimental usage. Do not use this project
-    for security sensitive applications.
+    This release includes software which runs outside of SGX and simulates the
+    behavior of the PoET algorithm. It does **not** provide security in this
+    mode. This project is intended for experimental usage and we recommend
+    against using it for security sensitive applications.
 
 This project, called "Sawtooth Lake" is a highly modular platform for
 building, deploying and running distributed ledgers. Distributed ledgers
@@ -144,9 +143,17 @@ the robustness of the consensus algorithm.
 
 Our “proof of processor” algorithm scales to thousands of participants
 and will run efficiently on any Intel processor that supports SGX.
+
 **As noted in the caution above, the current implementation simulates
 the behavior of the PoET algorithm running in a trusted execution environment
-and is not secure.**
+and is not secure.** There are some benefits to using a simulator:
+
+    * It does not require you to have a processor which supports SGX
+      in order to experiment with Sawtooth Lake.
+
+    * It allows running many validators (nodes) on a single system. An SGX
+      implementation of PoET will allow only a single node per CPU socket.
+
 
 Getting Sawtooth Lake
 =====================
