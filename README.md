@@ -16,3 +16,7 @@ Documentation
 =============
 
 Documentation is available at: http://intelledger.github.io/.
+
+Contents
+========
+This repository contains many fundamental classes used in the distributed ledger system.
