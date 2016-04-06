@@ -16,3 +16,10 @@ Documentation
 =============
 
 Documentation is available at: http://intelledger.github.io/.
+
+Content
+=======
+
+This repository contains the documentation source files. The documentation
+generated from these source files can be found at
+[Distributed Ledger Documentation](http://intelledger.github.io/index.html).
