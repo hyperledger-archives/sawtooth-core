@@ -91,7 +91,7 @@ class LiabilityObject(market_place_object_update.MarketPlaceObject):
 
 
 class Register(market_place_object_update.Register):
-    UpdateType = '/' + __name__ + '/Register'
+    UpdateType = '/mktplace.transactions.LiabilityUpdate/Register'
     ObjectType = LiabilityObject
     CreatorType = participant_update.ParticipantObject
 
@@ -158,7 +158,7 @@ class Register(market_place_object_update.Register):
 
 
 class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/' + __name__ + '/Unregister'
+    UpdateType = '/mktplace.transactions.LiabilityUpdate/Unregister'
     ObjectType = LiabilityObject
     CreatorType = participant_update.ParticipantObject
 

@@ -270,7 +270,7 @@ class _Adjustment(object):
 
 
 class Exchange(object):
-    UpdateType = '/' + __name__ + '/Exchange'
+    UpdateType = '/mktplace.transactions.ExchangeUpdate/Exchange'
     CreatorType = participant_update.ParticipantObject
 
     def __init__(self, transaction=None, minfo={}):

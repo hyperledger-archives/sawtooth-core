@@ -354,7 +354,7 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
 
 
 class MarketPlaceTransactionMessage(transaction_message.TransactionMessage):
-    MessageType = "/" + __name__ + "/Transaction"
+    MessageType = "/mktplace.transactions.MarketPlace/Transaction"
 
     def __init__(self, minfo={}):
         super(MarketPlaceTransactionMessage, self).__init__(minfo)

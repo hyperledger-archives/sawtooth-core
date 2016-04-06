@@ -64,7 +64,7 @@ class MarketPlaceObject(object):
 
 
 class Register(object):
-    UpdateType = '/' + __name__ + '/Register'
+    UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/Register'
 
     def __init__(self, transaction=None, minfo={}):
         self.Transaction = transaction
@@ -129,7 +129,7 @@ class Register(object):
 
 
 class Unregister(object):
-    UpdateType = '/' + __name__ + '/Unregister'
+    UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/Unregister'
 
     def __init__(self, transaction=None, minfo={}):
         self.Transaction = transaction

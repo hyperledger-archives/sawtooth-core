@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class IncentiveUpdate(object):
-    UpdateType = '/' + __name__ + '/IncentiveUpdate'
+    UpdateType = '/mktplace.transactions.IncentiveUpdate/IncentiveUpdate'
     CreatorType = participant_update.ParticipantObject
     ValidationTokenAssetID = None
 
