@@ -13,7 +13,7 @@ Introduction
     mode. This project is intended for experimental usage and we recommend
     against using it for security sensitive applications.
 
-Distributed Ledger is a highly modular platform for
+This project, called "Sawtooth Lake" is a highly modular platform for
 building, deploying and running distributed ledgers. Distributed ledgers
 provide a digital record (such as asset ownership) that is maintained
 without a central authority or implementation. Instead of a single,
@@ -33,7 +33,7 @@ Distributed ledgers generally consist of three basic components:
     * A protocol used to build consensus among participants around
       which transactions will be accepted by the ledger.
 
-In Distributed Ledger the data model and transaction language are implemented
+In Sawtooth Lake the data model and transaction language are implemented
 in a “transaction family”. While we expect users to build custom transaction
 families that reflect the unique requirements of their ledgers, we provide
 three transaction families that are sufficient for building, testing and
@@ -85,7 +85,7 @@ algorithms and uses multiple rounds of explicit votes to achieve consensus.
 developed consensus protocols that extend traditional BFT for open
 participation.
 
-Distributed Ledger abstracts the core concepts of consensus, isolates consensus
+Sawtooth Lake abstracts the core concepts of consensus, isolates consensus
 from transaction semantics, and provides two consensus protocols with
 different performance trade-offs.  The first, called PoET for “Proof
 of Elapsed Time”, is a lottery protocol that builds on trusted execution
@@ -111,7 +111,7 @@ a good lottery function has several characteristics:
     * Verification: It should be relatively simple for all participants
       to verify that the leader was legitimately selected.
 
-Distributed Ledger provides a Nakamoto consensus algorithm called PoET
+Sawtooth Lake provides a Nakamoto consensus algorithm called PoET
 that uses a trusted execution environment (TEE) such as
 `Intel® Software Guard Extensions (SGX)
 <https://software.intel.com/en-us/isa-extensions/intel-sgx>`_
@@ -149,16 +149,16 @@ the behavior of the PoET algorithm running in a trusted execution environment
 and is not secure.** There are some benefits to using a simulator:
 
     * It does not require you to have a processor which supports SGX
-      in order to experiment with Distributed Ledger.
+      in order to experiment with Sawtooth Lake.
 
     * It allows running many validators (nodes) on a single system. An SGX
       implementation of PoET will allow only a single node per CPU socket.
 
 
-Getting Distributed Ledger
-==========================
+Getting Sawtooth Lake
+=====================
 
-The Distributed Ledger platform is distributed in source code form with
+The Sawtooth Lake platform is distributed in source code form with
 an Apache license. You can get the code `here
 <https://github.com/intelledger>`_ and start building your own
 distributed ledger.
@@ -169,10 +169,11 @@ Repositories
 Here are the repositories:
 
 sawtooth-core
-    Contains fundamental classes used throughout the Distributed Ledger project
+    Contains fundamental classes used throughout the Sawtooth Lake project
 
 sawtooth-validator
-    Contains the implementation of the validator process which runs on each node
+    Contains the implementation of the validator process which runs on each
+    node
 
 sawtooth-mktplace
     Contains the implementation of a transaction family for buying, selling and
