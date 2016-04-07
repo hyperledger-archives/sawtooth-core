@@ -11,7 +11,7 @@ to the oldest.
    Returns a list of the committed transaction IDs.
 
    :query blockcount: Returns the transaction IDs from up to
-   `blockcount` blocks.
+       `blockcount` blocks.
 
 .. http:get:: /transaction/{transaction_id}
 
@@ -70,7 +70,7 @@ to the oldest.
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /transaction?blockcount=1
 
@@ -100,7 +100,7 @@ to the oldest.
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /transaction/1e79d167c62bbc44
 
@@ -126,7 +126,7 @@ to the oldest.
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /transaction/1e79d167c62bbc44/InBlock
 

@@ -1,3 +1,5 @@
+.. _web-api-index-label:
+
 **************************
 Distributed Ledger Web API
 **************************

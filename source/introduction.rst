@@ -172,7 +172,8 @@ sawtooth-core
     Contains fundamental classes used throughout the Sawtooth Lake project
 
 sawtooth-validator
-    Contains the implementation of the validator process which runs on each node
+    Contains the implementation of the validator process which runs on each
+    node
 
 sawtooth-mktplace
     Contains the implementation of a transaction family for buying, selling and

@@ -1,3 +1,5 @@
+.. _mktplace-transactions-label:
+
 -----------------------------------------------------------------
 MarketPlace Transactions
 -----------------------------------------------------------------
@@ -7,7 +9,7 @@ All MarketPlace transactions have the following fields:
 :Dependencies:
    a list of transaction identifiers that must be
    committed to the log before this transaction is committed
-      
+
 :Nonce:
    a uniquifier for the transaction, we use a wallclock time
    stamp though any float value will suffice; it is the creator of the
@@ -31,7 +33,7 @@ All MarketPlace transactions have the following fields:
 There are no optional fields in MarketPlace transactions. A value must
 be specified for every field for the purposes of consistency in
 signing. The MarketPlace Client API provides a simple means for filling
-in reasonable default values, but other clients must ensure that the 
+in reasonable default values, but other clients must ensure that the
 serialized object contains values for all specified fields.
 
 -----------------------------------------------------------------
@@ -65,8 +67,8 @@ Register Participant
         "Update" :
         {
           "UpdateType": "/mktplace.transactions.ParticipantUpdate/Register"
-          "Description": "MarketPlace Participant", 
-          "Name": "market", 
+          "Description": "MarketPlace Participant",
+          "Name": "market",
         }
 
 
@@ -85,9 +87,9 @@ The fields for account registration include:
 
         "Update" :
         {
-          "CreatorID": "1b452fc363a3e024", 
-          "Description": "", 
-          "Name": "/private/account", 
+          "CreatorID": "1b452fc363a3e024",
+          "Description": "",
+          "Name": "/private/account",
           "UpdateType": "/mktplace.transactions.AccountUpdate/Register"
         }
 
@@ -97,7 +99,7 @@ Register Asset Type
 
 The fields for asset type registration include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
@@ -105,9 +107,9 @@ The fields for asset type registration include:
 
         "Update":
         {
-          "CreatorID": "1b452fc363a3e024", 
-          "Description": "Currency asset type", 
-          "Name": "/asset-type/currency", 
+          "CreatorID": "1b452fc363a3e024",
+          "Description": "Currency asset type",
+          "Name": "/asset-type/currency",
           "UpdateType": "/mktplace.transactions.AssetTypeUpdate/Register"
         }
 
@@ -117,24 +119,24 @@ Register Asset
 
 The fields for asset registration include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
-:AssetTypeID: 
+:AssetTypeID:
    The identifier for the asset type, the only participant
    allowed to create an asset with the type is the participant who
    created the type
-      
+
 
 .. code-block:: javascript
 
         "Update":
         {
-          "AssetTypeID": "77dfddc9936745fc", 
-          "CreatorID": "1b452fc363a3e024", 
-          "Description": "", 
-          "Name": "/asset/currency/mikel", 
+          "AssetTypeID": "77dfddc9936745fc",
+          "CreatorID": "1b452fc363a3e024",
+          "Description": "",
+          "Name": "/asset/currency/mikel",
           "UpdateType": "/mktplace.transactions.AssetUpdate/Register"
         }
 
@@ -144,29 +146,29 @@ Register Holding
 
 The fields for holding registration include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
-:AssetID: 
+:AssetID:
    The identifier for the asset stored in the holding
 
-:Count: 
+:Count:
    The number of assets stored in the holding
 
-:AccountID: 
+:AccountID:
    The identifier for the account used to manage the holding
 
 .. code-block:: javascript
 
         "Update":
         {
-          "AssetID": "b6bdf0368de9855a", 
-          "Count": 1000000, 
-          "CreatorID": "1b452fc363a3e024", 
-          "Description": "", 
-          "Name": "/private/holding/currency/mikel", 
-          "UpdateType": "/mktplace.transactions.HoldingUpdate/Register", 
+          "AssetID": "b6bdf0368de9855a",
+          "Count": 1000000,
+          "CreatorID": "1b452fc363a3e024",
+          "Description": "",
+          "Name": "/private/holding/currency/mikel",
+          "UpdateType": "/mktplace.transactions.HoldingUpdate/Register",
           "AccountID": "bb3613256325c35a"
         }
 
@@ -176,20 +178,20 @@ Register Liability
 
 The fields for liability registration include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
-:AssetTypeID: 
+:AssetTypeID:
    The identifier for the asset stored in the holding
 
-:Count: 
+:Count:
    The number of assets stored in the holding
 
-:AccountID: 
+:AccountID:
    The identifier for the account used to manage the holding
 
-:GuarantorID: 
+:GuarantorID:
    The identifier for the participant who guarantees the
    liability
 
@@ -197,13 +199,13 @@ The fields for liability registration include:
 
         "Update":
         {
-          "AssetTypeID": "b6bdf0368de9855a", 
-          "Count": 1000000, 
-          "GuarantorID": "1b452fc363a3e024", 
-          "CreatorID": "1b452fc363a3e024", 
-          "Description": "", 
-          "Name": "/private/holding/currency/mikel", 
-          "UpdateType": "/mktplace.transactions.LiabilityUpdate/Register", 
+          "AssetTypeID": "b6bdf0368de9855a",
+          "Count": 1000000,
+          "GuarantorID": "1b452fc363a3e024",
+          "CreatorID": "1b452fc363a3e024",
+          "Description": "",
+          "Name": "/private/holding/currency/mikel",
+          "UpdateType": "/mktplace.transactions.LiabilityUpdate/Register",
           "AccountID": "bb3613256325c35a"
         }
 
@@ -213,21 +215,21 @@ Register ExchangeOffer
 
 The fields for registration of a SellOffer include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
-:InputID: 
+:InputID:
    The identifier for the holding (or liability) into which
    assets will be transferred (e.g. the holding where payment is
    received)
 
-:OutputID: 
+:OutputID:
    The identifier for the holding (or liability) from which
    assets will be tranferred (e.g. the holding for assets being
    purchased)
 
-:Ratio: 
+:Ratio:
    The number of output assets transferred per input asset
 
 :Minimum:
@@ -257,15 +259,15 @@ The fields for registration of a SellOffer include:
 
         "Update":
         {
-          "CreatorID": "5863bd0527ca2143", 
-          "Description": "", 
-          "InputID": "53434b20963cb525", 
-          "Name": "/offer/buyback/bills", 
-          "OutputID": "cc007e32955254a7", 
-          "Ratio": 93, 
-          "Execution": "Any", 
-          "Maximum": 1000000000, 
-          "Minimum": 1, 
+          "CreatorID": "5863bd0527ca2143",
+          "Description": "",
+          "InputID": "53434b20963cb525",
+          "Name": "/offer/buyback/bills",
+          "OutputID": "cc007e32955254a7",
+          "Ratio": 93,
+          "Execution": "Any",
+          "Maximum": 1000000000,
+          "Minimum": 1,
           "UpdateType": "/mktplace.transactions.ExchangeOfferUpdate/Register"
         }
 
@@ -275,20 +277,20 @@ Register SellOffer
 
 The fields for registration of a SellOffer include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
-:InputID: 
+:InputID:
    The identifier for the holding (or liability) into which
    assets will be transferred (e.g. the holding where payment is
    received)
 
-:OutputID: 
+:OutputID:
    The identifier for the holding from which assets will be
    tranferred (e.g. the holding for assets being purchased)
 
-:Ratio: 
+:Ratio:
    The number of output assets transferred per input asset
 
 :Minimum:
@@ -318,15 +320,15 @@ The fields for registration of a SellOffer include:
 
         "Update":
         {
-          "CreatorID": "5863bd0527ca2143", 
-          "Description": "", 
-          "InputID": "53434b20963cb525", 
-          "Name": "/offer/buyback/bills", 
-          "OutputID": "cc007e32955254a7", 
-          "Ratio": 93, 
-          "Execution": "Any", 
-          "Maximum": 1000000000, 
-          "Minimum": 1, 
+          "CreatorID": "5863bd0527ca2143",
+          "Description": "",
+          "InputID": "53434b20963cb525",
+          "Name": "/offer/buyback/bills",
+          "OutputID": "cc007e32955254a7",
+          "Ratio": 93,
+          "Execution": "Any",
+          "Maximum": 1000000000,
+          "Minimum": 1,
           "UpdateType": "/mktplace.transactions.SellOfferUpdate/Register"
         }
 
@@ -337,19 +339,19 @@ Unregister All Objects
 The fields used to unregister an object are consistent across all object
 types and include:
 
-:CreatorID: 
+:CreatorID:
    The identifier for the participant requesting creation of
    the new object
 
-:ObjectID: 
+:ObjectID:
    The identifier for the object to unregister
 
 .. code-block:: javascript
 
         "Update":
         {
-          "CreatorID": "5863bd0527ca2143", 
-          "ObjectID": "ad8d6a71827e9be0", 
+          "CreatorID": "5863bd0527ca2143",
+          "ObjectID": "ad8d6a71827e9be0",
           "UpdateType": "/mktplace.transactions.SellOfferUpdate/Unregister"
         }
 
@@ -363,20 +365,20 @@ starts from an initial holding/liability and passes through a specified
 series of sell offers until the final transfer is made. Asset types must
 be consistent across each transfer.
 
-:InitialLiabilityID: 
+:InitialLiabilityID:
    the identifier for the initial holding/liability
    from which assets are transferred (e.g. from which payment is made)
 
-:FinalLiabilityID: 
+:FinalLiabilityID:
    the identifier for the holding/liability into which
    assets are ultimately transferred (e.g. the holding where goods
    purchased are placed)
 
-:InitialCount: 
+:InitialCount:
    the number of assets to transfer out of the initial
    liability (e.g. the amount paid)
 
-:OfferIDList: 
+:OfferIDList:
    a list of identifiers for sell offers that will be
    applied in order to tranfer assets.
 
@@ -384,10 +386,10 @@ be consistent across each transfer.
 
         "Update":
         {
-          "FinalLiabilityID": "8a67d29135306115", 
-          "InitialCount": 10, 
-          "InitialLiabilityID": "84272ffad75a8043", 
-          "OfferIDList": [], 
+          "FinalLiabilityID": "8a67d29135306115",
+          "InitialCount": 10,
+          "InitialLiabilityID": "84272ffad75a8043",
+          "OfferIDList": [],
           "UpdateType": "/mktplace.transactions.ExchangeUpdate/Exchange"
         }
 

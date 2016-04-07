@@ -51,11 +51,11 @@
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /store/IntegerKeyTransaction
 
-.. sourcecode:: http
+.. sourcecode:: javascript
 
     [
         "SYM3",
@@ -66,7 +66,7 @@
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /store/IntegerKeyTransaction/*
 
@@ -82,7 +82,7 @@
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /store/IntegerKeyTransaction/SYM1
 
@@ -92,7 +92,7 @@
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /store/IntegerKeyTransaction/*?blockid=1f8fc8250cd26fb3
 
@@ -106,7 +106,7 @@ Note that after block `1f8fc8250cd26fb3` was committed, the
 
 .. note::
 
-   The block id was obtained by using the block API (see :any:`/block`).
+   The block id was obtained by using the block API (see :ref:`block-label`).
 
 
 
