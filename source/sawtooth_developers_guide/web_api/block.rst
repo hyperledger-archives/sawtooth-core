@@ -1,3 +1,5 @@
+.. _block-label:
+
 =================================================================
 /block
 =================================================================
@@ -51,7 +53,7 @@ Block IDs are always ordered from the newest committed block ID to the oldest.
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /block?blockcount=2
 
@@ -64,7 +66,7 @@ Block IDs are always ordered from the newest committed block ID to the oldest.
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /block/85ec88be3fdd404b
 
@@ -89,7 +91,7 @@ Block IDs are always ordered from the newest committed block ID to the oldest.
 
 **Example**:
 
-.. sourcecode:: http
+.. sourcecode:: console
 
     GET /block/b33ce9f5d203bfc0/Signature
 

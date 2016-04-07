@@ -15,7 +15,7 @@ signature.
 
 Note that the authoritative log of transactions and the cached state of
 objects associated with the log can be retrieved through the
-:any:`../sawtooth_developers_guide/web_api/index`.
+:ref:`web-api-index-label`.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Participant

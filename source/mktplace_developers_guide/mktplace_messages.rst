@@ -24,7 +24,7 @@ HTTP/POST interface. Messages are JSON-encoded for example:
       "__TYPE__": "/mktplace.transactions.MarketPlace/Transaction"
     }
 
-Messages contain one of the :any:`mktplace_transactions` and three
+Messages contain one of the :ref:`mktplace-transactions-label` and three
 additional fields:
 
 :__NONCE__:
