@@ -15,4 +15,4 @@ by Distributed Ledger developers. It is the place to go for quick help,
 bouncing off ideas and good discussion about the project.
 
 An invite to the Slack team can be requested by sending an email to
-markx.ford@intel.com so you can get up and going quickly.
+intel-ledger-request@intel.com so you can get up and going quickly.
