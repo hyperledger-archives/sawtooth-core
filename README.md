@@ -9,7 +9,7 @@ Security Notice
 This project is intended for experimental usage and is not secure.
 Do not use this project for security sensitive applications.
 Please see the
-[Introduction](http://intelledger.github.io/introduction.rst)
+[Introduction](http://intelledger.github.io/introduction.html)
 for more details.
 
 Documentation
