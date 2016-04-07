@@ -11,9 +11,9 @@ To create packages for Ubuntu, you need the following:
 * Ubuntu 14.04 LTS with Internet access
 * git Repositories
 
-  * sawtooth
+  * sawtooth-core
   * sawtooth-validator
-  * mktplace
+  * sawtooth-mktplace
 
 The remainder of these instructions assume a vanilla Ubuntu 14.04 installation
 as a starting point.  An easy method to obtain such a machine is by creating
@@ -119,9 +119,9 @@ Clone or copy the repositories into the VM environment:
 
    vagrant@ubuntu $ mkdir -p $HOME/projects
    vagrant@ubuntu $ cd $HOME/projects
-   vagrant@ubuntu $ git clone ssh://url_to_git_server/intel/sawtooth-validator.git
-   vagrant@ubuntu $ git clone ssh://url_to_git_server/intel/sawtooth.git
-   vagrant@ubuntu $ git clone ssh://url_to_git_server/intel/mktplace.git
+   vagrant@ubuntu $ git clone git@github.com:IntelLedger/sawtooth-validator.git
+   vagrant@ubuntu $ git clone git@github.com:IntelLedger/sawtooth-core.git
+   vagrant@ubuntu $ git clone git@github.com:IntelLedger/sawtooth-mktplace.git
 
 .. note::
 
@@ -138,17 +138,17 @@ Create package from sawtooth repository:
 
 .. code-block:: console
 
-  vagrant@ubuntu $ cd $HOME/projects/sawtooth
+  vagrant@ubuntu $ cd $HOME/projects/sawtooth-core
   vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
-  vagrant@ubuntu $ cp deb_dist/python-sawtoothlakeledger*.deb $HOME/packages/
+  vagrant@ubuntu $ cp deb_dist/python-sawtooth-core*.deb $HOME/packages/
 
 Create package from mktplace repository:
 
 .. code-block:: console
 
-  vagrant@ubuntu $ cd $HOME/projects/mktplace
+  vagrant@ubuntu $ cd $HOME/projects/sawtooth-mktplace
   vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
-  vagrant@ubuntu $ cp deb_dist/python-sawtoothlakemarket*.deb $HOME/packages/
+  vagrant@ubuntu $ cp deb_dist/python-sawtooth-mktplace*.deb $HOME/packages/
 
 Create package from sawtooth-validator repository:
 
@@ -156,7 +156,7 @@ Create package from sawtooth-validator repository:
 
   vagrant@ubuntu $ cd $HOME/projects/sawtooth-validator
   vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
-  vagrant@ubuntu $ cp deb_dist/python-sawtoothlakevalidator*.deb $HOME/packages/
+  vagrant@ubuntu $ cp deb_dist/python-sawtooth-validator*.deb $HOME/packages/
 
 Create tar File of Packages
 ===========================

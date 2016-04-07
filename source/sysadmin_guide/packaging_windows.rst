@@ -338,18 +338,18 @@ Build Sawtooth Lake Package
 
 .. code:: console
 
-  PS C:\build> cd sawtooth
-  PS C:\build\sawtooth> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
-  PS C:\build\sawtooth> cd ..\mktplace
-  PS C:\build\mktplace> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
-  PS C:\build\mktplace> cd ..\sawtooth-validator
+  PS C:\build> cd sawtooth-core
+  PS C:\build\sawtooth-core> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
+  PS C:\build\sawtooth-core> cd ..\sawtooth-mktplace
+  PS C:\build\sawtooth-mktplace> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
+  PS C:\build\sawtooth-mktplace> cd ..\sawtooth-validator
   PS C:\build\sawtooth-validator> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
 
 * Copy cryptopp.dll into the Ledger libs directory
 
 .. code:: console
 
-  PS C:\build> cp C:\build\cryptopp561\x64\DLL_Output\Release\cryptopp.dll "C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\SawtoothLakeLedger-<version>-py2.7.egg\"
+  PS C:\build> cp C:\build\cryptopp561\x64\DLL_Output\Release\cryptopp.dll "C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\sawtooth-core-<version>-py2.7.egg\"
 
 * Copy the packaging script from the sawtooth-validator repository to ``C:\Program Files (x86)\Intel\``
 
