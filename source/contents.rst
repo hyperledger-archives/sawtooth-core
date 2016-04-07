@@ -11,5 +11,7 @@ Table of Contents
    sysadmin_guide.rst
    community.rst
    packaging.rst
+   faq.rst
+
 
 
