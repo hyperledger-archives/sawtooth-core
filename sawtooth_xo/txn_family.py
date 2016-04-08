@@ -58,9 +58,6 @@ class XoUpdate(object):
 
     Attributes:
         KnownVerbs (list): A list of possible update actions.
-        Verb (str): The action of this update, defaults to 'set'.
-        Name (str): The name of the Xo.
-        Value (int): The value of the Xo.
     """
     KnownVerbs = ['set', 'inc', 'dec']
 
@@ -70,12 +67,12 @@ class XoUpdate(object):
         Args:
             minfo (dict): Dictionary of values for update fields.
         """
-        self.Verb = minfo['Verb'] if 'Verb' in minfo else 'set'
-        self.Name = minfo['Name'] if 'Name' in minfo else None
-        self.Value = long(minfo['Value']) if 'Value' in minfo else 0
+        self._verb = minfo['Verb'] if 'Verb' in minfo else 'set'
+        self._name = minfo['Name'] if 'Name' in minfo else None
+        self._value = long(minfo['Value']) if 'Value' in minfo else 0
 
     def __str__(self):
-        return "({0} {1} {2})".format(self.Verb, self.Name, self.Value)
+        return "({0} {1} {2})".format(self._verb, self._name, self._value)
 
     def is_valid(self, store):
         """Determines if the update is valid.
@@ -90,25 +87,27 @@ class XoUpdate(object):
 
         # in theory, the name should have been checked before the transaction
         # was submitted... not being too careful about this
-        if not self.Name or self.Name == '':
+        if not self._name or self._name == '':
             return False
 
         # in theory, the value should have been checked before the transaction
         # was submitted... not being too careful about this
-        if not isinstance(self.Value, (int, long)):
+        if not isinstance(self._value, (int, long)):
             return False
 
         # in theory, the value should have been checked before the transaction
         # was submitted... not being too careful about this
-        if self.Verb == 'set' and self.Name not in store and self.Value >= 0:
+        if (self._verb == 'set'
+                and self._name not in store
+                and self._value >= 0):
             return True
 
-        if self.Verb == 'inc' and self.Name in store:
+        if self._verb == 'inc' and self._name in store:
             return True
 
         # value after a decrement operation must remain above zero
-        if (self.Verb == 'dec' and self.Name in store
-                and store[self.Name] > self.Value):
+        if (self._verb == 'dec' and self._name in store
+                and store[self._name] > self._value):
             return True
 
         return False
@@ -121,14 +120,14 @@ class XoUpdate(object):
         """
         logger.debug('apply %s', str(self))
 
-        if self.Verb == 'set':
-            store[self.Name] = self.Value
-        elif self.Verb == 'inc':
-            store[self.Name] += self.Value
-        elif self.Verb == 'dec':
-            store[self.Name] -= self.Value
+        if self._verb == 'set':
+            store[self._name] = self._value
+        elif self._verb == 'inc':
+            store[self._name] += self._value
+        elif self._verb == 'dec':
+            store[self._name] -= self._value
         else:
-            logger.info('unknown verb %s', self.Verb)
+            logger.info('unknown verb %s', self._verb)
 
     def dump(self):
         """Returns a dict with attributes from the update object.
@@ -136,7 +135,7 @@ class XoUpdate(object):
         Returns:
             dict: The name, value, and verb from the update object.
         """
-        result = {'Name': self.Name, 'Value': self.Value, 'Verb': self.Verb}
+        result = {'Name': self._name, 'Value': self._value, 'Verb': self._verb}
         return result
 
 
