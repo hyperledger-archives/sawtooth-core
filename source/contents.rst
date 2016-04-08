@@ -10,7 +10,6 @@ Table of Contents
    mktplace_developers_guide.rst
    sysadmin_guide.rst
    community.rst
-   packaging.rst
    faq.rst
 
 
