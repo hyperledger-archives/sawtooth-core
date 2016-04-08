@@ -52,7 +52,7 @@ class PoetJournal(journal_core.Journal):
 
         # propagate the maximum blocks to keep
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
-                                       WaitTimer.CertificateSampleLength)
+                                       WaitTimer.certificate_sample_length)
 
     def build_transaction_block(self, force=False):
         """Builds a transaction block that is specific to this particular
@@ -135,7 +135,7 @@ class PoetJournal(journal_core.Journal):
         # for the moment we just dump all of these into one list,
         # not very efficient but it makes things a lot easier to maintain
         certs = collections.deque()
-        count = WaitTimer.CertificateSampleLength
+        count = WaitTimer.certificate_sample_length
 
         while block.PreviousBlockID != common.NullIdentifier \
                 and len(certs) < count:

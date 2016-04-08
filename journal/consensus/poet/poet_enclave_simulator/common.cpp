@@ -223,12 +223,12 @@ string B32Decode(string encoded)
     return decoded;
 }
 
-string TestSignMessage(string message)
+string test_sign_message(string message)
 {
     return SignMessage(GlobalPrivateKey, message);
 }
 
-bool TestVerifySignature(string message, string signature)
+bool test_verify_message(string message, string signature)
 {
     return verify_signature(GlobalPublicKey, message, signature);
 }

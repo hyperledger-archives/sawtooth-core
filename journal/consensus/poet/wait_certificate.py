@@ -17,7 +17,7 @@ import importlib
 from journal.consensus.poet.wait_timer import WaitTimer
 
 import journal.consensus.poet.poet_enclave_simulator.poet_enclave_simulator \
-    as PoetEnclaveSimulator
+    as poet_enclave_simulator
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class WaitCertificate(object):
     Attributes:
         PoetEnclave (module): The PoetEnclave module to use for executing
             enclave functions.
-        PreviousCertID (str): The id of the previous certificate.
+        previous_certificate_id (str): The id of the previous certificate.
         LocalMean (float): The local mean wait time based on the history
             of certs.
         RequestTime (float): The request time of the certificate.
@@ -48,9 +48,9 @@ class WaitCertificate(object):
         Identifier (str): The identifier of this certificate.
         SerializedCert (str): A serialized version of the certificate.
     """
-    PoetEnclave = PoetEnclaveSimulator
+    _poet_enclave = poet_enclave_simulator
     try:
-        PoetEnclave = importlib.import_module("poet_enclave.poet_enclave")
+        _poet_enclave = importlib.import_module("poet_enclave.poet_enclave")
     except ImportError, e:
         pass
 
@@ -66,7 +66,8 @@ class WaitCertificate(object):
         Returns:
             WaitCertificate: A new wait certificate.
         """
-        cert = cls.PoetEnclave.create_wait_certificate(timer.EnclaveWaitTimer)
+        cert = cls._poet_enclave.create_wait_certificate(
+            timer.enclave_wait_timer)
         if not cert:
             logger.warn('invalid timer: %s', timer)
             raise Exception(
@@ -90,10 +91,10 @@ class WaitCertificate(object):
             WaitCertificate: A wait certificate representing the
                 contents of the serialized wait certificate.
         """
-        cert = cls.PoetEnclave.deserialize_wait_certificate(
+        cert = cls._poet_enclave.deserialize_wait_certificate(
             serialized, signature)
-        if cert.PreviousCertID != cls.PoetEnclave.NullIdentifier:
-            if not cls.PoetEnclave.VerifyWaitCertificate(cert):
+        if cert.previous_certificate_id != cls._poet_enclave.NULL_IDENTIFIER:
+            if not cls._poet_enclave.verify_wait_certificate(cert):
                 raise Exception(
                     'WaitCertificateVerify',
                     'Attempt to deserialize an invalid wait certificate')
@@ -107,28 +108,28 @@ class WaitCertificate(object):
             cert (poet_enclave.WaitCertificate): The poet enclave
                 generated wait certificate.
         """
-        self.PreviousCertID = cert.PreviousCertID
-        self.LocalMean = cert.LocalMean
-        self.RequestTime = cert.RequestTime
-        self.Duration = cert.Duration
-        self.Signature = cert.Signature
-        self.Identifier = cert.Identifier()
+        self.previous_certificate_id = cert.previous_certificate_id
+        self.local_mean = cert.local_mean
+        self.request_time = cert.request_time
+        self.duration = cert.duration
+        self.signature = cert.signature
+        self.identifier = cert.identifier()
 
         # we cannot hold the certificate because it cannot be pickled for
         # storage in the transaction block array
-        self.SerializedCert = cert.serialize()
+        self.serialized_cert = cert.serialize()
 
     @property
-    def EnclaveWaitCertificate(self):
+    def enclave_wait_certificate(self):
         """Returns the enclave version of the wait certificate.
 
         Returns:
             poet_enclave.WaitCertificate: Enclave deserialized version
                 of the certificate.
         """
-        return self.PoetEnclave.deserialize_wait_certificate(
-            self.SerializedCert,
-            self.Signature)
+        return self._poet_enclave.deserialize_wait_certificate(
+            self.serialized_cert,
+            self.signature)
 
     def is_valid_wait_certificate(self, certs):
         """Determines whether the wait certificate is valid.
@@ -139,27 +140,27 @@ class WaitCertificate(object):
         Returns:
             bool: Whether or not the wait certificate is valid.
         """
-        cert = self.EnclaveWaitCertificate
-        expectedmean = WaitTimer.compute_local_mean(certs)
-        if not is_close(cert.LocalMean, expectedmean, abs_tol=0.001):
-            logger.warn('mismatch local mean: %s != %s', cert.LocalMean,
-                        expectedmean)
+        cert = self.enclave_wait_certificate
+        expected_mean = WaitTimer.compute_local_mean(certs)
+        if not is_close(cert.local_mean, expected_mean, abs_tol=0.001):
+            logger.warn('mismatch local mean: %s != %s', cert.local_mean,
+                        expected_mean)
             # return False
 
-        if cert.PreviousCertID == self.PoetEnclave.NullIdentifier:
+        if cert.previous_certificate_id == self._poet_enclave.NULL_IDENTIFIER:
             return True
 
-        if cert.PreviousCertID != certs[-1].Identifier:
+        if cert.previous_certificate_id != certs[-1].identifier:
             logger.warn('mismatch previous identifier: %s != %s',
-                        cert.PreviousCertID, certs[-1].Identifier)
+                        cert.previous_certificate_id, certs[-1].identifier)
             # return False
 
-        return self.PoetEnclave.VerifyWaitCertificate(cert)
+        return self._poet_enclave.verify_wait_certificate(cert)
 
     def __str__(self):
         return "CERT, {0:0.2f}, {1:0.2f}, {2}, {3}".format(
-            self.LocalMean, self.Duration, self.Identifier,
-            self.PreviousCertID)
+            self.local_mean, self.duration, self.identifier,
+            self.previous_certificate_id)
 
     def dump(self):
         """Returns a dict containing information about the wait
@@ -169,7 +170,7 @@ class WaitCertificate(object):
             dict: A dict containing info about the wait certificate.
         """
         result = {
-            'SerializedCert': self.SerializedCert,
-            'Signature': self.Signature
+            'SerializedCert': self.serialized_cert,
+            'Signature': self.signature
         }
         return result
