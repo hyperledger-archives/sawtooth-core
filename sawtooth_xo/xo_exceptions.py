@@ -11,18 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# -----------------------------------------------------------------------------
-
-from sawtooth_xo.txn_family import _register_transaction_types
-
-__all__ = [
-    'txn_family',
-    'xo_client',
-    'xo_communication',
-    'xo_exceptions',
-    'xo_state'
-]
+# ------------------------------------------------------------------------------
 
 
-def register_transaction_types(ledger):
-    _register_transaction_types(ledger)
+class XoException(Exception):
+    def __init__(self, msg):
+        super(XoException, self).__init__(msg)
