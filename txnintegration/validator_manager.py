@@ -178,7 +178,7 @@ class ValidatorManager:
         return False
 
     def status(self):
-        st = "UNK  "
+        st = "unk  "
         if self.handle:
             rc = self.handle.returncode
             if rc:
@@ -190,20 +190,20 @@ class ValidatorManager:
         if os.path.exists(self.logFile):
             s = os.stat(self.logFile)
             if s.st_size > 0:
-                log = "LOG: {}".format(human_size(s.st_size))
+                log = "log: {}".format(human_size(s.st_size))
         out = ""
         if os.path.exists(self.stdoutFile):
             s = os.stat(self.stdoutFile)
             if s.st_size > 0:
-                out = "LOG: {}".format(human_size(s.st_size))
+                out = "out: {}".format(human_size(s.st_size))
         err = ""
         if os.path.exists(self.stderrFile):
             s = os.stat(self.stderrFile)
             if s.st_size > 0:
-                err = "LOG: {}".format(human_size(s.st_size))
-        errors = "ERROR" if self.has_error() else ""
+                err = "err: {}".format(human_size(s.st_size))
+        errors = "errs!" if self.has_error() else ""
 
-        print("{}: {} {} {} {} {}".format(self.Id, st, out, err, log, errors))
+        return "{}: {} {} {} {} {}".format(self.Id, st, out, err, log, errors)
 
     def dump_config(self):
         with open(self.configFile, 'r') as fin:
