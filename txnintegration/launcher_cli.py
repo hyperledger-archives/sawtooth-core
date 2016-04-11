@@ -20,6 +20,7 @@ import cmd
 import pprint
 import traceback
 import tempfile
+import time
 import logging
 import shutil
 
@@ -231,13 +232,26 @@ class ValidatorNetworkConsole(cmd.Cmd):
         return False
 
     def do_kill(self, args):
-        pass
+        try:
+            id = args[0]
+            v = self.networkManager.validator(id)
+            if v:
+                while v.is_running():
+                    v.shutdown(True)
+                    if v.is_running():
+                        time.sleep(1)
+                print("Validator {} killed.".format(v.Name))
+            else:
+                print "Invalid validator id: {}".format(args[0])
+        except:
+            print sys.exc_info()[0]
 
     def do_status(self, args):
         """status
-        Show the status of the running validators
+            Show the status of the running validators
         """
-        s = self.networkManager.status()
+        for l in self.networkManager.status():
+            print l
         return False
 
     def do_exit(self, args):
@@ -246,7 +260,8 @@ class ValidatorNetworkConsole(cmd.Cmd):
         """
         return True
 
-    def do_eof(self, args):
+    def do_EOF(self, args):
+        # pylint: disable=invalid-name
         print("")
         return self.do_exit(args)
 
