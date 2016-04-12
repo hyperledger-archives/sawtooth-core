@@ -14,13 +14,14 @@
 // ------------------------------------------------------------------------------
 
 #ifdef _WIN32
-    #include <windows.h>                                                                
+    #include <windows.h>
     #include <random>
 #else
-    #include <sys/time.h>                                                                
+    #include <sys/time.h>
 #endif
-#include <time.h>                                                                    
-#include <stdlib.h>                                                                  
+#include <algorithm>
+#include <time.h>
+#include <stdlib.h>
 #include <string>
 #include <json-c/json.h>
 
@@ -49,50 +50,52 @@ static double ComputeDuration(double mean, double minimum)
 
 WaitTimer::WaitTimer(string encoded, string signature)
 {
-    Signature = signature;
-    MinimumWaitTime = 1.0;
-    Deserialize(encoded);
+    this->minimum_wait_time = 1.0;
+    this->signature = signature;
+    this->deserialize(encoded);
 }
 
-WaitTimer::WaitTimer(string pcertid, double localmean)
+WaitTimer::WaitTimer(string previous_certificate_id, double local_mean)
 {
-    MinimumWaitTime = 1.0;
-    LocalMean = localmean;
+    this->minimum_wait_time = 1.0;
+    this->local_mean = local_mean;
 
-    RequestTime = CurrentTime();
-    Duration = ComputeDuration(LocalMean, MinimumWaitTime);
+    this->request_time = CurrentTime();
+    this->duration = ComputeDuration(local_mean, this->minimum_wait_time);
 
-    PreviousCertID = pcertid;
+    this->previous_certificate_id = previous_certificate_id;
 }
 
 bool WaitTimer::is_expired(void)
 {
-    return (RequestTime + Duration) < CurrentTime() ? true : false;
+    return (request_time + duration) < CurrentTime() ? true : false;
 }
 
-bool WaitTimer::Deserialize(string serialized)
+bool WaitTimer::deserialize(string serialized)
 {
     json_object *jobj = json_tokener_parse((char *)serialized.data());
     if (jobj == NULL)
+    {
         return false;
+    }
 
     struct json_object *obj = NULL;
 
     // Use alphabetical order for the keys
     if (json_object_object_get_ex(jobj, "Duration", &obj))
-        Duration = json_object_get_double(obj);
+        duration = json_object_get_double(obj);
 
     if (json_object_object_get_ex(jobj, "LocalMean", &obj))
-        LocalMean = json_object_get_double(obj);
+        local_mean = json_object_get_double(obj);
 
     if (json_object_object_get_ex(jobj, "MinimumWaitTime", &obj))
-        MinimumWaitTime = json_object_get_double(obj);
+        minimum_wait_time = json_object_get_double(obj);
 
     if (json_object_object_get_ex(jobj, "PreviousCertID", &obj))
-        PreviousCertID = json_object_get_string(obj);
+        previous_certificate_id = json_object_get_string(obj);
 
     if (json_object_object_get_ex(jobj, "RequestTime", &obj))
-        RequestTime = json_object_get_double(obj);
+        request_time = json_object_get_double(obj);
 
     return true;
 }
@@ -102,27 +105,28 @@ string WaitTimer::serialize()
     json_object *jobj = json_object_new_object();
 
     // Use alphabetical order for the keys
-    json_object_object_add(jobj, "Duration", json_object_new_double(Duration));
-    json_object_object_add(jobj, "LocalMean", json_object_new_double(LocalMean));
-    json_object_object_add(jobj, "MinimumWaitTime", json_object_new_double(MinimumWaitTime));
-    json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)PreviousCertID.data()));
-    json_object_object_add(jobj, "RequestTime", json_object_new_double(RequestTime));
+    json_object_object_add(jobj, "Duration", json_object_new_double(duration));
+    json_object_object_add(jobj, "LocalMean", json_object_new_double(local_mean));
+    json_object_object_add(jobj, "MinimumWaitTime", json_object_new_double(minimum_wait_time));
+    json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.data()));
+    json_object_object_add(jobj, "RequestTime", json_object_new_double(request_time));
 
     string serialized = (char *)json_object_to_json_string(jobj);
 
     return serialized;
 }
 
-WaitTimer *create_wait_timer(string prevcertid, double localmean)
+WaitTimer* create_wait_timer(string prev_cert_id,
+                                double local_mean)
 {
-    WaitTimer *timer = new WaitTimer(prevcertid, localmean);
-    timer->Signature = SignMessage(WaitTimerPrivateKey, timer->serialize());
-
+    WaitTimer *timer = new WaitTimer(prev_cert_id, local_mean);
+    timer->signature = SignMessage(WaitTimerPrivateKey, timer->serialize());
     return(timer);
 }
 
-WaitTimer *DeserializeWaitTimer(string serializedtimer, string signature)
+WaitTimer* deserialize_wait_timer(string serialized_timer,
+                                        string signature)
 {
-    WaitTimer *timer = new WaitTimer(serializedtimer, signature);
+    WaitTimer *timer = new WaitTimer(serialized_timer, signature);
     return timer;
 }

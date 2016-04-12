@@ -21,60 +21,64 @@
 #include <string>
 
 // This is the identifier for the genesis block
-const std::string NullIdentifier = "0000000000000000";
+const std::string NULL_IDENTIFIER = "0000000000000000";
+const double MINIMUM_WAIT_TIME = 1.0;
 
 class WaitTimer
 {
  public:
-    WaitTimer(std::string pcertid, double localmean);
-    WaitTimer(std::string serializedtimer, std::string signature = "");
+    WaitTimer(std::string prev_cert_id, double local_mean);
+    WaitTimer(std::string serialized_timer, std::string signature = "");
 
     bool is_expired(void);
 
     std::string serialize(void);
-    bool Deserialize(std::string encoded);
+    bool deserialize(std::string encoded);
 
-    double MinimumWaitTime;
-    double LocalMean;
+    double minimum_wait_time;
+    double local_mean;
 
-    double RequestTime;
-    double Duration;
+    double request_time;
+    double duration;
 
-    std::string PreviousCertID;
+    std::string previous_certificate_id;
 
-    std::string Signature;
+    std::string signature;
 };
 
-WaitTimer *create_wait_timer(std::string prevcertid, double localmean);
-WaitTimer *DeserializeWaitTimer(std::string serializedtimer, std::string signature = "");
+WaitTimer* create_wait_timer(std::string prev_cert_id,
+                            double local_mean);
+WaitTimer* deserialize_wait_timer(std::string serialized_timer,
+                                        std::string signature = "");
 
 class WaitCertificate
 {
  public:
     WaitCertificate(WaitTimer *timer);
-    WaitCertificate(std::string serializedCert, std::string signature = "");
+    WaitCertificate(std::string serialized_cert, std::string signature = "");
 
-    std::string Identifier(void);
+    std::string identifier(void);
 
     std::string serialize(void);
-    bool Deserialize(std::string encoded);
+    bool deserialize(std::string encoded);
 
-    double MinimumWaitTime;
-    double LocalMean;
+    double minimum_wait_time;
+    double local_mean;
 
-    double RequestTime;
-    double Duration;
+    double request_time;
+    double duration;
 
-   std:: string PreviousCertID;
+   std:: string previous_certificate_id;
 
-    std::string Signature;
+    std::string signature;
 };
 
-WaitCertificate *create_wait_certificate(WaitTimer *timer);
-WaitCertificate *deserialize_wait_certificate(std::string serializedcert, std::string signature = "");
-bool VerifyWaitCertificate(WaitCertificate *cert);
+WaitCertificate* create_wait_certificate(WaitTimer *timer);
+WaitCertificate* deserialize_wait_certificate(std::string serialized_cert,
+                                        std::string signature = "");
+bool verify_wait_certificate(WaitCertificate *cert);
 
-std::string TestSignMessage(std::string message);
-bool TestVerifySignature(std::string message, std::string signature);
+std::string test_sign_message(std::string message);
+bool test_verify_message(std::string message, std::string signature);
 
 void InitializePoetEnclaveModule(void);
