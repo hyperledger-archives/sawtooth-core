@@ -26,15 +26,15 @@ class WaitTimer(object):
     certificate.
 
     Attributes:
-        MinimumWaitTime (float): The minimum wait time in seconds.
-        TargetWaitTime (float): The target wait time in seconds.
-        InitialWaitTime (float): The initial wait time in seconds.
-        CertificateSampleLength (int): The number of certificates to
+        minimum_wait_time (float): The minimum wait time in seconds.
+        target_wait_time (float): The target wait time in seconds.
+        initial_wait_time (float): The initial wait time in seconds.
+        certificate_sample_length (int): The number of certificates to
             sample for the population estimate.
-        FixedDurationBlocks (int): If fewer than FixedDurationBlocks
+        fixed_duration_blocks (int): If fewer than FixedDurationBlocks
             exist, then base the local mean on a ratio based on
             InitialWaitTime, rather than the history.
-        PoetEnclave (module): The PoetEnclave module to use for
+        _poet_enclave (module): The PoetEnclave module to use for
             executing enclave functions.
         previous_certificate_id (str): The id of the previous certificate.
         local_mean (float): The local mean wait time based on the history
