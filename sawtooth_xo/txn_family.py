@@ -46,7 +46,10 @@ class XoTransactionMessage(transaction_message.TransactionMessage):
     """
     MessageType = "/Xo/Transaction"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
+
         super(XoTransactionMessage, self).__init__(minfo)
 
         tinfo = minfo.get('Transaction', {})
@@ -61,12 +64,16 @@ class XoUpdate(object):
     """
     KnownVerbs = ['set', 'inc', 'dec']
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the Update class.
 
         Args:
             minfo (dict): Dictionary of values for update fields.
         """
+
+        if minfo is None:
+            minfo = {}
+
         self._verb = minfo['Verb'] if 'Verb' in minfo else 'set'
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._value = long(minfo['Value']) if 'Value' in minfo else 0
@@ -158,12 +165,16 @@ class XoTransaction(transaction.Transaction):
     TransactionStoreType = global_store_manager.KeyValueStore
     MessageType = XoTransactionMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the XoTransaction class.
 
         Args:
             minfo: Dictionary of values for transaction fields.
         """
+
+        if minfo is None:
+            minfo = {}
+
         super(XoTransaction, self).__init__(minfo)
 
         self.Updates = []
