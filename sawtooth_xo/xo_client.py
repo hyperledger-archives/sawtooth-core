@@ -89,7 +89,7 @@ class XoClient(XoCommunication):
             logger.debug('Posting transaction: %s', txnid)
             result = self.postmsg(msg.MessageType, msg.dump())
 
-        except MessageException as me:
+        except MessageException:
             return None
 
         except:
