@@ -175,6 +175,15 @@ class ValidatorManager:
                     match = reg.search(line)
                     if match and int(match.group(1)) >= 50:
                         return True
+                    elif 'error' in line:
+                        return True
+                    elif 'Traceback' in line:  # exception dump
+                        return True
+                    elif 'exception' in line and \
+                            'http request' not in line:
+                        #  errors in http requests are routinely generated
+                        # when checking transactions status.
+                        return True
         return False
 
     def status(self):
