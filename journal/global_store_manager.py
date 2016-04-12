@@ -150,8 +150,8 @@ class GlobalStoreManager(object):
             logger.info('load block %s from storage', blockid)
             blockinfo = cbor.loads(self._persistmap[blockid])
             prevstore = self._blockmap[blockinfo['PreviousBlockID']]
-            blockstore = prevstore.CloneBlock(blockinfo, True)
-            blockstore.CommitBlock(blockid)
+            blockstore = prevstore.clone_block(blockinfo, True)
+            blockstore.commit_block(blockid)
             self._blockmap[blockid] = blockstore
 
     def get_block_store(self, blockid):
@@ -203,7 +203,7 @@ class GlobalStoreManager(object):
             blockid (str): Identifier associated with the block.
         """
 
-        blockstore = self.GetBlockStore(blockid)
+        blockstore = self.get_block_store(blockid)
         blockstore.flatten()
 
         self.flush_block_store(blockstore.PreviousBlockID)
