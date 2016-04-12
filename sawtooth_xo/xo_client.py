@@ -24,7 +24,6 @@ from sawtooth_xo.xo_communication import MessageException
 from sawtooth_xo.xo_state import XoState
 from sawtooth_xo.txn_family import XoTransaction
 from sawtooth_xo.txn_family import XoTransactionMessage
-from sawtooth_xo.txn_family import XoUpdate
 from sawtooth_xo.xo_exceptions import XoException
 
 LOGGER = logging.getLogger(__name__)
@@ -40,8 +39,8 @@ class XoClient(XoCommunication):
         super(XoClient, self).__init__(baseurl)
         self.LastTransaction = None
 
-        self.CurrentState = state or XoState(self.BaseURL)
-        self.CurrentState.fetch()
+        self._current_state = state or XoState(self.BaseURL)
+        self._current_state.fetch()
 
         # set up the signing key
         if keystring:
@@ -62,25 +61,23 @@ class XoClient(XoCommunication):
                                    signingkey=signingkey,
                                    name=name)
 
-    def _sendtxn(self, update):
+    def _sendtxn(self, minfo):
         """
         Build a transaction for the update, wrap it in a message with all
         of the appropriate signatures and post it to the validator
         """
 
-        txn = XoTransaction()
-        txn.Updates = [update]
+        txn = XoTransaction(minfo=minfo)
 
         # add the last transaction submitted to ensure that the ordering
         # in the journal matches the order in which we generated them
         if self.LastTransaction:
             txn.Dependencies = [self.LastTransaction]
 
-        update.Transaction = txn
         txn.sign_from_node(self.LocalNode)
         txnid = txn.Identifier
 
-        if not txn.is_valid(self.CurrentState.State):
+        if not txn.is_valid(self._current_state.State):
             LOGGER.warn('transaction failed to apply')
             return None
 
@@ -108,9 +105,12 @@ class XoClient(XoCommunication):
         # id for future dependencies this could be a problem if the transaction
         # fails during application
         self.LastTransaction = txnid
-        txn.apply(self.CurrentState.State)
+        txn.apply(self._current_state.State)
 
         return txnid
+
+    def get_state(self):
+        return self._current_state.State
 
     def waitforcommit(self, txnid=None, timetowait=5, iterations=12):
         """
@@ -144,35 +144,23 @@ class XoClient(XoCommunication):
             LOGGER.debug('waiting for transaction %s to commit', txnid)
             time.sleep(timetowait)
 
-    def set(self, key, value):
+    def create(self, name):
         """
         """
-        update = XoUpdate({
-            "Verb": "set",
-            "Name": key,
-            "Value": value
-        })
+        update = {
+            'Action': 'CREATE',
+            'Name': name
+        }
 
         return self._sendtxn(update)
 
-    def inc(self, key, value):
+    def take(self, name, space):
         """
         """
-        update = XoUpdate({
-            "Verb": "inc",
-            "Name": key,
-            "Value": value
-        })
-
-        return self._sendtxn(update)
-
-    def dec(self, key, value):
-        """
-        """
-        update = XoUpdate({
-            "Verb": "dec",
-            "Name": key,
-            "Value": value
-        })
+        update = {
+            'Action': 'TAKE',
+            'Name': name,
+            'Space': space,
+        }
 
         return self._sendtxn(update)
