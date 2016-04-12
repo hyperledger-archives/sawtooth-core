@@ -402,7 +402,7 @@ We can also view Bob's current offers:
 
    //bob> offers --creator //bob
    Ratio    Input Asset (What You Pay)          Output Asset (What You Get)         Name
-   2.0      //mkt/asset/cookie/choc_chip        //mkt/asset/currency/USD            //bob/choc_chip_sale
+   0.5      //mkt/asset/currency/USD            //mkt/asset/cookie/choc_chip        //bob/choc_chip_sale
 
 Great!  Now Bob waits for someone to accept his offer, so we can exit
 mktclient:
