@@ -10,7 +10,6 @@
     "GenesisLedger" : true,
 
     ## configuration of the ledger wait time certificate 
-    "MinimumWaitTime" : 1.0,
     "TargetWaitTime" : 30.0,
     "InitialWaitTime" : 750.0,
     "CertificateSampleLength" : 30,

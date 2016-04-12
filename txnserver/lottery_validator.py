@@ -39,10 +39,6 @@ class LotteryValidator(validator.Validator):
             wait_certificate.WaitTimer.target_wait_time = \
                 float(self.Config['TargetWaitTime'])
 
-        if 'MinimumWaitTime' in self.Config:
-            wait_certificate.WaitTimer.minimum_wait_time = \
-                float(self.Config['MinimumWaitTime'])
-
         if 'InitialWaitTime' in self.Config:
             wait_certificate.WaitTimer.initial_wait_time = \
                 float(self.Config['InitialWaitTime'])
