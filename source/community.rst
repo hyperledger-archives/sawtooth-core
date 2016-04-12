@@ -4,15 +4,14 @@ Community
 
 Distributed Ledger uses several forums for project participants to
 discuss ideas, pose questions and chat about the project. Information
-about the forums currently available are discussed below. When
-participating, please be respectful and courteous. 
+about the forums, becoming a contributor and reporting issues, can be found in
+the associated links below.
 
-Distributed Ledger Slack Team
------------------------------
+When participating, please be respectful and courteous. 
 
-https://inteldl.slack.com is preferred for daily chat and is frequented
-by Distributed Ledger developers. It is the place to go for quick help,
-bouncing off ideas and good discussion about the project.
+.. toctree::
+   :maxdepth: 2
 
-An invite to the Slack team can be requested by sending an email to
-intel-ledger-request@intel.com so you can get up and going quickly.
+   community/slack
+   community/issues
+   community/contributing
