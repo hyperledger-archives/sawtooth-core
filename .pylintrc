@@ -61,6 +61,15 @@ confidence=
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
 disable=
+    bad-continuation,
+    too-many-branches,
+    no-self-use,
+    unused-argument,
+    invalid-name,
+    bare-except,
+    missing-docstring,
+    empty-docstring,
+    too-many-arguments
 
 
 [REPORTS]
