@@ -141,6 +141,12 @@ class WaitCertificate(object):
             bool: Whether or not the wait certificate is valid.
         """
         cert = self.enclave_wait_certificate
+
+        if cert.duration < self._poet_enclave.MINIMUM_WAIT_TIME:
+            logger.warn('Wait time less then minimum: %s != %s',
+                        cert.duration, self._poet_enclave.MINIMUM_WAIT_TIME)
+        # return False
+
         expected_mean = WaitTimer.compute_local_mean(certs)
         if not is_close(cert.local_mean, expected_mean, abs_tol=0.001):
             logger.warn('mismatch local mean: %s != %s', cert.local_mean,

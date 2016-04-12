@@ -30,7 +30,7 @@
 
 using namespace std;
 
-static double ComputeDuration(double mean, double minimum)
+static double ComputeDuration(double mean)
 {
 #ifdef _WIN32
     SYSTEMTIME seed;
@@ -45,23 +45,23 @@ static double ComputeDuration(double mean, double minimum)
     std::exponential_distribution<double> distribution(1.0 / mean);
 #endif
 
-    return(minimum + distribution(generator));
+    double wait = distribution(generator);
+
+    return (MINIMUM_WAIT_TIME + wait);
 }
 
 WaitTimer::WaitTimer(string encoded, string signature)
 {
-    this->minimum_wait_time = 1.0;
     this->signature = signature;
     this->deserialize(encoded);
 }
 
 WaitTimer::WaitTimer(string previous_certificate_id, double local_mean)
 {
-    this->minimum_wait_time = 1.0;
     this->local_mean = local_mean;
 
     this->request_time = CurrentTime();
-    this->duration = ComputeDuration(local_mean, this->minimum_wait_time);
+    this->duration = ComputeDuration(local_mean);
 
     this->previous_certificate_id = previous_certificate_id;
 }
@@ -88,9 +88,6 @@ bool WaitTimer::deserialize(string serialized)
     if (json_object_object_get_ex(jobj, "LocalMean", &obj))
         local_mean = json_object_get_double(obj);
 
-    if (json_object_object_get_ex(jobj, "MinimumWaitTime", &obj))
-        minimum_wait_time = json_object_get_double(obj);
-
     if (json_object_object_get_ex(jobj, "PreviousCertID", &obj))
         previous_certificate_id = json_object_get_string(obj);
 
@@ -107,7 +104,6 @@ string WaitTimer::serialize()
     // Use alphabetical order for the keys
     json_object_object_add(jobj, "Duration", json_object_new_double(duration));
     json_object_object_add(jobj, "LocalMean", json_object_new_double(local_mean));
-    json_object_object_add(jobj, "MinimumWaitTime", json_object_new_double(minimum_wait_time));
     json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.data()));
     json_object_object_add(jobj, "RequestTime", json_object_new_double(request_time));
 
