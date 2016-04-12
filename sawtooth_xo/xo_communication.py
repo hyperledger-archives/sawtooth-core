@@ -22,7 +22,7 @@ import urllib2
 from gossip.common import json2dict, cbor2dict, dict2cbor
 from gossip.common import pretty_print_dict
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class MessageException(Exception):
@@ -48,7 +48,7 @@ class XoCommunication(object):
 
         url = "{0}/{1}".format(self.BaseURL, path.strip('/'))
 
-        logger.debug('get content from url <%s>', url)
+        LOGGER.debug('get content from url <%s>', url)
 
         try:
             request = urllib2.Request(url)
@@ -62,11 +62,11 @@ class XoCommunication(object):
             return err.code
 
         except urllib2.URLError as err:
-            logger.warn('operation failed: %s', err.reason)
+            LOGGER.warn('operation failed: %s', err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except:
-            logger.warn('no response from server')
+            LOGGER.warn('no response from server')
             raise MessageException('no response from server')
 
         return response.code
@@ -79,7 +79,7 @@ class XoCommunication(object):
 
         url = "{0}/{1}".format(self.BaseURL, path.strip('/'))
 
-        logger.debug('get content from url <%s>', url)
+        LOGGER.debug('get content from url <%s>', url)
 
         try:
             request = urllib2.Request(url)
@@ -87,16 +87,16 @@ class XoCommunication(object):
             response = opener.open(request, timeout=10)
 
         except urllib2.HTTPError as err:
-            logger.warn('operation failed with response: %s', err.code)
+            LOGGER.warn('operation failed with response: %s', err.code)
             raise MessageException('operation failed with resonse: {0}'.format(
                 err.code))
 
         except urllib2.URLError as err:
-            logger.warn('operation failed: %s', err.reason)
+            LOGGER.warn('operation failed: %s', err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except:
-            logger.warn('no response from server')
+            LOGGER.warn('no response from server')
             raise MessageException('no response from server')
 
         content = response.read()
@@ -122,7 +122,7 @@ class XoCommunication(object):
         datalen = len(data)
         url = self.BaseURL + msgtype
 
-        logger.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
+        LOGGER.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
                      datalen, data)
 
         try:
@@ -133,16 +133,16 @@ class XoCommunication(object):
             response = opener.open(request, timeout=10)
 
         except urllib2.HTTPError as err:
-            logger.warn('operation failed with response: %s', err.code)
+            LOGGER.warn('operation failed with response: %s', err.code)
             raise MessageException('operation failed with resonse: {0}'.format(
                 err.code))
 
         except urllib2.URLError as err:
-            logger.warn('operation failed: %s', err.reason)
+            LOGGER.warn('operation failed: %s', err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except:
-            logger.warn('no response from server')
+            LOGGER.warn('no response from server')
             raise MessageException('no response from server')
 
         content = response.read()
@@ -156,9 +156,9 @@ class XoCommunication(object):
         elif encoding == 'application/cbor':
             value = cbor2dict(content)
         else:
-            logger.info('server responds with message %s of type %s', content,
+            LOGGER.info('server responds with message %s of type %s', content,
                         encoding)
             return None
 
-        logger.debug(pretty_print_dict(value))
+        LOGGER.debug(pretty_print_dict(value))
         return value

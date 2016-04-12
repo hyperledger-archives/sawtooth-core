@@ -26,7 +26,7 @@ from sawtooth_xo.txn_family import XoTransaction
 from sawtooth_xo.txn_family import XoTransactionMessage
 from sawtooth_xo.txn_family import XoUpdate
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class XoClient(XoCommunication):
@@ -44,10 +44,10 @@ class XoClient(XoCommunication):
 
         # set up the signing key
         if keystring:
-            logger.debug("set signing key from string\n%s", keystring)
+            LOGGER.debug("set signing key from string\n%s", keystring)
             signingkey = signed_object.generate_signing_key(wifstr=keystring)
         elif keyfile:
-            logger.debug("set signing key from file %s", keyfile)
+            LOGGER.debug("set signing key from file %s", keyfile)
             signingkey = signed_object.generate_signing_key(
                 wifstr=open(keyfile, "r").read().strip())
         else:
@@ -77,7 +77,7 @@ class XoClient(XoCommunication):
         txnid = txn.Identifier
 
         if not txn.is_valid(self.CurrentState.State):
-            logger.warn('transaction failed to apply')
+            LOGGER.warn('transaction failed to apply')
             return None
 
         msg = XoTransactionMessage()
@@ -86,14 +86,14 @@ class XoClient(XoCommunication):
         msg.sign_from_node(self.LocalNode)
 
         try:
-            logger.debug('Posting transaction: %s', txnid)
+            LOGGER.debug('Posting transaction: %s', txnid)
             result = self.postmsg(msg.MessageType, msg.dump())
 
         except MessageException:
             return None
 
         except:
-            logger.debug('message post failed for some unusual reason')
+            LOGGER.debug('message post failed for some unusual reason')
             return None
 
         # if there was no exception thrown then all transactions should return
@@ -122,7 +122,7 @@ class XoClient(XoCommunication):
         if not txnid:
             txnid = self.LastTransaction
         if not txnid:
-            logger.info('no transaction specified for wait')
+            LOGGER.info('no transaction specified for wait')
             return True
 
         passes = 0
@@ -131,13 +131,13 @@ class XoClient(XoCommunication):
             status = self.headrequest('/transaction/{0}'.format(txnid))
 
             if status == http.NOT_FOUND and passes > iterations:
-                logger.warn('unknown transaction %s', txnid)
+                LOGGER.warn('unknown transaction %s', txnid)
                 return False
 
             if status == http.OK:
                 return True
 
-            logger.debug('waiting for transaction %s to commit', txnid)
+            LOGGER.debug('waiting for transaction %s to commit', txnid)
             time.sleep(timetowait)
 
     def set(self, key, value):

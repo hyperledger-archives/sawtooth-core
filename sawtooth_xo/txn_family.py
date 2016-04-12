@@ -18,7 +18,7 @@ import logging
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def _register_transaction_types(ledger):
@@ -90,7 +90,7 @@ class XoUpdate(object):
         Returns:
             bool: Whether or not the update is valid.
         """
-        logger.debug('check update %s', str(self))
+        LOGGER.debug('check update %s', str(self))
 
         # in theory, the name should have been checked before the transaction
         # was submitted... not being too careful about this
@@ -125,7 +125,7 @@ class XoUpdate(object):
         Args:
             store (dict): Transaction store mapping.
         """
-        logger.debug('apply %s', str(self))
+        LOGGER.debug('apply %s', str(self))
 
         if self._verb == 'set':
             store[self._name] = self._value
@@ -134,7 +134,7 @@ class XoUpdate(object):
         elif self._verb == 'dec':
             store[self._name] -= self._value
         else:
-            logger.info('unknown verb %s', self._verb)
+            LOGGER.info('unknown verb %s', self._verb)
 
     def dump(self):
         """Returns a dict with attributes from the update object.
@@ -197,7 +197,7 @@ class XoTransaction(transaction.Transaction):
 
         for update in self.Updates:
             if not update.is_valid(store):
-                logger.debug('invalid transaction: %s', str(update))
+                LOGGER.debug('invalid transaction: %s', str(update))
                 return False
 
         return True

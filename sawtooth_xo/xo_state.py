@@ -17,7 +17,7 @@ import logging
 
 from sawtooth_xo.xo_communication import XoCommunication
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class XoState(XoCommunication):
@@ -36,6 +36,6 @@ class XoState(XoCommunication):
             retrieve
         """
 
-        logger.debug('fetch state from %s/%s/*', self.BaseURL, store)
+        LOGGER.debug('fetch state from %s/%s/*', self.BaseURL, store)
 
         self.State = self.getmsg("/store/{0}/*".format(store))
