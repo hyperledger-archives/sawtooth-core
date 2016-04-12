@@ -36,25 +36,25 @@ class LotteryValidator(validator.Validator):
 
         # Handle all of the configuration variables
         if 'TargetWaitTime' in self.Config:
-            wait_certificate.WaitTimer.TargetWaitTime = \
+            wait_certificate.WaitTimer.target_wait_time = \
                 float(self.Config['TargetWaitTime'])
 
         if 'MinimumWaitTime' in self.Config:
-            wait_certificate.WaitTimer.MinimumWaitTime = \
+            wait_certificate.WaitTimer.minimum_wait_time = \
                 float(self.Config['MinimumWaitTime'])
 
         if 'InitialWaitTime' in self.Config:
-            wait_certificate.WaitTimer.InitialWaitTime = \
+            wait_certificate.WaitTimer.initial_wait_time = \
                 float(self.Config['InitialWaitTime'])
 
         if 'CertificateSampleLength' in self.Config:
-            wait_certificate.WaitTimer.CertificateSampleLength = int(
+            wait_certificate.WaitTimer.certificate_sample_length = int(
                 self.Config['CertificateSampleLength'])
-            wait_certificate.WaitTimer.FixedDurationBlocks = \
+            wait_certificate.WaitTimer.fixed_duration_blocks = \
                 int(self.Config['CertificateSampleLength'])
 
         if 'FixedDurationBlocks' in self.Config:
-            wait_certificate.WaitTimer.FixedDurationBlocks = \
+            wait_certificate.WaitTimer.fixed_duration_blocks = \
                 int(self.Config['FixedDurationBlocks'])
 
         if 'MinTransactionsPerBlock' in self.Config:
