@@ -145,21 +145,22 @@ class WaitCertificate(object):
         if cert.duration < self._poet_enclave.MINIMUM_WAIT_TIME:
             logger.warn('Wait time less then minimum: %s != %s',
                         cert.duration, self._poet_enclave.MINIMUM_WAIT_TIME)
-        # return False
+            return False
 
         expected_mean = WaitTimer.compute_local_mean(certs)
         if not is_close(cert.local_mean, expected_mean, abs_tol=0.001):
             logger.warn('mismatch local mean: %s != %s', cert.local_mean,
                         expected_mean)
-            # return False
+            return False
 
         if cert.previous_certificate_id == self._poet_enclave.NULL_IDENTIFIER:
-            return True
+            if len(certs) == 0:
+                return True
 
         if cert.previous_certificate_id != certs[-1].identifier:
             logger.warn('mismatch previous identifier: %s != %s',
                         cert.previous_certificate_id, certs[-1].identifier)
-            # return False
+            return False
 
         return self._poet_enclave.verify_wait_certificate(cert)
 
