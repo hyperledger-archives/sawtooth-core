@@ -14,8 +14,8 @@ do
 done
 
 
-pep8 --config=.pep8-enforced
+pep8 --config=.pep8
 python setup.py -q lint \
-    --lint-rcfile=.pylintrc-enforced \
+    --lint-rcfile=.pylintrc \
     --lint-reports=no \
     --lint-packages=$(echo $files | sed -e 's/ /,/g')
