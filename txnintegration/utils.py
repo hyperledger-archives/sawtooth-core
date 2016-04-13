@@ -35,7 +35,7 @@ class ExitError(Exception):
         return self.what
 
 
-class Progress:
+class Progress(object):
     def __init__(self, msg=None):
         if msg:
             sys.stdout.write(msg + ": ")
@@ -67,7 +67,7 @@ def human_size(nbytes):
     return '%s %s' % (f, suffixes[i])
 
 
-class Timer:
+class Timer(object):
     def __init__(self):
         pass
 
@@ -82,7 +82,7 @@ class Timer:
         return time.time() - self.start
 
 
-class TimeOut:
+class TimeOut(object):
     def __init__(self, wait):
         self.WaitTime = wait
         self.ExpireTime = time.time() + wait

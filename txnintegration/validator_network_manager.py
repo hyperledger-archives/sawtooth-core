@@ -49,8 +49,8 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'UseFixedDelay': True}
 
 
-class ValidatorNetworkManager:
-    class AdminNode:
+class ValidatorNetworkManager(object):
+    class AdminNode(object):
         SigningKey = None
         Address = None
 

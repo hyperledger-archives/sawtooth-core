@@ -27,7 +27,7 @@ from gossip.messages import shutdown_message
 from txnserver import ledger_web_client
 
 
-class ValidatorManager:
+class ValidatorManager(object):
     """
     Manages a txnvalidator process
     contains logic to:

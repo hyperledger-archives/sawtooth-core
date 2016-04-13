@@ -32,7 +32,7 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
     ENABLE_INTEGRATION_TESTS = True
 
 
-class IntKeyLoadTest:
+class IntKeyLoadTest(object):
     def __init__(self):
         pass
 
