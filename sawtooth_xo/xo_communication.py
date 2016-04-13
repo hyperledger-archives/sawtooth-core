@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 """
-A class to canonical communication with the Xo
+A class for canonical communication with the Xo
 """
 
 import logging
