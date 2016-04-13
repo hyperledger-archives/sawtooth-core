@@ -366,7 +366,7 @@ class LedgerWebClient(object):
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except NameError as err:
-            logger.error('name error {0}', err)
+            logger.error('name error %s', err)
             raise MessageException('operation failed: {0}'.format(url))
 
         except:
