@@ -49,8 +49,8 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'UseFixedDelay': True}
 
 
-class ValidatorNetworkManager:
-    class AdminNode:
+class ValidatorNetworkManager(object):
+    class AdminNode(object):
         SigningKey = None
         Address = None
 
@@ -119,7 +119,6 @@ class ValidatorNetworkManager:
                     v = self.ValidatorMap[idx]
         except:
             print sys.exc_info()[0]
-            pass
 
         return v
 
@@ -127,7 +126,7 @@ class ValidatorNetworkManager:
         with Progress("Launching initial validator") as p:
             self.ValidatorConfig['LedgerURL'] = "**none**"
             self.ValidatorConfig['GenesisLedger'] = True
-            if(self.blockChainArchive is not None):
+            if self.blockChainArchive is not None:
                 self.ValidatorConfig['Restore'] = True
 
             validator = self.launch_node()
@@ -143,7 +142,7 @@ class ValidatorNetworkManager:
             self.ValidatorConfig['LedgerURL'] = validator.Url
             self.ValidatorConfig['GenesisLedger'] = False
             self.ValidatorConfig['Restore'] = False
-            for i in range(1, count):
+            for _ in range(1, count):
                 self.launch_node()
                 p.step()
 
@@ -229,7 +228,7 @@ class ValidatorNetworkManager:
                 and os.path.exists(self.DataDir) \
                 and len(self.Validators) != 0:
             tar = tarfile.open(archiveName, "w|gz")
-            for (dirpath, dirnames, filenames) in walk(self.DataDir):
+            for (dirpath, _, filenames) in walk(self.DataDir):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
                     tar.add(fp, f)

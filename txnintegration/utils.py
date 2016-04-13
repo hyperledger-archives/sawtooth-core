@@ -29,13 +29,14 @@ from colorlog import ColoredFormatter
 
 class ExitError(Exception):
     def __init__(self, what):
+        super(ExitError, self).__init__()
         self.what = what
 
     def __str__(self):
         return self.what
 
 
-class Progress:
+class Progress(object):
     def __init__(self, msg=None):
         if msg:
             sys.stdout.write(msg + ": ")
@@ -67,7 +68,7 @@ def human_size(nbytes):
     return '%s %s' % (f, suffixes[i])
 
 
-class Timer:
+class Timer(object):
     def __init__(self):
         pass
 
@@ -82,7 +83,7 @@ class Timer:
         return time.time() - self.start
 
 
-class TimeOut:
+class TimeOut(object):
     def __init__(self, wait):
         self.WaitTime = wait
         self.ExpireTime = time.time() + wait
@@ -169,7 +170,7 @@ def find_txn_validator():
             return validator
 
     if validator is None:
-        print("txnvalidator: {}".format(validator))
+        print "txnvalidator: {}".format(validator)
         raise ExitError("Could not find txnvalidator in your $PATH")
 
     return validator

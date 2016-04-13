@@ -59,59 +59,29 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=import-star-module-level,
-    old-octal-literal,
-    oct-method,
-    print-statement,
-    unpacking-in-except,
-    parameter-unpacking,
-    backtick,
-    old-raise-syntax,
-    old-ne-operator,
-    long-suffix,
-    dict-view-method,
-    dict-iter-method,
-    metaclass-assignment,
-    next-method-called,
-    raising-string,
-    indexing-exception,
-    raw_input-builtin,
-    long-builtin,
-    file-builtin,
-    execfile-builtin,
-    coerce-builtin,
-    cmp-builtin,
-    buffer-builtin,
-    basestring-builtin,
-    apply-builtin,
-    filter-builtin-not-iterating,
-    using-cmp-argument,
-    useless-suppression,
-    range-builtin-not-iterating,
-    suppressed-message,
-    no-absolute-import,
-    old-division,
-    cmp-method,
-    reload-builtin,
-    zip-builtin-not-iterating,
-    intern-builtin,
-    unichr-builtin,
-    reduce-builtin,
-    standarderror-builtin,
-    unicode-builtin,
-    xrange-builtin,
-    coerce-method,
-    delslice-method,
-    getslice-method,
-    setslice-method,
-    input-builtin,
-    round-builtin,
-    hex-method,
-    nonzero-method,
-    map-builtin-not-iterating,
-    locally-disabled,
+
+disable=no-member,
+    missing-docstring,
+    bare-except,
+    unused-argument,
+    duplicate-code,
     bad-continuation,
-    wrong-import-order
+    too-many-instance-attributes,
+    attribute-defined-outside-init,
+    too-few-public-methods,
+    redefined-outer-name,
+    redefined-builtin,
+    broad-except,
+    no-self-use,
+    too-many-branches,
+    too-many-arguments,
+    redefined-variable-type,
+    wrong-import-position,
+    import-error,
+    too-many-public-methods,
+    too-many-locals,
+    wrong-import-order,
+    locally-disabled
 
 [REPORTS]
 
@@ -277,31 +247,31 @@ name-group=
 include-naming-hint=no
 
 # Regular expression matching correct function names
-function-rgx=[a-z_][a-z0-9_]{2,30}$
+function-rgx=[a-z_][a-z0-9_]{2,40}$
 
 # Naming hint for function names
 function-name-hint=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression matching correct variable names
-variable-rgx=[a-z_][a-z0-9_]{2,30}$
+variable-rgx=[A-Za-z_][A-Za-z0-9_]{0,30}$
 
 # Naming hint for variable names
 variable-name-hint=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression matching correct constant names
-const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+const-rgx=(([a-zA-Z_][a-zA-Z0-9_]*)|(__.*__))$
 
 # Naming hint for constant names
 const-name-hint=(([A-Z_][A-Z0-9_]*)|(__.*__))$
 
 # Regular expression matching correct attribute names
-attr-rgx=[a-z_][a-z0-9_]{2,30}$
+attr-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
 
 # Naming hint for attribute names
 attr-name-hint=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression matching correct argument names
-argument-rgx=[a-z_][a-z0-9_]{2,30}$
+argument-rgx=[A-Za-z_][A-Za-z0-9_]{2,30}$
 
 # Naming hint for argument names
 argument-name-hint=[a-z_][a-z0-9_]{2,30}$
@@ -331,7 +301,7 @@ module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 
 # Regular expression matching correct method names
-method-rgx=[a-z_][a-z0-9_]{2,30}$
+method-rgx=[a-z_][a-z0-9_]{2,40}$
 
 # Naming hint for method names
 method-name-hint=[a-z_][a-z0-9_]{2,30}$

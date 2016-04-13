@@ -246,10 +246,8 @@ class Validator(object):
         if len(peerset) < minpeercount and len(nodeset) > 0:
             nodeset.discard(self.Ledger.LocalNode.Name)
             nodeset = nodeset.difference(peerset)
-            peerset = peerset.union(
-                random.sample(list(nodeset),
-                              min(minpeercount - len(peerset),
-                              len(nodeset))))
+            peerset = peerset.union(random.sample(list(nodeset), min(
+                minpeercount - len(peerset), len(nodeset))))
 
         # Add the candidate nodes to the gossip object so we can send connect
         # requests to them
@@ -368,8 +366,8 @@ class Validator(object):
             self.shutdown()
             return
 
-        logger.info('check for valid initialization; peers=%s', map(
-            lambda p: p.Name, self.Ledger.peer_list()))
+        logger.info('check for valid initialization; peers=%s',
+                    [p.Name for p in self.Ledger.peer_list()])
 
         # if this is not the root validator and there are no peers, something
         # bad happened and we are just going to bail out
@@ -384,15 +382,15 @@ class Validator(object):
             logger.info('still initializing')
             reactor.callLater(60.0, self._verify_initialization)
 
-    def register_endpoint(self, node, domain='/'):
+    def register_endpoint(self, endpoint, domain='/'):
         txn = endpoint_registry.EndpointRegistryTransaction.create_from_node(
-            node, domain)
-        txn.sign_from_node(node)
+            endpoint, domain)
+        txn.sign_from_node(endpoint)
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
+        msg.SenderID = str(endpoint.Identifier)
+        msg.sign_from_node(endpoint)
 
         logger.info('register endpoint %s with name %s through HTTP server',
                     endpoint.Identifier, endpoint.Name)

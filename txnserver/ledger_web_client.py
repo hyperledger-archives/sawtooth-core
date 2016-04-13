@@ -242,18 +242,16 @@ class LedgerWebClient(object):
                 return transaction.Status.unknown
 
         except urllib2.HTTPError as err:
-            logger.error(
-                'peer operation on url {0} failed with response: {1}'.format(
-                    url, err.code))
+            logger.error('peer operation on url %s failed with response: %d',
+                         url, err.code)
 
         except urllib2.URLError as err:
-            logger.error('peer operation on url {0} failed: {1}'.format(
-                url, err.reason))
+            logger.error('peer operation on url %s failed: %s', url,
+                         err.reason)
 
         except:
-            logger.error(
-                'no response from peer server for url {0}; {1}'.format(
-                    url, sys.exc_info()[0]))
+            logger.error('no response from peer server for url %s; %s',
+                         url, sys.exc_info()[0])
 
         return transaction.Status.unknown
 
@@ -302,21 +300,19 @@ class LedgerWebClient(object):
             response = opener.open(request, timeout=30)
 
         except urllib2.HTTPError as err:
-            logger.error(
-                'peer operation on url {0} failed with response: {1}'.format(
-                    url, err.code))
+            logger.error('peer operation on url %s failed with response: %d',
+                         url, err.code)
             raise MessageException('operation failed with resonse: {0}'.format(
                 err.code))
 
         except urllib2.URLError as err:
-            logger.error('peer operation on url {0} failed: {1}'.format(
-                url, err.reason))
+            logger.error('peer operation on url %s failed: %s',
+                         url, err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except:
-            logger.error(
-                'no response from peer server for url {0}; {1}'.format(
-                    url, sys.exc_info()[0]))
+            logger.error('no response from peer server for url %s; %s', url,
+                         sys.exc_info()[0])
             raise MessageException('no response from server')
 
         content = response.read()
@@ -359,25 +355,23 @@ class LedgerWebClient(object):
             response = opener.open(request, timeout=10)
 
         except urllib2.HTTPError as err:
-            logger.error(
-                'peer operation on url {0} failed with response: {1}'.format(
-                    url, err.code))
+            logger.error('peer operation on url %s failed with response: %d',
+                         url, err.code)
             raise MessageException('operation failed with resonse: {0}'.format(
                 err.code))
 
         except urllib2.URLError as err:
-            logger.error('peer operation on url {0} failed: {1}'.format(
-                url, err.reason))
+            logger.error('peer operation on url %s failed: %s', url,
+                         err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except NameError as err:
-            logger.error('name error {0}', err)
+            logger.error('name error %s', err)
             raise MessageException('operation failed: {0}'.format(url))
 
         except:
-            logger.error(
-                'no response from peer server for url {0}; {1}'.format(
-                    url, sys.exc_info()[0]))
+            logger.error('no response from peer server for url %s; %s', url,
+                         sys.exc_info()[0])
             raise MessageException('no response from server')
 
         content = response.read()

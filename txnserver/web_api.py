@@ -112,9 +112,11 @@ class RootPage(Resource):
 
             pretty = 'p' in request.args
             if pretty:
-                return pretty_print_dict(response) + '\n'
+                result = pretty_print_dict(response) + '\n'
             else:
-                return dict2json(response)
+                result = dict2json(response)
+
+            return result
 
         except Error as e:
             return self.error_response(
@@ -182,9 +184,11 @@ class RootPage(Resource):
 
             request.responseHeaders.addRawHeader("content-type", encoding)
             if encoding == 'application/json':
-                return dict2json(response.dump())
+                result = dict2json(response.dump())
             else:
-                return dict2cbor(response.dump())
+                result = dict2cbor(response.dump())
+
+            return result
 
         except Error as e:
             return self.error_response(

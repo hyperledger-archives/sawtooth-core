@@ -27,7 +27,7 @@ from gossip.messages import shutdown_message
 from txnserver import ledger_web_client
 
 
-class ValidatorManager:
+class ValidatorManager(object):
     """
     Manages a txnvalidator process
     contains logic to:
@@ -145,7 +145,7 @@ class ValidatorManager:
         msg.sign_from_node(self.AdminNode)
 
         try:
-            result = lwc.post_message(msg)
+            lwc.post_message(msg)
         except ledger_web_client.MessageException as me:
             print me
 
@@ -169,7 +169,7 @@ class ValidatorManager:
 
     def has_log_error(self):
         if os.path.exists(self.logFile):
-            reg = re.compile("^\[[\d:]*, ([\d]*), .*]")
+            reg = re.compile(r"^\[[\d:]*, ([\d]*), .*\]")
             with open(self.logFile, 'r') as fin:
                 for line in fin:
                     match = reg.search(line)

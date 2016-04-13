@@ -76,11 +76,11 @@ def configure(opts):
     if opts.validator is None:
         opts.validator = find_txn_validator()
         if not os.path.isfile(opts.validator):
-            print("txnvalidator: {}".format(opts.validator))
+            print "txnvalidator: {}".format(opts.validator)
             raise ExitError("Could not find txnvalidator.")
     else:
         if not os.path.isfile(opts.validator):
-            print("txnvalidator: {}".format(opts.validator))
+            print "txnvalidator: {}".format(opts.validator)
             raise ExitError("txnvalidator script does not exist.")
 
     validatorConfig = {}
@@ -93,7 +93,7 @@ def configure(opts):
     else:
         opts.config = os.path.realpath(os.path.join(scriptDir, "..", "etc",
                                                     "txnvalidator.js"))
-        print("No config file specified, loading  {}".format(opts.config))
+        print "No config file specified, loading  {}".format(opts.config)
         if os.path.exists(opts.config):
             validatorConfig = parse_configuration_file(opts.config)
         else:
@@ -219,7 +219,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         Launch another validator on the network
         """
         v = self.networkManager.launch_node()
-        print("Validator {} launched.".format(v.Name))
+        print "Validator {} launched.".format(v.Name)
         return False
 
     def do_launch_cmd(self, args):
@@ -240,7 +240,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
                     v.shutdown(True)
                     if v.is_running():
                         time.sleep(1)
-                print("Validator {} killed.".format(v.Name))
+                print "Validator {} killed.".format(v.Name)
             else:
                 print "Invalid validator id: {}".format(args[0])
         except:
@@ -262,7 +262,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
 
     def do_EOF(self, args):
         # pylint: disable=invalid-name
-        print("")
+        print ""
         return self.do_exit(args)
 
 

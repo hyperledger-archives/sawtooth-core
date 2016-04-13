@@ -58,7 +58,7 @@ def local_main(config, windows_service=False):
         try:
             validator.add_transaction_family(
                 importlib.import_module(txnfamily))
-        except ImportError, e:
+        except ImportError:
             warnings.warn("transaction family not found: {}".format(txnfamily))
             sys.exit(1)
 
@@ -214,7 +214,7 @@ def main(args, windows_service=False):
     log_setup.setup_loggers(cfg)
 
     for key, value in cfg.iteritems():
-        logger.debug("CONFIG: {} = {}".format(key, value))
+        logger.debug("CONFIG: %s = %s", key, value)
 
     logger.info('validator started with arguments: %s', sys.argv)
     logger.warn('validator pid is %s', os.getpid())
