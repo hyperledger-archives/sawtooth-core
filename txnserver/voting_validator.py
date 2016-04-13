@@ -40,7 +40,7 @@ class VotingValidator(validator.Validator):
         Initialize the ledger object for the local node, expected to be
         overridden
         """
-        self.Ledger = quorum_journal.QuorumJournal(node, self.Config)
+        self.Ledger = quorum_journal.QuorumJournal(node, **self.Config)
 
         nodelist = self.get_endpoints(0, self.EndpointDomain)
         for node in nodelist:

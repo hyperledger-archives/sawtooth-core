@@ -79,7 +79,6 @@ disable=no-member,
     import-error,
     too-many-public-methods,
     too-many-locals,
-    too-many-function-args,
     logging-too-many-args,
     locally-disabled
 
