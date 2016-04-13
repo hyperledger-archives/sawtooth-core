@@ -119,7 +119,6 @@ class ValidatorNetworkManager(object):
                     v = self.ValidatorMap[idx]
         except:
             print sys.exc_info()[0]
-            pass
 
         return v
 
