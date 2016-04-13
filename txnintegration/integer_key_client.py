@@ -139,7 +139,11 @@ class IntegerKeyClient(IntegerKeyCommunication):
             time.sleep(timetowait)
 
     def set(self, key, value):
-        """
+        """Creates an update object which sets the value associated with a key.
+
+               Args:
+                   key (str): The key to set.
+                   value (int): The value to set for key.
         """
         update = integer_key.Update({
             "Verb": "set",
@@ -150,7 +154,12 @@ class IntegerKeyClient(IntegerKeyCommunication):
         return self._sendtxn(update)
 
     def inc(self, key, value):
-        """
+        """Creates an update object which increments the value associated with
+           a key.
+               Args:
+                   key (str): The key to set.
+                   value (int): The value by which to increment the current
+                       value associated with key.
         """
         update = integer_key.Update({
             "Verb": "inc",
@@ -161,7 +170,12 @@ class IntegerKeyClient(IntegerKeyCommunication):
         return self._sendtxn(update)
 
     def dec(self, key, value):
-        """
+        """Creates an update object which decrements the value associated with
+           a key.
+               Args:
+                   key (str): The key to set.
+                   value (int): The value by which to decrement the current
+                       value associated with key.
         """
         update = integer_key.Update({
             "Verb": "dec",
