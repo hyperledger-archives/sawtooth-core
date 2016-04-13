@@ -29,6 +29,7 @@ from colorlog import ColoredFormatter
 
 class ExitError(Exception):
     def __init__(self, what):
+        super(ExitError, self).__init__()
         self.what = what
 
     def __str__(self):
