@@ -79,6 +79,7 @@ disable=no-member,
     import-error,
     too-many-public-methods,
     too-many-locals,
+    wrong-import-order,
     locally-disabled
 
 [REPORTS]
