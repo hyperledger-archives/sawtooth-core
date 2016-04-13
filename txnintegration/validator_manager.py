@@ -169,7 +169,7 @@ class ValidatorManager(object):
 
     def has_log_error(self):
         if os.path.exists(self.logFile):
-            reg = re.compile("^\[[\d:]*, ([\d]*), .*]")
+            reg = re.compile(r"^\[[\d:]*, ([\d]*), .*\]")
             with open(self.logFile, 'r') as fin:
                 for line in fin:
                     match = reg.search(line)
