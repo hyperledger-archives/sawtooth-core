@@ -382,15 +382,15 @@ class Validator(object):
             logger.info('still initializing')
             reactor.callLater(60.0, self._verify_initialization)
 
-    def register_endpoint(self, node, domain='/'):
+    def register_endpoint(self, endpoint, domain='/'):
         txn = endpoint_registry.EndpointRegistryTransaction.create_from_node(
-            node, domain)
-        txn.sign_from_node(node)
+            endpoint, domain)
+        txn.sign_from_node(endpoint)
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
+        msg.SenderID = str(endpoint.Identifier)
+        msg.sign_from_node(endpoint)
 
         logger.info('register endpoint %s with name %s through HTTP server',
                     endpoint.Identifier, endpoint.Name)
