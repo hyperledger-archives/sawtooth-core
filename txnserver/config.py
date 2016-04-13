@@ -45,8 +45,8 @@ def parse_configuration_files(cfiles, search_path):
         warnings.warn(
             "Unable to locate the following configuration files: "
             "{0} (search path: {1})".format(
-                ", ".join(files_not_found), ", ".join(map(os.path.realpath,
-                                                          search_path))))
+                ", ".join(files_not_found),
+                ", ".join([os.path.realpath(d) for d in search_path])))
         sys.exit(-1)
 
     for filename in files_found:
