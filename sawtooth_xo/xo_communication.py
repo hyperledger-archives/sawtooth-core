@@ -45,7 +45,6 @@ class XoCommunication(object):
         """
         Send an HTTP head request to the validator. Return the result code.
         """
-
         url = "{0}/{1}".format(self.BaseURL, path.strip('/'))
 
         LOGGER.debug('get content from url <%s>', url)
