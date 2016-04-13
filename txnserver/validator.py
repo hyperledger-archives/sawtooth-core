@@ -366,8 +366,8 @@ class Validator(object):
             self.shutdown()
             return
 
-        logger.info('check for valid initialization; peers=%s', map(
-            lambda p: p.Name, self.Ledger.peer_list()))
+        logger.info('check for valid initialization; peers=%s',
+                    [p.Name for p in self.Ledger.peer_list()])
 
         # if this is not the root validator and there are no peers, something
         # bad happened and we are just going to bail out
