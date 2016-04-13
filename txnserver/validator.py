@@ -246,10 +246,8 @@ class Validator(object):
         if len(peerset) < minpeercount and len(nodeset) > 0:
             nodeset.discard(self.Ledger.LocalNode.Name)
             nodeset = nodeset.difference(peerset)
-            peerset = peerset.union(
-                random.sample(list(nodeset),
-                              min(minpeercount - len(peerset),
-                              len(nodeset))))
+            peerset = peerset.union(random.sample(list(nodeset), min(
+                minpeercount - len(peerset), len(nodeset))))
 
         # Add the candidate nodes to the gossip object so we can send connect
         # requests to them
