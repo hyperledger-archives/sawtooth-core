@@ -58,7 +58,7 @@ def local_main(config, windows_service=False):
         try:
             validator.add_transaction_family(
                 importlib.import_module(txnfamily))
-        except ImportError, e:
+        except ImportError:
             warnings.warn("transaction family not found: {}".format(txnfamily))
             sys.exit(1)
 

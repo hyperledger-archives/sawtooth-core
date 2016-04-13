@@ -145,7 +145,7 @@ class ValidatorManager(object):
         msg.sign_from_node(self.AdminNode)
 
         try:
-            result = lwc.post_message(msg)
+            lwc.post_message(msg)
         except ledger_web_client.MessageException as me:
             print me
 

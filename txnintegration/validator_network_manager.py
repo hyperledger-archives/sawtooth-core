@@ -142,7 +142,7 @@ class ValidatorNetworkManager(object):
             self.ValidatorConfig['LedgerURL'] = validator.Url
             self.ValidatorConfig['GenesisLedger'] = False
             self.ValidatorConfig['Restore'] = False
-            for i in range(1, count):
+            for _ in range(1, count):
                 self.launch_node()
                 p.step()
 
@@ -228,7 +228,7 @@ class ValidatorNetworkManager(object):
                 and os.path.exists(self.DataDir) \
                 and len(self.Validators) != 0:
             tar = tarfile.open(archiveName, "w|gz")
-            for (dirpath, dirnames, filenames) in walk(self.DataDir):
+            for (dirpath, _, filenames) in walk(self.DataDir):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
                     tar.add(fp, f)

@@ -93,7 +93,6 @@ class IntKeyLoadTest(object):
     def run(self, rounds=1):
         self.state.fetch()
 
-        inc = True
         keys = self.state.State.keys()
 
         for r in range(0, rounds):
