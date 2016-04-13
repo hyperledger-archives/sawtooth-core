@@ -214,7 +214,7 @@ def main(args, windows_service=False):
     log_setup.setup_loggers(cfg)
 
     for key, value in cfg.iteritems():
-        logger.debug("CONFIG: {} = {}".format(key, value))
+        logger.debug("CONFIG: %s = %s", key, value)
 
     logger.info('validator started with arguments: %s', sys.argv)
     logger.warn('validator pid is %s', os.getpid())
