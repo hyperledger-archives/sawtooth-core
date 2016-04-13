@@ -127,7 +127,7 @@ class ValidatorNetworkManager(object):
         with Progress("Launching initial validator") as p:
             self.ValidatorConfig['LedgerURL'] = "**none**"
             self.ValidatorConfig['GenesisLedger'] = True
-            if(self.blockChainArchive is not None):
+            if self.blockChainArchive is not None:
                 self.ValidatorConfig['Restore'] = True
 
             validator = self.launch_node()

@@ -169,7 +169,7 @@ def find_txn_validator():
             return validator
 
     if validator is None:
-        print("txnvalidator: {}".format(validator))
+        print "txnvalidator: {}".format(validator)
         raise ExitError("Could not find txnvalidator in your $PATH")
 
     return validator
