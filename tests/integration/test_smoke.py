@@ -35,7 +35,7 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
     ENABLE_INTEGRATION_TESTS = True
 
 
-class MktPlaceLoad:
+class MktPlaceLoad(object):
     def __init__(self, num_traders, iterations, urls, test_dir):
         self.Actors = []
         self.state = None

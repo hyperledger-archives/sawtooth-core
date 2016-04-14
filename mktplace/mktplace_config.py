@@ -31,7 +31,7 @@ def get_mktplace_configuration(config_files,
 
     conf_dir = AggregateConfig(
         configs=[default_config, env_config, options_config]).resolve(
-        {'home': 'CurrencyHome'})['ConfigDirectory']
+            {'home': 'CurrencyHome'})['ConfigDirectory']
 
     user_conf_dir = os.path.join(os.path.expanduser("~"), ".sawtooth")
 

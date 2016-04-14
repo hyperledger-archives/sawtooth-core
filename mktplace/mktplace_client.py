@@ -156,7 +156,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         try:
             result = self.postmsg(msg.MessageType, msg.dump())
 
-        except MessageException as me:
+        except MessageException:
             return None
 
         except:

@@ -972,8 +972,8 @@ identifiers, ///$name
                                     default='')
                 parser.add_argument('--name',
                                     help='Name of the participant, must not '
-                                         'start with "/" Default: '
-                                         + self.MarketClient.LocalNode.Name,
+                                         'start with "/" Default: ' +
+                                    self.MarketClient.LocalNode.Name,
                                     default=self.MarketClient.LocalNode.Name)
                 parser.add_argument('--symbol',
                                     help='Symbol to associate with the newly '
@@ -1152,8 +1152,7 @@ identifiers, ///$name
                                                                  creator))
 
             if options.assets:
-                assetids = map(lambda n: self.MarketState.n2i(n),
-                               options.assets)
+                assetids = [self.MarketState.n2i(n) for n in options.assets]
                 filters.append(mktplace_state.Filters.references('asset',
                                                                  assetids))
 

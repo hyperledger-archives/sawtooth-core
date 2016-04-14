@@ -58,8 +58,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                                "scenario_setup_1_mkt"),
                                   "--echo",
                                   "--url",
-                                  cls.url
-                                  ])
+                                  cls.url])
 
             client_cli.main(
                 args=["--name", "BANK-trader",
@@ -69,8 +68,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                    "scenario_setup_2_trader"),
                       "--echo",
                       "--url",
-                      cls.url
-                      ])
+                      cls.url])
 
             client_cli.main(args=["--name", "BANK-agent",
                                   "--script",
@@ -78,8 +76,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                                "scenario_setup_3_agent"),
                                   "--echo",
                                   "--url",
-                                  cls.url
-                                  ])
+                                  cls.url])
 
             client_cli.main(
                 args=["--name", "BANK-dealer",
@@ -88,8 +85,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                    "scenario_setup_4_dealer"),
                       "--echo",
                       "--url",
-                      cls.url
-                      ])
+                      cls.url])
 
             state = mktplace_state.MarketPlaceState(cls.url)
             state.fetch()
@@ -151,8 +147,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                            "scenario_a_1_trader"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -164,8 +159,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                            "scenario_a_2_agent"),
                               "--echo",
                               "--url",
-                              self.url
-                              ])
+                              self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -207,8 +201,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                "scenario_b_1_trader"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -222,8 +215,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                "scenario_b_2_dealer"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -270,8 +262,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                "scenario_c_1_trader"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -285,8 +276,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                "scenario_c_2_dealer"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -303,8 +293,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                            "scenario_c_3_agent"),
                               "--echo",
                               "--url",
-                              self.url
-                              ])
+                              self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -330,8 +319,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                "scenario_c_4_dealer"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -382,8 +370,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                                "scenario_d_1_trader"),
                   "--echo",
                   "--url",
-                  self.url
-                  ])
+                  self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
@@ -395,8 +382,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                               os.path.join(self.scenarios_path,
                                            "scenario_d_2_agent"),
                               "--url",
-                              self.url
-                              ])
+                              self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()

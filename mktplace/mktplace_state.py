@@ -190,12 +190,9 @@ class MarketPlaceState(MarketPlaceCommunication):
             logger.debug('full fetch of state for block %s', blockid)
             state = self.getmsg(
                 "/store/{0}/*?blockid={1}".format(store, blockid))
-            self._state = \
-                MarketPlaceGlobalStore(prevstore=None,
-                                       storeinfo={
-                                           'Store': state, 'DeletedKeys': []
-                                       }
-                                       )
+            self._state = MarketPlaceGlobalStore(prevstore=None,
+                                                 storeinfo={'Store': state,
+                                                            'DeletedKeys': []})
 
         # State is actually a clone of the block state, this is a free
         # operation because of the copy on write implementation of the global
@@ -272,6 +269,6 @@ class MarketPlaceState(MarketPlaceCommunication):
             elif fields == '*':
                 result.append(objinfo)
             else:
-                result.append(map(lambda fld: objinfo.get(fld), fields))
+                result.append([objinfo.get(fld) for fld in fields])
 
         return result
