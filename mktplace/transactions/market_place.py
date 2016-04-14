@@ -306,11 +306,13 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
 
     def bind(self, fqname, objectid):
         """
+        Associate the objectid with the namemap
         """
         self._namemap[fqname] = objectid
 
     def unbind(self, fqname):
         """
+        Remove fqname from the namemap
         """
         del self._namemap[fqname]
 
