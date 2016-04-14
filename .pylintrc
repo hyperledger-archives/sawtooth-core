@@ -89,7 +89,6 @@ disable=bad-builtin,
   undefined-variable,
   unnecessary-lambda,
   unused-argument,
-  unused-variable,
   wrong-import-order
 
 [REPORTS]

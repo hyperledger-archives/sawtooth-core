@@ -297,7 +297,7 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
         for the global store. Oh well...
         """
         info = self.compose(readonly=True)
-        for objid, objinfo in info.iteritems():
+        for objid in info.iterkeys():
             name = self.i2n(objid)
             if not name.startswith('///'):
                 self._namemap[name] = objid
