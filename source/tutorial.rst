@@ -272,6 +272,14 @@ a holding for tokens (a special asset only covered briefly below).
    //mkt> account reg --name /market/account
    //mkt> holding reg --name /market/holding/token --count 1 --account /market/account --asset //marketplace/asset/token
 
+The special token asset is useful for bootstrapping purposes.  Tokens are
+non-consumable, in that they are never deducted from a holding even when
+exchanged for another asset.  The /market/holding/token as defined has 1 token,
+but since it will never be deducted during an exchange, it really has an
+infinite number of tokens in practice.  We use it below to create an inital
+one-time offer of USD to new participants (an offer which Bob and Alice will
+accept later).
+
 Now let's add the currency asset type and USD asset.  Note the count of USD
 below is a fixed amount.  By default, asset types are restricted and only the
 creator of the asset type can create assets of that type; so here, USD can only
