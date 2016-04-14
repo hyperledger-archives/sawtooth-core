@@ -57,7 +57,7 @@ class _LiabilityInformation(object):
 
     def __init__(self, objectid, creatorid, otype, asset, assettype, count):
         # this is not going to work for liabilities yet so just fail early
-        assert (otype == holding_update.HoldingObject.ObjectTypeName)
+        assert otype == holding_update.HoldingObject.ObjectTypeName
 
         self.ObjectID = objectid
         self.CreatorID = creatorid
