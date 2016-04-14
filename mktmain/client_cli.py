@@ -972,8 +972,8 @@ identifiers, ///$name
                                     default='')
                 parser.add_argument('--name',
                                     help='Name of the participant, must not '
-                                         'start with "/" Default: '
-                                         + self.MarketClient.LocalNode.Name,
+                                         'start with "/" Default: ' +
+                                    self.MarketClient.LocalNode.Name,
                                     default=self.MarketClient.LocalNode.Name)
                 parser.add_argument('--symbol',
                                     help='Symbol to associate with the newly '
