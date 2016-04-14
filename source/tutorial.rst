@@ -314,6 +314,19 @@ to have the client block until the changes have been committed:
 
    //mkt> waitforcommit
 
+.. note::
+
+   :command:`waitforcommit` can potentially take several minutes with a small
+   number of validators.  For this section of the tutorial, we are running with
+   a single validator and have updated the configuration such that it will
+   usually return within a reasonable amount of time.  PoET (the consensus
+   mechanism) is optimized for more realistic use cases (not a single
+   validator).  The amount of time to wait is related to several factors,
+   including a random number mapped to an exponential distribution.  So, if you
+   get unlucky, :command:`waitforcommit` might take a while.  As the number of
+   validators increases, the average wait time becomes more stable and
+   predictable.
+
 Market initialization is complete, so you can now exit mktclient:
 
 .. code-block:: none
