@@ -224,6 +224,27 @@ generate a key for each of them:
    $ ./bin/txnkeygen --keydir keys alice
    $ ./bin/txnkeygen --keydir keys bob
 
+Object Names
+------------
+
+Objects within MarketPlace are referenced (named) using paths separated by a
+slash (/).  The number of leading slashes determines whether the reference
+is an absolute path, a relative path, or an identifier. 
+
+============ =================== =============================================
+Count        Format              Description
+============ =================== =============================================
+Single (/)   /<PATH>             Relative to the current key in use
+Double (//)  //<CREATOR>/<PATH>  Fully qualified name
+Triple (///) ///<IDENTIFIER>     The object identifier
+============ =================== =============================================
+
+In this tutorial, we will stick to the relative paths when possible and specify
+absolute paths when referencing objects created by another key (another user).
+
+For example, both Alice and Bob will end up with "/USD" (a relative path), and
+the associated absolute paths will be "//bob/USD" and "//alice/USD".
+
 Market Initialization
 ---------------------
 
