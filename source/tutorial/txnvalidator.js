@@ -46,9 +46,10 @@
     ## do not restart 
     "Restore" : false,
 
-    ## administration node, the only node identifier from which
-    ## we will accept shutdown messages
-    "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE",
+    ## This value should be set to the identifier which is
+    ## permitted to send shutdown messages on the network.
+    ## By default, no AdministrationNode is set.
+    ## "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE",
 
     ## key file
     "KeyFile" : "{key_dir}/{node}.wif"
