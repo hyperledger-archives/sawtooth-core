@@ -1152,8 +1152,7 @@ identifiers, ///$name
                                                                  creator))
 
             if options.assets:
-                assetids = map(lambda n: self.MarketState.n2i(n),
-                               options.assets)
+                assetids = [self.MarketState.n2i(n) for n in options.assets]
                 filters.append(mktplace_state.Filters.references('asset',
                                                                  assetids))
 

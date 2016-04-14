@@ -269,6 +269,6 @@ class MarketPlaceState(MarketPlaceCommunication):
             elif fields == '*':
                 result.append(objinfo)
             else:
-                result.append(map(lambda fld: objinfo.get(fld), fields))
+                result.append([objinfo.get(fld) for fld in fields])
 
         return result
