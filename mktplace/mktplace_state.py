@@ -32,10 +32,6 @@ class Filters(object):
     """
 
     @staticmethod
-    def _reference(objid, field):
-        return objinfo.get('asset')
-
-    @staticmethod
     def matchvalue(field, value):
         """
         Predicate: match objects that have the given field and the
