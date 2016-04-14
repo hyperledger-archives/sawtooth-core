@@ -20,7 +20,7 @@ from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import random_name
 
 
-class MktActor:
+class MktActor(object):
     """
     This is a simplification of the MktPlace transaction client
 
