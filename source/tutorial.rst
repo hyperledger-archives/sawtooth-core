@@ -224,6 +224,27 @@ generate a key for each of them:
    $ ./bin/txnkeygen --keydir keys alice
    $ ./bin/txnkeygen --keydir keys bob
 
+Object Names
+------------
+
+Objects within MarketPlace are referenced (named) using paths separated by a
+slash (/).  The number of leading slashes determines whether the reference
+is an absolute path, a relative path, or an identifier. 
+
+============ =================== =============================================
+Count        Format              Description
+============ =================== =============================================
+Single (/)   /<PATH>             Relative to the current key in use
+Double (//)  //<CREATOR>/<PATH>  Fully qualified name
+Triple (///) ///<IDENTIFIER>     The object identifier
+============ =================== =============================================
+
+In this tutorial, we will stick to the relative paths when possible and specify
+absolute paths when referencing objects created by another key (another user).
+
+For example, both Alice and Bob will end up with "/USD" (a relative path), and
+the associated absolute paths will be "//bob/USD" and "//alice/USD".
+
 Market Initialization
 ---------------------
 
@@ -250,6 +271,14 @@ a holding for tokens (a special asset only covered briefly below).
    //UNKNOWN> participant reg --name mkt --description "The Marketplace"
    //mkt> account reg --name /market/account
    //mkt> holding reg --name /market/holding/token --count 1 --account /market/account --asset //marketplace/asset/token
+
+The special token asset is useful for bootstrapping purposes.  Tokens are
+non-consumable, in that they are never deducted from a holding even when
+exchanged for another asset.  The /market/holding/token as defined has 1 token,
+but since it will never be deducted during an exchange, it really has an
+infinite number of tokens in practice.  We use it below to create an inital
+one-time offer of USD to new participants (an offer which Bob and Alice will
+accept later).
 
 Now let's add the currency asset type and USD asset.  Note the count of USD
 below is a fixed amount.  By default, asset types are restricted and only the
@@ -284,6 +313,19 @@ to have the client block until the changes have been committed:
 .. code-block:: none
 
    //mkt> waitforcommit
+
+.. note::
+
+   :command:`waitforcommit` can potentially take several minutes with a small
+   number of validators.  For this section of the tutorial, we are running with
+   a single validator and have updated the configuration such that it will
+   usually return within a reasonable amount of time.  PoET (the consensus
+   mechanism) is optimized for more realistic use cases (not a single
+   validator).  The amount of time to wait is related to several factors,
+   including a random number mapped to an exponential distribution.  So, if you
+   get unlucky, :command:`waitforcommit` might take a while.  As the number of
+   validators increases, the average wait time becomes more stable and
+   predictable.
 
 Market initialization is complete, so you can now exit mktclient:
 
