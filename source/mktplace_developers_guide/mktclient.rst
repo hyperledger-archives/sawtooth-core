@@ -23,8 +23,8 @@ Configuring the mktclient
 
 The market client needs 2 pieces of configuration to connect to a validator
 network:
-    #. A valid key - these can be generated with txnkeygen.
-    #. The url of a Sawtooth validator on the network.
+#. A valid key - these can be generated with txnkeygen.
+#. The url of a Sawtooth validator on the network.
 
 An example command line would be:
 
