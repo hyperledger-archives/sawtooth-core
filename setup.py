@@ -69,7 +69,12 @@ if os.name == 'nt':
     libraries = ['json-c', 'cryptopp-static']
     include_dirs = ['deps/include', 'deps/include/cryptopp']
     library_dirs = ['deps/lib']
-
+elif sys.platform == 'darwin':
+    os.environ["CC"] = "clang++"
+    extra_compile_args = ['-std=c++11']
+    libraries = ['json-c', 'cryptopp']
+    include_dirs = ['/usr/local/include']
+    library_dirs = ['/usr/local/lib']
 else:
     extra_compile_args = ['-std=c++11']
     libraries = ['json-c', 'cryptopp']

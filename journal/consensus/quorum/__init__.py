@@ -13,4 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import journal.consensus.quorum.quorum_journal
+import journal.consensus.quorum.quorum_transaction_block
+
 __all__ = ['quorum_journal', 'quorum_transaction_block']

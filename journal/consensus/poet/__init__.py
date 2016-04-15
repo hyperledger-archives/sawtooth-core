@@ -12,4 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-__all__ = ['poet_journal', 'poet_transaction_block', 'wait_certificate']
+
+import journal.consensus.poet.poet_journal
+import journal.consensus.poet.poet_transaction_block
+import journal.consensus.poet.wait_certificate
+import journal.consensus.poet.wait_timer
+
+__all__ = ['poet_journal', 'poet_transaction_block', 'wait_certificate',
+           'wait_timer']

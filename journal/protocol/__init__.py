@@ -13,4 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import journal.protocol.journal_transfer
+
 __all__ = ['journal_transfer']
