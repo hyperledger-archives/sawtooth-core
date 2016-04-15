@@ -124,10 +124,10 @@ class MarketPlaceState(MarketPlaceCommunication):
         """
         Convert a name into an identifier. The name can take one of these
         forms:
-            @ -- resolves to the identifier for creator
-            ///<IDENTIFIER>  -- resolves to the identifier
-            //<CREATOR>/<PATH> -- fully qualified name
-            /<PATH> -- resolve relative to the current creator if specified
+        @ -- resolves to the identifier for creator
+        ///<IDENTIFIER>  -- resolves to the identifier
+        //<CREATOR>/<PATH> -- fully qualified name
+        /<PATH> -- resolve relative to the current creator if specified
 
         :param str name: object name
         :return: object identifier

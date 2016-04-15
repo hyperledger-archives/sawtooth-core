@@ -291,7 +291,7 @@ identifiers, ///$name
             state value -- get the value associated with a field in state
             state query -- find object that match specific criteria
             state byname -- find the identifier for an object using its fully
-                qualified name
+            qualified name
         """
         pargs = shlex.split(self._expandargs(args))
 
