@@ -24,6 +24,7 @@ from twisted.internet import reactor
 from gossip.config import ArgparseOptionsConfig
 from gossip.config import ConfigFileNotFound
 from gossip.config import InvalidSubstitutionKey
+from gossip.gossip_core import GossipException
 from txnserver import log_setup, lottery_validator, voting_validator, web_api
 from txnserver.config import get_validator_configuration
 
@@ -38,16 +39,23 @@ def local_main(config, windows_service=False):
     txnvalidator
     """
     ledgertype = config.get('LedgerType', 'lottery')
-    if ledgertype == 'lottery':
-        validator = lottery_validator.LotteryValidator(
-            config,
-            windows_service=windows_service)
-    elif ledgertype == 'voting':
-        validator = voting_validator.VotingValidator(
-            config,
-            windows_service=windows_service)
-    else:
-        warnings.warn('Unknown ledger type %s' % ledgertype)
+
+    validator = None
+
+    try:
+        if ledgertype == 'lottery':
+            validator = lottery_validator.LotteryValidator(
+                config,
+                windows_service=windows_service)
+        elif ledgertype == 'voting':
+            validator = voting_validator.VotingValidator(
+                config,
+                windows_service=windows_service)
+        else:
+            warnings.warn('Unknown ledger type %s' % ledgertype)
+            sys.exit(1)
+    except GossipException as e:
+        print >> sys.stderr, str(e)
         sys.exit(1)
 
     web_api.initialize_web_server(config, validator.Ledger)
