@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import logging
-import importlib
-from journal.consensus.poet.wait_timer import WaitTimer
 
-import journal.consensus.poet.poet_enclave_simulator.poet_enclave_simulator \
-    as poet_enclave_simulator
+import importlib
+import logging
+
+from journal.consensus.poet.poet_enclave_simulator \
+    import poet_enclave_simulator
+from journal.consensus.poet.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
 

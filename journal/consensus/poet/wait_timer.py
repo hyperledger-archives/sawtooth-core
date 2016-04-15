@@ -15,8 +15,9 @@
 
 import logging
 import importlib
-import journal.consensus.poet.poet_enclave_simulator.poet_enclave_simulator \
-    as poet_enclave_simulator
+
+from journal.consensus.poet.poet_enclave_simulator \
+    import poet_enclave_simulator
 
 logger = logging.getLogger(__name__)
 
