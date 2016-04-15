@@ -20,7 +20,6 @@ import Queue
 import errno
 import logging
 import socket
-import sys
 import time
 
 from twisted.internet import reactor, task
@@ -36,6 +35,14 @@ from gossip.messages import shutdown_message
 from gossip.messages import topology_message
 
 logger = logging.getLogger(__name__)
+
+
+class GossipException(Exception):
+    """An exception thrown when an error is encountered during
+    Gossip initialization."""
+
+    def __init__(self, msg):
+        super(GossipException, self).__init__(msg)
 
 
 class Gossip(object, DatagramProtocol):
@@ -142,7 +149,9 @@ class Gossip(object, DatagramProtocol):
             logger.critical(
                 "failed to connect local socket, server shutting down",
                 exc_info=True)
-            sys.exit(0)
+            raise GossipException(
+                "Failed to connect local "
+                "socket, server shutting down")
 
     def _initgossipstats(self):
         self.PacketStats = stats.Stats(self.LocalNode.Name, 'packet')
