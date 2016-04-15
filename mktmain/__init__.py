@@ -13,4 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import mktmain.client_cli
+
 __all__ = ['client_cli']
