@@ -30,9 +30,8 @@ from txnintegration.utils import write_key_file
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.validator_network_manager import defaultValidatorConfig
 
-ENABLE_INTEGRATION_TESTS = False
-if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
-    ENABLE_INTEGRATION_TESTS = True
+from integration import ENABLE_INTEGRATION_TESTS, \
+    SAVE_INTEGRATION_TEST_DATA
 
 
 class MktPlaceLoad(object):
@@ -235,6 +234,10 @@ class TestSmoke(unittest.TestCase):
             test_case.run()
             test_case.validate()
 
+            if SAVE_INTEGRATION_TEST_DATA:
+                vnm.create_result_archive("TestSmokeResults.tar.gz")
+                print "Validator data and logs preserved in: " \
+                    "TestSmokeResults.tar.gz"
             vnm.shutdown()
         except:
             print "Exception encountered in test case."
