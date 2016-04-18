@@ -37,7 +37,7 @@ def _register_transaction_types(ledger):
 
 
 class XoTransactionMessage(transaction_message.TransactionMessage):
-    """Integer key transaction message represent Xo transactions.
+    """Xo transaction message represent Xo transactions.
 
     Attributes:
         MessageType (str): The class name of the message.
