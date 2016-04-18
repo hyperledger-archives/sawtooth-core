@@ -14,13 +14,13 @@
 // ------------------------------------------------------------------------------
 
 #ifdef _WIN32
-    #include <windows.h>                                                                
+    #include <windows.h>
     #include <random>
 #else
-    #include <sys/time.h>                                                                
+    #include <sys/time.h>
 #endif
-#include <time.h>                                                                    
-#include <stdlib.h>                                                                  
+#include <time.h>
+#include <stdlib.h>
 #include <string>
 #include <json-c/json.h>
 
@@ -31,14 +31,12 @@ using namespace std;
 
 WaitCertificate::WaitCertificate(string encoded, string signature)
 {
-    this->minimum_wait_time = 1.0;
     this->signature = signature;
     this->deserialize(encoded);
 }
 
 WaitCertificate::WaitCertificate(WaitTimer *timer)
 {
-    this->minimum_wait_time = timer->minimum_wait_time;
     this->request_time = timer->request_time;
     this->duration = timer->duration;
     this->local_mean = timer->local_mean;
@@ -69,9 +67,6 @@ bool WaitCertificate::deserialize(string serialized)
     if (json_object_object_get_ex(jobj, "LocalMean", &obj))
         local_mean = json_object_get_double(obj);
 
-    if (json_object_object_get_ex(jobj, "MinimumWaitTime", &obj))
-        minimum_wait_time = json_object_get_double(obj);
-
     if (json_object_object_get_ex(jobj, "PreviousCertID", &obj))
         previous_certificate_id = json_object_get_string(obj);
 
@@ -88,7 +83,6 @@ string WaitCertificate::serialize()
     // Use alphabetical order for the keys
     json_object_object_add(jobj, "Duration", json_object_new_double(duration));
     json_object_object_add(jobj, "LocalMean", json_object_new_double(local_mean));
-    json_object_object_add(jobj, "MinimumWaitTime", json_object_new_double(minimum_wait_time));
     json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.data()));
     json_object_object_add(jobj, "RequestTime", json_object_new_double(request_time));
 

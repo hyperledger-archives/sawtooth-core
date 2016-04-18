@@ -46,7 +46,6 @@ class WaitTimer(object):
         serialized_timer (str): A serialized version of the timer.
 
     """
-    minimum_wait_time = 1.0
     target_wait_time = 30.0
     initial_wait_time = 3000.0
     certificate_sample_length = 50
@@ -127,7 +126,7 @@ class WaitTimer(object):
         sum_means = 0
         sum_waits = 0
         for cert in certificates[:cls.certificate_sample_length]:
-            sum_waits += cert.duration - cls.minimum_wait_time
+            sum_waits += cert.duration - cls._poet_enclave.MINIMUM_WAIT_TIME
             sum_means += cert.local_mean
 
         avg_wait = sum_waits / len(certificates)

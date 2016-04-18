@@ -35,7 +35,6 @@ class WaitTimer
     std::string serialize(void);
     bool deserialize(std::string encoded);
 
-    double minimum_wait_time;
     double local_mean;
 
     double request_time;
@@ -62,7 +61,6 @@ class WaitCertificate
     std::string serialize(void);
     bool deserialize(std::string encoded);
 
-    double minimum_wait_time;
     double local_mean;
 
     double request_time;
