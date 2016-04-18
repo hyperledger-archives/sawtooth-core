@@ -82,7 +82,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         transactions
     :param str keystring: the wif format key used to sign transactions
     :param str keyfile: the name of a file that contains the wif format key
-    :param MarketPlaceState state : ledger state used to test correctness of
+    :param MarketPlaceState state: ledger state used to test correctness of
         transactions prior to submission
     """
 
@@ -259,7 +259,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
             the payer holding/liability
         :param offerids: a list of offer identifiers that transform payer to
             payee transaction
-        :type offerids list of id
+        :type offerids: list of id
         :return: exchange transaction id
         :rtype: id
         """

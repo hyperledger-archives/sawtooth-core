@@ -25,10 +25,8 @@ class MktActor(object):
     This is a simplification of the MktPlace transaction client
 
     Each actor has:
-    1 Account (/account
-        all holdings are registered as /account/{asset name}
-    1 Asset type (/assets)
-        all assets are registered as /assets/{asset name}
+    1 Account (/account) all holdings are registered as /account/{asset name}
+    1 Asset type (/assets) all assets are registered as /assets/{asset name}
 
     holdings for assets will be automatically created if needed.
 

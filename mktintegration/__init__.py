@@ -13,4 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import mktintegration.actor
+
 __all__ = ['actor']
