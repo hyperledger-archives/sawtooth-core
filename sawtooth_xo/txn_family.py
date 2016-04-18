@@ -68,8 +68,6 @@ class XoTransaction(transaction.Transaction):
         TransactionTypeStore (type): The type of transaction store.
         MessageType (type): The object type of the message associated
             with this transaction.
-        Updates (list): A list of Xo registry updates associated
-            with this transaction.
     """
     TransactionTypeName = '/XoTransaction'
     TransactionStoreType = global_store_manager.KeyValueStore
