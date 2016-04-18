@@ -91,7 +91,7 @@ In order to join the new validator to an existing network of validators,
 the "LedgerURL" setting must be changed in the configuration file to
 point to a valid URL for an existing http validator in the network.
 
-.. code-block:: json
+.. code-block:: none
 
   {
       "HttpPort" : 0,
@@ -99,6 +99,7 @@ point to a valid URL for an existing http validator in the network.
       "Port" : 0,
       "NodeName" : "node000",
       "LedgerURL" : "http://base-validator.domain.com:8800/",
+
 
 It is also important to set the "NodeName" value to a unique value based
 on your naming convention. The node's key, which must be generated using
@@ -108,7 +109,7 @@ Several other settings are important for correct functionality of the
 new validator node. The configuration file must contain the list of
 valid transaction families supported by the validator network.
 
-.. code-block:: json
+.. code-block:: none
 
   "TransactionFamilies" : [
       "IntegerKey",
@@ -117,12 +118,12 @@ valid transaction families supported by the validator network.
 
 Lastly, the "AdministrationNode" setting must contain the address of the
 administration node on the validator network. This instructs the validator
-to listen for and act on administrative transactions (like shutdown) 
+to listen for and act on administrative transactions (like shutdown)
 received from the administration node. The administration node address
 can be found in the keys directory on the adminstration node in a file
 called {node name}.addr.
 
-.. code-block:: json
+.. code-block:: none
 
   "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE"
 
