@@ -30,8 +30,6 @@ def _register_transaction_types(ledger):
         ledger (journal.journal_core.Journal): The ledger to register
             the transaction type against.
     """
-    logging.error("XO!")
-
     ledger.register_message_handler(
         XoTransactionMessage,
         transaction_message.transaction_message_handler)
