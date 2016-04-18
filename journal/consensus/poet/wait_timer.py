@@ -67,7 +67,7 @@ class WaitTimer(object):
             certs (list): A historical list of certificates.
 
         Returns:
-            WaitTimer: A new wait timer.
+            wait_timer.WaitTimer: A new wait timer.
         """
         previous_certificate_id = certs[-1].identifier if certs else \
             cls._poet_enclave.NULL_IDENTIFIER

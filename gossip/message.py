@@ -103,7 +103,7 @@ class Packet(object):
         """Resets the Packet with the attributes of the Message.
 
         Args:
-            msg (Message): The message to apply to the packet.
+            msg (message.Message): The message to apply to the packet.
             src (Node): The source node of the packet.
             dst (Node): The destination node of the packet.
             seqno (int): The sequence number of the packet.

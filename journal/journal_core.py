@@ -219,7 +219,7 @@ class Journal(gossip_core.Gossip):
         """Add a transaction type-specific store to the global store.
 
         Args:
-            family (Transaction): The transaction family.
+            family (transaction.Transaction): The transaction family.
         """
         tname = family.TransactionTypeName
         tstore = family.TransactionStoreType()
@@ -490,7 +490,7 @@ class Journal(gossip_core.Gossip):
             blockid (str): The identifier of the missing block.
             exceptions (list): Identifiers of nodes we know don't have
                 the block.
-            request (Message): A previously initialized message for
+            request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
         now = time.time()
@@ -523,7 +523,7 @@ class Journal(gossip_core.Gossip):
             txnid (str): The identifier of the missing transaction.
             exceptions (list): Identifiers of nodes we know don't have
                 the block.
-            request (Message): A previously initialized message for
+            request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
         now = time.time()

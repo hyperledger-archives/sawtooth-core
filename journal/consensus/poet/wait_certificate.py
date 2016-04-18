@@ -61,11 +61,11 @@ class WaitCertificate(object):
         a WaitCertificate object.
 
         Args:
-            timer (WaitTimer): The wait timer to use in creating the
+            timer (wait_timer.WaitTimer): The wait timer to use in creating the
                 certificate.
 
         Returns:
-            WaitCertificate: A new wait certificate.
+            wait_certificate.WaitCertificate: A new wait certificate.
         """
         cert = cls._poet_enclave.create_wait_certificate(
             timer.enclave_wait_timer)
@@ -89,7 +89,7 @@ class WaitCertificate(object):
             signature (str): The signature.
 
         Returns:
-            WaitCertificate: A wait certificate representing the
+            wait_certificate.WaitCertificate: A wait certificate representing the
                 contents of the serialized wait certificate.
         """
         cert = cls._poet_enclave.deserialize_wait_certificate(

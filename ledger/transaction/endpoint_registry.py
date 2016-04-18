@@ -78,7 +78,8 @@ class Update(object):
             domain (str): The domain of the endpoint.
 
         Returns:
-            Update: An update object for registering the node's details.
+            endpoint_registry.Update: An update object for registering the
+                node's details.
         """
         update = Update()
 
@@ -200,7 +201,7 @@ class EndpointRegistryTransaction(transaction.Transaction):
             domain (str): The domain of the endpoint.
 
         Returns:
-            Update: A transaction contiaining an update for
+            endpoint_registry.Update: A transaction contiaining an update for
                 registering the node's details.
         """
         regtxn = EndpointRegistryTransaction()

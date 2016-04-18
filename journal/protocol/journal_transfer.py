@@ -43,7 +43,7 @@ def start_journal_transfer(journal, oncomplete):
     """Initiates journal transfer to peers.
 
     Args:
-        journal (Journal): The journal to transfer.
+        journal (journal_core.Journal): The journal to transfer.
         oncomplete (function): The function to call when the
             journal transfer has completed.
 
@@ -66,7 +66,7 @@ class JournalTransfer(object):
     """Handles the transfer of a journal to peers.
 
     Attributes:
-        Journal (Journal): The journal to transfer.
+        Journal (journal_core.Journal): The journal to transfer.
         Callback (function): The function to call when the
             journal transfer has completed.
     """
@@ -74,7 +74,7 @@ class JournalTransfer(object):
         """Constructor for the JournalTransfer class.
 
         Args:
-            journal (Journal): The journal to transfer.
+            journal (journal_core.Journal): The journal to transfer.
             callback (function): The function to call when
                 the journal transfer has completed.
         """

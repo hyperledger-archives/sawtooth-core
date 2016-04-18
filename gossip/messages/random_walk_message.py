@@ -143,7 +143,7 @@ def random_walk_handler(msg, gossiper):
     from one of its peers.
 
     Args:
-        msg (Message): The received random walk message.
+        msg (message.Message): The received random walk message.
         gossiper (Node): The local node.
     """
 

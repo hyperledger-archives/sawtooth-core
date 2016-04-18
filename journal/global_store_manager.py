@@ -107,8 +107,8 @@ class GlobalStoreManager(object):
 
         Args:
             blockid (str): The identifier to associate with the block.
-            blockstore (BlockStore): An initialized blockstore to be
-                used as the root store.
+            blockstore (global_store_manager.BlockStore): An initialized
+                blockstore to be used as the root store.
         """
 
         # if we commit a block then we know that either this is the genesis
@@ -164,7 +164,8 @@ class GlobalStoreManager(object):
             blockid (str): Identifier associated with the block.
 
         Returns:
-            BlockStore: The blockstore associated with the identifier.
+            global_store_manager.BlockStore: The blockstore associated with
+                the identifier.
         """
 
         self.require_store(blockid)
@@ -222,7 +223,7 @@ class BlockStore(object):
     the stores.
 
     Attributes:
-        PrevBlock (BlockStore): The previous block.
+        PrevBlock (global_store_manager.BlockStore): The previous block.
         BlockID (str): The ID of the root block.
         TransactionStores (dict): The transaction stores associated with
             this block store.
@@ -232,8 +233,9 @@ class BlockStore(object):
         """Initializes a new BlockStore.
 
         Args:
-            prevblock (BlockStore): Optional parameter to initialize
-                previous block pointer, required for all but the root block.
+            prevblock (global_store_manager.BlockStore): Optional parameter
+                to initialize previous block pointer, required for all but the
+                root block.
             blockinfo (dict): Optional initial data for the block.
         """
 

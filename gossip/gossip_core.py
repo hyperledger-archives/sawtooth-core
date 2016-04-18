@@ -692,7 +692,7 @@ class Gossip(object, DatagramProtocol):
         we do not want to re-process the request.
 
         Args:
-            msg (Message): The message to forward.
+            msg (message.Message): The message to forward.
             exceptions (list): A list of Nodes to exclude from the peer_list.
             initialize (bool): Whether to initialize the origin fields, used
                 for initial send of the message.
@@ -713,7 +713,7 @@ class Gossip(object, DatagramProtocol):
         network of participants.
 
         Args:
-            msg (Message): The message to send.
+            msg (message.Message): The message to send.
             peerid (str): Identifer of the peer node.
             initialize (bool): Whether to initialize the origin fields, used
                 for initial send of the message.
@@ -734,7 +734,7 @@ class Gossip(object, DatagramProtocol):
         of participants.
 
         Args:
-            msg (Message): The message to broadcast.
+            msg (message.Message): The message to broadcast.
             initialize (bool): Whether to initialize the origin fields, used
                 for initial send of the message.
         """
@@ -753,7 +753,7 @@ class Gossip(object, DatagramProtocol):
         """Handle a message.
 
         Args:
-            msg (Message): The message to handle.
+            msg (message.Message): The message to handle.
         """
         # mark the message as handled
         logger.debug('calling handler for message %s from %s of type %s',

@@ -24,7 +24,7 @@ def register_message_handlers(journal):
     journal.
 
     Args:
-        journal (Journal): The journal to register the message
+        journal (journal_core.Journal): The journal to register the message
             handlers against.
     """
     journal.register_message_handler(TransactionBlockMessage,
@@ -81,8 +81,8 @@ def transaction_block_message_handler(msg, journal):
     block message.
 
     Args:
-        msg (Message): The transaction block message.
-        journal (Journal): The journal.
+        msg (message.Message): The transaction block message.
+        journal (journal_core.Journal): The journal.
     """
     # if we already have this block, then there is no reason to
     # send it on, be conservative about forwarding messages
