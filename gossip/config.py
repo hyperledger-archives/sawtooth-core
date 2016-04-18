@@ -75,8 +75,8 @@ class Config(dict):
 
         Keyword arguments:
         substitutions -- a dict where the key is the variable to be
-            substituted and the value is the config key to use to
-            lookup the value
+        substituted and the value is the config key to use to
+        lookup the value
         """
 
         pathsubs = {}
@@ -193,7 +193,7 @@ def load_config_files(config_files, search_path, config_files_required=True):
     config_files -- a list of config filenames
     search_path -- a list of directories to search
     config_files_required -- if True, ConfigFilesNotFound is thrown if
-        the configuration files cannot be located
+    the configuration files cannot be located
     """
     files_not_found = []
     files_found = []

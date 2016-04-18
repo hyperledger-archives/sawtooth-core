@@ -13,4 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import gossip.topology.barabasi_albert
+import gossip.topology.random_walk
+
 __all__ = ['barabasi_albert', 'random_walk']

@@ -13,6 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import journal.global_store_manager
+import journal.journal_core
+import journal.transaction
+import journal.transaction_block
+
 __all__ = [
     'global_store_manager',
     'journal_core',

@@ -13,5 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import gossip.common
+import gossip.config
+import gossip.event_handler
+import gossip.gossip_core
+import gossip.message
+import gossip.node
+import gossip.signed_object
+import gossip.stats
+import gossip.token_bucket
+
 __all__ = ['common', 'config', 'event_handler', 'gossip_core', 'message',
            'node', 'signed_object', 'stats', 'token_bucket']

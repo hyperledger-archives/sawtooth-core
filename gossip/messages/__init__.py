@@ -13,5 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import gossip.messages.connect_message
+import gossip.messages.gossip_debug
+import gossip.messages.random_walk_message
+import gossip.messages.shutdown_message
+import gossip.messages.topology_message
+
 __all__ = ['connect_message', 'gossip_debug', 'random_walk_message',
            'shutdown_message', 'topology_message']

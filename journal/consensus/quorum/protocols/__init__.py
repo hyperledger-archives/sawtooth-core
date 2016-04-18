@@ -13,4 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import journal.consensus.quorum.protocols.quorum_vote
+
 __all__ = ['quorum_vote']
