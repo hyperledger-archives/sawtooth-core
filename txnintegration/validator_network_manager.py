@@ -187,7 +187,6 @@ class ValidatorNetworkManager(object):
         return v
 
     def shutdown(self):
-
         if len(self.Validators) == 0:
             # no validators to shutdown
             return
@@ -198,14 +197,27 @@ class ValidatorNetworkManager(object):
                     v.post_shutdown()
                 p.step()
 
-        print "Giving validators time to shutdown"
-        time.sleep(10)
-
-        with Progress("Shutting down validators: ") as p:
-            for v in self.Validators:
-                if v.is_running():
-                    v.shutdown(True)
+        running_count = 0
+        to = TimeOut(10)
+        with Progress("Giving validators time to shutdown: ") as p:
+            while True:
+                running_count = 0
+                for v in self.Validators:
+                    if v.is_running():
+                        running_count = running_count + 1
+                if to.is_timed_out() or running_count == 0:
+                    break
+                else:
+                    time.sleep(1)
                 p.step()
+
+        if running_count != 0:
+            with Progress("Killing {} intransigent validators: "
+                          .format(running_count)) as p:
+                for v in self.Validators:
+                    if v.is_running():
+                        v.shutdown(True)
+                    p.step()
 
         # wait for windows to learn that the subprocess are dead.
         if os.name == "nt":
