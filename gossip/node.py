@@ -37,8 +37,7 @@ class Node(object):
         SigningKey (str): a PEM formatted signing key.
         Identifier (str): an identifier for the node.
         Name (str): a short, human-readable name for the node.
-        Enabled (bool): whether or not the node is active. This is set from
-            outside the Node class.
+        Enabled (bool): whether or not the node is active.
         Estimator (RoundTripEstimator): tracks network timing between nodes.
         MessageQ (TransmissionQueue): a transmission queue ordered by time
             to send.
@@ -123,6 +122,20 @@ class Node(object):
 
     def _fixeddelay(self):
         return self.FixedRandomDelay
+
+    def enable(self):
+        """Enables the node.
+        """
+        if not self.Enabled:
+            logger.info('enabling node %s', self.Identifier)
+        self.Enabled = True
+
+    def disable(self):
+        """Disables the node.
+        """
+        if self.Enabled:
+            logger.info('disabling node %s', self.Identifier)
+        self.Enabled = False
 
     def initialize_stats(self, localnode):
         """Initializes statistics collection for the node.

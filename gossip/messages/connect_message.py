@@ -143,7 +143,7 @@ def connect_request_handler(msg, gossiper):
     orignode = node.Node(address=msg.NetAddress,
                          identifier=msg.OriginatorID,
                          name=name)
-    orignode.Enabled = True
+    orignode.enable()
     gossiper.add_node(orignode)
 
     reply = ConnectReplyMessage()
@@ -206,9 +206,7 @@ def connect_reply_handler(msg, gossiper):
     # we have confirmation that this peer is currently up, so add it to our
     # list
     if msg.OriginatorID in gossiper.NodeMap:
-        logger.info('mark node %s as enabled',
-                    gossiper.NodeMap[msg.OriginatorID])
-        gossiper.NodeMap[msg.OriginatorID].Enabled = True
+        gossiper.NodeMap[msg.OriginatorID].enable()
 
 
 class DisconnectRequestMessage(message.Message):
