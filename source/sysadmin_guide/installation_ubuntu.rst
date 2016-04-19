@@ -96,7 +96,7 @@ In order to join the new validator to an existing network of validators,
 the "LedgerURL" setting must be changed in the configuration file to
 point to a valid URL for an existing http validator in the network.
 
-.. code-block:: json
+.. code-block:: none
 
   {
       "HttpPort" : 0,
@@ -113,7 +113,7 @@ Several other settings are important for correct functionality of the
 new validator node. The configuration file must contain the list of
 valid transaction families supported by the validator network.
 
-.. code-block:: json
+.. code-block:: none
 
   "TransactionFamilies" : [
       "IntegerKey",
@@ -127,7 +127,7 @@ received from the administration node. The administration node address
 can be found in the keys directory on the adminstration node in a file
 called {node name}.addr.
 
-.. code-block:: json
+.. code-block:: none
 
   "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE"
 
