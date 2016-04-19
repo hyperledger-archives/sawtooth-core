@@ -89,8 +89,8 @@ class WaitCertificate(object):
             signature (str): The signature.
 
         Returns:
-            wait_certificate.WaitCertificate: A wait certificate representing the
-                contents of the serialized wait certificate.
+            wait_certificate.WaitCertificate: A wait certificate representing
+                the contents of the serialized wait certificate.
         """
         cert = cls._poet_enclave.deserialize_wait_certificate(
             serialized, signature)
