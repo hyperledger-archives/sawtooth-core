@@ -47,7 +47,7 @@ class PingMessage(message.Message):
     """Ping messages are sent to a peer node to verify connectivity.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        PingMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically
@@ -87,7 +87,8 @@ class DumpConnectionsMessage(message.Message):
     it to log enabled and disabled connections information.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        DumpConnectionsMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically
@@ -141,7 +142,7 @@ class DumpPeerStatsMessage(message.Message):
     it to log statistics about specified peer connections.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        DumpPeerStatsMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically
@@ -202,7 +203,7 @@ class ResetPeerStatsMessage(message.Message):
     it to reset statistics about specified peer connections.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        ResetPeerStatsMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically
@@ -263,7 +264,7 @@ class DumpNodeStatsMessage(message.Message):
     it to dump statistics.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        DumpNodeStatsMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically
@@ -322,7 +323,7 @@ class ResetStatsMessage(message.Message):
     it to reset statistics.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        ResetStatsMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically

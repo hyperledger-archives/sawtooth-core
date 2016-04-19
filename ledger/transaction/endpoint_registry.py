@@ -40,7 +40,8 @@ class EndpointRegistryTransactionMessage(
     transactions.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        EndpointRegistryTransactionMessage.MessageType (str): The class name
+            of the message.
         Transaction (EndpointRegistryTransaction): The transaction the
             message is associated with.
     """
@@ -57,7 +58,8 @@ class Update(object):
     """Updates represent potential changes to the endpoint registry.
 
     Attributes:
-        KnownVerbs (list): A list of possible update actions.
+        endpoint_registry.Update.KnownVerbs (list): A list of possible update
+            actions.
         Verb (str): The action of this update, defaults to 'reg'.
         Domain (str): The domain of the endpoint.
         Name (str): The name of the endpoint.
@@ -178,11 +180,12 @@ class EndpointRegistryTransaction(transaction.Transaction):
     It has a unique identifier and a signature to validate the source.
 
     Attributes:
-        TransactionTypeName (str): The name of the endpoint registry
-            transaction type.
-        TransactionStoreType (type): The type of the transaction store.
-        MessageType (type): The object type of the message associated
-            with this transaction.
+        EndpointRegistryTransaction.TransactionTypeName (str): The name of the
+            endpoint registry transaction type.
+        EndpointRegistryTransaction.TransactionStoreType (type): The type of
+            the transaction store.
+        EndpointRegistryTransaction.MessageType (type): The object type of the
+            message associated with this transaction.
         Updates (list): A list of endpoint registry updates associated
             with this transaction.
     """

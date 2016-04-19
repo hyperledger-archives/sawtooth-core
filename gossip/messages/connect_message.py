@@ -66,7 +66,7 @@ class ConnectRequestMessage(message.Message):
     a gossip connection.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        ConnectRequestMessage.MessageType (str): The class name of the message.
         Reliable (bool): Whether or not the message requires reliable
             delivery.
         NetHost (str): Hostname or IP address identifying the node.
@@ -156,7 +156,7 @@ class ConnectReplyMessage(message.Message):
     an incoming connection request message.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        ConnectReplyMessage.MessageType (str): The class name of the message.
         InReplyTo (str): The node identifier of the originator of the
             connection request message.
         IsSystemMessage (bool): Whether or not this is a system message.
@@ -216,7 +216,8 @@ class DisconnectRequestMessage(message.Message):
     to disconnect from the gossip network.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        DisconnectRequestMessage.MessageType (str): The class name of the
+            message.
         Reliable (bool): Whether or not the message requires reliable
             delivery.
         IsSystemMessage (bool): Whether or not this is a system message.
@@ -274,7 +275,7 @@ class KeepAliveMessage(message.Message):
     conneciton alive.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        KeepAliveMessage.MessageType (str): The class name of the message.
         Reliable (bool): Whether or not the message requires reliable
             delivery.
         IsSystemMessage (bool): Whether or not this is a system message.

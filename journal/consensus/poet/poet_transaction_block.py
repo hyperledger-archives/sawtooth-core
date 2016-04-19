@@ -41,7 +41,8 @@ class PoetTransactionBlockMessage(
     for exchanging information about poet transaction blocks.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        PoetTransactionBlockMessage.MessageType (str): The class name of
+            the message.
     """
     MessageType = \
         "/journal.consensus.poet.PoetTransactionBlock/TransactionBlock"
@@ -58,13 +59,14 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
     be applied to a ledger.
 
     Attributes:
-        TransactionBlockTypeName (str): The name of the
+        PoetTransactionBlock.TransactionBlockTypeName (str): The name of the
             transaction block type.
-        MessageType (type): The poet transaction block message
-            class.
-        WaitTimer (WaitTimer): The wait timer for the block.
-        WaitCertificate (WaitCertificate): The wait certificate
+        PoetTransactionBlock.MessageType (type): The poet transaction block
+            message class.
+        PoetTransactionBlock.WaitTimer (wait_timer.WaitTimer): The wait timer
             for the block.
+        PoetTransactionBlock.WaitCertificate (wait_certificateWaitCertificate):
+            The wait certificate for the block.
     """
     TransactionBlockTypeName = '/Lottery/PoetTransactionBlock'
     MessageType = PoetTransactionBlockMessage

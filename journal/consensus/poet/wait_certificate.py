@@ -40,12 +40,14 @@ class WaitCertificate(object):
     Attributes:
         _poet_enclave (module): The PoetEnclave module to use for executing
             enclave functions.
-        previous_certificate_id (str): The id of the previous certificate.
-        local_mean (float): The local mean wait time based on the history
-            of certs.
-        request_time (float): The request time of the certificate.
-        duration (float): The duration of the wait timer.
-        signature (str): The signature of the certificate.
+        WaitCertificate.previous_certificate_id (str): The id of the previous
+            certificate.
+        WaitCertificate.local_mean (float): The local mean wait time based on
+            the history of certs.
+        WaitCertificate.request_time (float): The request time of the
+            certificate.
+        WaitCertificate.duration (float): The duration of the wait timer.
+        WaitCertificate.signature (str): The signature of the certificate.
         identifier (str): The identifier of this certificate.
         serialized_cert (str): A serialized version of the certificate.
     """

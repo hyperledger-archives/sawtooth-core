@@ -27,7 +27,7 @@ class WaitTimer(object):
     certificate.
 
     Attributes:
-        minimum_wait_time (float): The minimum wait time in seconds.
+        WaitTimer.minimum_wait_time (float): The minimum wait time in seconds.
         target_wait_time (float): The target wait time in seconds.
         initial_wait_time (float): The initial wait time in seconds.
         certificate_sample_length (int): The number of certificates to
@@ -37,12 +37,13 @@ class WaitTimer(object):
             InitialWaitTime, rather than the history.
         _poet_enclave (module): The PoetEnclave module to use for
             executing enclave functions.
-        previous_certificate_id (str): The id of the previous certificate.
-        local_mean (float): The local mean wait time based on the history
-            of certs.
-        request_time (float): The request time.
-        duration (float): The duration of the wait timer.
-        signature (str): The signature of the timer.
+        WaitTimer.previous_certificate_id (str): The id of the previous
+            certificate.
+        WaitTimer.local_mean (float): The local mean wait time based on the
+            history of certs.
+        WaitTimer.request_time (float): The request time.
+        WaitTimer.duration (float): The duration of the wait timer.
+        WaitTimer.signature (str): The signature of the timer.
         serialized_timer (str): A serialized version of the timer.
 
     """

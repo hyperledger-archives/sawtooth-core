@@ -41,7 +41,7 @@ class QuorumBallotMessage(message.Message):
     exchanging quorum ballots.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        QuorumBallotMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this message is a
             system message.
         IsForward (bool): Whether or not this message is forwarded.
@@ -113,7 +113,8 @@ class QuorumInitiateVoteMessage(message.Message):
     exchanging quorum advertisements.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        QuorumInitiateVoteMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this message is a system
             message.
         IsForward (bool): Whether this message is forwarded.
@@ -170,7 +171,8 @@ class QuorumCompleteVoteMessage(message.Message):
     for exchanging information between peers when voting has completed.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        QuorumCompleteVoteMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this message is
             a system message.
         IsForward (bool): Whether or not this message is forwarded.

@@ -70,10 +70,11 @@ class Transaction(signed_object.SignedObject):
         individual not a Node as is the case for the signer of a message.
 
     Attributes:
-        TransactionTypeName (str): The name of the transaction type.
-        MessageType (type): The transaction class.
+        Transaction.TransactionTypeName (str): The name of the transaction
+            type.
+        Transaction.MessageType (type): The transaction class.
         Nonce (float): A locally unique identifier.
-        Status (Status): The status of the transaction.
+        Transaction.Status (transaction.Status): The status of the transaction.
         Dependencies (list): A list of transactions that this transaction
             is dependent on.
     """
