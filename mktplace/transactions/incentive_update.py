@@ -57,6 +57,11 @@ class IncentiveUpdate(object):
         assert self.Transaction
         return self.Transaction.Identifier
 
+    @property
+    def References(self):
+        return [self.CreatorID, self.AccountID, self.AssetTypeID,
+                self.GuarantorID]
+
     def is_valid(self, store):
         # make sure the holding is really a holding
         if not holding_update.HoldingObject.is_valid_object(store,

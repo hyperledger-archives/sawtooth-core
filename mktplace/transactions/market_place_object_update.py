@@ -74,6 +74,10 @@ class Register(object):
                                         self.ObjectID)
 
     @property
+    def references(self):
+        return []
+
+    @property
     def OriginatorID(self):
         assert self.Transaction
         return self.Transaction.OriginatorID
@@ -140,6 +144,10 @@ class Unregister(object):
     def __str__(self):
         return "({0}, {1}, {2})".format(self.UpdateType, self.OriginatorID,
                                         self.ObjectID)
+
+    @property
+    def References(self):
+        return []
 
     @property
     def OriginatorID(self):

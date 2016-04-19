@@ -68,6 +68,10 @@ class Register(market_place_object_update.Register):
         self.Description = minfo.get('Description', '')
         self.Name = minfo.get('Name', '')
 
+    @property
+    def References(self):
+        return [self.CreatorID]
+
     def is_valid(self, store):
         if not super(Register, self).is_valid(store):
             return False

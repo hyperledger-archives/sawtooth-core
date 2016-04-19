@@ -66,6 +66,10 @@ class Register(market_place_object_update.Register):
         self.Description = minfo.get('Description', '')
         self.Name = minfo.get('Name', '')
 
+    @property
+    def References(self):
+        return []
+
     def is_valid_name(self):
         """
         Participant names may not include a '/' and must be less than

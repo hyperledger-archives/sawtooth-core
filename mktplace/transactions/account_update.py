@@ -65,6 +65,10 @@ class Register(market_place_object_update.Register):
         self.Description = minfo.get('Description', '')
         self.Name = minfo.get('Name', '')
 
+    @property
+    def References(self):
+        return [self.CreatorID]
+
     def is_valid(self, store):
         if not super(Register, self).is_valid(store):
             return False
@@ -100,6 +104,10 @@ class Unregister(market_place_object_update.Unregister):
 
     def __init__(self, transaction=None, minfo={}):
         super(Unregister, self).__init__(transaction, minfo)
+
+    @property
+    def References(self):
+        return []
 
     def is_valid(self, store):
         if not super(Unregister, self).is_valid(store):

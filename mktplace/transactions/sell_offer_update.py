@@ -109,6 +109,10 @@ class Register(market_place_object_update.Register):
         self.Maximum = int(minfo.get('Maximum', sys.maxint))
         self.Execution = minfo.get('Execution', 'Any')
 
+    @property
+    def References(self):
+        return [self.CreatorID, self.InputID, self.OutputID]
+
     def is_valid(self, store):
         if not super(Register, self).is_valid(store):
             return False
