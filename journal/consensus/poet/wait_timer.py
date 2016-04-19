@@ -138,13 +138,16 @@ class WaitTimer(object):
         """Constructor for the WaitTimer class.
 
         Args:
-            PreviousCertID (str): The id of the previous certificate.
-            LocalMean (float): The local mean wait time based on the
+            timer (poet_enclave.WaitTimer): an enclave timer object
+
+            timer.previous_certificate_id (str): The id of the previous
+                certificate.
+            timer.local_mean (float): The local mean wait time based on the
                 history of certs.
-            RequestTime (float): The request time.
-            Duration (float): The duration of the wait timer.
-            Signature (str): The signature of the timer.
-            SerializedTimer (str): A serialized version of the timer.
+            timer.request_time (float): The request time.
+            timer.duration (float): The duration of the wait timer.
+            timer.signature (str): The signature of the timer.
+            timer.serialized_timer (str): A serialized version of the timer.
         """
         self.previous_certificate_id = timer.previous_certificate_id
         self.local_mean = timer.local_mean
