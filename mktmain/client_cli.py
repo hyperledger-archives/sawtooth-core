@@ -913,7 +913,7 @@ identifiers, ///$name
 
                 accountid = self.MarketState.n2i(options.account)
                 typeid = self.MarketState.n2i(options.type)
-                guarantorid = self.MarketState.n2i(options.guarntor)
+                guarantorid = self.MarketState.n2i(options.guarantor)
 
                 txnid = self.MarketClient.register_liability(
                     accountid, typeid, guarantorid, int(options.count),
