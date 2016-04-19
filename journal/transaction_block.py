@@ -41,13 +41,15 @@ class TransactionBlock(signed_object.SignedObject):
     a ledger.
 
     Attributes:
-        TransactionBlockTypeName (str): The name of the transaction
-            block type.
-        MessageType (type): The transaction block message class.
+        TransactionBlock.TransactionBlockTypeName (str): The name of the
+            transaction block type.
+        TransactionBlock.MessageType (type): The transaction block message
+            class.
         BlockNum (int): The number of the block.
         PreviousBlockID (str): The ID of the previous block.
         TransactionIDs (list): A list of transaction IDs on this block.
-        Status (Status): The status of the block.
+        TransactionBlock.Status (transaction_block.Status): The status of the
+            block.
         TransactionDepth (int): The number of transactions on the block.
     """
     TransactionBlockTypeName = "/TransactionBlock"

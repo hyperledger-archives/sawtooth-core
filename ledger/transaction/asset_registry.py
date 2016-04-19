@@ -39,7 +39,8 @@ class AssetRegistryTransactionMessage(transaction_message.TransactionMessage):
     transactions.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        AssetRegistryTransactionMessage.MessageType (str): The class name of
+            the message.
         Transaction (AssetRegistryTransaction): The transaction the
             message is associated with.
     """
@@ -61,7 +62,8 @@ class Update(object):
     """Updates represent potential changes to the asset registry.
 
     Attributes:
-        KnownVerbs (list): A list of possible update actions.
+        asset_registry.Update.KnownVerbs (list): A list of possible update
+            actions.
         Verb (str): The action of this update, defaults to 'reg'.
         AssetID (str): The asset ID to be updated.
         OwnerID (str): The ID of the owner of the asset.
@@ -147,11 +149,12 @@ class AssetRegistryTransaction(transaction.Transaction):
     It has a unique identifier and a signature to validate the source.
 
     Attributes:
-        TransactionTypeName (str): The name of the asset registry
-            transaction type.
-        TransactionStoreType (type): The type of transaction store.
-        MessageType (type): The object type of the message associated
-            with this transaction.
+        AssetRegistryTransaction.TransactionTypeName (str): The name of the
+            asset registry transaction type.
+        AssetRegistryTransaction.TransactionStoreType (type): The type of
+            transaction store.
+        AssetRegistryTransaction.MessageType (type): The object type of the
+            message associated with this transaction.
         Updates (list): A list of asset registry updates associated
             with this transaction.
     """

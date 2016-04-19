@@ -38,7 +38,8 @@ class IntegerKeyTransactionMessage(transaction_message.TransactionMessage):
     """Integer key transaction message represent integer key transactions.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        IntegerKeyTransactionMessage.MessageType (str): The class name of the
+            message.
         Transaction (IntegerKeyTransaction): The transaction the
             message is associated with.
     """
@@ -55,7 +56,8 @@ class Update(object):
     """Updates represent potential changes to the integer key registry.
 
     Attributes:
-        KnownVerbs (list): A list of possible update actions.
+        integer_key.Update.KnownVerbs (list): A list of possible update
+            actions.
         Verb (str): The action of this update, defaults to 'set'.
         Name (str): The name of the integer key.
         Value (int): The value of the integer key.
@@ -145,11 +147,12 @@ class IntegerKeyTransaction(transaction.Transaction):
     It has a unique identifier and a signature to validate the source.
 
     Attributes:
-        TransactionTypeName (str): The name of the integer key
-            transaction type.
-        TransactionTypeStore (type): The type of transaction store.
-        MessageType (type): The object type of the message associated
-            with this transaction.
+        IntegerKeyTransaction.TransactionTypeName (str): The name of the
+            integer key transaction type.
+        TransactionTypeStore (type): The type of
+            transaction store.
+        IntegerKeyTransaction.MessageType (type): The object type of the
+            message associated with this transaction.
         Updates (list): A list of integer key registry updates associated
             with this transaction.
     """

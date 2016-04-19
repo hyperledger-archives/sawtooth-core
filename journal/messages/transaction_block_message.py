@@ -37,7 +37,8 @@ class TransactionBlockMessage(message.Message):
     for exchanging transaction blocks.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        TransactionBlockMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this message is
             a system message.
         IsForward (bool): Whether or not this message is forwarded.
@@ -102,7 +103,8 @@ class BlockRequestMessage(message.Message):
     """Represents the message format for block requests.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        transaction_block_message.BlockRequestMessage.MessageType (str):
+            The class name of the message.
         IsSystemMessage (bool): Whether or not this message is
             a system message.
         IsForward (bool): Whether or not this message is forwarded.

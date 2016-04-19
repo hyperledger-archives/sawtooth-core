@@ -40,7 +40,8 @@ class QuorumTransactionBlockMessage(
     for exchanging information about quorum transaction blocks.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        QuorumTransactionBlockMessage.MessageType (str): The class name of the
+            message.
     """
     MessageType = \
         "/journal.consensus.quorum.QuorumTransactionBlock/TransactionBlock"
@@ -63,10 +64,10 @@ class QuorumTransactionBlock(transaction_block.TransactionBlock):
     be applied to a ledger.
 
     Attributes:
-        TransactionBlockTypeName (str): The name of the quorum block
-            type.
-        MessageType (type): The quorum transaction block message
-            class.
+        QuorumTransactionBlock.TransactionBlockTypeName (str): The name of the
+            quorum block type.
+        QuorumTransactionBlock.MessageType (type): The quorum transaction block
+            message class.
         BlockNumber (int): The number of the block.
     """
     TransactionBlockTypeName = '/Quorum'

@@ -46,7 +46,7 @@ class ShutdownMessage(message.Message):
     """Shutdown messages are sent to a peer node to initiate shutdown.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        ShutdownMessage.MessageType (str): The class name of the message.
         NodeList (list): The list of nodes to shutdown.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.

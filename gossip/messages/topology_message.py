@@ -85,7 +85,8 @@ class TopologyRequestMessage(message.Message):
     connectivity of the peer nodes.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        TopologyRequestMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically
@@ -152,7 +153,7 @@ class TopologyReplyMessage(message.Message):
     request messages.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        TopologyReplyMessage.MessageType (str): The class name of the message.
         IsSystemMessage (bool): Whether or not this is a system message.
             System messages have special delivery priority rules.
         IsForward (bool): Whether the message should be automatically

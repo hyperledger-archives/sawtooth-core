@@ -52,7 +52,8 @@ class DumpJournalBlocksMessage(message.Message):
     for exchanging dump journal blocks messages.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        DumpJournalBlocksMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this message is
             a system message.
         IsForward (bool): Whether or not this message is forwarded.
@@ -122,7 +123,8 @@ class DumpJournalValueMessage(message.Message):
     value messages.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        DumpJournalValueMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this message is
             a system message.
         IsForward (bool): Whether or not this message is forwarded.

@@ -61,7 +61,7 @@ class RandomWalkMessage(message.Message):
     connectivity of the network.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        RandomWalkMessage.MessageType (str): The class name of the message.
         NetHost (str): Hostname or IP address identifying the node.
         NetPort (int): The remote port number to connect to.
         NodeIdentifier (str): The identifier of the originating node.

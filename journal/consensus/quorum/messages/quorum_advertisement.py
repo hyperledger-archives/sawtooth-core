@@ -55,7 +55,8 @@ class QuorumAdvertisementMessage(message.Message):
     for exchanging quorum advertisements.
 
     Attributes:
-        MessageType (str): The class name of the message.
+        QuorumAdvertisementMessage.MessageType (str): The class name of the
+            message.
         IsSystemMessage (bool): Whether or not this message is
             a system message.
         IsForward (bool): Whether or not this message is forwarded.
