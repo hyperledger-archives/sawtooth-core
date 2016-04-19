@@ -1,14 +1,17 @@
----------------------
-**Contributing Code**
----------------------
+-----------------
+Contributing Code
+-----------------
 
 Code contributions are welcome! Distributed Ledger is Apache 2.0 licensed and
 accepts contributions via GitHub pull requests. When contributing code
 please do the following:
 
-* Fork the repository and make your changes in a feature branch. Please add a prefix to the branch name (XXXX-) where XXX is the Github bug or issue number.
-* Please include unit and integration test changes. 
-* Please ensure the unit and integration tests run successfully. Both are run with `nose2`, but integration tests are run if the environment variable ENABLE_INTEGRATION_TESTS is set.
+* Fork the repository and make your changes in a feature branch. Please add a
+  prefix to the branch name (XXXX-) where XXX is the Github bug or issue number.
+* Please include unit and integration test changes.
+* Please ensure the unit and integration tests run successfully. Both are run
+  with `nose2`, but integration tests are run if the environment variable
+  ENABLE_INTEGRATION_TESTS is set.
 
 **Commit Guidelines**
 
@@ -24,14 +27,19 @@ Also make sure that you run LINT prior to your commit.
 
 **Pull Request Guidelines**
 
-Pull requests can contain a single commit or multiple commits. The most
-important part is that **a single commit maps to a single fix**.
+Pull requests can contain a single commit or multiple commits.
+The most important part is that a single commit maps to a single fix.
 
 Here are a few scenarios:
 
-* If a pull request adds a feature but also fixes two bugs, then the pull request should have three commits, one commit each for the feature and two bug fixes
-* If a PR is opened with 5 commits that was work involved to fix a single issue, it should be rebased to a single commit
-* If a PR is opened with 5 commits, with the first three to fix one issue and the second two to fix a separate issue, then it should be rebased to two commits, one for each issue
+* If a pull request adds a feature but also fixes two bugs, then the pull
+  request should have three commits, one commit each for the feature and two
+  bug fixes
+* If a PR is opened with 5 commits that was work involved to fix a single issue,
+  it should be rebased to a single commit
+* If a PR is opened with 5 commits, with the first three to fix one issue and
+  the second two to fix a separate issue, then it should be rebased to two
+  commits, one for each issue
 
 Your pull request should be rebased against the current master branch. Please do
 not merge the current master branch in with your topic branch, nor use the
