@@ -128,7 +128,7 @@ def connect_request_handler(msg, gossiper):
     as a peer and a reply message is sent.
 
     Args:
-        msg (Message): The received connection request message.
+        msg (message.Message): The received connection request message.
         gossiper (Node): The local node.
     """
     if msg.SenderID != msg.OriginatorID:
@@ -197,7 +197,7 @@ def connect_reply_handler(msg, gossiper):
     as a peer.
 
     Args:
-        msg (Message): The received connection reply message.
+        msg (message.Message): The received connection reply message.
         gossiper (Node): The local node.
     """
     logger.info('received connect confirmation from node %s',
@@ -256,7 +256,7 @@ def disconnect_request_handler(msg, gossiper):
     removed as a peer.
 
     Args:
-        msg (Message): The received disconnection request message.
+        msg (message.Message): The received disconnection request message.
         gossiper (Node): The local node.
     """
     logger.warn('received disconnect message from node %s',
@@ -311,7 +311,7 @@ def keep_alive_handler(msg, gossiper):
     """Handles keep alive events.
 
     Args:
-        msg (Message): The received disconnection request message.
+        msg (message.Message): The received disconnection request message.
         gossiper (Node): The local node.
     """
     pass

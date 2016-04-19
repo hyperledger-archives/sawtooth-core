@@ -145,7 +145,7 @@ class TransactionBlock(signed_object.SignedObject):
         """Constructs a message containing the transaction block.
 
         Returns:
-            msg (Message): A transaction block message containing the
+            msg (message.Message): A transaction block message containing the
                 transaction block.
         """
         msg = self.MessageType()

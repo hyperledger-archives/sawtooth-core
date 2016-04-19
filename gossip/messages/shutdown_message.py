@@ -91,7 +91,7 @@ def shutdown_handler(msg, gossiper):
     included in the shutdown list and, if so, shuts down.
 
     Args:
-        msg (Message): The recevied shutdown request message.
+        msg (message.Message): The recevied shutdown request message.
         gossiper (Node): The local node.
     """
     if msg.OriginatorID != AdministrationNode:

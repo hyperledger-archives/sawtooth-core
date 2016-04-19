@@ -122,7 +122,7 @@ class Transaction(signed_object.SignedObject):
         """Constructs a message containing the transaction.
 
         Returns:
-            msg (Message): A transaction message containing the
+            msg (message.Message): A transaction message containing the
                 transaction.
         """
         msg = self.MessageType()

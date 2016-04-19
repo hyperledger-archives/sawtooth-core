@@ -122,7 +122,7 @@ def topology_request_handler(msg, gossiper):
     """Handles incoming topology request messages.
 
     Args:
-        msg (Message): The incoming topology message.
+        msg (message.Message): The incoming topology message.
         gossiper (Node): The local node.
     """
     logger.debug('responding to probe %s from node %s', msg.Identifier[:8],
@@ -215,7 +215,7 @@ def topology_reply_handler(msg, gossiper):
     """Handles incoming topology reply messages.
 
     Args:
-        msg (Message): The incoming topology message.
+        msg (message.Message): The incoming topology message.
         gossiper (Node): The local node.
     """
     logger.debug('received reply to probe %s from node %s', msg.InReplyTo[:8],

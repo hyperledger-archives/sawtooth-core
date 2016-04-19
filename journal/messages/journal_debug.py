@@ -26,7 +26,7 @@ def register_message_handlers(journal):
     support.
 
     Args:
-        journal (Journal): The journal to register the message
+        journal (journal_core.Journal): The journal to register the message
             handlers against.
     """
     journal.register_message_handler(DumpJournalBlocksMessage,
