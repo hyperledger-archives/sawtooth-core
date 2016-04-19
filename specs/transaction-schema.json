@@ -83,14 +83,21 @@
             "type" : "object",
             "properties" :
             {
-                "name" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.ParticipantUpdate/Register" ],
+                    "required" : true
+                },
+
+                "Name" :
                 {
                     "description" : "human readable name for the participant ",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the participant",
                     "type" : "object",
@@ -106,7 +113,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.ParticipantUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the participant to unregister",
                     "type" : "string",
@@ -115,7 +129,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant",
                     "type" : "string",
@@ -133,7 +147,14 @@
             "type" : "object",
             "properties" :
             {
-                "creator" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.AccountUpdate/Register" ],
+                    "required" : true
+                },
+
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the account",
                     "type" : "string",
@@ -142,14 +163,14 @@
                     "required" : true
                 },
 
-                "name" :
+                "Name" :
                 {
                     "description" : "human readable name for the account",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the account",
                     "type" : "object",
@@ -165,7 +186,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.AccountUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the account to unregister",
                     "type" : "string",
@@ -174,7 +202,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant",
                     "type" : "string",
@@ -192,7 +220,14 @@
             "type" : "object",
             "properties" :
             {
-                "creator" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.AssetTypeUpdate/Register" ],
+                    "required" : true
+                },
+
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the asset type",
                     "type" : "string",
@@ -201,7 +236,7 @@
                     "required" : true
                 },
 
-                "restricted" :
+                "Restricted" :
                 {
                     "description" : "flag to indicate that only the creator of the asset type may create assets of the type",
                     "type" : "boolean",
@@ -209,14 +244,14 @@
                     "required" : false
                 },
 
-                "name" :
+                "Name" :
                 {
                     "description" : "human readable name for the asset type",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the asset type",
                     "type" : "object",
@@ -232,7 +267,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.AssetTypeUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the asset type to unregister",
                     "type" : "string",
@@ -241,7 +283,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant",
                     "type" : "string",
@@ -259,7 +301,14 @@
             "type" : "object",
             "properties" :
             {
-                "creator" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.AssetUpdate/Register" ],
+                    "required" : true
+                },
+
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the asset",
                     "type" : "string",
@@ -268,7 +317,7 @@
                     "required" : true
                 },
 
-                "restricted" :
+                "Restricted" :
                 {
                     "description" : "flag to indicate that the creator of the asset is the only participant who can create asset instances",
                     "type" : "boolean",
@@ -276,7 +325,7 @@
                     "required" : false
                 },
 
-                "consumable" :
+                "Consumable" :
                 {
                     "description" : "flag to indicate that assets transfered amongst holdings must be replaced",
                     "type" : "boolean",
@@ -284,7 +333,7 @@
                     "required" : false
                 },
 
-                "divisible" :
+                "Divisible" :
                 {
                     "description" : "flag to indicate that factional portions of an asset are acceptable",
                     "type" : "boolean",
@@ -292,21 +341,21 @@
                     "required" : false
                 },
 
-                "name" :
+                "Name" :
                 {
                     "description" : "human readable name for the asset",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the asset",
                     "type" : "object",
                     "required" : false
                 },
 
-                "asset-type" :
+                "AssetTypeID" :
                 {
                     "description" : "a unique identifier for the type of the asset",
                     "type" : "string",
@@ -324,7 +373,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.AssetUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the asset to unregister",
                     "type" : "string",
@@ -333,7 +389,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant that created the asset originally",
                     "type" : "string",
@@ -351,7 +407,14 @@
             "type" : "object",
             "properties" :
             {
-                "creator" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.HoldingUpdate/Register" ],
+                    "required" : true
+                },
+
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the holding",
                     "type" : "string",
@@ -360,21 +423,21 @@
                     "required" : true
                 },
 
-                "name" :
+                "Name" :
                 {
                     "description" : "human readable name for the holding",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the holding",
                     "type" : "object",
                     "required" : false
                 },
 
-                "account" :
+                "AccountID" :
                 {
                     "description" : "a unique identifier for the holding account",
                     "type" : "string",
@@ -383,7 +446,7 @@
                     "required" : true
                 },
 
-                "asset" :
+                "AssetID" :
                 {
                     "description" : "a unique identifier for the asset contained in the holding",
                     "type" : "string",
@@ -392,7 +455,7 @@
                     "required" : true
                 },
 
-                "count" :
+                "Count" :
                 {
                     "description" : "the count of instances of the asset",
                     "type" : integer,
@@ -409,7 +472,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.HoldingUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the holding to unregister",
                     "type" : "string",
@@ -418,7 +488,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant that created the holding originally",
                     "type" : "string",
@@ -436,7 +506,14 @@
             "type" : "object",
             "properties" :
             {
-                "creator" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.LiabilityUpdate/Register" ],
+                    "required" : true
+                },
+
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the holding",
                     "type" : "string",
@@ -445,21 +522,21 @@
                     "required" : true
                 },
 
-                "name" :
+                "Name" :
                 {
                     "description" : "human readable name for the holding",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the holding",
                     "type" : "object",
                     "required" : false
                 },
 
-                "account" :
+                "AccountID" :
                 {
                     "description" : "a unique identifier for the holding account",
                     "type" : "string",
@@ -468,7 +545,7 @@
                     "required" : true
                 },
 
-                "guarantor" :
+                "GuarantorID" :
                 {
                     "description" : "a unique identifier for the participant who guarantees the liability",
                     "type" : "string",
@@ -477,7 +554,7 @@
                     "required" : true
                 },
 
-                "asset-type" :
+                "AssetTypeID" :
                 {
                     "description" : "a unique identifier for the asset type contained in the liability",
                     "type" : "string",
@@ -486,7 +563,7 @@
                     "required" : true
                 },
 
-                "count" :
+                "Count" :
                 {
                     "description" : "the count of instances of the asset",
                     "type" : integer,
@@ -503,7 +580,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.LiabilityUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the liability to unregister",
                     "type" : "string",
@@ -512,7 +596,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant that created the liability originally",
                     "type" : "string",
@@ -530,6 +614,13 @@
             "type" : "object",
             "properties" :
             {
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.SellOfferUpdate/Register" ],
+                    "required" : true
+                },
+
                 "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the sell offer",
@@ -612,7 +703,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.SellOfferUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the sell offer to unregister",
                     "type" : "string",
@@ -621,7 +719,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant that created the sell offer originally",
                     "type" : "string",
@@ -639,7 +737,14 @@
             "type" : "object",
             "properties" :
             {
-                "creator" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.ExchangeOfferUpdate/Register" ],
+                    "required" : true
+                },
+
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant creating the exchange offer",
                     "type" : "string",
@@ -648,21 +753,21 @@
                     "required" : true
                 },
 
-                "name" :
+                "Name" :
                 {
                     "description" : "human readable name for the exchange offer",
                     "type" : "string",
                     "required" : false
                 },
 
-                "description" :
+                "Description" :
                 {
                     "description" : "information about the exchange offer",
                     "type" : "object",
                     "required" : false
                 },
 
-                "input-liability" :
+                "InputID" :
                 {
                     "description" : "a unique identifier for the liability into which payment is made",
                     "type" : "string",
@@ -674,7 +779,7 @@
                     "required" : true
                 },
 
-                "output-liability" :
+                "OutputID" :
                 {
                     "description" : "a unique identifier for the liability from which payment is made",
                     "type" : "string",
@@ -686,11 +791,33 @@
                     "required" : true
                 },
 
-                "ratio" :
+                "Ratio" :
                 {
                     "description" : "the count of instances of the input liability type required to recieve one output asset",
                     "type" : float,
                     "required" : true
+                },
+
+                "Minimum" :
+                {
+                    "description" : "the minimum number of input instances",
+                    "type" : int,
+                    "required" : false
+                },
+
+                "Maximum" :
+                {
+                    "description" : "the maximum number of input instances",
+                    "type" : int,
+                    "required" : false
+                },
+
+                "Execution" :
+                {
+                    "description" : "Modifier for offer execution",
+                    "type" : "string",
+                    "oneOf" : [ "ExecuteOnce", "ExecuteOncePerParticipant", "Any" ],
+                    "required" : false
                 }
             }
         },
@@ -702,7 +829,14 @@
             "type" : "object",
             "properties" :
             {
-                "objectid" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.ExchangeOfferUpdate/Unregister" ],
+                    "required" : true
+                },
+
+                "ObjectID" :
                 {
                     "description" : "unique identifier for the exchange offer to unregister",
                     "type" : "string",
@@ -711,7 +845,7 @@
                     "required" : true
                 },
 
-                "creator" :
+                "CreatorID" :
                 {
                     "description" : "unique identifier for the participant that created the exchange offer originally",
                     "type" : "string",
@@ -729,7 +863,14 @@
             "type" : "object",
             "properties" :
             {
-                "final-liability" :
+                "UpdateType" :
+                {
+                    "description" : "name of the update type",
+                    "enum" : [ "/mktplace.transactions.ParticipantUpdate/Register" ],
+                    "required" : true
+                },
+
+                "FinalLiabilityID" :
                 {
                     "description" : "a unique identifier for the liability into which payment is made",
                     "type" : "string",
@@ -741,7 +882,7 @@
                     "required" : true
                 },
 
-                "initial-liability" :
+                "InitialLiabilityID" :
                 {
                     "description" : "a unique identifier for the liability from which payment is made",
                     "type" : "string",
@@ -753,7 +894,7 @@
                     "required" : true
                 },
 
-                "offer-list" :
+                "OfferIDList" :
                 {
                     "description" : "an ordered list of offers to process while transfering assets",
                     "type" : "array",
@@ -770,7 +911,7 @@
                     "required" : true
                 },
 
-                "initial-count" :
+                "InitialCount" :
                 {
                     "description" : "the count of instances of the ininitial liability to transfer",
                     "type" : integer,
