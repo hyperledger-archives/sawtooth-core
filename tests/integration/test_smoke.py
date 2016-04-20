@@ -25,7 +25,8 @@ from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.integer_key_state import IntegerKeyState
-from txnintegration.validator_network_manager import ValidatorNetworkManager
+from txnintegration.validator_network_manager import ValidatorNetworkManager, \
+    defaultValidatorConfig
 
 ENABLE_INTEGRATION_TESTS = False
 if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
@@ -136,7 +137,12 @@ class TestSmoke(unittest.TestCase):
     def test_intkey_load(self):
         vnm = None
         try:
-            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100)
+            print "Launching validator network."
+            vnm_config = defaultValidatorConfig.copy()
+            vnm_config['LogLevel'] = 'DEBUG'
+
+            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
+                                          cfg=vnm_config)
             vnm.launch_network(5)
 
             print "Testing transaction load."
