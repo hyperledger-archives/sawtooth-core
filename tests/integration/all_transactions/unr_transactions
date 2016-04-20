@@ -1,0 +1,18 @@
+echo Running: All unregister transaction test
+
+liability unr --name /user/liability/currency/USD
+holding unr --name /user/holding/currency/USD
+holding unr --name /user/holding/token
+
+asset unr --name /asset/currency/USD
+asset unr --name /asset/good/paper
+
+assettype unr --name /asset-type/currency
+assettype unr --name /asset-type/good
+
+account unr --name /user/account
+waitforcommit
+participant unr --name //user
+waitforcommit
+
+exit
