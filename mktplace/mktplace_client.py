@@ -132,11 +132,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
         if self.TokenStore:
             txn.Payment = self.TokenStore.get_tokens(1)
 
-        # add the last transaction submitted to ensure that the ordering
-        # in the journal matches the order in which we generated them
-        if self.LastTransaction:
-            txn.Dependencies = [self.LastTransaction]
-
         txn.Update.Transaction = txn
         if txn.Payment:
             txn.Payment.Transaction = txn

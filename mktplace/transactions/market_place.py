@@ -477,4 +477,9 @@ class MarketPlaceTransaction(transaction.Transaction):
         if self.Payment:
             result['Payment'] = self.Payment.dump()
 
+        assert 'Dependencies' in result
+        for refid in self.Update.References:
+            if str(refid) not in result['Dependencies']:
+                result['Dependencies'].append(str(refid))
+
         return result

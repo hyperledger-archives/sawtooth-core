@@ -285,6 +285,11 @@ class Exchange(object):
         self._AdjustmentList = None
 
     @property
+    def References(self):
+        return [self.InitialLiabilityID, self.FinalLiabilityID] \
+            + self.OfferIDList
+
+    @property
     def OriginatorID(self):
         assert self.Transaction
         return self.Transaction.OriginatorID
