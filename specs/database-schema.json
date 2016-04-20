@@ -13,6 +13,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "Participant" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the participant, taken from the identifier of the transaction that created the participant",
@@ -52,6 +59,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "Asset" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the asset, taken from the identifier of the transaction that created the asset",
@@ -125,6 +139,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "AssetType" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "a unique identifier for the asset type take from the identifier of the transaction that created the asset",
@@ -173,6 +194,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "Account" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the account, taken from the identifier of the transaction that created the participant",
@@ -213,6 +241,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "Holding" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the holding, taken from the identifer of the transaction that created the holding",
@@ -280,6 +315,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "Liability" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the liability, taken from the identifer of the transaction that created the liability",
@@ -354,6 +396,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "ExchangeOffer" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the offer, taken from the identifer of the transaction that created the offer",
@@ -448,6 +497,13 @@
             "type" : "object",
             "properties" :
             {
+                "object-type" :
+                {
+                    "description" : "type of the object",
+                    "enum" : [ "SellOffer" ],
+                    "required" : true,
+                },
+
                 "identifier" :
                 {
                     "description" : "unique identifier for the sell off, taken from the identifer of the transaction that created the sell offer",
