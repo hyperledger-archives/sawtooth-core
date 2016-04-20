@@ -21,9 +21,7 @@ from mktplace import mktplace_state
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.validator_network_manager import defaultValidatorConfig
 
-ENABLE_INTEGRATION_TESTS = False
-if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
-    ENABLE_INTEGRATION_TESTS = True
+from integration import ENABLE_INTEGRATION_TESTS
 
 
 @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
@@ -401,8 +399,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
     def tearDownClass(cls):
         if cls.vnm is not None:
             cls.vnm.shutdown()
-            # currently nose2 offers no way to detect test failure -- so
-            # always save the results
+            # currently nose2 offers no way to detect test failures here.
+            # so we always save the data.
             if cls.vnm.create_result_archive(
                     "TestCommercialPaperScenarios.tar.gz"):
                 print "Validator data and logs preserved in: " \

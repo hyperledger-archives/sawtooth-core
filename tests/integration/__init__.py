@@ -13,4 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
+
 __all__ = []
+
+ENABLE_INTEGRATION_TESTS = False
+if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
+    ENABLE_INTEGRATION_TESTS = True
+
+SAVE_INTEGRATION_TEST_DATA = False
+if os.environ.get("SAVE_INTEGRATION_TEST_DATA", False) == "1":
+    SAVE_INTEGRATION_TEST_DATA = True
