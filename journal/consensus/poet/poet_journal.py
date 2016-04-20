@@ -15,11 +15,13 @@
 
 import collections
 import logging
+import importlib
 
 from gossip import common, stats
 from journal import journal_core
 from journal.consensus.poet import poet_transaction_block
-from journal.consensus.poet.wait_certificate import WaitTimer
+from journal.consensus.poet.wait_timer import WaitTimer
+from journal.consensus.poet.wait_certificate import WaitCertificate
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,18 @@ class PoetJournal(journal_core.Journal):
             node (Node): The local node.
         """
         super(PoetJournal, self).__init__(node, **kwargs)
+
+        enclave_module = None
+        if 'PoetEnclaveImplementation' in kwargs:
+            enclave_module = kwargs['PoetEnclaveImplementation']
+        else:
+            enclave_module = 'journal.consensus.poet.poet_enclave_simulator' \
+                             '.poet_enclave_simulator'
+
+        poet_enclave = importlib.import_module(enclave_module)
+        poet_enclave.initialize(**kwargs)
+        WaitCertificate.poet_enclave = poet_enclave
+        WaitTimer.poet_enclave = poet_enclave
 
         self.onHeartbeatTimer += self._check_certificate
 

@@ -13,11 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import importlib
 import logging
 
-from journal.consensus.poet.poet_enclave_simulator \
-    import poet_enclave_simulator
 from journal.consensus.poet.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
@@ -38,7 +35,7 @@ class WaitCertificate(object):
     """Represents wait certificates, which include a random wait timer.
 
     Attributes:
-        _poet_enclave (module): The PoetEnclave module to use for executing
+        poet_enclave (module): The PoetEnclave module to use for executing
             enclave functions.
         WaitCertificate.previous_certificate_id (str): The id of the previous
             certificate.
@@ -51,11 +48,7 @@ class WaitCertificate(object):
         identifier (str): The identifier of this certificate.
         serialized_cert (str): A serialized version of the certificate.
     """
-    _poet_enclave = poet_enclave_simulator
-    try:
-        _poet_enclave = importlib.import_module("poet_enclave.poet_enclave")
-    except ImportError, e:
-        pass
+    poet_enclave = None
 
     @classmethod
     def create_wait_certificate(cls, timer):
@@ -69,7 +62,7 @@ class WaitCertificate(object):
         Returns:
             wait_certificate.WaitCertificate: A new wait certificate.
         """
-        cert = cls._poet_enclave.create_wait_certificate(
+        cert = cls.poet_enclave.create_wait_certificate(
             timer.enclave_wait_timer)
         if not cert:
             logger.warn('invalid timer: %s', timer)
@@ -94,10 +87,10 @@ class WaitCertificate(object):
             wait_certificate.WaitCertificate: A wait certificate representing
                 the contents of the serialized wait certificate.
         """
-        cert = cls._poet_enclave.deserialize_wait_certificate(
+        cert = cls.poet_enclave.deserialize_wait_certificate(
             serialized, signature)
-        if cert.previous_certificate_id != cls._poet_enclave.NULL_IDENTIFIER:
-            if not cls._poet_enclave.verify_wait_certificate(cert):
+        if cert.previous_certificate_id != cls.poet_enclave.NULL_IDENTIFIER:
+            if not cls.poet_enclave.verify_wait_certificate(cert):
                 raise Exception(
                     'WaitCertificateVerify',
                     'Attempt to deserialize an invalid wait certificate')
@@ -130,7 +123,7 @@ class WaitCertificate(object):
             poet_enclave.WaitCertificate: Enclave deserialized version
                 of the certificate.
         """
-        return self._poet_enclave.deserialize_wait_certificate(
+        return self.poet_enclave.deserialize_wait_certificate(
             self.serialized_cert,
             self.signature)
 
@@ -145,9 +138,9 @@ class WaitCertificate(object):
         """
         cert = self.enclave_wait_certificate
 
-        if cert.duration < self._poet_enclave.MINIMUM_WAIT_TIME:
+        if cert.duration < self.poet_enclave.MINIMUM_WAIT_TIME:
             logger.warn('Wait time less then minimum: %s != %s',
-                        cert.duration, self._poet_enclave.MINIMUM_WAIT_TIME)
+                        cert.duration, self.poet_enclave.MINIMUM_WAIT_TIME)
             return False
 
         expected_mean = WaitTimer.compute_local_mean(certs)
@@ -156,7 +149,7 @@ class WaitCertificate(object):
                         expected_mean)
             return False
 
-        if cert.previous_certificate_id == self._poet_enclave.NULL_IDENTIFIER:
+        if cert.previous_certificate_id == self.poet_enclave.NULL_IDENTIFIER:
             if len(certs) == 0:
                 return True
 
@@ -165,7 +158,7 @@ class WaitCertificate(object):
                         cert.previous_certificate_id, certs[-1].identifier)
             return False
 
-        return self._poet_enclave.verify_wait_certificate(cert)
+        return self.poet_enclave.verify_wait_certificate(cert)
 
     def __str__(self):
         return "CERT, {0:0.2f}, {1:0.2f}, {2}, {3}".format(

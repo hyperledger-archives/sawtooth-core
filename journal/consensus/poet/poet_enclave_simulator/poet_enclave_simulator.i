@@ -11,3 +11,10 @@
 %init %{
     InitializePoetEnclaveModule();
 %}
+%pythoncode %{
+    # initialization entry point for the module
+    # this implementation does not require any parameters but other
+    # enclave implementations do.
+    def initialize(**kwargs):
+        pass
+%}
