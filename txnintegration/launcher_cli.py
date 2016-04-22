@@ -23,6 +23,7 @@ import tempfile
 import time
 import logging
 import shutil
+import tarfile
 
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.utils import ExitError, parse_configuration_file, \
@@ -69,8 +70,23 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
+def get_archive_config(data_dir, archive_name):
+    tar = tarfile.open(archive_name, "r|gz")
+    config = None
+    for f in tar:
+        if f.name == 'validator-0.json':
+            tar.extract(f, data_dir)
+            config = os.path.join(data_dir, "config.json")
+            if os.path.exists(config):
+                os.remove(config)
+            os.rename(os.path.join(data_dir, f.name),
+                      config)
+    tar.close()
+    return config
+
+
 def configure(opts):
-    scriptDir = os.path.dirname(os.path.realpath(__file__))
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
 
     # Find the validator to use
     if opts.validator is None:
@@ -83,28 +99,6 @@ def configure(opts):
             print "txnvalidator: {}".format(opts.validator)
             raise ExitError("txnvalidator script does not exist.")
 
-    validatorConfig = {}
-    if opts.config is not None:
-        if os.path.exists(opts.config):
-            validatorConfig = parse_configuration_file(opts.config)
-        else:
-            raise ExitError("Config file does not exist: {}".format(
-                opts.config))
-    else:
-        opts.config = os.path.realpath(os.path.join(scriptDir, "..", "etc",
-                                                    "txnvalidator.js"))
-        print "No config file specified, loading  {}".format(opts.config)
-        if os.path.exists(opts.config):
-            validatorConfig = parse_configuration_file(opts.config)
-        else:
-            raise ExitError(
-                "Default config file does not exist: {}".format(opts.config))
-
-    if opts.load_blockchain is not None:
-        if not os.path.isfile(opts.load_blockchain):
-            raise ExitError("Blockchain archive to load {} does not "
-                            "exist.".format(opts.load_blockchain))
-
     # Create directory -- after the params have been validated
     if opts.data_dir is None:
         opts.data_dir_is_tmp = True  # did we make up a directory
@@ -113,6 +107,35 @@ def configure(opts):
         opts.data_dir = os.path.abspath(opts.data_dir)
         if not os.path.exists(opts.data_dir):
             os.makedirs(opts.data_dir)
+
+    if opts.load_blockchain is not None:
+        if not os.path.isfile(opts.load_blockchain):
+            raise ExitError("Blockchain archive to load {} does not "
+                            "exist.".format(opts.load_blockchain))
+        else:
+            opts.config = get_archive_config(opts.data_dir,
+                                             opts.load_blockchain)
+            if opts.config is None:
+                raise ExitError("Could not read config from Blockchain "
+                                "archive: {}".format(opts.load_blockchain))
+
+    validator_config = {}
+
+    if opts.config is not None:
+        if os.path.exists(opts.config):
+            validator_config = parse_configuration_file(opts.config)
+        else:
+            raise ExitError("Config file does not exist: {}".format(
+                opts.config))
+    else:
+        opts.config = os.path.realpath(os.path.join(scriptdir, "..", "etc",
+                                                    "txnvalidator.js"))
+        print "No config file specified, loading  {}".format(opts.config)
+        if os.path.exists(opts.config):
+            validator_config = parse_configuration_file(opts.config)
+        else:
+            raise ExitError(
+                "Default config file does not exist: {}".format(opts.config))
 
     keys = [
         'NodeName',
@@ -126,16 +149,16 @@ def configure(opts):
         "DataDirectory",
         "GenesisLedger",
     ]
-    if any(k in validatorConfig for k in keys):
+    if any(k in validator_config for k in keys):
         print "Overriding the following keys from validator configuration " \
               "file: {}".format(opts.config)
         for k in keys:
-            if k in validatorConfig:
+            if k in validator_config:
                 print "\t{}".format(k)
-                del validatorConfig[k]
+                del validator_config[k]
 
     opts.count = max(1, opts.count)
-    opts.validator_config = validatorConfig
+    opts.validator_config = validator_config
     opts.validator_config['LogLevel'] = opts.log_level
 
     print "Configuration:"
@@ -308,7 +331,7 @@ def main():
 
     if opts.save_blockchain:
         print "Saving blockchain to {}".format(opts.save_blockchain)
-        networkManager.pack_blockchain(opts.save_blockchain)
+        networkManager.create_result_archive(opts.save_blockchain)
 
     # if dir was auto-generated
     if opts and "data_dir_is_tmp" in opts \
