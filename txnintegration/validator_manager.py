@@ -23,6 +23,7 @@ import json
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
+from txnintegration.utils import read_key_file
 from gossip.messages import shutdown_message
 from txnserver import ledger_web_client
 
@@ -64,6 +65,9 @@ class ValidatorManager(object):
             with open(self.config['KeyFile'], 'w') as fp:
                 fp.write(self.Key)
                 fp.write("\n")
+        else:
+            self.Key = read_key_file(self.config['KeyFile'])
+            self.Address = get_address_from_private_key_wif(self.Key)
 
         configFileName = "{}.json".format(self.Name)
         self.configFile = os.path.join(self.dataDir, configFileName)

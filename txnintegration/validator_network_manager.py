@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import glob
 import shutil
 import sys
 import tarfile
@@ -235,11 +234,11 @@ class ValidatorNetworkManager(object):
             out.append(v.Url)
         return out
 
-    def create_result_archive(self, archiveName):
+    def create_result_archive(self, archive_name):
         if self.DataDir is not None \
                 and os.path.exists(self.DataDir) \
                 and len(self.Validators) != 0:
-            tar = tarfile.open(archiveName, "w|gz")
+            tar = tarfile.open(archive_name, "w|gz")
             for (dirpath, _, filenames) in walk(self.DataDir):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
@@ -248,23 +247,14 @@ class ValidatorNetworkManager(object):
             return True
         return False
 
-    def pack_blockchain(self, archiveName):
-        tar = tarfile.open(archiveName, "w|gz")
-        fp = os.path.join(self.DataDir, self.Validators[0].Name + "_*")
-        for f in glob.glob(fp):
-            tar.add(f, os.path.basename(f))
-        fp = os.path.join(self.DataDir, "*.wif")
-        for f in glob.glob(fp):
-            tar.add(f, os.path.basename(f))
-        tar.close()
-
-    def unpack_blockchain(self, archiveName):
-        # only unpack the root validator data, this
-        # allows us to use Result archives from failed tests as input
-        # blockchains
-        tar = tarfile.open(archiveName, "r|gz")
+    def unpack_blockchain(self, archive_name):
+        tar = tarfile.open(archive_name, "r|gz")
+        ext = ["cb", "cs", "gs", "xn"]
         for f in tar:
-            if f.name.startswith("validator-0_")  \
-                    or f.name.endswith("wif"):
+            e = f.name[-2:]
+            if e in ext or f.name.endswith("wif"):
+                dest_file = os.path.join(self.DataDir, f.name)
+                if os.path.exists(dest_file):
+                    os.remove(dest_file)
                 tar.extract(f, self.DataDir)
         tar.close()
