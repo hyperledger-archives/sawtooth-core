@@ -24,7 +24,7 @@ from sawtooth_xo.xo_communication import MessageException
 from sawtooth_xo.xo_state import XoState
 from sawtooth_xo.txn_family import XoTransaction
 from sawtooth_xo.txn_family import XoTransactionMessage
-from sawtooth_xo.xo_exceptions import XoException
+from sawtooth_xo.xo_exceptions import XoClientException
 
 LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +52,8 @@ class XoClient(XoCommunication):
                 signingkey = signed_object.generate_signing_key(
                     wifstr=open(keyfile, "r").read().strip())
             except IOError as e:
-                raise XoException("Failed to load key file: {}".format(str(e)))
+                raise XoClientException(
+                    "Failed to load key file: {}".format(str(e)))
         else:
             raise TypeError('expecting valid signing key, none provided')
 
