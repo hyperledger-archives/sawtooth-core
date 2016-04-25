@@ -81,6 +81,13 @@ sawtooth-dev-tools on the host and run:
   % cd sawtooth-dev-tools
   % vagrant up
 
+.. note::
+
+   We have encountered an intermittent problem on Windows hosts which
+   presents as an 'Operation not permitted' error in the vagrant startup
+   output. If you encounter this error, perform a 'vagrant destroy' and
+   then run 'vagrant up' again.
+
 Downloading the Vagrant box file, booting the VM, and running through
 the bootstrap scripts will take several minutes.
 
