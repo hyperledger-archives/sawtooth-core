@@ -30,8 +30,6 @@ def _register_transaction_types(ledger):
         ledger (journal.journal_core.Journal): The ledger to register
             the transaction type against.
     """
-    logging.error("XO!")
-
     ledger.register_message_handler(
         XoTransactionMessage,
         transaction_message.transaction_message_handler)
@@ -39,7 +37,7 @@ def _register_transaction_types(ledger):
 
 
 class XoTransactionMessage(transaction_message.TransactionMessage):
-    """Integer key transaction message represent Xo transactions.
+    """Xo transaction message represent Xo transactions.
 
     Attributes:
         MessageType (str): The class name of the message.
@@ -69,8 +67,6 @@ class XoTransaction(transaction.Transaction):
             transaction type.
         TransactionTypeStore (type): The type of transaction store.
         MessageType (type): The object type of the message associated
-            with this transaction.
-        Updates (list): A list of Xo registry updates associated
             with this transaction.
     """
     TransactionTypeName = '/XoTransaction'
