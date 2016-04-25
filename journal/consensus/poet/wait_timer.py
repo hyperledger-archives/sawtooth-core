@@ -14,10 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import importlib
-
-from journal.consensus.poet.poet_enclave_simulator \
-    import poet_enclave_simulator
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +31,7 @@ class WaitTimer(object):
         fixed_duration_blocks (int): If fewer than FixedDurationBlocks
             exist, then base the local mean on a ratio based on
             InitialWaitTime, rather than the history.
-        _poet_enclave (module): The PoetEnclave module to use for
+        poet_enclave (module): The PoetEnclave module to use for
             executing enclave functions.
         WaitTimer.previous_certificate_id (str): The id of the previous
             certificate.
@@ -52,11 +48,7 @@ class WaitTimer(object):
     certificate_sample_length = 50
     fixed_duration_blocks = certificate_sample_length
 
-    _poet_enclave = poet_enclave_simulator
-    try:
-        _poet_enclave = importlib.import_module("poet_enclave.poet_enclave")
-    except ImportError, e:
-        pass
+    poet_enclave = None
 
     @classmethod
     def create_wait_timer(cls, certs):
@@ -70,10 +62,10 @@ class WaitTimer(object):
             wait_timer.WaitTimer: A new wait timer.
         """
         previous_certificate_id = certs[-1].identifier if certs else \
-            cls._poet_enclave.NULL_IDENTIFIER
+            cls.poet_enclave.NULL_IDENTIFIER
         local_mean = cls.compute_local_mean(certs)
-        timer = cls._poet_enclave.create_wait_timer(previous_certificate_id,
-                                                    local_mean)
+        timer = cls.poet_enclave.create_wait_timer(previous_certificate_id,
+                                                   local_mean)
 
         wt = cls(timer)
         logger.info('wait timer created; %s', wt)
@@ -127,7 +119,7 @@ class WaitTimer(object):
         sum_means = 0
         sum_waits = 0
         for cert in certificates[:cls.certificate_sample_length]:
-            sum_waits += cert.duration - cls._poet_enclave.MINIMUM_WAIT_TIME
+            sum_waits += cert.duration - cls.poet_enclave.MINIMUM_WAIT_TIME
             sum_means += cert.local_mean
 
         avg_wait = sum_waits / len(certificates)
@@ -165,8 +157,8 @@ class WaitTimer(object):
             poet_enclave.WaitTimer: The deserialized enclave timer
                 object.
         """
-        return self._poet_enclave.deserialize_wait_timer(self.serialized_timer,
-                                                         self.signature)
+        return self.poet_enclave.deserialize_wait_timer(self.serialized_timer,
+                                                        self.signature)
 
     def __str__(self):
         return "TIMER, {0:0.2f}, {1:0.2f}, {2}".format(
