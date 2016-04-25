@@ -23,7 +23,8 @@ from os import walk
 
 import pybitcointools
 
-from txnintegration.utils import ExitError
+from txnintegration.exceptions import ExitError
+from txnintegration.exceptions import ValidatorManagerException
 from txnintegration.utils import find_txn_validator
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
@@ -130,10 +131,12 @@ class ValidatorNetworkManager(object):
 
             validator = self.launch_node()
             while not validator.is_registered():
-                if validator.has_error():
+                try:
+                    validator.check_error()
+                except ValidatorManagerException as vme:
                     validator.dump_log()
                     validator.dump_stderr()
-                    raise ExitError("Initial validator crashed.")
+                    raise ExitError(str(vme))
                 p.step()
                 time.sleep(1)
 
@@ -162,11 +165,12 @@ class ValidatorNetworkManager(object):
                 for v in self.Validators:
                     if not v.is_registered(url):
                         unregCount += 1
-                    if v.has_error():
+                    try:
+                        v.check_error()
+                    except ValidatorManagerException as vme:
                         v.dump_log()
                         v.dump_stderr()
-                        raise ExitError(
-                            "{} crashed during initialization.".format(v.Name))
+                        raise ExitError(str(vme))
 
     def launch_node(self, launch=True):
         id = self.NextValidatorId
