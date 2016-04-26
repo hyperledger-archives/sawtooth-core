@@ -160,3 +160,29 @@ class TestSmoke(unittest.TestCase):
             print "Validator data and logs preserved in: " \
                   "TestSmokeResults.tar.gz"
             raise e
+
+    @unittest.skip("LedgerType voting is broken")
+    def test_intkey_load_voting(self):
+        vnm = None
+        vote_cfg = defaultValidatorConfig.copy()
+        vote_cfg['LedgerType'] = 'voting'
+        try:
+            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
+                                          cfg=vote_cfg)
+            vnm.launch_network(5)
+
+            print "Testing transaction load."
+            test = IntKeyLoadTest()
+            test.setup(vnm.urls(), 100)
+            test.run(2)
+            test.validate()
+            vnm.shutdown()
+        except Exception as e:
+            print "Exception encountered in test case."
+            traceback.print_exc()
+            if vnm:
+                vnm.shutdown()
+            vnm.create_result_archive("TestSmokeResultsVote.tar.gz")
+            print "Validator data and logs preserved in: " \
+                  "TestSmokeResultsVote.tar.gz"
+            raise e
