@@ -78,9 +78,9 @@ class XoClient(XoCommunication):
         txn.sign_from_node(self.LocalNode)
         txnid = txn.Identifier
 
+        txn.check_valid(self._current_state.State)
         if not txn.is_valid(self._current_state.State):
-            LOGGER.warn('transaction failed to apply')
-            return None
+            raise XoClientException('transaction failed to apply')
 
         msg = XoTransactionMessage()
         msg.Transaction = txn
