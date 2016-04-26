@@ -239,22 +239,41 @@ class ValidatorNetworkManager(object):
                 and os.path.exists(self.DataDir) \
                 and len(self.Validators) != 0:
             tar = tarfile.open(archive_name, "w|gz")
+            base_name = self.get_archive_base_name(archive_name)
             for (dirpath, _, filenames) in walk(self.DataDir):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
-                    tar.add(fp, f)
+                    tar.add(fp, os.path.join(base_name, f))
             tar.close()
             return True
         return False
 
     def unpack_blockchain(self, archive_name):
-        tar = tarfile.open(archive_name, "r|gz")
         ext = ["cb", "cs", "gs", "xn"]
+        dirs = set()
+        tar = tarfile.open(archive_name, "r|gz")
         for f in tar:
             e = f.name[-2:]
             if e in ext or f.name.endswith("wif"):
-                dest_file = os.path.join(self.DataDir, f.name)
+                base_name = os.path.basename(f.name)
+                dest_file = os.path.join(self.DataDir, base_name)
                 if os.path.exists(dest_file):
                     os.remove(dest_file)
                 tar.extract(f, self.DataDir)
+                # extract put the file in a directory below DataDir
+                # move the file from extract location to dest_file
+                ext_file = os.path.join(self.DataDir, f.name)
+                os.rename(ext_file, dest_file)
+                # and remember the extract directory for deletion
+                dirs.add(os.path.dirname(ext_file))
         tar.close()
+        for d in dirs:
+            os.rmdir(d)
+
+    @staticmethod
+    def get_archive_base_name(path):
+        file_name = os.path.basename(path)
+        if file_name.endswith(".tar.gz"):
+            return file_name[:len(file_name) - 7]
+        else:
+            return file_name

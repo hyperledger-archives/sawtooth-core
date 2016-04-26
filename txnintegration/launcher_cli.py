@@ -72,15 +72,15 @@ def parse_args(args):
 
 def get_archive_config(data_dir, archive_name):
     tar = tarfile.open(archive_name, "r|gz")
-    config = None
     for f in tar:
-        if f.name == 'validator-0.json':
-            tar.extract(f, data_dir)
+        if os.path.basename(f.name) == 'validator-0.json':
             config = os.path.join(data_dir, "config.json")
             if os.path.exists(config):
                 os.remove(config)
-            os.rename(os.path.join(data_dir, f.name),
-                      config)
+            tar.extract(f, data_dir)
+            os.rename(os.path.join(data_dir, f.name), config)
+            os.rmdir(os.path.join(data_dir, os.path.dirname(f.name)))
+            break
     tar.close()
     return config
 
