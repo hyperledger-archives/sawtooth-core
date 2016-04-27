@@ -91,7 +91,11 @@ class XoTransaction(transaction.Transaction):
         self._space = minfo['Space'] if 'Space' in minfo else None
 
     def __str__(self):
-        return "({0} {1} {2})".format(self.OriginatorID,
+        try:
+            oid = self.OriginatorID
+        except AssertionError:
+            oid = "unknown"
+        return "({0} {1} {2})".format(oid,
                                       self._name,
                                       self._space)
 
@@ -101,54 +105,64 @@ class XoTransaction(transaction.Transaction):
         Args:
             store (dict): Transaction store mapping.
         """
-        if not super(XoTransaction, self).is_valid(store):
-            return False
-
-        LOGGER.debug('check update %s', str(self))
 
         try:
-            if self._name is None or self._name == '':
-                raise XoException('name not set')
-
-            if self._action is None or self._action == '':
-                raise XoException('action not set')
-
-            if self._action == 'CREATE':
-                if self._name in store:
-                    raise XoException('game already exists')
-            elif self._action == 'TAKE':
-                if self._space is None:
-                    raise XoException('TAKE requires space')
-
-                if self._space < 1 or self._space > 9:
-                    raise XoException('invalid space')
-
-                if self._name not in store:
-                    raise XoException('no such game')
-
-                state = store[self._name]['State']
-                if state in ['P1-WIN', 'P2-WIN']:
-                    raise XoException('game complete')
-
-                if state == 'P1-NEXT' and 'Player1' in store[self._name]:
-                    player1 = store[self._name]['Player1']
-                    if player1 != self.OriginatorID:
-                        raise XoException('invalid player 1')
-
-                if state == 'P2-NEXT' and 'Player2' in store[self._name]:
-                    player1 = store[self._name]['Player2']
-                    if player1 != self.OriginatorID:
-                        raise XoException('invalid player 2')
-
-                if store[self._name]['Board'][self._space - 1] != '-':
-                    raise XoException('space already taken')
-            else:
-                raise XoException('invalid action')
+            self.check_valid(store)
         except XoException as e:
             LOGGER.debug('invalid transaction (%s): %s', str(e), str(self))
             return False
 
         return True
+
+    def check_valid(self, store):
+        """Determines if the transaction is valid.
+
+        Args:
+            store (dict): Transaction store mapping.
+        """
+
+        if not super(XoTransaction, self).is_valid(store):
+            raise XoException("invalid transaction")
+
+        LOGGER.debug('checking %s', str(self))
+
+        if self._name is None or self._name == '':
+            raise XoException('name not set')
+
+        if self._action is None or self._action == '':
+            raise XoException('action not set')
+
+        if self._action == 'CREATE':
+            if self._name in store:
+                raise XoException('game already exists')
+        elif self._action == 'TAKE':
+            if self._space is None:
+                raise XoException('TAKE requires space')
+
+            if self._space < 1 or self._space > 9:
+                raise XoException('invalid space')
+
+            if self._name not in store:
+                raise XoException('no such game')
+
+            state = store[self._name]['State']
+            if state in ['P1-WIN', 'P2-WIN']:
+                raise XoException('game complete')
+
+            if state == 'P1-NEXT' and 'Player1' in store[self._name]:
+                player1 = store[self._name]['Player1']
+                if player1 != self.OriginatorID:
+                    raise XoException('invalid player 1')
+
+            if state == 'P2-NEXT' and 'Player2' in store[self._name]:
+                player1 = store[self._name]['Player2']
+                if player1 != self.OriginatorID:
+                    raise XoException('invalid player 2')
+
+            if store[self._name]['Board'][self._space - 1] != '-':
+                raise XoException('space already taken')
+        else:
+            raise XoException('invalid action')
 
     def _is_win(self, board, letter):
         wins = ((1, 2, 3), (4, 5, 6), (7, 8, 9),

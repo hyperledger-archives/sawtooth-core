@@ -72,6 +72,12 @@ def add_create_parser(subparsers, parent_parser):
         type=str,
         help='an identifier for the new game')
 
+    parser.add_argument(
+        '--wait',
+        action='store_true',
+        default=False,
+        help='wait for this commit before exiting')
+
 
 def add_init_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('init', parents=[parent_parser])
@@ -107,6 +113,12 @@ def add_take_parser(subparsers, parent_parser):
         'space',
         type=int,
         help='the square number to take')
+
+    parser.add_argument(
+        '--wait',
+        action='store_true',
+        default=False,
+        help='wait for this commit before exiting')
 
 
 def create_parent_parser(prog_name):
@@ -145,6 +157,9 @@ def do_create(args, config):
 
     client = XoClient(baseurl=url, keyfile=key_file)
     client.create(name=name)
+
+    if args.wait:
+        client.waitforcommit()
 
 
 def do_init(args, config):
@@ -253,6 +268,9 @@ def do_take(args, config):
 
     client = XoClient(baseurl=url, keyfile=key_file)
     client.take(name=name, space=space)
+
+    if args.wait:
+        client.waitforcommit()
 
 
 def load_config():
