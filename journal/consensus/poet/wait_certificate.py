@@ -89,11 +89,10 @@ class WaitCertificate(object):
         """
         cert = cls.poet_enclave.deserialize_wait_certificate(
             serialized, signature)
-        if cert.previous_certificate_id != cls.poet_enclave.NULL_IDENTIFIER:
-            if not cls.poet_enclave.verify_wait_certificate(cert):
-                raise Exception(
-                    'WaitCertificateVerify',
-                    'Attempt to deserialize an invalid wait certificate')
+        if not cert or not cls.poet_enclave.verify_wait_certificate(cert):
+            raise Exception(
+                'WaitCertificateVerify',
+                'Attempt to deserialize an invalid wait certificate')
 
         return cls(cert)
 
@@ -123,9 +122,13 @@ class WaitCertificate(object):
             poet_enclave.WaitCertificate: Enclave deserialized version
                 of the certificate.
         """
-        return self.poet_enclave.deserialize_wait_certificate(
-            self.serialized_cert,
-            self.signature)
+        try:
+            return self.poet_enclave.deserialize_wait_certificate(
+                self.serialized_cert,
+                self.signature)
+        except:
+            logger.warn('Wait certificate failed to desertialize.')
+            return None
 
     def is_valid_wait_certificate(self, certs):
         """Determines whether the wait certificate is valid.
@@ -136,7 +139,12 @@ class WaitCertificate(object):
         Returns:
             bool: Whether or not the wait certificate is valid.
         """
+        if not isinstance(certs, list):
+            raise TypeError
+
         cert = self.enclave_wait_certificate
+        if not cert:
+            return False
 
         if cert.duration < self.poet_enclave.MINIMUM_WAIT_TIME:
             logger.warn('Wait time less then minimum: %s != %s',

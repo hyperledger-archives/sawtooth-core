@@ -112,12 +112,22 @@ WaitCertificate* create_wait_certificate(WaitTimer *timer)
 WaitCertificate* deserialize_wait_certificate(string serialized_cert,
                     string signature)
 {
+    if (! verify_signature(GlobalPublicKey, serialized_cert,
+                            signature)) {
+        throw ValueError("Signature failed to verify.");
+    }
+
     WaitCertificate *cert = new WaitCertificate(serialized_cert, signature);
+
     return cert;
 }
 
 bool verify_wait_certificate(WaitCertificate *cert)
 {
+    if(cert == NULL) {
+        throw ValueError("Invalid Certificate.");
+    }
+
     string serialized = cert->serialize();
     return verify_signature(GlobalPublicKey, serialized, cert->signature);
 }

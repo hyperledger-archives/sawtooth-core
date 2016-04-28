@@ -14,8 +14,9 @@
 // ------------------------------------------------------------------------------
 
 
-#include <stdlib.h>                                                                  
+#include <stdlib.h>
 #include <string>
+#include <stdexcept>
 
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/eccrypto.h>
@@ -23,7 +24,64 @@
 
 #define ENCODESIGNATURE 1
 
-using namespace std;
+
+
+class MemoryError : public std::runtime_error {
+public:
+    MemoryError(std::string msg) : runtime_error(msg)
+    {}
+};
+class IOError : public std::runtime_error {
+public:
+    IOError(std::string msg) : runtime_error(msg)
+    {}
+};
+class RuntimeError : public std::runtime_error {
+public:
+    RuntimeError(std::string msg) : runtime_error(msg)
+    {}
+};
+class IndexError : public std::runtime_error {
+public:
+    IndexError(std::string msg) : runtime_error(msg)
+    {}
+};
+class TypeError : public std::runtime_error {
+public:
+    TypeError(std::string msg) : runtime_error(msg)
+    {}
+};
+class DivisionByZero : public std::runtime_error {
+public:
+    DivisionByZero(std::string msg) : runtime_error(msg)
+    {}
+};
+class OverflowError : public std::runtime_error {
+public:
+    OverflowError(std::string msg) : runtime_error(msg)
+    {}
+};
+class SyntaxError : public std::runtime_error {
+public:
+    SyntaxError(std::string msg) : runtime_error(msg)
+    {}
+};
+class ValueError : public std::runtime_error {
+public:
+    ValueError(std::string msg) : runtime_error(msg)
+    {}
+};
+class SystemError : public std::runtime_error {
+public:
+    SystemError(std::string msg) : runtime_error(msg)
+    {}
+};
+class UnknownError : public std::runtime_error {
+public:
+    UnknownError(std::string msg) : runtime_error(msg)
+    {}
+};
+
 
 extern CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PrivateKey GlobalPrivateKey;
 extern CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PublicKey GlobalPublicKey;
@@ -34,12 +92,12 @@ extern CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PublicKey WaitTimerPublic
 void GenerateGlobalKey(void);
 void GenerateWaitTimerKey(void);
 
-string SignMessage(CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PrivateKey privkey, string message);
-bool verify_signature(CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PublicKey pubkey, string message, string signature);
+std::string SignMessage(CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PrivateKey privkey, std::string message);
+bool verify_signature(CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA1>::PublicKey pubkey, std::string message, std::string signature);
 
 double CurrentTime(void);
 
-string CreateIdentifier(string signature);
-string B32Encode(string message);
-string B32Decode(string encoded);
+std::string CreateIdentifier(std::string signature);
+std::string B32Encode(std::string message);
+std::string B32Decode(std::string encoded);
 

@@ -61,8 +61,12 @@ class WaitTimer(object):
         Returns:
             wait_timer.WaitTimer: A new wait timer.
         """
-        previous_certificate_id = certs[-1].identifier if certs else \
-            cls.poet_enclave.NULL_IDENTIFIER
+
+        if not isinstance(certs, list):
+            raise TypeError
+
+        previous_certificate_id = certs[-1].identifier if certs \
+            else cls.poet_enclave.NULL_IDENTIFIER
         local_mean = cls.compute_local_mean(certs)
         timer = cls.poet_enclave.create_wait_timer(previous_certificate_id,
                                                    local_mean)
@@ -83,6 +87,9 @@ class WaitTimer(object):
         Returns:
             float: The local mean wait time.
         """
+        if not isinstance(certs, list):
+            raise TypeError
+
         count = len(certs)
         if count < cls.fixed_duration_blocks:
             ratio = 1.0 * count / cls.fixed_duration_blocks
@@ -116,6 +123,12 @@ class WaitTimer(object):
             certificates (list): Previously committed certificates,
                 ordered newest to oldest
         """
+        if not isinstance(certificates, list):
+            raise TypeError
+
+        if(len(certificates) < cls.certificate_sample_length):
+            raise ValueError
+
         sum_means = 0
         sum_waits = 0
         for cert in certificates[:cls.certificate_sample_length]:
