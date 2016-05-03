@@ -93,8 +93,8 @@ class WaitTimer(object):
         count = len(certs)
         if count < cls.fixed_duration_blocks:
             ratio = 1.0 * count / cls.fixed_duration_blocks
-            return cls.target_wait_time * (
-                1 - ratio * ratio) + cls.initial_wait_time * ratio * ratio
+            return cls.target_wait_time * \
+                (1 - ratio * ratio) + cls.initial_wait_time * ratio * ratio
 
         return cls.target_wait_time * cls.population_estimate(certs)
 

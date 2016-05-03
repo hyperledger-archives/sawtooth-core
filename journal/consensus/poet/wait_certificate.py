@@ -127,7 +127,7 @@ class WaitCertificate(object):
                 self.serialized_cert,
                 self.signature)
         except:
-            logger.warn('Wait certificate failed to desertialize.')
+            logger.warn('Wait certificate failed to deserialize.')
             return None
 
     def is_valid_wait_certificate(self, certs):
