@@ -235,3 +235,15 @@ class Unregister(market_place_object_update.Unregister):
             return False
 
         return True
+
+
+class UpdateDescription(market_place_object_update.UpdateDescription) :
+    UpdateType = '/mktplace.transactions.ExchangeOfferUpdate/UpdateDescription'
+    ObjectType = ExchangeOfferObject
+    CreatorType = participant_update.ParticipantObject
+
+
+class UpdateName(market_place_object_update.UpdateName) :
+    UpdateType = '/mktplace.transactions.ExchangeOfferUpdate/UpdateName'
+    ObjectType = ExchangeOfferObject
+    CreatorType = participant_update.ParticipantObject
