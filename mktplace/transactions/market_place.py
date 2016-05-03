@@ -308,12 +308,18 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
         """
         Associate the objectid with the namemap
         """
+        if not self._namemapinitialized:
+            self._initnamemap()
+
         self._namemap[fqname] = objectid
 
     def unbind(self, fqname):
         """
         Remove fqname from the namemap
         """
+        if not self._namemapinitialized:
+            self._initnamemap()
+
         del self._namemap[fqname]
 
     def i2n(self, objectid):
@@ -376,25 +382,60 @@ class MarketPlaceTransaction(transaction.Transaction):
     MessageType = MarketPlaceTransactionMessage
 
     UpdateRegistry = {
+        account_update.Register.UpdateType: account_update.Register,
+        account_update.Unregister.UpdateType: account_update.Unregister,
+        account_update.UpdateDescription.UpdateType:
+            account_update.UpdateDescription,
+        account_update.UpdateName.UpdateType: account_update.UpdateName,
+
         asset_update.Register.UpdateType: asset_update.Register,
         asset_update.Unregister.UpdateType: asset_update.Unregister,
+        asset_update.UpdateDescription.UpdateType:
+            asset_update.UpdateDescription,
+        asset_update.UpdateName.UpdateType: asset_update.UpdateName,
+
         asset_type_update.Register.UpdateType: asset_type_update.Register,
         asset_type_update.Unregister.UpdateType: asset_type_update.Unregister,
+        asset_type_update.UpdateDescription.UpdateType:
+            asset_type_update.UpdateDescription,
+        asset_type_update.UpdateName.UpdateType: asset_type_update.UpdateName,
+
         exchange_offer_update.Register.UpdateType:
             exchange_offer_update.Register,
         exchange_offer_update.Unregister.UpdateType:
             exchange_offer_update.Unregister,
+        exchange_offer_update.UpdateDescription.UpdateType:
+            exchange_offer_update.UpdateDescription,
+        exchange_offer_update.UpdateName.UpdateType:
+            exchange_offer_update.UpdateName,
+
+
         holding_update.Register.UpdateType: holding_update.Register,
         holding_update.Unregister.UpdateType: holding_update.Unregister,
+        holding_update.UpdateDescription.UpdateType:
+            holding_update.UpdateDescription,
+        holding_update.UpdateName.UpdateType: holding_update.UpdateName,
+
         liability_update.Register.UpdateType: liability_update.Register,
         liability_update.Unregister.UpdateType: liability_update.Unregister,
+        liability_update.UpdateDescription.UpdateType:
+            liability_update.UpdateDescription,
+        liability_update.UpdateName.UpdateType: liability_update.UpdateName,
+
         participant_update.Register.UpdateType: participant_update.Register,
         participant_update.Unregister.UpdateType:
             participant_update.Unregister,
+        participant_update.UpdateDescription.UpdateType:
+            participant_update.UpdateDescription,
+        participant_update.UpdateName.UpdateType:
+            participant_update.UpdateName,
+
         sell_offer_update.Register.UpdateType: sell_offer_update.Register,
         sell_offer_update.Unregister.UpdateType: sell_offer_update.Unregister,
-        account_update.Register.UpdateType: account_update.Register,
-        account_update.Unregister.UpdateType: account_update.Unregister,
+        sell_offer_update.UpdateDescription.UpdateType:
+            sell_offer_update.UpdateDescription,
+        sell_offer_update.UpdateName.UpdateType: sell_offer_update.UpdateName,
+
         exchange_update.Exchange.UpdateType: exchange_update.Exchange,
         incentive_update.IncentiveUpdate.UpdateType:
             incentive_update.IncentiveUpdate

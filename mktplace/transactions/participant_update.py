@@ -126,3 +126,81 @@ class Unregister(market_place_object_update.Unregister):
             return False
 
         return True
+
+
+class UpdateDescription(market_place_object_update.UpdateDescription):
+    UpdateType = '/mktplace.transactions.ParticipantUpdate/UpdateDescription'
+    ObjectType = ParticipantObject
+    CreatorType = ParticipantObject
+
+    def __init__(self, transaction=None, minfo={}):
+        super(UpdateDescription, self).__init__(transaction, minfo)
+
+    def is_valid(self, store):
+        if self.CreatorID != self.ObjectID:
+            logger.info('creator and object are the same for participant '
+                        'unregistration')
+            return False
+
+        if not super(UpdateDescription, self).IsValid(store):
+            return False
+
+        return True
+
+
+class UpdateName(market_place_object_update.UpdateName):
+    UpdateType = '/mktplace.transactions.ParticipantUpdate/UpdateName'
+    ObjectType = ParticipantObject
+    CreatorType = ParticipantObject
+
+    # -----------------------------------------------------------------
+    def __init__(self, transaction=None, minfo={}):
+        super(UpdateName, self).__init__(transaction, minfo)
+
+    # -----------------------------------------------------------------
+    def is_valid_name(self, store):
+        """
+        Ensure that the name property meets syntactic requirements. Objects
+        can override this method for object specific syntax. This method simply
+        requires that names begin with a '/' and have a total length less than
+        64 characters.
+        """
+
+        if self.Name == '':
+            return True
+
+        if self.Name.find('/') >= 0:
+            logger.debug('invalid name %s; must not contain /', self.Name)
+            return False
+
+        if len(self.Name) >= 64:
+            logger.debug('invalid name %s; must be less than 64 bytes',
+                         self.Name)
+            return False
+
+        name = "//{0}".format(self.Name)
+        if store.n2i(name):
+            logger.debug('invalid name %s; name must be unique', self.Name)
+            return False
+
+        return True
+
+    def is_valid(self, store):
+        logger.debug('market update: %s', str(self))
+
+        assert self.OriginatorID
+        assert self.ObjectID
+        assert self.CreatorID
+
+        if self.CreatorID != self.ObjectID:
+            logger.info('creator and object are the same for participant '
+                        'unregistration')
+            return False
+
+        if not self.ObjectType.is_valid_object(store, self.ObjectID):
+            return False
+
+        if not self.is_valid_name(store):
+            return False
+
+        return True
