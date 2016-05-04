@@ -71,16 +71,23 @@ def get_verifying_key(serialized_msg, serialized_sig):
     v, r, s = pybitcointools.decode_sig(serialized_sig)
     msghash = pybitcointools.electrum_sig_hash(serialized_msg)
     z = pybitcointools.hash_to_int(msghash)
-    yBit = v - 27
+    compress = True if v >= 31 else False
+    if compress:
+        rec = v - 31
+    else:
+        rec = v - 27
     try:
         pubkey = nativeECDSA.recover_pubkey(
-            str(z), str(r), str(s), int(yBit))
+            str(z), str(r), str(s), int(rec))
     except Exception as ex:
         logger.warn('Unable to extract public key from signature' + ex.args[0])
         return ""
     pubkey = pubkey.translate(None,
                               'h')  # strip out hex indicators from opencpp
-    pubkey = "04" + pubkey  # add header to match pybitcointools format
+    pubkey = '04' + pubkey      # indicate uncompressed pubkey
+    if compress:
+        pubkey = pybitcointools.compress(pubkey)
+
     return pubkey
 
 
