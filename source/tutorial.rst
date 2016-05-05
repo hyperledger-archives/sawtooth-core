@@ -173,11 +173,54 @@ txnvalidator case, you will need to log in to the development environment
 
     $ cd /project/sawtooth-validator
     $ ./bin/launcher
+    No config file specified, loading  /project/sawtooth-validator/etc/txnvalidator.js
+    Overriding the following keys from validator configuration file: /project/sawtooth-validator/etc/txnvalidator.js
+            NodeName
+            Host
+            HttpPort
+            Port
+            LogFile
+            LogLevel
+            KeyFile
+            GenesisLedger
+    Configuration:
+    {   'config': '/project/sawtooth-validator/etc/txnvalidator.js',
+        'count': 1,
+        'data_dir': '/tmp/tmpohtWIM',
+        'data_dir_is_tmp': True,
+        'load_blockchain': None,
+        'log_level': 'WARNING',
+        'save_blockchain': None,
+        'validator': '/project/sawtooth-validator/bin/txnvalidator',
+        'validator_config': {   u'CertificateSampleLength': 30,
+                                u'InitialWaitTime': 750.0,
+                                u'LedgerType': u'lottery',
+                                u'LedgerURL': u'http://localhost:8800/',
+                                'LogLevel': 'WARNING',
+                                u'MaxTransactionsPerBlock': 1000,
+                                u'MinTransactionsPerBlock': 1,
+                                u'NetworkBurstRate': 128000,
+                                u'NetworkDelayRange': [0.0, 0.1],
+                                u'NetworkFlowRate': 96000,
+                                u'Restore': False,
+                                u'TargetConnectivity': 3,
+                                u'TargetWaitTime': 30.0,
+                                u'TopologyAlgorithm': u'RandomWalk',
+                                u'TransactionFamilies': [   u'ledger.transaction.integer_key',
+                                                            u'sawtooth_xo'],
+                                u'UseFixedDelay': True}}
+    Launching initial validator: .......... 10.08S
+    Launching validator network:  0.00S
+    Waiting for validator registration: . 1.12S
 
-Without any command-line options, the script will launch a single txnvalidator
-instance with a default configuration.  The launcher has numerous command-line
-options, all of which can be seen by executing the command with the --help (or -h)
-command-line option.
+Without any command-line options, the script launches a single txnvalidator
+instance.  As can be seen from the output above, the launcher reports the
+configuration file used, usually
+/project/sawtooth-validator/etc/txnvalidator.js, as well as any configuration
+settings that it has overridden.
+
+The launcher has numerous command-line options, all of which can be seen by
+executing the command with the ``--help`` (or ``-h``) command-line option.
 
 .. code-block:: console
 
@@ -212,45 +255,6 @@ level set to DEBUG, execute the following:
 .. code-block:: console
 
     $ ./bin/launcher --count 2 --log-level DEBUG
-    No config file specified, loading  /project/sawtooth-validator/etc/txnvalidator.js
-    Overriding the following keys from validator configuration file: /project/sawtooth-validator/etc/txnvalidator.js
-            NodeName
-            Host
-            HttpPort
-            Port
-            LogFile
-            LogLevel
-            KeyFile
-            GenesisLedger
-    Configuration:
-    {   'config': '/project/sawtooth-validator/etc/txnvalidator.js',
-        'count': 2,
-        'data_dir': '/tmp/tmpylbmp_',
-        'data_dir_is_tmp': True,
-        'load_blockchain': None,
-        'log_level': 'DEBUG',
-        'save_blockchain': None,
-        'validator': '/project/sawtooth-validator/bin/txnvalidator',
-        'validator_config': {   u'CertificateSampleLength': 30,
-                                u'InitialWaitTime': 750.0,
-                                u'LedgerType': u'lottery',
-                                u'LedgerURL': u'http://localhost:8800/',
-                                'LogLevel': 'DEBUG',
-                                u'MaxTransactionsPerBlock': 1000,
-                                u'MinTransactionsPerBlock': 1,
-                                u'NetworkBurstRate': 128000,
-                                u'NetworkDelayRange': [0.0, 0.1],
-                                u'NetworkFlowRate': 96000,
-                                u'Restore': False,
-                                u'TargetConnectivity': 3,
-                                u'TargetWaitTime': 30.0,
-                                u'TopologyAlgorithm': u'RandomWalk',
-                                u'TransactionFamilies': [   u'ledger.transaction.integer_key',
-                                                            u'sawtooth_xo'],
-                                u'UseFixedDelay': True}}
-    Launching initial validator: ............. 13.37S
-    Launching validator network: . 0.04S
-    Waiting for validator registration: .................. 18.21S
 
 .. note::
 
