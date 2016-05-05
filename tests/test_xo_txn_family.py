@@ -381,3 +381,159 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('State', store['game000'])
         self.assertEquals(store['game000']['State'], 'P2-WIN')
         self.assertEquals(store['game000']['Board'], 'XO-XO--OX')
+
+
+    def test_xo_transaction_game_tie(self):
+        player1_key = signed_object.generate_signing_key()
+        player2_key = signed_object.generate_signing_key()
+
+        store = global_store_manager.KeyValueStore()
+
+        # Create the game
+        transaction = XoTransaction({
+            'Action': 'CREATE',
+            'Name': 'game000'
+        })
+        transaction.sign_object(player1_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P1-NEXT')
+        self.assertEquals(store['game000']['Board'], '---------')
+
+        # Take space 1
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 1
+        })
+        transaction.sign_object(player1_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P2-NEXT')
+        self.assertEquals(store['game000']['Board'], 'X--------')
+
+        # Take space 2
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 2
+        })
+        transaction.sign_object(player2_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P1-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XO-------')
+
+        # Take space 4
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 4
+        })
+        transaction.sign_object(player1_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P2-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XO-X-----')
+
+        # Take space 5
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 5
+        })
+        transaction.sign_object(player2_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P1-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XO-XO----')
+
+        # Take space 8
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 8
+        })
+        transaction.sign_object(player1_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P2-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XO-XO--X-')
+
+        # Take space 7
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 7
+        })
+        transaction.sign_object(player2_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P1-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XO-XO-OX-')
+
+        # Take space 3
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 3
+        })
+        transaction.sign_object(player1_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P2-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XOXXO-OX-')
+
+        # Take space 6
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 6
+        })
+        transaction.sign_object(player2_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'P1-NEXT')
+        self.assertEquals(store['game000']['Board'], 'XOXXOOOX-')
+
+        # Take space 9
+        transaction = XoTransaction({
+            'Action': 'TAKE',
+            'Name': 'game000',
+            'Space': 9
+        })
+        transaction.sign_object(player1_key)
+        self.assertTrue(transaction.is_valid(store))
+        transaction.apply(store)
+        self.assertIn('game000', store)
+        self.assertIn('Board', store['game000'])
+        self.assertIn('State', store['game000'])
+        self.assertEquals(store['game000']['State'], 'TIE')
+        self.assertEquals(store['game000']['Board'], 'XOXXOOOXX')
