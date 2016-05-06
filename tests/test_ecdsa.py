@@ -50,6 +50,24 @@ class TestPKRecover(unittest.TestCase):
             self.assertEquals(native_recovered, py_recovered,
                               "Priv Key that failed: {}".format(priv))
 
+    def test_compressed_keys(self):
+        """
+        Tests compressed key
+        """
+        msg = 'foo'
+        self.longMessage = True
+        priv = pbt.encode_privkey(pbt.random_key(), 'hex_compressed')
+        sig = pbt.ecdsa_sign(msg, priv)
+        # Force old pybitcointools to behave
+        v, r, s = pbt.decode_sig(sig)
+        if v < 31:
+            v += 4
+        sig = pbt.encode_sig(v, r, s)
+        pub = pbt.compress(pbt.privtopub(priv))
+        native_recovered = gossip.signed_object.get_verifying_key(msg, sig)
+        self.assertEquals(native_recovered, pub,
+                          "Priv Key that failed: {}".format(priv))
+
     def test_exception_on_empty_param(self):
         """
         Tests Exception Handling
