@@ -146,7 +146,7 @@ class XoTransaction(transaction.Transaction):
                 raise XoException('no such game')
 
             state = store[self._name]['State']
-            if state in ['P1-WIN', 'P2-WIN']:
+            if state in ['P1-WIN', 'P2-WIN', 'TIE']:
                 raise XoException('game complete')
 
             if state == 'P1-NEXT' and 'Player1' in store[self._name]:
@@ -217,6 +217,8 @@ class XoTransaction(transaction.Transaction):
             state = 'P1-WIN'
         elif self._is_win(game['Board'], 'O'):
             state = 'P2-WIN'
+        elif '-' not in game['Board']:
+            state = 'TIE'
 
         game['State'] = state
         store[self._name] = game
