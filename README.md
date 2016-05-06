@@ -111,3 +111,10 @@ You can turn up the verbosity of the command (which enables logging output
 to the console) by adding -v or -vv.  -v enables INFO-level messages and
 -vv enables DEBUG-level messages.
 
+Sawtooth Ethereum Guess
+-----------------------
+
+seg is a game about guessing the balances of Ethereum addresses.  While it
+isn't really fun... it does show how to integrate an Ethereum client into
+a transaction family (thus using Ethereum as a source of record for some
+data).
