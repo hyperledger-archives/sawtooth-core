@@ -66,6 +66,23 @@ class Stats(object):
 
         raise AttributeError("no metric of type %r", attr)
 
+    def get_stats(self, metrics=[]):
+        """
+        Return a dictionary with current value of the statistics
+
+        Args:
+            metrics (list of Metric): A list of metrics to dump.
+        """
+        if len(metrics) == 0:
+            metrics = self.Metrics.keys()
+
+        result = dict()
+        for metric in metrics:
+            if metric in self.Metrics:
+                result[metric] = self.Metrics[metric].get_metric()
+
+        return result
+
     def dump_stats(self, batchid, metrics=[]):
         """Dumps associated metrics information to the log.
 
@@ -130,6 +147,13 @@ class Metric(object):
                entry.
         """
         logger.info("metric, %s", ", ".join([str(x) for x in args]))
+        return args
+
+    def get_metric(self):
+        """
+        Return the current value of the metric. Subclasses will override.
+        """
+        return None
 
     def dump_metric(self, identifier):
         """Writes a logger entry containing the provided identifier and
@@ -138,7 +162,7 @@ class Metric(object):
         Args:
             identifier (str): The identifier to log.
         """
-        self.dump(identifier, self.Name)
+        return self.dump(identifier, self.Name)
 
     def reset(self):
         """Base class reset of associated measure.
@@ -167,6 +191,12 @@ class Value(Metric):
         super(Value, self).__init__(name)
         self.Value = value
 
+    def get_metric(self):
+        """
+        Return the current value of the metric.
+        """
+        return self.Value
+
     def dump_metric(self, identifier):
         """Writes a logger entry containing the provided identifier,
         the metric name, and the metric value.
@@ -174,7 +204,7 @@ class Value(Metric):
         Args:
             identifier (str): The identifier to log.
         """
-        self.dump(identifier, self.Name, self.Value)
+        return self.dump(identifier, self.Name, self.Value)
 
 
 class Counter(Metric):
@@ -202,6 +232,12 @@ class Counter(Metric):
         """
         self.Value += int(value)
 
+    def get_metric(self):
+        """
+        Return the current value of the metric.
+        """
+        return self.Value
+
     def dump_metric(self, identifier):
         """Writes a logger entry containing the provided identifier,
         the metric name, and the metric value.
@@ -209,7 +245,7 @@ class Counter(Metric):
         Args:
             identifier (str): The identifier to log.
         """
-        self.dump(identifier, self.Name, self.Value)
+        return self.dump(identifier, self.Name, self.Value)
 
     def reset(self):
         """Resets the value of the metric to zero.
@@ -246,6 +282,12 @@ class MapCounter(Metric):
             self.Values[key] = 0
         self.Values[key] += int(value)
 
+    def get_metric(self):
+        """
+        Return the current value of the metric.
+        """
+        return self.Values
+
     def dump_metric(self, identifier):
         """Writes a logger entry for each key in the map containing the
         provided identifier, the key and the metric value.
@@ -255,6 +297,8 @@ class MapCounter(Metric):
         """
         for key, val in self.Values.iteritems():
             self.dump(identifier, key, val)
+
+        return
 
     def reset(self):
         """Resets the contents of the Values dict.
@@ -288,6 +332,12 @@ class Average(Metric):
         """
         self.Total += value
         self.Count += 1
+
+    def get_metric(self):
+        """
+        Return the current value of the metric.
+        """
+        return [self.Total, self.Count]
 
     def dump_metric(self, identifier):
         """Writes a logger entry containing the provided identifier,
@@ -325,6 +375,12 @@ class Sample(Metric):
         """
         super(Sample, self).__init__(name)
         self.Closure = closure
+
+    def get_metric(self):
+        """
+        Return the current value of the metric.
+        """
+        return self.Closure()
 
     def dump_metric(self, identifier):
         """Writes a logger entry containing the provided identifier, the
