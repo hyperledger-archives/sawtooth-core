@@ -23,10 +23,6 @@ import logging
 
 from gossip.common import pretty_print_dict
 
-from gossip.config import ArgparseOptionsConfig
-from gossip.config import ConfigFileNotFound
-from gossip.config import InvalidSubstitutionKey
-
 from gossip.messages import gossip_debug
 from gossip.messages import shutdown_message
 
@@ -41,6 +37,10 @@ from journal.messages import journal_debug
 
 from ledger.transaction import integer_key
 from ledger.transaction import endpoint_registry
+
+from sawtooth.config import ArgparseOptionsConfig
+from sawtooth.config import ConfigFileNotFound
+from sawtooth.config import InvalidSubstitutionKey
 
 from txnserver import ledger_web_client, log_setup
 from txnserver.config import get_validator_configuration
