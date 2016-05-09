@@ -18,12 +18,12 @@ import os
 import tempfile
 import unittest
 
-from gossip.config import AggregateConfig
-from gossip.config import ArgparseOptionsConfig
-from gossip.config import Config
-from gossip.config import EnvConfig
-from gossip.config import JsonConfig
-from gossip.config import JsonFileConfig
+from sawtooth.config import AggregateConfig
+from sawtooth.config import ArgparseOptionsConfig
+from sawtooth.config import Config
+from sawtooth.config import EnvConfig
+from sawtooth.config import JsonConfig
+from sawtooth.config import JsonFileConfig
 
 
 class TestEnvConfig(unittest.TestCase):
