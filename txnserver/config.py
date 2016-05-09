@@ -18,10 +18,11 @@ import re
 import sys
 import warnings
 
-import gossip.config
 from gossip.common import json2dict
-from gossip.config import AggregateConfig
-from gossip.config import load_config_files
+
+import sawtooth.config
+from sawtooth.config import AggregateConfig
+from sawtooth.config import load_config_files
 
 
 def parse_configuration_files(cfiles, search_path):
@@ -123,7 +124,7 @@ def get_validator_configuration(config_files,
     return resolved
 
 
-class ValidatorDefaultConfig(gossip.config.Config):
+class ValidatorDefaultConfig(sawtooth.config.Config):
     def __init__(self, os_name=os.name):
         super(ValidatorDefaultConfig, self).__init__(name="default")
 
@@ -148,7 +149,7 @@ class ValidatorDefaultConfig(gossip.config.Config):
         self['CurrencyHost'] = "localhost"
 
 
-class CurrencyEnvConfig(gossip.config.EnvConfig):
+class CurrencyEnvConfig(sawtooth.config.EnvConfig):
     def __init__(self):
         super(CurrencyEnvConfig, self).__init__([
             ('CURRENCYHOME', 'CurrencyHome'),

@@ -21,10 +21,10 @@ import warnings
 
 from twisted.internet import reactor
 
-from gossip.config import ArgparseOptionsConfig
-from gossip.config import ConfigFileNotFound
-from gossip.config import InvalidSubstitutionKey
 from gossip.gossip_core import GossipException
+from sawtooth.config import ArgparseOptionsConfig
+from sawtooth.config import ConfigFileNotFound
+from sawtooth.config import InvalidSubstitutionKey
 from txnserver import log_setup, lottery_validator, voting_validator, web_api
 from txnserver.config import get_validator_configuration
 
