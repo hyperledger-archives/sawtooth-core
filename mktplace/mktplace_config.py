@@ -16,9 +16,9 @@
 import getpass
 import os
 
-import gossip.config
-from gossip.config import AggregateConfig
-from gossip.config import load_config_files
+import sawtooth.config
+from sawtooth.config import AggregateConfig
+from sawtooth.config import load_config_files
 
 
 def get_mktplace_configuration(config_files,
@@ -63,7 +63,7 @@ def get_mktplace_configuration(config_files,
     return resolved
 
 
-class MarketPlaceDefaultConfig(gossip.config.Config):
+class MarketPlaceDefaultConfig(sawtooth.config.Config):
     def __init__(self, os_name=os.name):
         super(MarketPlaceDefaultConfig, self).__init__(name="default")
 
@@ -95,7 +95,7 @@ class MarketPlaceDefaultConfig(gossip.config.Config):
                 self['User'] = os.environ['USERNAME']
 
 
-class MarketPlaceEnvConfig(gossip.config.EnvConfig):
+class MarketPlaceEnvConfig(sawtooth.config.EnvConfig):
     def __init__(self):
         super(MarketPlaceEnvConfig, self).__init__([
             ('CURRENCYHOME', 'CurrencyHome'),
