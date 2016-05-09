@@ -45,8 +45,9 @@ class RootPage(Resource):
         self.Ledger = ledger
 
         self.GetPageMap = {
-            'store': self._handlestorerequest,
             'block': self._handleblkrequest,
+            'stat': self._handlestatrequest,
+            'store': self._handlestorerequest,
             'transaction': self._handletxnrequest
         }
 
@@ -380,6 +381,25 @@ class RootPage(Resource):
                         'unknown transaction field {0}'.format(field))
 
         return tinfo[field]
+
+    def _handlestatrequest(self, pathcomponents, args, testonly):
+        if not pathcomponents:
+            raise Error(http.BAD_REQUEST, 'missing stat family')
+
+        result = dict()
+
+        source = pathcomponents.pop(0)
+        if source == 'ledger':
+            for domain in self.Ledger.StatDomains.iterkeys():
+                result[domain] = self.Ledger.StatDomains[domain].get_stats()
+        elif source == 'node':
+            for peer in self.Ledger.NodeMap.itervalues():
+                if peer.Enabled:
+                    result[peer.Name] = peer.Stats.get_stats()
+        else:
+            raise Error(http.NOT_FOUND, 'no stat source specified')
+
+        return result
 
 
 class ApiSite(Site):
