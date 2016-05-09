@@ -70,15 +70,28 @@ class Register(market_place_object_update.Register):
     def References(self):
         return []
 
-    def is_valid_name(self):
+    def is_valid_name(self, store):
         """
         Participant names may not include a '/' and must be less than
         64 characters long.
         """
 
-        if self.Name:
-            return self.Name.find('/') < 0 and len(self.Name) < 64
+        if self.Name == '':
+            return True
 
+        if self.Name.find('/') >= 0:
+            logger.debug('invalid name %s; must not contain /', self.Name)
+            return False
+
+        if len(self.Name) >= 64:
+            logger.debug('invalid name %s; must be less than 64 bytes',
+                         self.Name)
+            return False
+
+        name = "//{0}".format(self.Name)
+        if store.n2i(name):
+            logger.debug('invalid name %s; name must be unique', self.Name)
+            return False
         return True
 
     def is_valid(self, store):
