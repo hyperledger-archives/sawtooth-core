@@ -25,11 +25,11 @@ from string import Template
 import pybitcointools
 
 from gossip.common import pretty_print_dict
-from gossip.config import ArgparseOptionsConfig
-from gossip.config import ConfigFileNotFound
-from gossip.config import InvalidSubstitutionKey
 from mktplace import mktplace_client, mktplace_state, mktplace_token_store
 from mktplace.mktplace_config import get_mktplace_configuration
+from sawtooth.config import ArgparseOptionsConfig
+from sawtooth.config import ConfigFileNotFound
+from sawtooth.config import InvalidSubstitutionKey
 from txnserver import log_setup
 
 logger = logging.getLogger(__name__)
