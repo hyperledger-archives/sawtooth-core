@@ -135,7 +135,7 @@ build, run the following inside vagrant:
 Running txnvalidator
 ====================
 
-To start txnvalidator, login to the development environment with 'vagrant ssh'
+To start txnvalidator, log in to the development environment with 'vagrant ssh'
 and run the following command:
 
 .. note::
