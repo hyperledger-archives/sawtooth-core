@@ -30,21 +30,26 @@ class TestEnvConfig(unittest.TestCase):
     def test_load_from_env_notset(self):
         """Verifies that a configuration variable will not be set if
         it is missing from os.environ."""
-
+        env_bak = dict(os.environ)
         os.environ.clear()
         cfg = EnvConfig([("TEST_VAR", "test_env_var")])
         self.assertIsNotNone(cfg)
         self.assertNotIn("test_env_var", cfg)
 
+        os.environ.update(env_bak)
+
     def test_load_from_env_set(self):
         """Verifies that a configuration variable will be set correctly if
         it is present in os.environ."""
 
+        env_bak = dict(os.environ)
         os.environ.clear()
         os.environ["TEST_VAR"] = "set"
         cfg = EnvConfig([("TEST_VAR", "test_env_var")])
         self.assertIn("test_env_var", cfg)
         self.assertEquals(cfg["test_env_var"], "set")
+
+        os.environ.update(env_bak)
 
 
 class TestJsonishConfig(unittest.TestCase):
