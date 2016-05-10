@@ -26,14 +26,7 @@ import warnings
 import pybitcointools
 from colorlog import ColoredFormatter
 
-
-class ExitError(Exception):
-    def __init__(self, what):
-        super(ExitError, self).__init__()
-        self.what = what
-
-    def __str__(self):
-        return self.what
+from txnintegration.exceptions import ExitError
 
 
 class Progress(object):

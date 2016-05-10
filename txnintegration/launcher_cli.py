@@ -25,8 +25,9 @@ import logging
 import shutil
 import tarfile
 
+from txnintegration.exceptions import ExitError
 from txnintegration.validator_network_manager import ValidatorNetworkManager
-from txnintegration.utils import ExitError, parse_configuration_file, \
+from txnintegration.utils import parse_configuration_file, \
     prompt_yes_no, find_txn_validator
 
 logger = logging.getLogger(__name__)

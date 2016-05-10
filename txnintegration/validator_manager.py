@@ -20,6 +20,7 @@ import sys
 import re
 import json
 
+from txnintegration.exceptions import ValidatorManagerException
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
@@ -158,37 +159,43 @@ class ValidatorManager(object):
             return self.handle.returncode is None
         return False
 
-    def has_error(self):
+    def check_error(self):
         if self.handle:
             if self.handle.returncode:
-                return True  # has exited
+                raise ValidatorManagerException("validator has exited")
             else:
                 err = os.stat(self.stderrFile)
                 if err.st_size > 0:
-                    return True  # has stderr output
-                if self.has_log_error():
-                    return True  # has log error msg output
-            return False
-        return True  # is not running
+                    with open(self.stderrFile, 'r') as fd:
+                        lines = fd.readlines()
+                        raise ValidatorManagerException(
+                            "stderr has output: line 1 of {}: {}".format(
+                                len(lines), lines[0]))
+                self._check_log_error()
+        else:
+            raise ValidatorManagerException("validator not running")
 
-    def has_log_error(self):
+    def _check_log_error(self):
         if os.path.exists(self.logFile):
             reg = re.compile(r"^\[[\d:]*, ([\d]*), .*\]")
             with open(self.logFile, 'r') as fin:
                 for line in fin:
                     match = reg.search(line)
                     if match and int(match.group(1)) >= 50:
-                        return True
+                        raise ValidatorManagerException(
+                            "error in log: {}".format(line))
                     elif 'error' in line:
-                        return True
+                        raise ValidatorManagerException(
+                            "error in log: {}".format(line))
                     elif 'Traceback' in line:  # exception dump
-                        return True
+                        raise ValidatorManagerException(
+                            "error in log: {}".format(line))
                     elif 'exception' in line and \
                             'http request' not in line:
                         #  errors in http requests are routinely generated
                         # when checking transactions status.
-                        return True
-        return False
+                        raise ValidatorManagerException(
+                            "error in log: {}".format(line))
 
     def status(self):
         st = "unk  "
