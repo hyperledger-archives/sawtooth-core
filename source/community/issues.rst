@@ -13,7 +13,7 @@ https://inteldl.slack.com for initial feedback before submitting the issue
 in Github.
 
 Guidelines for submitting an issue with good information is located at
-:doc:`how_to_report_issues`.
+:doc:`how_to_report`.
 
 A team member will be assigned to review the issue and will respond to the
 contributor with questions and clarifications, as needed. This may result in:

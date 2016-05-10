@@ -15,3 +15,4 @@ When participating, please be respectful and courteous.
    community/slack
    community/issues
    community/contributing
+   community/how_to_report
