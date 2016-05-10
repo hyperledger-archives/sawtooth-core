@@ -188,7 +188,7 @@ families:
      Don't miss the comma at the end of the integer_key line, before your new
      line for market_place!
 
-.. code-block:: json
+.. code-block:: none
 
     "TransactionFamilies" : [
         "ledger.transaction.integer_key",
