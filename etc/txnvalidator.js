@@ -33,7 +33,7 @@
     "UseFixedDelay" : true,
 
     ## configuration of logging
-    "LogLevel" : "INFO",
+    "LogLevel" : "DEBUG",
     "LogFile"  : "{log_dir}/lottery-{node}.log",
 
     ## configuration of the transaction families to include
