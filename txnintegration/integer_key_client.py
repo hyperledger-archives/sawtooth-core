@@ -47,7 +47,7 @@ class IntegerKeyClient(IntegerKeyCommunication):
         elif keyfile:
             logger.debug("set signing key from file %s", keyfile)
             signingkey = signed_object.generate_signing_key(
-                wifstr=open(keyfile, "r").read())
+                wifstr=open(keyfile, "r").read().strip())
         else:
             raise TypeError('expecting valid signing key, none provided')
 
