@@ -19,7 +19,7 @@ the configuration file, In this example, we have copied the
 .. code-block:: console
 
     $ cd /project/sawtooth-validator
-    $ ./bin/txnvalidator --logfile=__screen__ --config ../etc/single-node.js
+    $ ./bin/txnvalidator -v --config ../etc/single-node.js
 
 Multiple config files can be overlaid, and all of the settings in the
 config file can be overridden on the command line, but that's beyond the
