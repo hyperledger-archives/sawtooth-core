@@ -31,7 +31,7 @@ class WaitTimer(object):
         fixed_duration_blocks (int): If fewer than FixedDurationBlocks
             exist, then base the local mean on a ratio based on
             InitialWaitTime, rather than the history.
-        poet_enclave (module): The PoetEnclave module to use for
+        WaitTimer.poet_enclave (module): The PoetEnclave module to use for
             executing enclave functions.
         WaitTimer.previous_certificate_id (str): The id of the previous
             certificate.

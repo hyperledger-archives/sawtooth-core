@@ -35,8 +35,8 @@ class WaitCertificate(object):
     """Represents wait certificates, which include a random wait timer.
 
     Attributes:
-        poet_enclave (module): The PoetEnclave module to use for executing
-            enclave functions.
+        WaitCertificate.poet_enclave (module): The PoetEnclave module to use
+            for executing enclave functions.
         WaitCertificate.previous_certificate_id (str): The id of the previous
             certificate.
         WaitCertificate.local_mean (float): The local mean wait time based on
