@@ -61,6 +61,7 @@ mktplace_apidoc:
 	$(SPHINXAPIDOC) -o source/mktplace_api -M -f -e -H "MarketPlace Python API" $(MKTPLACE_REPO) $(MKTPLACE_REPO)/setup.py
 
 html: sawtooth_apidoc mktplace_apidoc
+	@mkdir -p source/_static
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -123,6 +124,7 @@ epub:
 	@echo "Build finished. The epub file is in $(BUILDDIR)/epub."
 
 latex:
+	@mkdir -p source/_static
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo
 	@echo "Build finished; the LaTeX files are in $(BUILDDIR)/latex."
