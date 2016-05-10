@@ -63,6 +63,7 @@ def local_main(config, windows_service=False):
     # go through the list of transaction families that should be initialized in
     # this validator. the endpoint registry is always included
     for txnfamily in config.get('TransactionFamilies'):
+        logger.info("adding transaction family: %s", txnfamily)
         try:
             validator.add_transaction_family(
                 importlib.import_module(txnfamily))
