@@ -6,7 +6,7 @@ Overview
 
 If you wish to start up a validator network with multiple instances of txnvalidator,
 but do not want to either bring up multiple virtual machine instances or use separate
-physical machines, there is a script that simplifies the process or running multiple
+physical machines, there is a script that simplifies the process for running multiple
 instances of txnvalidator on a single virtual machine instance.  As in the single
 txnvalidator case, you will need to log in to the development environment
 (i.e., ``vagrant ssh``).  In its simplest form, the script is executed as follows:
@@ -69,8 +69,8 @@ shell command-line interface:
     Welcome to the sawtooth txnvalidator network manager interactive console
     launcher_cli.py>
 
-Commnand-Line Options
----------------------
+Command-Line Options
+--------------------
 
 The launcher has numerous command-line options, all of which can be seen by
 executing the command with the ``--help`` (or ``-h``) command-line option.
