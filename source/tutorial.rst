@@ -138,15 +138,10 @@ Running txnvalidator
 To start txnvalidator, log in to the development environment with 'vagrant ssh'
 and run the following command:
 
-.. note::
-
-    There are two underscores before and after the word screen in the command
-    below.
-
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
-   $ ./bin/txnvalidator --logfile=__screen__ --http 8800
+   $ ./bin/txnvalidator -v --http 8800
 
 This will startup txnvalidator and logging output will be printed to the
 terminal window.
@@ -200,7 +195,7 @@ To test the changes, startup txnvalidator:
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
-   $ ./bin/txnvalidator --logfile=__screen__ --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
+   $ ./bin/txnvalidator -v --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
