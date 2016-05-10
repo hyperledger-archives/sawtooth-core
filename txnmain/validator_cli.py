@@ -114,6 +114,10 @@ def parse_command_line(args):
                         nargs=2,
                         action='append')
     parser.add_argument('--type', help='Type of ledger to create')
+    parser.add_argument('--verbose', '-v',
+                        action='count',
+                        default=0,
+                        help='increase output sent to stderr')
 
     result = parser.parse_args(args)
 
@@ -160,6 +164,7 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('peers', 'Peers'),
             ('genesis', 'GenesisLedger'),
             ('url', 'LedgerURL'),
+            ('verbose', 'Verbose')
         ], options)
 
     if "LogLevel" in options_config:
@@ -219,7 +224,7 @@ def main(args, windows_service=False):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg)
+    log_setup.setup_loggers(cfg, cfg['Verbose'])
 
     for key, value in cfg.iteritems():
         logger.debug("CONFIG: %s = %s", key, value)
