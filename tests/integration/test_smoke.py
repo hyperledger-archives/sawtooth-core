@@ -143,12 +143,18 @@ class TestSmoke(unittest.TestCase):
 
             vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
                                           cfg=vnm_config)
+
             vnm.launch_network(5)
+
+            #launched_nodes = vnm.launch_network(5) // retreive list of launced nodes
+            #vnm.expand_network(launched_nodes, 1) // expand network
 
             print "Testing transaction load."
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(2)
+            #vnm.expand_network(launched_nodes, 1) // expand netowrk
+            #test.run(1) // update keys against expanded network
             test.validate()
             vnm.shutdown()
         except Exception as e:
