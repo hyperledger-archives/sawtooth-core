@@ -219,10 +219,7 @@ html_show_sphinx = False
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'SawtoothLakeDoc'
 
-latex_additional_files = ['sphinxhowto.cls']
-
-f = open('latexstyling.tex', 'r')
-PREAMBLE = f.read();
+PREAMBLE = ''
 
 # -- Options for LaTeX output ---------------------------------------------
 
