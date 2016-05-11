@@ -212,7 +212,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
     # -----------------------------------------------------------------
     def _update_name(self, module, objectid, name):
         """
-        Update the name of an object by invoking the type-specific update transaction
+        Update the name of an object by invoking the type-specific update
+        transaction
         :param module module: the module where the transaction resides
         :param id objectid: the identifier for the object to update
         :param str name: the new name of the object
@@ -236,7 +237,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
     # -----------------------------------------------------------------
     def _update_description(self, module, objectid, description):
         """
-        Update the description of an object by invoking the type-specific update transaction
+        Update the description of an object by invoking the type-specific
+        update transaction
         :param module module: the module where the transaction resides
         :param id objectid: the identifier for the object to update
         :param str description: the new description of the object
@@ -401,7 +403,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
         return self._update_name(asset_type_update, objectid, name)
 
     def update_assettype_description(self, objectid, description):
-        return self._update_description(asset_type_update, objectid, description)
+        return self._update_description(
+            asset_type_update, objectid, description)
 
     def register_exchangeoffer(self, iliability, oliability, ratio, **kwargs):
         """
@@ -470,7 +473,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
         return self._update_name(exchange_offer_update, objectid, name)
 
     def update_exchangeoffer_description(self, objectid, description):
-        return self._update_description(exchange_offer_update, objectid, description)
+        return self._update_description(
+            exchange_offer_update, objectid, description)
 
     def register_holding(self, account, asset, count, name='', description=''):
         """
@@ -573,7 +577,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
         return self._update_name(liability_update, objectid, name)
 
     def update_liability_description(self, objectid, description):
-        return self._update_description(liability_update, objectid, description)
+        return self._update_description(
+            liability_update, objectid, description)
 
     def register_participant(self, name='', description=''):
         """
@@ -613,7 +618,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
         return self._update_name(participant_update, objectid, name)
 
     def update_participant_description(self, objectid, description):
-        return self._update_description(participant_update, objectid, description)
+        return self._update_description(
+            participant_update, objectid, description)
 
     def register_selloffer(self, iliability, oholding, ratio, **kwargs):
         """
@@ -682,7 +688,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
         return self._update_name(sell_offer_update, objectid, name)
 
     def update_selloffer_description(self, objectid, description):
-        return self._update_description(sell_offer_update, objectid, description)
+        return self._update_description(
+            sell_offer_update, objectid, description)
 
     def register_account(self, name='', description=''):
         """
@@ -718,7 +725,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.ObjectID = objectid
 
         return self._unregister(update)
-
 
     def update_account_name(self, objectid, name):
         return self._update_name(account_update, objectid, name)

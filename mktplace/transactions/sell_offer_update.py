@@ -220,4 +220,3 @@ class UpdateName(market_place_object_update.UpdateName):
     UpdateType = '/mktplace.transactions.SellOfferUpdate/UpdateName'
     ObjectType = SellOfferObject
     CreatorType = participant_update.ParticipantObject
-

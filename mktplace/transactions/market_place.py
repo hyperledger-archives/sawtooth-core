@@ -308,7 +308,7 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
         """
         Associate the objectid with the namemap
         """
-        if not self._namemapinitialized :
+        if not self._namemapinitialized:
             self._initnamemap()
 
         self._namemap[fqname] = objectid
@@ -317,7 +317,7 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
         """
         Remove fqname from the namemap
         """
-        if not self._namemapinitialized :
+        if not self._namemapinitialized:
             self._initnamemap()
 
         del self._namemap[fqname]

@@ -153,13 +153,13 @@ class Unregister(market_place_object_update.Unregister):
         return True
 
 
-class UpdateDescription(market_place_object_update.UpdateDescription) :
+class UpdateDescription(market_place_object_update.UpdateDescription):
     UpdateType = '/mktplace.transactions.AssetUpdate/UpdateDescription'
     ObjectType = AssetObject
     CreatorType = participant_update.ParticipantObject
 
 
-class UpdateName(market_place_object_update.UpdateName) :
+class UpdateName(market_place_object_update.UpdateName):
     UpdateType = '/mktplace.transactions.AssetUpdate/UpdateName'
     ObjectType = AssetObject
     CreatorType = participant_update.ParticipantObject
