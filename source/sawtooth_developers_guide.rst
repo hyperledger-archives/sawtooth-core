@@ -1,7 +1,7 @@
 
-************************************
-Distributed Ledger Developer's Guide
-************************************
+*******************************
+Sawtooth Lake Developer's Guide
+*******************************
 
 .. toctree::
    :maxdepth: 2
