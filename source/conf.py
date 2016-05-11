@@ -246,12 +246,14 @@ latex_elements = {
 latex_documents = [
   (master_doc, 'SawtoothLake.tex', u'Sawtooth Lake Documentation',
    u'Intel Corporation', 'manual'),
-  ('packaging', 'SawtoothLakePackaging.tex', u'Sawtooth Lake Packaging',
+  ('tutorial', 'SawtoothLakeTutorial.tex', u'Sawtooth Lake Tutorial',
    u'Intel Corporation', 'howto'),
-  ('users_guide', 'SawtoothLakeUsersGuide.tex', u'Sawtooth Lake User\'s Guide',
+  ('sawtooth_developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Lake Developer\'s Guide',
    u'Intel Corporation', 'howto'),
-  ('developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Lake Developer\'s Guide',
+  ('mktplace_developers_guide', 'MarketPlaceDevelopersGuide.tex', u'MarketPlace Developer\'s Guide',
    u'Intel Corporation', 'howto'),
+  ('sysadmin_guide', 'SawtoothLakeSysadminGuide.tex', u'Sawtooth Lake Systems Administrator\'s Guide',
+   u'Intel Corporation', 'howto')
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
