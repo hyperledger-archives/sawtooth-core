@@ -1,3 +1,6 @@
+# Incubation Notice
+This project is a Hyperledger project in _Incubation_. It was proposed to the community and documented [here](http://bit.ly/1T6eVBH). Information on what _Incubation_ entails can be found in the [Hyperledger Project Lifecycle document](https://goo.gl/4edNRc).
+
 Distributed Ledger
 ==================
 
