@@ -146,15 +146,18 @@ class TestSmoke(unittest.TestCase):
 
             vnm.launch_network(5)
 
-            #launched_nodes = vnm.launch_network(5) // retreive list of launced nodes
-            #vnm.expand_network(launched_nodes, 1) // expand network
+            # use the following to capture list of launched nodes
+            # launched_nodes = vnm.launch_network(5)
+            # use the following to expand network before running tests
+            # vnm.expand_network(launched_nodes, 1)
 
             print "Testing transaction load."
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(2)
-            #vnm.expand_network(launched_nodes, 1) // expand netowrk
-            #test.run(1) // update keys against expanded network
+            # use the following to expand network and then run more tests
+            # vnm.expand_network(launched_nodes, 1)
+            # test.run(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:

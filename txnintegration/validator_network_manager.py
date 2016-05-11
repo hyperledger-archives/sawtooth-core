@@ -179,15 +179,18 @@ class ValidatorNetworkManager(object):
         validators: list of validators on which to wait
         validator: running validator against which to verify registration
         """
-        with Progress("Waiting for registration of {0} validators".format(len(validators))) as p:
-            unregCount = len(validators)
+        unregCount = len(validators)
+
+        with Progress("Waiting for registration of {0} validators".format(
+                unregCount)) as p:
             url = validator.Url
             to = TimeOut(max_time)
 
             while unregCount > 0:
                 if to():
                     raise ExitError(
-                        "{} extended validators failed to register within {}S.".format(
+                        "{} extended validators failed to register "
+                        "within {}S.".format(
                             unregCount, to.WaitTime))
 
                 p.step()
@@ -203,11 +206,11 @@ class ValidatorNetworkManager(object):
                         v.dump_stderr()
                         raise ExitError(str(vme))
 
-    def expand_network(self, validators, count = 1):
+    def expand_network(self, validators, count=1):
         """
         expand existing network.
-        validators: list of running validators against which to launch new nodes
-        count: number of new validators to launch against each running validator
+        validators: running validators against which to launch new nodes
+        count: new validators to launch against each running validator
         validator: running validator against which to verify registration
         """
         validator = validators[0]
