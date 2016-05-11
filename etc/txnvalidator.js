@@ -1,5 +1,5 @@
 {
-    "HttpPort" : 0,
+    "HttpPort" : 8800,
     "Host" : "localhost",
     "Port" : 0,
     "NodeName" : "base000",
