@@ -37,11 +37,11 @@ from journal.messages import journal_debug
 
 from ledger.transaction import integer_key
 from ledger.transaction import endpoint_registry
+from ledger.transaction.endpoint_registry import SpecialPingMessage
 
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
-
 from txnserver import ledger_web_client, log_setup
 from txnserver.config import get_validator_configuration
 
@@ -311,12 +311,28 @@ class ClientController(cmd.Cmd):
 
         self.sign_and_post(gossip_debug.PingMessage({}))
 
+    def do_sping(self, args):
+        """
+        sping -- Command to send a special ping message to validator pool
+        """
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            '--address',
+            default=self.LocalNode.Identifier)
+        parser.add_argument('--count', default=2, type=int)
+        options = parser.parse_args(args.split())
+
+        msg = SpecialPingMessage()
+        msg.Address = options.address
+        msg.Count = options.count
+        self.sign_and_post(msg)
+
     def do_dumpquorum(self, args):
         """
         dumpquorum -- Command to request quorum consensus node to dump quorum
             list
         """
-
         self.sign_and_post(quorum_debug.DumpQuorumMessage({}))
 
     def do_dumpcnxs(self, args):

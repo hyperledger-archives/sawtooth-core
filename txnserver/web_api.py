@@ -394,8 +394,8 @@ class RootPage(Resource):
                 result[domain] = self.Ledger.StatDomains[domain].get_stats()
         elif source == 'node':
             for peer in self.Ledger.NodeMap.itervalues():
-                if peer.Enabled:
-                    result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name]['IsPeer'] = peer.is_peer
         else:
             raise Error(http.NOT_FOUND, 'no stat source specified')
 
