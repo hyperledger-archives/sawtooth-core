@@ -971,9 +971,9 @@ class Journal(gossip_core.Gossip):
                          dependencyID[:8], txn.Identifier[:8])
 
             # check to see if the dependency has already been committed
-            if (dependencyID in self.TransactionStore
-                    and (self.TransactionStore[dependencyID].Status ==
-                         transaction.Status.committed)):
+            if (dependencyID in self.TransactionStore and
+                    (self.TransactionStore[dependencyID].Status ==
+                     transaction.Status.committed)):
                 continue
 
             # check to see if the dependency is already in this block
