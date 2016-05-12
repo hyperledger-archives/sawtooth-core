@@ -186,7 +186,7 @@ class Gossip(object, DatagramProtocol):
         """
         peers = []
         for peer in self.NodeMap.itervalues():
-            if allflag or peer.Enabled:
+            if peer.is_peer or allflag:
                 if peer.Identifier not in exceptions:
                     peers.append(peer)
         return peers
@@ -334,7 +334,7 @@ class Gossip(object, DatagramProtocol):
         # type does not, then something bad is happening.
         self.PacketStats.MessagesHandled.increment()
 
-        if srcpeer or msg.IsSystemMessage:
+        if (srcpeer and srcpeer.is_peer) or msg.IsSystemMessage:
             self.handle_message(msg)
             return
 
@@ -412,12 +412,12 @@ class Gossip(object, DatagramProtocol):
         for dstnodeid in destids:
             dstnode = self.NodeMap.get(dstnodeid)
             if not dstnode:
-                logger.debug('attempt to send message to unknown node %s',
-                             dstnodeid[:8])
+                logger.info(
+                    'attempt to send message to unknown node %s',
+                    dstnodeid[:8])
                 continue
 
-            if dstnode.Enabled or msg.IsSystemMessage:
-                dstnode.enqueue_message(msg, now)
+            dstnode.enqueue_message(msg, now)
 
     def _sendack(self, packet, peer):
         """Send an acknowledgement for a reliable packet.
@@ -487,7 +487,7 @@ class Gossip(object, DatagramProtocol):
             for dstnode in dstnodes:
                 msg = dstnode.get_next_message(now)
                 if msg:
-                    if dstnode.Enabled or msg.IsSystemMessage:
+                    if dstnode.is_peer or msg.IsSystemMessage:
                         # basically we are looping through the nodes & as long
                         # as there are messages pending then come back around &
                         # try again
@@ -698,17 +698,32 @@ class Gossip(object, DatagramProtocol):
                 for initial send of the message.
         """
 
+        self.multicast_message(
+            msg,
+            self.peer_id_list(exceptions=exceptions),
+            initialize)
+
+    def multicast_message(self, msg, nodeids, initialize=True):
+        """
+        Send an encoded message to a list of participants
+
+        Args
+            message -- object of type Message
+            nodeids -- list of node identifiers where the message should be
+                sent
+            initialize -- flag to indicate that the message should be signed
+        """
         if msg.IsForward:
-            logger.warn('Attempt to forward a broadcast message with id %s',
+            logger.warn('Attempt to unicast a broadcast message with id %s',
                         msg.Identifier[:8])
             msg.IsForward = False
 
         if initialize:
             msg.sign_from_node(self.LocalNode)
 
-        self._sendmsg(msg, self.peer_id_list(exceptions=exceptions))
+        self._sendmsg(msg, nodeids)
 
-    def send_message(self, msg, peerid, initialize=True):
+    def send_message(self, msg, nodeid, initialize=True):
         """Send an encoded message through the peers to the entire
         network of participants.
 
@@ -719,15 +734,7 @@ class Gossip(object, DatagramProtocol):
                 for initial send of the message.
         """
 
-        if msg.IsForward:
-            logger.warn('Attempt to unicast a broadcast message with id %s',
-                        msg.Identifier[:8])
-            msg.IsForward = False
-
-        if initialize:
-            msg.sign_from_node(self.LocalNode)
-
-        self._sendmsg(msg, [peerid])
+        self.multicast_message(msg, [nodeid], initialize)
 
     def broadcast_message(self, msg, initialize=True):
         """Send an encoded message through the peers to the entire network
@@ -738,14 +745,6 @@ class Gossip(object, DatagramProtocol):
             initialize (bool): Whether to initialize the origin fields, used
                 for initial send of the message.
         """
-
-        if not msg.IsForward:
-            logger.warn('Attempt to broadcast a unicast message with id %s',
-                        msg.Identifier[:8])
-            msg.IsForward = True
-
-        if initialize:
-            msg.sign_from_node(self.LocalNode)
 
         self.handle_message(msg)
 
