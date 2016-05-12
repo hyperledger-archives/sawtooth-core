@@ -19,6 +19,9 @@
 #else
     #include <sys/time.h>
 #endif
+#ifdef __APPLE__
+    #include <random>
+#endif
 #include <algorithm>
 #include <time.h>
 #include <stdlib.h>
