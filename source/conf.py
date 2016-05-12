@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Distributed Ledger documentation build configuration file, created by
+# Sawtooth Lake documentation build configuration file, created by
 # sphinx-quickstart on Wed Dec  2 11:03:19 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -61,7 +61,7 @@ source_suffix = '.rst'
 master_doc = 'contents'
 
 # General information about the project.
-project = u'Distributed Ledger'
+project = u'Sawtooth Lake'
 copyright = u'2015-2016, Intel Corporation'
 author = u'Intel Corporation'
 
@@ -217,12 +217,9 @@ html_show_sphinx = False
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'DistributedLedgerdoc'
+htmlhelp_basename = 'SawtoothLakeDoc'
 
-latex_additional_files = ['sphinxhowto.cls']
-
-f = open('latexstyling.tex', 'r')
-PREAMBLE = f.read();
+PREAMBLE = ''
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -244,14 +241,16 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'DistributedLedger.tex', u'Distributed Ledger Documentation',
+  (master_doc, 'SawtoothLake.tex', u'Sawtooth Lake Documentation',
    u'Intel Corporation', 'manual'),
-  ('packaging', 'DistributedLedgerPackaging.tex', u'Distributed Ledger Packaging',
+  ('tutorial', 'SawtoothLakeTutorial.tex', u'Sawtooth Lake Tutorial',
    u'Intel Corporation', 'howto'),
-  ('users_guide', 'DistributedLedgerUsersGuide.tex', u'Distributed Ledger User\'s Guide',
+  ('sawtooth_developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Lake Developer\'s Guide',
    u'Intel Corporation', 'howto'),
-  ('developers_guide', 'DistributedLedgerDevelopersGuide.tex', u'Distributed Ledger Developer\'s Guide',
+  ('mktplace_developers_guide', 'MarketPlaceDevelopersGuide.tex', u'MarketPlace Developer\'s Guide',
    u'Intel Corporation', 'howto'),
+  ('sysadmin_guide', 'SawtoothLakeSysadminGuide.tex', u'Sawtooth Lake Systems Administrator\'s Guide',
+   u'Intel Corporation', 'howto')
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -280,7 +279,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'intelmaidenlane', u'Distributed Ledger Documentation',
+    (master_doc, 'intelmaidenlane', u'Sawtooth Lake Documentation',
      [author], 1)
 ]
 
@@ -294,8 +293,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'DistributedLedger', u'Distributed Ledger Documentation',
-   author, 'DistributedLedger', 'One line description of project.',
+  (master_doc, 'SawtoothLake', u'Sawtooth Lake Documentation',
+   author, 'SawtoothLake', 'One line description of project.',
    'Miscellaneous'),
 ]
 
