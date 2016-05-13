@@ -30,7 +30,8 @@
                 "Nonce" :
                 {
                     "description" : "**TEMPORARY** a float used to uniqueify the transaction",
-                    "type" : float,
+                    "type" : "float",
+                    "default" : 0.0,
                     "required" : false
                 },
                 
@@ -45,6 +46,7 @@
                     },
                     "minItems" : 0,
                     "uniqueItems" : true,
+                    "default" : [],
                     "required" : false
                 },
 
@@ -94,6 +96,7 @@
                 {
                     "description" : "human readable name for the participant ",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -101,6 +104,7 @@
                 {
                     "description" : "information about the participant",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 }
             }
@@ -167,6 +171,7 @@
                 {
                     "description" : "human readable name for the account",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -174,6 +179,7 @@
                 {
                     "description" : "information about the account",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 }
             }
@@ -248,6 +254,7 @@
                 {
                     "description" : "human readable name for the asset type",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -255,6 +262,7 @@
                 {
                     "description" : "information about the asset type",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 }
             }
@@ -345,6 +353,7 @@
                 {
                     "description" : "human readable name for the asset",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -352,6 +361,7 @@
                 {
                     "description" : "information about the asset",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 },
 
@@ -427,6 +437,7 @@
                 {
                     "description" : "human readable name for the holding",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -434,6 +445,7 @@
                 {
                     "description" : "information about the holding",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 },
 
@@ -526,6 +538,7 @@
                 {
                     "description" : "human readable name for the holding",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -533,6 +546,7 @@
                 {
                     "description" : "information about the holding",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 },
 
@@ -634,6 +648,7 @@
                 {
                     "description" : "human readable name for the sell offer",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -641,6 +656,7 @@
                 {
                     "description" : "information about the sell offer",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 },
 
@@ -668,21 +684,23 @@
                 "Ratio" :
                 {
                     "description" : "the count of instances of the input liability type required to recieve one output asset",
-                    "type" : float,
+                    "type" : "float",
                     "required" : true
                 },
 
                 "Minimum" :
                 {
                     "description" : "the minimum number of input instances",
-                    "type" : int,
+                    "type" : "int",
+                    "default" : 1,
                     "required" : false
                 },
 
                 "Maximum" :
                 {
                     "description" : "the maximum number of input instances",
-                    "type" : int,
+                    "type" : "int",
+                    "default" : 9223372036854775807,
                     "required" : false
                 },
 
@@ -691,6 +709,7 @@
                     "description" : "Modifier for offer execution",
                     "type" : "string",
                     "oneOf" : [ "ExecuteOnce", "ExecuteOncePerParticipant", "Any" ],
+                    "default" : "Any",
                     "required" : false
                 }
             }
@@ -757,6 +776,7 @@
                 {
                     "description" : "human readable name for the exchange offer",
                     "type" : "string",
+                    "default" : "",
                     "required" : false
                 },
 
@@ -764,6 +784,7 @@
                 {
                     "description" : "information about the exchange offer",
                     "type" : "object",
+                    "default" : {},
                     "required" : false
                 },
 
@@ -794,21 +815,23 @@
                 "Ratio" :
                 {
                     "description" : "the count of instances of the input liability type required to recieve one output asset",
-                    "type" : float,
+                    "type" : "float",
                     "required" : true
                 },
 
                 "Minimum" :
                 {
                     "description" : "the minimum number of input instances",
-                    "type" : int,
+                    "type" : "int",
+                    "default" : 1,
                     "required" : false
                 },
 
                 "Maximum" :
                 {
                     "description" : "the maximum number of input instances",
-                    "type" : int,
+                    "type" : "int",
+                    "default" : 9223372036854775807,
                     "required" : false
                 },
 
@@ -817,6 +840,7 @@
                     "description" : "Modifier for offer execution",
                     "type" : "string",
                     "oneOf" : [ "ExecuteOnce", "ExecuteOncePerParticipant", "Any" ],
+                    "default" : "Any",
                     "required" : false
                 }
             }
@@ -866,7 +890,7 @@
                 "UpdateType" :
                 {
                     "description" : "name of the update type",
-                    "enum" : [ "/mktplace.transactions.ParticipantUpdate/Register" ],
+                    "enum" : [ "/mktplace.transactions.ExchangeUpdate/Exchange" ],
                     "required" : true
                 },
 
