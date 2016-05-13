@@ -823,7 +823,7 @@
                 {
                     "description" : "the minimum number of input instances",
                     "type" : "int",
-                    "default" : 1
+                    "default" : 1,
                     "required" : false
                 },
 
