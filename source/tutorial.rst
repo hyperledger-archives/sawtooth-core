@@ -154,6 +154,8 @@ To stop the validator, press CTRL-c.
    it starts.  If you want to start txnvalidator with the previous
    blockchain, use the '--restore' flag.
 
+.. _mktplace-transaction-family-tutorial-label:
+
 Working with the MarketPlace Transaction Family
 ===============================================
 
@@ -225,6 +227,8 @@ generate a key for each of them:
    $ ./bin/txnkeygen --keydir keys mkt
    $ ./bin/txnkeygen --keydir keys alice
    $ ./bin/txnkeygen --keydir keys bob
+
+.. _mktplace-object-names-label:
 
 Object Names
 ------------
