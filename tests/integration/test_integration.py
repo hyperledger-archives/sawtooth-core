@@ -29,7 +29,7 @@ from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
 
 ENABLE_INTEGRATION_TESTS = False
-if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
+if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
     ENABLE_INTEGRATION_TESTS = True
 
 
