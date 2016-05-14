@@ -119,7 +119,7 @@ class IntKeyLoadTest(object):
                 self.localState[k] -= 1
                 txndep = self.lastKeyTxn[k]
                 txndep=None
-                txnid = c.inc(k, 1, txndep)
+                txnid = c.dec(k, 1, txndep)
                 if txnid is None:
                     raise Exception(
                         "Failed to dec key:{} value:{} by 1".format(

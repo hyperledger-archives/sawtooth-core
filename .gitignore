@@ -20,3 +20,4 @@ dist
 doc/_build
 .coverage
 htmlcov
+Test*.tar.gz
