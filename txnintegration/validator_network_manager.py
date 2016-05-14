@@ -123,6 +123,8 @@ class ValidatorNetworkManager(object):
         return v
 
     def launch_network(self, count=1):
+        validators = []
+
         with Progress("Launching initial validator") as p:
             self.ValidatorConfig['LedgerURL'] = "**none**"
             self.ValidatorConfig['GenesisLedger'] = True
@@ -130,6 +132,7 @@ class ValidatorNetworkManager(object):
                 self.ValidatorConfig['Restore'] = True
 
             validator = self.launch_node()
+            validators.append(validator)
             while not validator.is_registered():
                 try:
                     validator.check_error()
@@ -145,32 +148,13 @@ class ValidatorNetworkManager(object):
             self.ValidatorConfig['GenesisLedger'] = False
             self.ValidatorConfig['Restore'] = False
             for _ in range(1, count):
-                self.launch_node()
+                v = self.launch_node()
+                validators.append(v)
                 p.step()
 
-        with Progress("Waiting for validator registration") as p:
-            unregCount = len(self.Validators)
-            url = validator.Url
-            to = TimeOut(120)
+        self.wait_for_registration(validators, validator)
 
-            while unregCount > 0:
-                if to():
-                    raise ExitError(
-                        "{} validators failed to register within {}S.".format(
-                            unregCount, to.WaitTime))
-
-                p.step()
-                time.sleep(1)
-                unregCount = 0
-                for v in self.Validators:
-                    if not v.is_registered(url):
-                        unregCount += 1
-                    try:
-                        v.check_error()
-                    except ValidatorManagerException as vme:
-                        v.dump_log()
-                        v.dump_stderr()
-                        raise ExitError(str(vme))
+        return validators
 
     def launch_node(self, launch=True):
         id = self.NextValidatorId
@@ -188,6 +172,63 @@ class ValidatorNetworkManager(object):
         self.ValidatorMap[id] = v
         self.ValidatorMap[cfg['NodeName']] = v
         return v
+
+    def wait_for_registration(self, validators, validator, max_time=120):
+        """
+        Wait for newly launched validators to register.
+        validators: list of validators on which to wait
+        validator: running validator against which to verify registration
+        """
+        unregCount = len(validators)
+
+        with Progress("Waiting for registration of {0} validators".format(
+                unregCount)) as p:
+            url = validator.Url
+            to = TimeOut(max_time)
+
+            while unregCount > 0:
+                if to():
+                    raise ExitError(
+                        "{} extended validators failed to register "
+                        "within {}S.".format(
+                            unregCount, to.WaitTime))
+
+                p.step()
+                time.sleep(1)
+                unregCount = 0
+                for v in validators:
+                    if not v.is_registered(url):
+                        unregCount += 1
+                    try:
+                        v.check_error()
+                    except ValidatorManagerException as vme:
+                        v.dump_log()
+                        v.dump_stderr()
+                        raise ExitError(str(vme))
+
+    def expand_network(self, validators, count=1):
+        """
+        expand existing network.
+        validators: running validators against which to launch new nodes
+        count: new validators to launch against each running validator
+        validator: running validator against which to verify registration
+        """
+        validator = validators[0]
+        new_validators = []
+
+        with Progress("Extending validator network") as p:
+            self.ValidatorConfig['GenesisLedger'] = False
+            self.ValidatorConfig['Restore'] = False
+            for validator in validators:
+                self.ValidatorConfig['LedgerURL'] = validator.Url
+                for _ in range(0, count):
+                    v = self.launch_node()
+                    new_validators.append(v)
+                    p.step()
+
+        self.wait_for_registration(new_validators, validator, max_time=240)
+
+        return new_validators
 
     def shutdown(self):
         if len(self.Validators) == 0:

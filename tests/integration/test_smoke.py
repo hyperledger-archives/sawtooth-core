@@ -151,6 +151,7 @@ class TestSmoke(unittest.TestCase):
 
             vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
                                           cfg=vnm_config)
+
             vnm.launch_network(5)
 
             print "Testing transaction load."
