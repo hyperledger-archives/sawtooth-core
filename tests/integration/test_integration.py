@@ -30,7 +30,7 @@ from txnintegration.validator_network_manager import ValidatorNetworkManager, \
 
 ENABLE_INTEGRATION_TESTS = False
 if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
-    ENABLE_INTEGRATION_TESTS = True
+    ENABLE_OVERNIGHT_TESTS = True
 
 
 class IntKeyLoadTest(object):
@@ -133,8 +133,8 @@ class IntKeyLoadTest(object):
 
 
 class TestSmoke(unittest.TestCase):
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load(self):
+    @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS, "integration test")
+    def test_intkey_load_ext(self):
         vnm = None
         try:
             print "Launching validator network."
@@ -144,12 +144,14 @@ class TestSmoke(unittest.TestCase):
             vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
                                           cfg=vnm_config)
 
-            vnm.launch_network(5)
+            firstwavevalidators =  vnm.launch_network(5)
 
             print "Testing transaction load."
             test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 100)
-            test.run(2)
+            test.setup(vnm.urls(), 10)
+            test.run(1)
+            vnm.expand_network(firstwavevalidators, 1)
+            test.run(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:
