@@ -56,7 +56,7 @@ class IntegerKeyClient(IntegerKeyCommunication):
                                    signingkey=signingkey,
                                    name=name)
 
-    def _sendtxn(self, update):
+    def _sendtxn(self, update, txndep=None):
         """
         Build a transaction for the update, wrap it in a message with all
         of the appropriate signatures and post it to the validator
@@ -65,10 +65,14 @@ class IntegerKeyClient(IntegerKeyCommunication):
         txn = integer_key.IntegerKeyTransaction()
         txn.Updates = [update]
 
+        # if dependent transaction is not explicitly specified, then...
         # add the last transaction submitted to ensure that the ordering
         # in the journal matches the order in which we generated them
-        if self.LastTransaction:
-            txn.Dependencies = [self.LastTransaction]
+        if txndep == None:
+            if self.LastTransaction:
+                txn.Dependencies = [self.LastTransaction]
+        else:
+            txn.Dependencies = [txndep]
 
         update.Transaction = txn
         txn.sign_from_node(self.LocalNode)
@@ -138,7 +142,7 @@ class IntegerKeyClient(IntegerKeyCommunication):
             logger.debug('waiting for transaction %s to commit', txnid)
             time.sleep(timetowait)
 
-    def set(self, key, value):
+    def set(self, key, value, txndep=None):
         """Creates an update object which sets the value associated with a key.
 
                Args:
@@ -151,9 +155,9 @@ class IntegerKeyClient(IntegerKeyCommunication):
             "Value": value
         })
 
-        return self._sendtxn(update)
+        return self._sendtxn(update, txndep)
 
-    def inc(self, key, value):
+    def inc(self, key, value, txndep=None):
         """Creates an update object which increments the value associated with
            a key.
                Args:
@@ -167,9 +171,9 @@ class IntegerKeyClient(IntegerKeyCommunication):
             "Value": value
         })
 
-        return self._sendtxn(update)
+        return self._sendtxn(update, txndep)
 
-    def dec(self, key, value):
+    def dec(self, key, value, txndep=None):
         """Creates an update object which decrements the value associated with
            a key.
                Args:
@@ -183,4 +187,4 @@ class IntegerKeyClient(IntegerKeyCommunication):
             "Value": value
         })
 
-        return self._sendtxn(update)
+        return self._sendtxn(update, txndep)

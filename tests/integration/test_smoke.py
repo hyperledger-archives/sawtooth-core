@@ -69,6 +69,7 @@ class IntKeyLoadTest(object):
     def setup(self, urls, numKeys):
         self.localState = {}
         self.transactions = []
+        self.lastKeyTxn = {}
         self.clients = []
         self.state = IntegerKeyState(urls[0])
 
@@ -84,7 +85,8 @@ class IntKeyLoadTest(object):
                 c = self._get_client()
                 v = random.randint(5, 1000)
                 self.localState[n] = v
-                txnid = c.set(n, v)
+                txnid = c.set(n, v, txndep=None)
+                self.lastKeyTxn[n] = txnid
                 if txnid is None:
                     raise Exception("Failed to set {} to {}".format(n, v))
                 self.transactions.append(txnid)
@@ -103,21 +105,27 @@ class IntKeyLoadTest(object):
             for k in keys:
                 c = self._get_client()
                 self.localState[k] += 2
-                txnid = c.inc(k, 2)
+                txndep=self.lastKeyTxn[k]
+                txndep=None
+                txnid = c.inc(k, 2, txndep)
                 if txnid is None:
                     raise Exception(
                         "Failed to inc key:{} value:{} by 2".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
+                self.lastKeyTxn[k] = txnid
             for k in keys:
                 c = self._get_client()
                 self.localState[k] -= 1
-                txnid = c.dec(k, 1)
+                txndep = self.lastKeyTxn[k]
+                txndep=None
+                txnid = c.inc(k, 1, txndep)
                 if txnid is None:
                     raise Exception(
                         "Failed to dec key:{} value:{} by 1".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
+                self.lastKeyTxn[k] = txnid
 
             self._wait_for_transaction_commits()
 
