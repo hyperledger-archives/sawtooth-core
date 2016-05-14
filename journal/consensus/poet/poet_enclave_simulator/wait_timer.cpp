@@ -23,10 +23,12 @@
     #include <random>
 #endif
 #include <algorithm>
+#include <memory>
 #include <time.h>
 #include <stdlib.h>
 #include <string>
 #include <json-c/json.h>
+#include <iostream>
 
 #include "poet_enclave.h"
 #include "common.h"
@@ -36,8 +38,7 @@ using namespace std;
 static double ComputeDuration(double mean)
 {
 #ifdef _WIN32
-    SYSTEMTIME seed;
-    GetLocalTime(&seed);
+    SYSTEMTIME seed;GetLocalTime(&seed);
     std::tr1::mt19937 generator((int) seed.wMilliseconds);
     std::tr1::exponential_distribution<double> distribution(1.0 / mean);
 #else
@@ -61,6 +62,14 @@ WaitTimer::WaitTimer(string encoded, string signature)
 
 WaitTimer::WaitTimer(string previous_certificate_id, double local_mean)
 {
+    if(local_mean <= 0) {
+        throw ValueError("Invalid local mean");
+    }
+
+    if(previous_certificate_id.length() != IDENTIFIER_LENGTH) {
+        throw ValueError("Invalid previous_certificate_id");
+    }
+
     this->local_mean = local_mean;
 
     this->request_time = CurrentTime();
@@ -115,6 +124,7 @@ string WaitTimer::serialize()
     return serialized;
 }
 
+
 WaitTimer* create_wait_timer(string prev_cert_id,
                                 double local_mean)
 {
@@ -126,6 +136,12 @@ WaitTimer* create_wait_timer(string prev_cert_id,
 WaitTimer* deserialize_wait_timer(string serialized_timer,
                                         string signature)
 {
-    WaitTimer *timer = new WaitTimer(serialized_timer, signature);
+    if(!verify_signature(WaitTimerPublicKey, serialized_timer, signature))
+    {
+        throw ValueError("Signature failed to verify.");
+    }
+
+    WaitTimer* timer = new WaitTimer(serialized_timer, signature);
+
     return timer;
 }
