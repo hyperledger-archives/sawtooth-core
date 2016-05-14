@@ -86,10 +86,10 @@ class IntKeyLoadTest(object):
                 v = random.randint(5, 1000)
                 self.localState[n] = v
                 txnid = c.set(n, v, txndep=None)
-                self.lastKeyTxn[n] = txnid
                 if txnid is None:
                     raise Exception("Failed to set {} to {}".format(n, v))
                 self.transactions.append(txnid)
+                self.lastKeyTxn[n] = txnid
 
         self._wait_for_transaction_commits()
 
@@ -106,7 +106,6 @@ class IntKeyLoadTest(object):
                 c = self._get_client()
                 self.localState[k] += 2
                 txndep=self.lastKeyTxn[k]
-                txndep=None
                 txnid = c.inc(k, 2, txndep)
                 if txnid is None:
                     raise Exception(
@@ -118,7 +117,6 @@ class IntKeyLoadTest(object):
                 c = self._get_client()
                 self.localState[k] -= 1
                 txndep = self.lastKeyTxn[k]
-                txndep=None
                 txnid = c.dec(k, 1, txndep)
                 if txnid is None:
                     raise Exception(
