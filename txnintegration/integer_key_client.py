@@ -68,7 +68,7 @@ class IntegerKeyClient(IntegerKeyCommunication):
         # if dependent transaction is not explicitly specified, then...
         # add the last transaction submitted to ensure that the ordering
         # in the journal matches the order in which we generated them
-        if txndep == None:
+        if txndep is None:
             if self.LastTransaction:
                 txn.Dependencies = [self.LastTransaction]
         else:

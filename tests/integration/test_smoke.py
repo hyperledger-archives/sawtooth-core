@@ -105,7 +105,7 @@ class IntKeyLoadTest(object):
             for k in keys:
                 c = self._get_client()
                 self.localState[k] += 2
-                txndep=self.lastKeyTxn[k]
+                txndep = self.lastKeyTxn[k]
                 txnid = c.inc(k, 2, txndep)
                 if txnid is None:
                     raise Exception(
