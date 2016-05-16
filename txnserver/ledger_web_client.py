@@ -302,8 +302,8 @@ class LedgerWebClient(object):
         except urllib2.HTTPError as err:
             logger.error('peer operation on url %s failed with response: %d',
                          url, err.code)
-            raise MessageException('operation failed with resonse: {0}'.format(
-                err.code))
+            raise MessageException('operation failed '
+                                   'with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             logger.error('peer operation on url %s failed: %s',

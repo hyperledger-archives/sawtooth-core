@@ -56,10 +56,6 @@ class Validator(object):
         self.initialize_common_configuration()
         self.initialize_ledger_specific_configuration()
 
-        # ---------- Initialize the LedgerWebClient ----------
-        self.LedgerWebClient = ledger_web_client.LedgerWebClient(
-            self.Config.get('LedgerURL'))
-
         # ---------- Initialize the NodeMap ----------
         self.initialize_node_map()
 
@@ -227,17 +223,29 @@ class Validator(object):
 
         assert self.Ledger
 
-        url = self.Config.get('LedgerURL', '**none**')
-        if url != '**none**':
-            logger.info('load peers using url %s', self.Config['LedgerURL'])
+        # Continue to support existing config files with single
+        # string values.
+        if isinstance(self.Config.get('LedgerURL'), basestring):
+            urls = [self.Config.get('LedgerURL')]
+        else:
+            urls = self.Config.get('LedgerURL', ['**none**'])
 
-            try:
-                peers = self.get_endpoints(0, self.EndpointDomain)
-                for peer in peers:
-                    self.NodeMap[peer.Name] = peer
-            except ledger_web_client.MessageException as e:
-                logger.error("Unable to get endpoints from LedgerURL: %s",
-                             str(e))
+        if '**none**' not in urls:
+            for url in urls:
+                logger.info('attempting to load peers using url %s', url)
+                try:
+                    self.LedgerWebClient = ledger_web_client.LedgerWebClient(
+                        url)
+                    peers = self.get_endpoints(0, self.EndpointDomain)
+                    for peer in peers:
+                        self.NodeMap[peer.Name] = peer
+                    break
+                except ledger_web_client.MessageException as e:
+                    logger.error("Unable to get endpoints from LedgerURL: %s",
+                                 str(e))
+        else:
+            logger.info('not loading peers since **none** was provided as '
+                        'a url option.')
 
         # Build a list of nodes that we can use for the initial connection
         minpeercount = self.Config.get("InitialConnectivity", 1)
