@@ -179,11 +179,14 @@ class TestValidatorCLI(unittest.TestCase):
     def test_options_mapping_url(self):
         os.environ.clear()
 
-        cfg = get_configuration(args=["--url=http://testhost:8888"],
+        cfg = get_configuration(args=["--url",
+                                      "http://testhost:8888",
+                                      "http://testhost:8889"],
                                 config_files_required=False)
 
         self.assertIn("LedgerURL", cfg)
-        self.assertEquals(cfg["LedgerURL"], "http://testhost:8888")
+        self.assertIn("http://testhost:8888", cfg["LedgerURL"])
+        self.assertIn("http://testhost:8889", cfg["LedgerURL"])
 
 
 if __name__ == '__main__':

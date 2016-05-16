@@ -99,7 +99,9 @@ def parse_command_line(args):
                         action='store_true')
     parser.add_argument(
         '--url',
-        help='URL from which to retrieve peer list or **none** for no url')
+        help='List of URLs from which to retrieve peer list or '
+             '**none** for no url',
+        nargs='*')
     parser.add_argument('--node', help='Short form name of the node')
     parser.add_argument('--host',
                         help='Host name to use to access specific interface')
