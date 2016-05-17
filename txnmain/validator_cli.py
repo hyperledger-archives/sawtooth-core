@@ -112,10 +112,6 @@ def parse_command_line(args):
     parser.add_argument('--restore',
                         help='Restore previous block chain',
                         action='store_true')
-    parser.add_argument('--set',
-                        help='Specify arbitrary configuration options',
-                        nargs=2,
-                        action='append')
     parser.add_argument('--type', help='Type of ledger to create')
     parser.add_argument('--verbose', '-v',
                         action='count',
