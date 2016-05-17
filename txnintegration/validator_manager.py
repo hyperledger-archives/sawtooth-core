@@ -59,6 +59,8 @@ class ValidatorManager(object):
         self.config['LogFile'] = os.path.join(self.dataDir,
                                               "{}.log".format(self.Name))
         self.logFile = self.config['LogFile']
+        if os.path.exists(self.logFile):  # delete existing log file
+            os.remove(self.logFile)
 
         self.config['KeyFile'] = os.path.join(self.dataDir,
                                               "{}.wif".format(self.Name))
@@ -164,14 +166,15 @@ class ValidatorManager(object):
             if self.handle.returncode:
                 raise ValidatorManagerException("validator has exited")
             else:
-                err = os.stat(self.stderrFile)
-                if err.st_size > 0:
-                    with open(self.stderrFile, 'r') as fd:
-                        lines = fd.readlines()
-                        raise ValidatorManagerException(
-                            "stderr has output: line 1 of {}: {}".format(
-                                len(lines), lines[0]))
-                self._check_log_error()
+                if "PYCHARM_HOSTED" not in os.environ:
+                    err = os.stat(self.stderrFile)
+                    if err.st_size > 0:
+                        with open(self.stderrFile, 'r') as fd:
+                            lines = fd.readlines()
+                            raise ValidatorManagerException(
+                                "stderr has output: line 1 of {}: {}".format(
+                                    len(lines), lines[0]))
+                    self._check_log_error()
         else:
             raise ValidatorManagerException("validator not running")
 
