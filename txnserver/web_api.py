@@ -248,7 +248,7 @@ class RootPage(Resource):
         if not self.Ledger.GlobalStore:
             raise Error(http.BAD_REQUEST, 'no global store')
 
-        blockid = self.Ledger.MostRecentCommitedBlockID
+        blockid = self.Ledger.MostRecentCommittedBlockID
         if 'blockid' in args:
             blockid = args.get('blockid').pop(0)
 
@@ -300,7 +300,7 @@ class RootPage(Resource):
             if 'blockcount' in args:
                 count = int(args.get('blockcount').pop(0))
 
-            blockids = self.Ledger.commited_block_ids(count)
+            blockids = self.Ledger.committed_block_ids(count)
             return blockids
 
         blockid = pathcomponents.pop(0)
@@ -345,7 +345,7 @@ class RootPage(Resource):
                 blkcount = int(args.get('blockcount').pop(0))
 
             txnids = []
-            blockids = self.Ledger.commited_block_ids(blkcount)
+            blockids = self.Ledger.committed_block_ids(blkcount)
             while blockids:
                 blockid = blockids.pop()
                 txnids.extend(self.Ledger.BlockStore[blockid].TransactionIDs)
