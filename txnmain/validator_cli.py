@@ -80,9 +80,10 @@ def parse_command_line(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--config',
-                        help='configuration file',
-                        default=['txnvalidator.js'],
-                        nargs='+')
+                        help='Comma-separated list of config files to '
+                             'load. Alternatively, multiple --config '
+                             'options can be specified.',
+                        action='append')
     parser.add_argument('--loglevel', help='Logging level')
     parser.add_argument('--keyfile', help='Name of the key file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
@@ -92,16 +93,19 @@ def parse_command_line(args):
         '--logfile',
         help='Name of the log file, __screen__ for standard output')
     parser.add_argument('--peers',
-                        help='Specific list of peers to connect',
-                        nargs='+')
+                        help='Comma-separated list of peers to connect to. '
+                             'Alterntively, multiple --peers options can '
+                             'be specified.',
+                        action='append')
     parser.add_argument('--genesis',
                         help='Start the ledger with the genesis block',
                         action='store_true')
     parser.add_argument(
         '--url',
-        help='List of URLs from which to retrieve peer list or '
-             '**none** for no url',
-        nargs='*')
+        help='Comma-separated list of URLs from which to retrieve peer '
+             'list or **none** for no url. Alternatively, multiple --url '
+             'options can be specified.',
+        action='append')
     parser.add_argument('--node', help='Short form name of the node')
     parser.add_argument('--host',
                         help='Host name to use to access specific interface')
@@ -112,10 +116,6 @@ def parse_command_line(args):
     parser.add_argument('--restore',
                         help='Restore previous block chain',
                         action='store_true')
-    parser.add_argument('--set',
-                        help='Specify arbitrary configuration options',
-                        nargs=2,
-                        action='append')
     parser.add_argument('--type', help='Type of ledger to create')
     parser.add_argument('--verbose', '-v',
                         action='count',
@@ -123,6 +123,21 @@ def parse_command_line(args):
                         help='increase output sent to stderr')
 
     result = parser.parse_args(args)
+
+    # Set the default value of config because argparse 'default' in
+    # combination with action='append' does the wrong thing.
+    if result.config is None:
+        result.config = ['txnvalidator.js']
+
+    # Convert any comma-delimited argument strings to list elements
+    for arglist in [result.config, result.peers, result.url]:
+        if arglist is not None:
+            for arg in arglist:
+                if ',' in arg:
+                    loc = arglist.index(arg)
+                    arglist.pop(loc)
+                    for element in reversed(arg.split(',')):
+                        arglist.insert(loc, element)
 
     # if the boolean arguments have not been set to true, remove
     # them to prevent the False value from overriding during aggregation
