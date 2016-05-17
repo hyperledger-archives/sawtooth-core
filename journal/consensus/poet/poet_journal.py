@@ -82,7 +82,7 @@ class PoetJournal(journal_core.Journal):
                 certificate.
         """
         logger.debug('attempt to build transaction block extending %s',
-                     self.MostRecentCommitedBlockID[:8])
+                     self.MostRecentCommittedBlockID[:8])
 
         # Get the list of prepared transactions, if there aren't enough
         # then just return
@@ -94,13 +94,13 @@ class PoetJournal(journal_core.Journal):
 
         logger.info('build transaction block to extend %s with %s '
                     'transactions',
-                    self.MostRecentCommitedBlockID[:8], len(txnlist))
+                    self.MostRecentCommittedBlockID[:8], len(txnlist))
 
         # Create a new block from all of our pending transactions
         nblock = poet_transaction_block.PoetTransactionBlock()
-        nblock.BlockNum = self.MostRecentCommitedBlock.BlockNum \
-            + 1 if self.MostRecentCommitedBlock else 0
-        nblock.PreviousBlockID = self.MostRecentCommitedBlockID
+        nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
+            + 1 if self.MostRecentCommittedBlock else 0
+        nblock.PreviousBlockID = self.MostRecentCommittedBlockID
         nblock.TransactionIDs = txnlist
         nblock.create_wait_timer(self._build_certificate_list(nblock))
 
