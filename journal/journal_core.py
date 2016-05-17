@@ -689,7 +689,7 @@ class Journal(gossip_core.Gossip):
         # at this point we know that the block is valid
         tblock.Status = transaction_block.Status.valid
         tblock.CommitTime = time.time() - self.StartTime
-        tblock.update_transaction_depth(self)
+        tblock.update_block_weight(self)
 
         # time to apply the transactions in the block to get a new state
         self.GlobalStoreMap.commit_block_store(tblock.Identifier,

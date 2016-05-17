@@ -18,6 +18,7 @@ import logging
 from journal import transaction_block
 from journal.messages import transaction_block_message
 from journal.consensus.poet.wait_certificate import WaitCertificate, WaitTimer
+from gossip.common import NullIdentifier
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,9 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
     def __cmp__(self, other):
         """
         Compare two blocks, this will throw an error unless
-        both blocks are valid.
+        both blocks are valid. Return 1 if this block should be
+        chosen as the head of the chain. Return -1 if the other
+        block should be chosen as the head of the chain.
         """
         if self.Status != transaction_block.Status.valid:
             raise ValueError('block {0} must be valid for comparison'.format(
@@ -109,12 +112,25 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             raise ValueError('block {0} must be valid for comparison'.format(
                 other.Identifier))
 
-        if self.TransactionDepth < other.TransactionDepth:
-            return -1
-        elif self.TransactionDepth > other.TransactionDepth:
-            return 1
+        # Criteria #1: if both blocks share the same previous block, then the
+        # block with the smallest duration wins
+        if self.PreviousBlockID == other.PreviousBlockID:
+            if self.WaitCertificate.Duration < other.WaitCertificate.Duration:
+                return 1
+            elif self.WaitCertificate.Duration > \
+                    other.WaitCertificate.Duration:
+                return -1
+        # Criteria #2: if there is a difference between the immediate ancestors
+        # then pick the chain with the highest aggregate local mean, this will
+        # be the largest population (more or less)
         else:
-            return cmp(self.Identifier, other.Identifier)
+            if self.AggregateLocalMean > other.AggregateLocalMean:
+                return 1
+            elif self.AggregateLocalMean < other.AggregateLocalMean:
+                return -1
+        # Criteria #3... use number of transactions as a tie breaker, this
+        # should not happen except in very rare cases
+        return super(PoetTransactionBlock, self).__cmp__(other)
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
@@ -134,6 +150,26 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
         return self.WaitCertificate.is_valid_wait_certificate(
             journal._build_certificate_list(self))
+
+    def update_block_weight(self, journal):
+        """
+        Update the weight of the chain rooted by this block. For PoET this
+        means that we compute the aggregate local mean which is proportional
+        to the voting population of validators.
+
+        :param PoetJournal journal: the current journal, used to extract
+        the previous block
+        """
+        assert self.Status == transaction_block.Status.valid
+        super(PoetTransactionBlock, self).update_block_weight(journal)
+
+        assert self.WaitCertificate
+        self.AggregateLocalMean = self.WaitCertificate.local_mean
+
+        if self.PreviousBlockID != NullIdentifier:
+            assert self.PreviousBlockID in journal.BlockStore
+            self.AggregateLocalMean += \
+                journal.BlockStore[self.PreviousBlockID].AggregateLocalMean
 
     def create_wait_timer(self, certlist):
         """Creates a wait timer for the journal based on a list
