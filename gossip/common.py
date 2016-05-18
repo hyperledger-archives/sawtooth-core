@@ -36,7 +36,7 @@ def pretty_print_dict(dictionary):
     Returns:
         str: pretty-print formatted string.
     """
-    return json.dumps(_ascii_encode_dict(dictionary), indent=2, sort_keys=True)
+    return json.dumps(ascii_encode_dict(dictionary), indent=2, sort_keys=True)
 
 
 def json2dict(dictionary):
@@ -48,7 +48,7 @@ def json2dict(dictionary):
     Returns:
         dict: a dictionary object reflecting the structure of the JSON.
     """
-    return _ascii_encode_dict(json.loads(dictionary))
+    return ascii_encode_dict(json.loads(dictionary))
 
 
 def dict2json(dictionary):
@@ -60,7 +60,7 @@ def dict2json(dictionary):
     Returns:
         str: a JSON string reflecting the structure of the input dict.
     """
-    return json.dumps(_ascii_encode_dict(dictionary))
+    return json.dumps(ascii_encode_dict(dictionary))
 
 
 def cbor2dict(dictionary):
@@ -73,7 +73,7 @@ def cbor2dict(dictionary):
         dict: a dictionary object reflecting the structure of the CBOR.
     """
 
-    return _ascii_encode_dict(cbor.loads(dictionary))
+    return ascii_encode_dict(cbor.loads(dictionary))
 
 
 def dict2cbor(dictionary):
@@ -89,17 +89,17 @@ def dict2cbor(dictionary):
     return cbor.dumps(_unicode_encode_dict(dictionary), sort_keys=True)
 
 
-def _ascii_encode_dict(item):
+def ascii_encode_dict(item):
     """
     Support method to ensure that JSON is converted to ascii since unicode
     identifiers, in particular, can cause problems
     """
     if isinstance(item, dict):
         return OrderedDict(
-            (_ascii_encode_dict(key), _ascii_encode_dict(item[key]))
+            (ascii_encode_dict(key), ascii_encode_dict(item[key]))
             for key in sorted(item.keys()))
     elif isinstance(item, list):
-        return [_ascii_encode_dict(element) for element in item]
+        return [ascii_encode_dict(element) for element in item]
     elif isinstance(item, unicode):
         return item.encode('ascii')
     else:

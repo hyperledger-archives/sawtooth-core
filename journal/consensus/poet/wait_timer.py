@@ -161,6 +161,10 @@ class WaitTimer(object):
         self.duration = timer.duration
         self.signature = timer.signature
         self.serialized_timer = timer.serialize()
+        self._enclave_wait_timer = \
+            self.poet_enclave.deserialize_wait_timer(
+                self.serialized_timer,
+                self.signature)
 
     @property
     def enclave_wait_timer(self):
@@ -170,8 +174,7 @@ class WaitTimer(object):
             poet_enclave.WaitTimer: The deserialized enclave timer
                 object.
         """
-        return self.poet_enclave.deserialize_wait_timer(self.serialized_timer,
-                                                        self.signature)
+        return self._enclave_wait_timer
 
     def __str__(self):
         return "TIMER, {0:0.2f}, {1:0.2f}, {2}".format(
