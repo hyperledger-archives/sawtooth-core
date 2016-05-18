@@ -95,10 +95,10 @@ class TransactionBlock(signed_object.SignedObject):
             raise ValueError('block {0} must be valid for comparison'.format(
                 other.Identifier))
 
-        if self.TransactionDepth < other.TransactionDepth:
-            return -1
-        elif self.TransactionDepth > other.TransactionDepth:
+        if self.TransactionDepth > other.TransactionDepth:
             return 1
+        elif self.TransactionDepth < other.TransactionDepth:
+            return -1
         else:
             return cmp(self.Identifier, other.Identifier)
 
