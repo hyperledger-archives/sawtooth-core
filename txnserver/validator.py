@@ -230,7 +230,7 @@ class Validator(object):
         else:
             urls = self.Config.get('LedgerURL', ['**none**'])
 
-        if '**none**' not in urls:
+        if not self.GenesisLedger:
             for url in urls:
                 logger.info('attempting to load peers using url %s', url)
                 try:
@@ -259,11 +259,14 @@ class Validator(object):
 
         # Add the candidate nodes to the gossip object so we can send connect
         # requests to them
+        connections = 0
         for peername in peerset:
             peer = self.NodeMap.get(peername)
             if peer:
                 logger.info('add peer %s with identifier %s', peername,
                             peer.Identifier)
+                connect_message.send_connection_request(self.Ledger, peer)
+                connections += 1
                 self.Ledger.add_node(peer)
             else:
                 logger.info('requested connection to unknown peer %s',
@@ -271,16 +274,10 @@ class Validator(object):
 
         # the pathological case is that there was nothing specified and since
         # we already know we aren't the genesis block, we can just shut down
-        if len(self.Ledger.peer_list(allflag=True)) == 0:
+        if connections == 0:
             logger.critical('unable to find a valid peer')
             self.shutdown()
             return
-
-        # and send all the connection requests, must use allflag because we
-        # added the nodes disabled, the connect response will mark them
-        # enabled
-        for peer in self.Ledger.peer_list(allflag=True):
-            connect_message.send_connection_request(self.Ledger, peer)
 
         logger.debug("initial ledger connection requests sent")
 
@@ -391,7 +388,7 @@ class Validator(object):
             reactor.callLater(60.0, self._verify_initialization)
 
     def register_endpoint(self, endpoint, domain='/'):
-        txn = endpoint_registry.EndpointRegistryTransaction.create_from_node(
+        txn = endpoint_registry.EndpointRegistryTransaction.register_node(
             endpoint, domain)
         txn.sign_from_node(endpoint)
 
@@ -405,18 +402,13 @@ class Validator(object):
         self.LedgerWebClient.post_message(msg)
 
     def unregister_endpoint(self, node, domain='/'):
-        update = endpoint_registry.update.create_from_node(node, domain)
-        update.Verb = 'unr'
-
-        txn = endpoint_registry.EndpointRegistryTransaction()
-        txn.Updates.append(update)
+        txn = endpoint_registry.unregister_node(node)
         txn.sign_from_node(node)
 
         # Since unregister is often called on shutdown, we really need to make
         # this a system message for the purpose of sending it out from our own
         # queue
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
-        msg.IsSystemMessage = True
         msg.Transaction = txn
         msg.SenderID = str(node.Identifier)
         msg.sign_from_node(node)

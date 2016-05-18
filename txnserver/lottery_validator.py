@@ -70,7 +70,7 @@ class LotteryValidator(validator.Validator):
 
     def register_endpoint(self, node, domain='/'):
 
-        txn = endpoint_registry.EndpointRegistryTransaction.create_from_node(
+        txn = endpoint_registry.EndpointRegistryTransaction.register_node(
             node, domain)
         txn.sign_from_node(node)
 
@@ -84,18 +84,14 @@ class LotteryValidator(validator.Validator):
         self.Ledger.handle_message(msg)
 
     def unregister_endpoint(self, node, domain='/'):
-        update = endpoint_registry.Update.create_from_node(node, domain)
-        update.Verb = 'unr'
-
-        txn = endpoint_registry.EndpointRegistryTransaction()
-        txn.Updates.append(update)
+        txn = endpoint_registry.EndpointRegistryTransaction\
+            .unregister_node(node)
         txn.sign_from_node(node)
 
         # Since unregister is often called on shutdown, we really need to make
         # this a system message for the purpose of sending it out from our own
         # queue
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
-        msg.IsSystemMessage = True
         msg.Transaction = txn
         msg.SenderID = str(node.Identifier)
         msg.sign_from_node(node)
