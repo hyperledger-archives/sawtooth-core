@@ -26,8 +26,8 @@ def register_message_handlers(journal):
     """
     journal.register_message_handler(BlockListRequestMessage,
                                      _blocklistrequesthandler)
-    journal.register_message_handler(UncommitedListRequestMessage,
-                                     _uncommitedlistrequesthandler)
+    journal.register_message_handler(UncommittedListRequestMessage,
+                                     _uncommittedlistrequesthandler)
     journal.register_message_handler(BlockRequestMessage, _blockrequesthandler)
     journal.register_message_handler(TransactionRequestMessage,
                                      _txnrequesthandler)
@@ -64,7 +64,7 @@ def _blocklistrequesthandler(msg, journal):
     if journal.Initializing:
         src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
-            'recieved blocklist transfer request from %s prior to completing '
+            'received blocklist transfer request from %s prior to completing '
             'initialization',
             src)
         journal.send_message(TransferFailedMessage(), msg.OriginatorID)
@@ -74,14 +74,14 @@ def _blocklistrequesthandler(msg, journal):
     reply.InReplyTo = msg.Identifier
     reply.BlockListIndex = msg.BlockListIndex
 
-    blockids = journal.commited_block_ids()
+    blockids = journal.committed_block_ids()
     blockids.reverse()
 
     index = msg.BlockListIndex
     if index < len(blockids):
         reply.BlockIDs = blockids[index:index + 100]
 
-    logger.debug('sending %d commited blocks to %s for request %s',
+    logger.debug('sending %d committed blocks to %s for request %s',
                  len(reply.BlockIDs), source, msg.Identifier[:8])
     journal.send_message(reply, msg.OriginatorID)
 
@@ -95,7 +95,7 @@ class BlockListReplyMessage(message.Message):
         self.InReplyTo = minfo.get('InReplyTo')
         self.BlockListIndex = minfo.get('BlockListIndex', 0)
         self.BlockIDs = minfo.get('BlockIDs', [])
-        self.UncommitedTxnIDs = minfo.get('UncommitedTxnIDs', [])
+        self.UncommittedTxnIDs = minfo.get('UncommittedTxnIDs', [])
 
         self.IsSystemMessage = True
         self.IsForward = False
@@ -109,19 +109,19 @@ class BlockListReplyMessage(message.Message):
         for blkid in self.BlockIDs:
             result['BlockIDs'].append(blkid)
 
-        result['UncommitedTxnIDs'] = []
-        for txnid in self.UncommitedTxnIDs:
-            result['UncommitedTxnIDs'].append(txnid)
+        result['UncommittedTxnIDs'] = []
+        for txnid in self.UncommittedTxnIDs:
+            result['UncommittedTxnIDs'].append(txnid)
 
         result['InReplyTo'] = self.InReplyTo
         return result
 
 
-class UncommitedListRequestMessage(message.Message):
-    MessageType = "/journal.messages.JournalTransfer/UncommitedListRequest"
+class UncommittedListRequestMessage(message.Message):
+    MessageType = "/journal.messages.JournalTransfer/UncommittedListRequest"
 
     def __init__(self, minfo={}):
-        super(UncommitedListRequestMessage, self).__init__(minfo)
+        super(UncommittedListRequestMessage, self).__init__(minfo)
         self.TransactionListIndex = minfo.get('TransactionListIndex', 0)
 
         self.IsSystemMessage = True
@@ -129,15 +129,15 @@ class UncommitedListRequestMessage(message.Message):
         self.IsReliable = True
 
     def dump(self):
-        result = super(UncommitedListRequestMessage, self).dump()
+        result = super(UncommittedListRequestMessage, self).dump()
         result['TransactionListIndex'] = self.TransactionListIndex
         return result
 
 
-def _uncommitedlistrequesthandler(msg, journal):
+def _uncommittedlistrequesthandler(msg, journal):
     source = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
     logger.debug(
-        'processing incoming uncommited list request for journal transfer '
+        'processing incoming uncommitted list request for journal transfer '
         'from %s',
         source)
 
@@ -149,13 +149,13 @@ def _uncommitedlistrequesthandler(msg, journal):
     if journal.Initializing:
         src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
-            'recieved uncommited list transfer request from %s prior to '
+            'received uncommitted list transfer request from %s prior to '
             'completing initialization',
             src)
         journal.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
-    reply = UncommitedListReplyMessage()
+    reply = UncommittedListReplyMessage()
     reply.InReplyTo = msg.Identifier
     reply.TransactionListIndex = msg.TransactionListIndex
 
@@ -164,16 +164,16 @@ def _uncommitedlistrequesthandler(msg, journal):
     if index < len(txns):
         reply.TransactionIDs = txns[index:index + 100]
 
-    logger.debug('sending %d uncommited txns to %s for request %s',
+    logger.debug('sending %d uncommitted txns to %s for request %s',
                  len(reply.TransactionIDs), source, msg.Identifier[:8])
     journal.send_message(reply, msg.OriginatorID)
 
 
-class UncommitedListReplyMessage(message.Message):
-    MessageType = "/journal.messages.JournalTransfer/UncommitedListReply"
+class UncommittedListReplyMessage(message.Message):
+    MessageType = "/journal.messages.JournalTransfer/UncommittedListReply"
 
     def __init__(self, minfo={}):
-        super(UncommitedListReplyMessage, self).__init__(minfo)
+        super(UncommittedListReplyMessage, self).__init__(minfo)
 
         self.InReplyTo = minfo.get('InReplyTo')
         self.TransactionListIndex = minfo.get('TransactionListIndex', 0)
@@ -184,7 +184,7 @@ class UncommitedListReplyMessage(message.Message):
         self.IsReliable = True
 
     def dump(self):
-        result = super(UncommitedListReplyMessage, self).dump()
+        result = super(UncommittedListReplyMessage, self).dump()
         result['TransactionListIndex'] = self.TransactionListIndex
 
         result['TransactionIDs'] = []
@@ -219,7 +219,7 @@ def _blockrequesthandler(msg, journal):
     if journal.Initializing:
         src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
-            'recieved block transfer request from %s prior to completing '
+            'received block transfer request from %s prior to completing '
             'initialization',
             src)
         journal.send_message(TransferFailedMessage(), msg.OriginatorID)
@@ -289,7 +289,7 @@ def _txnrequesthandler(msg, journal):
     if journal.Initializing:
         src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
-            'recieved transaction transfer request from %s prior to '
+            'received transaction transfer request from %s prior to '
             'completing initialization',
             src)
         journal.send_message(TransferFailedMessage(), msg.OriginatorID)

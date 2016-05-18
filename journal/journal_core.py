@@ -76,7 +76,7 @@ class Journal(gossip_core.Gossip):
         RequestedBlocks (dict): A dict of blocks which are not in the
             local cache, the details of which have been requested
             from peers.
-        MostRecentCommitedBlockID (str): The block ID of the most
+        MostRecentCommittedBlockID (str): The block ID of the most
             recently committed block.
         PendingTransactionBlock (TransactionBlock): The constructed
             pending transaction block.
@@ -144,7 +144,7 @@ class Journal(gossip_core.Gossip):
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
 
-        self.MostRecentCommitedBlockID = common.NullIdentifier
+        self.MostRecentCommittedBlockID = common.NullIdentifier
         self.PendingTransactionBlock = None
 
         self.PendingBlockIDs = set()
@@ -164,23 +164,23 @@ class Journal(gossip_core.Gossip):
         journal_debug.register_message_handlers(self)
 
     @property
-    def CommitedBlockCount(self):
+    def CommittedBlockCount(self):
         """Returns the block number of the most recently committed block.
 
         Returns:
             int: most recently committed block number.
         """
-        return self.MostRecentCommitedBlock.BlockNum
+        return self.MostRecentCommittedBlock.BlockNum
 
     @property
-    def CommitedTxnCount(self):
+    def CommittedTxnCount(self):
         """Returns the committed transaction count.
 
         Returns:
             int: the transaction depth based on the most recently
                 committed block.
         """
-        return self.MostRecentCommitedBlock.TransactionDepth
+        return self.MostRecentCommittedBlock.TransactionDepth
 
     @property
     def PendingBlockCount(self):
@@ -227,27 +227,27 @@ class Journal(gossip_core.Gossip):
     @property
     def GlobalStore(self):
         """Returns a reference to the global store associated with the
-        most recently commited block that this validator possesses.
+        most recently committed block that this validator possesses.
 
         Returns:
             Shelf: The block store.
         """
-        blkid = self.MostRecentCommitedBlockID
+        blkid = self.MostRecentCommittedBlockID
 
         return self.GlobalStoreMap.get_block_store(blkid)
 
     @property
-    def MostRecentCommitedBlock(self):
+    def MostRecentCommittedBlock(self):
         """Returns the most recently committed block.
 
         Returns:
             dict: the most recently committed block.
         """
-        return self.BlockStore.get(self.MostRecentCommitedBlockID)
+        return self.BlockStore.get(self.MostRecentCommittedBlockID)
 
-    def commited_block_ids(self, count=0):
+    def committed_block_ids(self, count=0):
         """Returns the list of block identifiers starting from the
-        most recently commited block.
+        most recently committed block.
 
         Args:
             count (int): How many results should be returned.
@@ -260,7 +260,7 @@ class Journal(gossip_core.Gossip):
 
         blockids = []
 
-        blkid = self.MostRecentCommitedBlockID
+        blkid = self.MostRecentCommittedBlockID
         while blkid != common.NullIdentifier and len(blockids) < count:
             blockids.append(blkid)
             blkid = self.BlockStore[blkid].PreviousBlockID
@@ -320,12 +320,12 @@ class Journal(gossip_core.Gossip):
         if self.GenesisLedger and self.Restore:
             logger.warn('restore ledger state from the backup data stores')
             try:
-                self.MostRecentCommitedBlockID = \
+                self.MostRecentCommittedBlockID = \
                     self.ChainStore['MostRecentBlockID']
             except KeyError:
                 logger.warn('unable to load the most recent block id, '
                             'recomputing')
-                self.MostRecentCommitedBlockID = self.compute_chain_root()
+                self.MostRecentCommittedBlockID = self.compute_chain_root()
 
             self.post_initialize()
             return
@@ -349,7 +349,7 @@ class Journal(gossip_core.Gossip):
             self.onGenesisBlock.fire(self)
             self.claim_transaction_block(self.build_transaction_block(True))
         else:
-            if self.MostRecentCommitedBlockID == common.NullIdentifier:
+            if self.MostRecentCommittedBlockID == common.NullIdentifier:
                 logger.critical('no ledger for a new network node')
                 return
 
@@ -423,7 +423,7 @@ class Journal(gossip_core.Gossip):
         # Make sure this is a valid block, for now this will just check the
         # signature... more later
         if not tblock.verify_signature():
-            logger.warn('invalid block %s recieved from %s', tblock.Identifier,
+            logger.warn('invalid block %s received from %s', tblock.Identifier,
                         tblock.OriginatorID)
             return
 
@@ -453,14 +453,14 @@ class Journal(gossip_core.Gossip):
 
         # Make sure that we have not already processed this block
         if tblock.Identifier in self.BlockStore:
-            logger.info('found previously commited block %s',
+            logger.info('found previously committed block %s',
                         tblock.Identifier[:8])
             return
 
         # Make sure we initialize the state of the block
         tblock.Status = transaction_block.Status.incomplete
 
-        # Add this block to block pool, mark as orphaned until it is commited
+        # Add this block to block pool, mark as orphaned until it is committed
         self.PendingBlockIDs.add(tblock.Identifier)
         self.BlockStore[tblock.Identifier] = tblock
 
@@ -584,14 +584,14 @@ class Journal(gossip_core.Gossip):
             'received a disconnected block %s from %s with previous id %s, '
             'expecting %s',
             tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
-            tblock.PreviousBlockID[:8], self.MostRecentCommitedBlockID[:8])
+            tblock.PreviousBlockID[:8], self.MostRecentCommittedBlockID[:8])
 
         # First see if the chain rooted in tblock is the one we should use, if
         # it is not, then we are building on the correct block and nothing
         # needs to change
 
-        assert self.MostRecentCommitedBlockID != common.NullIdentifier
-        if cmp(tblock, self.MostRecentCommitedBlock) < 0:
+        assert self.MostRecentCommittedBlockID != common.NullIdentifier
+        if cmp(tblock, self.MostRecentCommittedBlock) < 0:
             logger.info('existing chain is the valid one')
             return
 
@@ -609,12 +609,12 @@ class Journal(gossip_core.Gossip):
         # at this point we have a new chain that is longer than the current
         # one, need to move the blocks in the current chain that follow the
         # fork into the orphaned pool and then move the blocks from the new
-        # chain into the commited pool and finally rebuild the global store
+        # chain into the committed pool and finally rebuild the global store
 
-        # move the previously commited blocks into the orphaned list
+        # move the previously committed blocks into the orphaned list
         self._decommitblockchain(forkid)
 
-        # move the new blocks from the orphaned list to the commited list
+        # move the new blocks from the orphaned list to the committed list
         self._commitblockchain(tblock.Identifier, forkid)
         self.PendingTransactionBlock = self.build_transaction_block()
 
@@ -703,7 +703,7 @@ class Journal(gossip_core.Gossip):
 
         # handle the easy, common case here where the new block extends the
         # current chain
-        if tblock.PreviousBlockID == self.MostRecentCommitedBlockID:
+        if tblock.PreviousBlockID == self.MostRecentCommittedBlockID:
             self.handle_advance(tblock)
         else:
             self.handle_fork(tblock)
@@ -741,11 +741,11 @@ class Journal(gossip_core.Gossip):
     def _commitblock(self, tblock):
         """
         Add a block to the committed chain, this function extends the
-        chain by updating the most recent commited block field
+        chain by updating the most recent committed block field
 
         Args:
              tblock (Transaction.TransactionBlock) -- block of transactions to
-                 be commited
+                 be committed
         """
 
         logger.info('commit block %s from %s with previous id %s',
@@ -754,8 +754,8 @@ class Journal(gossip_core.Gossip):
 
         assert tblock.Status == transaction_block.Status.valid
 
-        # Remove all of the newly commited transactions from the pending list
-        # and put them in the commited list
+        # Remove all of the newly committed transactions from the pending list
+        # and put them in the committed list
         for txnid in tblock.TransactionIDs:
             if txnid in self.PendingTransactions:
                 del self.PendingTransactions[txnid]
@@ -766,12 +766,12 @@ class Journal(gossip_core.Gossip):
             self.TransactionStore[txnid] = txn
 
         # Update the head of the chain
-        self.MostRecentCommitedBlockID = tblock.Identifier
-        self.ChainStore['MostRecentBlockID'] = self.MostRecentCommitedBlockID
+        self.MostRecentCommittedBlockID = tblock.Identifier
+        self.ChainStore['MostRecentBlockID'] = self.MostRecentCommittedBlockID
 
         # Update stats
-        self.JournalStats.CommitedBlockCount.increment()
-        self.JournalStats.CommitedTxnCount.increment(len(
+        self.JournalStats.CommittedBlockCount.increment()
+        self.JournalStats.CommittedTxnCount.increment(len(
             tblock.TransactionIDs))
 
         # fire the event handler for block commit
@@ -784,18 +784,18 @@ class Journal(gossip_core.Gossip):
         Args:
             forkid (UUID) -- identifier of the block where the fork occurred
         """
-        blockid = self.MostRecentCommitedBlockID
+        blockid = self.MostRecentCommittedBlockID
         while blockid != forkid:
             self._decommitblock()
-            blockid = self.MostRecentCommitedBlockID
+            blockid = self.MostRecentCommittedBlockID
 
     def _decommitblock(self):
         """
-        Move the head of the block chain from the commited pool to the orphaned
-        pool and move all transactions in the block back into the pending
-        transaction list.
+        Move the head of the block chain from the committed pool to the
+        orphaned pool and move all transactions in the block back into the
+        pending transaction list.
         """
-        blockid = self.MostRecentCommitedBlockID
+        blockid = self.MostRecentCommittedBlockID
         block = self.BlockStore[blockid]
         assert block.Status == transaction_block.Status.valid
 
@@ -803,11 +803,11 @@ class Journal(gossip_core.Gossip):
         self.onDecommitBlock.fire(self, block)
 
         # move the head of the chain back
-        self.MostRecentCommitedBlockID = block.PreviousBlockID
-        self.ChainStore['MostRecentBlockID'] = self.MostRecentCommitedBlockID
+        self.MostRecentCommittedBlockID = block.PreviousBlockID
+        self.ChainStore['MostRecentBlockID'] = self.MostRecentCommittedBlockID
 
         # this bizarre bit of code is intended to preserve the ordering of
-        # transactions, where all commited transactions occur before pending
+        # transactions, where all committed transactions occur before pending
         # transactions
         pending = OrderedDict()
         for txnid in block.TransactionIDs:
@@ -826,8 +826,8 @@ class Journal(gossip_core.Gossip):
         self.PendingTransactions = pending
 
         # update stats
-        self.JournalStats.CommitedBlockCount.increment(-1)
-        self.JournalStats.CommitedTxnCount.increment(-len(
+        self.JournalStats.CommittedBlockCount.increment(-1)
+        self.JournalStats.CommittedTxnCount.increment(-len(
             block.TransactionIDs))
 
     def _applyblock(self, tblock):
@@ -882,7 +882,7 @@ class Journal(gossip_core.Gossip):
         :param depth int: depth in the current chain to search, 0 implies all
         """
 
-        blockids = set(self.commited_block_ids(depth))
+        blockids = set(self.committed_block_ids(depth))
         forkid = tblock.PreviousBlockID
         while True:
             if forkid == common.NullIdentifier or forkid in blockids:
@@ -957,7 +957,7 @@ class Journal(gossip_core.Gossip):
             logger.debug('check dependency %s of transaction %s',
                          dependencyID[:8], txn.Identifier[:8])
 
-            # check to see if the dependency has already been commited
+            # check to see if the dependency has already been committed
             if (dependencyID in self.TransactionStore
                     and (self.TransactionStore[dependencyID].Status ==
                          transaction.Status.committed)):
@@ -1031,12 +1031,12 @@ class Journal(gossip_core.Gossip):
         # later on, however, the flattening process increases memory usage
         # so we don't want to do it too often, the code below keeps the number
         # of blocks kept in memory less than 2 * self.MaximumBlocksToKeep
-        if self.MostRecentCommitedBlock.BlockNum \
+        if self.MostRecentCommittedBlock.BlockNum \
                 % self.MaximumBlocksToKeep == 0:
             logger.info('compress global state for block number %s',
-                        self.MostRecentCommitedBlock.BlockNum)
+                        self.MostRecentCommittedBlock.BlockNum)
             depth = 0
-            blockid = self.MostRecentCommitedBlockID
+            blockid = self.MostRecentCommittedBlockID
             while (blockid != common.NullIdentifier and
                    depth < self.MaximumBlocksToKeep):
                 blockid = self.BlockStore[blockid].PreviousBlockID
@@ -1048,8 +1048,8 @@ class Journal(gossip_core.Gossip):
 
     def _initledgerstats(self):
         self.JournalStats = stats.Stats(self.LocalNode.Name, 'ledger')
-        self.JournalStats.add_metric(stats.Counter('CommitedBlockCount'))
-        self.JournalStats.add_metric(stats.Counter('CommitedTxnCount'))
+        self.JournalStats.add_metric(stats.Counter('CommittedBlockCount'))
+        self.JournalStats.add_metric(stats.Counter('CommittedTxnCount'))
         self.JournalStats.add_metric(stats.Sample(
             'PendingBlockCount', lambda: self.PendingBlockCount))
         self.JournalStats.add_metric(stats.Sample(

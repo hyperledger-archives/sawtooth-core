@@ -137,7 +137,7 @@ class QuorumJournal(journal_core.Journal):
             'received a forked block %s from %s with previous id %s, '
             'expecting %s',
             tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
-            tblock.PreviousBlockID[:8], self.MostRecentCommitedBlockID[:8])
+            tblock.PreviousBlockID[:8], self.MostRecentCommittedBlockID[:8])
 
     #
     # CUSTOM JOURNAL API
@@ -170,7 +170,8 @@ class QuorumJournal(journal_core.Journal):
         This method is called when the vote timer expires indicating
         that a new vote should be initiated.
         """
-        logger.info('quorum, initiate, %s', self.MostRecentCommitedBlockID[:8])
+        logger.info('quorum, initiate, %s',
+                    self.MostRecentCommittedBlockID[:8])
 
         # Get the list of prepared transactions, if there aren't enough then
         # reset the timers and return since there is nothing to vote on
@@ -184,7 +185,7 @@ class QuorumJournal(journal_core.Journal):
             return
 
         # we are initiating the vote, send the message to the world
-        newblocknum = self.MostRecentCommitedBlock.BlockNumber + 1
+        newblocknum = self.MostRecentCommittedBlock.BlockNumber + 1
         msg = quorum_vote.QuorumInitiateVoteMessage()
         msg.BlockNumber = newblocknum
         self.forward_message(msg)
@@ -202,10 +203,10 @@ class QuorumJournal(journal_core.Journal):
             bool: True if this is a new, valid vote, false otherwise.
         """
 
-        if blocknum != self.MostRecentCommitedBlock.BlockNumber + 1:
+        if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
             logger.warn(
                 'attempt initiate vote on block %d, expecting block %d',
-                blocknum, self.MostRecentCommitedBlock.BlockNumber + 1)
+                blocknum, self.MostRecentCommittedBlock.BlockNumber + 1)
             return False
 
         if self.CurrentQuorumVote:
@@ -214,7 +215,7 @@ class QuorumJournal(journal_core.Journal):
             return False
 
         logger.info('quorum, handle initiate, %s',
-                    self.MostRecentCommitedBlockID[:8])
+                    self.MostRecentCommittedBlockID[:8])
 
         txnlist = self._preparetransactionlist()
         self.CurrentQuorumVote = quorum_vote.QuorumVote(self, blocknum,
@@ -231,7 +232,7 @@ class QuorumJournal(journal_core.Journal):
         particular ballot is complete.
         """
         logger.info('quorum, ballot, %s, %d',
-                    self.MostRecentCommitedBlockID[:8],
+                    self.MostRecentCommittedBlockID[:8],
                     self.CurrentQuorumVote.Ballot)
 
         self.NextBallotTime = self._nextballottime()
@@ -250,17 +251,17 @@ class QuorumJournal(journal_core.Journal):
         """
 
         logger.debug('complete the vote for block based on %s',
-                     self.MostRecentCommitedBlockID)
+                     self.MostRecentCommittedBlockID)
 
-        if blocknum != self.MostRecentCommitedBlock.BlockNumber + 1:
+        if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
             logger.warn(
                 'attempt complete vote on block %d, expecting block %d',
-                blocknum, self.MostRecentCommitedBlock.BlockNumber + 1)
+                blocknum, self.MostRecentCommittedBlock.BlockNumber + 1)
             return
 
         nblock = quorum_transaction_block.QuorumTransactionBlock()
         nblock.BlockNumber = blocknum
-        nblock.PreviousBlockID = self.MostRecentCommitedBlockID
+        nblock.PreviousBlockID = self.MostRecentCommittedBlockID
         nblock.TransactionIDs = txnlist[:]
         nblock.sign_from_node(self.LocalNode)
 

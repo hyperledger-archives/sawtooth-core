@@ -86,7 +86,7 @@ class TransactionRequestMessage(message.Message):
 
 
 def _txnrequesthandler(msg, journal):
-    # a transaction might be in the commited transaction list only as a
+    # a transaction might be in the committed transaction list only as a
     # placeholder, so we have to make sure that it is there and that it is not
     # None
     txn = journal.TransactionStore.get(msg.TransactionID)

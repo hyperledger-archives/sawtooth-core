@@ -30,8 +30,8 @@ from journal.messages.journal_transfer import BlockReplyMessage
 from journal.messages.journal_transfer import TransactionRequestMessage
 from journal.messages.journal_transfer import TransactionReplyMessage
 
-from journal.messages.journal_transfer import UncommitedListRequestMessage
-from journal.messages.journal_transfer import UncommitedListReplyMessage
+from journal.messages.journal_transfer import UncommittedListRequestMessage
+from journal.messages.journal_transfer import UncommittedListReplyMessage
 
 from journal.messages.journal_transfer import TransferFailedMessage
 
@@ -92,14 +92,14 @@ class JournalTransfer(object):
         self.TransactionMap = OrderedDict()
         self.PendingTransactions = []
 
-        self.ProcessingUncommited = False
-        self.UncommitedTransactions = []
+        self.ProcessingUncommitted = False
+        self.UncommittedTransactions = []
 
         self.Journal.register_message_handler(BlockListReplyMessage,
                                               self._blocklistreplyhandler)
         self.Journal.register_message_handler(BlockReplyMessage,
                                               self._blockreplyhandler)
-        self.Journal.register_message_handler(UncommitedListReplyMessage,
+        self.Journal.register_message_handler(UncommittedListReplyMessage,
                                               self._txnlistreplyhandler)
         self.Journal.register_message_handler(TransactionReplyMessage,
                                               self._txnreplyhandler)
@@ -116,7 +116,7 @@ class JournalTransfer(object):
         # clear all of the message handlers
         self.Journal.clear_message_handler(BlockListReplyMessage)
         self.Journal.clear_message_handler(BlockReplyMessage)
-        self.Journal.clear_message_handler(UncommitedListReplyMessage)
+        self.Journal.clear_message_handler(UncommittedListReplyMessage)
         self.Journal.clear_message_handler(TransactionReplyMessage)
         self.Journal.clear_message_handler(TransferFailedMessage)
 
@@ -165,7 +165,7 @@ class JournalTransfer(object):
         return False
 
     def _blocklistreplyhandler(self, msg, journal):
-        logger.debug('request %s, recieved %d block identifiers from %s',
+        logger.debug('request %s, received %d block identifiers from %s',
                      msg.InReplyTo[:8], len(msg.BlockIDs), self.Peer.Name)
 
         # add all the blocks to the block map in order
@@ -185,22 +185,24 @@ class JournalTransfer(object):
         if self._kick_off_next_block():
             return
 
-        # kick off retrieval of the uncommited transactions
-        request2 = UncommitedListRequestMessage()
+        # kick off retrieval of the uncommitted transactions
+        request2 = UncommittedListRequestMessage()
         request2.TransactionListIndex = 0
         self.Journal.send_message(request2, self.Peer.Identifier)
 
     def _txnlistreplyhandler(self, msg, journal):
-        logger.debug('request %s, recieved %d uncommited transactions from %s',
-                     msg.InReplyTo[:8], len(msg.TransactionIDs),
-                     self.Peer.Name)
+        logger.debug(
+            'request %s, received %d uncommitted transactions from %s',
+            msg.InReplyTo[:8],
+            len(msg.TransactionIDs),
+            self.Peer.Name)
 
-        # save the uncommited transactions
+        # save the uncommitted transactions
         for txnid in msg.TransactionIDs:
-            self.UncommitedTransactions.append(txnid)
+            self.UncommittedTransactions.append(txnid)
 
         if len(msg.TransactionIDs) > 0:
-            request = UncommitedListRequestMessage()
+            request = UncommittedListRequestMessage()
             request.TransactionListIndex = msg.TransactionListIndex + len(
                 msg.TransactionIDs)
             self.Journal.send_message(request, self.Peer.Identifier)
@@ -210,12 +212,12 @@ class JournalTransfer(object):
         if self._kick_off_next_block():
             return
 
-        self._handleuncommited()
+        self._handleuncommitted()
 
     def _blockreplyhandler(self, msg, journal):
         # leaving this as info to provide some feedback in the log for
         # ongoing progress on the journal transfer
-        logger.info('request %s, recieved block from %s', msg.InReplyTo[:8],
+        logger.info('request %s, received block from %s', msg.InReplyTo[:8],
                     self.Peer.Name)
 
         # the actual transaction block is encapsulated in a message within the
@@ -242,7 +244,7 @@ class JournalTransfer(object):
         if self._kick_off_next_block():
             return
 
-        self._handleuncommited()
+        self._handleuncommitted()
 
     def _txnreplyhandler(self, msg, journal):
         logger.debug('request %s, received transaction from %s',
@@ -267,16 +269,16 @@ class JournalTransfer(object):
         if self._kick_off_next_block():
             return
 
-        self._handleuncommited()
+        self._handleuncommitted()
 
-    def _handleuncommited(self):
-        logger.debug('transition to uncommited messages')
+    def _handleuncommitted(self):
+        logger.debug('transition to uncommitted messages')
 
-        if not self.ProcessingUncommited and len(
-                self.UncommitedTransactions) > 0:
-            self.ProcessingUncommited = True
+        if not self.ProcessingUncommitted and len(
+                self.UncommittedTransactions) > 0:
+            self.ProcessingUncommitted = True
 
-            for txnid in self.UncommitedTransactions:
+            for txnid in self.UncommittedTransactions:
                 self.TransactionMap[txnid] = None
                 self.PendingTransactions.append(txnid)
 
@@ -306,20 +308,20 @@ class JournalTransfer(object):
                          line)
         except:
             logger.error(
-                'unexpected error happened commiting blocks during journal '
+                'unexpected error happened committing blocks during journal '
                 'transfer; %s',
                 str(sys.exc_info()[0]))
 
         logger.info(
-            'journal transfered from %s, %d transactions, %d blocks, current '
+            'journal transferred from %s, %d transactions, %d blocks, current '
             'head is %s',
             self.Peer, len(self.TransactionMap), len(self.BlockMap),
-            self.Journal.MostRecentCommitedBlockID[:8])
+            self.Journal.MostRecentCommittedBlockID[:8])
 
         # clear all of the message handlers
         self.Journal.clear_message_handler(BlockListReplyMessage)
         self.Journal.clear_message_handler(BlockReplyMessage)
-        self.Journal.clear_message_handler(UncommitedListReplyMessage)
+        self.Journal.clear_message_handler(UncommittedListReplyMessage)
         self.Journal.clear_message_handler(TransactionReplyMessage)
         self.Journal.clear_message_handler(TransferFailedMessage)
 

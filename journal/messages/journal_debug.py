@@ -41,7 +41,7 @@ def _dumpjournalblockshandler(msg, journal):
     identifier = "{0}, {1:0.2f}, {2}".format(journal.LocalNode, time.time(),
                                              msg.Identifier[:8])
 
-    blockids = journal.commited_block_ids(msg.Count)
+    blockids = journal.committed_block_ids(msg.Count)
     for blkid in blockids:
         block = journal.BlockStore[blkid]
         logger.info('block, %s, %s', identifier, str(block))
