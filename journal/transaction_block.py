@@ -129,7 +129,7 @@ class TransactionBlock(signed_object.SignedObject):
 
         return missing
 
-    def update_transaction_depth(self, journal):
+    def update_block_weight(self, journal):
         """Compute the depth of transactions.
 
         Args:

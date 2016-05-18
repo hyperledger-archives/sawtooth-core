@@ -149,7 +149,6 @@ class Journal(gossip_core.Gossip):
 
         self.PendingBlockIDs = set()
         self.InvalidBlockIDs = set()
-        self.FrontierBlockIDs = set()
 
         # Set up the global store and transaction handlers
         self.GlobalStoreMap = GlobalStoreManager(
@@ -689,19 +688,14 @@ class Journal(gossip_core.Gossip):
         # at this point we know that the block is valid
         tblock.Status = transaction_block.Status.valid
         tblock.CommitTime = time.time() - self.StartTime
-        tblock.update_transaction_depth(self)
+        tblock.update_block_weight(self)
 
         # time to apply the transactions in the block to get a new state
         self.GlobalStoreMap.commit_block_store(tblock.Identifier,
                                                self._applyblock(tblock))
         self.BlockStore[tblock.Identifier] = tblock
 
-        # if the previous block was in the frontier set it is no
-        # longer, the new block is definitely in the frontier at
-        # least for the moment, that may change if this block
-        # connects other orphaned blocks
-        self.FrontierBlockIDs.discard(tblock.PreviousBlockID)
-        self.FrontierBlockIDs.add(tblock.Identifier)
+        # remove the block from the pending block list
         self.PendingBlockIDs.discard(tblock.Identifier)
 
         # and now check to see if we should start to use this block as the one

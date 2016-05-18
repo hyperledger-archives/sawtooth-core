@@ -86,7 +86,7 @@ def update_connections(gossiper, topology, oncomplete):
             # the FudgeFactor is used to increase the chance that we'll connect
             # to a node, strictly speaking the fudge factor should be 0
             if random.randint(0, total - 1) < count + ConnectivityFudgeFactor:
-                _sendconnectionrequest(gossiper, peer)
+                connect_message.send_connection_request(gossiper, peer)
 
     # call the final handler
     oncomplete(gossiper)

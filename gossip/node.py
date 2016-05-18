@@ -37,7 +37,8 @@ class Node(object):
         SigningKey (str): a PEM formatted signing key.
         Identifier (str): an identifier for the node.
         Name (str): a short, human-readable name for the node.
-        Enabled (bool): whether or not the node is active.
+        is_peer (bool): whether or not the node is treated as a peer.
+            This is set from outside the Node class.
         Estimator (RoundTripEstimator): tracks network timing between nodes.
         MessageQ (TransmissionQueue): a transmission queue ordered by time
             to send.
@@ -92,7 +93,7 @@ class Node(object):
         self.Identifier = identifier
 
         self.Name = name if name else self.Identifier[:8]
-        self.Enabled = False
+        self.is_peer = False
 
         self.Estimator = RoundTripEstimator()
         self.MessageQ = TransmissionQueue()
@@ -123,20 +124,6 @@ class Node(object):
     def _fixeddelay(self):
         return self.FixedRandomDelay
 
-    def enable(self):
-        """Enables the node.
-        """
-        if not self.Enabled:
-            logger.info('enabling node %s', self.Identifier)
-        self.Enabled = True
-
-    def disable(self):
-        """Disables the node.
-        """
-        if self.Enabled:
-            logger.info('disabling node %s', self.Identifier)
-        self.Enabled = False
-
     def initialize_stats(self, localnode):
         """Initializes statistics collection for the node.
 
@@ -148,7 +135,6 @@ class Node(object):
         self.Stats.add_metric(stats.Value('Identifier', self.Identifier))
         self.Stats.add_metric(stats.Value('Address', "{0}:{1}".format(
             self.NetHost, self.NetPort)))
-        self.Stats.add_metric(stats.Sample('Enabled', lambda: self.Enabled))
         self.Stats.add_metric(stats.Sample('MessageQueue',
                                            lambda: str(self.MessageQ)))
         self.Stats.add_metric(stats.Sample('MessageQueueLength',

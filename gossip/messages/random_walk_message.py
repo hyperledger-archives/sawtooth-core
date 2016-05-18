@@ -167,7 +167,6 @@ def random_walk_handler(msg, gossiper):
             onode = node.Node(address=msg.NetAddress,
                               identifier=msg.NodeIdentifier,
                               name=msg.Name)
-            onode.enable()
 
             send_connection_request(gossiper, onode)
             return
