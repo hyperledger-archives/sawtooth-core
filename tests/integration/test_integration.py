@@ -28,7 +28,7 @@ from txnintegration.integer_key_state import IntegerKeyState
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
 
-ENABLE_INTEGRATION_TESTS = False
+ENABLE_OVERNIGHT_TESTS = False
 if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
     ENABLE_OVERNIGHT_TESTS = True
 
@@ -132,7 +132,7 @@ class IntKeyLoadTest(object):
             assert self.localState[k] == v
 
 
-class TestSmoke(unittest.TestCase):
+class TestIntegration(unittest.TestCase):
     @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS, "integration test")
     def test_intkey_load_ext(self):
         vnm = None
@@ -159,9 +159,9 @@ class TestSmoke(unittest.TestCase):
             traceback.print_exc()
             if vnm:
                 vnm.shutdown()
-            vnm.create_result_archive("TestSmokeResults.tar.gz")
+            vnm.create_result_archive("TestIntegrationResults.tar.gz")
             print "Validator data and logs preserved in: " \
-                  "TestSmokeResults.tar.gz"
+                  "TestIntegrationResults.tar.gz"
             raise e
 
     @unittest.skip("LedgerType voting is broken")
@@ -185,7 +185,7 @@ class TestSmoke(unittest.TestCase):
             traceback.print_exc()
             if vnm:
                 vnm.shutdown()
-            vnm.create_result_archive("TestSmokeResultsVote.tar.gz")
+            vnm.create_result_archive("TestIntegrationResultsVote.tar.gz")
             print "Validator data and logs preserved in: " \
-                  "TestSmokeResultsVote.tar.gz"
+                  "TestIntegrationResultsVote.tar.gz"
             raise e
