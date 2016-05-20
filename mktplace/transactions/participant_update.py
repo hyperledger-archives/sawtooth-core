@@ -73,7 +73,7 @@ class Register(market_place_object_update.Register):
     def is_valid_name(self, store):
         """
         Participant name may not include a '/', must be less than
-        64 characters long, and is not the same of an already-existing
+        64 characters long, and is not the same as an already-existing
         object.
         """
 
@@ -177,7 +177,7 @@ class UpdateName(market_place_object_update.UpdateName):
         Ensure that the name property meets syntactic requirements. Objects
         can override this method for object specific syntax. This method
         simply requires that a name not contain a '/', has a total length
-        less than 64 characters, and is not the same of an already-existing
+        less than 64 characters, and is not the same as an already-existing
         object.
         """
 

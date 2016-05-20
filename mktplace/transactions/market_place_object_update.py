@@ -93,7 +93,7 @@ class Register(object):
         Ensure that the name property meets syntactic requirements. Objects
         can override this method for object specific syntax. This method
         simply requires that a name begins with a '/', has a total length
-        less than 64 characters, and is not the same of an already-existing
+        less than 64 characters, and is not the same as an already-existing
         object.
         """
 
@@ -325,7 +325,7 @@ class UpdateName(object):
         Ensure that the name property meets syntactic requirements. Objects
         can override this method for object specific syntax. This method
         simply requires that a name begins with a '/', has a total length
-        less than 64 characters, and is not the same of an already-existing
+        less than 64 characters, and is not the same as an already-existing
         object.
         """
 
