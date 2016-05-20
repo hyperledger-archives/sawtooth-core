@@ -17,7 +17,7 @@ import unittest
 
 from mktplace.transactions import participant_update
 from mktplace.transactions import asset_update
-from mock_market_place_global_store import MockMarketPlaceGlobalStore
+from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
 
 
 class TestAssetUpdate(unittest.TestCase):

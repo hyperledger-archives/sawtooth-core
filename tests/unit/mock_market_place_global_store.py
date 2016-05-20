@@ -39,3 +39,6 @@ class MockMarketPlaceGlobalStore:
 
     def __setitem__(self, object_id, the_object):
         self.objects[object_id] = the_object
+
+    def __getitem__(self, object_id):
+        return self.objects.get(object_id)

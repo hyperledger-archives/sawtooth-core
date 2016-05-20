@@ -17,7 +17,7 @@ import unittest
 
 from mktplace.transactions import participant_update
 from mktplace.transactions import exchange_offer_update
-from mock_market_place_global_store import MockMarketPlaceGlobalStore
+from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
 
 
 class TestExchangeOfferUpdate(unittest.TestCase):
