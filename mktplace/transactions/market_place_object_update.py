@@ -88,16 +88,35 @@ class Register(object):
         assert self.Transaction
         return self.Transaction.Identifier
 
-    def is_valid_name(self):
+    def is_valid_name(self, store):
         """
         Ensure that the name property meets syntactic requirements. Objects
-        can override this method for object specific syntax. This method simply
-        requires that names begin with a '/' and have a total length less than
-        64 characters.
+        can override this method for object specific syntax. This method
+        simply requires that a name begins with a '/', has a total length
+        less than 64 characters, and is not the same as an already-existing
+        object.
         """
 
-        if self.Name:
-            return self.Name.startswith('/') and len(self.Name) < 64
+        if self.Name == '':
+            return True
+        if not self.Name.startswith('/'):
+            logger.debug('invalid name %s; must start with /', self.Name)
+            return False
+
+        if len(self.Name) >= 64:
+            logger.debug(
+                'invalid name %s; must be less than 64 bytes', self.Name)
+            return False
+
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+
+        if store.n2i(name):
+            logger.debug(
+                'invalid name %s; name must be unique', self.Name)
+            return False
 
         return True
 
@@ -108,8 +127,7 @@ class Register(object):
             logger.info('duplicate registration for object %s', self.ObjectID)
             return False
 
-        if not self.is_valid_name():
-            logger.debug('invalid name %s; must start with /', self.Name)
+        if not self.is_valid_name(store):
             return False
 
         return True
@@ -305,9 +323,10 @@ class UpdateName(object):
     def is_valid_name(self, store):
         """
         Ensure that the name property meets syntactic requirements. Objects
-        can override this method for object specific syntax. This method simply
-        requires that names begin with a '/' and have a total length less than
-        64 characters.
+        can override this method for object specific syntax. This method
+        simply requires that a name begins with a '/', has a total length
+        less than 64 characters, and is not the same as an already-existing
+        object.
         """
 
         if self.Name == '':
@@ -322,7 +341,11 @@ class UpdateName(object):
                          self.Name)
             return False
 
-        name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+
         if store.n2i(name):
             logger.debug('invalid name %s; name must be unique', self.Name)
             return False

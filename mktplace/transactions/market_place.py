@@ -292,13 +292,13 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
 
     def _initnamemap(self):
         """
-        Initialize the name map, this is probably a bad thing to have
-        around given that it is likely to end up in the shelve database
-        for the global store. Oh well...
+        Initialize the name map
+
+        NOTE: This is an expensive operation for a large ledger since it
+        processes every object in the ledger.
         """
-        info = self.compose(readonly=True)
-        for objid in info.iterkeys():
-            name = self.i2n(objid)
+        for objid, objinfo in self.iteritems():
+            name = self.i2n(objid, objinfo)
             if not name.startswith('///'):
                 self._namemap[name] = objid
 
@@ -322,13 +322,14 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
 
         del self._namemap[fqname]
 
-    def i2n(self, objectid):
+    def i2n(self, objectid, objinfo=None):
         """
         Convert an objectid into a canonical name representation
         """
 
         try:
-            objinfo = self.get(objectid)
+            if objinfo is None:
+                objinfo = self.get(objectid)
         except KeyError:
             return None
 
