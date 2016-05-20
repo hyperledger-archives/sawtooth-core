@@ -23,7 +23,7 @@ class TestParticipantUpdate(unittest.TestCase):
     def test_duplicate_name(self):
         # Create a mock store
         store = MockMarketPlaceGlobalStore()
-        
+
         # Because we have not "registered" any participants, the name
         # should not be a duplicate
         update = participant_update.Register(
