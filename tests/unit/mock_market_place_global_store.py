@@ -16,7 +16,7 @@
 from mktplace.transactions import participant_update
 
 
-class MockMarketPlaceGlobalStore:
+class MockMarketPlaceGlobalStore(object):
     def __init__(self):
         self.objects = {}
         self.names = {}
