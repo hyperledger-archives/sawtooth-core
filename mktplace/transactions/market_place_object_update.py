@@ -91,9 +91,10 @@ class Register(object):
     def is_valid_name(self, store):
         """
         Ensure that the name property meets syntactic requirements. Objects
-        can override this method for object specific syntax. This method simply
-        requires that names begin with a '/' and have a total length less than
-        64 characters.
+        can override this method for object specific syntax. This method
+        simply requires that a name begins with a '/', has a total length
+        less than 64 characters, and is not the same of an already-existing
+        object.
         """
 
         if self.Name == '':
@@ -107,7 +108,11 @@ class Register(object):
                 'invalid name %s; must be less than 64 bytes', self.Name)
             return False
 
-        name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+
         if store.n2i(name):
             logger.debug(
                 'invalid name %s; name must be unique', self.Name)
@@ -318,9 +323,10 @@ class UpdateName(object):
     def is_valid_name(self, store):
         """
         Ensure that the name property meets syntactic requirements. Objects
-        can override this method for object specific syntax. This method simply
-        requires that names begin with a '/' and have a total length less than
-        64 characters.
+        can override this method for object specific syntax. This method
+        simply requires that a name begins with a '/', has a total length
+        less than 64 characters, and is not the same of an already-existing
+        object.
         """
 
         if self.Name == '':
@@ -335,7 +341,11 @@ class UpdateName(object):
                          self.Name)
             return False
 
-        name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+
         if store.n2i(name):
             logger.debug('invalid name %s; name must be unique', self.Name)
             return False
