@@ -35,7 +35,8 @@ from txnintegration.validator_network_manager import ValidatorNetworkManager, \
 
 class IntKeyLoadTest(object):
     def __init__(self):
-        pass
+        print "start inkeyloadtest"
+        # pass
 
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
@@ -51,9 +52,9 @@ class IntKeyLoadTest(object):
         return len(self.transactions)
 
     def _wait_for_transaction_commits(self):
-        to = TimeOut(120)
+        to = TimeOut(900)
         txnCnt = len(self.transactions)
-        with Progress("Waiting for transactions to commit") as p:
+        with Progress("Waiting for {0} transactions to commit".format(txnCnt)) as p:
             while not to() and txnCnt > 0:
                 p.step()
                 time.sleep(1)
@@ -78,29 +79,43 @@ class IntKeyLoadTest(object):
                 self.clients.append(IntegerKeyClient(u, keystring=key))
                 p.step()
 
-        with Progress("Creating initial key values") as p:
+        print "Checking for pre-existing state"
+        self.state.fetch()
+        keys = self.state.State.keys()
+
+        for k, v in self.state.State.iteritems():
+            self.localState[k] = v
+
+        with Progress("Populating initial key values") as p:
             for n in range(1, numKeys + 1):
                 n = str(n)
-                c = self._get_client()
-                v = random.randint(5, 1000)
-                self.localState[n] = v
-                txnid = c.set(n, v)
-                if txnid is None:
-                    raise Exception("Failed to set {} to {}".format(n, v))
-                self.transactions.append(txnid)
+                if n not in keys:
+                    c = self._get_client()
+                    v = random.randint(5, 1000)
+                    self.localState[n] = v
+                    txnid = c.set(n, v)
+                    if txnid is None:
+                        raise Exception("Failed to set {} to {}".format(n, v))
+                    self.transactions.append(txnid)
 
         self._wait_for_transaction_commits()
 
-    def run(self, rounds=1):
+    def run(self, numkeys, rounds=1, txintv=0):
         self.state.fetch()
 
         keys = self.state.State.keys()
 
+        print "Running {0} rounds for {1} keys with {2} second inter-transaction time"\
+            .format(rounds, numkeys, txintv)
+
+        starttime = time.clock()
         for r in range(0, rounds):
             for c in self.clients:
                 c.CurrentState.fetch()
             print "Round {}".format(r)
-            for k in keys:
+            # for k in keys:
+            for k in range(1, numkeys+1):
+                k=str(k)
                 c = self._get_client()
                 self.localState[k] += 2
                 txnid = c.inc(k, 2)
@@ -109,7 +124,10 @@ class IntKeyLoadTest(object):
                         "Failed to inc key:{} value:{} by 2".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
-            for k in keys:
+                time.sleep(txintv)
+            # for k in keys:
+            for k in range(1, numkeys + 1):
+                k = str(k)
                 c = self._get_client()
                 self.localState[k] -= 1
                 txnid = c.dec(k, 1)
@@ -118,7 +136,12 @@ class IntKeyLoadTest(object):
                         "Failed to dec key:{} value:{} by 1".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
-
+                time.sleep(txintv)
+            endtime=time.clock()
+            totaltime=endtime-starttime
+            avgrate = ((2*numkeys)/totaltime)
+            print "Sent {0} transaction in {1} seconds averaging {2} t/s"\
+                .format(2*numkeys, totaltime, avgrate)
             self._wait_for_transaction_commits()
 
     def validate(self):
@@ -131,15 +154,29 @@ class IntKeyLoadTest(object):
                     k, v, self.localState[k])
             assert self.localState[k] == v
 
+    def ledgerstate(self):
+        self.state.fetch()
 
+        keys = self.state.State.keys()
 
+        print "state: "
+        for k, v in self.state.State.iteritems():
+            print k, v
+        print
 
 print "Testing transaction load."
-urls = ("http://localhost:8800/stat/ledger", "http://localhost:8801/stat/ledger", "http://localhost:8802/stat/ledger")
+urls = ("http://localhost:8800", "http://localhost:8801", "http://localhost:8802")
+
+keys = 100
+rounds = 5
+txn_intv = 0.0
+
 test = IntKeyLoadTest()
-test.setup(urls(), 100)
-test.run(2)
+test.setup(urls, keys)
 test.validate()
+test.run(keys, rounds, txn_intv)
+test.validate()
+# test.ledgerstate()
 
 
 
