@@ -174,9 +174,9 @@ class validator_stats_manager():
 
             try:
                 self.vstats.blocks_claimed = jsonstats["ledger"]["BlocksClaimed"]
-                self.vstats.blocks_committed = jsonstats["ledger"]["CommitedBlockCount"]
+                self.vstats.blocks_committed = jsonstats["ledger"]["CommittedBlockCount"]
                 self.vstats.blocks_pending = jsonstats["ledger"]["PendingBlockCount"]
-                self.vstats.txns_committed = jsonstats["ledger"]["CommitedTxnCount"]
+                self.vstats.txns_committed = jsonstats["ledger"]["CommittedTxnCount"]
                 self.vstats.txns_pending = jsonstats["ledger"]["PendingTxnCount"]
                 self.vstats.packets_dropped = jsonstats["packet"]["DroppedPackets"]
                 self.vstats.packets_duplicates = jsonstats["packet"]["DuplicatePackets"]

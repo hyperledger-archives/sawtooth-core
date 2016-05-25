@@ -87,6 +87,8 @@ class IntKeyLoadTest(object):
             self.localState[k] = v
 
         with Progress("Populating initial key values") as p:
+            txncount=0
+            starttime = time.clock()
             for n in range(1, numKeys + 1):
                 n = str(n)
                 if n not in keys:
@@ -97,7 +99,8 @@ class IntKeyLoadTest(object):
                     if txnid is None:
                         raise Exception("Failed to set {} to {}".format(n, v))
                     self.transactions.append(txnid)
-
+                    txncount+=1
+            self.txnrate(starttime, txncount)
         self._wait_for_transaction_commits()
 
     def run(self, numkeys, rounds=1, txintv=0):
@@ -108,12 +111,12 @@ class IntKeyLoadTest(object):
         print "Running {0} rounds for {1} keys with {2} second inter-transaction time"\
             .format(rounds, numkeys, txintv)
 
-        starttime = time.clock()
         for r in range(0, rounds):
             for c in self.clients:
                 c.CurrentState.fetch()
             print "Round {}".format(r)
             # for k in keys:
+            starttime = time.clock()
             for k in range(1, numkeys+1):
                 k=str(k)
                 c = self._get_client()
@@ -137,11 +140,7 @@ class IntKeyLoadTest(object):
                             k, self.localState[k]))
                 self.transactions.append(txnid)
                 time.sleep(txintv)
-            endtime=time.clock()
-            totaltime=endtime-starttime
-            avgrate = ((2*numkeys)/totaltime)
-            print "Sent {0} transaction in {1} seconds averaging {2} t/s"\
-                .format(2*numkeys, totaltime, avgrate)
+            self.txnrate(starttime, 2*numkeys)
             self._wait_for_transaction_commits()
 
     def validate(self):
@@ -163,6 +162,14 @@ class IntKeyLoadTest(object):
         for k, v in self.state.State.iteritems():
             print k, v
         print
+
+    def txnrate(selfself, starttime, numtxns):
+        if numtxns>0:
+            endtime = time.clock()
+            totaltime = endtime - starttime
+            avgrate = (numtxns / totaltime)
+            print "Sent {0} transaction in {1} seconds averaging {2} t/s" \
+                .format(numtxns, totaltime, avgrate)
 
 print "Testing transaction load."
 urls = ("http://localhost:8800", "http://localhost:8801", "http://localhost:8802")
