@@ -51,7 +51,7 @@ class IntKeyLoadTest(object):
         return len(self.transactions)
 
     def _wait_for_transaction_commits(self):
-        to = TimeOut(120)
+        to = TimeOut(240)
         txnCnt = len(self.transactions)
         with Progress("Waiting for transactions to commit") as p:
             while not to() and txnCnt > 0:
