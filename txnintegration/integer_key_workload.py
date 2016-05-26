@@ -14,9 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import random
-import traceback
-import unittest
-import os
+# import traceback
+# import unittest
+# import os
 import time
 from twisted.web import http
 
@@ -25,8 +25,8 @@ from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.integer_key_state import IntegerKeyState
-from txnintegration.validator_network_manager import ValidatorNetworkManager, \
-    defaultValidatorConfig
+# from txnintegration.validator_network_manager \
+#     import ValidatorNetworkManager, defaultValidatorConfig
 
 # ENABLE_INTEGRATION_TESTS = False
 # if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
@@ -115,7 +115,7 @@ class IntKeyLoadTest(object):
     def run(self, numkeys, rounds=1, txintv=0):
         self.state.fetch()
 
-        keys = self.state.State.keys()
+        #  keys = self.state.State.keys()
 
         print "Running {0} rounds for {1} keys " \
               "with {2} second inter-transaction time" \
@@ -166,7 +166,7 @@ class IntKeyLoadTest(object):
     def ledgerstate(self):
         self.state.fetch()
 
-        keys = self.state.State.keys()
+        # keys = self.state.State.keys()
 
         print "state: "
         for k, v in self.state.State.iteritems():
@@ -250,9 +250,8 @@ def main():
     portnum = opts.validator_port
 
     for i in range(0, vcount):
-        url = baseurl + ":" + str(portnum)
+        url = baseurl + ":" + str(portnum + i)
         urls.append(url)
-        portnum += 1
 
     print "validator urls: ", urls
 

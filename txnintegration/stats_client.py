@@ -1,13 +1,14 @@
-from pprint import pformat
+# from pprint import pformat
 import json
 
 from twisted.internet import task
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
+# from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.web.client import Agent
+from twisted.web.client import readBody
 from twisted.web.http_headers import Headers
-from twisted.web.client import Agent, readBody
+
 
 import time
 
@@ -20,7 +21,7 @@ if os.name == "posix":
     import curses
 
 
-class ConsolePrint:
+class ConsolePrint(object):
     def __init__(self):
         self.use_curses = True if os.name == "posix" else False
         self.start = True
@@ -37,14 +38,14 @@ class ConsolePrint:
             if self.start:
                 self.scrn.erase()
                 self.start = False
-            he, wi = self.scrn.getmaxyx()
-            self.scrn.addstr(printstring[:wi - 1] + "\n", attr)
+            hw = self.scrn.getmaxyx()
+            self.scrn.addstr(printstring[:hw[1] - 1] + "\n", attr)
             if finish:
                 self.scrn.refresh()
                 self.start = True
         # todo: limit number of lines printed to screen height
         else:
-            print(printstring)
+            print printstring
 
     def cpstop(self):
         if self.use_curses:
@@ -64,16 +65,16 @@ class DataReader(Protocol):
     def dataReceived(self, somebytes):
         if self.remaining:
             display = somebytes[:self.remaining]
-            print 'Some data received:'
+            print 'body data:'
             print display
             self.remaining -= len(display)
 
     def connectionLost(self, reason):
-        print 'Finished receiving body:', reason.getErrorMessage()
+        print 'body data complete:', reason.getErrorMessage()
         self.finished.callback(None)
 
 
-class StatsClient():
+class StatsClient(object):
     def __init__(self, val_id, baseurl, portnum):
         # self.delay=delay
         self.id = val_id
@@ -96,6 +97,7 @@ class StatsClient():
         self.request_complete = 0.0
 
     def request(self):
+        # type: () -> StatsClient
         self.request_start = time.clock()
         d = agent.request(
             'GET',
@@ -136,8 +138,9 @@ class StatsClient():
         self.vsm.update_stats(self.ledgerstats, True, self.request_start,
                               self.request_complete)
 
-    def handleerror(self, f):
-        # print "validator_client errback exception: %s" % (f.getTraceback(),)
+    def handleerror(self, failed):
+        # print "validator_client errback exception: %s"\
+        #       % (failed.getTraceback(),)
         # todo: better handle unresponsive validator node
         self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
@@ -150,7 +153,7 @@ class StatsClient():
         reactor.stop()
 
 
-class ValidatorStats:
+class ValidatorStats(object):
     def __init__(self):
         self.blocks_claimed = 0
         self.blocks_committed = 0
@@ -164,7 +167,7 @@ class ValidatorStats:
         self.msgs_acked = 0
 
 
-class ValidatorStatsManager():
+class ValidatorStatsManager(object):
     def __init__(self):
         self.vstats = ValidatorStats()
         self.vstatslast = ValidatorStats()
@@ -203,7 +206,7 @@ class ValidatorStatsManager():
                     jsonstats["packet"]["MessagesAcked"]
             except KeyError as ke:
                 print "invalid key in vsm.update_stats()", ke
-                "todo: figure out how to pass this to proper deferred errback"
+                # todo: figure out how to pass this to proper deferred errback
 
             self.active = True
             self.request_time = starttime
@@ -214,7 +217,7 @@ class ValidatorStatsManager():
             self.response_time = endtime - starttime
 
 
-class SystemStats:
+class SystemStats(object):
     def __init__(self):
         self.starttime = int(time.time())
         self.runtime = 0
@@ -252,7 +255,7 @@ class SystemStats:
         self.msgs_min_acked = 0
 
 
-class SystemStatsManager():
+class SystemStatsManager(object):
     def __init__(self):
         self.cp = ConsolePrint()
         self.ss = SystemStats()
@@ -323,48 +326,75 @@ class SystemStatsManager():
         self.ss.runtime = int(time.time()) - self.ss.starttime
 
     def print_stats(self):
-        self.cp.cpprint(
-            '    Validators: {0:8d} known,         {1:8d} responding,      {2:8f} avg time(s),    {3:8f} max time(s),    {4:8d} run time(s)'  # noqa
-                .format(self.ss.known_validators, self.ss.active_validators,
-                        self.ss.avg_client_time, self.ss.max_client_time,
-                        self.ss.runtime), False)
-        self.cp.cpprint(
-            '        Blocks: {0:8d} max committed, {1:8d} min commited,    {2:8d} max pending,    {3:8d} min pending,    {4:8d} max claimed,      {5:8d} min claimed'  # noqa
-                .format(self.ss.blocks_max_committed,
-                        self.ss.blocks_min_committed,
-                        self.ss.blocks_max_pending,
-                        self.ss.blocks_min_pending,
-                        self.ss.blocks_max_claimed,
-                        self.ss.blocks_min_claimed), False)
-        self.cp.cpprint(
-            '  Transactions: {0:8d} max committed, {1:8d} min committed,   {2:8d} max pending,    {2:8d} min pending,    {3:8d} rate (t/s)'  # noqa
-                .format(self.ss.txns_max_committed, self.ss.txns_min_committed,
-                        self.ss.txns_max_pending, self.ss.txns_min_pending,
-                        0), False)
-        self.cp.cpprint(
-            ' Packet totals: {0:8d} max dropped,   {1:8d} min dropped      {2:8d} max duplicated, {3:8d} min duplicated, {4:8d} max aks received, {5:8d} min aks received'  # noqa
-                .format(self.ss.packets_max_dropped,
-                        self.ss.packets_min_dropped,
-                        self.ss.packets_max_duplicates,
-                        self.ss.packets_min_duplicates,
-                        self.ss.packets_max_acks_received,
-                        self.ss.packets_min_acks_received), False)
-        self.cp.cpprint(
-            'Message totals: {0:8d} max handled,   {1:8d} min handled,     {2:8d} max acked,      {3:8d} min acked'  # noqa
-                .format(self.ss.msgs_max_handled, self.ss.msgs_min_handled,
-                        self.ss.msgs_max_acked, self.ss.msgs_min_acked), False)
+        self.cp.cpprint('    Validators: {0:8d} known,'
+                        '         {1:8d} responding,'
+                        '      {2:8f} avg time(s),'
+                        '    {3:8f} max time(s),'
+                        '    {4:8d} run time(s)'
+                        .format(self.ss.known_validators,
+                                self.ss.active_validators,
+                                self.ss.avg_client_time,
+                                self.ss.max_client_time,
+                                self.ss.runtime), False)
+        self.cp.cpprint('        Blocks: {0:8d} max committed,'
+                        ' {1:8d} min committed,'
+                        '    {2:8d} max pending,'
+                        '    {3:8d} min pending,'
+                        '    {4:8d} max claimed,'
+                        '      {5:8d} min claimed'
+                        .format(self.ss.blocks_max_committed,
+                                self.ss.blocks_min_committed,
+                                self.ss.blocks_max_pending,
+                                self.ss.blocks_min_pending,
+                                self.ss.blocks_max_claimed,
+                                self.ss.blocks_min_claimed), False)
+        self.cp.cpprint('  Transactions: {0:8d} max committed,'
+                        ' {1:8d} min committed,'
+                        '   {2:8d} max pending,'
+                        '    {3:8d} min pending,'
+                        '    {4:8d} rate (t/s)'
+                        .format(self.ss.txns_max_committed,
+                                self.ss.txns_min_committed,
+                                self.ss.txns_max_pending,
+                                self.ss.txns_min_pending,
+                                0), False)
+        self.cp.cpprint(' Packet totals: {0:8d} max dropped,'
+                        '   {1:8d} min dropped,'
+                        '     {2:8d} max duplicated,'
+                        ' {3:8d} min duplicated,'
+                        ' {4:8d} max aks received,'
+                        ' {5:8d} min aks received'
+                        .format(self.ss.packets_max_dropped,
+                                self.ss.packets_min_dropped,
+                                self.ss.packets_max_duplicates,
+                                self.ss.packets_min_duplicates,
+                                self.ss.packets_max_acks_received,
+                                self.ss.packets_min_acks_received), False)
+        self.cp.cpprint('Message totals: {0:8d} max handled,'
+                        '   {1:8d} min handled,'
+                        '     {2:8d} max acked,'
+                        '      {3:8d} min acked'
+                        .format(self.ss.msgs_max_handled,
+                                self.ss.msgs_min_handled,
+                                self.ss.msgs_max_acked,
+                                self.ss.msgs_min_acked), False)
 
-        self.cp.cpprint(
-            '   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS      TXNS     TXNS  VAL                VAL',  # noqa
-            reverse=True)
-        self.cp.cpprint(
-            '    ID   STATE      TIME   CLAIMED COMMITTED  PENDING COMMITTED  PENDING  NAME               URL',  # noqa
-            reverse=True)
-        # self.cp.cpprint('{0:6d}  {1:6}  {1:8d}  {2:8d}  {3:8d} {4:8d}  {5:8d} {6:8d}  {7:16}   {8:16}'.format(0, 0, 0, 0, 0, 0, 0, "barney_83_exiter"[:16], "ragmuffin1234//roofuscalamzoo//3/4/5"), False)  # noqa
+        self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
+                        '      TXNS     TXNS  VAL                VAL',
+                        reverse=True)
+        self.cp.cpprint('    ID   STATE      TIME   CLAIMED COMMITTED  PENDING'
+                        ' COMMITTED  PENDING  NAME               URL',
+                        reverse=True)
+
+        # self.cp.cpprint('{0:6d}  {1:6}  {1:8d}  {2:8d}  {3:8d} {4:8d}  {5:8d}
+        #  {6:8d}  {7:16}   {8:16}'.format(0, 0, 0, 0, 0, 0, 0,
+        # "barney_83_exiter"[:16],
+        # "ragmuffin1234//roofuscalamzoo//3/4/5"), False)
 
         for c in clients:
             if c.responding:
-                self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} {5:8d}  {6:8d} {7:8d}  {8:16}   {9:16}'  # noqa
+                self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} '
+                                '{5:8d}  {6:8d} {7:8d}  {8:16}   {9:16}'
                                 .format(c.id, c.validator_state,
                                         c.response_time,
                                         c.vsm.vstats.blocks_claimed,
@@ -374,10 +404,10 @@ class SystemStatsManager():
                                         c.vsm.vstats.txns_pending,
                                         c.name[:16], c.url), False)
             else:
-                self.cp.cpprint(
-                    '{0:6d}  {1:6}                                                            {2:16}   {3:16}'  # noqa
-                        .format(c.id, c.validator_state,
-                                c.name[:16], c.url), False)
+                self.cp.cpprint('{0:6d}  {1:6}                               '
+                                '                             {2:16}   {3:16}'
+                                .format(c.id, c.validator_state,
+                                        c.name[:16], c.url), False)
 
         self.cp.cpprint("", True)
 
@@ -392,14 +422,14 @@ def handleshutdown(ignored):
 
 
 def dowork():
-    # d = None
+
     for c in clients:
-        d = c.request()
-        # clients.append(c)
+        c.request()
 
 
 def workloop():
     global loopcounter
+    global loop
 
     if loopcounter < looptimes:
         loopcounter += 1
@@ -409,8 +439,8 @@ def workloop():
         dowork()
         return
 
-    if workloopfail:
-        raise Exception('Failed during work loop')
+    # if workloopfail:
+    #     raise Exception('Failed during work loop')
 
     loop.stop()
     return
@@ -466,7 +496,17 @@ def configure(opts):
     # sys.exit(1)
 
 
+loopcounter = 0
+looptimes = 1000000  # run for a really long time
+clients = []
+agent = Agent(reactor)
+workloopfail = False
+ssm = SystemStatsManager()
+loop = None
+
+
 def main():
+
     try:
         opts = parse_args(sys.argv[1:])
     except:
@@ -474,12 +514,6 @@ def main():
         sys.exit(1)
 
     configure(opts)
-
-    global agent
-    agent = Agent(reactor)
-
-    global clients
-    clients = []
 
     validators = opts.validator_count
     portnum = opts.validator_port
@@ -490,17 +524,6 @@ def main():
         c.name = "validator_{0}".format(i)
         clients.append(c)
         portnum += 1
-
-    global looptimes
-    looptimes = 1000000  # run for a really long time
-
-    global loopcounter
-    loopcounter = 0
-
-    workloopfail = False
-
-    global ssm
-    ssm = SystemStatsManager()
 
     loop = task.LoopingCall(workloop)
 
