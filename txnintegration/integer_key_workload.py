@@ -32,10 +32,17 @@ from txnintegration.validator_network_manager import ValidatorNetworkManager, \
 # if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 #     ENABLE_INTEGRATION_TESTS = True
 
+import argparse
+import sys
+
 
 class IntKeyLoadTest(object):
     def __init__(self):
         print "start inkeyloadtest"
+        self.localState = {}
+        self.transactions = []
+        self.clients = []
+        self.state = None
         # pass
 
     def _get_client(self):
@@ -53,21 +60,21 @@ class IntKeyLoadTest(object):
 
     def _wait_for_transaction_commits(self):
         to = TimeOut(900)
-        txnCnt = len(self.transactions)
-        with Progress("Waiting for {0} transactions to commit".format(txnCnt)) as p:
-            while not to() and txnCnt > 0:
+        txncnt = len(self.transactions)
+        with Progress("Waiting for {0} transactions to commit".format(txncnt)) as p:
+            while not to() and txncnt > 0:
                 p.step()
                 time.sleep(1)
                 self._has_uncommitted_transactions()
-                txnCnt = len(self.transactions)
+                txncnt = len(self.transactions)
 
-        if txnCnt != 0:
+        if txncnt != 0:
             if len(self.transactions) != 0:
                 print "Uncommitted transactions: ", self.transactions
             raise Exception("{} transactions failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
+                txncnt, to.WaitTime))
 
-    def setup(self, urls, numKeys):
+    def setup(self, urls, numkeys):
         self.localState = {}
         self.transactions = []
         self.clients = []
@@ -87,9 +94,9 @@ class IntKeyLoadTest(object):
             self.localState[k] = v
 
         with Progress("Populating initial key values") as p:
-            txncount=0
+            txncount = 0
             starttime = time.clock()
-            for n in range(1, numKeys + 1):
+            for n in range(1, numkeys + 1):
                 n = str(n)
                 if n not in keys:
                     c = self._get_client()
@@ -99,7 +106,7 @@ class IntKeyLoadTest(object):
                     if txnid is None:
                         raise Exception("Failed to set {} to {}".format(n, v))
                     self.transactions.append(txnid)
-                    txncount+=1
+                    txncount += 1
             self.txnrate(starttime, txncount)
         self._wait_for_transaction_commits()
 
@@ -108,7 +115,7 @@ class IntKeyLoadTest(object):
 
         keys = self.state.State.keys()
 
-        print "Running {0} rounds for {1} keys with {2} second inter-transaction time"\
+        print "Running {0} rounds for {1} keys with {2} second inter-transaction time" \
             .format(rounds, numkeys, txintv)
 
         for r in range(0, rounds):
@@ -117,8 +124,8 @@ class IntKeyLoadTest(object):
             print "Round {}".format(r)
             # for k in keys:
             starttime = time.clock()
-            for k in range(1, numkeys+1):
-                k=str(k)
+            for k in range(1, numkeys + 1):
+                k = str(k)
                 c = self._get_client()
                 self.localState[k] += 2
                 txnid = c.inc(k, 2)
@@ -140,7 +147,7 @@ class IntKeyLoadTest(object):
                             k, self.localState[k]))
                 self.transactions.append(txnid)
                 time.sleep(txintv)
-            self.txnrate(starttime, 2*numkeys)
+            self.txnrate(starttime, 2 * numkeys)
             self._wait_for_transaction_commits()
 
     def validate(self):
@@ -163,27 +170,100 @@ class IntKeyLoadTest(object):
             print k, v
         print
 
-    def txnrate(selfself, starttime, numtxns):
-        if numtxns>0:
+    def txnrate(self, starttime, numtxns):
+        if numtxns > 0:
             endtime = time.clock()
             totaltime = endtime - starttime
             avgrate = (numtxns / totaltime)
             print "Sent {0} transaction in {1} seconds averaging {2} t/s" \
                 .format(numtxns, totaltime, avgrate)
 
-print "Testing transaction load."
-urls = ("http://localhost:8800", "http://localhost:8801", "http://localhost:8802")
 
-keys = 10
-rounds = 2
-txn_intv = 0.0
+def parse_args(args):
+    parser = argparse.ArgumentParser()
 
-test = IntKeyLoadTest()
-test.setup(urls, keys)
-test.validate()
-test.run(keys, rounds, txn_intv)
-test.validate()
-# test.ledgerstate()
+    parser.add_argument('--validator-count',
+                        metavar="",
+                        help='number of validators to monitor (default: %(default)s)',
+                        default=3,
+                        type=int)
+    parser.add_argument('--validator-url',
+                        metavar="",
+                        help='Base validator url (default: %(default)s)',
+                        default="http://localhost")
+    parser.add_argument('--validator-port',
+                        metavar="",
+                        help='Base validator http port (default: %(default)s)',
+                        default=8800,
+                        type=int)
+    parser.add_argument('--keys',
+                        metavar="",
+                        help='Number of key to create/exercise (default: %(default)s)',
+                        default=10,
+                        type=int)
+    parser.add_argument('--rounds',
+                        metavar="",
+                        help='Number of rounds to execute (default: %(default)s)',
+                        default=2,
+                        type=int)
+    parser.add_argument('--txn-intv',
+                        metavar="",
+                        help='Time between transactions (mS) (default: %(default)s)',
+                        default=0,
+                        type=int)
+
+    return parser.parse_args(args)
 
 
+def configure(opts):
+    # scriptdir = os.path.dirname(os.path.realpath(__file__))
 
+    print "     validator count: ", opts.validator_count
+    print "  validator base url: ", opts.validator_url
+    print " validator base port: ", opts.validator_port
+    print "                keys: ", opts.keys
+    print "              rounds: ", opts.rounds
+    print "transaction interval: ", opts.txn_intv
+    # sys.exit(1)
+
+
+def main():
+    try:
+        opts = parse_args(sys.argv[1:])
+    except:
+        # argparse reports details on the parameter error.
+        sys.exit(1)
+
+    configure(opts)
+
+    # urls = ("http://localhost:8800", "http://localhost:8801", "http://localhost:8802")
+
+    urls = []
+
+    vcount = opts.validator_count
+    baseurl = opts.validator_url
+    portnum = opts.validator_port
+
+    for i in range(0, vcount):
+        url = baseurl + ":" + str(portnum)
+        urls.append(url)
+        portnum += 1
+
+    print "validator urls: ", urls
+
+    keys = opts.keys
+    rounds = opts.rounds
+    txn_intv = opts.txn_intv
+
+    print "Testing transaction load."
+
+    test = IntKeyLoadTest()
+    test.setup(urls, keys)
+    test.validate()
+    test.run(keys, rounds, txn_intv)
+    test.validate()
+    # test.ledgerstate()
+
+
+if __name__ == "__main__":
+    main()
