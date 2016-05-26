@@ -113,7 +113,8 @@ class StatsClient():
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
         # print 'delay:', self.delay
-        # print 'Response version:', response.version, 'code:', response.code, 'phrase:', response.phrase
+        # print 'Response version:', response.version, 'code:', response.code,
+        # 'phrase:', response.phrase
         # print 'Response headers:'
         # print pformat(list(response.headers.getAllRawHeaders()))
         # if response to be read in entirety
@@ -132,7 +133,8 @@ class StatsClient():
         # print body [:80]
         self.ledgerstats = json.loads(body)
         # print "Blocks claimed: ", self.ledgerstats["ledger"]["BlocksClaimed"]
-        self.vsm.update_stats(self.ledgerstats, True, self.request_start, self.request_complete)
+        self.vsm.update_stats(self.ledgerstats, True, self.request_start,
+                              self.request_complete)
 
     def handleerror(self, f):
         # print "validator_client errback exception: %s" % (f.getTraceback(),)
@@ -179,18 +181,28 @@ class ValidatorStatsManager():
             # self.vstatslast = deepcopy(self.vstats)
 
             try:
-                self.vstats.blocks_claimed = jsonstats["ledger"]["BlocksClaimed"]
-                self.vstats.blocks_committed = jsonstats["ledger"]["CommittedBlockCount"]
-                self.vstats.blocks_pending = jsonstats["ledger"]["PendingBlockCount"]
-                self.vstats.txns_committed = jsonstats["ledger"]["CommittedTxnCount"]
-                self.vstats.txns_pending = jsonstats["ledger"]["PendingTxnCount"]
-                self.vstats.packets_dropped = jsonstats["packet"]["DroppedPackets"]
-                self.vstats.packets_duplicates = jsonstats["packet"]["DuplicatePackets"]
-                self.vstats.packets_acks_received = jsonstats["packet"]["AcksReceived"]
-                self.vstats.msgs_handled = jsonstats["packet"]["MessagesHandled"]
-                self.vstats.msgs_acked = jsonstats["packet"]["MessagesAcked"]
+                self.vstats.blocks_claimed = \
+                    jsonstats["ledger"]["BlocksClaimed"]
+                self.vstats.blocks_committed = \
+                    jsonstats["ledger"]["CommittedBlockCount"]
+                self.vstats.blocks_pending = \
+                    jsonstats["ledger"]["PendingBlockCount"]
+                self.vstats.txns_committed = \
+                    jsonstats["ledger"]["CommittedTxnCount"]
+                self.vstats.txns_pending = \
+                    jsonstats["ledger"]["PendingTxnCount"]
+                self.vstats.packets_dropped = \
+                    jsonstats["packet"]["DroppedPackets"]
+                self.vstats.packets_duplicates = \
+                    jsonstats["packet"]["DuplicatePackets"]
+                self.vstats.packets_acks_received = \
+                    jsonstats["packet"]["AcksReceived"]
+                self.vstats.msgs_handled = \
+                    jsonstats["packet"]["MessagesHandled"]
+                self.vstats.msgs_acked = \
+                    jsonstats["packet"]["MessagesAcked"]
             except KeyError as ke:
-                print "bogus key in validation_stats_manager.updata_stats: ", ke
+                print "invalid key in vsm.update_stats()", ke
                 "todo: figure out how to pass this to proper deferred errback"
 
             self.active = True
@@ -275,7 +287,8 @@ class SystemStatsManager():
                 txns_pending.append(c.vsm.vstats.txns_pending)
                 packets_dropped.append(c.vsm.vstats.packets_dropped)
                 packets_duplicates.append(c.vsm.vstats.packets_duplicates)
-                packets_acks_received.append(c.vsm.vstats.packets_acks_received)
+                packets_acks_received\
+                    .append(c.vsm.vstats.packets_acks_received)
                 msgs_handled.append(c.vsm.vstats.msgs_handled)
                 msgs_acked.append(c.vsm.vstats.msgs_acked)
 
@@ -311,49 +324,58 @@ class SystemStatsManager():
 
     def print_stats(self):
         self.cp.cpprint(
-            '    Validators: {0:8d} known,         {1:8d} responding,      {2:8f} avg time(s),    {3:8f} max time(s),    {4:8d} run time(s)'
+            '    Validators: {0:8d} known,         {1:8d} responding,      {2:8f} avg time(s),    {3:8f} max time(s),    {4:8d} run time(s)'  # noqa
                 .format(self.ss.known_validators, self.ss.active_validators,
                         self.ss.avg_client_time, self.ss.max_client_time,
                         self.ss.runtime), False)
         self.cp.cpprint(
-            '        Blocks: {0:8d} max committed, {1:8d} min commited,    {2:8d} max pending,    {3:8d} min pending,    {4:8d} max claimed,      {5:8d} min claimed'
-                .format(self.ss.blocks_max_committed, self.ss.blocks_min_committed,
-                        self.ss.blocks_max_pending, self.ss.blocks_min_pending,
-                        self.ss.blocks_max_claimed, self.ss.blocks_min_claimed), False)
+            '        Blocks: {0:8d} max committed, {1:8d} min commited,    {2:8d} max pending,    {3:8d} min pending,    {4:8d} max claimed,      {5:8d} min claimed'  # noqa
+                .format(self.ss.blocks_max_committed,
+                        self.ss.blocks_min_committed,
+                        self.ss.blocks_max_pending,
+                        self.ss.blocks_min_pending,
+                        self.ss.blocks_max_claimed,
+                        self.ss.blocks_min_claimed), False)
         self.cp.cpprint(
-            '  Transactions: {0:8d} max committed, {1:8d} min committed,   {2:8d} max pending,    {2:8d} min pending,    {3:8d} rate (t/s)'
+            '  Transactions: {0:8d} max committed, {1:8d} min committed,   {2:8d} max pending,    {2:8d} min pending,    {3:8d} rate (t/s)'  # noqa
                 .format(self.ss.txns_max_committed, self.ss.txns_min_committed,
                         self.ss.txns_max_pending, self.ss.txns_min_pending,
                         0), False)
         self.cp.cpprint(
-            ' Packet totals: {0:8d} max dropped,   {1:8d} min dropped      {2:8d} max duplicated, {3:8d} min duplicated, {4:8d} max aks received, {5:8d} min aks received'
-                .format(self.ss.packets_max_dropped, self.ss.packets_min_dropped,
-                        self.ss.packets_max_duplicates, self.ss.packets_min_duplicates,
-                        self.ss.packets_max_acks_received, self.ss.packets_min_acks_received), False)
+            ' Packet totals: {0:8d} max dropped,   {1:8d} min dropped      {2:8d} max duplicated, {3:8d} min duplicated, {4:8d} max aks received, {5:8d} min aks received'  # noqa
+                .format(self.ss.packets_max_dropped,
+                        self.ss.packets_min_dropped,
+                        self.ss.packets_max_duplicates,
+                        self.ss.packets_min_duplicates,
+                        self.ss.packets_max_acks_received,
+                        self.ss.packets_min_acks_received), False)
         self.cp.cpprint(
-            'Message totals: {0:8d} max handled,   {1:8d} min handled,     {2:8d} max acked,      {3:8d} min acked'
+            'Message totals: {0:8d} max handled,   {1:8d} min handled,     {2:8d} max acked,      {3:8d} min acked'  # noqa
                 .format(self.ss.msgs_max_handled, self.ss.msgs_min_handled,
                         self.ss.msgs_max_acked, self.ss.msgs_min_acked), False)
 
         self.cp.cpprint(
-            '   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS      TXNS     TXNS  VAL                VAL',
+            '   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS      TXNS     TXNS  VAL                VAL',  # noqa
             reverse=True)
         self.cp.cpprint(
-            '    ID   STATE      TIME   CLAIMED COMMITTED  PENDING COMMITTED  PENDING  NAME               URL',
+            '    ID   STATE      TIME   CLAIMED COMMITTED  PENDING COMMITTED  PENDING  NAME               URL',  # noqa
             reverse=True)
-        # self.cp.cpprint('{0:6d}  {1:6}  {1:8d}  {2:8d}  {3:8d} {4:8d}  {5:8d} {6:8d}  {7:16}   {8:16}'.format(0, 0, 0, 0, 0, 0, 0, "barney_83_exiter"[:16], "ragmuffin1234//roofuscalamzoo//3/4/5"), False)
+        # self.cp.cpprint('{0:6d}  {1:6}  {1:8d}  {2:8d}  {3:8d} {4:8d}  {5:8d} {6:8d}  {7:16}   {8:16}'.format(0, 0, 0, 0, 0, 0, 0, "barney_83_exiter"[:16], "ragmuffin1234//roofuscalamzoo//3/4/5"), False)  # noqa
 
         for c in clients:
             if c.responding:
-                self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} {5:8d}  {6:8d} {7:8d}  {8:16}   {9:16}'
-                                .format(c.id, c.validator_state, c.response_time,
-                                        c.vsm.vstats.blocks_claimed, c.vsm.vstats.blocks_committed,
+                self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} {5:8d}  {6:8d} {7:8d}  {8:16}   {9:16}'  # noqa
+                                .format(c.id, c.validator_state,
+                                        c.response_time,
+                                        c.vsm.vstats.blocks_claimed,
+                                        c.vsm.vstats.blocks_committed,
                                         c.vsm.vstats.blocks_pending,
-                                        c.vsm.vstats.txns_committed, c.vsm.vstats.txns_pending,
+                                        c.vsm.vstats.txns_committed,
+                                        c.vsm.vstats.txns_pending,
                                         c.name[:16], c.url), False)
             else:
                 self.cp.cpprint(
-                    '{0:6d}  {1:6}                                                            {2:16}   {3:16}'
+                    '{0:6d}  {1:6}                                                            {2:16}   {3:16}'  # noqa
                         .format(c.id, c.validator_state,
                                 c.name[:16], c.url), False)
 
@@ -410,25 +432,30 @@ def parse_args(args):
     # use system or dev paths...
     parser.add_argument('--validator-count',
                         metavar="",
-                        help='number of validators to monitor (default: %(default)s)',
+                        help='number of validators to monitor '
+                             '(default: %(default)s)',
                         default=3,
                         type=int)
     parser.add_argument('--validator-url',
                         metavar="",
-                        help='Base validator url (default: %(default)s)',
+                        help='Base validator url '
+                             '(default: %(default)s)',
                         default="http://localhost")
     parser.add_argument('--validator-port',
                         metavar="",
-                        help='Base validator http port (default: %(default)s)',
+                        help='Base validator http port '
+                             '(default: %(default)s)',
                         default=8800,
                         type=int)
     parser.add_argument('--sample-time',
                         metavar="",
-                        help='Number of validators to launch (default: %(default)s)',
+                        help='Number of validators to launch '
+                             '(default: %(default)s)',
                         default=3,
                         type=int)
 
     return parser.parse_args(args)
+
 
 def configure(opts):
     # scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -437,6 +464,7 @@ def configure(opts):
     print " validator base url: ", opts.validator_url
     print "validator base port: ", opts.validator_port
     # sys.exit(1)
+
 
 def main():
     try:

@@ -61,7 +61,9 @@ class IntKeyLoadTest(object):
     def _wait_for_transaction_commits(self):
         to = TimeOut(900)
         txncnt = len(self.transactions)
-        with Progress("Waiting for {0} transactions to commit".format(txncnt)) as p:
+
+        with Progress("Waiting for {0} transactions to commit"
+                              .format(txncnt)) as p:  # noqa
             while not to() and txncnt > 0:
                 p.step()
                 time.sleep(1)
@@ -115,7 +117,8 @@ class IntKeyLoadTest(object):
 
         keys = self.state.State.keys()
 
-        print "Running {0} rounds for {1} keys with {2} second inter-transaction time" \
+        print "Running {0} rounds for {1} keys " \
+              "with {2} second inter-transaction time" \
             .format(rounds, numkeys, txintv)
 
         for r in range(0, rounds):
@@ -184,7 +187,7 @@ def parse_args(args):
 
     parser.add_argument('--validator-count',
                         metavar="",
-                        help='number of validators to monitor (default: %(default)s)',
+                        help='Validators to monitor (default: %(default)s)',
                         default=3,
                         type=int)
     parser.add_argument('--validator-url',
@@ -198,17 +201,17 @@ def parse_args(args):
                         type=int)
     parser.add_argument('--keys',
                         metavar="",
-                        help='Number of key to create/exercise (default: %(default)s)',
+                        help='Keys to create/exercise (default: %(default)s)',
                         default=10,
                         type=int)
     parser.add_argument('--rounds',
                         metavar="",
-                        help='Number of rounds to execute (default: %(default)s)',
+                        help='Rounds to execute (default: %(default)s)',
                         default=2,
                         type=int)
     parser.add_argument('--txn-intv',
                         metavar="",
-                        help='Time between transactions (mS) (default: %(default)s)',
+                        help='Inter-tx time (mS) (default: %(default)s)',
                         default=0,
                         type=int)
 
@@ -236,7 +239,9 @@ def main():
 
     configure(opts)
 
-    # urls = ("http://localhost:8800", "http://localhost:8801", "http://localhost:8802")
+    # urls = ("http://localhost:8800",
+    #         "http://localhost:8801",
+    #         "http://localhost:8802")
 
     urls = []
 
