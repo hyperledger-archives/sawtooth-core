@@ -141,8 +141,7 @@ class Gossip(object, DatagramProtocol):
         try:
             self.ProcessIncomingMessages = True
             self.Listener = reactor.listenUDP(self.LocalNode.NetPort,
-                                              self,
-                                              interface=self.LocalNode.NetHost)
+                                              self)
             reactor.callInThread(self._dispatcher)
 
         except:
