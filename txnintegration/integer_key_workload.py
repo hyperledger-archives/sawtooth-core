@@ -174,8 +174,8 @@ class IntKeyLoadTest(object):
 print "Testing transaction load."
 urls = ("http://localhost:8800", "http://localhost:8801", "http://localhost:8802")
 
-keys = 100
-rounds = 5
+keys = 10
+rounds = 2
 txn_intv = 0.0
 
 test = IntKeyLoadTest()
