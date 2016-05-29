@@ -85,6 +85,16 @@ def parse_configuration_file(filename):
     return json.loads(text)
 
 
+def get_config_directory(configs):
+    agg = AggregateConfig(configs=configs)
+
+    for key in agg.keys():
+        if key not in ['CurrencyHome', 'ConfigDirectory']:
+            del agg[key]
+
+    return agg.resolve({'home': 'CurrencyHome'})['ConfigDirectory']
+
+
 def get_validator_configuration(config_files,
                                 options_config,
                                 os_name=os.name,
@@ -93,9 +103,8 @@ def get_validator_configuration(config_files,
 
     default_config = ValidatorDefaultConfig(os_name=os_name)
 
-    conf_dir = AggregateConfig(
-        configs=[default_config, env_config, options_config]).resolve(
-            {'home': 'CurrencyHome'})['ConfigDirectory']
+    conf_dir = get_config_directory(
+        [default_config, env_config, options_config])
 
     # Determine the configuration file search path
     search_path = [conf_dir, '.', os.path.join(
