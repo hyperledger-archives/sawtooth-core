@@ -127,7 +127,8 @@ def get_validator_configuration(config_files,
         'conf_dir': 'ConfigDirectory',
         'data_dir': 'DataDirectory',
         'log_dir': 'LogDirectory',
-        'key_dir': 'KeyDirectory'
+        'key_dir': 'KeyDirectory',
+        'run_dir': 'RunDirectory'
     })
     return resolved
 
@@ -141,17 +142,22 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
             self['LogDirectory'] = '{home}/logs'
             self['DataDirectory'] = '{home}/data'
             self['KeyDirectory'] = '{home}/keys'
+            self['RunDirectory'] = '{home}/run'
+            self['PidFile'] = '{run_dir}/{node}.pid'
         elif os_name == 'nt':
             base_dir = 'C:\\Program Files (x86)\\Intel\\sawtooth-validator\\'
             self['ConfigDirectory'] = '{0}conf'.format(base_dir)
             self['LogDirectory'] = '{0}logs'.format(base_dir)
             self['DataDirectory'] = '{0}data'.format(base_dir)
             self['KeyDirectory'] = '{0}conf\\keys'.format(base_dir)
+            self['RunDirectory'] = '{0}\\run'.format(base_dir)
         else:
             self['ConfigDirectory'] = '/etc/sawtooth-validator'
             self['LogDirectory'] = '/var/log/sawtooth-validator'
             self['DataDirectory'] = '/var/lib/sawtooth-validator'
             self['KeyDirectory'] = '/etc/sawtooth-validator/keys'
+            self['RunDirectory'] = '/var/run/sawtooth-validator'
+            self['PidFile'] = '{run_dir}/{node}.pid'
 
         self['BaseDirectory'] = os.path.abspath(os.path.dirname(__file__))
         self['CurrencyHost'] = "localhost"
@@ -164,5 +170,6 @@ class CurrencyEnvConfig(sawtooth.config.EnvConfig):
             ('CURRENCY_CONF_DIR', 'ConfigDirectory'),
             ('CURRENCY_LOG_DIR', 'LogDirectory'),
             ('CURRENCY_DATA_DIR', 'DataDirectory'),
+            ('CURRENCY_RUN_DIR', 'RunDirectory'),
             ('HOSTNAME', 'CurrencyHost')
         ])
