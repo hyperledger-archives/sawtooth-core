@@ -13,12 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 import os
 import re
 import sys
 import warnings
-
-from gossip.common import json2dict
 
 import sawtooth.config
 from sawtooth.config import AggregateConfig
@@ -83,7 +82,7 @@ def parse_configuration_file(filename):
     for line in lines:
         text += re.sub(cpattern, '', line) + ' '
 
-    return json2dict(text)
+    return json.loads(text)
 
 
 def get_validator_configuration(config_files,
