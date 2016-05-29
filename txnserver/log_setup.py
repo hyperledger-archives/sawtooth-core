@@ -42,7 +42,7 @@ def create_file_handler(logfile, loglevel):
 
         flog = logging.FileHandler(logfile)
     flog.setFormatter(logging.Formatter(
-        '[%(asctime)s, %(levelno)d, %(module)s] %(message)s', "%H:%M:%S"))
+        '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
     flog.setLevel(loglevel)
 
     return flog
