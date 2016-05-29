@@ -85,7 +85,7 @@ class Config(dict):
 
         cfg = {}
         for key, value in self.iteritems():
-            if isinstance(value, str):
+            if isinstance(value, basestring):
                 for _ in xrange(self.substitution_max_iterations):
                     try:
                         new_value = value.format(**pathsubs)
