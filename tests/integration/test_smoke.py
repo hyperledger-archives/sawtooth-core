@@ -85,17 +85,25 @@ class IntKeyLoadTest(object):
             if self.clients == []:
                 return
 
+        # add check for if a state already exists
+        print "Checking for pre-existing state"
+        self.state.fetch()
+        keys = self.state.State.keys()
+        for k, v in self.state.State.iteritems():
+            self.localState[k] = v
+
         with Progress("Creating initial key values") as p:
             for n in range(1, numKeys + 1):
                 n = str(n)
-                c = self._get_client()
-                v = random.randint(5, 1000)
-                self.localState[n] = v
-                txnid = c.set(n, v, txndep=None)
-                if txnid is None:
-                    raise Exception("Failed to set {} to {}".format(n, v))
-                self.transactions.append(txnid)
-                self.lastKeyTxn[n] = txnid
+                if n not in keys:
+                    c = self._get_client()
+                    v = random.randint(5, 1000)
+                    self.localState[n] = v
+                    txnid = c.set(n, v, txndep=None)
+                    if txnid is None:
+                        raise Exception("Failed to set {} to {}".format(n, v))
+                    self.transactions.append(txnid)
+                    self.lastKeyTxn[n] = txnid
 
         self._wait_for_transaction_commits()
 
@@ -103,6 +111,7 @@ class IntKeyLoadTest(object):
         if self.clients == []:
             return
 
+        self.state.fetch()
         keys = self.state.State.keys()
 
         for r in range(0, rounds):
@@ -112,7 +121,10 @@ class IntKeyLoadTest(object):
             for k in keys:
                 c = self._get_client()
                 self.localState[k] += 2
-                txndep = self.lastKeyTxn[k]
+                if k in self.lastKeyTxn:
+                    txndep = self.lastKeyTxn[k]
+                else:
+                    txndep = None
                 txnid = c.inc(k, 2, txndep)
                 if txnid is None:
                     raise Exception(
