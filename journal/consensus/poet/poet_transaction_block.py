@@ -150,6 +150,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         """
         self.WaitCertificate = WaitCertificate.create_wait_certificate(
             self.WaitTimer)
+        if self.WaitCertificate:
+            self.WaitTimer = None
 
     def wait_timer_is_expired(self, now):
         """Determines if the wait timer is expired.
