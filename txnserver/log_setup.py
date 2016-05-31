@@ -28,7 +28,7 @@ class LogWriter(object):
 
     def write(self, line):
         if line != '\n':
-            self.logger.log(self.level, line)
+            self.logger.log(self.level, line.rstrip())
 
 
 def create_file_handler(logfile, loglevel):
