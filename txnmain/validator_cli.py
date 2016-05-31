@@ -17,6 +17,7 @@ import importlib
 import logging
 import os
 import sys
+import traceback
 import warnings
 
 from sawtooth.config import ArgparseOptionsConfig
@@ -87,9 +88,17 @@ def local_main(config, windows_service=False, daemonized=False):
             warnings.warn("transaction family not found: {}".format(txnfamily))
             sys.exit(1)
 
-    validator.start()
+    try:
+        validator.start()
 
-    reactor.run()
+        reactor.run()
+    except KeyboardInterrupt:
+        pass
+    except SystemExit as e:
+        raise e
+    except:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
 
 
 def parse_command_line(args):
