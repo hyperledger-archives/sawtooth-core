@@ -4,7 +4,7 @@ import json
 from twisted.internet import task
 from twisted.internet import reactor
 # from twisted.internet.defer import Deferred
-from twisted.internet.protocol import Protocol
+# from twisted.internet.protocol import Protocol
 from twisted.web.client import Agent
 from twisted.web.client import readBody
 from twisted.web.http_headers import Headers
@@ -22,12 +22,14 @@ if os.name == "posix":
 
 
 class ConsolePrint(object):
+
     def __init__(self):
         self.use_curses = True if os.name == "posix" else False
         self.start = True
         self.scrn = None
 
         if self.use_curses:
+            # curses.reset_prog_mode()
             self.scrn = curses.initscr()
 
     def cpprint(self, printstring, finish=False, reverse=False):
@@ -55,23 +57,6 @@ class ConsolePrint(object):
             self.scrn.keypad(0)
             curses.echo()
             curses.endwin()
-
-
-class DataReader(Protocol):
-    def __init__(self, finished):
-        self.finished = finished
-        self.remaining = 1024 * 10
-
-    def dataReceived(self, somebytes):
-        if self.remaining:
-            display = somebytes[:self.remaining]
-            print 'body data:'
-            print display
-            self.remaining -= len(display)
-
-    def connectionLost(self, reason):
-        print 'body data complete:', reason.getErrorMessage()
-        self.finished.callback(None)
 
 
 class StatsClient(object):
@@ -114,27 +99,14 @@ class StatsClient(object):
     def handlerequest(self, response):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
-        # print 'delay:', self.delay
-        # print 'Response version:', response.version, 'code:', response.code,
-        # 'phrase:', response.phrase
-        # print 'Response headers:'
-        # print pformat(list(response.headers.getAllRawHeaders()))
-        # if response to be read in entirety
         self.responding = True
-        self.validator_state = "ACTIVE"
+        self.validator_state = "RESPND"
         d = readBody(response)
         d.addCallback(self.handlebody)
         return d
-        # if response to be read incrementally
-        # finished = Deferred()
-        # response.deliverBody(datareader(finished))
-        # return finished
 
     def handlebody(self, body):
-        # print 'Response body for {0}:'.format(self.url)
-        # print body [:80]
         self.ledgerstats = json.loads(body)
-        # print "Blocks claimed: ", self.ledgerstats["ledger"]["BlocksClaimed"]
         self.vsm.update_stats(self.ledgerstats, True, self.request_start,
                               self.request_complete)
 
@@ -181,7 +153,6 @@ class ValidatorStatsManager(object):
     def update_stats(self, jsonstats, active, starttime, endtime):
 
         if active:
-            # self.vstatslast = deepcopy(self.vstats)
 
             try:
                 self.vstats.blocks_claimed = \
@@ -254,6 +225,70 @@ class SystemStats(object):
         self.msgs_max_acked = 0
         self.msgs_min_acked = 0
 
+        # collectors
+
+        self.response_times = []
+
+        self.blocks_claimed = []
+        self.blocks_committed = []
+        self.blocks_pending = []
+        self.txns_committed = []
+        self.txns_pending = []
+        self.packets_dropped = []
+        self.packets_duplicates = []
+        self.packets_acks_received = []
+        self.msgs_handled = []
+        self.msgs_acked = []
+
+    def collect_stats(self, statsclients):
+        for c in statsclients:
+            if c.responding:
+                self.active_validators += 1
+
+                self.response_times.append(c.vsm.response_time)
+
+                self.blocks_claimed.append(c.vsm.vstats.blocks_claimed)
+                self.blocks_committed.append(c.vsm.vstats.blocks_committed)
+                self.blocks_pending.append(c.vsm.vstats.blocks_pending)
+                self.txns_committed.append(c.vsm.vstats.txns_committed)
+                self.txns_pending.append(c.vsm.vstats.txns_pending)
+                self.packets_dropped.append(c.vsm.vstats.packets_dropped)
+                self.packets_duplicates.append(c.vsm.vstats.packets_duplicates)
+                self.packets_acks_received \
+                    .append(c.vsm.vstats.packets_acks_received)
+                self.msgs_handled.append(c.vsm.vstats.msgs_handled)
+                self.msgs_acked.append(c.vsm.vstats.msgs_acked)
+
+    def calculate_stats(self):
+        if self.active_validators > 0:
+            self.avg_client_time = sum(self.response_times)\
+                / len(self.response_times)
+            self.max_client_time = max(self.response_times)
+
+            self.blocks_max_committed = max(self.blocks_committed)
+            self.blocks_min_committed = min(self.blocks_committed)
+            self.blocks_max_pending = max(self.blocks_pending)
+            self.blocks_min_pending = min(self.blocks_pending)
+            self.blocks_max_claimed = max(self.blocks_claimed)
+            self.blocks_min_claimed = min(self.blocks_claimed)
+
+            self.txns_max_committed = max(self.txns_committed)
+            self.txns_min_committed = min(self.txns_committed)
+            self.txns_max_pending = max(self.txns_pending)
+            self.txns_min_pending = min(self.txns_pending)
+
+            self.packets_max_dropped = max(self.packets_dropped)
+            self.packets_min_dropped = min(self.packets_dropped)
+            self.packets_max_duplicates = max(self.packets_duplicates)
+            self.packets_min_duplicates = min(self.packets_duplicates)
+            self.packets_max_acks_received = max(self.packets_acks_received)
+            self.packets_min_acks_received = min(self.packets_acks_received)
+
+            self.msgs_max_handled = max(self.msgs_handled)
+            self.msgs_min_handled = min(self.msgs_handled)
+            self.msgs_max_acked = max(self.msgs_acked)
+            self.msgs_min_acked = min(self.msgs_acked)
+
 
 class SystemStatsManager(object):
     def __init__(self):
@@ -264,64 +299,8 @@ class SystemStatsManager(object):
         self.ss.known_validators = len(statsclients)
         self.ss.active_validators = 0
 
-        response_times = []
-
-        blocks_claimed = []
-        blocks_committed = []
-        blocks_pending = []
-        txns_committed = []
-        txns_pending = []
-        packets_dropped = []
-        packets_duplicates = []
-        packets_acks_received = []
-        msgs_handled = []
-        msgs_acked = []
-
-        for c in statsclients:
-            if c.responding:
-                self.ss.active_validators += 1
-
-                response_times.append(c.vsm.response_time)
-
-                blocks_claimed.append(c.vsm.vstats.blocks_claimed)
-                blocks_committed.append(c.vsm.vstats.blocks_committed)
-                blocks_pending.append(c.vsm.vstats.blocks_pending)
-                txns_committed.append(c.vsm.vstats.txns_committed)
-                txns_pending.append(c.vsm.vstats.txns_pending)
-                packets_dropped.append(c.vsm.vstats.packets_dropped)
-                packets_duplicates.append(c.vsm.vstats.packets_duplicates)
-                packets_acks_received\
-                    .append(c.vsm.vstats.packets_acks_received)
-                msgs_handled.append(c.vsm.vstats.msgs_handled)
-                msgs_acked.append(c.vsm.vstats.msgs_acked)
-
-        if self.ss.active_validators > 0:
-            self.ss.avg_client_time = sum(response_times) / len(response_times)
-            self.ss.max_client_time = max(response_times)
-
-            self.ss.blocks_max_committed = max(blocks_committed)
-            self.ss.blocks_min_committed = min(blocks_committed)
-            self.ss.blocks_max_pending = max(blocks_pending)
-            self.ss.blocks_min_pending = min(blocks_pending)
-            self.ss.blocks_max_claimed = max(blocks_claimed)
-            self.ss.blocks_min_claimed = min(blocks_claimed)
-
-            self.ss.txns_max_committed = max(txns_committed)
-            self.ss.txns_min_committed = min(txns_committed)
-            self.ss.txns_max_pending = max(txns_pending)
-            self.ss.txns_min_pending = min(txns_pending)
-
-            self.ss.packets_max_dropped = max(packets_dropped)
-            self.ss.packets_min_dropped = min(packets_dropped)
-            self.ss.packets_max_duplicates = max(packets_duplicates)
-            self.ss.packets_min_duplicates = min(packets_duplicates)
-            self.ss.packets_max_acks_received = max(packets_acks_received)
-            self.ss.packets_min_acks_received = min(packets_acks_received)
-
-            self.ss.msgs_max_handled = max(msgs_handled)
-            self.ss.msgs_min_handled = min(msgs_handled)
-            self.ss.msgs_max_acked = max(msgs_acked)
-            self.ss.msgs_min_acked = min(msgs_acked)
+        self.ss.collect_stats(statsclients)
+        self.ss.calculate_stats()
 
         self.ss.runtime = int(time.time()) - self.ss.starttime
 
@@ -421,29 +400,23 @@ def handleshutdown(ignored):
     reactor.stop()
 
 
-def dowork():
-
-    for c in clients:
-        c.request()
-
-
 def workloop():
-    global loopcounter
-    global loop
 
-    if loopcounter < looptimes:
+    loopcounter = 0
+
+    while True:
         loopcounter += 1
 
         ssm.process_stats(clients)
         ssm.print_stats()
-        dowork()
+
+        for c in clients:
+            c.request()
+
         return
 
-    # if workloopfail:
-    #     raise Exception('Failed during work loop')
-
-    loop.stop()
-    return
+    # todo: handle exception in loop
+    # todo: handle smooth stop
 
 
 def handleloopdone(result):
@@ -460,26 +433,26 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
 
     # use system or dev paths...
-    parser.add_argument('--validator-count',
+    parser.add_argument('--count',
                         metavar="",
                         help='number of validators to monitor '
                              '(default: %(default)s)',
                         default=3,
                         type=int)
-    parser.add_argument('--validator-url',
+    parser.add_argument('--url',
                         metavar="",
                         help='Base validator url '
                              '(default: %(default)s)',
                         default="http://localhost")
-    parser.add_argument('--validator-port',
+    parser.add_argument('--port',
                         metavar="",
                         help='Base validator http port '
                              '(default: %(default)s)',
                         default=8800,
                         type=int)
-    parser.add_argument('--sample-time',
+    parser.add_argument('--update-time',
                         metavar="",
-                        help='Number of validators to launch '
+                        help='Interval between stats updates (s) '
                              '(default: %(default)s)',
                         default=3,
                         type=int)
@@ -490,22 +463,53 @@ def parse_args(args):
 def configure(opts):
     # scriptdir = os.path.dirname(os.path.realpath(__file__))
 
-    print "    validator count: ", opts.validator_count
-    print " validator base url: ", opts.validator_url
-    print "validator base port: ", opts.validator_port
+    print "    validator count: ", opts.count
+    print " validator base url: ", opts.url
+    print "validator base port: ", opts.port
     # sys.exit(1)
 
+# loopcounter = 0
+# looptimes = 1000000  # run for a really long time
+# loop = None
+# workloopfail = False
 
-loopcounter = 0
-looptimes = 1000000  # run for a really long time
 clients = []
 agent = Agent(reactor)
-workloopfail = False
 ssm = SystemStatsManager()
-loop = None
 
 
 def main():
+    """
+    Synopsis:
+    1) Creates a twisted instance of twisted http Agent
+    2) Creates a instance of SystemStatsManager.  This implement logic for:
+        a) Collecting stats from each stats client
+        b) processing stats to generate system stats
+        c) printing stats to console
+    3) Creates an instance of StatsClient for each validator
+    4) StatsClient implements the following key functions:
+        a) request: creates an agent.request() to send stats request to its
+            corresponding validator, and sets the handle_request() and
+            handle_error() functions as callbacks. Using twisted agent to
+            separate request and response this way allows requests by all
+            clients to be issued "simultaneously" without having to wait
+            for responses.
+        b) handle_request: handles the stats response
+        c) handle_error: handles any errors, including unresponsive validator
+    4) Creates twisted LoopingCall workloop.  Each time it executes it:
+        a) calls SystemStatsManager.process_stats()
+        b) calls SystemStatsManager.print_stats()
+        c) calls the request function of each StatsClient,
+            starting another round of stats collection
+    5) ConsolePrint() manages printing to console.  When printing to posix
+    (linux)console, curses allows a "top"-like non-scrolling display to be
+        implemented.  When printing to a non-posix non-posix console,
+        results simply scroll.
+     """
+
+    # prevents curses import from modifying normal terminal operation
+    # (suppression of cr-lf) during display of help screen, config settings
+    curses.endwin()
 
     try:
         opts = parse_args(sys.argv[1:])
@@ -515,9 +519,9 @@ def main():
 
     configure(opts)
 
-    validators = opts.validator_count
-    portnum = opts.validator_port
-    baseurl = opts.validator_url
+    validators = opts.count
+    portnum = opts.port
+    baseurl = opts.url
 
     for i in range(0, validators):
         c = StatsClient(i, baseurl, portnum)
