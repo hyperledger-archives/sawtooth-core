@@ -18,6 +18,7 @@ import traceback
 import unittest
 import os
 import time
+import logging
 from twisted.web import http
 
 from txnintegration.utils import generate_private_key
@@ -28,6 +29,8 @@ from txnintegration.integer_key_state import IntegerKeyState
 from txnintegration.integer_key_communication import MessageException
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
+
+logger = logging.getLogger(__name__)
 
 ENABLE_INTEGRATION_TESTS = False
 if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
@@ -81,7 +84,7 @@ class IntKeyLoadTest(object):
                     self.clients.append(IntegerKeyClient(u, keystring=key))
                     p.step()
                 except MessageException:
-                    print "Unable to connect to Url: {}".format(u)
+                    logger.warn("Unable to connect to Url: %s ", u)
             if self.clients == []:
                 return
 
@@ -148,7 +151,7 @@ class IntKeyLoadTest(object):
 
     def validate(self):
         if self.clients == []:
-            print "Unable to connect to Validators, No Clients created"
+            logger.warn("Unable to connect to Validators, No Clients created")
             return
         self.state.fetch()
         print "Validating IntegerKey State"
