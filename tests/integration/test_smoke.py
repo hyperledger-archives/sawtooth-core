@@ -89,11 +89,11 @@ class IntKeyLoadTest(object):
                 return
 
         # add check for if a state already exists
-        print "Checking for pre-existing state"
-        self.state.fetch()
-        keys = self.state.State.keys()
-        for k, v in self.state.State.iteritems():
-            self.localState[k] = v
+        with Progress("Checking for pre-existing state") as p:
+            self.state.fetch()
+            keys = self.state.State.keys()
+            for k, v in self.state.State.iteritems():
+                self.localState[k] = v
 
         with Progress("Creating initial key values") as p:
             for n in range(1, numKeys + 1):
@@ -190,7 +190,7 @@ class TestSmoke(unittest.TestCase):
             if vnm:
                 vnm.shutdown()
 
-        except Exception as e:
+        except Exception:
             print "Exception encountered in test case."
             traceback.print_exc()
             if vnm:
