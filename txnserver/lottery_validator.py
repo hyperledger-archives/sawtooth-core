@@ -71,7 +71,7 @@ class LotteryValidator(validator.Validator):
     def register_endpoint(self, node, domain='/'):
 
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
-            node, domain)
+            node, domain, httpport=self.Config["HttpPort"])
         txn.sign_from_node(node)
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()

@@ -389,7 +389,7 @@ class Validator(object):
 
     def register_endpoint(self, endpoint, domain='/'):
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
-            endpoint, domain)
+            endpoint, domain, httpport=self.Config["HttpPort"])
         txn.sign_from_node(endpoint)
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
