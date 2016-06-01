@@ -30,8 +30,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
     def setUpClass(cls):
         cls.vnm = None
         try:
-            if 'TEST_VALIDATOR_URL' in os.environ:
-                cls.url = os.environ['TEST_VALIDATOR_URL']
+            if 'TEST_VALIDATOR_URLS' in os.environ:
+                cls.url = os.environ['TEST_VALIDATOR_URLS']
             else:
                 vnm_config = defaultValidatorConfig.copy()
                 if 'mktplace.transactions.market_place' not in \
