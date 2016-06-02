@@ -685,6 +685,18 @@ class Journal(gossip_core.Gossip):
             self.BlockStore[tblock.Identifier] = tblock
             return
 
+        # sixth test... verify that every transaction in the now complete
+        # block is valid independently and build the new data store
+        newstore = self._testandapplyblock(tblock)
+        if newstore is None:
+            logger.debug('transaction validity test failed for %s',
+                         tblock.Identifier[:8])
+            self.PendingBlockIDs.discard(tblock.Identifier)
+            self.InvalidBlockIDs.add(tblock.Identifier)
+            tblock.Status = transaction_block.Status.invalid
+            self.BlockStore[tblock.Identifier] = tblock
+            return
+
         # at this point we know that the block is valid
         tblock.Status = transaction_block.Status.valid
         tblock.CommitTime = time.time() - self.StartTime
@@ -692,7 +704,7 @@ class Journal(gossip_core.Gossip):
 
         # time to apply the transactions in the block to get a new state
         self.GlobalStoreMap.commit_block_store(tblock.Identifier,
-                                               self._applyblock(tblock))
+                                               newstore)
         self.BlockStore[tblock.Identifier] = tblock
 
         # remove the block from the pending block list
@@ -830,10 +842,9 @@ class Journal(gossip_core.Gossip):
         self.JournalStats.CommittedTxnCount.increment(-len(
             block.TransactionIDs))
 
-    def _applyblock(self, tblock):
-        """
-        apply transactions to the previous block's global store to create a new
-        version of the store
+    def _testandapplyblock(self, tblock):
+        """Test and apply transactions to the previous block's global
+        store to create a new version of the store
 
         Args:
             tblock (Transaction.TransactionBlock) -- block of transactions to
@@ -842,36 +853,29 @@ class Journal(gossip_core.Gossip):
             GlobalStore
         """
 
-        assert tblock.Status == transaction_block.Status.valid
+        assert tblock.Status == transaction_block.Status.complete
 
         # make a copy of the store from the previous block, the previous
         # block must be complete if this block is complete
-        store = self.GlobalStoreMap.get_block_store(
+        teststore = self.GlobalStoreMap.get_block_store(
             tblock.PreviousBlockID).clone_block()
 
         # apply the transactions
         try:
             for txnid in tblock.TransactionIDs:
                 txn = self.TransactionStore[txnid]
-                # When we move InBlock to a set of blocks that contain the
-                # transaction then it should be updated here, for now the
-                # update happens only when one of the blocks containing the
-                # transaction is actually committed
-                # txn.InBlock.add(tblock.Identifier)
-                # self.TransactionStore[txnid] = txn
-                txn.apply(store.get_transaction_store(txn.TransactionTypeName))
+                txnstore = teststore.get_transaction_store(
+                    txn.TransactionTypeName)
+                if not txn.is_valid(txnstore):
+                    return None
+
+                txn.apply(txnstore)
         except:
-            logger.critical(
-                'failed to apply transactions from completed block %s, this '
-                'should not happen',
-                tblock.Identifier[:8],
-                exc_info=True)
-
-            # ROLLBACK updates to tranaction status!!
-
+            logger.exception('unexpected exception when testing'
+                             ' transaction block validity')
             return None
 
-        return store
+        return teststore
 
     def _findfork(self, tblock, depth):
         """
