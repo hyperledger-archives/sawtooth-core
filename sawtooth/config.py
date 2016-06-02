@@ -15,8 +15,7 @@
 
 import os
 import re
-
-from gossip.common import json2dict
+import json
 
 
 class ConfigFileNotFound(Exception):
@@ -86,7 +85,7 @@ class Config(dict):
 
         cfg = {}
         for key, value in self.iteritems():
-            if isinstance(value, str):
+            if isinstance(value, basestring):
                 for _ in xrange(self.substitution_max_iterations):
                     try:
                         new_value = value.format(**pathsubs)
@@ -152,9 +151,7 @@ class JsonConfig(Config):
         for line in lines:
             text += re.sub(cpattern, '', line) + ' '
 
-        json_dict = json2dict(text)
-
-        self.update(json_dict)
+        self.update(json.loads(text))
 
 
 class JsonFileConfig(Config):
