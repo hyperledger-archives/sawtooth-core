@@ -180,12 +180,12 @@ class TestIntegration(unittest.TestCase):
             test.run(2)
             test.validate()
             vnm.shutdown()
-        except Exception as e:
+        except Exception:
             print "Exception encountered in test case."
             traceback.print_exc()
             if vnm:
                 vnm.shutdown()
-            vnm.create_result_archive("TestIntegrationResultsVote.tar.gz")
-            print "Validator data and logs preserved in: " \
-                  "TestIntegrationResultsVote.tar.gz"
-            raise e
+            raise
+        finally:
+            if vnm:
+                vnm.create_result_archive("TestIntegrationResultsVote.tar.gz")

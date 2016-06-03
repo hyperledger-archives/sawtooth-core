@@ -158,15 +158,15 @@ class TestSmoke(unittest.TestCase):
             test.run(2)
             test.validate()
             vnm.shutdown()
-        except Exception as e:
+        except Exception:
             print "Exception encountered in test case."
             traceback.print_exc()
             if vnm:
                 vnm.shutdown()
-            vnm.create_result_archive("TestSmokeResults.tar.gz")
-            print "Validator data and logs preserved in: " \
-                  "TestSmokeResults.tar.gz"
-            raise e
+            raise
+        finally:
+            if vnm:
+                vnm.create_result_archive("TestSmokeResults.tar.gz")
 
     @unittest.skip("LedgerType voting is broken")
     def test_intkey_load_voting(self):
@@ -184,12 +184,12 @@ class TestSmoke(unittest.TestCase):
             test.run(2)
             test.validate()
             vnm.shutdown()
-        except Exception as e:
+        except Exception:
             print "Exception encountered in test case."
             traceback.print_exc()
             if vnm:
                 vnm.shutdown()
-            vnm.create_result_archive("TestSmokeResultsVote.tar.gz")
-            print "Validator data and logs preserved in: " \
-                  "TestSmokeResultsVote.tar.gz"
-            raise e
+            raise
+        finally:
+            if vnm:
+                vnm.create_result_archive("TestSmokeResultsVote.tar.gz")
