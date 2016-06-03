@@ -25,6 +25,7 @@ from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.integer_key_state import IntegerKeyState
+from txnintegration.integer_key_communication import MessageException
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
 
@@ -75,9 +76,14 @@ class IntKeyLoadTest(object):
 
         with Progress("Creating clients") as p:
             for u in urls:
-                key = generate_private_key()
-                self.clients.append(IntegerKeyClient(u, keystring=key))
-                p.step()
+                try:
+                    key = generate_private_key()
+                    self.clients.append(IntegerKeyClient(u, keystring=key))
+                    p.step()
+                except MessageException:
+                    print "Unable to connect to Url: {}".format(u)
+            if self.clients == []:
+                return
 
         with Progress("Creating initial key values") as p:
             for n in range(1, numKeys + 1):
@@ -94,7 +100,8 @@ class IntKeyLoadTest(object):
         self._wait_for_transaction_commits()
 
     def run(self, rounds=1):
-        self.state.fetch()
+        if self.clients == []:
+            return
 
         keys = self.state.State.keys()
 
@@ -128,8 +135,10 @@ class IntKeyLoadTest(object):
             self._wait_for_transaction_commits()
 
     def validate(self):
+        if self.clients == []:
+            print "Unable to connect to Validators, No Clients created"
+            return
         self.state.fetch()
-
         print "Validating IntegerKey State"
         for k, v in self.state.State.iteritems():
             if self.localState[k] != v:
@@ -142,23 +151,31 @@ class TestSmoke(unittest.TestCase):
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_intkey_load(self):
         vnm = None
+        urls = ""
         try:
-            print "Launching validator network."
-            vnm_config = defaultValidatorConfig.copy()
-            vnm_config['LogLevel'] = 'DEBUG'
-
-            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
-                                          cfg=vnm_config)
-
-            vnm.launch_network(5)
-
-            print "Testing transaction load."
             test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 100)
+            if "TEST_VALIDATOR_URLS" not in os.environ:
+                print "Launching validator network."
+                vnm_config = defaultValidatorConfig.copy()
+                vnm_config['LogLevel'] = 'DEBUG'
+                vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
+                                              cfg=vnm_config)
+                vnm.launch_network(5)
+                urls = vnm.urls()
+            else:
+                print "Fetching Urls of Running Validators"
+                # TEST_VALIDATORS_RUNNING is a list of validators urls
+                # seperated by commas.
+                # 'http://localhost:8800,http://localhost:8801'
+                urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
+            print "Testing transaction load."
+            test.setup(urls, 100)
             test.run(2)
             test.validate()
-            vnm.shutdown()
-        except Exception:
+            if vnm:
+                vnm.shutdown()
+
+        except Exception as e:
             print "Exception encountered in test case."
             traceback.print_exc()
             if vnm:
@@ -167,6 +184,8 @@ class TestSmoke(unittest.TestCase):
         finally:
             if vnm:
                 vnm.create_result_archive("TestSmokeResults.tar.gz")
+            else:
+                print "No Validator data and logs to preserve"
 
     @unittest.skip("LedgerType voting is broken")
     def test_intkey_load_voting(self):
