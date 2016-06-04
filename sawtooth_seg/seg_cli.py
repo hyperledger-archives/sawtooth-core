@@ -23,9 +23,10 @@ import logging
 import os
 import traceback
 import sys
+import json
+
 import pybitcointools
 import requests
-import json
 
 from colorlog import ColoredFormatter
 
@@ -136,9 +137,10 @@ def get_ethereum_block_number():
         "id": 83
     }
     response = requests.post(
-        eth_url, data=json.dumps(payload), headers=headers).json() 
+        eth_url, data=json.dumps(payload), headers=headers).json()
 
     return response['result']
+
 
 def do_guess(args, config):
     address = args.address
@@ -151,7 +153,6 @@ def do_guess(args, config):
     # we specify the block when constructing the transaction, so we
     # can get deterministic results.
     block = get_ethereum_block_number()
-
 
     client = SegClient(baseurl=url, keyfile=key_file)
     client.guess(address=address, balance=balance, block=block)

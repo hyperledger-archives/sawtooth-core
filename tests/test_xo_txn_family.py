@@ -382,7 +382,6 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertEquals(store['game000']['State'], 'P2-WIN')
         self.assertEquals(store['game000']['Board'], 'XO-XO--OX')
 
-
     def test_xo_transaction_game_tie(self):
         player1_key = signed_object.generate_signing_key()
         player2_key = signed_object.generate_signing_key()

@@ -15,7 +15,6 @@
 
 import json
 import logging
-import math
 import os
 import requests
 
@@ -99,10 +98,10 @@ class SegTransaction(transaction.Transaction):
             oid = self.OriginatorID
         except AssertionError:
             oid = "unknown"
-        return "({0} {1} {2})".format(oid,
-                                      self._address,
-                                      self._balance,
-                                      self._block)
+        return "({0} {1} {2} {3})".format(oid,
+                                          self._address,
+                                          self._balance,
+                                          self._block)
 
     def is_valid(self, store):
         """Determines if the transaction is valid.
