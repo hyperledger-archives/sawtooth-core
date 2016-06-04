@@ -53,8 +53,12 @@ class InvalidSubstitutionKey(Exception):
 class Config(dict):
     """Configuration base class."""
 
-    def __init__(self, name="config", cfg={}, source=None, **kwargs):
+    def __init__(self, name="config", cfg=None, source=None, **kwargs):
         super(Config, self).__init__(**kwargs)
+
+        if cfg is None:
+            cfg = {}
+
         self.name = name
         self.update(cfg)
         self._source = source
