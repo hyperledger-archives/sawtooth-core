@@ -59,7 +59,9 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=bad-continuation,
+disable=
+    design,
+    bad-continuation,
     no-member,
     missing-docstring,
     dangerous-default-value,
@@ -67,17 +69,12 @@ disable=bad-continuation,
     unused-argument,
     superfluous-parens,
     duplicate-code,
-    too-many-instance-attributes,
     attribute-defined-outside-init,
     unused-variable,
-    too-few-public-methods,
     protected-access,
     broad-except,
     no-self-use,
     global-variable-not-assigned,
-    too-many-return-statements,
-    too-many-branches,
-    too-many-arguments,
     global-statement,
     too-many-lines
 
