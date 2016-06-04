@@ -61,6 +61,7 @@ confidence=
 # --disable=W"
 disable=
     design,
+    similarities,
     bad-continuation,
     no-member,
     missing-docstring,
@@ -68,7 +69,6 @@ disable=
     bare-except,
     unused-argument,
     superfluous-parens,
-    duplicate-code,
     attribute-defined-outside-init,
     unused-variable,
     protected-access,
