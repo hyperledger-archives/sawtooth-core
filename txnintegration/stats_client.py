@@ -1,35 +1,31 @@
-# from pprint import pformat
 import json
 
 from twisted.internet import task
 from twisted.internet import reactor
-# from twisted.internet.defer import Deferred
-# from twisted.internet.protocol import Protocol
 from twisted.web.client import Agent
 from twisted.web.client import readBody
 from twisted.web.http_headers import Headers
-
 
 import time
 
 import argparse
 import sys
 
-import os
-
-if os.name == "posix":
+curses_imported = True
+try:
     import curses
+except ImportError:
+    curses_imported = False
 
 
 class ConsolePrint(object):
 
     def __init__(self):
-        self.use_curses = True if os.name == "posix" else False
+        self.use_curses = True if curses_imported else False
         self.start = True
         self.scrn = None
 
         if self.use_curses:
-            # curses.reset_prog_mode()
             self.scrn = curses.initscr()
 
     def cpprint(self, printstring, finish=False, reverse=False):
@@ -45,14 +41,11 @@ class ConsolePrint(object):
             if finish:
                 self.scrn.refresh()
                 self.start = True
-        # todo: limit number of lines printed to screen height
         else:
             print printstring
 
     def cpstop(self):
         if self.use_curses:
-            # todo: dont clear screen
-            # todo: stop curses on exception
             curses.nocbreak()
             self.scrn.keypad(0)
             curses.echo()
@@ -61,10 +54,7 @@ class ConsolePrint(object):
 
 class StatsClient(object):
     def __init__(self, val_id, baseurl, portnum):
-        # self.delay=delay
         self.id = val_id
-        # self.portindex=portindex
-        # self.url = 'http://localhost:880{0}'.format(self.portindex)
         self.url = baseurl + ":" + str(portnum)
         self.name = ""
 
@@ -82,7 +72,6 @@ class StatsClient(object):
         self.request_complete = 0.0
 
     def request(self):
-        # type: () -> StatsClient
         self.request_start = time.clock()
         d = agent.request(
             'GET',
@@ -92,7 +81,6 @@ class StatsClient(object):
 
         d.addCallback(self.handlerequest)
         d.addErrback(self.handleerror)
-        # d.addBoth(self.handleshutdown)
 
         return d
 
@@ -111,15 +99,10 @@ class StatsClient(object):
                               self.request_complete)
 
     def handleerror(self, failed):
-        # print "validator_client errback exception: %s"\
-        #       % (failed.getTraceback(),)
-        # todo: better handle unresponsive validator node
         self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
         self.validator_state = "NORESP"
         return
-
-    # todo: add callbacks to request additional stats or modify stats provider
 
     def shutdown(self, ignored):
         reactor.stop()
@@ -177,7 +160,6 @@ class ValidatorStatsManager(object):
                     jsonstats["packet"]["MessagesAcked"]
             except KeyError as ke:
                 print "invalid key in vsm.update_stats()", ke
-                # todo: figure out how to pass this to proper deferred errback
 
             self.active = True
             self.request_time = starttime
@@ -317,7 +299,7 @@ class SystemStatsManager(object):
                                 self.ss.runtime), False)
         self.cp.cpprint('        Blocks: {0:8d} max committed,'
                         ' {1:8d} min committed,'
-                        '    {2:8d} max pending,'
+                        '   {2:8d} max pending,'
                         '    {3:8d} min pending,'
                         '    {4:8d} max claimed,'
                         '      {5:8d} min claimed'
@@ -365,11 +347,6 @@ class SystemStatsManager(object):
                         ' COMMITTED  PENDING  NAME               URL',
                         reverse=True)
 
-        # self.cp.cpprint('{0:6d}  {1:6}  {1:8d}  {2:8d}  {3:8d} {4:8d}  {5:8d}
-        #  {6:8d}  {7:16}   {8:16}'.format(0, 0, 0, 0, 0, 0, 0,
-        # "barney_83_exiter"[:16],
-        # "ragmuffin1234//roofuscalamzoo//3/4/5"), False)
-
         for c in clients:
             if c.responding:
                 self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} '
@@ -389,8 +366,6 @@ class SystemStatsManager(object):
                                         c.name[:16], c.url), False)
 
         self.cp.cpprint("", True)
-
-        # todo: limit number of lines to screen height
 
     def ssmstop(self):
         self.cp.cpstop()
@@ -415,9 +390,6 @@ def workloop():
 
         return
 
-    # todo: handle exception in loop
-    # todo: handle smooth stop
-
 
 def handleloopdone(result):
     print "Loop done."
@@ -432,7 +404,6 @@ def handleloopfailed(failure):
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    # use system or dev paths...
     parser.add_argument('--count',
                         metavar="",
                         help='number of validators to monitor '
@@ -461,17 +432,10 @@ def parse_args(args):
 
 
 def configure(opts):
-    # scriptdir = os.path.dirname(os.path.realpath(__file__))
 
     print "    validator count: ", opts.count
     print " validator base url: ", opts.url
     print "validator base port: ", opts.port
-    # sys.exit(1)
-
-# loopcounter = 0
-# looptimes = 1000000  # run for a really long time
-# loop = None
-# workloopfail = False
 
 clients = []
 agent = Agent(reactor)
