@@ -18,6 +18,9 @@ import traceback
 import unittest
 import os
 import time
+import json
+import urllib2
+
 from twisted.web import http
 
 from txnintegration.utils import generate_private_key
@@ -63,8 +66,8 @@ class IntKeyLoadTest(object):
         if txnCnt != 0:
             if len(self.transactions) != 0:
                 print "Uncommitted transactions: ", self.transactions
-            raise Exception("{} transactions failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
+            #raise Exception("{} transactions failed to commit in {}s".format(
+            #    txnCnt, to.WaitTime))
 
     def setup(self, urls, numKeys):
         self.localState = {}
@@ -106,13 +109,16 @@ class IntKeyLoadTest(object):
                 c = self._get_client()
                 self.localState[k] += 2
                 txndep = self.lastKeyTxn[k]
-                txnid = c.inc(k, 2, txndep)
+                if k =="2":
+                    txnid = c.inc(k, 2, txndep, postmsg=False)
+                else:
+                    txnid = c.inc(k, 2, txndep)
                 if txnid is None:
                     raise Exception(
                         "Failed to inc key:{} value:{} by 2".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
-                self.lastKeyTxn[k] = txnid
+
             for k in keys:
                 c = self._get_client()
                 self.localState[k] -= 1
@@ -123,9 +129,72 @@ class IntKeyLoadTest(object):
                         "Failed to dec key:{} value:{} by 1".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
-                self.lastKeyTxn[k] = txnid
+                #self.lastKeyTxn[k] = txnid
 
             self._wait_for_transaction_commits()
+
+            urlstring = "http://localhost:9000/stat/ledger"
+            response = urllib2.urlopen(urlstring)
+            html = response.read()
+            data = json.loads(html)
+            print json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
+
+
+    def runMissingDepTest(self, rounds = 0):
+        self.state.fetch()
+
+        keys = self.state.State.keys()
+
+        for r in range(0, rounds):
+            for c in self.clients:
+                c.CurrentState.fetch()
+            print "Round {}".format(r)
+            for k in keys:
+                c = self._get_client()
+
+                k = "2"
+                missingid = c.inc(k, 1, txndep=None, postmsg=False)
+                dependingtid = c.inc(k, 1, txndep=missingid)
+                self.transactions.append(dependingtid)
+
+                # self.localState[k] += 2
+                # txndep = self.lastKeyTxn[k]
+                # txnid = c.inc(k, 2, txndep, postmsg=False)
+                # if txnid is None:
+                #     raise Exception(
+                #         "Failed to inc key:{} value:{} by 2".format(
+                #             k, self.localState[k]))
+                # self.transactions.append(txnid)
+                # self.lastKeyTxn[k] = txnid
+
+
+                # txnid = c.inc(k, 2, txndep)
+                # if txnid is None:
+                #     raise Exception(
+                #         "Failed to inc key:{} value:{} by 2".format(
+                #             k, self.localState[k]))
+                # self.transactions.append(txnid)
+                # self.lastKeyTxn[k] = txnid
+
+                # if k == "2":
+                #     txnid = c.inc(k, 2, txndep, postmsg=False)
+                # else:
+                #     txnid = c.inc(k, 2, txndep)
+                # if txnid is None:
+                #     raise Exception(
+                #         "Failed to inc key:{} value:{} by 2".format(
+                #             k, self.localState[k]))
+
+                            #self.transactions.append(txnid)
+
+            self._wait_for_transaction_commits()
+
+            urlstring = "http://localhost:9000/stat/ledger"
+            response = urllib2.urlopen(urlstring)
+            html = response.read()
+            data = json.loads(html)
+            print json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
+
 
     def validate(self):
         self.state.fetch()
@@ -156,6 +225,7 @@ class TestSmoke(unittest.TestCase):
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(2)
+            test.runMissingDepTest(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:
@@ -182,6 +252,7 @@ class TestSmoke(unittest.TestCase):
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(2)
+            #test.runMissingDepTest(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:

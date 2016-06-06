@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+    # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class IntegerKeyClient(IntegerKeyCommunication):
                                    signingkey=signingkey,
                                    name=name)
 
-    def _sendtxn(self, update, txndep=None):
+    def _sendtxn(self, update, txndep=None, postmsg=True):
         """
         Build a transaction for the update, wrap it in a message with all
         of the appropriate signatures and post it to the validator
@@ -87,25 +87,32 @@ class IntegerKeyClient(IntegerKeyCommunication):
         msg.SenderID = self.LocalNode.Identifier
         msg.sign_from_node(self.LocalNode)
 
-        try:
-            logger.debug('Posting transaction: %s', txnid)
-            result = self.postmsg(msg.MessageType, msg.dump())
+        if postmsg:
+            try:
+                logger.debug('Posting transaction: %s', txnid)
+                result = self.postmsg(msg.MessageType, msg.dump())
 
-        except MessageException:
-            return None
+            except MessageException:
+                return None
 
-        except:
-            logger.debug('message post failed for some unusual reason')
-            return None
+            except:
+                logger.debug('message post failed for some unusual reason')
+                return None
 
-        # if there was no exception thrown then all transactions should return
-        # a value which is a dictionary with the message that was sent
-        assert result
+            # if there was no exception thrown then all transactions should return
+            # a value which is a dictionary with the message that was sent
+            assert result
 
-        # if the message was successfully posted, then save the transaction
-        # id for future dependencies this could be a problem if the transaction
-        # fails during application
-        self.LastTransaction = txnid
+            # if the message was successfully posted, then save the transaction
+            # id for future dependencies this could be a problem if the transaction
+            # fails during application
+
+        #self.LastTransaction = txnid
+        if txndep == None:
+            self.LastTransaction = txnid
+        else:
+            self.LastTransaction = []
+
         txn.apply(self.CurrentState.State)
 
         return txnid
@@ -142,7 +149,7 @@ class IntegerKeyClient(IntegerKeyCommunication):
             logger.debug('waiting for transaction %s to commit', txnid)
             time.sleep(timetowait)
 
-    def set(self, key, value, txndep=None):
+    def set(self, key, value, txndep=None, postmsg=True):
         """Creates an update object which sets the value associated with a key.
 
                Args:
@@ -155,9 +162,9 @@ class IntegerKeyClient(IntegerKeyCommunication):
             "Value": value
         })
 
-        return self._sendtxn(update, txndep)
+        return self._sendtxn(update, txndep, postmsg)
 
-    def inc(self, key, value, txndep=None):
+    def inc(self, key, value, txndep=None, postmsg=True):
         """Creates an update object which increments the value associated with
            a key.
                Args:
@@ -171,9 +178,9 @@ class IntegerKeyClient(IntegerKeyCommunication):
             "Value": value
         })
 
-        return self._sendtxn(update, txndep)
+        return self._sendtxn(update, txndep, postmsg)
 
-    def dec(self, key, value, txndep=None):
+    def dec(self, key, value, txndep=None, postmsg=True):
         """Creates an update object which decrements the value associated with
            a key.
                Args:
@@ -187,4 +194,4 @@ class IntegerKeyClient(IntegerKeyCommunication):
             "Value": value
         })
 
-        return self._sendtxn(update, txndep)
+        return self._sendtxn(update, txndep, postmsg)

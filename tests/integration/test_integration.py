@@ -109,17 +109,33 @@ class IntKeyLoadTest(object):
                         "Failed to inc key:{} value:{} by 2".format(
                             k, self.localState[k]))
                 self.transactions.append(txnid)
-            for k in keys:
-                c = self._get_client()
-                self.localState[k] -= 1
-                txnid = c.dec(k, 1)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to dec key:{} value:{} by 1".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
+            # for k in keys:
+            #     c = self._get_client()
+            #     self.localState[k] -= 1
+            #     txnid = c.dec(k, 1)
+            #     if txnid is None:
+            #         raise Exception(
+            #             "Failed to dec key:{} value:{} by 1".format(
+            #                 k, self.localState[k]))
+            #     self.transactions.append(txnid)
 
             self._wait_for_transaction_commits()
+
+    def run_missingDep(self, round=0):
+        self.state.fetch()
+
+        keys = self.state.State.keys()
+        for k in keys:
+            c = self._get_client()
+            self.localState[k] -= 1
+            txnid = c.dec(k, 1)
+            if txnid is None:
+                raise Exception(
+                    "Failed to dec key:{} value:{} by 1".format(
+                        k, self.localState[k]))
+            self.transactions.append(txnid)
+
+        self._wait_for_transaction_commits()
 
     def validate(self):
         self.state.fetch()
@@ -152,6 +168,7 @@ class TestIntegration(unittest.TestCase):
             test.run(1)
             vnm.expand_network(firstwavevalidators, 1)
             test.run(1)
+            test.run_missingDep(0)
             test.validate()
             vnm.shutdown()
         except Exception as e:
