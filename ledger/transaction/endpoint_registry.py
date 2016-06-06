@@ -155,7 +155,7 @@ class Update(object):
     KnownVerbs = ['reg', 'unr']
 
     @staticmethod
-    def register_node(txn, nde, domain='/'):
+    def register_node(txn, nde, domain='/', httpport=None):
         """Creates a new Update object based on the attributes of a
         node.
 
@@ -175,6 +175,7 @@ class Update(object):
         update.Name = nde.Name
         update.NetHost = nde.NetHost
         update.NetPort = nde.NetPort
+        update.HttpPort = httpport
         update.NodeIdentifier = nde.Identifier
         return update
 
@@ -201,12 +202,13 @@ class Update(object):
         self.Name = minfo.get('Name', '')
         self.NetHost = minfo.get('NetHost', '0.0.0.0')
         self.NetPort = minfo.get('NetPort', 0)
+        self.HttpPort = minfo.get('HttpPort', 0)
         self.NodeIdentifier = minfo.get('NodeIdentifier', NullIdentifier)
 
     def __str__(self):
-        return "({0} {1} {2} {3} {4}:{5})".format(
+        return "({0} {1} {2} {3} {4}:{5} {4}:{6})".format(
             self.Verb, self.NodeIdentifier, self.Name, self.Domain,
-            self.NetHost, self.NetPort)
+            self.NetHost, self.NetPort, self.HttpPort)
 
     def is_valid(self, store):
         """Determines if the update is valid.
@@ -244,6 +246,7 @@ class Update(object):
                 'Domain': self.Domain,
                 'Host': self.NetHost,
                 'Port': self.NetPort,
+                'HttpPort': self.HttpPort,
                 'NodeIdentifier': self.NodeIdentifier,
             }
         elif self.Verb == 'unr':
@@ -266,6 +269,7 @@ class Update(object):
             'Name': self.Name,
             'NetHost': self.NetHost,
             'NetPort': self.NetPort,
+            'HttpPort': self.HttpPort,
             'NodeIdentifier': self.NodeIdentifier
         }
         return result
@@ -325,7 +329,7 @@ class EndpointRegistryTransaction(transaction.Transaction):
     MessageType = EndpointRegistryTransactionMessage
 
     @staticmethod
-    def register_node(nde, domain='/'):
+    def register_node(nde, domain='/', httpport=None):
         """Creates a new EndpointRegistryTransaction object based on
         the attributes of a node.
 
@@ -339,7 +343,7 @@ class EndpointRegistryTransaction(transaction.Transaction):
                 registering the node's details.
         """
         regtxn = EndpointRegistryTransaction()
-        regtxn.Update = Update.register_node(regtxn, nde, domain)
+        regtxn.Update = Update.register_node(regtxn, nde, domain, httpport)
 
         return regtxn
 
