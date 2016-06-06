@@ -7,7 +7,7 @@
 
     ## pick the ledger type
     "LedgerType" : "lottery",
-    "GenesisLedger" : true,
+    "GenesisLedger" : false,
 
     ## configuration of the ledger wait time certificate 
     "TargetWaitTime" : 30.0,

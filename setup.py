@@ -69,14 +69,19 @@ if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\conf"
     log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\logs"
     data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\data"
+    run_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\run"
 else:
     conf_dir = "/etc/sawtooth-validator"
     log_dir = "/var/log/sawtooth-validator"
     data_dir = "/var/lib/sawtooth-validator"
+    run_dir = "/var/run/sawtooth-validator"
 
 data_files = [
-    (conf_dir, ['etc/txnvalidator.js']), (os.path.join(conf_dir, "keys"), []),
-    (log_dir, []), (data_dir, [])
+    (conf_dir, ['etc/txnvalidator.js']),
+    (os.path.join(conf_dir, "keys"), []),
+    (log_dir, []),
+    (data_dir, []),
+    (run_dir, [])
 ]
 
 if os.path.exists("/etc/debian_version"):

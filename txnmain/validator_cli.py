@@ -17,15 +17,13 @@ import importlib
 import logging
 import os
 import sys
+import traceback
 import warnings
 
-from twisted.internet import reactor
-
-from gossip.gossip_core import GossipException
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
-from txnserver import log_setup, lottery_validator, voting_validator, web_api
+from txnserver import log_setup
 from txnserver.config import get_validator_configuration
 
 logger = logging.getLogger(__name__)
@@ -33,11 +31,30 @@ logger = logging.getLogger(__name__)
 CurrencyHost = os.environ.get("HOSTNAME", "localhost")
 
 
-def local_main(config, windows_service=False):
+def local_main(config, windows_service=False, daemonized=False):
     """
     Implement the actual application logic for starting the
     txnvalidator
     """
+
+    # If this process has been daemonized, then we want to make
+    # sure to print out an information message as quickly as possible
+    # to the logger for debugging purposes.
+    if daemonized:
+        logger.info('validator has been daemonized')
+
+    # These imports are delayed because of poor interactions between
+    # epoll and fork.  Unfortunately, these import statements set up
+    # epoll and we need that to happen after the forking done with
+    # Daemonize().  This is a side-effect of importing twisted.
+    from twisted.internet import reactor
+    from txnserver import lottery_validator
+    from txnserver import voting_validator
+    from txnserver import web_api
+    from gossip.gossip_core import GossipException
+
+    logger.warn('validator pid is %s', os.getpid())
+
     ledgertype = config.get('LedgerType', 'lottery')
 
     validator = None
@@ -71,9 +88,17 @@ def local_main(config, windows_service=False):
             warnings.warn("transaction family not found: {}".format(txnfamily))
             sys.exit(1)
 
-    validator.start()
+    try:
+        validator.start()
 
-    reactor.run()
+        reactor.run()
+    except KeyboardInterrupt:
+        pass
+    except SystemExit as e:
+        raise e
+    except:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
 
 
 def parse_command_line(args):
@@ -88,6 +113,9 @@ def parse_command_line(args):
     parser.add_argument('--keyfile', help='Name of the key file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
     parser.add_argument('--data-dir', help='Name of the data directory')
+    parser.add_argument('--daemon',
+                        help='Daemonize this process',
+                        action='store_true')
     parser.add_argument('--log-dir', help='Name of the log directory')
     parser.add_argument(
         '--logfile',
@@ -121,6 +149,8 @@ def parse_command_line(args):
                         action='count',
                         default=0,
                         help='increase output sent to stderr')
+    parser.add_argument('--run-dir', help='Name of the run directory')
+    parser.add_argument('--pidfile', help='Name of the PID file')
 
     result = parser.parse_args(args)
 
@@ -144,6 +174,7 @@ def parse_command_line(args):
 
     remove_false_key(result, "genesis")
     remove_false_key(result, "restore")
+    remove_false_key(result, "daemon")
 
     return result
 
@@ -170,6 +201,7 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('conf_dir', 'ConfigDirectory'),
             ('log_dir', 'LogDirectory'),
             ('data_dir', 'DataDirectory'),
+            ('run_dir', 'RunDirectory'),
             ('type', 'LedgerType'),
             ('logfile', 'LogFile'),
             ('loglevel', 'LogLevel'),
@@ -182,7 +214,9 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('peers', 'Peers'),
             ('genesis', 'GenesisLedger'),
             ('url', 'LedgerURL'),
-            ('verbose', 'Verbose')
+            ('verbose', 'Verbose'),
+            ('pidfile', 'PidFile'),
+            ('daemon', 'Daemonize')
         ], options)
 
     if "LogLevel" in options_config:
@@ -203,6 +237,7 @@ if os.name == "nt":
     import win32serviceutil
     import win32event
     import servicemanager
+    from twisted.internet import reactor
 
     class SawtoothValidatorService(win32serviceutil.ServiceFramework):
         _svc_name_ = "SawtoothValidator-Service"
@@ -242,13 +277,21 @@ def main(args, windows_service=False):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg, cfg['Verbose'])
+    daemonize = cfg.get('Daemonize', False)
+    if daemonize:
+        verbose_level = 0
+    else:
+        verbose_level = cfg['Verbose']
+
+    log_setup.setup_loggers(
+        cfg,
+        verbose_level=verbose_level,
+        capture_std_output=daemonize)
 
     for key, value in cfg.iteritems():
         logger.debug("CONFIG: %s = %s", key, value)
 
     logger.info('validator started with arguments: %s', sys.argv)
-    logger.warn('validator pid is %s', os.getpid())
 
     if not os.path.exists(cfg["DataDirectory"]):
         warnings.warn("Data directory does not exist: {}".format(
@@ -266,7 +309,37 @@ def main(args, windows_service=False):
     else:
         logger.warn('no key file specified')
 
-    local_main(cfg, windows_service)
+    if daemonize:
+        if os.name != 'posix':
+            warnings.warn("Running as a daemon is not supported on "
+                          "non-posix platforms")
+            sys.exit(1)
+
+        try:
+            from daemonize import Daemonize
+        except ImportError, e:
+            warnings.warn("Configured to run as a daemon, but import from "
+                          "'daemonize' failed: {}".format(str(e)))
+            sys.exit(1)
+
+        pid_dir = os.path.dirname(cfg["PidFile"])
+        if not os.path.exists(pid_dir):
+            warnings.warn("can not create PID file, no such directory: "
+                          "{}".format(pid_dir))
+
+    keep_fds = []
+    for handler in logging.getLogger().handlers:
+        keep_fds.append(handler.stream.fileno())
+
+    if cfg.get("Daemonize", False):
+        daemon = Daemonize(
+            app="txnvalidator",
+            pid=os.path.join(cfg["PidFile"]),
+            action=lambda: local_main(cfg, windows_service, daemonized=True),
+            keep_fds=keep_fds)
+        daemon.start()
+    else:
+        local_main(cfg, windows_service)
 
 
 def main_wrapper():

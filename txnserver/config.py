@@ -13,12 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 import os
 import re
 import sys
 import warnings
-
-from gossip.common import json2dict
 
 import sawtooth.config
 from sawtooth.config import AggregateConfig
@@ -83,7 +82,17 @@ def parse_configuration_file(filename):
     for line in lines:
         text += re.sub(cpattern, '', line) + ' '
 
-    return json2dict(text)
+    return json.loads(text)
+
+
+def get_config_directory(configs):
+    agg = AggregateConfig(configs=configs)
+
+    for key in agg.keys():
+        if key not in ['CurrencyHome', 'ConfigDirectory']:
+            del agg[key]
+
+    return agg.resolve({'home': 'CurrencyHome'})['ConfigDirectory']
 
 
 def get_validator_configuration(config_files,
@@ -94,9 +103,8 @@ def get_validator_configuration(config_files,
 
     default_config = ValidatorDefaultConfig(os_name=os_name)
 
-    conf_dir = AggregateConfig(
-        configs=[default_config, env_config, options_config]).resolve(
-            {'home': 'CurrencyHome'})['ConfigDirectory']
+    conf_dir = get_config_directory(
+        [default_config, env_config, options_config])
 
     # Determine the configuration file search path
     search_path = [conf_dir, '.', os.path.join(
@@ -119,7 +127,8 @@ def get_validator_configuration(config_files,
         'conf_dir': 'ConfigDirectory',
         'data_dir': 'DataDirectory',
         'log_dir': 'LogDirectory',
-        'key_dir': 'KeyDirectory'
+        'key_dir': 'KeyDirectory',
+        'run_dir': 'RunDirectory'
     })
     return resolved
 
@@ -133,20 +142,26 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
             self['LogDirectory'] = '{home}/logs'
             self['DataDirectory'] = '{home}/data'
             self['KeyDirectory'] = '{home}/keys'
+            self['RunDirectory'] = '{home}/run'
+            self['PidFile'] = '{run_dir}/{node}.pid'
         elif os_name == 'nt':
             base_dir = 'C:\\Program Files (x86)\\Intel\\sawtooth-validator\\'
             self['ConfigDirectory'] = '{0}conf'.format(base_dir)
             self['LogDirectory'] = '{0}logs'.format(base_dir)
             self['DataDirectory'] = '{0}data'.format(base_dir)
             self['KeyDirectory'] = '{0}conf\\keys'.format(base_dir)
+            self['RunDirectory'] = '{0}\\run'.format(base_dir)
         else:
             self['ConfigDirectory'] = '/etc/sawtooth-validator'
             self['LogDirectory'] = '/var/log/sawtooth-validator'
             self['DataDirectory'] = '/var/lib/sawtooth-validator'
             self['KeyDirectory'] = '/etc/sawtooth-validator/keys'
+            self['RunDirectory'] = '/var/run/sawtooth-validator'
+            self['PidFile'] = '{run_dir}/{node}.pid'
 
         self['BaseDirectory'] = os.path.abspath(os.path.dirname(__file__))
         self['CurrencyHost'] = "localhost"
+        self['NodeName'] = "base000"
 
 
 class CurrencyEnvConfig(sawtooth.config.EnvConfig):
@@ -156,5 +171,6 @@ class CurrencyEnvConfig(sawtooth.config.EnvConfig):
             ('CURRENCY_CONF_DIR', 'ConfigDirectory'),
             ('CURRENCY_LOG_DIR', 'LogDirectory'),
             ('CURRENCY_DATA_DIR', 'DataDirectory'),
+            ('CURRENCY_RUN_DIR', 'RunDirectory'),
             ('HOSTNAME', 'CurrencyHost')
         ])

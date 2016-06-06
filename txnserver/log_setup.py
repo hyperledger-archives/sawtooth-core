@@ -21,6 +21,16 @@ import warnings
 from colorlog import ColoredFormatter
 
 
+class LogWriter(object):
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+
+    def write(self, line):
+        if line != '\n':
+            self.logger.log(self.level, line.rstrip())
+
+
 def create_file_handler(logfile, loglevel):
     if logfile == '-':
         flog = logging.StreamHandler(sys.stdout)
@@ -32,7 +42,7 @@ def create_file_handler(logfile, loglevel):
 
         flog = logging.FileHandler(logfile)
     flog.setFormatter(logging.Formatter(
-        '[%(asctime)s, %(levelno)d, %(module)s] %(message)s', "%H:%M:%S"))
+        '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
     flog.setLevel(loglevel)
 
     return flog
@@ -65,7 +75,7 @@ def create_console_handler(config, verbose_level):
     return clog
 
 
-def setup_loggers(config, verbose_level=2):
+def setup_loggers(config, verbose_level=2, capture_std_output=False):
     loglevel = getattr(
         logging, config["LogLevel"]) if 'LogLevel' in config else logging.WARN
     logger = logging.getLogger()
@@ -81,3 +91,7 @@ def setup_loggers(config, verbose_level=2):
 
     if verbose_level > 0:
         logger.addHandler(create_console_handler(config, verbose_level))
+
+    if capture_std_output:
+        sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
+        sys.stderr = LogWriter(logging.getLogger("STDERR"), logging.ERROR)
