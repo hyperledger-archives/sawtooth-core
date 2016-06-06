@@ -161,6 +161,7 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
 
         self['BaseDirectory'] = os.path.abspath(os.path.dirname(__file__))
         self['CurrencyHost'] = "localhost"
+        self['NodeName'] = "base000"
 
 
 class CurrencyEnvConfig(sawtooth.config.EnvConfig):
