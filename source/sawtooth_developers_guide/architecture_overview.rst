@@ -30,8 +30,8 @@ of the distributed ledger, including:
 * basic transaction, block, and message objects
 * the base journal implementation
 * the PoET and quorum voting journal consensus mechanisms
-* 'built-in' transaction families - Endpoint Registry, Asset Registry,
-  and Integer Key Registry
+* 'built-in' transaction families - Endpoint Registry and Integer Key
+  Registry
 
 **sawtooth-mktplace** - This repository contains the MarketPlace
 Transaction Family. This demonstrates how to inherit and extend base
@@ -71,11 +71,11 @@ classes already present in the Communication and Journal layers.
    :scale: 50 %
    :align: center
 
-In addition to some in-built system ledgers (Asset Registry, Endpoint
-Registry, and Integer Key Registry), implementing new classes in the
-ledger layer allows for the creation of new transaction families. The
-MarketPlace Transaction Family, located in the sawtooth-mktplace
-repository, is a good example of how the ledger layer can be extended.
+In addition to some in-built system ledgers (Endpoint Registry, and
+Integer Key Registry), implementing new classes in the ledger layer
+allows for the creation of new transaction families. The MarketPlace
+Transaction Family, located in the sawtooth-mktplace repository, is a
+good example of how the ledger layer can be extended.
 
 Journals
 --------
