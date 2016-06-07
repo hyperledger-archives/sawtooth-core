@@ -59,7 +59,7 @@ class WaitTimer(object):
             certs (list): A historical list of certificates.
 
         Returns:
-            wait_timer.WaitTimer: A new wait timer.
+            journal.consensus.poet.wait_timer.WaitTimer: A new wait timer.
         """
 
         if not isinstance(certs, list):
