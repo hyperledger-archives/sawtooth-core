@@ -122,6 +122,38 @@ class ValidatorNetworkManager(object):
 
         return v
 
+    def staged_launch_network(self, count=1, stage1max=12, increment=12):
+        validators = []
+
+        if count <= stage1max:
+            validators = self.launch_network(count)
+            print "Launch complete with {0} validators launched" \
+                .format(len(self.Validators))
+            return validators
+        else:
+            validators = self.launch_network(stage1max)
+            print "Staged launch initiated with {0} validators launched" \
+                .format(len(self.Validators))
+            staged_validators = self.staged_expand_network(count)
+            validators += staged_validators
+
+            return validators
+
+    def staged_expand_network(self, count=1, increment=12):
+        validators = []
+        remaining_to_launch = count
+        while remaining_to_launch > 0:
+            number_to_launch = \
+                min([remaining_to_launch, increment, len(self.Validators)])
+            validators_to_use = \
+                self.Validators[len(self.Validators) - number_to_launch:]
+            print "Staged launching {0} validators".format(number_to_launch)
+            stagedvals = self.expand_network(validators_to_use, 1)
+            remaining_to_launch -= number_to_launch
+            validators += stagedvals
+
+        return validators
+
     def launch_network(self, count=1):
         validators = []
 
@@ -238,7 +270,9 @@ class ValidatorNetworkManager(object):
         with Progress("Sending shutdown message to validators: ") as p:
             for v in self.Validators:
                 if v.is_running():
+                    # print v.Name, v.Url
                     v.post_shutdown()
+                    # time.sleep(1)
                 p.step()
 
         running_count = 0

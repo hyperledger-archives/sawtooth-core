@@ -255,6 +255,17 @@ class ValidatorNetworkConsole(cmd.Cmd):
         print v.command
         return False
 
+    def do_expand(self, args):
+        """expand
+        Launch additional validators on the network
+        New validators connect to most recent existing validators
+        """
+        count = int(args[0])
+        v = self.networkManager.staged_expand_network(count)
+        print "Network expanded with {0} additional validators launched"\
+            .format(len(v))
+        return False
+
     def do_kill(self, args):
         try:
             id = args[0]
@@ -308,7 +319,8 @@ def main():
             cfg=opts.validator_config,
             dataDir=opts.data_dir,
             blockChainArchive=opts.load_blockchain)
-        networkManager.launch_network(opts.count)
+        # networkManager.launch_network(opts.count)
+        networkManager.staged_launch_network(opts.count)
 
         # wait ...
         ctrl = ValidatorNetworkConsole(networkManager)
