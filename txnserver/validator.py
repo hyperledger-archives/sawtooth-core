@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 class Validator(object):
     DefaultTransactionFamilies = [
-        # AssetRegistry,
         # IntegerKey,
         endpoint_registry
     ]
