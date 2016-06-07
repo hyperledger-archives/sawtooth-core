@@ -13,8 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import ledger.transaction.asset_registry
 import ledger.transaction.endpoint_registry
 import ledger.transaction.integer_key
 
-__all__ = ['asset_registry', 'endpoint_registry', 'integer_key']
+__all__ = ['endpoint_registry', 'integer_key']
