@@ -706,12 +706,14 @@ class Gossip(object, DatagramProtocol):
         """
         Send an encoded message to a list of participants
 
-        Args
-            message -- object of type Message
-            nodeids -- list of node identifiers where the message should be
-                sent
-            initialize -- flag to indicate that the message should be signed
+        Args:
+            message (message.Message): Object of type Message
+            nodeids (list): List of node identifiers where the message should
+                be sent.
+            initialize (bool): Flag to indicate that the message should be
+                signed.
         """
+
         if msg.IsForward:
             logger.warn('Attempt to unicast a broadcast message with id %s',
                         msg.Identifier[:8])
