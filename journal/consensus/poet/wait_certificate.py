@@ -45,7 +45,8 @@ class WaitCertificate(object):
             certificate.
         WaitCertificate.duration (float): The duration of the wait timer.
         WaitCertificate.signature (str): The signature of the certificate.
-        identifier (str): The identifier of this certificate.
+        journal.consensus.poet.wait_certificate.WaitCertificate.identifier\
+            (str): The identifier of this certificate.
         serialized_cert (str): A serialized version of the certificate.
     """
     poet_enclave = None
@@ -56,11 +57,12 @@ class WaitCertificate(object):
         a WaitCertificate object.
 
         Args:
-            timer (wait_timer.WaitTimer): The wait timer to use in creating the
-                certificate.
+            timer (journal.consensus.poet.wait_timer.WaitTimer): The wait
+                timer to use in creating the certificate.
 
         Returns:
-            wait_certificate.WaitCertificate: A new wait certificate.
+            journal.consensus.poet.wait_certificate.WaitCertificate: A new wait
+                 certificate.
         """
         cert = cls.poet_enclave.create_wait_certificate(
             timer.enclave_wait_timer)
@@ -84,8 +86,9 @@ class WaitCertificate(object):
             signature (str): The signature.
 
         Returns:
-            wait_certificate.WaitCertificate: A wait certificate representing
-                the contents of the serialized wait certificate.
+            journal.consensus.poet.wait_certificate.WaitCertificate: A wait
+                certificate representing the contents of the serialized wait
+                certificate.
         """
         cert = cls.poet_enclave.deserialize_wait_certificate(
             serialized, signature)

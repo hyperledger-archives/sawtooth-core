@@ -63,7 +63,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             transaction block type.
         PoetTransactionBlock.MessageType (type): The poet transaction block
             message class.
-        PoetTransactionBlock.WaitTimer (wait_timer.WaitTimer): The wait timer
+        PoetTransactionBlock.WaitTimer \
+            (journal.consensus.poet.wait_timer.WaitTimer): The wait timer
             for the block.
         PoetTransactionBlock.WaitCertificate (wait_certificateWaitCertificate):
             The wait certificate for the block.
