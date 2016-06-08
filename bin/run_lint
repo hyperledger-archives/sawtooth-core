@@ -16,8 +16,21 @@ do
     done
 done
 
+strict_files=""
+for dir in "sawtooth"
+do
+    for strict_file in $(find $dir -name \*.py)
+    do
+        strict_files="$strict_files $strict_file"
+    done
+done
+
 pep8 --config=.pep8
 python setup.py -q lint \
     --lint-rcfile=.pylintrc \
     --lint-reports=no \
     --lint-packages=$(echo $files | sed -e 's/ /,/g')
+python setup.py -q lint \
+    --lint-rcfile=.pylintrc-strict \
+    --lint-reports=no \
+    --lint-packages=$(echo $strict_files | sed -e 's/ /,/g')
