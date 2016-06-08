@@ -27,6 +27,8 @@ import pybitcointools
 
 from colorlog import ColoredFormatter
 
+from sawtooth.exceptions import ClientException
+
 from sawtooth_xo.xo_client import XoClient
 from sawtooth_xo.xo_exceptions import XoException
 
@@ -155,11 +157,11 @@ def do_create(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = XoClient(baseurl=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=key_file)
     client.create(name=name)
 
     if args.wait:
-        client.waitforcommit()
+        client.wait_for_commit()
 
 
 def do_init(args, config):
@@ -204,7 +206,7 @@ def do_list(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = XoClient(baseurl=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=key_file)
     state = client.get_state()
 
     fmt = "%-15s %-15.15s %-15.15s %-9s %s"
@@ -229,7 +231,7 @@ def do_show(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = XoClient(baseurl=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=key_file)
     state = client.get_state()
 
     if name not in state:
@@ -266,11 +268,11 @@ def do_take(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = XoClient(baseurl=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=key_file)
     client.take(name=name, space=space)
 
     if args.wait:
-        client.waitforcommit()
+        client.wait_for_commit()
 
 
 def load_config():
@@ -334,6 +336,9 @@ def main_wrapper():
     try:
         main()
     except XoException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except ClientException as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except KeyboardInterrupt:

@@ -26,7 +26,9 @@ from contextlib import contextmanager
 from StringIO import StringIO
 
 from sawtooth_xo import xo_cli
-from sawtooth_xo.xo_exceptions import XoClientException
+
+from sawtooth.exceptions import ClientException
+
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.validator_network_manager import defaultValidatorConfig
 
@@ -107,7 +109,7 @@ class TestXoCli(unittest.TestCase):
         game_name = self._game_name()
 
         with clean_home_directory():
-            self.assertRaisesRegexp(XoClientException,
+            self.assertRaisesRegexp(ClientException,
                                     'Failed to load key file.*',
                                     xo_cli.main,
                                     prog_name='xo',

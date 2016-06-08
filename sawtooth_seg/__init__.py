@@ -17,9 +17,9 @@ from sawtooth_seg.txn_family import _register_transaction_types
 
 __all__ = [
     'txn_family',
-    'eth_guess_cli'
-    'seg_client'
-    'seg_communicaation'
+    'seg_cli',
+    'seg_client',
+    'seg_communication',
     'seg_exceptions',
     'seg_state'
 ]

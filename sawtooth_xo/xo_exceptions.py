@@ -17,8 +17,3 @@
 class XoException(Exception):
     def __init__(self, msg):
         super(XoException, self).__init__(msg)
-
-
-class XoClientException(XoException):
-    def __init__(self, msg):
-        super(XoClientException, self).__init__(msg)

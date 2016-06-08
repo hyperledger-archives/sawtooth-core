@@ -18,10 +18,7 @@ from sawtooth_xo.txn_family import _register_transaction_types
 __all__ = [
     'txn_family',
     'xo_cli',
-    'xo_client',
-    'xo_communication',
-    'xo_exceptions',
-    'xo_state'
+    'xo_client'
 ]
 
 
