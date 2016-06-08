@@ -66,6 +66,22 @@ class IntKeyLoadTest(object):
             raise Exception("{} transactions failed to commit in {}s".format(
                 txnCnt, to.WaitTime))
 
+    def _wait_for_no_transaction_commits(self):
+        to = TimeOut(120)
+        txnCnt = len(self.transactions)
+        with Progress("Waiting for transactions to commit") as p:
+            while not to() and txnCnt > 0:
+                p.step()
+                time.sleep(1)
+                self._has_uncommitted_transactions()
+                txnCnt = len(self.transactions)
+
+        if txnCnt != 0:
+            if len(self.transactions) != 0:
+                print "Uncommitted transactions: ", self.transactions
+            raise Exception("{} transactions commited with unmet dependencies in {}s".format(
+                txnCnt, to.WaitTime))
+
     def setup(self, urls, numKeys):
         self.localState = {}
         self.transactions = []
@@ -121,21 +137,23 @@ class IntKeyLoadTest(object):
 
             self._wait_for_transaction_commits()
 
-    def run_missingDep(self, round=0):
+    def runMissingDepTest(self, rounds=0):
         self.state.fetch()
 
         keys = self.state.State.keys()
-        for k in keys:
-            c = self._get_client()
-            self.localState[k] -= 1
-            txnid = c.dec(k, 1)
-            if txnid is None:
-                raise Exception(
-                    "Failed to dec key:{} value:{} by 1".format(
-                        k, self.localState[k]))
-            self.transactions.append(txnid)
 
-        self._wait_for_transaction_commits()
+        for r in range(0, rounds):
+            for c in self.clients:
+                c.CurrentState.fetch()
+            print "Round {}".format(r)
+            for k in keys:
+                c = self._get_client()
+
+                missingid = c.inc(k, 1, txndep=None, postmsg=False)
+                dependingtid = c.inc(k, 1, txndep=missingid)
+                self.transactions.append(dependingtid)
+
+            self._wait_for_no_transaction_commits()
 
     def validate(self):
         self.state.fetch()
@@ -168,7 +186,7 @@ class TestIntegration(unittest.TestCase):
             test.run(1)
             vnm.expand_network(firstwavevalidators, 1)
             test.run(1)
-            test.run_missingDep(0)
+            test.runMissingDepTest(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:
@@ -195,6 +213,7 @@ class TestIntegration(unittest.TestCase):
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(2)
+            test.runMissingDepTest(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:

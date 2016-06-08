@@ -69,21 +69,6 @@ class IntKeyLoadTest(object):
             raise Exception("{} transactions failed to commit in {}s".format(
                 txnCnt, to.WaitTime))
 
-    def _dont_wait_for_transaction_commits(self):
-        to = TimeOut(120)
-        txnCnt = len(self.transactions)
-        with Progress("Waiting for transactions to commit") as p:
-            while not to() and txnCnt > 0:
-                p.step()
-                time.sleep(1)
-                self._has_uncommitted_transactions()
-                txnCnt = len(self.transactions)
-
-        if txnCnt != 0:
-            if len(self.transactions) != 0:
-                print "Uncommitted transactions: ", self.transactions
-            print "{} transactions did not commit in {}s".format(
-                txnCnt, to.WaitTime)
 
     def setup(self, urls, numKeys):
         self.localState = {}
@@ -111,6 +96,7 @@ class IntKeyLoadTest(object):
                 self.lastKeyTxn[n] = txnid
 
         self._wait_for_transaction_commits()
+
 
     def run(self, rounds=1):
         self.state.fetch()
@@ -148,32 +134,6 @@ class IntKeyLoadTest(object):
             self._wait_for_transaction_commits()
 
 
-    def runMissingDepTest(self, rounds = 0):
-        self.state.fetch()
-
-        keys = self.state.State.keys()
-
-        for r in range(0, rounds):
-            for c in self.clients:
-                c.CurrentState.fetch()
-            print "Round {}".format(r)
-            for k in keys:
-                c = self._get_client()
-
-                #k = "2"
-                missingid = c.inc(k, 1, txndep=None, postmsg=False)
-                dependingtid = c.inc(k, 1, txndep=missingid)
-                self.transactions.append(dependingtid)
-
-            self._dont_wait_for_transaction_commits()
-
-            urlstring = "http://localhost:9000/stat/ledger"
-            response = urllib2.urlopen(urlstring)
-            html = response.read()
-            data = json.loads(html)
-            print json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
-
-
     def validate(self):
         self.state.fetch()
 
@@ -203,7 +163,6 @@ class TestSmoke(unittest.TestCase):
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(1)
-            test.runMissingDepTest(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:
@@ -230,7 +189,6 @@ class TestSmoke(unittest.TestCase):
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
             test.run(2)
-            test.runMissingDepTest(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:
