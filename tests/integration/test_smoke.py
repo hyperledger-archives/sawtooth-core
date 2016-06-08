@@ -18,9 +18,6 @@ import traceback
 import unittest
 import os
 import time
-import json
-import urllib2
-
 from twisted.web import http
 
 from txnintegration.utils import generate_private_key
@@ -69,7 +66,6 @@ class IntKeyLoadTest(object):
             raise Exception("{} transactions failed to commit in {}s".format(
                 txnCnt, to.WaitTime))
 
-
     def setup(self, urls, numKeys):
         self.localState = {}
         self.transactions = []
@@ -97,7 +93,6 @@ class IntKeyLoadTest(object):
 
         self._wait_for_transaction_commits()
 
-
     def run(self, rounds=1):
         self.state.fetch()
 
@@ -118,7 +113,6 @@ class IntKeyLoadTest(object):
                             k, self.localState[k]))
                 self.transactions.append(txnid)
                 self.lastKeyTxn[k] = txnid
-
             for k in keys:
                 c = self._get_client()
                 self.localState[k] -= 1
@@ -132,7 +126,6 @@ class IntKeyLoadTest(object):
                 self.lastKeyTxn[k] = txnid
 
             self._wait_for_transaction_commits()
-
 
     def validate(self):
         self.state.fetch()
@@ -162,7 +155,7 @@ class TestSmoke(unittest.TestCase):
             print "Testing transaction load."
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 100)
-            test.run(1)
+            test.run(2)
             test.validate()
             vnm.shutdown()
         except Exception as e:
