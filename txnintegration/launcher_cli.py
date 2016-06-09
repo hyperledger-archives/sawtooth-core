@@ -255,12 +255,12 @@ class ValidatorNetworkConsole(cmd.Cmd):
         print v.command
         return False
 
-    def do_expand(self, args):
+    def do_expand(self, scount):
         """expand
         Launch additional validators on the network
         New validators connect to most recent existing validators
         """
-        count = int(args[0])
+        count = int(scount)
         v = self.networkManager.staged_expand_network(count)
         print "Network expanded with {0} additional validators launched"\
             .format(len(v))
