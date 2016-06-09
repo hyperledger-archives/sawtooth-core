@@ -79,8 +79,11 @@ class IntKeyLoadTest(object):
         if txnCnt != 0:
             if len(self.transactions) != 0:
                 print "Uncommitted transactions: ", self.transactions
-            raise Exception("{} transactions with unmet dependencies failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
+                "{} transactions with unmet dependencies did not to commit in {}s".format(
+                    txnCnt, to.WaitTime)
+            else:
+                raise Exception("{} transactions with unmet dependencies committed in {}s".format(
+                    txnCnt, to.WaitTime))
 
     def setup(self, urls, numKeys):
         self.localState = {}
