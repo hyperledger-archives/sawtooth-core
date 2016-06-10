@@ -30,6 +30,8 @@ import requests
 
 from colorlog import ColoredFormatter
 
+from sawtooth.exceptions import ClientException
+
 from sawtooth_seg.seg_client import SegClient
 from sawtooth_seg.seg_exceptions import SegException
 
@@ -154,11 +156,11 @@ def do_guess(args, config):
     # can get deterministic results.
     block = get_ethereum_block_number()
 
-    client = SegClient(baseurl=url, keyfile=key_file)
+    client = SegClient(base_url=url, keyfile=key_file)
     client.guess(address=address, balance=balance, block=block)
 
     if args.wait:
-        client.waitforcommit()
+        client.wait_for_commit()
 
 
 def do_init(args, config):
@@ -203,7 +205,7 @@ def do_list(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = SegClient(baseurl=url, keyfile=key_file)
+    client = SegClient(base_url=url, keyfile=key_file)
     state = client.get_state()
 
     fmt = "%-15s %-15s %-15s %s %s"
@@ -276,6 +278,9 @@ def main_wrapper():
     try:
         main()
     except SegException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except ClientException as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except KeyboardInterrupt:
