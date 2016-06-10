@@ -11,4 +11,5 @@ Sawtooth Lake Developer's Guide
    sawtooth_api/modules
    sawtooth_developers_guide/web_api/index
    sawtooth_developers_guide/validator-network-launcher
+   sawtooth_developers_guide/Signing_Transactions
 
