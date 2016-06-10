@@ -134,7 +134,7 @@ class ValidatorNetworkManager(object):
             validators = self.launch_network(stage1max)
             print "Staged launch initiated with {0} validators launched" \
                 .format(len(self.Validators))
-            staged_validators = self.staged_expand_network(count-stage1max)
+            staged_validators = self.staged_expand_network(count - stage1max)
             validators += staged_validators
 
             return validators
