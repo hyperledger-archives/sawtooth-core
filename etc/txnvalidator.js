@@ -32,14 +32,13 @@
     "NetworkDelayRange" : [ 0.00, 0.10 ],
     "UseFixedDelay" : true,
 
-    ## configuration of logging
-    "LogLevel" : "DEBUG",
-    "LogFile"  : "{log_dir}/lottery-{node}.log",
-
     ## configuration of the transaction families to include
     ## in the validator
     "TransactionFamilies" : [
-        "ledger.transaction.integer_key"
+        "ledger.transaction.integer_key",
+        "sawtooth_xo",
+        "sawtooth_bond",
+        "sawtooth_seg"
     ],
 
     ## do not restart 

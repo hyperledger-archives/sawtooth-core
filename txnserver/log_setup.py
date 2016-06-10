@@ -31,24 +31,7 @@ class LogWriter(object):
             self.logger.log(self.level, line.rstrip())
 
 
-def create_file_handler(logfile, loglevel):
-    if logfile == '-':
-        flog = logging.StreamHandler(sys.stdout)
-    else:
-        if not os.path.isdir(os.path.abspath(os.path.dirname(logfile))):
-            warnings.warn("Logging directory {0} does not exist".format(
-                os.path.abspath(os.path.dirname(logfile))))
-            sys.exit(-1)
-
-        flog = logging.FileHandler(logfile)
-    flog.setFormatter(logging.Formatter(
-        '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
-    flog.setLevel(loglevel)
-
-    return flog
-
-
-def create_console_handler(config, verbose_level):
+def create_console_handler(verbose_level):
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
         "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
@@ -75,22 +58,16 @@ def create_console_handler(config, verbose_level):
     return clog
 
 
-def setup_loggers(config, verbose_level=2, capture_std_output=False):
-    loglevel = getattr(
-        logging, config["LogLevel"]) if 'LogLevel' in config else logging.WARN
+def setup_loggers(verbose_level=2, capture_std_output=False):
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    logfile = config['LogFile']
-    if 'LogFile' in config:
-        if config['LogFile'] == '__screen__':
-            raise Exception("LogFile __screen__ no longer supported, "
-                            "use --verbose instead.")
-        else:
-            logger.addHandler(create_file_handler(logfile, loglevel))
 
     if verbose_level > 0:
-        logger.addHandler(create_console_handler(config, verbose_level))
+        logger.addHandler(create_console_handler(verbose_level))
+
+    if verbose_level == 0:
+        logger.setLevel(logging.INFO)
+    elif verbose_level > 1:
+        logger.setLevel(logging.DEBUG)
 
     if capture_std_output:
         sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
