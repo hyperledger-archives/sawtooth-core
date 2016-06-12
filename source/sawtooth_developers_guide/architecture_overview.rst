@@ -63,7 +63,7 @@ Ledgers
 -------
 
 Ledgers are a conceptual semantic and data model layer for
-transaction types. Ledgers are described as a ‘conceptual’ layer
+transaction types. Ledgers are described as a 'conceptual' layer
 because they are implemented as a specialization of existing base
 classes already present in the Communication and Journal layers.
 
@@ -111,7 +111,7 @@ The Sawtooth Lake Distributed Ledger provides a unique mechanism to
 ensure fairness in the node lottery. Instead of a Proof-of-Work
 competition amongst nodes, Sawtooth Lake implements a
 Proof-of-Elapsed-Time (PoET) algorithm for distributed consensus.
-PoET relies upon a trusted execution environment, Intel’s Software
+PoET relies upon a trusted execution environment, Intel's Software
 Guard Extensions (SGX), to generate fair, verifiable random wait
 timers and signed certificates of timer expiration. This mechanism
 substantially reduces the computation and energy cost of ensuring
@@ -121,7 +121,7 @@ The implementation of PoET in Sawtooth Lake runs in a simulated enclave,
 not a true trusted execution environment. For this reason, attestation
 that wait timers have been fairly generated is not possible. This
 version of PoET is intended for experimental purposes and should not
-be used as the consensus mechanism in any ‘production’ environment.
+be used as the consensus mechanism in any 'production' environment.
 
 The PoET implementation is located in journal.consensus.poet in
 sawtooth-core.
@@ -148,7 +148,7 @@ ledger. The transaction defines the data model and representation.
 For example, in the IntegerKey Transaction Family (located in
 ledger.transaction.integer_key in sawtooth-core), the
 IntegerKeyTransaction is defined as a list of zero or more updates
-to key value pairs using the defined verbs ‘set’, ‘inc’, and ‘dec’.
+to key value pairs using the defined verbs 'set', 'inc', and 'dec'.
 The associated IntegerKeyTransactionMessage wraps the derived
 transaction object in a standard message object. There is typically
 a message type for every transaction type.
@@ -205,7 +205,7 @@ Transaction Family Plugin Architecture
 ======================================
 
 As mentioned above, the creation of new classes in the conceptual
-‘ledger’ layer allows for the addition of transaction families. Via
+'ledger' layer allows for the addition of transaction families. Via
 a message handling and dispatch model, new transaction families can
 register themselves with the underlying journal consensus and global
 store mechanisms to allow for arbitrary callbacks on message arrival
@@ -241,5 +241,5 @@ simple example, or to mktplace.transactions.market_place in
 sawtooth-mktplace for a more substantial example.
 
 Transaction Families are loaded into the validator in sawtooth-validator
-via the “TransactionFamilies” config value (see
+via the "TransactionFamilies" config value (see
 sawtooth-validator/etc/txnvalidator.js).
