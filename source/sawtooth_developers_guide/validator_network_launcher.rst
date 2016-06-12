@@ -5,12 +5,13 @@ The Validator Network Launcher
 Overview
 --------
 
-If you wish to start up a validator network with multiple instances of txnvalidator,
-but do not want to either bring up multiple virtual machine instances or use separate
-physical machines, there is a script that simplifies the process for running multiple
-instances of txnvalidator on a single virtual machine instance.  As in the single
-txnvalidator case, you will need to log in to the development environment
-(i.e., ``vagrant ssh``).  In its simplest form, the script is executed as follows:
+If you wish to start up a validator network with multiple instances of
+txnvalidator, but do not want to either bring up multiple virtual machine
+instances or use separate physical machines, there is a script that simplifies
+the process for running multiple instances of txnvalidator on a single virtual
+machine instance.  As in the single txnvalidator case, you will need to log in
+to the development environment (i.e., ``vagrant ssh``).  In its simplest form,
+the script is executed as follows:
 
 .. code-block:: console
 
@@ -62,8 +63,8 @@ configuration file used, usually
 /project/sawtooth-validator/etc/txnvalidator.js, as well as any configuration
 settings that it has overridden.
 
-After the script launches the txnvalidator instance(s), it presents an interactive
-shell command-line interface:
+After the script launches the txnvalidator instance(s), it presents an
+interactive shell command-line interface:
 
 .. code-block:: console
 
@@ -103,8 +104,8 @@ executing the command with the ``--help`` (or ``-h``) command-line option.
       --log-level LOG_LEVEL
                             LogLevel to run the validators at.
 
-To initially launch, for example, two txnvalidator instances and have the logging
-level set to DEBUG, execute the following:
+To initially launch, for example, two txnvalidator instances and have the
+logging level set to DEBUG, execute the following:
 
 .. code-block:: console
 
@@ -118,8 +119,8 @@ level set to DEBUG, execute the following:
 Obtaining Help About Available Commands
 ---------------------------------------
 
-Execute the ``help`` command to learn about the commands available via the command-line
-interface.
+Execute the ``help`` command to learn about the commands available via the
+command-line interface.
 
 .. code-block:: console
 
@@ -139,8 +140,8 @@ executing ``help <command_name>``.
 Retrieving the Status of the Validator Network
 ----------------------------------------------
 
-Execute the ``status`` command to get information about the running txnvalidator
-instances.
+Execute the ``status`` command to get information about the running
+txnvalidator instances.
 
 .. code-block:: console
 
@@ -148,10 +149,10 @@ instances.
     0:  pid:8827   log: 18.77 KB
     1:  pid:8831   log: 19.23 KB
 
-Based upon the initial execution of the script with an instance count of two and
-the log level set to DEBUG, the ``status`` command, as expected, presents information
-about two txnvalidator instances.  For each txnvalidator instance, the following
-information is presented:
+Based upon the initial execution of the script with an instance count of two
+and the log level set to DEBUG, the ``status`` command, as expected, presents
+information about two txnvalidator instances.  For each txnvalidator instance,
+the following information is presented:
 
 * Instance ID, which is used for all commands that are specific to a txnvalidator instance
 * Process ID
@@ -160,8 +161,9 @@ information is presented:
 Adding a Validator to the Validator Network
 -------------------------------------------
 
-To add another txnvalidator instance to the existing validator network, execute the ``launch``
-command.  When the status command is run, there are now three txnvalidator instances.
+To add another txnvalidator instance to the existing validator network, execute
+the ``launch`` command.  When the status command is run, there are now three
+txnvalidator instances.
 
 .. code-block:: console
 
@@ -175,9 +177,9 @@ command.  When the status command is run, there are now three txnvalidator insta
 Retrieving a Validator's Configuration
 --------------------------------------
 
-To see the configuration information for the txnvalidator instance that was just
-launched to, for example, get the HTTP port it is listening on, execute the ``config``
-command, providing the txnvalidator instance ID.
+To see the configuration information for the txnvalidator instance that was
+just launched to, for example, get the HTTP port it is listening on, execute
+the ``config`` command, providing the txnvalidator instance ID.
 
 .. code-block:: console
 
@@ -217,11 +219,11 @@ txnvalidator instance is listening on port 8802.
 Viewing a Validator's Log File
 ------------------------------
 
-To view the log file for a txnvalidator instance, navigate to the data directory,
-which can either be specified as a command-line parameter to the script,
-or can be obtained by executing the config command for a particular txnvalidator
-instance.  Alternatively, execute the ``log`` command for a particular txnvalidator
-instance:
+To view the log file for a txnvalidator instance, navigate to the data
+directory, which can either be specified as a command-line parameter to the
+script, or can be obtained by executing the config command for a particular
+txnvalidator instance.  Alternatively, execute the ``log`` command for a
+particular txnvalidator instance:
 
 .. code-block:: console
 
@@ -236,9 +238,9 @@ instance:
 Removing a Validator from the Validator Network
 -----------------------------------------------
 
-To remove a txnvalidator instance from the validator network, execute the ``kill`` command,
-providing its instance ID.  For example, to remove the txnvalidator instance that was
-just launched, execute the following:
+To remove a txnvalidator instance from the validator network, execute the
+``kill`` command, providing its instance ID.  For example, to remove the
+txnvalidator instance that was just launched, execute the following:
 
 .. code-block:: console
 
@@ -248,9 +250,9 @@ just launched, execute the following:
 Tearing Down the Validator Network
 ----------------------------------
 
-To tear down the validator network, execute the ``exit`` command.  It will take care of
-stopping each of the txnvalidator instances as well as cleaning up any temporary
-files/directories that were created.
+To tear down the validator network, execute the ``exit`` command.  It will take
+care of stopping each of the txnvalidator instances as well as cleaning up any
+temporary files/directories that were created.
 
 .. code-block:: console
 
