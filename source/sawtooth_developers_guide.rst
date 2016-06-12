@@ -7,7 +7,7 @@ Sawtooth Lake Developer's Guide
    :maxdepth: 2
 
    sawtooth_developers_guide/architecture_overview
-   sawtooth_developers_guide/sawtooth-vagrant
+   sawtooth_developers_guide/sawtooth_vagrant
    sawtooth_api/modules
    sawtooth_developers_guide/web_api/index
    sawtooth_developers_guide/validator-network-launcher
