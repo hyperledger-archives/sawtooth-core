@@ -16,6 +16,7 @@
 import logging
 import time
 import urllib2
+from enum import Enum
 
 from gossip import node, signed_object
 from gossip.common import json2dict, cbor2dict, dict2cbor
@@ -27,9 +28,12 @@ from sawtooth.exceptions import ClientException
 
 LOGGER = logging.getLogger(__name__)
 
-# HTTP status codes
-HTTP_OK = 200
-HTTP_NOT_FOUND = 404
+
+# Map HTTP status codes to their corresponding transaction status
+class TransactionStatus(Enum):
+    committed = 200
+    pending = 302
+    not_found = 404
 
 
 class Communication(object):
@@ -289,16 +293,26 @@ class SawtoothClient(Communication):
             LOGGER.info('no transaction specified for wait')
             return True
 
+        start_time = time.time()
         passes = 0
         while True:
             passes += 1
             status = self.headrequest('/transaction/{0}'.format(txnid))
 
-            if status == HTTP_NOT_FOUND and passes > iterations:
-                LOGGER.warn('unknown transaction %s', txnid)
+            if status != TransactionStatus.committed and passes > iterations:
+                if status == TransactionStatus.not_found:
+                    LOGGER.warn('unknown transaction %s', txnid)
+                elif status == TransactionStatus.pending:
+                    LOGGER.warn(
+                        'transaction %s still uncommitted after %d sec',
+                        txnid, int(time.time() - start_time))
+                else:
+                    LOGGER.warn(
+                        'transaction %s returned unexpected status code %d',
+                        txnid, status)
                 return False
 
-            if status == HTTP_OK:
+            if status == TransactionStatus.committed:
                 return True
 
             LOGGER.debug('waiting for transaction %s to commit', txnid)
