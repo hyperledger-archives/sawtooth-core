@@ -319,7 +319,6 @@ def main():
             cfg=opts.validator_config,
             dataDir=opts.data_dir,
             blockChainArchive=opts.load_blockchain)
-        # networkManager.launch_network(opts.count)
         networkManager.staged_launch_network(opts.count)
 
         # wait ...

@@ -270,9 +270,7 @@ class ValidatorNetworkManager(object):
         with Progress("Sending shutdown message to validators: ") as p:
             for v in self.Validators:
                 if v.is_running():
-                    # print v.Name, v.Url
                     v.post_shutdown()
-                    # time.sleep(1)
                 p.step()
 
         running_count = 0
