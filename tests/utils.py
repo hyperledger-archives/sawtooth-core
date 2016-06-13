@@ -1,4 +1,5 @@
 
+import hashlib
 import random
 import string
 from journal.consensus.poet.poet_enclave_simulator \
@@ -30,3 +31,13 @@ def random_name(length=16):
     return ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits)
         for _ in range(length))
+
+
+def generate_txn_ids(count):
+    out = []
+    hasher = hashlib.sha256()
+    for i in range(0, count):
+        name = random_name(poet.IDENTIFIER_LENGTH)
+        hasher.update(name)
+        out.append(name)
+    return out, hasher.hexdigest()

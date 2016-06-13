@@ -102,7 +102,10 @@ class PoetJournal(journal_core.Journal):
             + 1 if self.MostRecentCommittedBlock else 0
         nblock.PreviousBlockID = self.MostRecentCommittedBlockID
         nblock.TransactionIDs = txnlist
-        nblock.create_wait_timer(self._build_certificate_list(nblock))
+
+        nblock.create_wait_timer(
+            self.LocalNode.signing_address(),
+            self._build_certificate_list(nblock))
 
         # must put a cap on the transactions in the block
         if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:

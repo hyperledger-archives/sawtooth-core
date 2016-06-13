@@ -24,11 +24,14 @@ logger = logging.getLogger(__name__)
 class WaitTimer(object):
     def __init__(self, serialized, signature):
         obj = json.loads(serialized)
+        self.duration = obj["Duration"]
         self.local_mean = obj["LocalMean"]
         self.request_time = time.time()
-        self.duration = obj["Duration"]
         self.previous_certificate_id = \
             obj["PreviousCertID"]
+        self.validator_address = \
+            obj["ValidatorAddress"]
+
         self.serialized = serialized
         self.signature = signature
 

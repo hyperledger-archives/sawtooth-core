@@ -14,7 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import logging
-
+import hashlib
+from time import time
 from journal.consensus.poet.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class WaitCertificate(object):
     poet_enclave = None
 
     @classmethod
-    def create_wait_certificate(cls, timer):
+    def create_wait_certificate(cls, timer, block_hash):
         """Creates a wait certificate in the enclave and then constructs
         a WaitCertificate object.
 
@@ -65,7 +66,8 @@ class WaitCertificate(object):
                  certificate.
         """
         cert = cls.poet_enclave.create_wait_certificate(
-            timer.enclave_wait_timer)
+            timer.enclave_wait_timer,
+            block_hash)
         if not cert:
             logger.warn('invalid timer: %s', timer)
             raise Exception(
@@ -110,6 +112,8 @@ class WaitCertificate(object):
         self.local_mean = cert.local_mean
         self.request_time = cert.request_time
         self.duration = cert.duration
+        self.validator_address = cert.validator_address
+        self.block_hash = cert.block_hash
         self.signature = cert.signature
         self.identifier = cert.identifier()
 
@@ -133,7 +137,7 @@ class WaitCertificate(object):
             logger.warn('Wait certificate failed to deserialize.')
             return None
 
-    def is_valid_wait_certificate(self, certs):
+    def is_valid_wait_certificate(self, originator_id, certs, transactions):
         """Determines whether the wait certificate is valid.
 
         Args:
@@ -142,7 +146,13 @@ class WaitCertificate(object):
         Returns:
             bool: Whether or not the wait certificate is valid.
         """
+        if not isinstance(originator_id, basestring):
+            raise TypeError
+
         if not isinstance(certs, list):
+            raise TypeError
+
+        if not isinstance(transactions, list):
             raise TypeError
 
         cert = self.enclave_wait_certificate
@@ -167,6 +177,28 @@ class WaitCertificate(object):
         if cert.previous_certificate_id != certs[-1].identifier:
             logger.warn('mismatch previous identifier: %s != %s',
                         cert.previous_certificate_id, certs[-1].identifier)
+            return False
+
+        hasher = hashlib.sha256()
+        for tid in transactions:
+            hasher.update(tid)
+        block_hash = hasher.hexdigest()
+
+        if block_hash != self.block_hash:
+            logger.warn('Transaction hash mismatch : %s != %s',
+                        self.block_hash, block_hash)
+            return False
+
+        if self.validator_address != originator_id:
+            logger.warn('Originator Id mismatch: %s != %s',
+                        self.validator_address, originator_id)
+            return False
+
+        end_time = self.request_time + self.duration
+        cur_time = time()
+        if end_time > cur_time:
+            logger.warn('Wait Certificate expires in the future: %f < %f',
+                        end_time, cur_time)
             return False
 
         return self.poet_enclave.verify_wait_certificate(cert)

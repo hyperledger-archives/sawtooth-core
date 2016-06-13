@@ -17,7 +17,7 @@ import unittest
 import time
 
 
-from utils import generate_certs
+from utils import generate_certs, random_name
 
 from journal.consensus.poet.wait_timer import WaitTimer
 from journal.consensus.poet.poet_enclave_simulator \
@@ -32,30 +32,41 @@ class TestPoetWaitTimer(unittest.TestCase):
         WaitTimer.poet_enclave = poet
 
     def test_create_wait_timer(self):
+        certs = []
         # invalid list
         with self.assertRaises(TypeError) as context:
-            WaitTimer.create_wait_timer(None)
+            WaitTimer.create_wait_timer(None, certs)
         with self.assertRaises(TypeError) as context:
-            WaitTimer.create_wait_timer("")
+            WaitTimer.create_wait_timer([], certs)
         with self.assertRaises(TypeError) as context:
-            WaitTimer.create_wait_timer("XYZZY")
+            WaitTimer.create_wait_timer({}, certs)
         with self.assertRaises(TypeError) as context:
-            WaitTimer.create_wait_timer(555)
+            WaitTimer.create_wait_timer(555, certs)
 
-        # empty list
-        certs = []
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        addr = random_name(20)
+        # invalid list
+        with self.assertRaises(TypeError) as context:
+            WaitTimer.create_wait_timer(addr, None)
+        with self.assertRaises(TypeError) as context:
+            WaitTimer.create_wait_timer(addr, "")
+        with self.assertRaises(TypeError) as context:
+            WaitTimer.create_wait_timer(addr, "XYZZY")
+        with self.assertRaises(TypeError) as context:
+            WaitTimer.create_wait_timer(addr, 555)
+
+        certs = []  # empty list
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         # this will only catch changes in behavior of local mean calc
         self.assertEqual(wait_timer.local_mean, 30)
 
         certs = generate_certs(WaitTimer.fixed_duration_blocks - 1)
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         # this will only catch changes in behavior of local mean calc
         # based on the existing defaults...
         self.assertEqual(wait_timer.local_mean, 2882.388)
 
         certs = generate_certs(WaitTimer.fixed_duration_blocks)
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         self.assertEqual(wait_timer.local_mean, 30)
 
     def test_compute_local_mean(self):
@@ -97,8 +108,9 @@ class TestPoetWaitTimer(unittest.TestCase):
         WaitTimer.target_wait_time = 1
 
         # normal case
+        addr = random_name(20)
         certs = generate_certs(WaitTimer.certificate_sample_length)
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         start = time.time()
         while not wait_timer.is_expired(time.time()):
             time.sleep(1)
@@ -106,7 +118,7 @@ class TestPoetWaitTimer(unittest.TestCase):
 
         self.assertLessEqual(wait_timer.duration, end - start)
         # tamper with duration
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         d = wait_timer.duration
         wait_timer.duration = 1
 
@@ -118,7 +130,7 @@ class TestPoetWaitTimer(unittest.TestCase):
         self.assertLessEqual(d, end - start)
 
         # tamper with request_time
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         wait_timer.request_time = time.time() - wait_timer.duration
         while not wait_timer.is_expired(time.time()):
             time.sleep(1)

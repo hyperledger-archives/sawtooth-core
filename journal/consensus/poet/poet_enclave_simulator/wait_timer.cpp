@@ -60,7 +60,10 @@ WaitTimer::WaitTimer(string encoded, string signature)
     this->deserialize(encoded);
 }
 
-WaitTimer::WaitTimer(string previous_certificate_id, double local_mean)
+WaitTimer::WaitTimer(
+    string validator_address,
+    string previous_certificate_id,
+    double local_mean)
 {
     if(local_mean <= 0) {
         throw ValueError("Invalid local mean");
@@ -76,6 +79,7 @@ WaitTimer::WaitTimer(string previous_certificate_id, double local_mean)
     this->duration = ComputeDuration(local_mean);
 
     this->previous_certificate_id = previous_certificate_id;
+    this->validator_address = validator_address;
 }
 
 bool WaitTimer::is_expired(void)
@@ -106,6 +110,9 @@ bool WaitTimer::deserialize(string serialized)
     if (json_object_object_get_ex(jobj, "RequestTime", &obj))
         request_time = json_object_get_double(obj);
 
+    if (json_object_object_get_ex(jobj, "ValidatorAddress", &obj))
+        validator_address = json_object_get_string(obj);
+
     return true;
 }
 
@@ -116,19 +123,21 @@ string WaitTimer::serialize()
     // Use alphabetical order for the keys
     json_object_object_add(jobj, "Duration", json_object_new_double(duration));
     json_object_object_add(jobj, "LocalMean", json_object_new_double(local_mean));
-    json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.data()));
+    json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.c_str()));
     json_object_object_add(jobj, "RequestTime", json_object_new_double(request_time));
+    json_object_object_add(jobj, "ValidatorAddress", json_object_new_string((char *)validator_address.c_str()));
 
     string serialized = (char *)json_object_to_json_string(jobj);
-
     return serialized;
 }
 
 
-WaitTimer* create_wait_timer(string prev_cert_id,
-                                double local_mean)
+WaitTimer* create_wait_timer(
+    string validator_address,
+    string prev_cert_id,
+    double local_mean)
 {
-    WaitTimer *timer = new WaitTimer(prev_cert_id, local_mean);
+    WaitTimer *timer = new WaitTimer(validator_address, prev_cert_id, local_mean);
     timer->signature = SignMessage(WaitTimerPrivateKey, timer->serialize());
     return(timer);
 }

@@ -27,8 +27,9 @@ from journal.consensus.poet.poet_enclave_simulator \
 
 class TestPoetEnclaveWaitTimer(unittest.TestCase):
     def test_create(self):
+        addr = random_name(20)
         previous_cert_id = poet.NULL_IDENTIFIER
-        wait_timer = poet.create_wait_timer(previous_cert_id, 100)
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
         self.assertEquals(wait_timer.previous_certificate_id, previous_cert_id)
         self.assertEquals(wait_timer.local_mean, 100)
 
@@ -36,37 +37,47 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
         previous_cert_id = random_name(poet.IDENTIFIER_LENGTH)
 
         # Bad local means
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, -1)
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, 0)
+        with self.assertRaises(TypeError) as context:
+            wait_timer = poet.create_wait_timer([], previous_cert_id, 100)
+        with self.assertRaises(TypeError) as context:
+            wait_timer = poet.create_wait_timer({}, previous_cert_id, 100)
+        with self.assertRaises(TypeError) as context:
+            wait_timer = poet.create_wait_timer(None, previous_cert_id, 100)
+        with self.assertRaises(TypeError) as context:
+            wait_timer = poet.create_wait_timer(8888, previous_cert_id, 100)
 
+        # Bad local means
+        with self.assertRaises(ValueError) as context:
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, -1)
+        with self.assertRaises(ValueError) as context:
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 0)
         with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, [])
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, [])
         with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, None)
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, None)
         with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, "3")
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, "3")
 
         # Bad previous cert len
         with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(None, 0)
+            wait_timer = poet.create_wait_timer(addr, None, 0)
 
         previous_cert_id = ""  # to short
         with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, 100)
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
 
         previous_cert_id = random_name(8)  # to short
         with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, 100)
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
 
         previous_cert_id = random_name(17)  # to long
         with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(previous_cert_id, 100)
+            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
 
     def test_is_expired(self):
+        addr = random_name(20)
         previous_cert_id = poet.NULL_IDENTIFIER
-        wait_timer = poet.create_wait_timer(previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
         start = time.time()
         while not wait_timer.is_expired():
             time.sleep(1)
@@ -78,12 +89,14 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
         # as showing in the test_serialize tampered data tests below.
 
     def test_serialize(self):
+        addr = random_name(20)
         previous_cert_id = poet.NULL_IDENTIFIER
-        wait_timer = poet.create_wait_timer(previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
         serialized_wait_timer = wait_timer.serialize()
 
-        wait_timer2 = poet.deserialize_wait_timer(serialized_wait_timer,
-                                                  wait_timer.signature)
+        wait_timer2 = poet.deserialize_wait_timer(
+            serialized_wait_timer,
+            wait_timer.signature)
 
         self.assertTrue(is_close(
             wait_timer.duration,
@@ -133,24 +146,41 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
         with self.assertRaises(TypeError) as context:
             wait_timer2 = poet.deserialize_wait_timer(8, wait_timer.signature)
 
+    def test_serialize_2(self):
+
+        addr = random_name(20)
+        previous_cert_id = poet.NULL_IDENTIFIER
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
+        serialized_wait_timer = wait_timer.serialize()
+        wait_timer2 = poet.deserialize_wait_timer(
+            serialized_wait_timer,
+            wait_timer.signature)
+
         # tampered data
-        wait_timer = poet.create_wait_timer(previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
         wait_timer.duration = 2
         serialized_wait_timer = wait_timer.serialize()
         with self.assertRaises(ValueError) as context:
             wait_timer2 = poet.deserialize_wait_timer(serialized_wait_timer,
                                                       wait_timer.signature)
 
-        wait_timer = poet.create_wait_timer(previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
         wait_timer.request_time = 2
         serialized_wait_timer = wait_timer.serialize()
         with self.assertRaises(ValueError) as context:
             wait_timer2 = poet.deserialize_wait_timer(serialized_wait_timer,
                                                       wait_timer.signature)
 
-        wait_timer = poet.create_wait_timer(previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
         wait_timer.previous_certificate_id = random_name(
             len(poet.NULL_IDENTIFIER))
+        serialized_wait_timer = wait_timer.serialize()
+        with self.assertRaises(ValueError) as context:
+            wait_timer2 = poet.deserialize_wait_timer(serialized_wait_timer,
+                                                      wait_timer.signature)
+
+        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
+        wait_timer.validator_address = random_name(20)
         serialized_wait_timer = wait_timer.serialize()
         with self.assertRaises(ValueError) as context:
             wait_timer2 = poet.deserialize_wait_timer(serialized_wait_timer,

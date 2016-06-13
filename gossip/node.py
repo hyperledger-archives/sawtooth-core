@@ -23,6 +23,8 @@ import random
 import time
 from heapq import heappop, heappush, heapify
 
+import pybitcointools
+
 from gossip import stats
 from gossip import token_bucket
 
@@ -253,6 +255,10 @@ class Node(object):
         multiple instances of a gossiper in one process.
         """
         return Node(self.Identifier, self.NetAddress)
+
+    def signing_address(self):
+        return pybitcointools.pubtoaddr(
+            pybitcointools.privtopub(self.SigningKey))
 
 
 class RoundTripEstimator(object):
