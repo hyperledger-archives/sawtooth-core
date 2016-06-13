@@ -108,6 +108,7 @@ class TestMessage(unittest.TestCase):
         # Test default Message intialization
         # This is a bad for actual use because it does not have a Signature
         msg = Message()
+        time.sleep(.05)
         self.assertLess(msg.Nonce, time.time())
         self.assertEquals(msg.TimeToLive, (2**31))
         self.assertTrue(msg.IsForward)
