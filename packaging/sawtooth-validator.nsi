@@ -48,7 +48,7 @@ section "install"
 	# Files for the install directory - to build the installer, these should be in the same directory as the install script (this file)
 	setOutPath $INSTDIR
 	# Files added here should be removed by the uninstaller (see section "uninstall")
-	File /r /x *.py /x easy_install*.exe /x pybtctool "sawtooth-validator\"
+	File /r /x *.pyc /x pybtctool "sawtooth-validator\"
 
 	
 	# Uninstaller - See function un.onInit and section "uninstall" for configuration
