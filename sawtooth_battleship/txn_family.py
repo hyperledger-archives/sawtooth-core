@@ -86,7 +86,8 @@ class BattleshipTransaction(transaction.Transaction):
         super(BattleshipTransaction, self).__init__(minfo)
 
         LOGGER.debug("minfo: %s", repr(minfo))
-        LOGGER.error("BattleshipTransaction.__init__() not implemented")
+        self._name = minfo['Name'] if 'Name' in minfo else None
+        self._action = minfo['Action'] if 'Action' in minfo else None
 
     def __str__(self):
         LOGGER.error("BattleshipTransaction.__str__() not implemented")
