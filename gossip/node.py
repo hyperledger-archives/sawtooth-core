@@ -252,7 +252,7 @@ class Node(object):
         """Create a copy of the node, primarily useful for debugging
         multiple instances of a gossiper in one process.
         """
-        return Node(self.Identifier, self.NetAddress)
+        return Node(self.NetAddress, self.Identifier)
 
 
 class RoundTripEstimator(object):
