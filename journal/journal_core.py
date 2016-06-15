@@ -525,6 +525,8 @@ class Journal(gossip_core.Gossip):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
+        logger.info('missing_txn called NC')
+
         now = time.time()
 
         if txnid in self.RequestedTransactions and now < \
@@ -991,6 +993,7 @@ class Journal(gossip_core.Gossip):
             # at this point we cannot find the dependency so send out a request
             # for it and wait, we should set a timer on this transaction so we
             # can just throw it away if the dependencies cannot be met
+            logger.info('calling missing Txn NC')
             ready = False
             self.request_missing_txn(dependencyID)
 
