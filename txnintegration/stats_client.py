@@ -6,7 +6,12 @@ from twisted.web.client import Agent
 from twisted.web.client import readBody
 from twisted.web.http_headers import Headers
 
+from txnintegration.utils import StatsCollector
+from txnintegration.utils import PlatformStats
+
 import time
+import csv
+import collections
 
 import argparse
 import sys
@@ -50,6 +55,40 @@ class ConsolePrint(object):
             self.scrn.keypad(0)
             curses.echo()
             curses.endwin()
+
+
+class CsvManager(object):
+    def __init__(self):
+        self.csvdata = []
+
+    def open_csv_file(self, filename, filepath=""):
+        self.file = open(filename, 'wt')
+        self.writer = csv.writer(self.file)
+
+    def close_csv_file(self):
+        self.file.close()
+
+    def csv_newline(self):
+        self.csvdata = []
+
+    def csv_append(self, datalist):
+        self.csvdata.extend(datalist)
+
+    def csv_write_header(self, headerlist=None):
+        if headerlist is not None:
+            self.csvdata.extend(headerlist)
+        self.csvdata.insert(0, "time")
+        self._csv_write()
+
+    def csv_write_data(self, datalist=None):
+        if datalist is not None:
+            self.csvdata.extend(datalist)
+        self.csvdata.insert(0, time.time())
+        self._csv_write()
+
+    def _csv_write(self):
+        self.writer.writerow(self.csvdata)
+        self.csvdata = []
 
 
 class StatsClient(object):
@@ -108,24 +147,28 @@ class StatsClient(object):
         reactor.stop()
 
 
-class ValidatorStats(object):
-    def __init__(self):
-        self.blocks_claimed = 0
-        self.blocks_committed = 0
-        self.blocks_pending = 0
-        self.txns_committed = 0
-        self.txns_pending = 0
-        self.packets_dropped = 0
-        self.packets_duplicates = 0
-        self.packets_acks_received = 0
-        self.msgs_handled = 0
-        self.msgs_acked = 0
+ValStats = collections.namedtuple('validatorstats',
+                                  'blocks_claimed '
+                                  'blocks_committed '
+                                  'blocks_pending '
+                                  'txns_committed '
+                                  'txns_pending '
+                                  'packets_dropped '
+                                  'packets_duplicates '
+                                  'packets_acks_received '
+                                  'msgs_handled '
+                                  'msgs_acked')
+
+
+class ValidatorStats(ValStats, StatsCollector):
+    def __init__(self, *args):
+        super(ValidatorStats, self).__init__()
+        self.statslist = [self]
 
 
 class ValidatorStatsManager(object):
     def __init__(self):
-        self.vstats = ValidatorStats()
-        self.vstatslast = ValidatorStats()
+        self.vstats = ValidatorStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
         self.val_name = None
         self.val_url = None
@@ -138,26 +181,18 @@ class ValidatorStatsManager(object):
         if active:
 
             try:
-                self.vstats.blocks_claimed = \
-                    jsonstats["ledger"]["BlocksClaimed"]
-                self.vstats.blocks_committed = \
-                    jsonstats["ledger"]["CommittedBlockCount"]
-                self.vstats.blocks_pending = \
-                    jsonstats["ledger"]["PendingBlockCount"]
-                self.vstats.txns_committed = \
-                    jsonstats["ledger"]["CommittedTxnCount"]
-                self.vstats.txns_pending = \
-                    jsonstats["ledger"]["PendingTxnCount"]
-                self.vstats.packets_dropped = \
-                    jsonstats["packet"]["DroppedPackets"]
-                self.vstats.packets_duplicates = \
-                    jsonstats["packet"]["DuplicatePackets"]
-                self.vstats.packets_acks_received = \
-                    jsonstats["packet"]["AcksReceived"]
-                self.vstats.msgs_handled = \
-                    jsonstats["packet"]["MessagesHandled"]
-                self.vstats.msgs_acked = \
+                self.vstats = ValStats(
+                    jsonstats["ledger"]["BlocksClaimed"],
+                    jsonstats["ledger"]["CommittedBlockCount"],
+                    jsonstats["ledger"]["PendingBlockCount"],
+                    jsonstats["ledger"]["CommittedTxnCount"],
+                    jsonstats["ledger"]["PendingTxnCount"],
+                    jsonstats["packet"]["DroppedPackets"],
+                    jsonstats["packet"]["DuplicatePackets"],
+                    jsonstats["packet"]["AcksReceived"],
+                    jsonstats["packet"]["MessagesHandled"],
                     jsonstats["packet"]["MessagesAcked"]
+                )
             except KeyError as ke:
                 print "invalid key in vsm.update_stats()", ke
 
@@ -170,42 +205,60 @@ class ValidatorStatsManager(object):
             self.response_time = endtime - starttime
 
 
-class SystemStats(object):
+SysClient = collections.namedtuple('sys_client',
+                                   'starttime '
+                                   'runtime '
+                                   'known_validators '
+                                   'active_validators '
+                                   'avg_client_time '
+                                   'max_client_time')
+SysBlocks = collections.namedtuple('sys_blocks',
+                                   'blocks_max_committed '
+                                   'blocks_min_committed '
+                                   'blocks_max_pending '
+                                   'blocks_min_pending '
+                                   'blocks_max_claimed '
+                                   'blocks_min_claimed')
+SysTxns = collections.namedtuple('sys_txns',
+                                 'txns_max_committed '
+                                 'txns_min_committed '
+                                 'txns_max_pending '
+                                 'txns_min_pending '
+                                 'txn_rate')
+SysPackets = collections.namedtuple('sys_packets',
+                                    'packets_max_dropped '
+                                    'packets_min_dropped '
+                                    'packets_max_duplicates '
+                                    'packets_min_duplicates '
+                                    'packets_max_acks_received '
+                                    'packets_min_acks_received')
+SysMsgs = collections.namedtuple('sys_messages',
+                                 'msgs_max_handled '
+                                 'msgs_min_handled '
+                                 'msgs_max_acked '
+                                 'msgs_min_acked')
+
+
+class SystemStats(StatsCollector):
     def __init__(self):
+        super(SystemStats, self).__init__()
+
         self.starttime = int(time.time())
         self.runtime = 0
-
         self.known_validators = 0
         self.active_validators = 0
-
         self.avg_client_time = 0
         self.max_client_time = 0
-
-        self.blocks_max_committed = 0
-        self.blocks_min_committed = 0
-        self.blocks_max_pending = 0
-        self.blocks_min_pending = 0
-        self.blocks_max_claimed = 0
-        self.blocks_min_claimed = 0
-
-        self.txns_max_committed = 0
-        self.txns_min_committed = 0
-        self.txns_max_pending = 0
-        self.txns_min_pending = 0
-
         self.txn_rate = 0
 
-        self.packets_max_dropped = 0
-        self.packets_min_dropped = 0
-        self.packets_max_duplicates = 0
-        self.packets_min_duplicates = 0
-        self.packets_max_acks_received = 0
-        self.packets_min_acks_received = 0
+        self.sys_client = SysClient(self.starttime, 0, 0, 0, 0, 0)
+        self.sys_blocks = SysBlocks(0, 0, 0, 0, 0, 0)
+        self.sys_txns = SysTxns(0, 0, 0, 0, 0)
+        self.sys_packets = SysPackets(0, 0, 0, 0, 0, 0)
+        self.sys_msgs = SysMsgs(0, 0, 0, 0)
 
-        self.msgs_max_handled = 0
-        self.msgs_min_handled = 0
-        self.msgs_max_acked = 0
-        self.msgs_min_acked = 0
+        self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
+                          self.sys_packets, self.sys_msgs]
 
         # collectors
 
@@ -242,40 +295,76 @@ class SystemStats(object):
                 self.msgs_acked.append(c.vsm.vstats.msgs_acked)
 
     def calculate_stats(self):
+        self.runtime = int(time.time()) - self.starttime
+
         if self.active_validators > 0:
             self.avg_client_time = sum(self.response_times)\
                 / len(self.response_times)
             self.max_client_time = max(self.response_times)
 
-            self.blocks_max_committed = max(self.blocks_committed)
-            self.blocks_min_committed = min(self.blocks_committed)
-            self.blocks_max_pending = max(self.blocks_pending)
-            self.blocks_min_pending = min(self.blocks_pending)
-            self.blocks_max_claimed = max(self.blocks_claimed)
-            self.blocks_min_claimed = min(self.blocks_claimed)
+            self.sys_client = SysClient(
+                self.starttime,
+                self.runtime,
+                self.known_validators,
+                self.active_validators,
+                self.avg_client_time,
+                self.max_client_time
+            )
 
-            self.txns_max_committed = max(self.txns_committed)
-            self.txns_min_committed = min(self.txns_committed)
-            self.txns_max_pending = max(self.txns_pending)
-            self.txns_min_pending = min(self.txns_pending)
+            self.sys_blocks = SysBlocks(
+                max(self.blocks_committed),
+                min(self.blocks_committed),
+                max(self.blocks_pending),
+                min(self.blocks_pending),
+                max(self.blocks_claimed),
+                min(self.blocks_claimed)
+            )
 
-            self.packets_max_dropped = max(self.packets_dropped)
-            self.packets_min_dropped = min(self.packets_dropped)
-            self.packets_max_duplicates = max(self.packets_duplicates)
-            self.packets_min_duplicates = min(self.packets_duplicates)
-            self.packets_max_acks_received = max(self.packets_acks_received)
-            self.packets_min_acks_received = min(self.packets_acks_received)
+            self.sys_txns = SysTxns(
+                max(self.txns_committed),
+                min(self.txns_committed),
+                max(self.txns_pending),
+                min(self.txns_pending),
+                0
+            )
 
-            self.msgs_max_handled = max(self.msgs_handled)
-            self.msgs_min_handled = min(self.msgs_handled)
-            self.msgs_max_acked = max(self.msgs_acked)
-            self.msgs_min_acked = min(self.msgs_acked)
+            self.sys_packets = SysPackets(
+                max(self.packets_dropped),
+                min(self.packets_dropped),
+                max(self.packets_duplicates),
+                min(self.packets_duplicates),
+                max(self.packets_acks_received),
+                min(self.packets_acks_received)
+            )
+
+            self.sys_msgs = SysMsgs(
+                max(self.msgs_handled),
+                min(self.msgs_handled),
+                max(self.msgs_acked),
+                min(self.msgs_acked)
+            )
+
+            # must create new stats list each time stats are updated
+            # because named tuples are immutable
+            self.statslist = [self.sys_client, self.sys_blocks,
+                              self.sys_txns, self.sys_packets, self.sys_msgs]
 
 
 class SystemStatsManager(object):
     def __init__(self):
         self.cp = ConsolePrint()
+
         self.ss = SystemStats()
+        self.ps = PlatformStats()
+
+        self.csvmgr = CsvManager()
+        filename = "stats_client_" + str(int(time.time())) + ".csv"
+
+        self.csvmgr.open_csv_file(filename)
+        header = self.ss.get_names()
+        self.csvmgr.csv_append(header)
+        header = self.ps.get_names()
+        self.csvmgr.csv_write_header(header)
 
     def process_stats(self, statsclients):
         self.ss.known_validators = len(statsclients)
@@ -284,7 +373,7 @@ class SystemStatsManager(object):
         self.ss.collect_stats(statsclients)
         self.ss.calculate_stats()
 
-        self.ss.runtime = int(time.time()) - self.ss.starttime
+        self.ps.get_stats()
 
     def print_stats(self):
         self.cp.cpprint('    Validators: {0:8d} known,'
@@ -292,53 +381,67 @@ class SystemStatsManager(object):
                         '      {2:8f} avg time(s),'
                         '    {3:8f} max time(s),'
                         '    {4:8d} run time(s)'
-                        .format(self.ss.known_validators,
-                                self.ss.active_validators,
-                                self.ss.avg_client_time,
-                                self.ss.max_client_time,
-                                self.ss.runtime), False)
+                        .format(self.ss.sys_client.known_validators,
+                                self.ss.sys_client.active_validators,
+                                self.ss.sys_client.avg_client_time,
+                                self.ss.sys_client.max_client_time,
+                                self.ss.sys_client.runtime),
+                        False)
         self.cp.cpprint('        Blocks: {0:8d} max committed,'
                         ' {1:8d} min committed,'
                         '   {2:8d} max pending,'
                         '    {3:8d} min pending,'
                         '    {4:8d} max claimed,'
                         '      {5:8d} min claimed'
-                        .format(self.ss.blocks_max_committed,
-                                self.ss.blocks_min_committed,
-                                self.ss.blocks_max_pending,
-                                self.ss.blocks_min_pending,
-                                self.ss.blocks_max_claimed,
-                                self.ss.blocks_min_claimed), False)
+                        .format(self.ss.sys_blocks.blocks_max_committed,
+                                self.ss.sys_blocks.blocks_min_committed,
+                                self.ss.sys_blocks.blocks_max_pending,
+                                self.ss.sys_blocks.blocks_min_pending,
+                                self.ss.sys_blocks.blocks_max_claimed,
+                                self.ss.sys_blocks.blocks_min_claimed),
+                        False)
         self.cp.cpprint('  Transactions: {0:8d} max committed,'
                         ' {1:8d} min committed,'
                         '   {2:8d} max pending,'
                         '    {3:8d} min pending,'
                         '    {4:8d} rate (t/s)'
-                        .format(self.ss.txns_max_committed,
-                                self.ss.txns_min_committed,
-                                self.ss.txns_max_pending,
-                                self.ss.txns_min_pending,
-                                0), False)
+                        .format(self.ss.sys_txns.txns_max_committed,
+                                self.ss.sys_txns.txns_min_committed,
+                                self.ss.sys_txns.txns_max_pending,
+                                self.ss.sys_txns.txns_min_pending,
+                                0),
+                        False)
         self.cp.cpprint(' Packet totals: {0:8d} max dropped,'
                         '   {1:8d} min dropped,'
                         '     {2:8d} max duplicated,'
                         ' {3:8d} min duplicated,'
                         ' {4:8d} max aks received,'
                         ' {5:8d} min aks received'
-                        .format(self.ss.packets_max_dropped,
-                                self.ss.packets_min_dropped,
-                                self.ss.packets_max_duplicates,
-                                self.ss.packets_min_duplicates,
-                                self.ss.packets_max_acks_received,
-                                self.ss.packets_min_acks_received), False)
+                        .format(self.ss.sys_packets.packets_max_dropped,
+                                self.ss.sys_packets.packets_min_dropped,
+                                self.ss.sys_packets.packets_max_duplicates,
+                                self.ss.sys_packets.packets_min_duplicates,
+                                self.ss.sys_packets.packets_max_acks_received,
+                                self.ss.sys_packets.packets_min_acks_received),
+                        False)
         self.cp.cpprint('Message totals: {0:8d} max handled,'
                         '   {1:8d} min handled,'
                         '     {2:8d} max acked,'
                         '      {3:8d} min acked'
-                        .format(self.ss.msgs_max_handled,
-                                self.ss.msgs_min_handled,
-                                self.ss.msgs_max_acked,
-                                self.ss.msgs_min_acked), False)
+                        .format(self.ss.sys_msgs.msgs_max_handled,
+                                self.ss.sys_msgs.msgs_min_handled,
+                                self.ss.sys_msgs.msgs_max_acked,
+                                self.ss.sys_msgs.msgs_min_acked),
+                        False)
+        self.cp.cpprint('Platform stats: {0:8f} cpu pct,'
+                        '       {1:8f} vmem pct,'
+                        '       {2:8d} net bytes tx,'
+                        '  {3:8d} net bytes rx'
+                        .format(self.ps.cpu_stats.percent,
+                                self.ps.vmem_stats.percent,
+                                self.ps.net_stats.bytes_sent,
+                                self.ps.net_stats.bytes_recv),
+                        False)
 
         self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
                         '      TXNS     TXNS  VAL                VAL',
@@ -367,28 +470,32 @@ class SystemStatsManager(object):
 
         self.cp.cpprint("", True)
 
+    def write_stats(self):
+        data = self.ss.get_data()
+        self.csvmgr.csv_append(data)
+        data = self.ps.get_data()
+        self.csvmgr.csv_write_data(data)
+
     def ssmstop(self):
+        print "ssm is stopping"
         self.cp.cpstop()
-
-
-def handleshutdown(ignored):
-    reactor.stop()
+        self.csvmgr.close_csv_file()
 
 
 def workloop():
 
-    loopcounter = 0
+    ssm.process_stats(clients)
+    ssm.print_stats()
+    ssm.write_stats()
 
-    while True:
-        loopcounter += 1
+    for c in clients:
+        c.request()
 
-        ssm.process_stats(clients)
-        ssm.print_stats()
+    return
 
-        for c in clients:
-            c.request()
 
-        return
+def handleshutdown(ignored):
+    reactor.stop()
 
 
 def handleloopdone(result):
@@ -473,7 +580,8 @@ def main():
 
     # prevents curses import from modifying normal terminal operation
     # (suppression of cr-lf) during display of help screen, config settings
-    curses.endwin()
+    if curses_imported:
+        curses.endwin()
 
     try:
         opts = parse_args(sys.argv[1:])
