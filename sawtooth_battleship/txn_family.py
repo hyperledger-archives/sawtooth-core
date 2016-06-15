@@ -115,7 +115,58 @@ class BattleshipTransaction(transaction.Transaction):
             store (dict): Transaction store mapping.
         """
 
-        raise BattleshipException("check_valid() not implemented")
+        if not super(BattleshipTransaction, self).is_valid(store):
+            raise BattleshipException("invalid transaction")
+        
+        LOGGER.debug('checking %s', str(self))
+
+        if self._name is None or self._name == '':
+                raise BattleshipException('name not set')
+
+        if self._action is None or self._action == '':
+            raise BattleshipException('action not set')
+
+        if self._action == 'CREATE':    
+            if self._name in store:
+                raise BattleshipException('game already exists')
+        elif self._action == 'FIRE':
+            if self._name not in store:
+                raise BattleshipException('no such game')
+            
+            #TODO: how to deal with the board without space?
+            #TODO: Set spaec to 25 for a 5x5 board game
+            """
+            if self._space < 1 or self._space > 25:  
+                raise BattleshipException('invalid choice')
+            
+            """
+            state = store[self._name]['State']
+            
+            # TIE isn't possible during a battleship 
+            if state in ['P1-WIN', 'P2-WIN']:
+                raise XoException('game complete')
+
+            if state == 'P1-NEXT' and 'Player1' in store[self._name]:
+                player1 = store[self._name]['Player1']
+                if player1 != self.OriginatorID:
+                    raise XoException('invalid player 1')
+
+            if state == 'P2-NEXT' and 'Player2' in store[self._name]:
+                player1 = store[self._name]['Player2']
+                if player1 != self.OriginatorID:
+                    raise XoException('invalid player 2')
+
+            if store[self._name]['Board'][self._space - 1] != '-':
+                raise XoException('space already bombed')
+
+        elif self._action == 'ADD_BOARD':
+            raise BattleshipException('ADD_BOARD not implemented')
+        elif self._action == 'REVEAL':
+            raise BattleshipException('REVEAL not implemented')
+        else:
+            raise BattleshipException('invalid action')
+
+        
 
     def apply(self, store):
         """Applies all the updates in the transaction to the transaction
