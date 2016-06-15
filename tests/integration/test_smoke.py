@@ -29,6 +29,7 @@ from txnintegration.integer_key_state import IntegerKeyState
 from txnintegration.integer_key_communication import MessageException
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
+from txnserver.ledger_web_client import LedgerWebClient
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,41 @@ class TestSmoke(unittest.TestCase):
             test.setup(urls, 100)
             test.run(2)
             test.validate()
+
+            # check for block id convergence:
+            tolerance = 2       # length of permissable fork
+            standard = 6        # converged blocks per divergent block
+            sample_size = max(1, tolerance) * standard
+            print "Testing block-level convergence with min sample size: " \
+                "%s (after tolerance: %s)" % (sample_size, tolerance)
+            # ....get all blockids from each server, newest last
+            block_lists = [LedgerWebClient(x).get_block_list() for x in urls]
+            for ls in block_lists:
+                ls.reverse()
+            # ....permit reasonable forks
+            max_mag = len(max(block_lists, key=len))
+            min_mag = len(min(block_lists, key=len))
+            self.assertGreaterEqual(
+                tolerance,
+                max_mag - min_mag,
+                'block list magnitude differences (%s) '
+                'exceed tolerance (%s)' % (
+                    max_mag - min_mag, tolerance))
+            effective_sample_size = max_mag - tolerance
+            print 'effective sample size: %s' % (effective_sample_size)
+            self.assertGreaterEqual(
+                effective_sample_size,
+                sample_size,
+                'not enough target samples to determine convergence')
+            block_lists = [ls[0:effective_sample_size] for ls in block_lists]
+            # ....check cross server block lists for identity within tolerance
+            for (i, ls) in enumerate(block_lists):
+                self.assertEqual(
+                    block_lists[0],
+                    ls,
+                    'validator %s is divergent (%s VS %s)' % (
+                        i, block_lists[0], ls))
+
             if vnm:
                 vnm.shutdown()
 
