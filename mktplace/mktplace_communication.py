@@ -40,7 +40,7 @@ class MarketPlaceCommunication(object):
     GET_HEADER = {"Accept": "application/cbor"}
 
     def __init__(self, baseurl):
-        self.BaseURL = baseurl.rstrip('/')
+        self.BaseURL = baseurl.rstrip('/').encode('utf-8')
         self.ProxyHandler = urllib2.ProxyHandler({})
 
     def headrequest(self, path):
