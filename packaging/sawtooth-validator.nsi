@@ -45,6 +45,14 @@ function .onInit
 functionEnd
  
 section "install"
+
+	# add install dir to pythonpath
+	!include "winmessages.nsh"
+	!define env_hklm 'HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"'
+	!define env_hkcu 'HKCU "Environment"'
+	WriteRegExpandStr ${env_hklm} PYTHONPATH ";C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\"
+	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+
 	# Files for the install directory - to build the installer, these should be in the same directory as the install script (this file)
 	setOutPath $INSTDIR
 	# Files added here should be removed by the uninstaller (see section "uninstall")
@@ -73,6 +81,8 @@ section "install"
 	# Set the INSTALLSIZE constant (!defined at the top of this script) so Add/Remove Programs can accurately report the size
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
 
+	Exec '"$PROGRAMFILES\${COMPANYNAME}\${APPNAME}\bin\txnvalidator.exe" --startup=auto install'
+
 sectionEnd
  
 # Uninstaller
@@ -88,6 +98,9 @@ function un.onInit
 functionEnd
  
 section "uninstall"
+
+	# Remove windows service
+	Exec 'sc.exe delete SawtoothValidator-Service'
 
 	rmdir /r $INSTDIR\bin
 	rmdir $INSTDIR\conf\keys
