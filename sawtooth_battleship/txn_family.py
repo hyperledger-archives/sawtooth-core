@@ -133,13 +133,10 @@ class BattleshipTransaction(transaction.Transaction):
             if self._name not in store:
                 raise BattleshipException('no such game')
             
-            #TODO: how to deal with the board without space?
-            #TODO: Set spaec to 25 for a 5x5 board game
-            """
+            
             if self._space < 1 or self._space > 25:  
                 raise BattleshipException('invalid choice')
             
-            """
             state = store[self._name]['State']
             
             # TIE isn't possible during a battleship 
