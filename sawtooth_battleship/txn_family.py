@@ -88,6 +88,7 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug("minfo: %s", repr(minfo))
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._action = minfo['Action'] if 'Action' in minfo else None
+        self._space = minfo['Space'] if 'Space' in minfo else None
 
     def __str__(self):
         LOGGER.error("BattleshipTransaction.__str__() not implemented")
@@ -173,8 +174,22 @@ class BattleshipTransaction(transaction.Transaction):
             store (dict): Transaction store mapping.
         """
         LOGGER.debug('apply %s', str(self))
-        LOGGER.error('BattleshipTransaction.apply() not implemented')
 
+        if self._name in store:
+            game = store[self._name].copy()
+        else:
+            game = {}
+            state = 'BUILD-BOARDS-NEXT'
+
+        # create another game
+        # restart the validator, transmit the txn we should see txn coming
+        # restart the same game should fail
+        # create the PR 
+        
+        game['State'] = state
+        store[self._name] = game
+
+         
     def dump(self):
         """Returns a dict with attributes from the transaction object.
 
