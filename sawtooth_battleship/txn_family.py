@@ -98,7 +98,7 @@ class BattleshipTransaction(transaction.Transaction):
         if self._action == "CREATE":
             return "{} {} {}".format(oid, self._action, self._name)
         else:
-            return "{} {} {}".format(oid, self._action)
+            return "{} {}".format(oid, self._action)
 
     def is_valid(self, store):
         """Determines if the transaction is valid.
