@@ -187,11 +187,6 @@ class BattleshipTransaction(transaction.Transaction):
         else:
             game = {}
             state = 'BUILD-BOARDS-NEXT'
-
-        # create another game
-        # restart the validator, transmit the txn we should see txn coming
-        # restart the same game should fail
-        # create the PR 
         
         game['State'] = state
         store[self._name] = game
