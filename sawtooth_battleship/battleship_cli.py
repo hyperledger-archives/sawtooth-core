@@ -81,6 +81,26 @@ def add_create_parser(subparsers, parent_parser):
         help='wait for this commit before exiting')
 
 
+def add_join_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('join', parents=[parent_parser])
+
+    parser.add_argument(
+        'name',
+        type=str,
+        help='the identifier for the game')
+
+    parser.add_argument(
+        'board',
+        type=str,
+        help='the board to join')
+
+    parser.add_argument(
+        '--wait',
+        action='store_true',
+        default=False,
+        help='wait for this commit before exiting')
+
+
 def add_init_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('init', parents=[parent_parser])
 
@@ -124,6 +144,7 @@ def create_parser(prog_name):
 
     add_create_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
+    add_join_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
     add_show_parser(subparsers, parent_parser)
 
@@ -179,6 +200,20 @@ def do_init(args, config):
                 addr_fd.write("\n")
         except IOError, ioe:
             raise BattleshipException("IOError: {}".format(str(ioe)))
+
+
+def do_join(args, config):
+    name = args.name
+    board = args.board
+
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = BattleshipClient(base_url=url, keyfile=key_file)
+    client.join(name=name, board=board)
+
+    if args.wait:
+        client.wait_for_commit()
 
 
 def do_list(args, config):
@@ -280,6 +315,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_create(args, config)
     elif args.command == 'init':
         do_init(args, config)
+    elif args.command == 'join':
+        do_join(args, config)
     elif args.command == 'list':
         do_list(args, config)
     elif args.command == 'show':

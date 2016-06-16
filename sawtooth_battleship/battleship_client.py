@@ -48,14 +48,14 @@ class BattleshipClient(SawtoothClient):
             update)
 
 
-    def submit_board(self, name, board):
+    def join(self, name, board):
         """
         """
         update = {
-            'Action': 'SUBMIT_BOARD'
+            'Action': 'JOIN',
+            'Name': name,
+            'Board': board
         }
-
-        LOGGER.error("submit_board not implemented")
 
         return self.sendtxn(
             BattleshipTransaction,
