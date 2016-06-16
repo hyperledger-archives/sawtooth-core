@@ -90,6 +90,10 @@ def add_init_parser(subparsers, parent_parser):
         help='the name of the player')
 
 
+def add_list_parser(subparsers, parent_parser):
+    subparsers.add_parser('list', parents=[parent_parser])
+
+
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -111,6 +115,7 @@ def create_parser(prog_name):
 
     add_create_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
+    add_list_parser(subparsers, parent_parser)
 
     return parser
 
@@ -166,6 +171,28 @@ def do_init(args, config):
             raise BattleshipException("IOError: {}".format(str(ioe)))
 
 
+def do_list(args, config):
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = BattleshipClient(base_url=url, keyfile=key_file)
+    state = client.get_state()
+
+    fmt = "%-15s %-15.15s %-15.15s %s"
+    print fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'STATE')
+    for name in state:
+        if 'Player1' in state[name]:
+            player1 = state[name]['Player1']
+        else:
+            player1 = ''
+        if 'Player2' in state[name]:
+            player2 = state[name]['Player2']
+        else:
+            player2 = ''
+        game_state = state[name]['State']
+        print fmt % (name, player1, player2, game_state)
+
+
 def load_config():
     home = os.path.expanduser("~")
     real_user = getpass.getuser()
@@ -213,6 +240,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_create(args, config)
     elif args.command == 'init':
         do_init(args, config)
+    elif args.command == 'list':
+        do_list(args, config)
     else:
         raise BattleshipException("invalid command: {}".format(args.command))
 
