@@ -186,6 +186,7 @@ class BattleshipTransaction(transaction.Transaction):
         """
         result = super(BattleshipTransaction, self).dump()
 
-        LOGGER.error('BattleshipTransaction.dump() not implemented')
+        result['Name'] = self._name
+        result['Action'] = self._action
 
         return result
