@@ -90,8 +90,15 @@ class BattleshipTransaction(transaction.Transaction):
         self._action = minfo['Action'] if 'Action' in minfo else None
 
     def __str__(self):
-        LOGGER.error("BattleshipTransaction.__str__() not implemented")
-        return "BattleshipTransaction"
+        try:
+            oid = self.OriginatorID
+        except AssertionError:
+            oid = "unknown"
+
+        if self._action == "CREATE":
+            return "{} {} {}".format(oid, self._action, self._name)
+        else:
+            return "{} {} {}".format(oid, self._action)
 
     def is_valid(self, store):
         """Determines if the transaction is valid.
