@@ -128,7 +128,7 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug('checking %s', str(self))
 
         if self._name is None or self._name == '':
-                raise BattleshipException('name not set')
+            raise BattleshipException('name not set')
 
         if self._action is None or self._action == '':
             raise BattleshipException('action not set')
