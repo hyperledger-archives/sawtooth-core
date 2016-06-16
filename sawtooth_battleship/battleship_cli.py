@@ -94,6 +94,15 @@ def add_list_parser(subparsers, parent_parser):
     subparsers.add_parser('list', parents=[parent_parser])
 
 
+def add_show_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('show', parents=[parent_parser])
+
+    parser.add_argument(
+        'name',
+        type=str,
+        help='the identifier for the game')
+
+
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -116,6 +125,7 @@ def create_parser(prog_name):
     add_create_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
+    add_show_parser(subparsers, parent_parser)
 
     return parser
 
@@ -193,6 +203,36 @@ def do_list(args, config):
         print fmt % (name, player1, player2, game_state)
 
 
+def do_show(args, config):
+    name = args.name
+
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = BattleshipClient(base_url=url, keyfile=key_file)
+    state = client.get_state()
+
+    if name not in state:
+        raise BattleshipException('no such game: {}'.format(name))
+
+    game = state[name]
+
+    player1 = ''
+    player2 = ''
+    if 'Player1' in game:
+        player1 = game['Player1']
+    if 'Player2' in game:
+        player2 = game['Player2']
+    game_state = game['State']
+
+    print "GAME:     : {}".format(name)
+    print "PLAYER 1  : {}".format(player1)
+    print "PLAYER 2  : {}".format(player2)
+    print "STATE     : {}".format(game_state)
+
+    # TODO: print out game boards for the current player
+
+
 def load_config():
     home = os.path.expanduser("~")
     real_user = getpass.getuser()
@@ -242,6 +282,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_init(args, config)
     elif args.command == 'list':
         do_list(args, config)
+    elif args.command == 'show':
+        do_show(args, config)
     else:
         raise BattleshipException("invalid command: {}".format(args.command))
 
