@@ -42,10 +42,12 @@ def initialize(**kwargs):
     poets_client = PoetsClient(**kwargs)
 
 
-def create_wait_timer(previous_certificate_id, local_mean):
+def create_wait_timer(validator_address, previous_certificate_id, local_mean):
     global poets_client
 
-    wt = poets_client.create_wait_timer(previous_certificate_id, local_mean)
+    wt = poets_client.create_wait_timer(validator_address,
+                                        previous_certificate_id,
+                                        local_mean)
 
     return WaitTimer(wt["Serialized"], wt["Signature"])
 
@@ -54,13 +56,13 @@ def deserialize_wait_timer(ser, sig):
     return WaitTimer(ser, sig)
 
 
-def create_wait_certificate(wait_timer):
+def create_wait_certificate(wait_timer, block_hash):
     global poets_client
     wtr = {
         "Serialized": wait_timer.serialized,
         "Signature": wait_timer.signature
     }
-    wc = poets_client.create_wait_certificate(wtr)
+    wc = poets_client.create_wait_certificate(wtr, block_hash)
     if wc:
         return WaitCertificate(wc["Serialized"], wc['Signature'])
     else:

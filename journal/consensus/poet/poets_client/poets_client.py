@@ -67,12 +67,18 @@ class PoetsClient(object):
             verify=self._server_cert)
         return result
 
-    def create_wait_timer(self, previous_certificate_id, local_mean):
+    def create_wait_timer(
+            self,
+            validator_address,
+            previous_certificate_id,
+            local_mean):
         """
         Calls the Poets Server to generate a create a WaitTimer
         """
-        json = {"PreviousCertID": previous_certificate_id,
-                "LocalMean": local_mean}
+        json = {
+            "ValidatorAddress": validator_address,
+            "PreviousCertID": previous_certificate_id,
+            "LocalMean": local_mean}
         result = self._post_request("CreateWaitTimer", json)
         if result.status_code != requests.codes.created:
             logger.error("/CreateWaitTimer HTTP Error code : %d",
@@ -80,12 +86,13 @@ class PoetsClient(object):
             result.raise_for_status()
         return ascii_encode_dict(result.json())
 
-    def create_wait_certificate(self, waittimer):
+    def create_wait_certificate(self, waittimer, block_hash):
         """
         Calls the Poets Server to create a WaitCertificate
         """
         json = {
             "WaitTimer": waittimer,
+            "BlockHash": block_hash,
         }
         result = self._post_request("CreateWaitCertificate", json)
         if result.status_code != requests.codes.created:

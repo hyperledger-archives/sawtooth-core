@@ -33,8 +33,9 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
     def get_wait_timer(self):
         pid = random_name(poet.IDENTIFIER_LENGTH)
 
+        addr = random_name(20)
         # super short local mean to get small duration..
-        wait_timer = poet.create_wait_timer(pid, 1)
+        wait_timer = poet.create_wait_timer(addr, pid, 1)
 
         while not wait_timer.is_expired():
             time.sleep(1)
@@ -42,13 +43,17 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
         return wait_timer
 
     def get_wait_cert(self):
+        block_hash = random_name(32)
         wait_timer = self.get_wait_timer()
-        return poet.create_wait_certificate(wait_timer)
+        return poet.create_wait_certificate(wait_timer, block_hash)
 
     def test_create(self):
+        block_hash = random_name(32)
+        addr = random_name(32)
+
         # with expired timer -- positive case
         wait_timer = self.get_wait_timer()
-        wait_cert = poet.create_wait_certificate(wait_timer)
+        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
         self.assertEqual(wait_timer.duration, wait_cert.duration)
         self.assertEqual(wait_timer.local_mean, wait_cert.local_mean)
         self.assertEqual(wait_timer.previous_certificate_id,
@@ -58,8 +63,8 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
 
         # the initial block does not need to wait, to accelerate
         # validator launch
-        wait_timer = poet.create_wait_timer(poet.NULL_IDENTIFIER, 1)
-        wait_cert = poet.create_wait_certificate(wait_timer)
+        wait_timer = poet.create_wait_timer(addr, poet.NULL_IDENTIFIER, 1)
+        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
         self.assertEqual(wait_timer.duration, wait_cert.duration)
         self.assertEqual(wait_timer.local_mean, wait_cert.local_mean)
         self.assertEqual(wait_timer.previous_certificate_id,
@@ -67,27 +72,31 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
 
         # with unexpired timer
         wait_timer = poet.create_wait_timer(
+            addr,
             random_name(poet.IDENTIFIER_LENGTH), 1)
-        wait_cert = poet.create_wait_certificate(wait_timer)
+        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
 
         # with tampered timer
         wait_timer = poet.create_wait_timer(
+            addr,
             random_name(poet.IDENTIFIER_LENGTH), 1)
         wait_timer.duration = 1
-        wait_cert = poet.create_wait_certificate(wait_timer)
+        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
         self.assertIsNone(wait_cert)
 
         wait_timer = poet.create_wait_timer(
+            addr,
             random_name(poet.IDENTIFIER_LENGTH), 1)
         wait_timer.local_mean = 1
-        wait_cert = poet.create_wait_certificate(wait_timer)
+        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
         self.assertIsNone(wait_cert)
 
         wait_timer = poet.create_wait_timer(
+            addr,
             random_name(poet.IDENTIFIER_LENGTH), 1)
         wait_timer.previous_certificate_id = \
             random_name(poet.IDENTIFIER_LENGTH)
-        wait_cert = poet.create_wait_certificate(wait_timer)
+        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
         self.assertIsNone(wait_cert)
 
     def test_serialize(self):

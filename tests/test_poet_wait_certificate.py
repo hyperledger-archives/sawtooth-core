@@ -16,7 +16,7 @@
 import time
 import unittest
 
-from utils import generate_certs, random_name
+from utils import generate_certs, generate_txn_ids, random_name
 from journal.consensus.poet.wait_timer import WaitTimer
 from journal.consensus.poet.wait_certificate import WaitCertificate
 
@@ -44,17 +44,22 @@ class TestPoetWaitCertificate(unittest.TestCase):
         WaitTimer.target_wait_time = cls.default_target_wait_time
 
     def test_wait_certificate(self):
+        addr = random_name(20)
         certs = generate_certs(WaitTimer.fixed_duration_blocks)
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        txn_ids, block_hash = generate_txn_ids(10)
+
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         self.assertIsNotNone(wait_timer)
         while not wait_timer.is_expired(time.time()):
             time.sleep(1)
 
-        wait_cert = WaitCertificate.create_wait_certificate(wait_timer)
+        wait_cert = WaitCertificate.create_wait_certificate(
+            wait_timer,
+            block_hash)
         self.assertIsNotNone(wait_cert)
 
         ewc = wait_cert.enclave_wait_certificate
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
         str(wait_cert)
 
@@ -69,14 +74,16 @@ class TestPoetWaitCertificate(unittest.TestCase):
         self.assertEquals(wait_cert.duration, swc.duration)
         self.assertEquals(wait_cert.signature, swc.signature)
         self.assertEquals(wait_cert.identifier, swc.identifier)
-        swc.is_valid_wait_certificate(certs)
+        self.assertEquals(wait_cert.validator_address, swc.validator_address)
+        self.assertEquals(wait_cert.block_hash, swc.block_hash)
 
+        swc.is_valid_wait_certificate(addr, certs, txn_ids)
         dwc = wait_cert.dump()
         swc = WaitCertificate.deserialize_wait_certificate(
             dwc["SerializedCert"],
             dwc["Signature"]
         )
-        swc.is_valid_wait_certificate(certs)
+        swc.is_valid_wait_certificate(addr, certs, txn_ids)
 
         self.assertEquals(wait_cert.previous_certificate_id,
                           swc.previous_certificate_id)
@@ -85,8 +92,10 @@ class TestPoetWaitCertificate(unittest.TestCase):
         self.assertEquals(wait_cert.duration, swc.duration)
         self.assertEquals(wait_cert.signature, swc.signature)
         self.assertEquals(wait_cert.identifier, swc.identifier)
+        self.assertEquals(wait_cert.validator_address, swc.validator_address)
+        self.assertEquals(wait_cert.block_hash, swc.block_hash)
 
-    def check_enclave_timer_tampering(self, wait_cert, certs):
+    def check_enclave_timer_tampering(self, wait_cert, oid, certs, txn_ids):
         # now we are going to tamper with the members of the enclave wait
         # timer object
         swc = wait_cert.serialized_cert
@@ -95,74 +104,114 @@ class TestPoetWaitCertificate(unittest.TestCase):
         d = ewt.duration
         ewt.duration = 0
         wait_cert.serialized_cert = ewt.serialize()
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(oid, certs, txn_ids)
         self.assertFalse(r)
         ewt.duration = d
 
         lm = ewt.local_mean
         ewt.local_mean = wait_cert.local_mean - 1
         wait_cert.serialized_cert = ewt.serialize()
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(oid, certs, txn_ids)
         self.assertFalse(r)
         ewt.local_mean = lm
 
         pc = wait_cert.previous_certificate_id
         ewt.previous_certificate_id = random_name(poet.IDENTIFIER_LENGTH)
         ewt.serialized_cert = ewt.serialize()
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(oid, certs, txn_ids)
         self.assertFalse(r)
         ewt.previous_certificate_id = pc
 
         # start up case, no previous certs and NULL_IDENTIFIER
-        wait_timer = WaitTimer.create_wait_timer([])
+        addr = random_name(20)
+        block_hash = random_name(32)
+        wait_timer = WaitTimer.create_wait_timer(addr, [])
         self.assertIsNotNone(wait_timer)
-        wait_cert = WaitCertificate.create_wait_certificate(wait_timer)
+        wait_cert = WaitCertificate.create_wait_certificate(
+            wait_timer,
+            block_hash)
         self.assertIsNotNone(wait_cert)
-        r = wait_cert.is_valid_wait_certificate([])
+        r = wait_cert.is_valid_wait_certificate(oid, [], txn_ids)
         self.assertTrue(r)
 
     def test_is_valid_wait_certificate(self):
+        addr = random_name(20)
         certs = generate_certs(WaitTimer.fixed_duration_blocks)
-        wait_timer = WaitTimer.create_wait_timer(certs)
+        txn_ids, block_hash = generate_txn_ids(10)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
         self.assertIsNotNone(wait_timer)
         while not wait_timer.is_expired(time.time()):
             time.sleep(1)
 
-        wait_cert = WaitCertificate.create_wait_certificate(wait_timer)
+        wait_cert = WaitCertificate.create_wait_certificate(
+            wait_timer,
+            block_hash)
         self.assertIsNotNone(wait_cert)
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
 
         # invalid list
         with self.assertRaises(TypeError) as context:
-            wait_cert.is_valid_wait_certificate(None)
+            wait_cert.is_valid_wait_certificate(None, certs, txn_ids)
         with self.assertRaises(TypeError) as context:
-            wait_cert.is_valid_wait_certificate("")
+            wait_cert.is_valid_wait_certificate({}, certs, txn_ids)
         with self.assertRaises(TypeError) as context:
-            wait_cert.is_valid_wait_certificate("XYZZY")
+            wait_cert.is_valid_wait_certificate([], certs, txn_ids)
         with self.assertRaises(TypeError) as context:
-            wait_cert.is_valid_wait_certificate(555)
+            wait_cert.is_valid_wait_certificate(555, certs, txn_ids)
+
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, None, txn_ids)
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, "test", txn_ids)
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, {}, txn_ids)
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, 545, txn_ids)
+
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, certs, None)
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, certs, {})
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, certs, "test")
+        with self.assertRaises(TypeError) as context:
+            wait_cert.is_valid_wait_certificate(addr, certs, 333)
+
+    def test_is_valid_wait_certificate_2(self):
+        addr = random_name(20)
+        certs = generate_certs(WaitTimer.fixed_duration_blocks)
+        txn_ids, block_hash = generate_txn_ids(10)
+        wait_timer = WaitTimer.create_wait_timer(addr, certs)
+        self.assertIsNotNone(wait_timer)
+        while not wait_timer.is_expired(time.time()):
+            time.sleep(1)
+
+        wait_cert = WaitCertificate.create_wait_certificate(
+            wait_timer,
+            block_hash)
+        self.assertIsNotNone(wait_cert)
 
         # Verify class changes don't affect validity
         d = wait_cert.duration
         wait_cert.duration = 0
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
         wait_cert.duration = d
 
         lm = wait_cert.local_mean
         wait_cert.local_mean = wait_cert.local_mean - 1
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
         wait_cert.local_mean = lm
 
         pc = wait_cert.previous_certificate_id
         wait_cert.previous_certificate_id = random_name(poet.IDENTIFIER_LENGTH)
-        r = wait_cert.is_valid_wait_certificate(certs)
+        r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
         wait_cert.previous_certificate_id = pc
 
-        self.check_enclave_timer_tampering(wait_cert, certs)
+        self.check_enclave_timer_tampering(wait_cert, addr, certs, txn_ids)
 
 if __name__ == '__main__':
     unittest.main()

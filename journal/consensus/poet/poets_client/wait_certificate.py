@@ -22,11 +22,13 @@ logger = logging.getLogger(__name__)
 class WaitCertificate(object):
     def __init__(self, serialized, signature):
         obj = json.loads(serialized)
-        self.previous_certificate_id = obj["PreviousCertID"]
+        self.block_hash = obj["BlockHash"]
+        self.duration = obj["Duration"]
         self._identifier = obj["Identifier"]
         self.local_mean = obj["LocalMean"]
+        self.previous_certificate_id = obj["PreviousCertID"]
         self.request_time = obj["RequestTime"]
-        self.duration = obj["Duration"]
+        self.validator_address = obj["ValidatorAddress"]
         self.serialized = serialized
         self.signature = signature
 

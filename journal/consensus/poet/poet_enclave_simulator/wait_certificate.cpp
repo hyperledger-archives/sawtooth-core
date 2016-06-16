@@ -35,12 +35,14 @@ WaitCertificate::WaitCertificate(string encoded, string signature)
     this->deserialize(encoded);
 }
 
-WaitCertificate::WaitCertificate(WaitTimer *timer)
+WaitCertificate::WaitCertificate(WaitTimer *timer, string block_hash)
 {
     this->request_time = timer->request_time;
     this->duration = timer->duration;
     this->local_mean = timer->local_mean;
     this->previous_certificate_id = timer->previous_certificate_id;
+    this->validator_address = timer->validator_address;
+    this->block_hash = block_hash;
     this->signature = "";
 }
 
@@ -61,6 +63,9 @@ bool WaitCertificate::deserialize(string serialized)
     struct json_object *obj = NULL;
 
     // Use alphabetical order for the keys
+    if (json_object_object_get_ex(jobj, "BlockHash", &obj))
+        block_hash = json_object_get_string(obj);
+
     if (json_object_object_get_ex(jobj, "Duration", &obj))
         duration = json_object_get_double(obj);
 
@@ -73,6 +78,9 @@ bool WaitCertificate::deserialize(string serialized)
     if (json_object_object_get_ex(jobj, "RequestTime", &obj))
         request_time = json_object_get_double(obj);
 
+    if (json_object_object_get_ex(jobj, "ValidatorAddress", &obj))
+        validator_address = json_object_get_string(obj);
+
     return true;
 }
 
@@ -81,16 +89,18 @@ string WaitCertificate::serialize()
     json_object *jobj = json_object_new_object();
 
     // Use alphabetical order for the keys
+    json_object_object_add(jobj, "BlockHash", json_object_new_string(block_hash.c_str()));
     json_object_object_add(jobj, "Duration", json_object_new_double(duration));
     json_object_object_add(jobj, "LocalMean", json_object_new_double(local_mean));
-    json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.data()));
+    json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.c_str()));
     json_object_object_add(jobj, "RequestTime", json_object_new_double(request_time));
+    json_object_object_add(jobj, "ValidatorAddress", json_object_new_string(validator_address.c_str()));
 
     string serialized = (char *)json_object_to_json_string(jobj);
     return serialized;
 }
 
-WaitCertificate* create_wait_certificate(WaitTimer *timer)
+WaitCertificate* create_wait_certificate(WaitTimer *timer, string block_hash)
 {
     // the timer must have been created by the enclave
     string serialized_timer = timer->serialize();
@@ -103,14 +113,15 @@ WaitCertificate* create_wait_certificate(WaitTimer *timer)
     if (timer->previous_certificate_id != NULL_IDENTIFIER && (! timer->is_expired()))
         return NULL;
 
-    WaitCertificate *cert = new WaitCertificate(timer);
+    WaitCertificate *cert = new WaitCertificate(timer, block_hash);
     cert->signature = SignMessage(GlobalPrivateKey, cert->serialize());
 
     return cert;
 }
 
-WaitCertificate* deserialize_wait_certificate(string serialized_cert,
-                    string signature)
+WaitCertificate* deserialize_wait_certificate(
+    string serialized_cert,
+    string signature)
 {
     if (! verify_signature(GlobalPublicKey, serialized_cert,
                             signature)) {

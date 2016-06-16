@@ -28,11 +28,17 @@ const double MINIMUM_WAIT_TIME = 1.0;
 class WaitTimer
 {
  protected:
-    friend WaitTimer* create_wait_timer(std::string prev_cert_id,
-                                double local_mean);
-    friend WaitTimer* deserialize_wait_timer(std::string serialized_timer,
-                                            std::string signature);
-    WaitTimer(std::string prev_cert_id, double local_mean);
+    friend WaitTimer* create_wait_timer(
+        std::string validator_address,
+        std::string prev_cert_id,
+        double local_mean);
+    friend WaitTimer* deserialize_wait_timer(
+        std::string serialized_timer,
+        std::string signature);
+    WaitTimer(
+        std::string validator_address,
+        std::string prev_cert_id,
+        double local_mean);
     WaitTimer(std::string serialized_timer, std::string signature);
 public:
     bool is_expired(void);
@@ -40,17 +46,18 @@ public:
     std::string serialize(void);
     bool deserialize(std::string encoded);
 
-    double local_mean;
-
-    double request_time;
+public:
     double duration;
-
+    double local_mean;
     std::string previous_certificate_id;
+    double request_time;
+    std::string validator_address;
 
     std::string signature;
 };
 
-WaitTimer* create_wait_timer(std::string prev_cert_id,
+WaitTimer* create_wait_timer(std::string validator_address,
+                             std::string prev_cert_id,
                              double local_mean);
 WaitTimer* deserialize_wait_timer(std::string serialized_timer,
                                   std::string signature);
@@ -58,35 +65,42 @@ WaitTimer* deserialize_wait_timer(std::string serialized_timer,
 class WaitCertificate
 {
 protected:
-    friend WaitCertificate* create_wait_certificate(WaitTimer *timer);
+    friend WaitCertificate* create_wait_certificate(
+        WaitTimer *timer,
+        std::string block_hash);
     friend  WaitCertificate* deserialize_wait_certificate(
-                                        std::string serialized_cert,
-                                        std::string signature);
-    WaitCertificate(WaitTimer *timer);
-    WaitCertificate(std::string serialized_cert, std::string signature);
+        std::string serialized_cert,
+        std::string signature);
+    WaitCertificate(
+        WaitTimer *timer,
+        std::string block_hash);
+    WaitCertificate(
+        std::string serialized,
+        std::string signature);
 public:
     std::string identifier(void);
 
     std::string serialize(void);
     bool deserialize(std::string encoded);
 
+public:
     double local_mean;
 
-    double request_time;
+    std:: string block_hash;
     double duration;
-
-   std:: string previous_certificate_id;
+    std:: string previous_certificate_id;
+    double request_time;
+    std:: string validator_address;
 
     std::string signature;
 };
 
-WaitCertificate* create_wait_certificate(WaitTimer *timer);
-WaitCertificate* deserialize_wait_certificate(std::string serialized_cert,
-                                              std::string signature);
+WaitCertificate* create_wait_certificate(
+    WaitTimer *timer,
+    std::string block_hash);
+WaitCertificate* deserialize_wait_certificate(
+    std::string serialized,
+    std::string signature);
 bool verify_wait_certificate(WaitCertificate *cert);
-/*
-std::string test_sign_message(std::string message);
-bool test_verify_message(std::string message, std::string signature);
-*/
 
 void InitializePoetEnclaveModule(void);

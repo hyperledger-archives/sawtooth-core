@@ -51,7 +51,7 @@ class WaitTimer(object):
     poet_enclave = None
 
     @classmethod
-    def create_wait_timer(cls, certs):
+    def create_wait_timer(cls, validator_address, certs):
         """Creates a wait timer in the enclave and then constructs
         a WaitTimer object.
 
@@ -68,8 +68,10 @@ class WaitTimer(object):
         previous_certificate_id = certs[-1].identifier if certs \
             else cls.poet_enclave.NULL_IDENTIFIER
         local_mean = cls.compute_local_mean(certs)
-        timer = cls.poet_enclave.create_wait_timer(previous_certificate_id,
-                                                   local_mean)
+        timer = cls.poet_enclave.create_wait_timer(
+            validator_address,
+            previous_certificate_id,
+            local_mean)
 
         wt = cls(timer)
         logger.info('wait timer created; %s', wt)

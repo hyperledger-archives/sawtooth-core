@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import hashlib
 
 from journal import transaction_block
 from journal.messages import transaction_block_message
@@ -134,23 +135,34 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             return False
 
         return self.WaitCertificate.is_valid_wait_certificate(
-            journal._build_certificate_list(self))
+            self.OriginatorID,
+            journal._build_certificate_list(self),
+            self.TransactionIDs)
 
-    def create_wait_timer(self, certlist):
+    def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list
         of wait certificates.
 
         Args:
             certlist (list): A list of wait certificates.
         """
-        self.WaitTimer = WaitTimer.create_wait_timer(certlist)
+
+        self.WaitTimer = WaitTimer.create_wait_timer(
+            validator_address,
+            certlist)
 
     def create_wait_certificate(self):
         """Create a wait certificate for the journal based on the
         wait timer.
         """
+        hasher = hashlib.sha256()
+        for tid in self.TransactionIDs:
+            hasher.update(tid)
+        block_hash = hasher.hexdigest()
+
         self.WaitCertificate = WaitCertificate.create_wait_certificate(
-            self.WaitTimer)
+            self.WaitTimer,
+            block_hash)
         if self.WaitCertificate:
             self.WaitTimer = None
 
