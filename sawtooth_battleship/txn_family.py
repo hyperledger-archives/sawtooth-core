@@ -91,8 +91,15 @@ class BattleshipTransaction(transaction.Transaction):
         self._space = minfo['Space'] if 'Space' in minfo else None
 
     def __str__(self):
-        LOGGER.error("BattleshipTransaction.__str__() not implemented")
-        return "BattleshipTransaction"
+        try:
+            oid = self.OriginatorID
+        except AssertionError:
+            oid = "unknown"
+
+        if self._action == "CREATE":
+            return "{} {} {}".format(oid, self._action, self._name)
+        else:
+            return "{} {}".format(oid, self._action)
 
     def is_valid(self, store):
         """Determines if the transaction is valid.
@@ -122,7 +129,7 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug('checking %s', str(self))
 
         if self._name is None or self._name == '':
-                raise BattleshipException('name not set')
+            raise BattleshipException('name not set')
 
         if self._action is None or self._action == '':
             raise BattleshipException('action not set')
@@ -198,6 +205,7 @@ class BattleshipTransaction(transaction.Transaction):
         """
         result = super(BattleshipTransaction, self).dump()
 
-        LOGGER.error('BattleshipTransaction.dump() not implemented')
+        result['Name'] = self._name
+        result['Action'] = self._action
 
         return result
