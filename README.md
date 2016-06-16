@@ -9,6 +9,45 @@ The documentation for Sawtooth Lake is available at:
 
   http://intelledger.github.io/
 
+Sawtooth Battleship
+-------------------
+
+Sawtooth Battleship contains two components:
+
+  - A transaction family, sawtooth\_battleship, which implements game rules
+  - A client, battleship, and client-side library code
+
+To use the sawtooth\_battleship transaction family, it must be added to the
+list of transaction families in txnvalidator.js (e.g.):
+
+_Don't forget to add the comma_
+
+```javascript
+     "TransactionFamilies" : [
+        "ledger.transaction.integer_key",
+        "sawtooth_battleship"
+     ],
+```
+
+txnvalidator must be able to find the sawtooth_battleship transaction family
+implementation, which can be done by adding this repository directory to the
+PYTHONPATH environment variable.
+
+The battleship client has several subcommands (create, init, list,
+show, fire) which will be covered briefly here.
+
+To start using battleship, first run 'battleship init' with the
+option --username parameter:
+
+```
+$ ./bin/battleship init --username=bob
+set username: bob
+writing file: /home/vagrant/.sawtooth/keys/bob.wif
+writing file: /home/vagrant/.sawtooth/keys/bob.addr
+```
+
+More coming as the hackathon continues ...
+
 Sawtooth Tac Toe
 ----------------
 
