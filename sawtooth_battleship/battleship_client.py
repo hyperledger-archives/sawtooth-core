@@ -62,18 +62,18 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransactionMessage,
             update)
 
- ##fire should respond with a reveal  --cl
-    def fire(self, name, x, y):
+
+    def fire(self, name, column, row):
         """
         """
         update = {
-            'Action': 'FIRE'
+            'Action': 'FIRE',
+            'Name': name,
+            'Column': column,
+            'Row': row
         }
-
-        LOGGER.error("fire not implemented")
 
         return self.sendtxn(
             BattleshipTransaction,
             BattleshipTransactionMessage,
             update)
-           

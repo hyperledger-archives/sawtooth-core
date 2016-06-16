@@ -81,6 +81,31 @@ def add_create_parser(subparsers, parent_parser):
         help='wait for this commit before exiting')
 
 
+def add_fire_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('fire', parents=[parent_parser])
+
+    parser.add_argument(
+        'name',
+        type=str,
+        help='the identifier for the game')
+
+    parser.add_argument(
+        'column',
+        type=str,
+        help='the column to fire upon (A-J)')
+
+    parser.add_argument(
+        'row',
+        type=str,
+        help='the row to fire upon (1-10)')
+
+    parser.add_argument(
+        '--wait',
+        action='store_true',
+        default=False,
+        help='wait for this commit before exiting')
+
+
 def add_join_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('join', parents=[parent_parser])
 
@@ -143,6 +168,7 @@ def create_parser(prog_name):
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
     add_create_parser(subparsers, parent_parser)
+    add_fire_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
     add_join_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
@@ -200,6 +226,21 @@ def do_init(args, config):
                 addr_fd.write("\n")
         except IOError, ioe:
             raise BattleshipException("IOError: {}".format(str(ioe)))
+
+
+def do_fire(args, config):
+    name = args.name
+    column = args.column
+    row = args.row
+
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = BattleshipClient(base_url=url, keyfile=key_file)
+    client.fire(name=name, column=column, row=row)
+
+    if args.wait:
+        client.wait_for_commit()
 
 
 def do_join(args, config):
@@ -313,6 +354,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
 
     if args.command == 'create':
         do_create(args, config)
+    elif args.command == 'fire':
+        do_fire(args, config)
     elif args.command == 'init':
         do_init(args, config)
     elif args.command == 'join':
