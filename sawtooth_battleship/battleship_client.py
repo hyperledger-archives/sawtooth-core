@@ -47,19 +47,6 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransactionMessage,
             update)
 
-    def reveal(self, name):
-        """
-        """
-        update = {
-            'Action': 'REVEAL'
-        }
-
-        LOGGER.error("reveal not implemented")
-
-        return self.sendtxn(
-            BattleshipTransaction,
-            BattleshipTransactionMessage,
-            update)
 
     def submit_board(self, name, board):
         """
@@ -75,6 +62,7 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransactionMessage,
             update)
 
+ ##fire should respond with a reveal  --cl
     def fire(self, name, x, y):
         """
         """
@@ -88,3 +76,4 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransaction,
             BattleshipTransactionMessage,
             update)
+           
