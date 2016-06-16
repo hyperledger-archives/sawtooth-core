@@ -44,12 +44,21 @@ class IntKeyLoadTest(object):
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
 
-    def _has_uncommitted_transactions(self):
+    def _update_uncommitted_transactions(self):
         remaining = []
-        for t in self.transactions:
-            status = self.clients[0].headrequest('/transaction/{0}'.format(t))
-            if status != http.OK:
-                remaining.append(t)
+
+        # For each client, we want to verify that its corresponding validator
+        # has the transaction.  For a transaction to be considered committed,
+        # all validators must have it in its blockchain as a committed
+        # transaction.
+        for c in self.clients:
+            for t in self.transactions:
+                status = c.headrequest('/transaction/{0}'.format(t))
+                # If the transaction has not been committed and we don't
+                # already have it in our list of uncommitted transactions
+                # then add it.
+                if (status != http.OK) and (t not in remaining):
+                    remaining.append(t)
 
         self.transactions = remaining
         return len(self.transactions)
@@ -61,8 +70,7 @@ class IntKeyLoadTest(object):
             while not to() and txnCnt > 0:
                 p.step()
                 time.sleep(1)
-                self._has_uncommitted_transactions()
-                txnCnt = len(self.transactions)
+                txnCnt = self._update_uncommitted_transactions()
 
         if txnCnt != 0:
             if len(self.transactions) != 0:
@@ -117,7 +125,7 @@ class IntKeyLoadTest(object):
         self.state.fetch()
         keys = self.state.State.keys()
 
-        for r in range(0, rounds):
+        for r in range(1, rounds + 1):
             for c in self.clients:
                 c.CurrentState.fetch()
             print "Round {}".format(r)
