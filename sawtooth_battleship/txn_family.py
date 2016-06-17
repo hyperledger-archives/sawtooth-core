@@ -174,7 +174,10 @@ class BattleshipTransaction(transaction.Transaction):
             if self._name not in store:
                 raise BattleshipException('no such game')
             
-            # TODO: Check that self._column is valid (letter from A-J)
+            # Check that self._column is valid (letter from A-J)
+            acceptable_columns = set('ABCDEFGHIJ')
+            if not any((c in acceptable_columns) for c in self._column):
+                raise BattleshipException('Acceptable columns letters are A to J')
 
             # TODO: Check that self._row is valid (number from 1-10)
 
