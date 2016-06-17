@@ -152,8 +152,10 @@ class BattleshipTransaction(transaction.Transaction):
         elif self._action == 'JOIN':
             # TODO: Check that the game can be joined (the state is 'NEW')
 
-            # TODO: Check that self._name is in the store (to verify
+            # Check that self._name is in the store (to verify 
             # that the game exists (see FIRE below).
+            if self._name not in store:
+                raise BattleshipException('Trying to join a game that does not exist')
 
             # TODO: Validate that self._board is a valid board (right size,
             # right content.
