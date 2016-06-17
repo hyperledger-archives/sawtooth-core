@@ -89,7 +89,9 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug("minfo: %s", repr(minfo))
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._action = minfo['Action'] if 'Action' in minfo else None
-        # TODO: handle 'Board', 'Column', 'Row' 
+        # TODO: handle 'Board', 'Row' 
+        self._column = minfo['Column'] if 'Column' in minfo else None
+        
 
     def __str__(self):
         try:
