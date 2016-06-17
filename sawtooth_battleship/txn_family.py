@@ -91,6 +91,9 @@ class BattleshipTransaction(transaction.Transaction):
         self._action = minfo['Action'] if 'Action' in minfo else None
         # TODO: handle 'Board', 'Row' 
         self._column = minfo['Column'] if 'Column' in minfo else None
+
+        # self._column is valid (letter from A-J)
+        self.acceptable_columns = set('ABCDEFGHIJ')
         
 
     def __str__(self):
@@ -175,8 +178,8 @@ class BattleshipTransaction(transaction.Transaction):
                 raise BattleshipException('no such game')
             
             # Check that self._column is valid (letter from A-J)
-            acceptable_columns = set('ABCDEFGHIJ')
-            if not any((c in acceptable_columns) for c in self._column):
+            
+            if not any((c in self._acceptable_columns) for c in self._column):
                 raise BattleshipException('Acceptable columns letters are A to J')
 
             # TODO: Check that self._row is valid (number from 1-10)
