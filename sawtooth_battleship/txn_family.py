@@ -14,6 +14,7 @@
 # -----------------------------------------------------------------------------
 
 import logging
+import re
 
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
@@ -88,7 +89,13 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug("minfo: %s", repr(minfo))
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._action = minfo['Action'] if 'Action' in minfo else None
-        # TODO: handle 'Board', 'Column', 'Row' 
+        # TODO: handle 'Board'
+        self._column = minfo['Column'] if 'Column' in minfo else None
+        self._row = minfo['Row'] if 'Row' in minfo else None
+
+        # self._column is valid (letter from A-J)
+        self._acceptable_columns = set('ABCDEFGHIJ')
+        
 
     def __str__(self):
         try:
@@ -143,13 +150,23 @@ class BattleshipTransaction(transaction.Transaction):
             if self._name in store:
                 raise BattleshipException('game already exists')
 
-            # TODO: Restrict game name letters and numbers.
+            # Restrict game name letters and numbers.
+            if not re.match("^[a-zA-Z0-9]*$", self._name):
+                raise BattleshipException("Only letters a-z A-Z and numbers 0-9 are allowed in the game name!")
+
             LOGGER.error("in check_valid, CREATE is not fully implemented")
         elif self._action == 'JOIN':
-            # TODO: Check that the game can be joined (the state is 'NEW')
 
-            # TODO: Check that self._name is in the store (to verify
+            # Check that self._name is in the store (to verify 
             # that the game exists (see FIRE below).
+            state = store[self._name]['State']
+            LOGGER.info("state: %s" % state)
+            if self._name not in store:
+                raise BattleshipException('Trying to join a game that does not exist')
+            elif (state != "NEW"):
+                # Check that the game can be joined (the state is 'NEW')
+                raise BattleshipException('The game cannot accept any new participant')
+                
 
             # TODO: Validate that self._board is a valid board (right size,
             # right content.
@@ -161,9 +178,19 @@ class BattleshipTransaction(transaction.Transaction):
             if self._name not in store:
                 raise BattleshipException('no such game')
             
-            # TODO: Check that self._column is valid (letter from A-J)
+            # Check that self._column is valid (letter from A-J)
+            
+            if not any((c in self._acceptable_columns) for c in self._column):
+                raise BattleshipException('Acceptable columns letters are A to J')
 
-            # TODO: Check that self._row is valid (number from 1-10)
+            # Check that self._row is valid (number from 1-10)
+            try:
+                row = int(self._row)
+                if (row <1) or (row>10):
+                    raise BattleshipException('Acceptable rows numbers are 1 to 10')
+            except ValueError:
+                raise BattleshipException('Acceptable rows numbers are 1 to 10')
+            
 
             state = store[self._name]['State']
 
