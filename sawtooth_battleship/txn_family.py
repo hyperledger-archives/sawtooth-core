@@ -14,6 +14,7 @@
 # -----------------------------------------------------------------------------
 
 import logging
+import re
 
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
@@ -143,7 +144,10 @@ class BattleshipTransaction(transaction.Transaction):
             if self._name in store:
                 raise BattleshipException('game already exists')
 
-            # TODO: Restrict game name letters and numbers.
+            # Restrict game name letters and numbers.
+            if not re.match("^[a-zA-Z0-9]*$", self._name):
+                raise BattleshipException("Only letters a-z A-Z and numbers 0-9 are allowed in the game name!")
+
             LOGGER.error("in check_valid, CREATE is not fully implemented")
         elif self._action == 'JOIN':
             # TODO: Check that the game can be joined (the state is 'NEW')
