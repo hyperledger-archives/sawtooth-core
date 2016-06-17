@@ -93,7 +93,7 @@ class BattleshipTransaction(transaction.Transaction):
         self._column = minfo['Column'] if 'Column' in minfo else None
 
         # self._column is valid (letter from A-J)
-        self.acceptable_columns = set('ABCDEFGHIJ')
+        self._acceptable_columns = set('ABCDEFGHIJ')
         
 
     def __str__(self):
