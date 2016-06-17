@@ -1,0 +1,3 @@
+
+class RPSException(Exception):
+    pass
