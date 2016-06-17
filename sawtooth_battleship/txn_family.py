@@ -150,12 +150,17 @@ class BattleshipTransaction(transaction.Transaction):
 
             LOGGER.error("in check_valid, CREATE is not fully implemented")
         elif self._action == 'JOIN':
-            # TODO: Check that the game can be joined (the state is 'NEW')
 
             # Check that self._name is in the store (to verify 
             # that the game exists (see FIRE below).
+            state = store[self._name]['State']
+            LOGGER.info("state: %s" % state)
             if self._name not in store:
                 raise BattleshipException('Trying to join a game that does not exist')
+            elif (state != "NEW"):
+                # Check that the game can be joined (the state is 'NEW')
+                raise BattleshipException('The game cannot accept any new participant')
+                
 
             # TODO: Validate that self._board is a valid board (right size,
             # right content.
