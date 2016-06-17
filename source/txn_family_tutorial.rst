@@ -148,6 +148,8 @@ family.
 
 In sawtooth_xo/__init__.py, register_transaction_types is defined as:
 
+*sawtooth_xo/__init__.py*
+
 .. code-block:: python
 
     from sawtooth_xo.txn_family import _register_transaction_types
@@ -202,6 +204,8 @@ Registration
 The implementation of _register_transaction_types, which is now complete,
 looks like this:
 
+*sawtooth_xo/txn_family.py*
+
 .. code-block:: python
 
     from journal.messages import transaction_message
@@ -213,20 +217,23 @@ looks like this:
         ledger.add_transaction_store(XoTransaction)
 
 The ledger object being passed into this function is a type derived from
-journal.journal_core.Journal (such as PoetJournal or QuorumJournal).  We
+journal.journal_core.Journal from `sawtooth-core <http://github.com/HyperLedger/sawtooth-core>`__
+(such as PoetJournal or QuorumJournal).  We
 register the standard transaction message handler
 specify the message type of XoTransactionMessage, which is derived from
 transaction_message.TransactionMessage.
 
-Lastly, we add the transaction store.  add_transaction_store() takes the
+Lastly, we add the transaction store. The method add_transaction_store() takes the
 transaction type as input (XoTransaction).  It adds an instance of the
-appropriate store type to teh global store, using the transaction type's
+appropriate store type to the global store, using the transaction type's
 name.
 
 The Message Class
 -----------------
 
 The implementation of XoTransactionMessage, which is also complete:
+
+*sawtooth_xo/txn_family.py*
 
 .. code-block:: python
 
@@ -250,7 +257,7 @@ is fairly simple.
 
 The MessageType class attribute specifies the name used for these types of
 messages.  This is used in several places; for example, it is used when
-coorelating message statistics.
+correlating message statistics.
 
 During __init__, the minfo argument is used for deserialization.  It is used by
 the implementation in this class and the base classes to restore an object.  In
@@ -273,6 +280,8 @@ The transaction class is the heart of a transaction family.  It must define:
 - A dump() method which implements serialization
 
 The skeleton implementation is:
+
+*sawtooth_xo/txn_family.py*
 
 .. code-block:: python
 
@@ -361,6 +370,8 @@ SawtoothClient.  The SawtoothClient base class takes care of all of the
 details related to submitting transactions and retrieving state.  XoClient
 provides a couple methods for creating transactions:
 
+*sawtooth_xo/xo_client.py*
+
 .. code-block:: python
 
     def create(self, name):
@@ -448,22 +459,27 @@ fields that make up a transaction: Action, Name, and Space.
 The __init__() implementation restores these fields from minfo if they are
 present there during construction:
 
+*sawtooth_xo/txn_family.py*
+
 .. code-block:: python
 
-    def __init__(self, minfo=None):
-        if minfo is None:
-            minfo = {}
+    class XoTransaction(transaction.Transaction):
+        def __init__(self, minfo=None):
+            if minfo is None:
+                minfo = {}
 
-        super(XoTransaction, self).__init__(minfo)
+            super(XoTransaction, self).__init__(minfo)
 
-        LOGGER.debug("minfo: %s", repr(minfo))
-        self._name = minfo['Name'] if 'Name' in minfo else None
-        self._action = minfo['Action'] if 'Action' in minfo else None
-        self._space = minfo['Space'] if 'Space' in minfo else None
+            LOGGER.debug("minfo: %s", repr(minfo))
+            self._name = minfo['Name'] if 'Name' in minfo else None
+            self._action = minfo['Action'] if 'Action' in minfo else None
+            self._space = minfo['Space'] if 'Space' in minfo else None
 
 If they are not specified in minfo, they default to None.
 
 The dump() method does the reverse and serializes the data:
+
+*sawtooth_xo/txn_family.py*
 
 .. code-block:: python
 
@@ -482,6 +498,8 @@ the transaction data.  Both of these methods call their base classes.  The base
 classes will add/restore additional fields to the transaction.
 
 We can now also implement __str__() since all the relevant fields are defined:
+
+*sawtooth_xo/txn_family.py*
 
 .. code-block:: python
 
@@ -507,6 +525,8 @@ the appropriate way.  It assumes that check_valid() has been called just
 before, in that it does not re-check everything checked with check_valid().
 
 The implementation of check_valid():
+
+*sawtooth_xo/txn_family.py*
 
 .. code-block:: python
 
@@ -626,12 +646,12 @@ Then, create a game:
 
 .. code-block:: console
 
-    $ ./bin/xo create -vvv game002 --wait
+    $ ./bin/xo create -vvv game001 --wait
     [04:53:07 DEBUG   client] fetch state from http://localhost:8800/XoTransaction/*
     [04:53:07 DEBUG   client] get content from url <http://localhost:8800/store/XoTransaction/\*>
     [04:53:07 DEBUG   client] set signing key from file /home/vagrant/.sawtooth/keys/player1.wif
-    [04:53:07 DEBUG   txn_family] minfo: {'Action': 'CREATE', 'Name': 'game002'}
-    [04:53:07 DEBUG   txn_family] checking (1NNxoo58EsR5cCEACiJf9mvoVLrGF37kvV game002 None)
+    [04:53:07 DEBUG   txn_family] minfo: {'Action': 'CREATE', 'Name': 'game001'}
+    [04:53:07 DEBUG   txn_family] checking (1NNxoo58EsR5cCEACiJf9mvoVLrGF37kvV game001 None)
     [04:53:07 DEBUG   txn_family] minfo: {}
     [04:53:07 DEBUG   client] Posting transaction: 12e8a91cb8dcd0fc
     [04:53:07 DEBUG   client] post transaction to http://localhost:8800/Xo/Transaction with DATALEN=349, DATA=<?kTransaction?fActionfCREATElDependencies?dNameggame002eNonce?A??7??7?iSignaturexXHIosnrTVbfgUL2jAc13I2i3H9/bEZ5l6/VGx0W4/H0Sh9BCmwDmku7bsApz3ykfwYr9yEiLprS0fL1YztqOzXqk=oTransactionTypen/XoTransactioni__NONCE__?A??7??Sm__SIGNATURE__xXHC5nsdONidVTX4ond7zOJgXvXOOvkQl5DYRNh1MglAEPSMK5NCDKViUfnuaTjIWyTFRLKTpsqatdBIJEghMXVJE=h__TYPE__o/Xo/Transaction>
@@ -639,7 +659,7 @@ Then, create a game:
       "Transaction": {
         "Action": "CREATE",
         "Dependencies": [],
-        "Name": "game002",
+        "Name": "game001",
         "Nonce": 1465966387.019018,
         "Signature": "HIosnrTVbfgUL2jAc13I2i3H9/bEZ5l6/VGx0W4/H0Sh9BCmwDmku7bsApz3ykfwYr9yEiLprS0fL1YztqOzXqk=",
         "TransactionType": "/XoTransaction"
@@ -648,7 +668,7 @@ Then, create a game:
       "__SIGNATURE__": "HC5nsdONidVTX4ond7zOJgXvXOOvkQl5DYRNh1MglAEPSMK5NCDKViUfnuaTjIWyTFRLKTpsqatdBIJEghMXVJE=",
       "__TYPE__": "/Xo/Transaction"
     }
-    [04:53:07 DEBUG   txn_family] apply (1NNxoo58EsR5cCEACiJf9mvoVLrGF37kvV game002 None)
+    [04:53:07 DEBUG   txn_family] apply (1NNxoo58EsR5cCEACiJf9mvoVLrGF37kvV game001 None)
     [04:53:07 DEBUG   client] get content from url <http://localhost:8800/transaction/12e8a91cb8dcd0fc>
     [04:53:07 DEBUG   client] waiting for transaction 12e8a91cb8dcd0fc to commit
     [04:53:12 DEBUG   client] get content from url <http://localhost:8800/transaction/12e8a91cb8dcd0fc>
