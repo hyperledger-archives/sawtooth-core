@@ -89,8 +89,9 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug("minfo: %s", repr(minfo))
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._action = minfo['Action'] if 'Action' in minfo else None
-        # TODO: handle 'Board', 'Row' 
+        # TODO: handle 'Board'
         self._column = minfo['Column'] if 'Column' in minfo else None
+        self._row = minfo['Row'] if 'Row' in minfo else None
 
         # self._column is valid (letter from A-J)
         self._acceptable_columns = set('ABCDEFGHIJ')
@@ -182,7 +183,14 @@ class BattleshipTransaction(transaction.Transaction):
             if not any((c in self._acceptable_columns) for c in self._column):
                 raise BattleshipException('Acceptable columns letters are A to J')
 
-            # TODO: Check that self._row is valid (number from 1-10)
+            # Check that self._row is valid (number from 1-10)
+            try:
+                row = int(self._row)
+                if (row <1) or (row>10):
+                    raise BattleshipException('Acceptable rows numbers are 1 to 10')
+            except ValueError:
+                raise BattleshipException('Acceptable rows numbers are 1 to 10')
+            
 
             state = store[self._name]['State']
 
