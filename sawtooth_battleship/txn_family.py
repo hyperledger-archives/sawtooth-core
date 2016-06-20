@@ -89,12 +89,15 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug("minfo: %s", repr(minfo))
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._action = minfo['Action'] if 'Action' in minfo else None
-        # TODO: handle 'Board'
+        self._board = minfo['Board'] if 'Board' in minfo else None
         self._column = minfo['Column'] if 'Column' in minfo else None
         self._row = minfo['Row'] if 'Row' in minfo else None
 
         # self._column is valid (letter from A-J)
         self._acceptable_columns = set('ABCDEFGHIJ')
+
+        # size of the board (10x10)
+        self._size = 10
         
 
     def __str__(self):
@@ -166,15 +169,23 @@ class BattleshipTransaction(transaction.Transaction):
             elif (state != "NEW"):
                 # Check that the game can be joined (the state is 'NEW')
                 raise BattleshipException('The game cannot accept any new participant')
-                
 
-            # TODO: Validate that self._board is a valid board (right size,
-            # right content.
+            # Check that the game board is the right size (10x10)
+            if len(self._board) != self._size:
+                raise BattleshipException('Game board is not valid size')
+            for row in xrange(0, self._size):
+                if len(self._board[row]) != self._size:
+                    raise BattleshipException('Game board is not valid size')
 
-            # TODO: Remove this logging statement when all other TODOs
-            # have been resolved for JOIN
-            LOGGER.error("in check_valid, JOIN is not fully implemented")
+            # Validate that self._board contains hash-like strings
+            for row in xrange(0, self._size):
+                for col in xrange(0, self._size):
+                    # length of md5 hexdigest is 32 characters
+                    if len(self._board[row][col]) != 32:
+                        raise BattleshipException("invalid board hash")
+
         elif self._action == 'FIRE':
+
             if self._name not in store:
                 raise BattleshipException('no such game')
             
@@ -237,14 +248,23 @@ class BattleshipTransaction(transaction.Transaction):
         elif self._action == 'JOIN':
             game = store[self._name].copy()
 
-            # TODO: if this is the first JOIN, set Board1 and Player1 in
-            # the store.  if this is the second JOIN, set Board2 and Player2
-            # in the store.  Also, initialie TargetBoard1 and TargetBoard2
-            # as empty.
+            # If this is the first JOIN, set HashedBoard1 and Player1 in the
+            # store.  if this is the second JOIN, set HashedBoard2 and
+            # Player2 in the store.  Also, initialize TargetBoard1 and
+            # TargetBoard2 as empty.
+            if not 'Player1' in game:
+                game['HashedBoard1'] = self._board
+                size = len(self._board)
+                game['TargetBoard1'] = [['?'] * size for i in range(size)]
+                game['Player1'] = self.OriginatorID
+            else:
+                game['HashedBoard2'] = self._board
+                size = len(self._board)
+                game['TargetBoard1'] = [['?'] * size for i in range(size)]
+                game['Player2'] = self.OriginatorID
 
-            # TODO: this should only move to 'P1-NEXT' if both boards have
-            # been entered.
-            game["State"] = 'P1-NEXT'
+                # Move to 'P1-NEXT' as both boards have been entered.
+                game["State"] = 'P1-NEXT'
 
             # TODO: Remove this logging statement when all other TODOs
             # have been resolved for JOIN
@@ -289,7 +309,10 @@ class BattleshipTransaction(transaction.Transaction):
 
         result['Name'] = self._name
         result['Action'] = self._action
-        # TODO: handle 'Board', 'Column', 'Row'; only add them to the result
-        # if they are valid arguments for the Action
+        if self._action == 'JOIN':
+            result['Board'] = self._board
+        if self._action == 'FIRE':
+            result['Row'] = self._board
+            result['Column'] = self._board
 
         return result

@@ -97,6 +97,32 @@ class BoardLayout(object):
 
         return board
 
+    def render_hashed(self, nonces):
+        hashed_board = [[None] * self.size for i in range(self.size)]
+        clear_board = self.render()
+
+        for row in xrange(0, self.size):
+            for col in xrange(0, self.size):
+                hashed_board[row][col] = hash_space(
+                    clear_board[row][col], nonces[row][col])
+
+        return hashed_board
+
+    def serialize(self):
+        data = {}
+        data['size'] = self.size
+        data['positions'] = []
+        for position in self.ship_positions:
+            data['positions'].append(position.serialize())
+        return data
+
+    @staticmethod
+    def deserialize(data):
+        layout = BoardLayout(data['size'])
+        for position in data['positions']:
+            layout.append(ShipPosition.deserialize(position))
+        return layout
+
     @staticmethod
     def generate(size=10, ships=None, max_placement_attempts=100):
         if ships is None:
@@ -155,71 +181,35 @@ class ShipPosition(object):
         self.column = column
         self.orientation = orientation
 
+    def serialize(self):
+        data = {}
+        data['text'] = self.text
+        data['row'] = self.row
+        data['column'] = self.column
+        data['orientation'] = self.orientation
+        return data
 
-class Board:
-    """The Board object manages local state for each game board instance.
-    Calling create_game() will return an encrypted board to send to the server
+    @staticmethod
+    def deserialize(data):
+        text = data['text']
+        row = data['row']
+        column = data['column']
+        orientation = data['orientation']
 
-    Attributes:
-        secret_board (str): Board with ship positions in the clear
-        secret_board_keys (str): Keys for each board space
-        board_commitment (str): Commitment to the keys that unlock the board
-    """
-    # TODO: figure out how to send in a pre-defined board
-    # TODO: figure out which class is responsible for persisting board and keys
-    # TODO: figure out call pattern with client for accessing this state
-    # TODO: txn_family should take advantage of these decrypt method(s)
-    # TODO: enhance the 'encryption' method
+        return ShipPosition(text, row, column, orientation)
 
-    def __init__(self):
-        """
-        Constructor for the battleship Game class
-        """
-        self.secret_board = ''
-        self.secret_board_keys = ''
-        self.board_commitment = ''
 
-    def create_game(self):
-        self.secret_board = self.create_secret_board()
-        self.secret_board_keys = self.create_board_keys(self.secret_board)
-        self.board_commitment = hashlib.sha1(self.secret_board_keys)\
-            .hexdigest()
-        return self.encrypt_board(self.secret_board, self.secret_board_keys)
+def create_nonces(board_size):
+    nonces = [[None] * board_size for i in range(board_size)]
+    for row in xrange(0, board_size):
+        for col in xrange(0, board_size):
+            nonces[row][col] = ''.join(
+                [random.choice(string.ascii_letters) for _ in xrange(0, 10)])
+    return nonces
 
-    def create_secret_board(self):
-        """
-        Create board with ship positions
-        """
-        # TODO: Generate a board automatically or parametrically
-        # Hard coding for test purposes
-        sb = ''
-        sb += '-----'
-        sb += 'AAAA-'
-        sb += '--BBB'
-        sb += 'S----'
-        sb += 'CCC--'
-        return sb
 
-    def create_board_keys(self, board):
-        return ''.join(random.choice(string.ascii_uppercase)
-                       for _ in range(len(board)))
-
-    def encrypt_space(self, space, secret_key):
-        return chr(ord(space) + ord(secret_key))
-
-    def decrypt_space(self, space, secret_key):
-        return chr(ord(space) - ord(secret_key))
-
-    def encrypt_board(self, board, board_keys):
-        encboard = ''
-        for i in range(len(board)):
-            encspace = self.encrypt_space(board[i], (board_keys[i]))
-            encboard += encspace
-        return encboard
-
-    def decrypt_board(self, board, board_keys):
-        decboard = ''
-        for i in range(len(board)):
-            decspace = self.decrypt_space(board[i], (board_keys[i]))
-            decboard += decspace
-        return decboard
+def hash_space(space, nonce):
+    m = hashlib.md5()
+    m.update(space)
+    m.update(nonce)
+    return m.hexdigest()

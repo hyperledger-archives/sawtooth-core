@@ -19,6 +19,7 @@
 import argparse
 import ConfigParser
 import getpass
+import json
 import logging
 import os
 import traceback
@@ -30,6 +31,7 @@ from colorlog import ColoredFormatter
 from sawtooth.exceptions import ClientException
 
 from sawtooth_battleship.battleship_board import BoardLayout
+from sawtooth_battleship.battleship_board import create_nonces
 from sawtooth_battleship.battleship_client import BattleshipClient
 from sawtooth_battleship.battleship_exceptions import BattleshipException
 
@@ -114,11 +116,6 @@ def add_join_parser(subparsers, parent_parser):
         'name',
         type=str,
         help='the identifier for the game')
-
-    parser.add_argument(
-        'board',
-        type=str,
-        help='the board to join')
 
     parser.add_argument(
         '--wait',
@@ -262,13 +259,40 @@ def do_fire(args, config):
 
 def do_join(args, config):
     name = args.name
-    board = args.board
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    username = config.get('DEFAULT', 'username')
+
+    home = os.path.expanduser("~")
+
+    data_file = os.path.join(home,
+                             ".sawtooth",
+                             "battleship-{}.data".format(username))
+    if os.path.exists(data_file):
+        with open(data_file, 'r') as fd:
+            data = json.load(fd)
+    else:
+        data = { 'games': {} }
+
+    if not name in data['games']:
+        new_layout = BoardLayout.generate()
+        data['games'][name] = {}
+        data['games'][name]['layout'] = new_layout.serialize()
+        data['games'][name]['nonces'] = create_nonces(new_layout.size)
+        with open(data_file + ".new", 'w') as fd:
+            json.dump(data, fd, sort_keys=True, indent=4)
+        os.rename(data_file + ".new", data_file)
+    else:
+        print "Board and nonces already defined for game, reusing..."
+
+    layout = BoardLayout.deserialize(data['games'][name]['layout'])
+    nonces = data['games'][name]['nonces']
+
+    hashed_board = layout.render_hashed(nonces)
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    client.join(name=name, board=board)
+    client.join(name=name, board=hashed_board)
 
     if args.wait:
         client.wait_for_commit()
