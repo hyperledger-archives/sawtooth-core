@@ -185,16 +185,16 @@ class IntKeyLoadTest(object):
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--validator-count',
+    parser.add_argument('--count',
                         metavar="",
                         help='Validators to monitor (default: %(default)s)',
                         default=3,
                         type=int)
-    parser.add_argument('--validator-url',
+    parser.add_argument('--url',
                         metavar="",
                         help='Base validator url (default: %(default)s)',
                         default="http://localhost")
-    parser.add_argument('--validator-port',
+    parser.add_argument('--port',
                         metavar="",
                         help='Base validator http port (default: %(default)s)',
                         default=8800,
@@ -209,9 +209,9 @@ def parse_args(args):
                         help='Rounds to execute (default: %(default)s)',
                         default=2,
                         type=int)
-    parser.add_argument('--txn-intv',
+    parser.add_argument('--interval',
                         metavar="",
-                        help='Inter-tx time (mS) (default: %(default)s)',
+                        help='Inter-txn time (mS) (default: %(default)s)',
                         default=0,
                         type=int)
 
@@ -221,12 +221,12 @@ def parse_args(args):
 def configure(opts):
     # scriptdir = os.path.dirname(os.path.realpath(__file__))
 
-    print "     validator count: ", opts.validator_count
-    print "  validator base url: ", opts.validator_url
-    print " validator base port: ", opts.validator_port
+    print "     validator count: ", opts.count
+    print "  validator base url: ", opts.url
+    print " validator base port: ", opts.port
     print "                keys: ", opts.keys
     print "              rounds: ", opts.rounds
-    print "transaction interval: ", opts.txn_intv
+    print "transaction interval: ", opts.interval
     # sys.exit(1)
 
 
@@ -245,9 +245,9 @@ def main():
 
     urls = []
 
-    vcount = opts.validator_count
-    baseurl = opts.validator_url
-    portnum = opts.validator_port
+    vcount = opts.count
+    baseurl = opts.url
+    portnum = opts.port
 
     for i in range(0, vcount):
         url = baseurl + ":" + str(portnum + i)
@@ -257,7 +257,7 @@ def main():
 
     keys = opts.keys
     rounds = opts.rounds
-    txn_intv = opts.txn_intv
+    txn_intv = opts.interval
 
     print "Testing transaction load."
 

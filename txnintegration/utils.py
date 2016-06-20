@@ -22,6 +22,8 @@ import string
 import sys
 import time
 import warnings
+import psutil
+import collections
 
 import pybitcointools
 from colorlog import ColoredFormatter
@@ -204,3 +206,77 @@ def setup_loggers(config):
         clog.setFormatter(formatter)
         clog.setLevel(loglevel)
         logger.addHandler(clog)
+
+
+class StatsCollector(object):
+    def __init__(self):
+        self.statslist = []
+
+    def get_names(self):
+        """
+        Returns: All data element names as list - for csv writer (header)
+        """
+        names = []
+
+        for stat in self.statslist:
+            statname = type(stat).__name__
+            for name in stat._fields:
+                names.append(statname + "_" + name)
+
+        return names
+
+    def get_data(self):
+        """
+        Returns: All data element values in list - for csv writer
+        """
+        values = []
+
+        for stat in self.statslist:
+            for value in stat:
+                values.append(value)
+
+        return values
+
+    def get_data_as_dict(self):
+        """
+        Returns: returns platform stats as dictionary - for stats web interface
+        """
+        p_stats = collections.OrderedDict()
+
+        for stat in self.statslist:
+            statname = type(stat).__name__
+            p_stats[statname] = self.cpu_stats._asdict()
+
+        return p_stats
+
+    def pprint_stats(self):
+        p_stats = self.get_data_as_dict()
+        print json.dumps(p_stats, indent=4)
+
+
+CpuStats = collections.namedtuple("scpu",
+                                  'percent '
+                                  'user_time '
+                                  'system_time '
+                                  'idle_time')
+
+
+class PlatformStats(StatsCollector):
+    def __init__(self):
+        super(PlatformStats, self).__init__()
+        self.get_stats()
+
+    def get_stats(self):
+        cpct = psutil.cpu_percent(interval=0)
+        ctimes = psutil.cpu_times()
+        self.cpu_stats = CpuStats(cpct, ctimes.user, ctimes.system,
+                                  ctimes.idle)
+
+        self.vmem_stats = psutil.virtual_memory()
+        self.disk_stats = psutil.disk_io_counters()
+        self.net_stats = psutil.net_io_counters()
+
+        # must create new stats list each time stats are updated
+        # because named tuples are immutable
+        self.statslist = [self.cpu_stats, self.vmem_stats, self.disk_stats,
+                          self.net_stats]
