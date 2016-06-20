@@ -17,3 +17,8 @@
 class BattleshipException(Exception):
     def __init__(self, msg):
         super(BattleshipException, self).__init__(msg)
+
+
+class BoardLayoutException(BattleshipException):
+    def __init__(self, msg):
+        super(BoardLayoutException, self).__init__(msg)
