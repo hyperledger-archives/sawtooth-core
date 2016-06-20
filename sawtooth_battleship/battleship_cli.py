@@ -263,24 +263,22 @@ def do_join(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
-    username = config.get('DEFAULT', 'username')
 
-    home = os.path.expanduser("~")
-
-    data_file = os.path.join(home,
-                             ".sawtooth",
-                             "battleship-{}.data".format(username))
-    if os.path.exists(data_file):
-        with open(data_file, 'r') as fd:
-            data = json.load(fd)
-    else:
-        data = { 'games': {} }
+    data = load_data(config)
 
     if not name in data['games']:
         new_layout = BoardLayout.generate()
         data['games'][name] = {}
         data['games'][name]['layout'] = new_layout.serialize()
         data['games'][name]['nonces'] = create_nonces(new_layout.size)
+
+        home = os.path.expanduser("~")
+
+        username = config.get('DEFAULT', 'username')
+
+        data_file = os.path.join(home,
+                                 ".sawtooth",
+                                 "battleship-{}.data".format(username))
         with open(data_file + ".new", 'w') as fd:
             json.dump(data, fd, sort_keys=True, indent=4)
         os.rename(data_file + ".new", data_file)
@@ -326,18 +324,8 @@ def do_show(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
-    username = config.get('DEFAULT', 'username')
 
-    home = os.path.expanduser("~")
-
-    data_file = os.path.join(home,
-                             ".sawtooth",
-                             "battleship-{}.data".format(username))
-    if os.path.exists(data_file):
-        with open(data_file, 'r') as fd:
-            data = json.load(fd)
-    else:
-        data = { 'games': {} }
+    data = load_data(config)
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
     state = client.get_state()
@@ -461,6 +449,23 @@ def save_config(config):
     with open("{}.new".format(config_file), "w") as fd:
         config.write(fd)
     os.rename("{}.new".format(config_file), config_file)
+
+
+def load_data(config):
+    home = os.path.expanduser("~")
+
+    username = config.get('DEFAULT', 'username')
+
+    data_file = os.path.join(home,
+                             ".sawtooth",
+                             "battleship-{}.data".format(username))
+    if os.path.exists(data_file):
+        with open(data_file, 'r') as fd:
+            data = json.load(fd)
+    else:
+        data = { 'games': {} }
+
+    return data
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
