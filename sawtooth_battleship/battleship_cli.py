@@ -29,6 +29,7 @@ from colorlog import ColoredFormatter
 
 from sawtooth.exceptions import ClientException
 
+from sawtooth_battleship.battleship_board import BoardLayout
 from sawtooth_battleship.battleship_client import BattleshipClient
 from sawtooth_battleship.battleship_exceptions import BattleshipException
 
@@ -148,6 +149,22 @@ def add_show_parser(subparsers, parent_parser):
         help='the identifier for the game')
 
 
+def add_genstats_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('genstats', parents=[parent_parser])
+
+    parser.add_argument(
+        '--count',
+        type=int,
+        default=100000,
+        help='the number of games to create')
+
+    parser.add_argument(
+        '--size',
+        type=int,
+        default=10,
+        help='the board size')
+
+
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -169,10 +186,10 @@ def create_parser(prog_name):
 
     add_create_parser(subparsers, parent_parser)
     add_fire_parser(subparsers, parent_parser)
+    add_genstats_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
     add_join_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
-    add_show_parser(subparsers, parent_parser)
 
     return parser
 
@@ -308,6 +325,38 @@ def do_show(args, config):
 
     # TODO: print out game boards for the current player
 
+def do_genstats(args, config):
+    count = args.count
+    size = args.size
+
+    # Create a board which contains a count of the number of time
+    # a space was used.
+    count_board = [[0] * size for i in range(size)]
+    for i in xrange(0, count):
+        layout = BoardLayout.generate(size=size)
+        board = layout.render()
+        for row in xrange(0, size):
+            for col in xrange(0, size):
+                if board[row][col] != '-':
+                    count_board[row][col] += 1
+
+    print "Percentages Board"
+    print "-----------------"
+
+    # Print the board of percentages.
+    print "  ",
+    for i in xrange(0, size):
+        print "  {}".format(chr(ord('A') + i)),
+    print
+
+    for row in xrange(0, size):
+        print "%2d" % (row + 1),
+        for space in count_board[row]:
+            print "%3.0f" % (float(space) / float(count) * 100,),
+        print
+
+    print
+    print "Total Games Created: {}".format(count)
 
 def load_config():
     home = os.path.expanduser("~")
@@ -356,6 +405,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_create(args, config)
     elif args.command == 'fire':
         do_fire(args, config)
+    elif args.command == 'genstats':
+        do_genstats(args, config)
     elif args.command == 'init':
         do_init(args, config)
     elif args.command == 'join':
