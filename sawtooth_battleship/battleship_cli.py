@@ -187,6 +187,7 @@ def create_parser(prog_name):
     add_init_parser(subparsers, parent_parser)
     add_join_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
+    add_show_parser(subparsers, parent_parser)
 
     return parser
 
@@ -325,6 +326,18 @@ def do_show(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    username = config.get('DEFAULT', 'username')
+
+    home = os.path.expanduser("~")
+
+    data_file = os.path.join(home,
+                             ".sawtooth",
+                             "battleship-{}.data".format(username))
+    if os.path.exists(data_file):
+        with open(data_file, 'r') as fd:
+            data = json.load(fd)
+    else:
+        data = { 'games': {} }
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
     state = client.get_state()
@@ -347,7 +360,45 @@ def do_show(args, config):
     print "PLAYER 2  : {}".format(player2)
     print "STATE     : {}".format(game_state)
 
-    # TODO: print out game boards for the current player
+    # TODO - figure out the proper user's target board, given key_file
+    # (could also look in the .addr file associated with the key file)
+    target_board = game['TargetBoard1']
+    size = len(target_board)
+
+    print
+    print "  Target Board"
+    print ''.join(["-"] * (size * 3 + 3))
+    print "  ",
+    for i in xrange(0, size):
+        print " {}".format(chr(ord('A') + i)),
+    print
+
+    for row in xrange(0, size):
+        print "%2d" % (row + 1),
+        for space in target_board[row]:
+            print " {}".format(space.replace('?', ' ')),
+        print
+
+    if name in data['games']:
+        layout = BoardLayout.deserialize(data['games'][name]['layout'])
+        board = layout.render()
+
+        size = len(board)
+
+        print
+        print "  Secret Board"
+        print ''.join(["-"] * (size * 3 + 3))
+        print "  ",
+        for i in xrange(0, size):
+            print " {}".format(chr(ord('A') + i)),
+        print
+
+        for row in xrange(0, size):
+            print "%2d" % (row + 1),
+            for space in board[row]:
+                print " {}".format(space.replace('-', ' ')),
+            print
+
 
 def do_genstats(args, config):
     count = args.count
