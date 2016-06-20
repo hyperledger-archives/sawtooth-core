@@ -157,7 +157,6 @@ class BattleshipTransaction(transaction.Transaction):
             if not re.match("^[a-zA-Z0-9]*$", self._name):
                 raise BattleshipException("Only letters a-z A-Z and numbers 0-9 are allowed in the game name!")
 
-            LOGGER.error("in check_valid, CREATE is not fully implemented")
         elif self._action == 'JOIN':
 
             # Check that self._name is in the store (to verify 
