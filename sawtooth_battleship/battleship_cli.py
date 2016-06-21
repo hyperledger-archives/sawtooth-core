@@ -378,25 +378,40 @@ def do_show(args, config):
     print "PLAYER 2  : {}".format(player2)
     print "STATE     : {}".format(game_state)
 
-    # TODO - figure out the proper user's target board, given key_file
-    # (could also look in the .addr file associated with the key file)
-    target_board = game['TargetBoard1']
-    size = len(target_board)
+    # figure out the proper user's target board, given the addr
+    wif_filename = config.get('DEFAULT', 'key_file')
+    if wif_filename.endswith(".wif"):
+        addr_filename = wif_filename[0:-len(".wif")] + ".addr"
+    else:
+        addr_filename = wif_filename + ".addr"
+    addr_file = file(addr_filename, mode='r')
+    addr = addr_file.readline().rstrip('\n')
 
-    print
-    print "  Target Board"
-    print ''.join(["-"] * (size * 3 + 3))
-    print "  ",
-    for i in xrange(0, size):
-        print " {}".format(chr(ord('A') + i)),
-    print
+    if 'Player1' in game and addr == game['Player1']:
+        target_board_name = 'TargetBoard1'
+    elif 'Player2' in game and addr == game['Player2']:
+        target_board_name = 'TargetBoard2'
+    else:
+        raise BattleshipException("Player hasn't joined game.")
 
-    for row in xrange(0, size):
-        print "%2d" % (row + 1),
-        for space in target_board[row]:
-            print " {}".format(
-                space.replace('?', ' ').replace('M', '.').replace('H', 'X')),
+    if target_board_name in game:
+        target_board = game[target_board_name]
+        size = len(target_board)
+
         print
+        print "  Target Board"
+        print ''.join(["-"] * (size * 3 + 3))
+        print "  ",
+        for i in xrange(0, size):
+            print " {}".format(chr(ord('A') + i)),
+        print
+
+        for row in xrange(0, size):
+            print "%2d" % (row + 1),
+            for space in target_board[row]:
+                print " {}".format(
+                    space.replace('?', ' ').replace('M', '.').replace('H', 'X')),
+            print
 
     if name in data['games']:
         layout = BoardLayout.deserialize(data['games'][name]['layout'])
