@@ -63,7 +63,7 @@ class BattleshipClient(SawtoothClient):
             update)
 
 
-    def fire(self, name, column, row):
+    def fire(self, name, column, row, reveal_space, reveal_nonce):
         """
         """
         update = {
@@ -72,6 +72,12 @@ class BattleshipClient(SawtoothClient):
             'Column': column,
             'Row': row
         }
+
+        if reveal_space is not None:
+            update['RevealSpace'] = reveal_space
+
+        if reveal_nonce is not None:
+            update['RevealNonce'] = reveal_nonce
 
         return self.sendtxn(
             BattleshipTransaction,

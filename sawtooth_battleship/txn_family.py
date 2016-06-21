@@ -19,6 +19,7 @@ import re
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
+from sawtooth_battleship.battleship_board import hash_space
 from sawtooth_battleship.battleship_exceptions import BattleshipException
 
 LOGGER = logging.getLogger(__name__)
@@ -92,6 +93,10 @@ class BattleshipTransaction(transaction.Transaction):
         self._board = minfo['Board'] if 'Board' in minfo else None
         self._column = minfo['Column'] if 'Column' in minfo else None
         self._row = minfo['Row'] if 'Row' in minfo else None
+        self._reveal_space = minfo['RevealSpace'] \
+            if 'RevealSpace' in minfo else None
+        self._reveal_nonce = minfo['RevealNonce'] \
+            if 'RevealNonce' in minfo else None
 
         # self._column is valid (letter from A-J)
         self._acceptable_columns = set('ABCDEFGHIJ')
@@ -188,8 +193,13 @@ class BattleshipTransaction(transaction.Transaction):
             if self._name not in store:
                 raise BattleshipException('no such game')
             
-            # Check that self._column is valid (letter from A-J)
+            if self._column is None:
+                raise BattleshipException("Column is required")
+
+            if self._row is None:
+                raise BattleshipException("Row is required")
             
+            # Check that self._column is valid (letter from A-J)
             if not any((c in self._acceptable_columns) for c in self._column):
                 raise BattleshipException('Acceptable columns letters are A to J')
 
@@ -221,6 +231,25 @@ class BattleshipTransaction(transaction.Transaction):
                     raise BattleshipException('invalid player 2')
             else:
                 raise BattleshipException("invalid state: {}".format(state))
+
+            # Make sure a space is revealed if it isn't the first turn.
+            if 'LastFireColumn' in store[self._name]:
+                if self._reveal_space is None or self._reveal_nonce is None:
+                    raise BattleshipException(
+                            "Attempted to fire without revealing target")
+
+                if state == 'P1-NEXT':
+                    hashed_board = 'HashedBoard1'
+                else:
+                    hashed_board = 'HashedBoard2'
+
+                col = ord(store[self._name]['LastFireColumn']) - ord('A')
+                row = int(store[self._name]['LastFireRow']) - 1
+                hashed_space = hash_space(self._reveal_space,
+                                          self._reveal_nonce)
+                if store[self._name][hashed_board][row][col] != hashed_space:
+                    raise BattleshipException("Hash mismatch on reveal: "
+                        "{} != {}".format(hashed_board[row][col], hashed_space))
 
             # TODO: Check whether the board's column and row have already been
             # fired upon.  Note there are two boards, so the board used
@@ -259,7 +288,7 @@ class BattleshipTransaction(transaction.Transaction):
             else:
                 game['HashedBoard2'] = self._board
                 size = len(self._board)
-                game['TargetBoard1'] = [['?'] * size for i in range(size)]
+                game['TargetBoard2'] = [['?'] * size for i in range(size)]
                 game['Player2'] = self.OriginatorID
 
                 # Move to 'P1-NEXT' as both boards have been entered.
@@ -273,13 +302,25 @@ class BattleshipTransaction(transaction.Transaction):
         elif self._action == 'FIRE':
             game = store[self._name].copy()
 
-            # TODO: Reveal.  Update TargetBoard1 or TargetBoard2 as
-            # appropriate, depending on the current player (determined by
-            # State).  Use the LastFireColumn and LastFireRow.
+            # Reveal the previously targeted space
+            if 'LastFireColumn' in game:
+                if game['State'] == 'P1-NEXT':
+                    target_board = 'TargetBoard2'
+                else:
+                    target_board = 'TargetBoard1'
 
-            # TODO: Update LastFireColumn and LastFireRow in the store so
-            # they can be used for last time.  (Set them to self._column and
-            # self._row.)
+                col = ord(game['LastFireColumn']) - ord('A')
+                row = int(game['LastFireRow']) - 1
+                if self._reveal_space != '-':
+                    game[target_board][row][col] = 'H'
+                else:
+                    game[target_board][row][col] = 'M'
+
+
+            # Update LastFireColumn and LastFireRow in the store so
+            # they can be used in the next transaction.
+            game['LastFireColumn'] = self._column
+            game['LastFireRow'] = self._row
 
             # TODO: detect if the game has been won, changing the State
             # to P1-WIN or P2-WIN as appropriate
@@ -311,7 +352,11 @@ class BattleshipTransaction(transaction.Transaction):
         if self._action == 'JOIN':
             result['Board'] = self._board
         if self._action == 'FIRE':
-            result['Row'] = self._board
-            result['Column'] = self._board
+            result['Row'] = self._row
+            result['Column'] = self._column
+            if self._reveal_space is not None:
+                result['RevealSpace'] = self._reveal_space
+            if self._reveal_nonce is not None:
+                result['RevealNonce'] = self._reveal_nonce
 
         return result

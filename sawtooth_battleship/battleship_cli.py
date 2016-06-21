@@ -251,8 +251,38 @@ def do_fire(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
+    data = load_data(config)
+
+    if not name in data['games']:
+        raise BattleshipException(
+            "no such game in local database: {}".format(name))
+
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    client.fire(name=name, column=column, row=row)
+    state = client.get_state()
+
+    if not name in state:
+        raise BattleshipException(
+            "no such game: {}".format(name))
+    state_game = state[name]
+
+    reveal_space = None
+    reveal_nonce = None
+
+    if 'LastFireColumn' in state_game:
+        last_col = ord(state_game['LastFireColumn']) - ord('A')
+        last_row = int(state_game['LastFireRow']) - 1
+
+        layout = BoardLayout.deserialize(data['games'][name]['layout'])
+        nonces = data['games'][name]['nonces']
+
+        reveal_space = layout.render()[last_row][last_col]
+        reveal_nonce = nonces[last_row][last_col]
+
+    client.fire(name=name,
+                column=column,
+                row=row,
+                reveal_space=reveal_space,
+                reveal_nonce=reveal_nonce)
 
     if args.wait:
         client.wait_for_commit()
@@ -364,7 +394,8 @@ def do_show(args, config):
     for row in xrange(0, size):
         print "%2d" % (row + 1),
         for space in target_board[row]:
-            print " {}".format(space.replace('?', ' ')),
+            print " {}".format(
+                space.replace('?', ' ').replace('M', '.').replace('H', 'X')),
         print
 
     if name in data['games']:
