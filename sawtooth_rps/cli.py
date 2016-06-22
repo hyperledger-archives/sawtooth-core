@@ -46,13 +46,16 @@ def do_list(args, config):
         state = v.get('State')
         print "%s\tplayers: %s status: %s creator: %s" % (k, players, state.capitalize(), creator)
         if state == "COMPLETE":
+            print "  Hands Played:"
+            for player, hand in v['Hands'].iteritems():
+                print "    %s: %s" % (player, hand.capitalize())
             print "  Results:"
             for other_player, result in v['Results'].iteritems():
                 print "    %s vs %s: %s" % (creator, other_player, result)
         else:
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
-                print "    %s: %s" % (player, hand.capitalize())
+                print "    %s: %s" % (player, "*******")
 
 def do_init(args, config):
     username = config.get('DEFAULT', 'username')
