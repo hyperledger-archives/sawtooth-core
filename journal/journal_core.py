@@ -1049,7 +1049,6 @@ class Journal(gossip_core.Gossip):
             # update missing txn counter
             self.JournalStats.MissingDependenciesCount.increment()
 
-
         # if all of the dependencies have not been met then there isn't any
         # point in continuing on so bail out
         if not ready:
