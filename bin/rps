@@ -8,7 +8,7 @@ import sys
 if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from sawtooth_rps.cli import main
+from sawtooth_rps.cli import main_wrapper
 
 if __name__ == '__main__':
-    main()
+    main_wrapper()

@@ -17,6 +17,8 @@
 
 
 import os
+import sys
+import traceback
 import ConfigParser
 import getpass
 import argparse
@@ -26,7 +28,8 @@ import pybitcointools
 from sawtooth_xo.xo_cli import setup_loggers
 
 from .client import RPSClient
-from .exceptions import RPSException
+from sawtooth_rps.exceptions import RPSException
+from sawtooth.exceptions import ClientException
 
 
 logger = logging.getLogger(__name__)
@@ -199,5 +202,19 @@ def main():
     else:
         logger.error("Invalid command")
 
-if __name__ == "__main__":
-    main()
+def main_wrapper():
+    try:
+        main()
+    except RPSException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except ClientException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        pass
+    except SystemExit as e:
+        raise e
+    except:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)

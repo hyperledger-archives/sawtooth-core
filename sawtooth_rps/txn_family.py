@@ -19,7 +19,7 @@ import logging
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
-from .exceptions import RPSException
+from sawtooth_rps.exceptions import RPSException
 
 
 logger = logging.getLogger(__name__)
