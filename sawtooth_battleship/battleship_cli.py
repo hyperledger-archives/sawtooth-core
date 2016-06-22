@@ -364,7 +364,7 @@ def do_show(args, config):
         raise BattleshipException('no such game: {}'.format(name))
 
     game = state[name]
-    print game
+
     player1 = ''
     player2 = ''
     if 'Player1' in game:
