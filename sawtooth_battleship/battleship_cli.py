@@ -398,7 +398,8 @@ def do_show(args, config):
     # to determine which board * is diplayed on to
     # show pending shot
     if 'LastFireRow' in game and 'LastFireColumn' in game:
-        last_fire = (int(game['LastFireRow']) - 1, int(ord(game['LastFireColumn']))-ord('A'))
+        last_fire = (int(game['LastFireRow']) - 1,
+                     int(ord(game['LastFireColumn'])) - ord('A'))
     else:
         last_fire = None
 
@@ -418,45 +419,62 @@ def do_show(args, config):
         last_fire = None
         will_be_on_target_board = False
 
-
     if target_board_name in game:
         target_board = game[target_board_name]
         size = len(target_board)
-        if will_be_on_target_board and last_fire:
-            target_board[last_fire[0]][last_fire[1]] = '* '
 
         print
         print "  Target Board"
-        print_board(target_board, size, is_target_board=True)
+        print_board(target_board, size, is_target_board=True,
+                    pending_on_target_board=will_be_on_target_board,
+                    last_fire=last_fire)
 
     if name in data['games']:
         layout = BoardLayout.deserialize(data['games'][name]['layout'])
         board = layout.render()
-
-        if not will_be_on_target_board and last_fire:
-            board[last_fire[0]][last_fire[1]] = '* '
         size = len(board)
 
         print
         print "  Secret Board"
-        print_board(board, size, is_target_board=False)
+        print_board(board, size, is_target_board=False,
+                    pending_on_target_board=will_be_on_target_board,
+                    last_fire=last_fire)
 
 
-def print_board(board, size, is_target_board=True):
+def print_board(board, size, is_target_board=True,
+                pending_on_target_board=False, last_fire=None):
     print ''.join(["-"] * (size * 3 + 3))
     print "  ",
     for i in xrange(0, size):
         print " {}".format(chr(ord('A') + i)),
     print
 
-    for row in xrange(0, size):
+    for row_idx, row in enumerate(xrange(0, size)):
         print "%2d" % (row + 1),
-        for space in board[row]:
+        for col_idx, space in enumerate(board[row]):
             if is_target_board:
-                print " {}".format(
-                    space.replace('?', ' ').replace('M', '.').replace('H', 'X')),
+                if pending_on_target_board and last_fire is not None and \
+                        row_idx == last_fire[0] and col_idx == last_fire[1]:
+
+                    print " {}".format(
+                        space.replace('?', '*')
+                    ),
+                else:
+                    print " {}".format(
+                        space.replace('?', ' ')
+                        .replace('M', '.').replace('H', 'X')
+                    ),
+
             else:
-                print " {}".format(space.replace('-', ' ')),
+                if not pending_on_target_board and last_fire is not None and \
+                        row_idx == last_fire[0] and col_idx == last_fire[1]:
+                    print " {}".format(
+                        '*'
+                    ),
+                else:
+                    print " {}".format(
+                        space.replace('-', ' ')
+                    ),
         print
 
 
@@ -492,6 +510,7 @@ def do_genstats(args, config):
 
     print
     print "Total Games Created: {}".format(count)
+
 
 def load_config():
     home = os.path.expanduser("~")
