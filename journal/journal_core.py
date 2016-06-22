@@ -100,10 +100,6 @@ class Journal(gossip_core.Gossip):
     # Time between sending requests for a missing transaction block
     MissingRequestInterval = 30.0
 
-    # Missing txn dependency count
-    MissingTxnDepCounter = 0
-    MissingTxnDepFromBlock = 0
-    MissingTxnDepFromNode = 0
 
     def __init__(self, node, **kwargs):
         """Constructor for the Journal class.
@@ -162,46 +158,11 @@ class Journal(gossip_core.Gossip):
         # initialize the ledger stats data structures
         self._initledgerstats()
 
-        # set missing txn variable counters      ***
-        self.MissingTxnDepCounter = 0
-        self.MissingTxnFromBlock = 0
-        self.MissingTxnDepFromNode = 0
-
         # connect the message handlers
         transaction_message.register_message_handlers(self)
         transaction_block_message.register_message_handlers(self)
         journal_transfer.register_message_handlers(self)
         journal_debug.register_message_handlers(self)
-
-    # stat to return missing_txn dependency
-    @property
-    def MissingDependenciesCount(self):
-        """Returns the number of missing txn dependencies.
-
-        Returns:
-               int: the number of missing txn dependencies.
-        """
-        return self.MissingTxnDepCounter
-
-    # stat to return missing_txn dependency from block
-    @property
-    def MissingDepFromBlock(self):
-        """Returns the number of missing txn dependencies.
-
-        Returns:
-                int: the number of missing txn dependencies.
-        """
-        return self.MissingTxnDepFromBlock
-
-    # stat to return missing_txn dependency from node/client
-    @property
-    def MissingDepFromNode(self):
-        """Returns the number of missing txn dependencies.
-
-        Returns:
-                int: the number of missing txn dependencies.
-        """
-        return self.MissingTxnDepFromNode
 
     @property
     def CommittedBlockCount(self):
@@ -565,7 +526,7 @@ class Journal(gossip_core.Gossip):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
-        logger.info('missing_txn called NC')
+        logger.info('missing_txn called')
 
         now = time.time()
 
@@ -576,8 +537,8 @@ class Journal(gossip_core.Gossip):
 
         self.RequestedTransactions[txnid] = now + self.MissingRequestInterval
         logger.info('New Txn placed in RequestedTxn')
-        # Update counter for missing dep from block
-        self.JournalStats.MissingDepFromNode.increment()
+
+        self.JournalStats.MissingTxnRequestCount.increment()
 
         # if the request for the missing block came from another node, then
         # we need to reuse the request or we'll process multiple copies
@@ -716,8 +677,7 @@ class Journal(gossip_core.Gossip):
         if missing:
             for txnid in missing:
                 self.request_missing_txn(txnid)
-                # Update counter for missing dep from block
-                self.JournalStats.MissingDepFromBlock.increment()
+                self.JournalStats.MissingTxnFromBlockCount.increment()
             return
 
         # at this point we know that the block is complete
@@ -1043,11 +1003,10 @@ class Journal(gossip_core.Gossip):
             # can just throw it away if the dependencies cannot be met
             ready = False
 
-            logger.info('calling missing Txn NC')
+            logger.info('calling missing Txn')
             self.request_missing_txn(dependencyID)
+            self.JournalStats.MissingTxnDepCount.increment()
 
-            # update missing txn counter
-            self.JournalStats.MissingDependenciesCount.increment()
 
         # if all of the dependencies have not been met then there isn't any
         # point in continuing on so bail out
@@ -1109,9 +1068,9 @@ class Journal(gossip_core.Gossip):
         self.JournalStats = stats.Stats(self.LocalNode.Name, 'ledger')
         self.JournalStats.add_metric(stats.Counter('CommittedBlockCount'))
         self.JournalStats.add_metric(stats.Counter('CommittedTxnCount'))
-        self.JournalStats.add_metric(stats.Counter('MissingDependenciesCount'))
-        self.JournalStats.add_metric(stats.Counter('MissingDepFromBlock'))
-        self.JournalStats.add_metric(stats.Counter('MissingDepFromNode'))
+        self.JournalStats.add_metric(stats.Counter('MissingTxnRequestCount'))
+        self.JournalStats.add_metric(stats.Counter('MissingTxnFromBlockCount'))
+        self.JournalStats.add_metric(stats.Counter('MissingTxnDepCount'))
         self.JournalStats.add_metric(stats.Sample(
             'PendingBlockCount', lambda: self.PendingBlockCount))
         self.JournalStats.add_metric(stats.Sample(
