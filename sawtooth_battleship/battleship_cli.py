@@ -364,7 +364,7 @@ def do_show(args, config):
         raise BattleshipException('no such game: {}'.format(name))
 
     game = state[name]
-
+    print game
     player1 = ''
     player2 = ''
     if 'Player1' in game:
@@ -394,9 +394,36 @@ def do_show(args, config):
     else:
         raise BattleshipException("Player hasn't joined game.")
 
+    # figure out who fired last and who is calling do_show
+    # to determine which board * is diplayed on to
+    # show pending shot
+    if 'LastFireRow' in game and 'LastFireColumn' in game:
+        last_fire = (int(game['LastFireRow']) - 1, int(ord(game['LastFireColumn']))-ord('A'))
+    else:
+        last_fire = None
+
+    if game_state == 'P1-NEXT' and target_board_name == 'TargetBoard1':
+        # player 2 last shot and player 1 is looking
+        will_be_on_target_board = False
+    elif game_state == 'P1-NEXT' and target_board_name == 'TargetBoard2':
+        # player 2 last shot and player 2 is looking
+        will_be_on_target_board = True
+    elif game_state == 'P2-NEXT' and target_board_name == 'TargetBoard1':
+        # player 1 last shot and player 1 is looking
+        will_be_on_target_board = True
+    elif game_state == 'P2-NEXT' and target_board_name == 'TargetBoard2':
+        # player 1 last shot and player 2 is looking
+        will_be_on_target_board = False
+    else:
+        last_fire = None
+        will_be_on_target_board = False
+
+
     if target_board_name in game:
         target_board = game[target_board_name]
         size = len(target_board)
+        if will_be_on_target_board and last_fire:
+            target_board[last_fire[0]][last_fire[1]] = '* '
 
         print
         print "  Target Board"
@@ -417,6 +444,8 @@ def do_show(args, config):
         layout = BoardLayout.deserialize(data['games'][name]['layout'])
         board = layout.render()
 
+        if not will_be_on_target_board and last_fire:
+            board[last_fire[0]][last_fire[1]] = '* '
         size = len(board)
 
         print
@@ -432,6 +461,19 @@ def do_show(args, config):
             for space in board[row]:
                 print " {}".format(space.replace('-', ' ')),
             print
+
+def print_board(board, size, board_type='Secret', board_name=None):
+    print ''.join(["-"] * (size * 3 + 3))
+    print "  ",
+    for i in xrange(0, size):
+        print " {}".format(chr(ord('A') + i)),
+    print
+
+    for row in xrange(0, size):
+        print "%2d" % (row + 1),
+        for space in board[row]:
+            print " {}".format(space.replace('-', ' ')),
+        print
 
 
 def do_genstats(args, config):
