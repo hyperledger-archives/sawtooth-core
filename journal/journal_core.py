@@ -100,10 +100,8 @@ class Journal(gossip_core.Gossip):
     # Time between sending requests for a missing transaction block
     MissingRequestInterval = 30.0
 
-
     def __init__(self, node, **kwargs):
         """Constructor for the Journal class.
-
         Args:
             node (Node): The local node.
             GenesisLedger (bool): Whether or not this journal is associated
@@ -1006,7 +1004,6 @@ class Journal(gossip_core.Gossip):
             logger.info('calling missing Txn')
             self.request_missing_txn(dependencyID)
             self.JournalStats.MissingTxnDepCount.increment()
-
 
         # if all of the dependencies have not been met then there isn't any
         # point in continuing on so bail out
