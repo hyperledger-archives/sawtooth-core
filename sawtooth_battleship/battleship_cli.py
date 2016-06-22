@@ -427,18 +427,7 @@ def do_show(args, config):
 
         print
         print "  Target Board"
-        print ''.join(["-"] * (size * 3 + 3))
-        print "  ",
-        for i in xrange(0, size):
-            print " {}".format(chr(ord('A') + i)),
-        print
-
-        for row in xrange(0, size):
-            print "%2d" % (row + 1),
-            for space in target_board[row]:
-                print " {}".format(
-                    space.replace('?', ' ').replace('M', '.').replace('H', 'X')),
-            print
+        print_board(target_board, size, is_target_board=True)
 
     if name in data['games']:
         layout = BoardLayout.deserialize(data['games'][name]['layout'])
@@ -450,19 +439,10 @@ def do_show(args, config):
 
         print
         print "  Secret Board"
-        print ''.join(["-"] * (size * 3 + 3))
-        print "  ",
-        for i in xrange(0, size):
-            print " {}".format(chr(ord('A') + i)),
-        print
+        print_board(board, size, is_target_board=False)
 
-        for row in xrange(0, size):
-            print "%2d" % (row + 1),
-            for space in board[row]:
-                print " {}".format(space.replace('-', ' ')),
-            print
 
-def print_board(board, size, board_type='Secret', board_name=None):
+def print_board(board, size, is_target_board=True):
     print ''.join(["-"] * (size * 3 + 3))
     print "  ",
     for i in xrange(0, size):
@@ -472,7 +452,11 @@ def print_board(board, size, board_type='Secret', board_name=None):
     for row in xrange(0, size):
         print "%2d" % (row + 1),
         for space in board[row]:
-            print " {}".format(space.replace('-', ' ')),
+            if is_target_board:
+                print " {}".format(
+                    space.replace('?', ' ').replace('M', '.').replace('H', 'X')),
+            else:
+                print " {}".format(space.replace('-', ' ')),
         print
 
 
