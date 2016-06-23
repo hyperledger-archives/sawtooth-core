@@ -86,11 +86,44 @@ def do_list(args, config):
             print "  Results:"
             for other_player, result in v['Results'].iteritems():
                 print "    %s vs %s: %s" % (creator, other_player, result)
+            print ""
         else:
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
                 print "    %s: %s" % (player, "*******")
+            print ""
 
+def do_show(args, config):
+    name = args.name
+
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = RPSClient(base_url=url, keyfile=key_file)
+    state = client.get_state()
+
+    if name not in state:
+        raise RPSException('no such game: {}'.format(name))
+
+    game = state[name]
+
+    creator = game['InitialID']
+    players = game.get('Players')
+    state = game.get('State')
+    print "%s\tplayers: %s status: %s creator: %s" % (name, players,
+                                                      state.capitalize(),
+                                                      creator)
+    if state == "COMPLETE":
+        print "  Hands Played:"
+        for player, hand in game['Hands'].iteritems():
+            print "    %s: %s" % (player, hand.capitalize())
+        print "  Results:"
+        for other_player, result in game['Results'].iteritems():
+            print "    %s vs %s: %s" % (creator, other_player, result)
+    else:
+        print "  Hands Played:"
+        for player, hand in game['Hands'].iteritems():
+            print "    %s: %s" % (player, "*******")
 
 def do_init(args, config):
     username = config.get('DEFAULT', 'username')
@@ -222,6 +255,9 @@ def main():
                              ' ROCK, PAPER or SCISSORS')
     play_parser.add_argument('--wait', action='store_true', default=False,
                              help='wait for this commit before exiting')
+    show_parser = subparsers.add_parser('show', parents=[parser])
+    show_parser.add_argument('name', type=str,
+                             help='the identifier for the game')
 
     args = arg_parser.parse_args()
     if args.verbose is None:
@@ -241,6 +277,8 @@ def main():
         do_create(args, config)
     elif args.command == "play":
         do_play(args, config)
+    elif args.command == "show":
+        do_show(args, config)
     else:
         raise RPSException("invalid command: {}".format(args.command))
 
