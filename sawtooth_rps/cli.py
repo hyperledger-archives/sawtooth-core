@@ -25,14 +25,43 @@ import argparse
 import logging
 import pybitcointools
 
-from sawtooth_xo.xo_cli import setup_loggers
+from colorlog import ColoredFormatter
 
 from .client import RPSClient
 from sawtooth_rps.exceptions import RPSException
 from sawtooth.exceptions import ClientException
 
 
-logger = logging.getLogger(__name__)
+def create_console_handler(verbose_level):
+    clog = logging.StreamHandler()
+    formatter = ColoredFormatter(
+        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+        "%(white)s%(message)s",
+        datefmt="%H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        })
+
+    clog.setFormatter(formatter)
+
+    if verbose_level == 0:
+        clog.setLevel(logging.WARN)
+    elif verbose_level == 1:
+        clog.setLevel(logging.INFO)
+    else:
+        clog.setLevel(logging.DEBUG)
+    return clog
+
+
+def setup_loggers(verbose_level):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(create_console_handler(verbose_level))
 
 
 def do_list(args, config):
@@ -59,6 +88,7 @@ def do_list(args, config):
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
                 print "    %s: %s" % (player, "*******")
+
 
 def do_init(args, config):
     username = config.get('DEFAULT', 'username')
@@ -200,7 +230,8 @@ def main():
     elif args.command == "play":
         do_play(args, config)
     else:
-        logger.error("Invalid command")
+        raise RPSException("invalid command: {}".format(args.command))
+
 
 def main_wrapper():
     try:
