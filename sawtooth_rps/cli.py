@@ -17,19 +17,51 @@
 
 
 import os
+import sys
+import traceback
 import ConfigParser
 import getpass
 import argparse
 import logging
 import pybitcointools
 
-from sawtooth_xo.xo_cli import setup_loggers
+from colorlog import ColoredFormatter
 
-from .client import RPSClient
-from .exceptions import RPSException
+from sawtooth_rps.client import RPSClient
+from sawtooth_rps.exceptions import RPSException
+from sawtooth.exceptions import ClientException
 
 
-logger = logging.getLogger(__name__)
+def create_console_handler(verbose_level):
+    clog = logging.StreamHandler()
+    formatter = ColoredFormatter(
+        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+        "%(white)s%(message)s",
+        datefmt="%H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        })
+
+    clog.setFormatter(formatter)
+
+    if verbose_level == 0:
+        clog.setLevel(logging.WARN)
+    elif verbose_level == 1:
+        clog.setLevel(logging.INFO)
+    else:
+        clog.setLevel(logging.DEBUG)
+    return clog
+
+
+def setup_loggers(verbose_level):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(create_console_handler(verbose_level))
 
 
 def do_list(args, config):
@@ -44,15 +76,21 @@ def do_list(args, config):
         creator = v['InitialID']
         players = v.get('Players')
         state = v.get('State')
-        print "%s\tplayers: %s status: %s creator: %s" % (k, players, state.capitalize(), creator)
+        print "%s\tplayers: %s status: %s creator: %s" % (k, players,
+                                                          state.capitalize(),
+                                                          creator)
         if state == "COMPLETE":
+            print "  Hands Played:"
+            for player, hand in v['Hands'].iteritems():
+                print "    %s: %s" % (player, hand.capitalize())
             print "  Results:"
             for other_player, result in v['Results'].iteritems():
                 print "    %s vs %s: %s" % (creator, other_player, result)
         else:
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
-                print "    %s: %s" % (player, hand.capitalize())
+                print "    %s: %s" % (player, "*******")
+
 
 def do_init(args, config):
     username = config.get('DEFAULT', 'username')
@@ -158,22 +196,32 @@ def save_config(config):
 
 def main():
     parser = argparse.ArgumentParser(prog="rps", add_help=False)
-    parser.add_argument('-v', '--verbose', action='count', help='enable more verbose output')
+    parser.add_argument('-v', '--verbose', action='count',
+                        help='enable more verbose output')
     parser.add_argument('--config', '-c', type=str, help='config file')
 
-    arg_parser = argparse.ArgumentParser(parents=[parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+    arg_parser = argparse.ArgumentParser(parents=[parser],
+                                         formatter_class=argparse.
+                                         RawDescriptionHelpFormatter)
     subparsers = arg_parser.add_subparsers(title='subcommands', dest='command')
-    list_parser = subparsers.add_parser('list', parents=[parser])
+    subparsers.add_parser('list', parents=[parser])
     init_parser = subparsers.add_parser('init', parents=[parser])
-    init_parser.add_argument('--username', type=str, help='the name of the player')
+    init_parser.add_argument('--username', type=str,
+                             help='the name of the player')
     create_parser = subparsers.add_parser('create', parents=[parser])
-    create_parser.add_argument('name', type=str, help='an identifier for the new game')
-    create_parser.add_argument('--wait', action='store_true', default=False, help='wait for this commit before exiting')
-    create_parser.add_argument('--players', type=int, default=2, help='number of players in the game')
+    create_parser.add_argument('name', type=str,
+                               help='an identifier for the new game')
+    create_parser.add_argument('--wait', action='store_true', default=False,
+                               help='wait for this commit before exiting')
+    create_parser.add_argument('--players', type=int, default=2,
+                               help='number of players in the game')
     play_parser = subparsers.add_parser('play', parents=[parser])
-    play_parser.add_argument('name', type=str, help='an identifier for the new game')
-    play_parser.add_argument('hand', type=str, help='hand must be either ROCK, PAPER or SCISSORS')
-    play_parser.add_argument('--wait', action='store_true', default=False, help='wait for this commit before exiting')
+    play_parser.add_argument('name', type=str,
+                             help='an identifier for the new game')
+    play_parser.add_argument('hand', type=str, help='hand must be either' +
+                             ' ROCK, PAPER or SCISSORS')
+    play_parser.add_argument('--wait', action='store_true', default=False,
+                             help='wait for this commit before exiting')
 
     args = arg_parser.parse_args()
     if args.verbose is None:
@@ -194,7 +242,22 @@ def main():
     elif args.command == "play":
         do_play(args, config)
     else:
-        logger.error("Invalid command")
+        raise RPSException("invalid command: {}".format(args.command))
 
-if __name__ == "__main__":
-    main()
+
+def main_wrapper():
+    try:
+        main()
+    except RPSException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except ClientException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        pass
+    except SystemExit as e:
+        raise e
+    except:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)

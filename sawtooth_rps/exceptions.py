@@ -16,4 +16,5 @@
 
 
 class RPSException(Exception):
-    pass
+    def __init__(self, msg):
+        super(RPSException, self).__init__(msg)

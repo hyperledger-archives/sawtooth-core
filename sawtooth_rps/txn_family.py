@@ -19,7 +19,7 @@ import logging
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
-from .exceptions import RPSException
+from sawtooth_rps.exceptions import RPSException
 
 
 logger = logging.getLogger(__name__)
@@ -97,8 +97,11 @@ class RPSTransaction(transaction.Transaction):
         if self._action == 'CREATE':
             if self._name in store:
                 raise RPSException('game already exists')
-            if not isinstance(self._players, (int, long)) or not self._players > 1:
-                raise RPSException('players must be a positive integer larger then 1: %s (%s)' % (self._players, type(self._players)))
+            if (not isinstance(self._players, (int, long)) or not
+                    self._players > 1):
+                raise RPSException('players must be a positive integer' +
+                                   'larger then 1: %s (%s)' %
+                                   (self._players, type(self._players)))
         elif self._action == 'SHOOT':
             if self._hand is None:
                 raise RPSException('SHOOT requires hand')
@@ -114,9 +117,11 @@ class RPSTransaction(transaction.Transaction):
             if state == 'COMPLETE':
                 raise RPSException('game complete')
             elif len(store[self._name]['Hands']) >= players:
-                raise RPSException('all players shown their hand but game state not set to complete')
+                raise RPSException('all players shown their hand but' +
+                                   'game state not set to complete')
             elif state == 'OPEN':
-                recorded_hand = store[self._name]['Hands'].get(self.OriginatorID)
+                recorded_hand = store[self._name]['Hands']\
+                    .get(self.OriginatorID)
                 if recorded_hand is not None:
                     raise RPSException('hand already registered')
             else:
@@ -139,7 +144,8 @@ class RPSTransaction(transaction.Transaction):
         for a, b, resolution in resolutions:
             if hand_a == a and hand_b == b:
                 return resolution
-        raise RPSException("no resolution found for hand_a: %s, hand_b: %s" % (hand_a, hand_b))
+        raise RPSException("no resolution found for hand_a: %s, hand_b: %s"
+                           % (hand_a, hand_b))
 
     def apply(self, store):
         logger.debug('apply %s', str(self))
@@ -147,7 +153,8 @@ class RPSTransaction(transaction.Transaction):
         if self._name in store:
             game = store[self._name].copy()
         elif self._hand is not None:
-            raise RPSException("Hand to be played without a game registered (should not happen)")
+            raise RPSException("Hand to be played without a" +
+                               "game registered (should not happen)")
         else:
             game = {
                 'State': 'OPEN',
