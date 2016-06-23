@@ -167,6 +167,12 @@ class Validator(object):
         """
         self.Ledger = None
 
+    def post_initialize_ledger(self):
+        """
+        Run optional ledger-specific post-initialization tasks
+        """
+        pass
+
     def add_transaction_family(self, txnfamily):
         txnfamily.register_transaction_types(self.Ledger)
 
@@ -181,6 +187,7 @@ class Validator(object):
         # in case of failure during initialization
         reactor.callLater(60.0, self._verify_initialization)
         self.initialize_ledger_connection()
+        self.post_initialize_ledger()
 
     def handle_node_disconnect_event(self, nodeid):
         """
@@ -386,24 +393,24 @@ class Validator(object):
             logger.info('still initializing')
             reactor.callLater(60.0, self._verify_initialization)
 
-    def register_endpoint(self, endpoint, domain='/'):
+    def register_endpoint(self, node, domain='/'):
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
-            endpoint, domain, httpport=self.Config["HttpPort"])
-        txn.sign_from_node(endpoint)
+            node, domain, httpport=self.Config["HttpPort"])
+        txn.sign_from_node(node)
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(endpoint.Identifier)
-        msg.sign_from_node(endpoint)
+        msg.SenderID = str(node.Identifier)
+        msg.sign_from_node(node)
 
-        logger.info('register endpoint %s with name %s through HTTP server',
-                    endpoint.Identifier, endpoint.Name)
-        self.LedgerWebClient.post_message(msg)
+        logger.info('register endpoint %s with name %s', node.Identifier[:8],
+                    node.Name)
+        self.Ledger.handle_message(msg)
 
     def unregister_endpoint(self, node, domain='/'):
-        txn = endpoint_registry.unregister_node(node)
+        txn = endpoint_registry.EndpointRegistryTransaction \
+            .unregister_node(node)
         txn.sign_from_node(node)
-
         # Since unregister is often called on shutdown, we really need to make
         # this a system message for the purpose of sending it out from our own
         # queue
@@ -411,10 +418,9 @@ class Validator(object):
         msg.Transaction = txn
         msg.SenderID = str(node.Identifier)
         msg.sign_from_node(node)
-
-        logger.info('unregister endpoint %s with name %s through HTTP server',
-                    node.Identifier, node.Name)
-        self.LedgerWebClient.post_message(msg)
+        logger.info('unregister endpoint %s with name %s', node.Identifier[:8],
+                    node.Name)
+        self.Ledger.handle_message(msg)
 
     def get_endpoints(self, count, domain='/'):
         endpoints = []

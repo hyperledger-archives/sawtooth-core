@@ -172,34 +172,53 @@ class IntKeyLoadTest(object):
 
 
 class TestSmoke(unittest.TestCase):
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load(self):
+    def _run_int_load(self, config, num_nodes, archive_name, tolerance=2,
+                      standard=5):
+        """
+        Args:
+            config (dict): Default config for each node
+            num_nodes (int): Total number of nodes in network simulation
+            archive_name (str): Name for tarball summary of test results
+            tolerance (int): Length in blocks of permissible fork (if forks are
+                             permissible)
+            standard (int): A variable intended to guarantee that our block
+                level identity checks have significant data to operate on.
+                Conceptually, depends on the value of tolerance:
+                    case(tolerance):
+                        0:          minimum # of blocks required per validator
+                        otherwise:  minimum # of converged blocks required per
+                                    divergent block (per validator)
+                Motivation: We want to compare identity across the network on
+                some meaningfully large set of blocks.  Introducing fork
+                tolerance is problematic: the variable tolerance which is used
+                to trim the ends of each ledger's block-chain could be abused
+                to trivialize the test.  Therefore, as tolerance is increased
+                (if non-zero), we use standard to proportionally increase the
+                minimum number of overall blocks required by the test.
+        """
         vnm = None
         urls = ""
         try:
             test = IntKeyLoadTest()
             if "TEST_VALIDATOR_URLS" not in os.environ:
                 print "Launching validator network."
-                vnm_config = defaultValidatorConfig.copy()
+                vnm_config = config
                 vnm_config['LogLevel'] = 'DEBUG'
                 vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
                                               cfg=vnm_config)
-                vnm.launch_network(5)
+                vnm.launch_network(num_nodes)
                 urls = vnm.urls()
             else:
                 print "Fetching Urls of Running Validators"
                 # TEST_VALIDATORS_RUNNING is a list of validators urls
                 # seperated by commas.
-                # 'http://localhost:8800,http://localhost:8801'
+                # e.g. 'http://localhost:8800,http://localhost:8801'
                 urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
             print "Testing transaction load."
             test.setup(urls, 100)
             test.run(2)
             test.validate()
-
-            # check for block id convergence:
-            tolerance = 2       # length of permissable fork
-            standard = 6        # converged blocks per divergent block
+            # check for block id convergence across network:
             sample_size = max(1, tolerance) * standard
             print "Testing block-level convergence with min sample size: " \
                 "%s (after tolerance: %s)" % (sample_size, tolerance)
@@ -207,7 +226,7 @@ class TestSmoke(unittest.TestCase):
             block_lists = [LedgerWebClient(x).get_block_list() for x in urls]
             for ls in block_lists:
                 ls.reverse()
-            # ....permit reasonable forks
+            # ...establish preconditions
             max_mag = len(max(block_lists, key=len))
             min_mag = len(min(block_lists, key=len))
             self.assertGreaterEqual(
@@ -222,18 +241,21 @@ class TestSmoke(unittest.TestCase):
                 effective_sample_size,
                 sample_size,
                 'not enough target samples to determine convergence')
-            block_lists = [ls[0:effective_sample_size] for ls in block_lists]
-            # ....check cross server block lists for identity within tolerance
-            for (i, ls) in enumerate(block_lists):
+            # ...(optionally) permit reasonable forks by normalizing lists
+            if tolerance > 0:
+                block_lists = [
+                    block_list[0:effective_sample_size]
+                    for block_list in block_lists
+                ]
+            # ...id-check (possibly normalized) cross-server block chains
+            for (i, block_list) in enumerate(block_lists):
                 self.assertEqual(
                     block_lists[0],
-                    ls,
-                    'validator %s is divergent (%s VS %s)' % (
-                        i, block_lists[0], ls))
-
+                    block_list,
+                    '%s is divergent:\n\t%s vs.\n\t%s' % (
+                        urls[i], block_lists[0], block_list))
             if vnm:
                 vnm.shutdown()
-
         except Exception:
             print "Exception encountered in test case."
             traceback.print_exc()
@@ -242,32 +264,18 @@ class TestSmoke(unittest.TestCase):
             raise
         finally:
             if vnm:
-                vnm.create_result_archive("TestSmokeResults.tar.gz")
+                vnm.create_result_archive("%s.tar.gz" % (archive_name))
             else:
                 print "No Validator data and logs to preserve"
 
-    @unittest.skip("LedgerType voting is broken")
-    def test_intkey_load_voting(self):
-        vnm = None
-        vote_cfg = defaultValidatorConfig.copy()
-        vote_cfg['LedgerType'] = 'voting'
-        try:
-            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
-                                          cfg=vote_cfg)
-            vnm.launch_network(5)
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+    def test_intkey_load_lottery(self):
+        cfg = defaultValidatorConfig.copy()
+        self._run_int_load(cfg, 5, "TestSmokeResultsLottery")
 
-            print "Testing transaction load."
-            test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 100)
-            test.run(2)
-            test.validate()
-            vnm.shutdown()
-        except Exception:
-            print "Exception encountered in test case."
-            traceback.print_exc()
-            if vnm:
-                vnm.shutdown()
-            raise
-        finally:
-            if vnm:
-                vnm.create_result_archive("TestSmokeResultsVote.tar.gz")
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+    def test_intkey_load_voting(self):
+        cfg = defaultValidatorConfig.copy()
+        cfg['LedgerType'] = 'voting'
+        self._run_int_load(cfg, 1, "TestSmokeResultsVoting", tolerance=0,
+                           standard=3)
