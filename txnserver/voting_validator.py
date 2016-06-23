@@ -32,8 +32,12 @@ class VotingValidator(validator.Validator):
         Initialize any ledger type specific configuration options, expected to
         be overridden
         """
-
-        pass
+        if 'MinTransactionsPerBlock' in self.Config:
+            quorum_journal.QuorumJournal.MinimumTransactionsPerBlock = int(
+                self.Config['MinTransactionsPerBlock'])
+        if 'MaxTransactionsPerBlock' in self.Config:
+            quorum_journal.QuorumJournal.MaximumTransactionsPerBlock = int(
+                self.Config['MaxTransactionsPerBlock'])
 
     def initialize_ledger_from_node(self, node):
         """
@@ -42,6 +46,11 @@ class VotingValidator(validator.Validator):
         """
         self.Ledger = quorum_journal.QuorumJournal(node, **self.Config)
 
-        nodelist = self.get_endpoints(0, self.EndpointDomain)
-        for node in nodelist:
-            self.Ledger.add_quorum_node(node)
+    def post_initialize_ledger(self):
+        '''
+        Socialize non-genesis nodes
+        '''
+        if not self.GenesisLedger:
+            nodelist = self.get_endpoints(0, self.EndpointDomain)
+            for node in nodelist:
+                self.Ledger.add_quorum_node(node)
