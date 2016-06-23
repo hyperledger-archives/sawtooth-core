@@ -169,11 +169,11 @@ class BattleshipTransaction(transaction.Transaction):
             # Check that self._name is in the store (to verify
             # that the game exists (see FIRE below).
             state = store[self._name]['State']
-            LOGGER.info("state: %s" % state)
+            LOGGER.info("state: %s", state)
             if self._name not in store:
                 raise BattleshipException(
                     'Trying to join a game that does not exist')
-            elif (state != "NEW"):
+            elif state != "NEW":
                 # Check that the game can be joined (the state is 'NEW')
                 raise BattleshipException(
                     'The game cannot accept any new participant')
@@ -300,12 +300,12 @@ class BattleshipTransaction(transaction.Transaction):
             if 'Player1' not in game:
                 game['HashedBoard1'] = self._board
                 size = len(self._board)
-                game['TargetBoard1'] = [['?'] * size for i in range(size)]
+                game['TargetBoard1'] = [['?'] * size for _ in range(size)]
                 game['Player1'] = self.OriginatorID
             else:
                 game['HashedBoard2'] = self._board
                 size = len(self._board)
-                game['TargetBoard2'] = [['?'] * size for i in range(size)]
+                game['TargetBoard2'] = [['?'] * size for _ in range(size)]
                 game['Player2'] = self.OriginatorID
 
                 # Move to 'P1-NEXT' as both boards have been entered.
@@ -359,7 +359,8 @@ class BattleshipTransaction(transaction.Transaction):
 
             store[self._name] = game
         else:
-            raise BattleshipException("invalid state: {}".format(state))
+            raise BattleshipException(
+                "invalid state: {}".format(store[self._name].copy))
 
     def dump(self):
         """Returns a dict with attributes from the transaction object.
