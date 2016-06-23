@@ -24,6 +24,7 @@ from journal.consensus.quorum.messages import quorum_advertisement
 from journal.consensus.quorum.messages import quorum_debug
 from journal.consensus.quorum.messages import quorum_ballot
 from journal.consensus.quorum.protocols import quorum_vote
+from gossip import common
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,7 @@ class QuorumJournal(journal_core.Journal):
         quorum_advertisement.register_message_handlers(self)
         quorum_debug.register_message_handlers(self)
         quorum_ballot.register_message_handlers(self)
+        quorum_transaction_block.register_message_handlers(self)
 
     #
     # GENERAL JOURNAL API
@@ -121,6 +123,7 @@ class QuorumJournal(journal_core.Journal):
         if force:
             block = quorum_transaction_block.QuorumTransactionBlock()
             block.BlockNumber = 0
+            block.sign_from_node(self.LocalNode)
             return block
 
         return None
@@ -159,6 +162,9 @@ class QuorumJournal(journal_core.Journal):
         target = int(-1.0 * self.VotingQuorumTargetSize *
                      math.log(1.0 - random.random()))
         if len(self.VotingQuorum) - 1 > target:
+            logger.debug('rejecting candidate %s: len(self.VotingQuorum) - '
+                         '1 [[%s]] > target [[%s]] ?', node,
+                         len(self.VotingQuorum) - 1, target)
             return
 
         logger.info('add node %s to voting quorum', node.Identifier[:8])
@@ -186,7 +192,7 @@ class QuorumJournal(journal_core.Journal):
 
         # we are initiating the vote, send the message to the world
         newblocknum = self.MostRecentCommittedBlock.BlockNumber + 1
-        msg = quorum_vote.QuorumInitiateVoteMessage()
+        msg = quorum_ballot.QuorumInitiateVoteMessage()
         msg.BlockNumber = newblocknum
         self.forward_message(msg)
 
@@ -202,6 +208,10 @@ class QuorumJournal(journal_core.Journal):
         Returns:
             bool: True if this is a new, valid vote, false otherwise.
         """
+        if self.MostRecentCommittedBlockID == common.NullIdentifier:
+            logger.warn('self.MostRecentCommittedBlockID is %s',
+                        self.MostRecentCommittedBlockID)
+            return False
 
         if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
             logger.warn(
