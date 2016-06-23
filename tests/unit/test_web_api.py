@@ -35,6 +35,11 @@ from journal.transaction import Status as tStatus
 from journal.journal_core import Journal
 
 
+class TestValidator(object):
+    def __init__(self, testLedger):
+        self.Ledger = testLedger
+
+
 class TestWebApi(unittest.TestCase):
 
     # Helper functions
@@ -76,8 +81,10 @@ class TestWebApi(unittest.TestCase):
         LocalNode = self._create_node(8809)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
+
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         request = self._create_get_request("/stat", {})
         error = root.error_response(request, http.BAD_REQUEST,
                                     'error processing http request {0}',
@@ -96,7 +103,8 @@ class TestWebApi(unittest.TestCase):
         node2.is_peer = True
         ledger.add_node(node1)
         ledger.add_node(node2)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         # Create message to use and the data to forward
         msg = shutdown_message.ShutdownMessage()
         msg.sign_from_node(LocalNode)
@@ -113,7 +121,8 @@ class TestWebApi(unittest.TestCase):
         LocalNode = self._create_node(8806)
         path = tempfile.mkdtemp()
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         # Create message to use and the data to  initiate
         msg = shutdown_message.ShutdownMessage()
         data = msg.dump()
@@ -134,7 +143,8 @@ class TestWebApi(unittest.TestCase):
         LocalNode = self._create_node(8805)
         path = tempfile.mkdtemp()
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         # Create message to use and the data to echo
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
         msg.sign_from_node(LocalNode)
@@ -148,7 +158,8 @@ class TestWebApi(unittest.TestCase):
         LocalNode = self._create_node(8800)
         path = tempfile.mkdtemp()
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         request = self._create_get_request("/store", {})
         try:
             # Test no GlobalStore
@@ -203,7 +214,8 @@ class TestWebApi(unittest.TestCase):
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         # TransactionBlock to the ledger
         transBlock = self._create_tblock(LocalNode, 0, common.NullIdentifier,
                                          [])
@@ -245,7 +257,8 @@ class TestWebApi(unittest.TestCase):
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
 
         # TransactionBlock to the ledger
         txns = []
@@ -295,7 +308,8 @@ class TestWebApi(unittest.TestCase):
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
         ledger = Journal(LocalNode, DataDirectory=path, GenesisLedger=True)
-        root = RootPage(ledger)
+        validator = TestValidator(ledger)
+        root = RootPage(validator)
         request = self._create_get_request("/stat", {})
         try:
             root.render_GET(request)

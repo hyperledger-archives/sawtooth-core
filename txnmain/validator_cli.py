@@ -75,7 +75,7 @@ def local_main(config, windows_service=False, daemonized=False):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    web_api.initialize_web_server(config, validator.Ledger)
+    web_api.initialize_web_server(config, validator)
 
     # go through the list of transaction families that should be initialized in
     # this validator. the endpoint registry is always included
@@ -89,7 +89,7 @@ def local_main(config, windows_service=False, daemonized=False):
             sys.exit(1)
 
     try:
-        validator.start()
+        validator.pre_start()
 
         reactor.run()
     except KeyboardInterrupt:
@@ -116,6 +116,10 @@ def parse_command_line(args):
     parser.add_argument('--daemon',
                         help='Daemonize this process',
                         action='store_true')
+    parser.add_argument(
+        '--delay-start',
+        help='Delay full startup sequence until /command/start',
+        action='store_true', default=False)
     parser.add_argument('--log-dir', help='Name of the log directory')
     parser.add_argument(
         '--logfile',
@@ -201,6 +205,7 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('conf_dir', 'ConfigDirectory'),
             ('log_dir', 'LogDirectory'),
             ('data_dir', 'DataDirectory'),
+            ('delay_start', 'DelayStart'),
             ('run_dir', 'RunDirectory'),
             ('type', 'LedgerType'),
             ('logfile', 'LogFile'),

@@ -40,9 +40,10 @@ logger = logging.getLogger(__name__)
 class RootPage(Resource):
     isLeaf = True
 
-    def __init__(self, ledger):
+    def __init__(self, validator):
         Resource.__init__(self)
-        self.Ledger = ledger
+        self.Ledger = validator.Ledger
+        self.Validator = validator
 
         self.GetPageMap = {
             'block': self._handleblkrequest,
@@ -55,6 +56,7 @@ class RootPage(Resource):
             'default': self._msgforward,
             'forward': self._msgforward,
             'initiate': self._msginitiate,
+            'command': self._docommand,
             'echo': self._msgecho
         }
 
@@ -134,9 +136,9 @@ class RootPage(Resource):
 
     def render_POST(self, request):
         """
-        Handle a POST request on the HTTP interface. All message on the POST
-        interface are gossip messages that should be relayed into the gossip
-        network as is.
+        Handle two types of HTTP POST requests:
+         - gossip messages.  relayed to the gossip network as is
+         - validator command and control (/command)
         """
         # pylint: disable=invalid-name
 
@@ -149,66 +151,105 @@ class RootPage(Resource):
         if prefix not in self.PostPageMap:
             prefix = 'default'
 
-        # process the message encoding
         encoding = request.getHeader('Content-Type')
         data = request.content.getvalue()
 
-        try:
-            if encoding == 'application/json':
-                minfo = json2dict(data)
-            elif encoding == 'application/cbor':
-                minfo = cbor2dict(data)
-            else:
-                return self.error_response(request, http.BAD_REQUEST,
-                                           'unknown message encoding, {0}',
-                                           encoding)
+        # process non-gossip API requests
+        if prefix == 'command':
 
-            typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
-            if typename not in self.Ledger.MessageHandlerMap:
+            try:
+                if encoding == 'application/json':
+                    minfo = json2dict(data)
+                else:
+                    return self.error_response(request, http.BAD_REQUEST,
+                                               'bad message encoding, {0}',
+                                               encoding)
+            except:
+                logger.info('exception while decoding http request %s; %s',
+                            request.path, traceback.format_exc(20))
                 return self.error_response(
                     request, http.BAD_REQUEST,
-                    'received request for unknown message type, {0}', typename)
+                    'unabled to decode incoming request {0}',
+                    data)
 
-            msg = self.Ledger.MessageHandlerMap[typename][0](minfo)
+            # process /command
+            try:
+                response = self.PostPageMap[prefix](request, components, minfo)
+                request.responseHeaders.addRawHeader("content-type", encoding)
+                result = dict2json(response)
+                return result
 
-        except:
-            logger.info('exception while decoding http request %s; %s',
-                        request.path, traceback.format_exc(20))
-            return self.error_response(
-                request, http.BAD_REQUEST,
-                'unabled to decode incoming request {0}',
-                data)
+            except Error as e:
+                return self.error_response(
+                    request, int(e.status),
+                    'exception while processing request {0}; {1}',
+                    request.path, str(e))
 
-        # and finally execute the associated method and send back the results
-        try:
-            response = self.PostPageMap[prefix](request, components, msg)
+            except:
+                logger.info('exception while processing http request %s; %s',
+                            request.path, traceback.format_exc(20))
+                return self.error_response(request, http.BAD_REQUEST,
+                                           'error processing http request {0}',
+                                           request.path)
+        else:
 
-            request.responseHeaders.addRawHeader("content-type", encoding)
-            if encoding == 'application/json':
-                result = dict2json(response.dump())
-            else:
-                result = dict2cbor(response.dump())
+            try:
+                if encoding == 'application/json':
+                    minfo = json2dict(data)
+                elif encoding == 'application/cbor':
+                    minfo = cbor2dict(data)
+                else:
+                    return self.error_response(request, http.BAD_REQUEST,
+                                               'unknown message encoding, {0}',
+                                               encoding)
 
-            return result
+                typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
+                if typename not in self.Ledger.MessageHandlerMap:
+                    return self.error_response(
+                        request, http.BAD_REQUEST,
+                        'received request for unknown message type, {0}',
+                        typename)
 
-        except Error as e:
-            return self.error_response(
-                request, int(e.status),
-                'exception while processing request {0}; {1}', request.path,
-                str(e))
+                msg = self.Ledger.MessageHandlerMap[typename][0](minfo)
 
-        except:
-            logger.info('exception while processing http request %s; %s',
-                        request.path, traceback.format_exc(20))
-            return self.error_response(request, http.BAD_REQUEST,
-                                       'error processing http request {0}',
-                                       request.path)
+            except:
+                logger.info('exception while decoding http request %s; %s',
+                            request.path, traceback.format_exc(20))
+                return self.error_response(
+                    request, http.BAD_REQUEST,
+                    'unabled to decode incoming request {0}',
+                    data)
+
+            # and finally execute the associated method and send back the
+            # results
+            try:
+                response = self.PostPageMap[prefix](request, components, msg)
+
+                request.responseHeaders.addRawHeader("content-type", encoding)
+                if encoding == 'application/json':
+                    result = dict2json(response.dump())
+                else:
+                    result = dict2cbor(response.dump())
+
+                return result
+
+            except Error as e:
+                return self.error_response(
+                    request, int(e.status),
+                    'exception while processing request {0}; {1}',
+                    request.path, str(e))
+
+            except:
+                logger.info('exception while processing http request %s; %s',
+                            request.path, traceback.format_exc(20))
+                return self.error_response(request, http.BAD_REQUEST,
+                                           'error processing http request {0}',
+                                           request.path)
 
     def _msgforward(self, request, components, msg):
         """
         Forward a signed message through the gossip network.
         """
-
         self.Ledger.handle_message(msg)
         return msg
 
@@ -235,6 +276,24 @@ class RootPage(Resource):
         """
 
         return msg
+
+    def _docommand(self, request, components, cmd):
+        """
+        Process validator control commands
+        """
+        if cmd['action'] == 'start':
+            if self.Validator.delaystart is True:
+                self.Validator.delaystart = False
+                logger.info("command received : %s", cmd['action'])
+                cmd['action'] = 'started'
+            else:
+                logger.warn("validator startup not delayed")
+                cmd['action'] = 'running'
+        else:
+            logger.warn("unknown command received")
+            cmd['action'] = 'startup failed'
+
+        return cmd
 
     def _handlestorerequest(self, pathcomponents, args, testonly):
         """
@@ -416,8 +475,8 @@ class ApiSite(Site):
         return Site.getResourceFor(self, request)
 
 
-def initialize_web_server(config, ledger):
+def initialize_web_server(config, validator):
     if 'HttpPort' in config and config["HttpPort"] > 0:
-        root = RootPage(ledger)
+        root = RootPage(validator)
         site = ApiSite(root)
         reactor.listenTCP(config["HttpPort"], site)
