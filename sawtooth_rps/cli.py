@@ -27,7 +27,7 @@ import pybitcointools
 
 from colorlog import ColoredFormatter
 
-from .client import RPSClient
+from sawtooth_rps.client import RPSClient
 from sawtooth_rps.exceptions import RPSException
 from sawtooth.exceptions import ClientException
 
@@ -76,7 +76,9 @@ def do_list(args, config):
         creator = v['InitialID']
         players = v.get('Players')
         state = v.get('State')
-        print "%s\tplayers: %s status: %s creator: %s" % (k, players, state.capitalize(), creator)
+        print "%s\tplayers: %s status: %s creator: %s" % (k, players,
+                                                          state.capitalize(),
+                                                          creator)
         if state == "COMPLETE":
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
@@ -194,22 +196,32 @@ def save_config(config):
 
 def main():
     parser = argparse.ArgumentParser(prog="rps", add_help=False)
-    parser.add_argument('-v', '--verbose', action='count', help='enable more verbose output')
+    parser.add_argument('-v', '--verbose', action='count',
+                        help='enable more verbose output')
     parser.add_argument('--config', '-c', type=str, help='config file')
 
-    arg_parser = argparse.ArgumentParser(parents=[parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+    arg_parser = argparse.ArgumentParser(parents=[parser],
+                                         formatter_class=argparse.
+                                         RawDescriptionHelpFormatter)
     subparsers = arg_parser.add_subparsers(title='subcommands', dest='command')
-    list_parser = subparsers.add_parser('list', parents=[parser])
+    subparsers.add_parser('list', parents=[parser])
     init_parser = subparsers.add_parser('init', parents=[parser])
-    init_parser.add_argument('--username', type=str, help='the name of the player')
+    init_parser.add_argument('--username', type=str,
+                             help='the name of the player')
     create_parser = subparsers.add_parser('create', parents=[parser])
-    create_parser.add_argument('name', type=str, help='an identifier for the new game')
-    create_parser.add_argument('--wait', action='store_true', default=False, help='wait for this commit before exiting')
-    create_parser.add_argument('--players', type=int, default=2, help='number of players in the game')
+    create_parser.add_argument('name', type=str,
+                               help='an identifier for the new game')
+    create_parser.add_argument('--wait', action='store_true', default=False,
+                               help='wait for this commit before exiting')
+    create_parser.add_argument('--players', type=int, default=2,
+                               help='number of players in the game')
     play_parser = subparsers.add_parser('play', parents=[parser])
-    play_parser.add_argument('name', type=str, help='an identifier for the new game')
-    play_parser.add_argument('hand', type=str, help='hand must be either ROCK, PAPER or SCISSORS')
-    play_parser.add_argument('--wait', action='store_true', default=False, help='wait for this commit before exiting')
+    play_parser.add_argument('name', type=str,
+                             help='an identifier for the new game')
+    play_parser.add_argument('hand', type=str, help='hand must be either' +
+                             ' ROCK, PAPER or SCISSORS')
+    play_parser.add_argument('--wait', action='store_true', default=False,
+                             help='wait for this commit before exiting')
 
     args = arg_parser.parse_args()
     if args.verbose is None:
