@@ -222,15 +222,32 @@ class BattleshipTransaction(transaction.Transaction):
 
             player = None
             if state == 'P1-NEXT':
+                player1_firing = True
                 player = store[self._name]['Player1']
                 if player != self.OriginatorID:
                     raise BattleshipException('invalid player 1')
             elif state == 'P2-NEXT':
+                player1_firing = False
                 player = store[self._name]['Player2']
                 if player != self.OriginatorID:
                     raise BattleshipException('invalid player 2')
             else:
                 raise BattleshipException("invalid state: {}".format(state))
+
+            # Check whether the board's column and row have already been
+            # fired upon.
+            if player1_firing:
+                target_board = store[self._name]['TargetBoard1']
+            else:
+                target_board = store[self._name]['TargetBoard2']
+
+            firing_row = int(self._row) - 1
+            firing_column = ord(self._column) - ord('A')
+            if target_board[firing_row][firing_column] != '?':
+                raise BattleshipException(
+                    "{} {} has already been fired upon".format(
+                        self._column, self._row)
+                )
 
             # Make sure a space is revealed if it isn't the first turn.
             if 'LastFireColumn' in store[self._name]:
@@ -251,13 +268,6 @@ class BattleshipTransaction(transaction.Transaction):
                     raise BattleshipException("Hash mismatch on reveal: "
                         "{} != {}".format(hashed_board[row][col], hashed_space))
 
-            # TODO: Check whether the board's column and row have already been
-            # fired upon.  Note there are two boards, so the board used
-            # depends upon which player's turn it is.
-
-            # TODO: Remove this logging statement when all other TODOs
-            # have been resolved for FIRE
-            LOGGER.error("in check_valid, FIRE is not fully implemented")
         else:
             raise BattleshipException('invalid action: {}'.format(self._action))
 
