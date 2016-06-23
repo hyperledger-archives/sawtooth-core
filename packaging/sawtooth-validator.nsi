@@ -25,7 +25,9 @@ outFile "sawtooth-validator.exe"
  
 !include LogicLib.nsh
 
- 
+LicenseData "c:\license.txt"
+
+page license
 
 page instfiles
  
