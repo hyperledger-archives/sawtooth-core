@@ -323,14 +323,28 @@ class BattleshipTransaction(transaction.Transaction):
                 else:
                     game[target_board][row][col] = 'M'
 
+                # calculate number of hits for later determination
+                # of win
+                number_of_hits = sum(sum([1 if space == 'H' else 0
+                                          for space in row])
+                                     for row in game[target_board])
+            else:
+                number_of_hits = None
 
             # Update LastFireColumn and LastFireRow in the store so
             # they can be used in the next transaction.
             game['LastFireColumn'] = self._column
             game['LastFireRow'] = self._row
 
-            # TODO: detect if the game has been won, changing the State
+            # if the game has been won, change the State
             # to P1-WIN or P2-WIN as appropriate
+            total_ship_spaces = sum([len(ship) for ship in game['Ships']])
+            if number_of_hits is not None and \
+                total_ship_spaces == number_of_hits:
+                if target_board == 'TargetBoard2':
+                    game['State'] = 'P2-WIN'
+                else:
+                    game['State'] = 'P1-WIN'
 
             if game['State'] == 'P1-NEXT':
                 game['State'] = 'P2-NEXT'
