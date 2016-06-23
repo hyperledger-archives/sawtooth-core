@@ -34,12 +34,13 @@ class BattleshipClient(SawtoothClient):
             name='BattleshipClient',
             keyfile=keyfile)
 
-    def create(self, name):
+    def create(self, name, ships):
         """
         """
         update = {
             'Action': 'CREATE',
-            'Name': name
+            'Name': name,
+            'Ships': ships
         }
 
         return self.sendtxn(

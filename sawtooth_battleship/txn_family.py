@@ -91,6 +91,7 @@ class BattleshipTransaction(transaction.Transaction):
         self._name = minfo['Name'] if 'Name' in minfo else None
         self._action = minfo['Action'] if 'Action' in minfo else None
         self._board = minfo['Board'] if 'Board' in minfo else None
+        self._ships = minfo['Ships'] if 'Ships' in minfo else None
         self._column = minfo['Column'] if 'Column' in minfo else None
         self._row = minfo['Row'] if 'Row' in minfo else None
         self._reveal_space = minfo['RevealSpace'] \
@@ -282,7 +283,7 @@ class BattleshipTransaction(transaction.Transaction):
         LOGGER.debug('apply %s', str(self))
 
         if self._action == 'CREATE':
-            store[self._name] = { 'State': 'NEW' }
+            store[self._name] = {'State': 'NEW', 'Ships': self._ships}
         elif self._action == 'JOIN':
             game = store[self._name].copy()
 
@@ -355,6 +356,7 @@ class BattleshipTransaction(transaction.Transaction):
 
         result['Name'] = self._name
         result['Action'] = self._action
+        result['Ships'] = self._ships
         if self._action == 'JOIN':
             result['Board'] = self._board
         if self._action == 'FIRE':

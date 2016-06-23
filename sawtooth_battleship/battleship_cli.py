@@ -78,6 +78,12 @@ def add_create_parser(subparsers, parent_parser):
         help='an identifier for the new game')
 
     parser.add_argument(
+        '--ships',
+        type=str,
+        help="a space delimited string of ship types: 'AAA SS BBB'"
+    )
+
+    parser.add_argument(
         '--wait',
         action='store_true',
         default=False,
@@ -194,12 +200,16 @@ def create_parser(prog_name):
 
 def do_create(args, config):
     name = args.name
+    if args.ships is not None:
+        ships = args.ships.split(' ')
+    else:
+        ships = None
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    client.create(name=name)
+    client.create(name=name, ships=ships)
 
     if args.wait:
         client.wait_for_commit()
@@ -296,8 +306,17 @@ def do_join(args, config):
 
     data = load_data(config)
 
+    client_for_state = BattleshipClient(base_url=url, keyfile=key_file)
+    state = client_for_state.get_state()
+    if name not in state:
+        raise BattleshipException(
+            "No such game: {}".format(name)
+        )
+    game = state[name]
+    ships = game['Ships']
+
     if not name in data['games']:
-        new_layout = BoardLayout.generate()
+        new_layout = BoardLayout.generate(ships=ships)
         data['games'][name] = {}
         data['games'][name]['layout'] = new_layout.serialize()
         data['games'][name]['nonces'] = create_nonces(new_layout.size)
