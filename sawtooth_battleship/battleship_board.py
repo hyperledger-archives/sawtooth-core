@@ -20,7 +20,7 @@ import hashlib
 
 from enum import Enum
 
-from battleship_exceptions import BoardLayoutException
+from sawtooth_battleship.battleship_exceptions import BoardLayoutException
 
 
 LOGGER = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ class BoardLayout(object):
         return board
 
     def render_hashed(self, nonces):
-        hashed_board = [[None] * self.size for i in range(self.size)]
+        hashed_board = [[None] * self.size for _ in range(self.size)]
         clear_board = self.render()
 
         for row in xrange(0, self.size):
@@ -156,7 +156,7 @@ class BoardLayout(object):
                 try:
                     layout.append(position)
                     success = True
-                except BoardLayoutException, e:
+                except BoardLayoutException:
                     if attempts > max_placement_attempts:
                         LOGGER.debug("exceeded attempts, resetting...")
                         layout = BoardLayout(size)
@@ -200,7 +200,7 @@ class ShipPosition(object):
 
 
 def create_nonces(board_size):
-    nonces = [[None] * board_size for i in range(board_size)]
+    nonces = [[None] * board_size for _ in range(board_size)]
     for row in xrange(0, board_size):
         for col in xrange(0, board_size):
             nonces[row][col] = ''.join(

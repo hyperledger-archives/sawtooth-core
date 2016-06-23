@@ -24,6 +24,7 @@ class TestSawtoothBsBoard(unittest.TestCase):
     def test_board_creation(self):
         board = bs.Board()
         enc_board = board.create_game()
-        dcrpt_space = board.decrypt_space(enc_board[5], board.secret_board_keys[5])
+        dcrpt_space = board.decrypt_space(enc_board[5],
+                                          board.secret_board_keys[5])
         orig_space = board.secret_board[5]
         self.assertEquals(orig_space, dcrpt_space)

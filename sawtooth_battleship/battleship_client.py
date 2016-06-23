@@ -34,19 +34,19 @@ class BattleshipClient(SawtoothClient):
             name='BattleshipClient',
             keyfile=keyfile)
 
-    def create(self, name):
+    def create(self, name, ships):
         """
         """
         update = {
             'Action': 'CREATE',
-            'Name': name
+            'Name': name,
+            'Ships': ships
         }
 
         return self.sendtxn(
             BattleshipTransaction,
             BattleshipTransactionMessage,
             update)
-
 
     def join(self, name, board):
         """
@@ -61,7 +61,6 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransaction,
             BattleshipTransactionMessage,
             update)
-
 
     def fire(self, name, column, row, reveal_space, reveal_nonce):
         """
