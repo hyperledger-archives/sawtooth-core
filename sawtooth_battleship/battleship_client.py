@@ -48,7 +48,6 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransactionMessage,
             update)
 
-
     def join(self, name, board):
         """
         """
@@ -62,7 +61,6 @@ class BattleshipClient(SawtoothClient):
             BattleshipTransaction,
             BattleshipTransactionMessage,
             update)
-
 
     def fire(self, name, column, row, reveal_space, reveal_nonce):
         """

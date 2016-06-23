@@ -104,7 +104,6 @@ class BattleshipTransaction(transaction.Transaction):
 
         # size of the board (10x10)
         self._size = 10
-        
 
     def __str__(self):
         try:
@@ -141,7 +140,7 @@ class BattleshipTransaction(transaction.Transaction):
 
         if not super(BattleshipTransaction, self).is_valid(store):
             raise BattleshipException("invalid transaction")
-        
+
         LOGGER.debug('checking %s', str(self))
 
         # Name (of the game) is always required
@@ -155,25 +154,29 @@ class BattleshipTransaction(transaction.Transaction):
         # The remaining validity rules depend upon which action has
         # been specified.
 
-        if self._action == 'CREATE':    
+        if self._action == 'CREATE':
             if self._name in store:
                 raise BattleshipException('game already exists')
 
             # Restrict game name letters and numbers.
             if not re.match("^[a-zA-Z0-9]*$", self._name):
-                raise BattleshipException("Only letters a-z A-Z and numbers 0-9 are allowed in the game name!")
+                raise BattleshipException(
+                    "Only letters a-z A-Z and numbers 0-9 are allowed in "
+                    "the game name!")
 
         elif self._action == 'JOIN':
 
-            # Check that self._name is in the store (to verify 
+            # Check that self._name is in the store (to verify
             # that the game exists (see FIRE below).
             state = store[self._name]['State']
             LOGGER.info("state: %s" % state)
             if self._name not in store:
-                raise BattleshipException('Trying to join a game that does not exist')
+                raise BattleshipException(
+                    'Trying to join a game that does not exist')
             elif (state != "NEW"):
                 # Check that the game can be joined (the state is 'NEW')
-                raise BattleshipException('The game cannot accept any new participant')
+                raise BattleshipException(
+                    'The game cannot accept any new participant')
 
             # Check that the game board is the right size (10x10)
             if len(self._board) != self._size:
@@ -193,25 +196,27 @@ class BattleshipTransaction(transaction.Transaction):
 
             if self._name not in store:
                 raise BattleshipException('no such game')
-            
+
             if self._column is None:
                 raise BattleshipException("Column is required")
 
             if self._row is None:
                 raise BattleshipException("Row is required")
-            
+
             # Check that self._column is valid (letter from A-J)
             if not any((c in self._acceptable_columns) for c in self._column):
-                raise BattleshipException('Acceptable columns letters are A to J')
+                raise BattleshipException(
+                    'Acceptable columns letters are A to J')
 
             # Check that self._row is valid (number from 1-10)
             try:
                 row = int(self._row)
-                if (row <1) or (row>10):
-                    raise BattleshipException('Acceptable rows numbers are 1 to 10')
+                if (row < 1) or (row > 10):
+                    raise BattleshipException(
+                        'Acceptable rows numbers are 1 to 10')
             except ValueError:
-                raise BattleshipException('Acceptable rows numbers are 1 to 10')
-            
+                raise BattleshipException(
+                    'Acceptable rows numbers are 1 to 10')
 
             state = store[self._name]['State']
 
@@ -254,7 +259,7 @@ class BattleshipTransaction(transaction.Transaction):
             if 'LastFireColumn' in store[self._name]:
                 if self._reveal_space is None or self._reveal_nonce is None:
                     raise BattleshipException(
-                            "Attempted to fire without revealing target")
+                        "Attempted to fire without revealing target")
 
                 if state == 'P1-NEXT':
                     hashed_board = 'HashedBoard1'
@@ -266,12 +271,13 @@ class BattleshipTransaction(transaction.Transaction):
                 hashed_space = hash_space(self._reveal_space,
                                           self._reveal_nonce)
                 if store[self._name][hashed_board][row][col] != hashed_space:
-                    raise BattleshipException("Hash mismatch on reveal: "
-                        "{} != {}".format(hashed_board[row][col], hashed_space))
+                    raise BattleshipException(
+                        "Hash mismatch on reveal: {} != {}".format(
+                            hashed_board[row][col], hashed_space))
 
         else:
-            raise BattleshipException('invalid action: {}'.format(self._action))
-
+            raise BattleshipException(
+                'invalid action: {}'.format(self._action))
 
     def apply(self, store):
         """Applies all the updates in the transaction to the transaction
@@ -291,7 +297,7 @@ class BattleshipTransaction(transaction.Transaction):
             # store.  if this is the second JOIN, set HashedBoard2 and
             # Player2 in the store.  Also, initialize TargetBoard1 and
             # TargetBoard2 as empty.
-            if not 'Player1' in game:
+            if 'Player1' not in game:
                 game['HashedBoard1'] = self._board
                 size = len(self._board)
                 game['TargetBoard1'] = [['?'] * size for i in range(size)]
@@ -340,7 +346,7 @@ class BattleshipTransaction(transaction.Transaction):
             # to P1-WIN or P2-WIN as appropriate
             total_ship_spaces = sum([len(ship) for ship in game['Ships']])
             if number_of_hits is not None and \
-                total_ship_spaces == number_of_hits:
+                    total_ship_spaces == number_of_hits:
                 if target_board == 'TargetBoard2':
                     game['State'] = 'P2-WIN'
                 else:
@@ -355,7 +361,6 @@ class BattleshipTransaction(transaction.Transaction):
         else:
             raise BattleshipException("invalid state: {}".format(state))
 
-         
     def dump(self):
         """Returns a dict with attributes from the transaction object.
 

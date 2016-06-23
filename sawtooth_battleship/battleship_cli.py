@@ -263,14 +263,14 @@ def do_fire(args, config):
 
     data = load_data(config)
 
-    if not name in data['games']:
+    if name not in data['games']:
         raise BattleshipException(
             "no such game in local database: {}".format(name))
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
     state = client.get_state()
 
-    if not name in state:
+    if name not in state:
         raise BattleshipException(
             "no such game: {}".format(name))
     state_game = state[name]
@@ -315,7 +315,7 @@ def do_join(args, config):
     game = state[name]
     ships = game['Ships']
 
-    if not name in data['games']:
+    if name not in data['games']:
         new_layout = BoardLayout.generate(ships=ships)
         data['games'][name] = {}
         data['games'][name]['layout'] = new_layout.serialize()
@@ -573,7 +573,7 @@ def load_data(config):
         with open(data_file, 'r') as fd:
             data = json.load(fd)
     else:
-        data = { 'games': {} }
+        data = {'games': {}}
 
     return data
 
