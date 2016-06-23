@@ -19,6 +19,7 @@
 import os
 import sys
 import traceback
+import random
 import ConfigParser
 import getpass
 import argparse
@@ -76,20 +77,69 @@ def do_list(args, config):
         creator = v['InitialID']
         players = v.get('Players')
         state = v.get('State')
+        comp = v.get("Computer")
         print "%s\tplayers: %s status: %s creator: %s" % (k, players,
                                                           state.capitalize(),
                                                           creator)
         if state == "COMPLETE":
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
-                print "    %s: %s" % (player, hand.capitalize())
+                if comp and (player != creator):
+                    print "    %s: %s" % ("Computer", hand.capitalize())
+                else:
+                    print "    %s: %s" % (player, hand.capitalize())
             print "  Results:"
             for other_player, result in v['Results'].iteritems():
-                print "    %s vs %s: %s" % (creator, other_player, result)
+                if comp:
+                    print "    %s vs %s: %s" % (creator, "Computer", result)
+                else:
+                    print "    %s vs %s: %s" % (creator, other_player, result)
+            print ""
         else:
             print "  Hands Played:"
             for player, hand in v['Hands'].iteritems():
                 print "    %s: %s" % (player, "*******")
+            print ""
+
+
+def do_show(args, config):
+    name = args.name
+
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = RPSClient(base_url=url, keyfile=key_file)
+    state = client.get_state()
+
+    if name not in state:
+        raise RPSException('no such game: {}'.format(name))
+
+    game = state[name]
+
+    creator = game['InitialID']
+    players = game.get('Players')
+    state = game.get('State')
+    comp = game.get("Computer")
+    print "%s\tplayers: %s status: %s creator: %s" % (name, players,
+                                                      state.capitalize(),
+                                                      creator)
+    if state == "COMPLETE":
+        print "  Hands Played:"
+        for player, hand in game['Hands'].iteritems():
+            if comp and (player != creator):
+                print "    %s: %s" % ("Computer", hand.capitalize())
+            else:
+                print "    %s: %s" % (player, hand.capitalize())
+        print "  Results:"
+        for other_player, result in game['Results'].iteritems():
+            if comp:
+                print "    %s vs %s: %s" % (creator, "Computer", result)
+            else:
+                print "    %s vs %s: %s" % (creator, other_player, result)
+    else:
+        print "  Hands Played:"
+        for player, hand in game['Hands'].iteritems():
+            print "    %s: %s" % (player, "*******")
 
 
 def do_init(args, config):
@@ -153,6 +203,25 @@ def do_play(args, config):
 
     client = RPSClient(base_url=url, keyfile=key_file)
     client.shoot(name=name, hand=hand)
+    state = client.get_state()
+    comp = state[name].get('Computer')
+    if comp:
+        username = config.get('DEFAULT', 'username')
+        # Create computer/switch to computer
+        hand = random.choice(['ROCK', 'PAPER', 'SCISSORS'])
+        d = vars(args)
+        d["username"] = "Computer"
+        do_init(args, config)
+        # Create correct client
+        url = config.get('DEFAULT', 'url')
+        key_file = config.get('DEFAULT', 'key_file')
+        # send Computers move
+        client = RPSClient(base_url=url, keyfile=key_file)
+        client.shoot(name=name, hand=hand)
+        # Switch back to orignal player
+        d = vars(args)
+        d["username"] = username
+        do_init(args, config)
 
     if args.wait:
         client.wait_for_commit()
@@ -214,7 +283,9 @@ def main():
     create_parser.add_argument('--wait', action='store_true', default=False,
                                help='wait for this commit before exiting')
     create_parser.add_argument('--players', type=int, default=2,
-                               help='number of players in the game')
+                               help='number of players in the game, ' +
+                               'if the number is 1, a 2 player game against' +
+                               ' the computer is created')
     play_parser = subparsers.add_parser('play', parents=[parser])
     play_parser.add_argument('name', type=str,
                              help='an identifier for the new game')
@@ -222,6 +293,9 @@ def main():
                              ' ROCK, PAPER or SCISSORS')
     play_parser.add_argument('--wait', action='store_true', default=False,
                              help='wait for this commit before exiting')
+    show_parser = subparsers.add_parser('show', parents=[parser])
+    show_parser.add_argument('name', type=str,
+                             help='the identifier for the game')
 
     args = arg_parser.parse_args()
     if args.verbose is None:
@@ -241,6 +315,8 @@ def main():
         do_create(args, config)
     elif args.command == "play":
         do_play(args, config)
+    elif args.command == "show":
+        do_show(args, config)
     else:
         raise RPSException("invalid command: {}".format(args.command))
 
