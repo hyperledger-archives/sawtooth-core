@@ -98,9 +98,9 @@ class RPSTransaction(transaction.Transaction):
             if self._name in store:
                 raise RPSException('game already exists')
             if (not isinstance(self._players, (int, long)) or not
-                    self._players > 1):
+                    self._players > 0):
                 raise RPSException('players must be a positive integer' +
-                                   'larger then 1: %s (%s)' %
+                                   'larger then 0: %s (%s)' %
                                    (self._players, type(self._players)))
         elif self._action == 'SHOOT':
             if self._hand is None:
@@ -156,12 +156,21 @@ class RPSTransaction(transaction.Transaction):
             raise RPSException("Hand to be played without a" +
                                "game registered (should not happen)")
         else:
-            game = {
-                'State': 'OPEN',
-                'Hands': {},
-                'Players': self._players,
-                'InitialID': self.OriginatorID,
-            }
+            if self._players == 1:
+                game = {
+                    'State': 'OPEN',
+                    'Hands': {},
+                    'Players': 2,
+                    'InitialID': self.OriginatorID,
+                    'Computer': True
+                }
+            else:
+                game = {
+                    'State': 'OPEN',
+                    'Hands': {},
+                    'Players': self._players,
+                    'InitialID': self.OriginatorID,
+                }
 
         if self._hand is not None:
             if self.OriginatorID in game['Hands']:
