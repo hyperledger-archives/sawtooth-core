@@ -40,13 +40,36 @@ ${If} $0 != "admin" ;Require admin rights on NT4+
         quit
 ${EndIf}
 !macroend
- 
+
+!include FileFunc.nsh
+!insertmacro GetParameters
+!insertmacro GetOptions
+
 function .onInit
 	setShellVarContext all
 	!insertmacro VerifyUserIsAdmin
+	${GetParameters} $R0
+	ClearErrors
+	${GetOptions} $R0 /EULA= $0
 functionEnd
  
 section "install"
+	${If} ${Silent}
+		${If} $0 != 'accept'
+			System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+			System::Call 'kernel32::AttachConsole(i -1)i.r1'
+			${If} $0 = 0
+			${OrIf} $1 = 0
+				System::Call 'kernel32::AllocConsole()'
+				System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+			${EndIf}
+			FileWrite $0 $\n
+			FileWrite $0 "Please include the option '/eula=accept' to accept the license agreement during a silent install.$\n"
+			FileWrite $0 "EXAMPLE: > sawtooth-validator.exe /S /eula=accept"
+			FileWrite $0 $\n
+			Abort "Install failed"
+		${EndIf}
+	${EndIf}
 
 	# add install dir to pythonpath
 	!include "winmessages.nsh"
