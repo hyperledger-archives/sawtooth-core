@@ -17,7 +17,6 @@ import logging
 
 from txnserver import validator
 from journal.consensus.poet import poet_journal, wait_certificate
-from ledger.transaction import endpoint_registry
 
 logger = logging.getLogger(__name__)
 
@@ -67,35 +66,3 @@ class LotteryValidator(validator.Validator):
         overridden
         """
         self.Ledger = poet_journal.PoetJournal(node, **self.Config)
-
-    def register_endpoint(self, node, domain='/'):
-
-        txn = endpoint_registry.EndpointRegistryTransaction.register_node(
-            node, domain, httpport=self.Config["HttpPort"])
-        txn.sign_from_node(node)
-
-        msg = endpoint_registry.EndpointRegistryTransactionMessage()
-        msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
-
-        logger.info('register endpoint %s with name %s', node.Identifier[:8],
-                    node.Name)
-        self.Ledger.handle_message(msg)
-
-    def unregister_endpoint(self, node, domain='/'):
-        txn = endpoint_registry.EndpointRegistryTransaction\
-            .unregister_node(node)
-        txn.sign_from_node(node)
-
-        # Since unregister is often called on shutdown, we really need to make
-        # this a system message for the purpose of sending it out from our own
-        # queue
-        msg = endpoint_registry.EndpointRegistryTransactionMessage()
-        msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
-
-        logger.info('unregister endpoint %s with name %s', node.Identifier[:8],
-                    node.Name)
-        self.Ledger.handle_message(msg)
