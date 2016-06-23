@@ -45,6 +45,7 @@ class Validator(object):
         # this is going to be used as a flag to indicate that a
         # topology update is in progress
         self._connectionattempts = 0
+        self.delaystart = self.Config['DelayStart']
 
         # set up signal handlers for shutdown
         if not windows_service:
@@ -175,6 +176,13 @@ class Validator(object):
 
     def add_transaction_family(self, txnfamily):
         txnfamily.register_transaction_types(self.Ledger)
+
+    def pre_start(self):
+        if self.delaystart is True:
+            logger.debug("DelayStart is in effect, waiting for /start")
+            reactor.callLater(1, self.pre_start)
+        else:
+            self.start()
 
     def start(self):
         # if this is the genesis ledger then there isn't anything left to do
