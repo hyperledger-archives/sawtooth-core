@@ -351,10 +351,6 @@ class BattleshipTransaction(transaction.Transaction):
             elif game['State'] == 'P2-NEXT':
                 game['State'] = 'P1-NEXT'
 
-            # TODO: Remove this logging statement when all other TODOs
-            # have been resolved for FIRE
-            LOGGER.error("in apply, FIRE is not fully implemented")
-
             store[self._name] = game
         else:
             raise BattleshipException("invalid state: {}".format(state))
