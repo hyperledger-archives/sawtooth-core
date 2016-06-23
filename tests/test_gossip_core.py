@@ -363,7 +363,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         # Test _dispatch will not loop if not processing messages
         core = self._setup(8883)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
-        core.MessageQueue.appendleft(msg)
+        core.MessageQueue.put(msg)
         # Should not run if ProcessIncomingMessages is False
         # Otherwise it will loop
         core.ProcessIncomingMessages = False
@@ -400,7 +400,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core = self._setup(8888)
         core.shutdown()
         self.assertFalse(core.ProcessIncomingMessages)
-        self.assertFalse(len(core.MessageQueue) == 0)
+        self.assertFalse(core.MessageQueue.empty())
 
     def test_gossip_register_message_handlers(self):
         # Test that a message handler and type can be added and removed

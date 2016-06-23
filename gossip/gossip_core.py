@@ -16,7 +16,7 @@
 This module defines the core gossip class for communication between nodes.
 """
 
-from collections import deque
+import Queue
 import errno
 import logging
 import socket
@@ -75,7 +75,7 @@ class Gossip(object, DatagramProtocol):
             to call when a node becomes disconnected.
         onHeartbeatTimer (EventHandler): An EventHandler for functions
             to call when the heartbeat timer fires.
-        MessageQueue (deque): The queue of incoming messages.
+        MessageQueue (Queue): The queue of incoming messages.
         ProcessIncomingMessages (bool): Whether or not to process incoming
             messages.
         Listener (Reactor.listenUDP): The UDP listener.
@@ -136,7 +136,7 @@ class Gossip(object, DatagramProtocol):
         self._HeartbeatTimer = task.LoopingCall(self._heartbeat)
         self._HeartbeatTimer.start(0.05)
 
-        self.MessageQueue = deque()
+        self.MessageQueue = Queue.Queue()
 
         try:
             self.ProcessIncomingMessages = True
@@ -576,18 +576,19 @@ class Gossip(object, DatagramProtocol):
 
     def _dispatcher(self):
         while self.ProcessIncomingMessages:
-            if len(self.MessageQueue) > 0:
-                msg = self.MessageQueue.pop()
-                try:
-                    if msg and msg.MessageType in self.MessageHandlerMap:
-                        self.MessageHandlerMap[msg.MessageType][1](msg, self)
+            msg = self.MessageQueue.get()
+            try:
+                if msg and msg.MessageType in self.MessageHandlerMap:
+                    self.MessageHandlerMap[msg.MessageType][1](msg, self)
 
-                # handle the attribute error specifically so that the
-                # message type can be used in the next exception
-                except:
-                    logger.exception(
-                        'unexpected error handling message of type %s',
-                        msg.MessageType)
+            # handle the attribute error specifically so that the message type
+            # can be used in the next exception
+            except:
+                logger.exception(
+                    'unexpected error handling message of type %s',
+                    msg.MessageType)
+
+            self.MessageQueue.task_done()
 
     # --------------------------------- ###
     # Locally defined interface methods ###
@@ -608,7 +609,7 @@ class Gossip(object, DatagramProtocol):
         # to leave the socket open long enough to send the disconnect messages
         # that we just queued up
         self.ProcessIncomingMessages = False
-        self.MessageQueue.appendleft(None)
+        self.MessageQueue.put(None)
 
     def register_message_handler(self, msg, handler):
         """Register a function to handle incoming messages for the
@@ -760,7 +761,7 @@ class Gossip(object, DatagramProtocol):
 
         self.MessageHandledMap[msg.Identifier] = time.time(
         ) + self.ExpireMessageTime
-        self.MessageQueue.appendleft(msg)
+        self.MessageQueue.put(msg)
 
         # and now forward it on to the peers if it is marked for forwarding
         if msg.IsForward and msg.TimeToLive > 0:
