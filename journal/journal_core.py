@@ -102,7 +102,6 @@ class Journal(gossip_core.Gossip):
 
     def __init__(self, node, **kwargs):
         """Constructor for the Journal class.
-
         Args:
             node (Node): The local node.
             GenesisLedger (bool): Whether or not this journal is associated
@@ -525,21 +524,29 @@ class Journal(gossip_core.Gossip):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
+        logger.info('missing_txn called')
+
         now = time.time()
 
         if txnid in self.RequestedTransactions and now < \
                 self.RequestedTransactions[txnid]:
+            logger.info('missing txnid is already in RequestedTxn')
             return
 
         self.RequestedTransactions[txnid] = now + self.MissingRequestInterval
+        logger.info('New Txn placed in RequestedTxn')
+
+        self.JournalStats.MissingTxnRequestCount.increment()
 
         # if the request for the missing block came from another node, then
         # we need to reuse the request or we'll process multiple copies
         if not request:
+            logger.info('new request from same node')
             request = transaction_message.TransactionRequestMessage(
                 {'TransactionID': txnid})
             self.forward_message(request, exceptions=exceptions)
         else:
+            logger.info('new request fr another node')
             self.forward_message(request,
                                  exceptions=exceptions,
                                  initialize=False)
@@ -668,6 +675,7 @@ class Journal(gossip_core.Gossip):
         if missing:
             for txnid in missing:
                 self.request_missing_txn(txnid)
+                self.JournalStats.MissingTxnFromBlockCount.increment()
             return
 
         # at this point we know that the block is complete
@@ -992,7 +1000,10 @@ class Journal(gossip_core.Gossip):
             # for it and wait, we should set a timer on this transaction so we
             # can just throw it away if the dependencies cannot be met
             ready = False
+
+            logger.info('calling missing Txn')
             self.request_missing_txn(dependencyID)
+            self.JournalStats.MissingTxnDepCount.increment()
 
         # if all of the dependencies have not been met then there isn't any
         # point in continuing on so bail out
@@ -1054,6 +1065,9 @@ class Journal(gossip_core.Gossip):
         self.JournalStats = stats.Stats(self.LocalNode.Name, 'ledger')
         self.JournalStats.add_metric(stats.Counter('CommittedBlockCount'))
         self.JournalStats.add_metric(stats.Counter('CommittedTxnCount'))
+        self.JournalStats.add_metric(stats.Counter('MissingTxnRequestCount'))
+        self.JournalStats.add_metric(stats.Counter('MissingTxnFromBlockCount'))
+        self.JournalStats.add_metric(stats.Counter('MissingTxnDepCount'))
         self.JournalStats.add_metric(stats.Sample(
             'PendingBlockCount', lambda: self.PendingBlockCount))
         self.JournalStats.add_metric(stats.Sample(
