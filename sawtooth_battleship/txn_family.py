@@ -217,8 +217,8 @@ class BattleshipTransaction(transaction.Transaction):
             if state in ['P1-WIN', 'P2-WIN']:
                 raise BattleshipException('game complete')
 
-            # TODO: Check that the state is not 'NEW', which would imply
-            # that the players have not yet joined.
+            if state == 'NEW':
+                raise BattleshipException("Game doesn't have enough players.")
 
             player = None
             if state == 'P1-NEXT':
