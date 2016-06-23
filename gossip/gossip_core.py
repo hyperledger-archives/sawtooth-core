@@ -22,6 +22,8 @@ import logging
 import socket
 import time
 
+from threading import Condition
+
 from twisted.internet import reactor, task
 from twisted.internet.protocol import DatagramProtocol
 
@@ -43,6 +45,34 @@ class GossipException(Exception):
 
     def __init__(self, msg):
         super(GossipException, self).__init__(msg)
+
+
+class MessageQueue(object):
+    """The message queue used internally by Gossip."""
+
+    def __init__(self):
+        self._queue = deque()
+        self._condition = Condition()
+
+    def pop(self):
+        self._condition.acquire()
+        try:
+            while len(self._queue) < 1:
+                self._condition.wait()
+            return self._queue.pop()
+        finally:
+            self._condition.release()
+
+    def __len__(self):
+        return len(self._queue)
+
+    def appendleft(self, msg):
+        self._condition.acquire()
+        try:
+            self._queue.appendleft(msg)
+            self._condition.notify()
+        finally:
+            self._condition.release()
 
 
 class Gossip(object, DatagramProtocol):
@@ -75,7 +105,7 @@ class Gossip(object, DatagramProtocol):
             to call when a node becomes disconnected.
         onHeartbeatTimer (EventHandler): An EventHandler for functions
             to call when the heartbeat timer fires.
-        MessageQueue (Queue): The queue of incoming messages.
+        MessageQueue (MessageQueue): The queue of incoming messages.
         ProcessIncomingMessages (bool): Whether or not to process incoming
             messages.
         Listener (Reactor.listenUDP): The UDP listener.
@@ -136,7 +166,7 @@ class Gossip(object, DatagramProtocol):
         self._HeartbeatTimer = task.LoopingCall(self._heartbeat)
         self._HeartbeatTimer.start(0.05)
 
-        self.MessageQueue = Queue.Queue()
+        self.MessageQueue = MessageQueue()
 
         try:
             self.ProcessIncomingMessages = True
@@ -576,19 +606,17 @@ class Gossip(object, DatagramProtocol):
 
     def _dispatcher(self):
         while self.ProcessIncomingMessages:
-            msg = self.MessageQueue.get()
+            msg = self.MessageQueue.pop()
             try:
                 if msg and msg.MessageType in self.MessageHandlerMap:
                     self.MessageHandlerMap[msg.MessageType][1](msg, self)
 
-            # handle the attribute error specifically so that the message type
-            # can be used in the next exception
+            # handle the attribute error specifically so that the
+            # message type can be used in the next exception
             except:
                 logger.exception(
                     'unexpected error handling message of type %s',
                     msg.MessageType)
-
-            self.MessageQueue.task_done()
 
     # --------------------------------- ###
     # Locally defined interface methods ###
