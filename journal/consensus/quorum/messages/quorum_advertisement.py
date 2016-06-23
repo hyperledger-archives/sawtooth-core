@@ -35,6 +35,7 @@ def send_quorum_advertisement_message(journal):
     peers = journal.peer_id_list()
     if len(peers) > 0:
         peerid = random.choice(peers)
+        msg.sign_from_node(journal.LocalNode)
         journal.send_message(msg, peerid)
 
 
@@ -83,7 +84,6 @@ class QuorumAdvertisementMessage(message.Message):
             QuorumAdvertisementMessage: The new message.
         """
         msg = QuorumAdvertisementMessage()
-        msg.Identifier = nd.Identifier
         msg.NetHost = nd.NetHost
         msg.NetPort = nd.NetPort
         msg.Name = nd.Name
@@ -102,10 +102,9 @@ class QuorumAdvertisementMessage(message.Message):
         self.IsForward = False
         self.IsReliable = True
 
-        self.Identifier = minfo.get('Identifier', '')
         self.NetHost = minfo.get('Host', "127.0.0.1")
         self.NetPort = minfo.get('Port', 0)
-        self.Name = minfo.get('Name', self.OriginatorID[:8])
+        self.Name = minfo.get('Name', None)
 
         self.TimeToLive = 8
 
@@ -130,7 +129,6 @@ class QuorumAdvertisementMessage(message.Message):
         result['Host'] = self.NetHost
         result['Port'] = self.NetPort
         result['Name'] = self.Name
-        result['Identifier'] = self.Identifier
 
         return result
 
@@ -154,7 +152,7 @@ def quorum_advertisement_handler(msg, journal):
         return
 
     onode = node.Node(address=msg.NetAddress,
-                      identifier=msg.Identifier,
+                      identifier=msg.OriginatorID,
                       name=msg.Name)
     journal.add_quorum_node(onode)
 

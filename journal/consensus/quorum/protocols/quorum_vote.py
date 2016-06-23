@@ -135,6 +135,7 @@ class QuorumVote(object):
         msg.Ballot = self.Ballot
         msg.BlockNumber = self.BlockNumber
         msg.TransactionIDs = txnlist
+        msg.sign_from_node(self.VotingLedger.LocalNode)
 
         self.VotingLedger.broadcast_message(msg)
 
