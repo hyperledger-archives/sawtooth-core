@@ -304,10 +304,6 @@ class BattleshipTransaction(transaction.Transaction):
                 # Move to 'P1-NEXT' as both boards have been entered.
                 game["State"] = 'P1-NEXT'
 
-            # TODO: Remove this logging statement when all other TODOs
-            # have been resolved for JOIN
-            LOGGER.error("in apply, JOIN is not fully implemented")
-
             store[self._name] = game
         elif self._action == 'FIRE':
             game = store[self._name].copy()
