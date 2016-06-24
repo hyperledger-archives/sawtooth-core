@@ -25,7 +25,9 @@ outFile "sawtooth-validator.exe"
  
 !include LogicLib.nsh
 
- 
+LicenseData "c:\license.txt"
+
+page license
 
 page instfiles
  
@@ -38,17 +40,48 @@ ${If} $0 != "admin" ;Require admin rights on NT4+
         quit
 ${EndIf}
 !macroend
- 
+
+!include FileFunc.nsh
+!insertmacro GetParameters
+!insertmacro GetOptions
+
 function .onInit
 	setShellVarContext all
 	!insertmacro VerifyUserIsAdmin
+	${GetParameters} $R0
+	ClearErrors
+	${GetOptions} $R0 /EULA= $0
 functionEnd
  
 section "install"
+	${If} ${Silent}
+		${If} $0 != 'accept'
+			System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+			System::Call 'kernel32::AttachConsole(i -1)i.r1'
+			${If} $0 = 0
+			${OrIf} $1 = 0
+				System::Call 'kernel32::AllocConsole()'
+				System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+			${EndIf}
+			FileWrite $0 $\n
+			FileWrite $0 "Please include the option '/eula=accept' to accept the license agreement during a silent install.$\n"
+			FileWrite $0 "EXAMPLE: > sawtooth-validator.exe /S /eula=accept"
+			FileWrite $0 $\n
+			Abort "Install failed"
+		${EndIf}
+	${EndIf}
+
+	# add install dir to pythonpath
+	!include "winmessages.nsh"
+	!define env_hklm 'HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"'
+	!define env_hkcu 'HKCU "Environment"'
+	WriteRegExpandStr ${env_hklm} PYTHONPATH ";C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\"
+	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+
 	# Files for the install directory - to build the installer, these should be in the same directory as the install script (this file)
 	setOutPath $INSTDIR
 	# Files added here should be removed by the uninstaller (see section "uninstall")
-	File /r /x *.py /x easy_install*.exe /x pybtctool "sawtooth-validator\"
+	File /r /x *.pyc /x pybtctool "sawtooth-validator\"
 
 	
 	# Uninstaller - See function un.onInit and section "uninstall" for configuration
@@ -73,6 +106,8 @@ section "install"
 	# Set the INSTALLSIZE constant (!defined at the top of this script) so Add/Remove Programs can accurately report the size
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
 
+	Exec '"$PROGRAMFILES\${COMPANYNAME}\${APPNAME}\bin\txnvalidator.exe" --startup=auto install'
+
 sectionEnd
  
 # Uninstaller
@@ -88,6 +123,9 @@ function un.onInit
 functionEnd
  
 section "uninstall"
+
+	# Remove windows service
+	Exec 'sc.exe delete SawtoothValidator-Service'
 
 	rmdir /r $INSTDIR\bin
 	rmdir $INSTDIR\conf\keys

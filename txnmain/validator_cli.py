@@ -349,7 +349,8 @@ def main(args, windows_service=False):
 
 def main_wrapper():
     if (os.name == "nt" and len(sys.argv) > 1
-            and sys.argv[1] in ['start', 'stop', 'install', 'remove']):
+            and sys.argv[1] in ['start', 'stop', 'install', 'remove',
+                                '--startup=auto']):
         win32serviceutil.HandleCommandLine(SawtoothValidatorService)
     else:
         main(sys.argv[1:])
