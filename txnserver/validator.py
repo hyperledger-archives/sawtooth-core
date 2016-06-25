@@ -226,18 +226,15 @@ class Validator(object):
             reactor.callLater(2.0, self.initialize_ledger_topology,
                               disconnect_callback)
 
-    def initialize_ledger_connection(self):
+    def _get_candidate_peers(self):
         """
-        Connect the ledger to the rest of the network; in addition to the
-        list of nodes directly specified in the configuration file, pull
-        a list from the LedgerURL. Once the list of potential peers is
-        constructed, pick from it those specified in the Peers configuration
+        Return the candidate (potential) peers to send connection requests; in
+        addition to the list of nodes directly specified in the configuration
+        file, pull a list from the LedgerURL. Once the list of potential peers
+        is constructed, pick from it those specified in the Peers configuration
         variable. If that is not enough, then pick more at random from the
         list.
         """
-
-        assert self.Ledger
-
         # Continue to support existing config files with single
         # string values.
         if isinstance(self.Config.get('LedgerURL'), basestring):
@@ -265,6 +262,17 @@ class Validator(object):
             nodeset = nodeset.difference(peerset)
             peerset = peerset.union(random.sample(list(nodeset), min(
                 minpeercount - len(peerset), len(nodeset))))
+
+        return peerset
+
+    def initialize_ledger_connection(self):
+        """
+        Connect the ledger to the rest of the network.
+        """
+
+        assert self.Ledger
+
+        peerset = self._get_candidate_peers()
 
         # Add the candidate nodes to the gossip object so we can send connect
         # requests to them
