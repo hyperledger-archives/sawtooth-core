@@ -248,9 +248,7 @@ class Validator(object):
             for url in urls:
                 logger.info('attempting to load peers using url %s', url)
                 try:
-                    self.LedgerWebClient = ledger_web_client.LedgerWebClient(
-                        url)
-                    peers = self.get_endpoints(0, self.EndpointDomain)
+                    peers = self.get_endpoints(url, 0, self.EndpointDomain)
                     for peer in peers:
                         self.NodeMap[peer.Name] = peer
                     break
@@ -430,16 +428,18 @@ class Validator(object):
                     node.Name)
         self.Ledger.handle_message(msg)
 
-    def get_endpoints(self, count, domain='/'):
+    def get_endpoints(self, url, count, domain='/'):
+        client = ledger_web_client.LedgerWebClient(url)
+
         endpoints = []
 
-        eplist = self.LedgerWebClient.get_store(
+        eplist = client.get_store(
             endpoint_registry.EndpointRegistryTransaction)
         if not eplist:
             return endpoints
 
         for ep in eplist:
-            epinfo = self.LedgerWebClient.get_store(
+            epinfo = client.get_store(
                 endpoint_registry.EndpointRegistryTransaction, ep)
             if epinfo.get('Domain', '/').startswith(domain):
                 addr = (socket.gethostbyname(epinfo["Host"]), epinfo["Port"])
