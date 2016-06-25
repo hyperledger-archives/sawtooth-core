@@ -1,19 +1,52 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
+
+require 'rbconfig'
 require 'yaml'
-
-
-box = "ubuntu/trusty64"
-forward_ports = true
-if File.file?('vagrant.local.yaml')
-    conf = YAML.load_file 'vagrant.local.yaml'
-    box = conf['vagrant'].fetch('box', box)
-    forward_ports = conf['vagrant'].fetch('forward_ports', forward_ports)
-end
 
 VAGRANTFILE_API_VERSION = "2"
 
+def load_conf()
+    config = {
+        'VAGRANT_BOX' => 'ubuntu/trusty64',
+        'VAGRANT_FORWARD_PORTS' => true,
+        'VAGRANT_MEMORY' => 2048,
+        'VAGRANT_CPUS' => 2
+    }
+
+    if RbConfig::CONFIG['host_os'] !~ /mswin|mingw/
+        bash_binary = `which bash`.strip
+        env = `#{bash_binary} -c 'source conf.sh; printenv'`
+        env_conf = Hash[env.split(/\n/).map {|l| l.split(/=/, 2)}]
+        for key in['VAGRANT_FORWARD_PORTS']
+            if env_conf.has_key? key
+                if env_conf[key] == '1'
+                    env_conf[key] = true
+                else
+                    env_conf[key] = false
+                end
+            end
+        end
+        for key in['VAGRANT_MEMORY', 'VAGRANT_CPUS']
+            if env_conf.has_key? key
+                env_conf[key] = env_conf[key].to_s
+            end
+        end
+        config.merge! env_conf.select { |k| config.keys.include? k }
+    end
+
+    if File.file?('vagrant.local.yaml')
+        yaml_conf = YAML.load_file 'vagrant.local.yaml'
+        config.merge! yaml_conf.select { |k| config.keys.include? k }
+    end
+
+    return config
+end
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  conf = load_conf()
+  conf.each_pair {|key,value| puts "#{key} = #{value}"}
+
   if ARGV.include? "up"
     repo_error = false
     ["../sawtooth-core", "../sawtooth-validator", "../sawtooth-mktplace"].each do |repo|
@@ -47,15 +80,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.provider "virtualbox" do |v|
-    v.memory = 2048
-    v.cpus = 2
+    v.memory = conf['VAGRANT_MEMORY']
+    v.cpus = conf['VAGRANT_CPUS']
   end
 
-  config.vm.box = box
+  config.vm.box = conf['VAGRANT_BOX']
 
-  puts config.vm.box
-
-  if forward_ports
+  if conf['VAGRANT_FORWARD_PORTS']
       config.vm.network "forwarded_port", guest: 8800, host: 8800
       config.vm.network "forwarded_port", guest: 8900, host: 8900
 
