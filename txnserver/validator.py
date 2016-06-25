@@ -20,7 +20,8 @@ import socket
 
 from twisted.internet import reactor
 
-from txnserver import ledger_web_client
+from txnserver.ledger_web_client import MessageException
+from txnserver.endpoint_registry_client import EndpointRegistryClient
 from gossip import node, signed_object, token_bucket
 from gossip.messages import connect_message, shutdown_message
 from gossip.topology import random_walk, barabasi_albert
@@ -248,11 +249,11 @@ class Validator(object):
             for url in urls:
                 logger.info('attempting to load peers using url %s', url)
                 try:
-                    peers = self.get_endpoints(url, self.EndpointDomain)
+                    peers = self.get_endpoint_nodes(url)
                     for peer in peers:
                         self.NodeMap[peer.Name] = peer
                     break
-                except ledger_web_client.MessageException as e:
+                except MessageException as e:
                     logger.error("Unable to get endpoints from LedgerURL: %s",
                                  str(e))
         else:
@@ -428,26 +429,18 @@ class Validator(object):
                     node.Name)
         self.Ledger.handle_message(msg)
 
-    def get_endpoints(self, url, domain='/'):
-        client = ledger_web_client.LedgerWebClient(url)
+    def get_endpoint_nodes(self, url):
+        client = EndpointRegistryClient(url)
 
-        endpoints = []
+        nodes = []
+        for epinfo in client.get_endpoint_list(domain=self.EndpointDomain):
+            nodes.append(self._endpoint_info_to_node(epinfo))
+        return nodes
 
-        eplist = client.get_store(
-            endpoint_registry.EndpointRegistryTransaction)
-        if not eplist:
-            return endpoints
-
-        for ep in eplist:
-            epinfo = client.get_store(
-                endpoint_registry.EndpointRegistryTransaction, ep)
-            if epinfo.get('Domain', '/').startswith(domain):
-                addr = (socket.gethostbyname(epinfo["Host"]), epinfo["Port"])
-                endpoint = node.Node(address=addr,
-                                     identifier=epinfo["NodeIdentifier"],
-                                     name=epinfo["Name"])
-                endpoints.append(endpoint)
-
-        logger.info('found %d endpoints', len(endpoints))
-
-        return endpoints
+    @staticmethod
+    def _endpoint_info_to_node(epinfo):
+        addr = (socket.gethostbyname(epinfo["Host"]), epinfo["Port"])
+        nd = node.Node(address=addr,
+                       identifier=epinfo["NodeIdentifier"],
+                       name=epinfo["Name"])
+        return nd
