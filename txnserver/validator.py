@@ -245,20 +245,16 @@ class Validator(object):
         else:
             urls = self.Config.get('LedgerURL', [])
 
-        if not self.GenesisLedger:
-            for url in urls:
-                logger.info('attempting to load peers using url %s', url)
-                try:
-                    peers = self.get_endpoint_nodes(url)
-                    for peer in peers:
-                        self.NodeMap[peer.Name] = peer
-                    break
-                except MessageException as e:
-                    logger.error("Unable to get endpoints from LedgerURL: %s",
-                                 str(e))
-        else:
-            logger.info('not loading peers since **none** was provided as '
-                        'a url option.')
+        for url in urls:
+            logger.info('attempting to load peers using url %s', url)
+            try:
+                peers = self.get_endpoint_nodes(url)
+                for peer in peers:
+                    self.NodeMap[peer.Name] = peer
+                break
+            except MessageException as e:
+                logger.error("Unable to get endpoints from LedgerURL: %s",
+                             str(e))
 
         # Build a list of nodes that we can use for the initial connection
         minpeercount = self.Config.get("InitialConnectivity", 1)
