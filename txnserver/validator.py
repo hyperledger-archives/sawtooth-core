@@ -243,7 +243,7 @@ class Validator(object):
         if isinstance(self.Config.get('LedgerURL'), basestring):
             urls = [self.Config.get('LedgerURL')]
         else:
-            urls = self.Config.get('LedgerURL', ['**none**'])
+            urls = self.Config.get('LedgerURL', [])
 
         if not self.GenesisLedger:
             for url in urls:
