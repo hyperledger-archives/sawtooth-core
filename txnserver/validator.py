@@ -248,7 +248,7 @@ class Validator(object):
             for url in urls:
                 logger.info('attempting to load peers using url %s', url)
                 try:
-                    peers = self.get_endpoints(url, 0, self.EndpointDomain)
+                    peers = self.get_endpoints(url, self.EndpointDomain)
                     for peer in peers:
                         self.NodeMap[peer.Name] = peer
                     break
@@ -428,7 +428,7 @@ class Validator(object):
                     node.Name)
         self.Ledger.handle_message(msg)
 
-    def get_endpoints(self, url, count, domain='/'):
+    def get_endpoints(self, url, domain='/'):
         client = ledger_web_client.LedgerWebClient(url)
 
         endpoints = []
@@ -450,7 +450,4 @@ class Validator(object):
 
         logger.info('found %d endpoints', len(endpoints))
 
-        if count <= 0:
-            return endpoints
-
-        return random.sample(endpoints, min(count, len(endpoints)))
+        return endpoints
