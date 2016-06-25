@@ -192,9 +192,7 @@ class Validator(object):
             return
 
         # if this isn't the genesis ledger then we need to connect
-        # this node into the validator network, first set up a handler
-        # in case of failure during initialization
-        reactor.callLater(60.0, self._verify_initialization)
+        # this node into the validator network
         self.initialize_ledger_connection()
         self.post_initialize_ledger()
 
@@ -272,38 +270,32 @@ class Validator(object):
 
         assert self.Ledger
 
-        peerset = self._get_candidate_peers()
+        min_peer_count = self.Config.get("InitialConnectivity", 1)
+        current_peer_count = len(self.Ledger.peer_list())
 
-        # Add the candidate nodes to the gossip object so we can send connect
-        # requests to them
-        connections = 0
-        for peername in peerset:
-            peer = self.NodeMap.get(peername)
-            if peer:
-                logger.info('add peer %s with identifier %s', peername,
-                            peer.Identifier)
-                connect_message.send_connection_request(self.Ledger, peer)
-                connections += 1
-                self.Ledger.add_node(peer)
-            else:
-                logger.info('requested connection to unknown peer %s',
-                            peername)
+        logger.debug("initial peer count is %d of %d",
+                     current_peer_count, min_peer_count)
 
-        # the pathological case is that there was nothing specified and since
-        # we already know we aren't the genesis block, we can just shut down
-        if connections == 0:
-            logger.critical('unable to find a valid peer')
-            self.shutdown()
-            return
+        if current_peer_count < min_peer_count:
+            peerset = self._get_candidate_peers()
 
-        logger.debug("initial ledger connection requests sent")
+            # Add the candidate nodes to the gossip object so we can send
+            # connect requests to them
+            for peername in peerset:
+                peer = self.NodeMap.get(peername)
+                if peer:
+                    logger.info('add peer %s with identifier %s', peername,
+                                peer.Identifier)
+                    connect_message.send_connection_request(self.Ledger, peer)
+                    self.Ledger.add_node(peer)
+                else:
+                    logger.info('requested connection to unknown peer %s',
+                                peername)
 
-        # Wait for the connection message to be processed before jumping to the
-        # next state a better technique would be to add an event in sawtooth
-        # when a new node is connected
-        self._connectionattempts = 3
-        reactor.callLater(2.0, self.initialize_ledger_topology,
-                          self.start_journal_transfer)
+            reactor.callLater(2.0, self.initialize_ledger_connection)
+        else:
+            reactor.callLater(2.0, self.initialize_ledger_topology,
+                              self.start_journal_transfer)
 
     def initialize_ledger_topology(self, callback):
         """
@@ -374,35 +366,6 @@ class Validator(object):
         self.Ledger.initialization_complete()
 
         self.register_endpoint(self.Ledger.LocalNode, self.EndpointDomain)
-
-    def _verify_initialization(self):
-        """
-        Callback to determine if the initialization failed fatally. This
-        happens most often if there are no peers and this is not the root
-        validator.
-        """
-
-        # this case should never happen, change to an assert later
-        if not self.Ledger:
-            logger.error('failed to initialize, no ledger, shutting down')
-            self.shutdown()
-            return
-
-        logger.info('check for valid initialization; peers=%s',
-                    [p.Name for p in self.Ledger.peer_list()])
-
-        # if this is not the root validator and there are no peers, something
-        # bad happened and we are just going to bail out
-        if len(self.Ledger.peer_list()) == 0:
-            logger.error('failed to connect to peers, shutting down')
-            self.shutdown()
-            return
-
-        # if we are still initializing, e.g. waiting for a large ledger
-        # transfer to complete, then come back and check again
-        if self.Ledger.Initializing:
-            logger.info('still initializing')
-            reactor.callLater(60.0, self._verify_initialization)
 
     def register_endpoint(self, node, domain='/'):
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
