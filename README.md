@@ -55,11 +55,11 @@ Remember that the validation happens asynchronously and so you may have to
 wait for the subsequent command. To cause the client to wait until the validation
 has happened pass the --wait parameter.
 
-Then join the game,
+Then join the game:
 ```
 $ ./bin/battleship join game000
 ```
-If you want to see all the games and who has joined them,
+If you want to see all the games and who has joined them:
 ```
 $ ./bin/battleship list
 GAME            PLAYER 1        PLAYER 2        STATE
@@ -68,8 +68,8 @@ game001                                         NEW
 game002                                         NEW
 ```
 
-Then show the game state, (Your secret board will be different,
-as it is randomly generated)
+Then show the game state (Your secret board will be different,
+as it is randomly generated):
 ```
 $ ./bin/battleship show game000
 GAME:     : game000
@@ -145,10 +145,6 @@ Hits are shown with an 'X', while misses are shown with a '.'
 10      
 ```
 
-### Features not yet implemented
- - Display hits and misses on your secret board.
- - Making your own ship placement. The ship placement is currently done for you.
- - Changing the size of the board at create time.
  
 Sawtooth Tac Toe
 ----------------
@@ -259,3 +255,16 @@ seg is a game about guessing the balances of Ethereum addresses.  While it
 isn't really fun... it does show how to integrate an Ethereum client into
 a transaction family (thus using Ethereum as a source of record for some
 data).
+
+Potential Future Enhancements
+-----------------------------
+Contributions welcome!
+
+To make your own game, first read: http://intelledger.github.io/txn_family_tutorial.html.
+
+__Sawtooth Battleship__
+  
+  - Display hits and misses on your secret board.
+  - Making your own ship placement. The ship placement is currently done for you.
+  - Changing the size of the board at create time.
+
