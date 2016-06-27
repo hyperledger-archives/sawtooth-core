@@ -20,7 +20,8 @@ import socket
 
 from twisted.internet import reactor
 
-from txnserver import ledger_web_client
+from txnserver.ledger_web_client import MessageException
+from txnserver.endpoint_registry_client import EndpointRegistryClient
 from gossip import node, signed_object, token_bucket
 from gossip.messages import connect_message, shutdown_message
 from gossip.topology import random_walk, barabasi_albert
@@ -191,9 +192,7 @@ class Validator(object):
             return
 
         # if this isn't the genesis ledger then we need to connect
-        # this node into the validator network, first set up a handler
-        # in case of failure during initialization
-        reactor.callLater(60.0, self._verify_initialization)
+        # this node into the validator network
         self.initialize_ledger_connection()
         self.post_initialize_ledger()
 
@@ -225,41 +224,32 @@ class Validator(object):
             reactor.callLater(2.0, self.initialize_ledger_topology,
                               disconnect_callback)
 
-    def initialize_ledger_connection(self):
+    def _get_candidate_peers(self):
         """
-        Connect the ledger to the rest of the network; in addition to the
-        list of nodes directly specified in the configuration file, pull
-        a list from the LedgerURL. Once the list of potential peers is
-        constructed, pick from it those specified in the Peers configuration
+        Return the candidate (potential) peers to send connection requests; in
+        addition to the list of nodes directly specified in the configuration
+        file, pull a list from the LedgerURL. Once the list of potential peers
+        is constructed, pick from it those specified in the Peers configuration
         variable. If that is not enough, then pick more at random from the
         list.
         """
-
-        assert self.Ledger
-
         # Continue to support existing config files with single
         # string values.
         if isinstance(self.Config.get('LedgerURL'), basestring):
             urls = [self.Config.get('LedgerURL')]
         else:
-            urls = self.Config.get('LedgerURL', ['**none**'])
+            urls = self.Config.get('LedgerURL', [])
 
-        if not self.GenesisLedger:
-            for url in urls:
-                logger.info('attempting to load peers using url %s', url)
-                try:
-                    self.LedgerWebClient = ledger_web_client.LedgerWebClient(
-                        url)
-                    peers = self.get_endpoints(0, self.EndpointDomain)
-                    for peer in peers:
-                        self.NodeMap[peer.Name] = peer
-                    break
-                except ledger_web_client.MessageException as e:
-                    logger.error("Unable to get endpoints from LedgerURL: %s",
-                                 str(e))
-        else:
-            logger.info('not loading peers since **none** was provided as '
-                        'a url option.')
+        for url in urls:
+            logger.info('attempting to load peers using url %s', url)
+            try:
+                peers = self.get_endpoint_nodes(url)
+                for peer in peers:
+                    self.NodeMap[peer.Name] = peer
+                break
+            except MessageException as e:
+                logger.error("Unable to get endpoints from LedgerURL: %s",
+                             str(e))
 
         # Build a list of nodes that we can use for the initial connection
         minpeercount = self.Config.get("InitialConnectivity", 1)
@@ -271,36 +261,41 @@ class Validator(object):
             peerset = peerset.union(random.sample(list(nodeset), min(
                 minpeercount - len(peerset), len(nodeset))))
 
-        # Add the candidate nodes to the gossip object so we can send connect
-        # requests to them
-        connections = 0
-        for peername in peerset:
-            peer = self.NodeMap.get(peername)
-            if peer:
-                logger.info('add peer %s with identifier %s', peername,
-                            peer.Identifier)
-                connect_message.send_connection_request(self.Ledger, peer)
-                connections += 1
-                self.Ledger.add_node(peer)
-            else:
-                logger.info('requested connection to unknown peer %s',
-                            peername)
+        return peerset
 
-        # the pathological case is that there was nothing specified and since
-        # we already know we aren't the genesis block, we can just shut down
-        if connections == 0:
-            logger.critical('unable to find a valid peer')
-            self.shutdown()
-            return
+    def initialize_ledger_connection(self):
+        """
+        Connect the ledger to the rest of the network.
+        """
 
-        logger.debug("initial ledger connection requests sent")
+        assert self.Ledger
 
-        # Wait for the connection message to be processed before jumping to the
-        # next state a better technique would be to add an event in sawtooth
-        # when a new node is connected
-        self._connectionattempts = 3
-        reactor.callLater(2.0, self.initialize_ledger_topology,
-                          self.start_journal_transfer)
+        min_peer_count = self.Config.get("InitialConnectivity", 1)
+        current_peer_count = len(self.Ledger.peer_list())
+
+        logger.debug("initial peer count is %d of %d",
+                     current_peer_count, min_peer_count)
+
+        if current_peer_count < min_peer_count:
+            peerset = self._get_candidate_peers()
+
+            # Add the candidate nodes to the gossip object so we can send
+            # connect requests to them
+            for peername in peerset:
+                peer = self.NodeMap.get(peername)
+                if peer:
+                    logger.info('add peer %s with identifier %s', peername,
+                                peer.Identifier)
+                    connect_message.send_connection_request(self.Ledger, peer)
+                    self.Ledger.add_node(peer)
+                else:
+                    logger.info('requested connection to unknown peer %s',
+                                peername)
+
+            reactor.callLater(2.0, self.initialize_ledger_connection)
+        else:
+            reactor.callLater(2.0, self.initialize_ledger_topology,
+                              self.start_journal_transfer)
 
     def initialize_ledger_topology(self, callback):
         """
@@ -372,35 +367,6 @@ class Validator(object):
 
         self.register_endpoint(self.Ledger.LocalNode, self.EndpointDomain)
 
-    def _verify_initialization(self):
-        """
-        Callback to determine if the initialization failed fatally. This
-        happens most often if there are no peers and this is not the root
-        validator.
-        """
-
-        # this case should never happen, change to an assert later
-        if not self.Ledger:
-            logger.error('failed to initialize, no ledger, shutting down')
-            self.shutdown()
-            return
-
-        logger.info('check for valid initialization; peers=%s',
-                    [p.Name for p in self.Ledger.peer_list()])
-
-        # if this is not the root validator and there are no peers, something
-        # bad happened and we are just going to bail out
-        if len(self.Ledger.peer_list()) == 0:
-            logger.error('failed to connect to peers, shutting down')
-            self.shutdown()
-            return
-
-        # if we are still initializing, e.g. waiting for a large ledger
-        # transfer to complete, then come back and check again
-        if self.Ledger.Initializing:
-            logger.info('still initializing')
-            reactor.callLater(60.0, self._verify_initialization)
-
     def register_endpoint(self, node, domain='/'):
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
             node, domain, httpport=self.Config["HttpPort"])
@@ -430,27 +396,18 @@ class Validator(object):
                     node.Name)
         self.Ledger.handle_message(msg)
 
-    def get_endpoints(self, count, domain='/'):
-        endpoints = []
+    def get_endpoint_nodes(self, url):
+        client = EndpointRegistryClient(url)
 
-        eplist = self.LedgerWebClient.get_store(
-            endpoint_registry.EndpointRegistryTransaction)
-        if not eplist:
-            return endpoints
+        nodes = []
+        for epinfo in client.get_endpoint_list(domain=self.EndpointDomain):
+            nodes.append(self._endpoint_info_to_node(epinfo))
+        return nodes
 
-        for ep in eplist:
-            epinfo = self.LedgerWebClient.get_store(
-                endpoint_registry.EndpointRegistryTransaction, ep)
-            if epinfo.get('Domain', '/').startswith(domain):
-                addr = (socket.gethostbyname(epinfo["Host"]), epinfo["Port"])
-                endpoint = node.Node(address=addr,
-                                     identifier=epinfo["NodeIdentifier"],
-                                     name=epinfo["Name"])
-                endpoints.append(endpoint)
-
-        logger.info('found %d endpoints', len(endpoints))
-
-        if count <= 0:
-            return endpoints
-
-        return random.sample(endpoints, min(count, len(endpoints)))
+    @staticmethod
+    def _endpoint_info_to_node(epinfo):
+        addr = (socket.gethostbyname(epinfo["Host"]), epinfo["Port"])
+        nd = node.Node(address=addr,
+                       identifier=epinfo["NodeIdentifier"],
+                       name=epinfo["Name"])
+        return nd
