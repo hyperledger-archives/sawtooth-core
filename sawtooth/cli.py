@@ -16,6 +16,7 @@
 
 import argparse
 import ConfigParser
+import importlib
 import getpass
 import logging
 import os
@@ -25,6 +26,8 @@ import pybitcointools
 
 from colorlog import ColoredFormatter
 
+from gossip.common import json2dict
+from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import ClientException
 
 
@@ -34,6 +37,24 @@ LOGGER = logging.getLogger(__name__)
 class CliException(Exception):
     def __init__(self, msg):
         super(CliException, self).__init__(msg)
+
+
+class FakeJournal(object):
+    """Used to determine details of a transaction family."""
+
+    def __init__(self):
+        self.msg_class = None
+        self.store_class = None
+
+    def register_message_handler(self, msg_class, handler):
+        if self.msg_class is not None:
+            raise CliException("multiple message classes are unsupported")
+        self.msg_class = msg_class
+
+    def add_transaction_store(self, store_class):
+        if self.store_class is not None:
+            raise CliException("multiple store classes are unsupported")
+        self.store_class = store_class
 
 
 def create_console_handler(verbose_level):
@@ -78,6 +99,32 @@ def add_init_parser(subparsers, parent_parser):
         help='the name of the player')
 
 
+def add_submit_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('submit', parents=[parent_parser])
+
+    parser.add_argument(
+        '-F', '--family',
+        required=True,
+        type=str,
+        help='the transaction family')
+
+    parser.add_argument(
+        '-f', '--filename',
+        required=True,
+        type=str,
+        help='a file containing the transaction JSON')
+
+    parser.add_argument(
+        '--username',
+        type=str,
+        help='the name of the player')
+
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+
+
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -98,6 +145,7 @@ def create_parser(prog_name):
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
     add_init_parser(subparsers, parent_parser)
+    add_submit_parser(subparsers, parent_parser)
 
     return parser
 
@@ -138,6 +186,57 @@ def do_init(args, config):
                 addr_fd.write("\n")
         except IOError, ioe:
             raise ClientException("IOError: {}".format(str(ioe)))
+
+
+def do_submit(args, config):
+    username = config.get('DEFAULT', 'username')
+    if args.username is not None:
+        username = args.username
+
+        # need to set url in config for substitution in key_file
+        config.set('DEFAULT', 'username', username)
+
+    url = config.get('DEFAULT', 'url')
+    if args.url is not None:
+        url = args.url
+
+    key_file = config.get('DEFAULT', 'key_file')
+
+    filename = args.filename
+    family_name = args.family
+
+    try:
+        if filename == '-':
+            json_content = sys.stdin.read()
+        else:
+            with open(filename) as fd:
+                json_content = fd.read()
+    except IOError, e:
+        raise CliException(str(e))
+
+    try:
+        txn_content = json2dict(json_content)
+    except ValueError, e:
+        raise CliException("Decoding JSON: {}".format(str(e)))
+
+    try:
+        txnfamily = importlib.import_module(family_name)
+    except ImportError:
+        raise CliException(
+            "transaction family not found: {}".format(txnfamily))
+
+    fake_journal = FakeJournal()
+    txnfamily.register_transaction_types(fake_journal)
+
+    client = SawtoothClient(
+        base_url=url,
+        keyfile=key_file,
+        store_name=fake_journal.store_class.__name__)
+
+    client.sendtxn(
+        fake_journal.store_class,
+        fake_journal.msg_class,
+        txn_content)
 
 
 def load_config():
@@ -185,6 +284,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
 
     if args.command == 'init':
         do_init(args, config)
+    elif args.command == 'submit':
+        do_submit(args, config)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
