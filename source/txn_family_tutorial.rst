@@ -412,7 +412,7 @@ First, startup txnvaldiator inside vagrant (and leave it running):
     $ cd /project/sawtooth-validator
     $ ./bin/txnvalidator -v --config /project/sawtooth-arcade/txnvalidator.js
 
-Next, in a separate window, use the xo CLI to create a key for player1:
+Next, in a separate vagrant window, use the xo CLI to create a key for player1:
 
 .. code-block:: console
 
