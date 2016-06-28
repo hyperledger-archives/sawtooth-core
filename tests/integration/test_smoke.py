@@ -277,5 +277,8 @@ class TestSmoke(unittest.TestCase):
     def test_intkey_load_voting(self):
         cfg = defaultValidatorConfig.copy()
         cfg['LedgerType'] = 'voting'
-        self._run_int_load(cfg, 1, "TestSmokeResultsVoting", tolerance=0,
-                           standard=3)
+        cfg['MaxTransactionsPerBlock'] = 64
+        cfg['VoteTimeInterval'] = 2.0
+        cfg['BallotTimeInterval'] = 1.0
+        cfg['VotingQuorumTargetSize'] = 5
+        self._run_int_load(cfg, 1, "TestSmokeResultsVoting", tolerance=0)

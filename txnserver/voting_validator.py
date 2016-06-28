@@ -39,6 +39,18 @@ class VotingValidator(validator.Validator):
             quorum_journal.QuorumJournal.MaximumTransactionsPerBlock = int(
                 self.Config['MaxTransactionsPerBlock'])
 
+        if 'VoteTimeInterval' in self.Config:
+            quorum_journal.QuorumJournal.VoteTimeInterval = float(
+                self.Config['VoteTimeInterval'])
+
+        if 'BallotTimeInterval' in self.Config:
+            quorum_journal.QuorumJournal.BallotTimeInterval = float(
+                self.Config['BallotTimeInterval'])
+
+        if 'VotingQuorumTargetSize' in self.Config:
+            quorum_journal.QuorumJournal.VotingQuorumTargetSize = int(
+                self.Config['VotingQuorumTargetSize'])
+
     def initialize_ledger_from_node(self, node):
         """
         Initialize the ledger object for the local node, expected to be
