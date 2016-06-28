@@ -73,12 +73,14 @@ class TestingJournalTransaction(unittest.TestCase):
 
     def test_journal_transaction_dump(self):
         # Test that transactions dump the correct info
-        minfo = {'__SIGNATURE__': 'Test', '__NONCE__': time.time(),
+        now = time.time()
+        minfo = {'__SIGNATURE__': 'Test', '__NONCE__': now,
                  'Dependencies': []}
-        time.sleep(.05)
         transaction = Transaction(minfo)
+        time.sleep(0.5)
         tDic = transaction.dump()
-        self.assertLess(tDic["Nonce"], time.time())
+        new = time.time()
+        self.assertLess(tDic["Nonce"], new)
         self.assertEquals(tDic["Dependencies"], [])
         self.assertEquals(tDic["TransactionType"], '/Transaction')
 

@@ -34,7 +34,8 @@ class TestRoundTripEstimator(unittest.TestCase):
         node.is_peer = True
         return node
 
-    def _create_msg(self, node):
+    def _create_msg(self):
+        node = self._create_node()
         msg = Message()
         msg.sign_from_node(node)
         return msg
@@ -52,14 +53,14 @@ class TestRoundTripEstimator(unittest.TestCase):
         now = time.time()
         node = self._create_node()
         for i in range(3):
-            msg = self._create_msg(node)
+            msg = self._create_msg()
             tQ.enqueue_message(msg, now)
         idlist = tQ._times.keys()
         # Should return a string with all 3 msgs
         self.assertEquals(str(tQ), '[' + ', '
                           .join([ident[:8] for ident in idlist]) + ']')
         for i in range(4):
-            msg = self._create_msg(node)
+            msg = self._create_msg()
             tQ.enqueue_message(msg, now)
         idlist = tQ._times.keys()
         idlist = idlist[:4]
@@ -73,7 +74,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         # Enqueue 1 message
         tQ.enqueue_message(msg, now)
         self.assertIn(msg.Identifier, tQ._messages)
@@ -81,7 +82,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         self.assertIn((now, msg.Identifier), tQ._heap)
         # Enqueue 10 messages
         for i in range(10):
-            msg = self._create_msg(node)
+            msg = self._create_msg()
             tQ.enqueue_message(msg, now)
         self.assertEquals(len(tQ._messages), 11)
 
@@ -90,7 +91,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         tQ.enqueue_message(msg, now)
         self.assertIn(msg.Identifier, tQ._messages)
         self.assertIn(msg.Identifier, tQ._times)
@@ -109,7 +110,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         # Add a message to the queue
         tQ.enqueue_message(msg, now)
         self.assertIn(msg.Identifier, tQ._messages)
@@ -132,7 +133,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         # Should return none, since no messages in queue
         head = tQ.Head
         self.assertIsNone(head)
@@ -148,13 +149,13 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         # 0 messages in queue
         self.assertEquals(tQ.Count, 0)
         tQ.enqueue_message(msg, now)
         # 1 message in queue
         self.assertEquals(tQ.Count, 1)
-        msg2 = self._create_msg(node)
+        msg2 = self._create_msg()
         tQ.enqueue_message(msg2, now)
         # 2 messages in queue
         self.assertEquals(tQ.Count, 2)
@@ -167,13 +168,13 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         # No messages
         self.assertEquals(tQ.Messages, [])
         tQ.enqueue_message(msg, now)
         # 1 message
         self.assertEquals(tQ.Messages, [msg.Identifier])
-        msg2 = self._create_msg(node)
+        msg2 = self._create_msg()
         # 2 messages, check if messages id are in Messages
         tQ.enqueue_message(msg2, now)
         self.assertIn(msg2.Identifier, tQ.Messages)
@@ -184,7 +185,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ = TransmissionQueue()
         now = time.time()
         node = self._create_node()
-        msg = self._create_msg(node)
+        msg = self._create_msg()
         # Test the _trimheap doesn't break on empty heap
         tQ._trimheap()
         self.assertEquals(tQ._heap, [])
@@ -205,7 +206,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         node = self._create_node()
         # Add 10 messages to the queue
         for i in range(10):
-            msg = self._create_msg(node)
+            msg = self._create_msg()
             tQ.enqueue_message(msg, now)
         before = str(tQ._heap)
         # Should not change the heap, no messages have been dequeued

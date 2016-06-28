@@ -125,12 +125,13 @@ class TestNode(unittest.TestCase):
         # Test get_next_message
         now = time.time()
         node = self._create_node()
+        node2 = self._create_node()
         # No Messages, return None
         self.assertIsNone(node.get_next_message(now))
         msg = Message()
         msg2 = Message()
         msg.sign_from_node(node)
-        msg2.sign_from_node(node)
+        msg2.sign_from_node(node2)
         now = time.time()
         # Add only 1 message
         node.enqueue_message(msg, now)
