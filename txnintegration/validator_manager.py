@@ -224,7 +224,11 @@ class ValidatorManager(object):
             s = os.stat(self.stderrFile)
             if s.st_size > 0:
                 err = "err: {}".format(human_size(s.st_size))
-        errors = "errs!" if self.has_error() else ""
+        errors = ""
+        try:
+            self.check_error()
+        except ValidatorManagerException:
+            errors = "errs!"
 
         return "{}: {} {} {} {} {}".format(self.Id, st, out, err, log, errors)
 
