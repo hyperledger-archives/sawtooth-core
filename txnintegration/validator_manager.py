@@ -53,7 +53,7 @@ class ValidatorManager(object):
         self.Key = generate_private_key()
         self.Address = get_address_from_private_key_wif(self.Key)
 
-    def launch(self, launch=True):
+    def launch(self, launch=True, genesis=False, daemon=False, delay=False):
         self.Url = "http://{}:{}".format(self.config['Host'],
                                          self.config['HttpPort'])
         self.config['LogFile'] = os.path.join(self.dataDir,
@@ -85,6 +85,15 @@ class ValidatorManager(object):
             "--config",
             configFileName
         ]
+
+        if genesis:
+            args.append("--genesis")
+
+        if daemon:
+            args.append("--daemon")
+
+        if delay:
+            args.append("--delay-start")
 
         # redirect stdout and stderror
         self.stdoutFile = os.path.join(self.dataDir,
