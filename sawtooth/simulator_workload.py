@@ -30,15 +30,16 @@ class SawtoothWorkload(object):
 
         Args:
             delegate: The object that supports delegate methods
-             the workload generator can use to alert the simulator of certain
-             events:
-                on_new_transaction(transaction_id, client) is called
-                when a workload generator creates a new transaction.
-                    transaction_id - the transaction ID for the new
-                       transaction
-                    client - an instance of a class that derives from
-                        SawtoothClient.  This client is the one to
-                        which the transaction was submitted.
+
+        The workload generator uses the delegate object to alert the
+        simulator of certain events.
+
+        on_new_transaction(transaction_id, client) is called when a
+        workload generator creates a new transaction.
+
+        transaction_id - the transaction ID for the new transaction
+        client - an instance of a class that derives from SawtoothClient.
+        This client is the one to which the transaction was submitted.
         """
         self._delegate = delegate
 
@@ -130,8 +131,7 @@ class SawtoothWorkload(object):
             transaction_id: The transaction that was checked.
 
         Returns:
-            True: Put the transaction back in the queue of transactions to
-             check
+            True: Put transaction back in the queue of transactions to check
             False: Don't bother checking the transaction's status any more
 
         """
