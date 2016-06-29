@@ -75,18 +75,17 @@ class IntKeyLoadTest(object):
     def _wait_for_no_transaction_commits(self):
         # for the case where no transactions are expected to commit
         to = TimeOut(120)
-        startingtxncnt = len(self.transactions)
+        starting_txn_count = len(self.transactions)
 
-        remainingtxncnt = len(self.transactions)
+        remaining_txn_cnt = len(self.transactions)
         with Progress("Waiting for transactions to NOT commit") as p:
-            while not to() and remainingtxncnt > 0:
+            while not to() and remaining_txn_cnt > 0:
                 p.step()
                 time.sleep(1)
-                self._update_uncommitted_transactions()
-                remainingtxncnt = len(self.transactions)
+                remaining_txn_cnt = self._update_uncommitted_transactions()
 
-        if remainingtxncnt != startingtxncnt:
-            committedtxncount = startingtxncnt - remainingtxncnt
+        if remaining_txn_cnt != starting_txn_count:
+            committedtxncount = starting_txn_count - remaining_txn_cnt
             raise Exception("{} transactions with missing dependencies "
                             "were committed in {}s"
                             .format(committedtxncount, to.WaitTime))
@@ -202,60 +201,18 @@ class IntKeyLoadTest(object):
               "with missing transactions" \
             .format(rounds, numkeys)
 
-        for r in range(0, rounds):
+        for r in range(1, rounds + 1):
             for c in self.clients:
                 c.CurrentState.fetch()
             print "Round {}".format(r)
             for k in range(1, numkeys + 1):
                 k = str(k)
-                c = self.clients[0]
-
+                c = c = self._get_client()
                 missingid = c.inc(k, 1, txndep=None, postmsg=False)
                 dependingtid = c.inc(k, 1, txndep=missingid)
                 self.transactions.append(dependingtid)
 
             self._wait_for_no_transaction_commits()
-
-    def make_transactions(self, numkeys, rounds=1, txintv=0):
-        # This does the same work as run()...
-        # It creates transactions but does not send them.
-        # This can be called to benchmark the time required to
-        # generate signed transactions
-        self.state.fetch()
-
-        print "Making transactions: Running {0} rounds for {1} keys " \
-              "with {2} second inter-transaction time" \
-            .format(rounds, numkeys, txintv)
-
-        for r in range(0, rounds):
-            for c in self.clients:
-                c.CurrentState.fetch()
-            print "Round {}".format(r)
-            starttime = time.clock()
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = self._get_client()
-                self.localState[k] += 2
-                txnid = c.inc(k, 2, postmsg=False)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to inc key:{} value:{} by 2".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                time.sleep(txintv)
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = self._get_client()
-                self.localState[k] -= 1
-                txnid = c.dec(k, 1, postmsg=False)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to dec key:{} value:{} by 1".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                time.sleep(txintv)
-            self.txnrate(starttime, 2 * numkeys)
-            self._wait_for_transaction_commits()
 
 
 def parse_args(args):

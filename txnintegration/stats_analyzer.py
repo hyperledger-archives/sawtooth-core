@@ -1,7 +1,6 @@
 import csv
 import argparse
 import sys
-import os.path
 
 mpl_imported = True
 try:
@@ -18,7 +17,7 @@ def display_headings(infile):
     row = next(csv_reader)
 
     table = []
-    maxcolumnwidth = []
+    max_column_width = []
 
     headings = len(row)
 
@@ -40,16 +39,14 @@ def display_headings(infile):
             if index == headings:
                 break
         table.append(table_column)
-        maxcolumnwidth.append(max(width))
+        max_column_width.append(max(width))
 
     print "available fields in stats file:"
     heading_index = 0
-    for rownum in range(0, table_rows):
-        column_index = 0
-        for column in table:
-            print "{0:{1}}".format(column[rownum],
-                                   maxcolumnwidth[column_index]),
-            column_index += 1
+    for row_num in range(0, table_rows):
+        for column_num, column in enumerate(table):
+            print "{0:{1}}".format(column[row_num],
+                                   max_column_width[column_num]),
             heading_index += 1
             if heading_index == headings:
                 break
@@ -64,52 +61,49 @@ time_data = []
 def read_data(infile, headings):
     with open(infile, 'rb') as csvfile:
         reader = csv.reader(csvfile)
-        firstrow = True
-        secondrow = True
-        thirdrow = True
+        first_row = True
+        second_row = True
+        third_row = True
 
         for row in reader:
-            if firstrow:
-                index = 0
+            if first_row:
                 for heading in headings:
                     field_index[heading] = row.index(heading)
                     field_data[heading] = []
-                    index += 1
-                firstrow = False
-            elif secondrow:
+                first_row = False
+            elif second_row:
                 # throw away the second row
-                secondrow = False
+                second_row = False
             else:
-                if thirdrow:
+                if third_row:
                     # make the first timestamp = 0
                     timeoffset = float(row[0])
-                    thirdrow = False
+                    third_row = False
                 time_data.append(float(row[0]) - timeoffset)
 
                 for heading in headings:
                     index = field_index[heading]
                     field_data[heading].append(float(row[index]))
-                firstrow = False
+                first_row = False
 
 
 def plot_all(headings):
     # utility - plot all data series
     fig = plt.figure()
     plotcount = len(headings)
-    plotnum = 1
-    for heading in headings:
+    for plotnum, heading in enumerate(headings):
         h1 = heading
         ax1 = fig.add_subplot(plotcount, 1, plotnum)
         ax1.set_title(h1, fontsize=10)
         ax1.plot(time_data, field_data[h1], 'b-')
         ymax = max(field_data[h1])
         ymin = min(field_data[h1])
-        ax1.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
+        if ymax > ymin:
+            ax1.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
         if plotnum != plotcount:
             ax1.xaxis.set_visible(False)
         ax1.tick_params(axis='both', which='major', labelsize=10)
         ax1.tick_params(axis='both', which='minor', labelsize=8)
-        plotnum += 1
 
     fig.subplots_adjust(hspace=.25)
 
@@ -147,13 +141,14 @@ def plot_summary(infile):
     ax1.plot(time_data, field_data[h2], 'r:')
     ymax = max(field_data[h1])
     ymin = min(field_data[h1])
-    ax1.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
+    if ymax > ymin:
+        ax1.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
     ax1.tick_params(axis='both', which='major', labelsize=10)
     ax1.tick_params(axis='both', which='minor', labelsize=8)
     ax1.xaxis.set_visible(False)
 
-    countonaxis = False
-    if countonaxis:
+    count_on_axis = False
+    if count_on_axis:
         ax12 = ax1.twinx()
         h2 = "sys_blocks_blocks_max_committed_count"
         ax12.plot(time_data, field_data[h2], 'g-')
@@ -166,7 +161,8 @@ def plot_summary(infile):
     ax2.plot(time_data, field_data[h1], 'b-')
     ymax = max(field_data[h1])
     ymin = min(field_data[h1])
-    ax2.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
+    if ymax > ymin:
+        ax2.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
     ax2.tick_params(axis='both', which='major', labelsize=10)
     ax2.tick_params(axis='both', which='minor', labelsize=8)
     ax2.xaxis.set_visible(False)
@@ -179,7 +175,8 @@ def plot_summary(infile):
     ax3.plot(time_data, field_data[h2], 'r:')
     ymax = max(field_data[h1])
     ymin = min(field_data[h1])
-    ax3.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
+    if ymax > ymin:
+        ax3.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
     ax3.tick_params(axis='both', which='major', labelsize=10)
     ax3.tick_params(axis='both', which='minor', labelsize=8)
     ax3.xaxis.set_visible(False)
@@ -190,7 +187,8 @@ def plot_summary(infile):
     ax4.plot(time_data, field_data[h1], 'b-')
     ymax = max(field_data[h1])
     ymin = min(field_data[h1])
-    ax4.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
+    if ymax > ymin:
+        ax4.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
     ax4.tick_params(axis='both', which='major', labelsize=10)
     ax4.tick_params(axis='both', which='minor', labelsize=8)
     ax4.xaxis.set_visible(False)
@@ -201,7 +199,8 @@ def plot_summary(infile):
     ax4.plot(time_data, field_data[h1], 'b-')
     ymax = max(field_data[h1])
     ymin = min(field_data[h1])
-    ax4.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
+    if ymax > ymin:
+        ax4.set_ylim([ymin, ymin + 1.2 * (ymax - ymin)])
     ax4.tick_params(axis='both', which='major', labelsize=10)
     ax4.tick_params(axis='both', which='minor', labelsize=8)
 
@@ -218,14 +217,10 @@ def parse_args(args):
 
     parser.add_argument('--statsfile',
                         metavar="",
-                        help='Base validator url (default: %(default)s)',
+                        help='Name of stats file to be analyzed',
                         default="")
 
     return parser.parse_args(args)
-
-
-def configure(opts):
-    pass
 
 
 def main():
@@ -235,32 +230,13 @@ def main():
         # argparse reports details on the parameter error.
         sys.exit(1)
 
-    configure(opts)
-
-    fname = 'stats_client_1466786949.csv'
-
-    infile = ""
-    if opts.statsfile != "":
-        fname = opts.statsfile
-        if os.path.isfile(fname):
-            infile = fname
-        else:
-            print "file not found: ", fname
-            print "ensure file is in same directory as stats analyzer"
-            sys.exit()
-    elif fname != "":
-        if os.path.isfile(fname):
-            infile = fname
-        else:
-            print "no csv file found:"
-            print "- generate stats csv file by running stats client with "
-            print "--csv-enable = True option"
-            sys.exit()
-    else:
+    if opts.statsfile == "":
         print "no filename specified "
-        print "- generate stats csv file by running stats client with "
+        print "generate stats csv file by running stats client using "
         print "--csv-enable = True option"
         sys.exit()
+
+    infile = opts.statsfile
 
     print "stats file to analyze: ", infile
 
