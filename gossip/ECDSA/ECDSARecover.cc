@@ -115,21 +115,14 @@ string RecoverPubKey(Integer e, Integer r, Integer s, int yBit) {
         return "";
     }
 
-    //Compute pulic key, Q, as Q=r^(-1)(sR-eG) mod p
+    // Compute pulic key, Q, as Q=r^(-1)(sR-eG) mod p
     ECPPoint sR(curve.Multiply(s, R));       // compute s*R
     ECPPoint eG(curve.Multiply(e, G));       // compute e*G
     ECPPoint sR_eG(curve.Subtract(sR, eG));  // compute sR-eG
     Integer rInv = r.InverseMod(n);          // Compute modular inverse of r
     ECPPoint Q(curve.Multiply(rInv, sR_eG)); // Apply r_inverse to sR-eG
 
-     
-    // Check that Q actually verifies the message. 
-    // (For optimization this can probably be removed.)
-    // The Crypto++ verify method takes the message not a digest as input. 
-    // We only have access to the digest.
-    // So do signature verification from scratch.
-
-    //If Q or QP is the identity or if it isn't on the curve then fail
+    // If Q or QP is the identity or if it isn't on the curve then fail
     if ( (Q == curve.Identity()) 
          || (curve.Multiply(p, Q) == curve.Identity()) 
          || (!curve.VerifyPoint(Q))) {
@@ -138,8 +131,9 @@ string RecoverPubKey(Integer e, Integer r, Integer s, int yBit) {
         throw std::domain_error(error);
         return "";
     }
-
-    //Compute ewG + rwQ; x component of sum should equal r for sig to verify
+#ifdef DEBUG_PUBKRECOVER
+    // Check that Q actually verifies the message. 
+    // Compute ewG + rwQ; x component of sum should equal r for sig to verify
     Integer w(s.InverseMod(n));             // Calculate s^-1
     Integer u1(a_times_b_mod_c(e, w, n));   // u1 = ew mod n
     Integer u2(a_times_b_mod_c(r, w, n));   // u2 = rw mod n
@@ -160,7 +154,6 @@ string RecoverPubKey(Integer e, Integer r, Integer s, int yBit) {
         return "";
     }
 
-#ifdef DEBUG_PUBKRECOVER
     cout << "Success recovering a pubkey from signature.\n";
     cout << "Computed R..." << endl;
     cout << "  R.x: " << R.x << endl;      
