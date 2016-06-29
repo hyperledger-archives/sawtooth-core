@@ -102,6 +102,7 @@ class Journal(gossip_core.Gossip):
 
     def __init__(self, node, **kwargs):
         """Constructor for the Journal class.
+
         Args:
             node (Node): The local node.
             GenesisLedger (bool): Whether or not this journal is associated
