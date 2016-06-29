@@ -14,9 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import random
-# import traceback
-# import unittest
-# import os
 import time
 from twisted.web import http
 
@@ -25,12 +22,6 @@ from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.integer_key_state import IntegerKeyState
-# from txnintegration.validator_network_manager \
-#     import ValidatorNetworkManager, defaultValidatorConfig
-
-# ENABLE_INTEGRATION_TESTS = False
-# if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
-#     ENABLE_INTEGRATION_TESTS = True
 
 import argparse
 import sys
@@ -43,38 +34,64 @@ class IntKeyLoadTest(object):
         self.transactions = []
         self.clients = []
         self.state = None
-        # pass
 
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
 
-    def _has_uncommitted_transactions(self):
+    def _update_uncommitted_transactions(self):
         remaining = []
-        for t in self.transactions:
-            status = self.clients[0].headrequest('/transaction/{0}'.format(t))
-            if status != http.OK:
-                remaining.append(t)
+
+        # For each client, we want to verify that its corresponding validator
+        # has the transaction.  For a transaction to be considered committed,
+        # all validators must have it in its blockchain as a committed
+        # transaction.
+        for c in self.clients:
+            for t in self.transactions:
+                status = c.headrequest('/transaction/{0}'.format(t))
+                # If the transaction has not been committed and we don't
+                # already have it in our list of uncommitted transactions
+                # then add it.
+                if (status != http.OK) and (t not in remaining):
+                    remaining.append(t)
 
         self.transactions = remaining
         return len(self.transactions)
 
     def _wait_for_transaction_commits(self):
-        to = TimeOut(900)
-        txncnt = len(self.transactions)
-
-        with Progress("Waiting for {0} transactions to commit"
-                              .format(txncnt)) as p:  # noqa
-            while not to() and txncnt > 0:
+        to = TimeOut(240)
+        txnCnt = len(self.transactions)
+        with Progress("Waiting for transactions to commit") as p:
+            while not to() and txnCnt > 0:
                 p.step()
                 time.sleep(1)
-                self._has_uncommitted_transactions()
-                txncnt = len(self.transactions)
+                txnCnt = self._update_uncommitted_transactions()
 
-        if txncnt != 0:
+        if txnCnt != 0:
             if len(self.transactions) != 0:
                 print "Uncommitted transactions: ", self.transactions
             raise Exception("{} transactions failed to commit in {}s".format(
-                txncnt, to.WaitTime))
+                txnCnt, to.WaitTime))
+
+    def _wait_for_no_transaction_commits(self):
+        # for the case where no transactions are expected to commit
+        to = TimeOut(120)
+        starting_txn_count = len(self.transactions)
+
+        remaining_txn_cnt = len(self.transactions)
+        with Progress("Waiting for transactions to NOT commit") as p:
+            while not to() and remaining_txn_cnt > 0:
+                p.step()
+                time.sleep(1)
+                remaining_txn_cnt = self._update_uncommitted_transactions()
+
+        if remaining_txn_cnt != starting_txn_count:
+            committedtxncount = starting_txn_count - remaining_txn_cnt
+            raise Exception("{} transactions with missing dependencies "
+                            "were committed in {}s"
+                            .format(committedtxncount, to.WaitTime))
+        else:
+            print "No transactions with missing dependencies " \
+                  "were committed in {0}s".format(to.WaitTime)
 
     def setup(self, urls, numkeys):
         self.localState = {}
@@ -114,8 +131,6 @@ class IntKeyLoadTest(object):
 
     def run(self, numkeys, rounds=1, txintv=0):
         self.state.fetch()
-
-        #  keys = self.state.State.keys()
 
         print "Running {0} rounds for {1} keys " \
               "with {2} second inter-transaction time" \
@@ -166,8 +181,6 @@ class IntKeyLoadTest(object):
     def ledgerstate(self):
         self.state.fetch()
 
-        # keys = self.state.State.keys()
-
         print "state: "
         for k, v in self.state.State.iteritems():
             print k, v
@@ -181,9 +194,30 @@ class IntKeyLoadTest(object):
             print "Sent {0} transaction in {1} seconds averaging {2} t/s" \
                 .format(numtxns, totaltime, avgrate)
 
+    def run_with_missing_dep(self, numkeys, rounds=1):
+        self.state.fetch()
+
+        print "Running {0} rounds for {1} keys " \
+              "with missing transactions" \
+            .format(rounds, numkeys)
+
+        for r in range(1, rounds + 1):
+            for c in self.clients:
+                c.CurrentState.fetch()
+            print "Round {}".format(r)
+            for k in range(1, numkeys + 1):
+                k = str(k)
+                c = c = self._get_client()
+                missingid = c.inc(k, 1, txndep=None, postmsg=False)
+                dependingtid = c.inc(k, 1, txndep=missingid)
+                self.transactions.append(dependingtid)
+
+            self._wait_for_no_transaction_commits()
+
 
 def parse_args(args):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('--count',
                         metavar="",
@@ -214,20 +248,23 @@ def parse_args(args):
                         help='Inter-txn time (mS) (default: %(default)s)',
                         default=0,
                         type=int)
+    parser.add_argument('--missingdep',
+                        metavar="",
+                        help="""Execute missing dependency test once
+after transaction rounds are complete (default: %(default)s)""",
+                        default=False,
+                        type=bool)
 
     return parser.parse_args(args)
 
 
 def configure(opts):
-    # scriptdir = os.path.dirname(os.path.realpath(__file__))
-
     print "     validator count: ", opts.count
     print "  validator base url: ", opts.url
     print " validator base port: ", opts.port
     print "                keys: ", opts.keys
     print "              rounds: ", opts.rounds
     print "transaction interval: ", opts.interval
-    # sys.exit(1)
 
 
 def main():
@@ -238,10 +275,6 @@ def main():
         sys.exit(1)
 
     configure(opts)
-
-    # urls = ("http://localhost:8800",
-    #         "http://localhost:8801",
-    #         "http://localhost:8802")
 
     urls = []
 
@@ -265,8 +298,9 @@ def main():
     test.setup(urls, keys)
     test.validate()
     test.run(keys, rounds, txn_intv)
+    if opts.missingdep:
+        test.run_with_missing_dep(keys)
     test.validate()
-    # test.ledgerstate()
 
 
 if __name__ == "__main__":
