@@ -14,7 +14,8 @@
 # ------------------------------------------------------------------------------
 import argparse
 import importlib
-import logging
+import json
+import logging.config
 import os
 import sys
 import traceback
@@ -289,8 +290,24 @@ def main(args, windows_service=False):
     if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
         log_config_file = cfg['LogConfigFile']
         try:
-            with open(cfg['LogConfigFile']) as log_config_fd:
-                logging.config.dictConfig(log_config_fd)
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.loads(log_config_fd.read())
+                logging.config.dictConfig(log_dic)
+        except IOError, ex:
+            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
+            sys.exit(1)
+
+    else:
+        log_config_file = "etc/txnvalidator_logging.js"
+        log_filename = cfg["LogDirectory"] + "/lottery-" + cfg["NodeName"]
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.loads(log_config_fd.read())
+                for handler in log_dic["handlers"]:
+                    if "filename" in log_dic["handlers"][handler]:
+                        log_dic["handlers"][handler]["filename"] = \
+                            log_filename + "-" + handler + ".log"
+                logging.config.dictConfig(log_dic)
         except IOError, ex:
             print >>sys.stderr, "Could not read log config: {}".format(str(ex))
             sys.exit(1)

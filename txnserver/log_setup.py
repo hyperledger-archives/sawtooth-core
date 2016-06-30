@@ -14,9 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import os
 import sys
-import warnings
 
 from colorlog import ColoredFormatter
 

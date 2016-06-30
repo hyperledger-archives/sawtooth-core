@@ -33,7 +33,6 @@ from txnintegration.validator_manager import ValidatorManager
 defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'InitialWaitTime': 25.0,
                           u'LedgerType': u'lottery',
-                          u'LogLevel': u'WARNING',
                           u'MaxTransactionsPerBlock': 1000,
                           u'MinTransactionsPerBlock': 1,
                           u'MinimumWaitTime': 1.0,

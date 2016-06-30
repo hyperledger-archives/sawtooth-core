@@ -35,10 +35,7 @@
     ## configuration of the transaction families to include
     ## in the validator
     "TransactionFamilies" : [
-        "ledger.transaction.integer_key",
-        "sawtooth_xo",
-        "sawtooth_bond",
-        "sawtooth_seg"
+        "ledger.transaction.integer_key"
     ],
 
     ## do not restart 
