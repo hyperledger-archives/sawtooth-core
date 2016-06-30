@@ -36,11 +36,13 @@ class QuorumJournal(journal_core.Journal):
         VoteTimeInterval (float): The minimum time between votes, in
             seconds.
         VoteTimeFudgeFactor (float): The average fudge factor added to
-            the vote interval, in seconds.
+            the vote interval, in seconds.  Used in conjunction with
+            randomization functions to stagger network initiative.
         BallotTimeInterval (float): The minimum time between ballots on
             a vote, in seconds.
         BallotTimeFudgeFactor (float): The average fudge factor added
-            to the ballot interval, in seconds.
+            to the ballot interval, in seconds.  Used in conjunction with
+            randomization functions to stagger network initiative.
         VoteThreshholds (list): The mimimum votes required for a
             transaction to proceed to the next ballot.
         VotingQuorumTargetSize (int): The target size for the local
