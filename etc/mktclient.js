@@ -3,8 +3,7 @@
     "TokenURL" : "http://localhost:7800/",
 
     ## configuration of logging
-    "LogLevel" : "WARN",
-    "LogFile"  : "__screen__",
+    "LogConfigFile": "etc/mktclient_logging.js",
 
     ## participant
     "ParticipantName" : "player1",
