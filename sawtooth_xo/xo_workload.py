@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import random
+import logging
 
 from collections import namedtuple
 from datetime import datetime
@@ -24,6 +25,8 @@ import pybitcointools
 from sawtooth.simulator_workload import SawtoothWorkload
 from sawtooth_xo.xo_client import XoClient
 
+
+LOGGER = logging.getLogger(__name__)
 
 GameState = namedtuple('GameState', ['name', 'client', 'spaces_taken'])
 
@@ -81,7 +84,15 @@ class XoWorkload(SawtoothWorkload):
         key_file.close()
 
     def on_validator_removed(self, url):
-        pass
+        # Remove validator from our list of clients so that we don't try to
+        # submit new transactions to it.
+        self._clients = [c for c in self._clients if c.base_url != url]
+
+        # Remove any pending transactions for the validator that has been
+        # removed.
+        self._pending_transactions = \
+            {t: g for t, g in self._pending_transactions.iteritems()
+             if g.client.base_url != url}
 
     def on_all_transactions_committed(self):
         # Since there are no outstanding transactions, we are going to create a
@@ -89,19 +100,22 @@ class XoWorkload(SawtoothWorkload):
         self._create_new_game()
 
     def on_transaction_committed(self, transaction_id):
-        # Look up the transaction ID to find the game
-        game = self._pending_transactions.get(transaction_id)
+        # Look up the transaction ID to find the game.  Since we will no longer
+        # track this transaction, we can remove it from the dictionary.
+        game = self._pending_transactions.pop(transaction_id, None)
         if game is not None:
             # If the game board is not full, we will take a new space,
             # update the game state, and add a new pending transaction
             if game.spaces_taken < len(self._space_order):
-                print 'Take space {0} in game {1} on {2}'.format(
-                    self._space_order[game.spaces_taken],
-                    game.name,
-                    game.client.base_url)
-
                 new_transaction_id = game.client.take(
                     game.name, self._space_order[game.spaces_taken])
+
+                LOGGER.info('Take space %d in game %s on validator %s with '
+                            'transaction ID %s',
+                            self._space_order[game.spaces_taken],
+                            game.name,
+                            game.client.base_url,
+                            new_transaction_id)
 
                 # Map the new transaction ID to the game state so we can look
                 # it up later and let the delegate know that there is a new
@@ -116,11 +130,8 @@ class XoWorkload(SawtoothWorkload):
                     new_transaction_id, game.client)
             # Otherwise, start a new game.
             else:
-                print 'Game {0} completed'.format(game.name)
+                LOGGER.info('Game %s completed', game.name)
                 self._create_new_game()
-
-            # We no longer need to track this transaction
-            del self._pending_transactions[transaction_id]
 
     def on_transaction_not_yet_committed(self, transaction_id):
         # Because we want to generate transactions at the rate requested, let's
@@ -135,16 +146,21 @@ class XoWorkload(SawtoothWorkload):
         # that the entire validator network has the transactions for a game
         # committed, all of the transaction for a particular game will be
         # submitted to a single client.
-        client = self._clients[random.randint(0, len(self._clients) - 1)]
+        if len(self._clients) > 0:
+            client = self._clients[random.randint(0, len(self._clients) - 1)]
 
-        name = datetime.now().isoformat()
-        transaction_id = client.create(name)
+            name = datetime.now().isoformat()
+            transaction_id = client.create(name)
 
-        print 'New game {0} with txn ID {1} on {2}'.format(
-            name, transaction_id, client.base_url)
+            if transaction_id is not None:
+                LOGGER.info('New game %s with transaction ID %s on %s',
+                            name,
+                            transaction_id,
+                            client.base_url)
 
-        # Map the transaction ID to the game state so we can look it up later
-        # and let the delegate know that there is a new pending transaction
-        self._pending_transactions[transaction_id] = \
-            GameState(name=name, client=client, spaces_taken=0)
-        self.delegate.on_new_transaction(transaction_id, client)
+                # Map the transaction ID to the game state so we can look it
+                # up later and let the delegate know that there is a new
+                # pending transaction
+                self._pending_transactions[transaction_id] = \
+                    GameState(name=name, client=client, spaces_taken=0)
+                self.delegate.on_new_transaction(transaction_id, client)
