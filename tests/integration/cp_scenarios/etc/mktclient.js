@@ -3,8 +3,7 @@
     "TokenURL" : "http://localhost:7800/",
 
     ## configuration of logging
-    "LogLevel" : "WARN",
-    "LogFile"  : "__screen__",
+    "LogConfigFile": "test/integration/cp_scenarios/etc/mktclient_logging.js",
 
     ## key file
     "KeyFile" : "{home}/keys/{name}.wif"

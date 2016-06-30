@@ -39,7 +39,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                         vnm_config['TransactionFamilies']:
                     vnm_config['TransactionFamilies'].append(
                         'mktplace.transactions.market_place')
-                vnm_config['LogLevel'] = 'DEBUG'
+                vnm_config["LogConfigFile"] = "tests/integration/" + \
+                    "cp_scenarios/etc/mktclient_logging.js"
                 cls.vnm = ValidatorNetworkManager(
                     httpPort=9500, udpPort=9600, cfg=vnm_config)
                 cls.vnm.launch_network(5)
