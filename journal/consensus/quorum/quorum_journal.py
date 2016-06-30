@@ -183,7 +183,8 @@ class QuorumJournal(journal_core.Journal):
 
         # Get the list of prepared transactions, if there aren't enough then
         # reset the timers and return since there is nothing to vote on
-        txnlist = self._preparetransactionlist()
+        txnlist = self._preparetransactionlist(
+            maxcount=self.MaximumTransactionsPerBlock)
         if len(txnlist) < self.MinimumTransactionsPerBlock:
             logger.debug('insufficient transactions for vote; %d out of %d',
                          len(txnlist), self.MinimumTransactionsPerBlock)
@@ -229,7 +230,8 @@ class QuorumJournal(journal_core.Journal):
         logger.info('quorum, handle initiate, %s',
                     self.MostRecentCommittedBlockID[:8])
 
-        txnlist = self._preparetransactionlist()
+        txnlist = self._preparetransactionlist(
+            maxcount=self.MaximumTransactionsPerBlock)
         self.CurrentQuorumVote = quorum_vote.QuorumVote(self, blocknum,
                                                         txnlist)
         self.NextVoteTime = 0
