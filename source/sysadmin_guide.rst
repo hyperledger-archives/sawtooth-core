@@ -12,4 +12,5 @@ System Administrator's Guide
    sysadmin_guide/installation_ubuntu
    sysadmin_guide/installation_sles
    sysadmin_guide/installation_windows
+   sysadmin_guide/network_configuration
 
