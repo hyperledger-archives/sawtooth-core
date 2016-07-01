@@ -64,9 +64,8 @@ def parse_args(args):
                         help='Where to store the logs, data, etc for the '
                              'network',
                         default=None)
-    parser.add_argument('--log-level',
-                        help='LogLevel to run the validators at.',
-                        default="WARNING")
+    parser.add_argument('--log-config',
+                        help='The python logging config file')
 
     return parser.parse_args(args)
 
@@ -143,8 +142,7 @@ def configure(opts):
         'Host',
         'HttpPort',
         'Port',
-        'LogFile',
-        'LogLevel',
+        'LogConfigFile'
         'KeyFile',
         "AdministrationNode",
         "DataDirectory",
@@ -160,7 +158,6 @@ def configure(opts):
 
     opts.count = max(1, opts.count)
     opts.validator_config = validator_config
-    opts.validator_config['LogLevel'] = opts.log_level
 
     print "Configuration:"
     pp.pprint(opts.__dict__)
