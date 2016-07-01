@@ -18,11 +18,12 @@
 import argparse
 import os
 import random
+import json
 import re
 import sys
 import time
 import urllib2
-import logging
+import logging.config
 
 from gossip import node, signed_object
 from gossip.common import pretty_print_dict
@@ -232,12 +233,8 @@ def parse_command_line(args):
                         default=['txnload.js'],
                         nargs='+')
     parser.add_argument('--keyfile', help='Name of the key file')
-    parser.add_argument('--loglevel', help='Logging level', default='info')
+    parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument(
-        '--logfile',
-        help='Name of the log file, __screen__ for standard output')
     parser.add_argument('--symbol', help='Base string for symbols')
     parser.add_argument('--urls',
                         help='List of potential web server to contact',
@@ -263,16 +260,11 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('conf_dir', 'ConfigDirectory'),
             ('count', 'Count'),
             ('interval', 'Interval'),
-            ('log_dir', 'LogDirectory'),
-            ('logfile', 'LogFile'),
-            ('loglevel', 'LogLevel'),
+            ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('symbol', 'Symbol'),
             ('urls', 'URLs'),
         ], options)
-
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
 
     cfg = get_validator_configuration(options.config, options_config, os_name,
                                       config_files_required)
@@ -309,7 +301,42 @@ def main(args):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg)
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.loads(log_config_fd.read())
+                logging.config.dictConfig(log_dic)
+        except IOError, ex:
+            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
+            sys.exit(1)
+
+    else:
+        log_config_file = "etc/txnload_logging.js"
+        log_filename = cfg["LogDirectory"] + "/load-" + cfg["CurrencyHost"]
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.loads(log_config_fd.read())
+                for handler in log_dic["handlers"]:
+                    if "filename" in log_dic["handlers"][handler]:
+                        log_dic["handlers"][handler]["filename"] = \
+                            log_filename + ".log"
+                logging.config.dictConfig(log_dic)
+        except IOError, ex:
+            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
+            sys.exit(1)
+
+    log_setup.setup_loggers()
 
     if "KeyFile" in cfg:
         keyfile = cfg["KeyFile"]
