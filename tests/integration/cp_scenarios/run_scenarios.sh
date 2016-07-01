@@ -6,10 +6,7 @@
 
 export CURRENCYHOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-LogLevel=DEBUG
-LogFile=scenario.log
-ARGS="--echo --loglevel=$LogLevel --logfile $LogFile"
-
+ARGS="--echo"
 
 mktclient --name mkt --script scenario_setup_1_mkt $ARGS
 mktclient --name BANK-trader --script scenario_setup_2_trader $ARGS

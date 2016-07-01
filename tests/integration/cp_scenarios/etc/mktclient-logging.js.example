@@ -11,10 +11,10 @@
 
   "handlers" : {
     "mktplace" : {
-      "class" : "logging.StreamHandler",
-      "level" : "WARNING",
+      "class" : "logging.FileHandler",
+      "level" : "DEBUG",
       "formatter" : "simple",
-      "stream": "ext://sys.stdout"
+      "filename": "test"
     }
   },
 

@@ -16,6 +16,7 @@
 import argparse
 import cmd
 import json
+import yaml
 import logging.config
 import os
 import shlex
@@ -69,12 +70,6 @@ def setup_loggers(verbose_level=0):
 
     if verbose_level > 0:
         logger.addHandler(create_console_handler(verbose_level))
-        print verbose_level
-    elif verbose_level > 1:
-        logger.setLevel(logging.Info)
-
-    elif verbose_level > 2:
-        logger.setLevel(logging.Debug)
 
 
 class ClientController(cmd.Cmd):
@@ -1504,6 +1499,36 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
     return cfg
 
 
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        clog = logging.StreamHandler()
+        clog.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        clog.setLevel(logging.WARN)
+        logging.getLogger().addHandler(clog)
+
+
 def read_key_file(keyfile):
     with open(keyfile, "r") as fd:
         key = fd.read().strip()
@@ -1530,27 +1555,8 @@ def main(args=sys.argv[1:]):
             "LogConfigFile instead"
         sys.exit(1)
 
-    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
-        log_config_file = cfg['LogConfigFile']
-        try:
-            with open(log_config_file) as log_config_fd:
-                log_dic = json.loads(log_config_fd.read())
-                logging.config.dictConfig(log_dic)
-        except IOError, ex:
-            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
-            sys.exit(1)
-
-    else:
-        log_config_file = "etc/mktclient_logging.js"
-        try:
-            with open(log_config_file) as log_config_fd:
-                log_dic = json.loads(log_config_fd.read())
-                logging.config.dictConfig(log_dic)
-        except IOError, ex:
-            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
-            sys.exit(1)
-
     setup_loggers(cfg["Verbose"])
+    log_configuration(cfg)
 
     if "KeyFile" in cfg:
         keyfile = cfg["KeyFile"]
