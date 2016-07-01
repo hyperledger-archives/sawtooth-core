@@ -60,15 +60,15 @@ class TestClientCLI(unittest.TestCase):
             cfg["DataDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\data")
 
-    def test_loglevel_arg(self):
+    def test_logconfig_arg(self):
         os.environ.clear()
 
         cfg = get_configuration(
-            args=["--config=invalid-config.js", "--loglevel=info"],
+            args=["--config=invalid-config.js", "--log-config=Logging.js"],
             config_files_required=False)
 
-        self.assertIn("LogLevel", cfg)
-        self.assertEquals(cfg["LogLevel"], "INFO")
+        self.assertIn("LogConfigFile", cfg)
+        self.assertEquals(cfg["LogConfigFile"], "Logging.js")
 
 
 if __name__ == '__main__':
