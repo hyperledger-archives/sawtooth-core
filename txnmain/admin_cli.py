@@ -15,11 +15,12 @@
 
 import argparse
 import cmd
+import json
 import os
 import re
 import socket
 import sys
-import logging
+import logging.config
 
 from gossip.common import pretty_print_dict
 
@@ -404,20 +405,19 @@ def parse_command_line(args):
                         help='configuration file',
                         default=['txnclient.js'],
                         nargs='+')
-    parser.add_argument('--loglevel', help='Logging level')
+    parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--keyfile', help='Name of the key file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument(
-        '--logfile',
-        help='Name of the log file, __screen__ for standard output',
-        default='__screen__')
     parser.add_argument('--url', help='Initial URL for the validator')
     parser.add_argument('--node', help='Short form name of the node')
     parser.add_argument('--set',
                         help='Specify arbitrary configuration options',
                         nargs=2,
                         action='append')
+    parser.add_argument('--verbose', '-v',
+                        action='count',
+                        default=0,
+                        help='increase output sent to stderr')
 
     return parser.parse_args(args)
 
@@ -427,17 +427,13 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
 
     options_config = ArgparseOptionsConfig(
         [
-            ('loglevel', 'LogLevel'),
+            ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('conf_dir', 'ConfigDirectory'),
-            ('log_dir', 'LogDirectory'),
-            ('logfile', 'LogFile'),
             ('url', 'LedgerURL'),
             ('node', 'NodeName'),
+            ('verbose', 'Verbose'),
         ], options)
-
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
 
     return get_validator_configuration(options.config, options_config, os_name,
                                        config_files_required)
@@ -459,7 +455,42 @@ def main(args=sys.argv[1:]):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg)
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.loads(log_config_fd.read())
+                logging.config.dictConfig(log_dic)
+        except IOError, ex:
+            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
+            sys.exit(1)
+
+    else:
+        log_config_file = "etc/txnclient_logging.js"
+        log_filename = cfg["LogDirectory"] + "/lottery-" + cfg["NodeName"]
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.loads(log_config_fd.read())
+                for handler in log_dic["handlers"]:
+                    if "filename" in log_dic["handlers"][handler]:
+                        log_dic["handlers"][handler]["filename"] = \
+                            log_filename + "-" + handler + ".log"
+                logging.config.dictConfig(log_dic)
+        except IOError, ex:
+            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
+            sys.exit(1)
+
+    log_setup.setup_loggers(cfg["Verbose"])
 
     if "KeyFile" in cfg:
         keyfile = cfg["KeyFile"]
