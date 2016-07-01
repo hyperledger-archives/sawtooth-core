@@ -14,7 +14,7 @@
       "class" : "logging.FileHandler",
       "level" : "INFO",
       "formatter" : "simple",
-      "filename" : "override"
+      "filename" : "example.log"
     }
   },
 

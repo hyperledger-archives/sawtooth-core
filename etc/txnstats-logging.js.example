@@ -10,23 +10,16 @@
     },
 
   "handlers" : {
-    "debug" : {
+    "stats" : {
       "class" : "logging.FileHandler",
-      "level" : "DEBUG",
+      "level" : "INFO",
       "formatter" : "simple",
-      "filename" : "override"
-    },
-
-    "error" : {
-      "class" : "logging.FileHandler",
-      "level" : "ERROR",
-      "formatter" : "simple",
-      "filename" : "override"
+      "filename" : "example.log"
     }
   },
 
   "root": {
     "level" : "INFO",
-    "handlers" : ["debug", "error"]
+    "handlers" : ["stats"]
   }
 }

@@ -16,6 +16,7 @@
 import argparse
 import cmd
 import json
+import yaml
 import os
 import re
 import socket
@@ -445,6 +446,36 @@ def read_key_file(keyfile):
     return key
 
 
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        clog = logging.StreamHandler()
+        clog.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        clog.setLevel(logging.WARNING)
+        logging.getLogger().addHandler(clog)
+
+
 def main(args=sys.argv[1:]):
     try:
         cfg = get_configuration(args)
@@ -465,30 +496,7 @@ def main(args=sys.argv[1:]):
             "LogConfigFile instead"
         sys.exit(1)
 
-    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
-        log_config_file = cfg['LogConfigFile']
-        try:
-            with open(log_config_file) as log_config_fd:
-                log_dic = json.loads(log_config_fd.read())
-                logging.config.dictConfig(log_dic)
-        except IOError, ex:
-            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
-            sys.exit(1)
-
-    else:
-        log_config_file = "etc/txnclient_logging.js"
-        log_filename = cfg["LogDirectory"] + "/lottery-" + cfg["NodeName"]
-        try:
-            with open(log_config_file) as log_config_fd:
-                log_dic = json.loads(log_config_fd.read())
-                for handler in log_dic["handlers"]:
-                    if "filename" in log_dic["handlers"][handler]:
-                        log_dic["handlers"][handler]["filename"] = \
-                            log_filename + "-" + handler + ".log"
-                logging.config.dictConfig(log_dic)
-        except IOError, ex:
-            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
-            sys.exit(1)
+    log_configuration(cfg)
 
     log_setup.setup_loggers(cfg["Verbose"])
 

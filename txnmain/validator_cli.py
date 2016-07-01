@@ -15,6 +15,7 @@
 import argparse
 import importlib
 import json
+import yaml
 import logging.config
 import os
 import sys
@@ -226,6 +227,44 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
                                        config_files_required)
 
 
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        log_filename = os.path.join(cfg["LogDirectory"], cfg["NodeName"])
+        flogD = logging.FileHandler(log_filename + "-debug.log")
+        flogD.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        flogD.setLevel(logging.DEBUG)
+
+        flogE = logging.FileHandler(log_filename + "-error.log")
+        flogE.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        flogE.setLevel(logging.ERROR)
+
+        logging.getLogger().addHandler(flogE)
+        logging.getLogger().addHandler(flogD)
+
+
 def read_key_file(keyfile):
     with open(keyfile, "r") as fd:
         key = fd.read().strip()
@@ -287,31 +326,6 @@ def main(args, windows_service=False):
             "LogConfigFile instead"
         sys.exit(1)
 
-    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
-        log_config_file = cfg['LogConfigFile']
-        try:
-            with open(log_config_file) as log_config_fd:
-                log_dic = json.loads(log_config_fd.read())
-                logging.config.dictConfig(log_dic)
-        except IOError, ex:
-            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
-            sys.exit(1)
-
-    else:
-        log_config_file = "etc/txnvalidator_logging.js"
-        log_filename = cfg["LogDirectory"] + "/lottery-" + cfg["NodeName"]
-        try:
-            with open(log_config_file) as log_config_fd:
-                log_dic = json.loads(log_config_fd.read())
-                for handler in log_dic["handlers"]:
-                    if "filename" in log_dic["handlers"][handler]:
-                        log_dic["handlers"][handler]["filename"] = \
-                            log_filename + "-" + handler + ".log"
-                logging.config.dictConfig(log_dic)
-        except IOError, ex:
-            print >>sys.stderr, "Could not read log config: {}".format(str(ex))
-            sys.exit(1)
-
     daemonize = cfg.get('Daemonize', False)
     if daemonize:
         verbose_level = 0
@@ -321,6 +335,7 @@ def main(args, windows_service=False):
     log_setup.setup_loggers(
         verbose_level=verbose_level,
         capture_std_output=daemonize)
+    log_configuration(cfg)
 
     for key, value in cfg.iteritems():
         logger.debug("CONFIG: %s = %s", key, value)

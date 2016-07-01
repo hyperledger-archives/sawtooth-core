@@ -58,14 +58,10 @@ def create_console_handler(verbose_level):
 
 def setup_loggers(verbose_level=2, capture_std_output=False):
     logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     if verbose_level > 0:
         logger.addHandler(create_console_handler(verbose_level))
-
-    if verbose_level == 0:
-        logger.setLevel(logging.INFO)
-    elif verbose_level > 1:
-        logger.setLevel(logging.DEBUG)
 
     if capture_std_output:
         sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
