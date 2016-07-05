@@ -21,7 +21,7 @@ import requests
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
-from sawtooth_seg.seg_exceptions import SegException
+from sawtooth.exceptions import InvalidTransactionError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -103,21 +103,6 @@ class SegTransaction(transaction.Transaction):
                                           self._balance,
                                           self._block)
 
-    def is_valid(self, store):
-        """Determines if the transaction is valid.
-
-        Args:
-            store (dict): Transaction store mapping.
-        """
-
-        try:
-            self.check_valid(store)
-        except SegException as e:
-            LOGGER.debug('invalid transaction (%s): %s', str(e), str(self))
-            return False
-
-        return True
-
     def check_valid(self, store):
         """Determines if the transaction is valid.
 
@@ -125,19 +110,18 @@ class SegTransaction(transaction.Transaction):
             store (dict): Transaction store mapping.
         """
 
-        if not super(SegTransaction, self).is_valid(store):
-            raise SegException("invalid transaction")
+        super(SegTransaction, self).check_valid(store)
 
         LOGGER.debug('checking %s', str(self))
 
         if self._address is None or self._address == '':
-            raise SegException('address not set')
+            raise InvalidTransactionError('address not set')
 
         if self._balance is None or self._balance == '':
-            raise SegException('balance not set')
+            raise InvalidTransactionError('balance not set')
 
         if self._block is None or self._block == '':
-            raise SegException('block not set')
+            raise InvalidTransactionError('block not set')
 
     def _get_ethereum_balance(self):
         eth_url = os.environ.get('ETH_URL', 'http://localhost:8545')

@@ -19,7 +19,7 @@ import logging
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
-from sawtooth_rps.exceptions import RPSException
+from sawtooth.exceptions import InvalidTransactionError
 
 
 logger = logging.getLogger(__name__)
@@ -73,61 +73,51 @@ class RPSTransaction(transaction.Transaction):
             oid = "unknown"
         return "({0} {1} {2})".format(oid, self._name, self._hand)
 
-    def is_valid(self, store):
-        try:
-            self.check_valid(store)
-        except RPSException as e:
-            logger.debug('invalid transaction (%s): %s', str(e), str(self))
-            return False
-
-        return True
-
     def check_valid(self, store):
-        if not super(RPSTransaction, self).is_valid(store):
-            raise RPSException("invalid transaction")
+        super(RPSTransaction, self).check_valid(store)
 
         logger.debug('checking %s', str(self))
 
         if self._name is None or self._name == '':
-            raise RPSException('name not set')
+            raise InvalidTransactionError('name not set')
 
         if self._action is None or self._action == '':
-            raise RPSException('action not set')
+            raise InvalidTransactionError('action not set')
 
         if self._action == 'CREATE':
             if self._name in store:
-                raise RPSException('game already exists')
+                raise InvalidTransactionError('game already exists')
             if (not isinstance(self._players, (int, long)) or not
                     self._players > 0):
-                raise RPSException('players must be a positive integer' +
+                raise InvalidTransactionError('players must be a positive integer' +
                                    'larger then 0: %s (%s)' %
                                    (self._players, type(self._players)))
         elif self._action == 'SHOOT':
             if self._hand is None:
-                raise RPSException('SHOOT requires hand')
+                raise InvalidTransactionError('SHOOT requires hand')
 
             if self._hand not in VALID_HANDS:
-                raise RPSException('invalid hand')
+                raise InvalidTransactionError('invalid hand')
 
             if self._name not in store:
-                raise RPSException('no such game')
+                raise InvalidTransactionError('no such game')
 
             players = store[self._name]['Players']
             state = store[self._name]['State']
             if state == 'COMPLETE':
-                raise RPSException('game complete')
+                raise InvalidTransactionError('game complete')
             elif len(store[self._name]['Hands']) >= players:
-                raise RPSException('all players shown their hand but' +
+                raise InvalidTransactionError('all players shown their hand but' +
                                    'game state not set to complete')
             elif state == 'OPEN':
                 recorded_hand = store[self._name]['Hands']\
                     .get(self.OriginatorID)
                 if recorded_hand is not None:
-                    raise RPSException('hand already registered')
+                    raise InvalidTransactionError('hand already registered')
             else:
-                raise RPSException('invalid game state')
+                raise InvalidTransactionError('invalid game state')
         else:
-            raise RPSException('invalid action')
+            raise InvalidTransactionError('invalid action')
 
     def _is_winner(self, hand_a, hand_b):
         resolutions = (
@@ -144,7 +134,7 @@ class RPSTransaction(transaction.Transaction):
         for a, b, resolution in resolutions:
             if hand_a == a and hand_b == b:
                 return resolution
-        raise RPSException("no resolution found for hand_a: %s, hand_b: %s"
+        raise InvalidTransactionError("no resolution found for hand_a: %s, hand_b: %s"
                            % (hand_a, hand_b))
 
     def apply(self, store):
@@ -153,7 +143,7 @@ class RPSTransaction(transaction.Transaction):
         if self._name in store:
             game = store[self._name].copy()
         elif self._hand is not None:
-            raise RPSException("Hand to be played without a" +
+            raise InvalidTransactionError("Hand to be played without a" +
                                "game registered (should not happen)")
         else:
             if self._players == 1:
@@ -174,16 +164,16 @@ class RPSTransaction(transaction.Transaction):
 
         if self._hand is not None:
             if self.OriginatorID in game['Hands']:
-                raise RPSException('hand already registered')
+                raise InvalidTransactionError('hand already registered')
 
             if self._hand not in VALID_HANDS:
-                raise RPSException('invalid hand')
+                raise InvalidTransactionError('invalid hand')
 
             game['Hands'][self.OriginatorID] = self._hand
 
         nr_hands = len(game['Hands'])
         if game['State'] != 'OPEN' and nr_hands < game['Players']:
-            raise RPSException("state not open while missing hands")
+            raise InvalidTransactionError("state not open while missing hands")
         elif nr_hands == game['Players']:
             # find out how won
             initial_id = game['InitialID']

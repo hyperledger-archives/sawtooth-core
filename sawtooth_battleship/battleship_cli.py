@@ -29,6 +29,7 @@ import pybitcointools
 from colorlog import ColoredFormatter
 
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import InvalidTransactionError
 
 from sawtooth_battleship.battleship_board import BoardLayout
 from sawtooth_battleship.battleship_board import create_nonces
@@ -613,6 +614,9 @@ def main_wrapper():
     try:
         main()
     except BattleshipException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except InvalidTransactionError as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except ClientException as e:

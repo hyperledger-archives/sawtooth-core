@@ -31,6 +31,7 @@ import requests
 from colorlog import ColoredFormatter
 
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import InvalidTransactionError
 
 from sawtooth_seg.seg_client import SegClient
 from sawtooth_seg.seg_exceptions import SegException
@@ -278,6 +279,9 @@ def main_wrapper():
     try:
         main()
     except SegException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except InvalidTransactionError as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except ClientException as e:
