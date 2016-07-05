@@ -36,11 +36,13 @@ class QuorumJournal(journal_core.Journal):
         VoteTimeInterval (float): The minimum time between votes, in
             seconds.
         VoteTimeFudgeFactor (float): The average fudge factor added to
-            the vote interval, in seconds.
+            the vote interval, in seconds.  Used in conjunction with
+            randomization functions to stagger network initiative.
         BallotTimeInterval (float): The minimum time between ballots on
             a vote, in seconds.
         BallotTimeFudgeFactor (float): The average fudge factor added
-            to the ballot interval, in seconds.
+            to the ballot interval, in seconds.  Used in conjunction with
+            randomization functions to stagger network initiative.
         VoteThreshholds (list): The mimimum votes required for a
             transaction to proceed to the next ballot.
         VotingQuorumTargetSize (int): The target size for the local
@@ -181,7 +183,8 @@ class QuorumJournal(journal_core.Journal):
 
         # Get the list of prepared transactions, if there aren't enough then
         # reset the timers and return since there is nothing to vote on
-        txnlist = self._preparetransactionlist()
+        txnlist = self._preparetransactionlist(
+            maxcount=self.MaximumTransactionsPerBlock)
         if len(txnlist) < self.MinimumTransactionsPerBlock:
             logger.debug('insufficient transactions for vote; %d out of %d',
                          len(txnlist), self.MinimumTransactionsPerBlock)
@@ -227,7 +230,8 @@ class QuorumJournal(journal_core.Journal):
         logger.info('quorum, handle initiate, %s',
                     self.MostRecentCommittedBlockID[:8])
 
-        txnlist = self._preparetransactionlist()
+        txnlist = self._preparetransactionlist(
+            maxcount=self.MaximumTransactionsPerBlock)
         self.CurrentQuorumVote = quorum_vote.QuorumVote(self, blocknum,
                                                         txnlist)
         self.NextVoteTime = 0
