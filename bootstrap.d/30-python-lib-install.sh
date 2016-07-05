@@ -14,3 +14,4 @@ pip install pep8
 pip install networkx
 pip install daemonize
 pip install psutil
+pip install demjson
