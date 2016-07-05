@@ -29,3 +29,24 @@ class MessageException(Exception):
     A class to capture communication exceptions
     """
     pass
+
+
+class TransactionException(SawtoothException):
+    """
+    Exception raised from Transaction implementations.
+    """
+
+    def __init__(self, msg):
+        super(TransactionException, self).__init__(msg)
+
+
+class InvalidTransactionError(TransactionException):
+    """
+    Exception raised from Transaction.check_valid(), indicating that the
+    transaction is not valid.  The corresponding message is logged by the
+    validator and may be provided to a client (and end-user) as a reason
+    the transaction was not accepted.
+    """
+
+    def __init__(self, msg):
+        super(InvalidTransactionError, self).__init__(msg)
