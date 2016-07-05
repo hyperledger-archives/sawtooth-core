@@ -76,7 +76,8 @@ disable=
     no-self-use,
     global-variable-not-assigned,
     global-statement,
-    too-many-lines
+    too-many-lines,
+    locally-disabled
 
 [REPORTS]
 

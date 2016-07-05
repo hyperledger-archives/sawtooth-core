@@ -66,7 +66,8 @@ disable=
     bad-continuation,
     missing-docstring,
     no-member,
-    unused-argument
+    unused-argument,
+    locally-disabled
 
 [REPORTS]
 
