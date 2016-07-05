@@ -124,6 +124,12 @@ def add_submit_parser(subparsers, parent_parser):
         type=str,
         help='the URL to the validator')
 
+    parser.add_argument(
+        '--wait',
+        action='store_true',
+        default=False,
+        help='wait for this commit before exiting')
+
 
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
@@ -237,6 +243,10 @@ def do_submit(args, config):
         fake_journal.store_class,
         fake_journal.msg_class,
         txn_content)
+
+    if args.wait:
+        if not client.wait_for_commit():
+            raise CliException("transaction was not successfully committed")
 
 
 def load_config():
