@@ -43,7 +43,7 @@ class TestBattleshipCommands(unittest.TestCase):
             # currently nose2 offers no way to detect test failure -- so
             # always save the results
             if cls.vnm.create_result_archive(
-                    "TestXoCli.tar.gz"):
+                    "TestBattleshipCli.tar.gz"):
                 print "Validator data and logs preserved in: " \
                       "TestBattleshipCli.tar.gz"
             else:
@@ -64,8 +64,8 @@ class TestBattleshipCommands(unittest.TestCase):
         for f in files:
             try:
                 os.remove(f)
-            except OSError:
-                print "{} does not exist".format(f)
+            except OSError as ose:
+                print "Could not remove file: {}".format(ose)
 
     def _call_battleship(self, args):
 
@@ -104,7 +104,5 @@ class TestBattleshipCommands(unittest.TestCase):
             self._call_battleship(['show', 'game000'])
             self._call_battleship(['show', 'game001'])
             self._call_battleship(['fire', 'game001', 'A', '7', '--wait'])
-
-            self._clean_data_and_key_files(user1, user2)
-        except Exception:
+        finally:
             self._clean_data_and_key_files(user1, user2)
