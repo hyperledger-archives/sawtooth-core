@@ -129,7 +129,6 @@ class Validator(object):
             nd = node.Node(address=addr,
                            identifier=nodedata["Identifier"],
                            name=nodedata["ShortName"])
-            nd.disable()
             self.NodeMap[nodedata["ShortName"]] = nd
 
     def initialize_ledger_object(self):

@@ -1,7 +1,9 @@
 import unittest
 
-import urllib2
+import os
 import time
+import urllib2
+
 
 from ledger.transaction.endpoint_registry import EndpointRegistryTransaction
 
@@ -17,6 +19,7 @@ from txnserver.ledger_web_client import LedgerWebClient
 class TestBasicStartup(unittest.TestCase):
 
     def setUp(self):
+        self.number_of_daemons = int(os.environ.get("NUMBER_OF_DAEMONS", 5))
         self.vnm = ValidatorNetworkManager(cfg=defaultValidatorConfig.copy())
 
     def _verify_equality_of_block_lists(self, webclients):
@@ -69,7 +72,9 @@ class TestBasicStartup(unittest.TestCase):
 
     def test_basic_startup(self):
         try:
-            self.vnm.launch_network(count=15, others_daemon=True)
+
+            self.vnm.launch_network(count=self.number_of_daemons,
+                                    others_daemon=True)
 
             validator_urls = self.vnm.urls()
             # IntegerKeyClient is only needed to send one more transaction
@@ -93,7 +98,7 @@ class TestBasicStartup(unittest.TestCase):
         delayed_validator = None
         validator_urls = []
         try:
-            self.vnm.launch_network(count=5)
+            self.vnm.launch_network(5)
             validator_urls = self.vnm.urls()
 
             delayed_validator = self.vnm.launch_node(delay=True)
@@ -160,7 +165,7 @@ class TestBasicStartup(unittest.TestCase):
                 self.vnm.ValidatorConfig['LedgerURL'] = validator.Url
                 self.vnm.ValidatorConfig['Restore'] = False
                 node_identifiers = [validator.Address]
-                for i in range(1, 10):
+                for i in range(1, 5):
                     self.vnm.ValidatorConfig['InitialConnectivity'] = i
                     v = self.vnm.launch_node(genesis=False, daemon=False)
                     validators.append(v)
