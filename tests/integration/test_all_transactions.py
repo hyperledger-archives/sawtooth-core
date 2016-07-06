@@ -43,7 +43,6 @@ class TestAllTransactions(unittest.TestCase):
                         'mktplace.transactions.market_place')
                 vnm_config['InitialWaitTime'] = 1
                 vnm_config['TargetWaitTime'] = 1
-                vnm_config['LogLevel'] = 'DEBUG'
                 cls.vnm = ValidatorNetworkManager(
                     httpPort=9500, udpPort=9600, cfg=vnm_config)
                 cls.vnm.launch_network(1)

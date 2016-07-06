@@ -15,12 +15,13 @@
 
 import argparse
 import cmd
-import logging
+import json
+import yaml
+import logging.config
 import os
 import shlex
 import sys
 import time
-import warnings
 from string import Template
 
 from colorlog import ColoredFormatter
@@ -37,41 +38,38 @@ from sawtooth.config import InvalidSubstitutionKey
 logger = logging.getLogger(__name__)
 
 
-def setup_loggers(config):
-    loglevel = getattr(
-        logging, config["LogLevel"]) if 'LogLevel' in config else logging.WARN
-    logger = logging.getLogger()
-    logger.setLevel(loglevel)
+def create_console_handler(verbose_level):
+    clog = logging.StreamHandler()
+    formatter = ColoredFormatter(
+        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+        "%(white)s%(message)s",
+        datefmt="%H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        })
 
-    if 'LogFile' in config and config['LogFile'] != '__screen__':
-        logfile = config['LogFile']
-        if not os.path.isdir(os.path.abspath(os.path.dirname(logfile))):
-            warnings.warn("Logging directory {0} does not exist".format(
-                os.path.abspath(os.path.dirname(logfile))))
-            sys.exit(-1)
+    clog.setFormatter(formatter)
 
-        flog = logging.FileHandler(logfile)
-        flog.setFormatter(logging.Formatter(
-            '[%(asctime)s, %(levelno)d, %(module)s] %(message)s', "%H:%M:%S"))
-        logger.addHandler(flog)
+    if verbose_level == 0:
+        clog.setLevel(logging.WARN)
+    elif verbose_level == 1:
+        clog.setLevel(logging.INFO)
     else:
-        clog = logging.StreamHandler()
-        formatter = ColoredFormatter(
-            "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
-            "%(white)s%(message)s",
-            datefmt="%H:%M:%S",
-            reset=True,
-            log_colors={
-                'DEBUG': 'cyan',
-                'INFO': 'green',
-                'WARNING': 'yellow',
-                'ERROR': 'red',
-                'CRITICAL': 'red',
-            })
+        clog.setLevel(logging.DEBUG)
 
-        clog.setFormatter(formatter)
-        clog.setLevel(loglevel)
-        logger.addHandler(clog)
+    return clog
+
+
+def setup_loggers(verbose_level=0):
+    logger = logging.getLogger()
+
+    if verbose_level > 0:
+        logger.addHandler(create_console_handler(verbose_level))
 
 
 class ClientController(cmd.Cmd):
@@ -1439,11 +1437,8 @@ def parse_command_line(args):
     parser.add_argument('--id',
                         help='The participant id to use, this supersedes the '
                              'participant name.')
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument('--logfile',
-                        help='Name of the log file, __screen__ for standard '
-                             'output')
-    parser.add_argument('--loglevel', help='Logging level')
+    parser.add_argument('--log-config',
+                        help='The python logging config file')
     parser.add_argument('--name',
                         help='Name of the participant to use as the creator')
     parser.add_argument('--url', help='Default url for connection')
@@ -1461,6 +1456,10 @@ def parse_command_line(args):
                         required=False,
                         action='store_true',
                         default=False)
+    parser.add_argument('--verbose', '-v',
+                        action='count',
+                        default=0,
+                        help='increase output sent to stderr')
 
     return parser.parse_args(args)
 
@@ -1470,11 +1469,10 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
 
     options_config = ArgparseOptionsConfig(
         [
-            ('loglevel', 'LogLevel'),
             ('keyfile', 'KeyFile'),
             ('conf_dir', 'ConfigDirectory'),
             ('log_dir', 'LogDirectory'),
-            ('logfile', 'LogFile'),
+            ('log_config', 'LogConfigFile'),
             ('url', 'LedgerURL'),
             ('script', 'ScriptName'),
             ('script', 'ScriptFile'),
@@ -1482,13 +1480,16 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('id', 'ParticipantId'),
             ('mapvar', 'VariableMap'),
             ('echo', 'Echo'),
+            ('verbose', 'Verbose'),
         ], options)
-
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
 
     cfg = get_mktplace_configuration(options.config, options_config, os_name,
                                      config_files_required)
+
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
 
     # General options
     if options.set:
@@ -1496,6 +1497,36 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             cfg[k] = v
 
     return cfg
+
+
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        clog = logging.StreamHandler()
+        clog.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        clog.setLevel(logging.WARN)
+        logging.getLogger().addHandler(clog)
 
 
 def read_key_file(keyfile):
@@ -1514,7 +1545,18 @@ def main(args=sys.argv[1:]):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    setup_loggers(cfg)
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    setup_loggers(cfg["Verbose"])
+    log_configuration(cfg)
 
     if "KeyFile" in cfg:
         keyfile = cfg["KeyFile"]
