@@ -31,6 +31,7 @@ from colorlog import ColoredFormatter
 from sawtooth_rps.client import RPSClient
 from sawtooth_rps.exceptions import RPSException
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import InvalidTransactionError
 
 
 def create_console_handler(verbose_level):
@@ -325,6 +326,9 @@ def main_wrapper():
     try:
         main()
     except RPSException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except InvalidTransactionError as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except ClientException as e:

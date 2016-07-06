@@ -28,6 +28,7 @@ import pybitcointools
 from colorlog import ColoredFormatter
 
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import InvalidTransactionError
 
 from sawtooth_xo.xo_client import XoClient
 from sawtooth_xo.xo_exceptions import XoException
@@ -336,6 +337,9 @@ def main_wrapper():
     try:
         main()
     except XoException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except InvalidTransactionError as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except ClientException as e:

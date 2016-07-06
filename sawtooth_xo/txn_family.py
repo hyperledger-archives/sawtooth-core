@@ -18,7 +18,7 @@ import logging
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
-from sawtooth_xo.xo_exceptions import XoException
+from sawtooth.exceptions import InvalidTransactionError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -99,21 +99,6 @@ class XoTransaction(transaction.Transaction):
                                       self._name,
                                       self._space)
 
-    def is_valid(self, store):
-        """Determines if the transaction is valid.
-
-        Args:
-            store (dict): Transaction store mapping.
-        """
-
-        try:
-            self.check_valid(store)
-        except XoException as e:
-            LOGGER.debug('invalid transaction (%s): %s', str(e), str(self))
-            return False
-
-        return True
-
     def check_valid(self, store):
         """Determines if the transaction is valid.
 
@@ -121,48 +106,47 @@ class XoTransaction(transaction.Transaction):
             store (dict): Transaction store mapping.
         """
 
-        if not super(XoTransaction, self).is_valid(store):
-            raise XoException("invalid transaction")
+        super(XoTransaction, self).check_valid(store)
 
         LOGGER.debug('checking %s', str(self))
 
         if self._name is None or self._name == '':
-            raise XoException('name not set')
+            raise InvalidTransactionError('name not set')
 
         if self._action is None or self._action == '':
-            raise XoException('action not set')
+            raise InvalidTransactionError('action not set')
 
         if self._action == 'CREATE':
             if self._name in store:
-                raise XoException('game already exists')
+                raise InvalidTransactionError('game already exists')
         elif self._action == 'TAKE':
             if self._space is None:
-                raise XoException('TAKE requires space')
+                raise InvalidTransactionError('TAKE requires space')
 
             if self._space < 1 or self._space > 9:
-                raise XoException('invalid space')
+                raise InvalidTransactionError('invalid space')
 
             if self._name not in store:
-                raise XoException('no such game')
+                raise InvalidTransactionError('no such game')
 
             state = store[self._name]['State']
             if state in ['P1-WIN', 'P2-WIN', 'TIE']:
-                raise XoException('game complete')
+                raise InvalidTransactionError('game complete')
 
             if state == 'P1-NEXT' and 'Player1' in store[self._name]:
                 player1 = store[self._name]['Player1']
                 if player1 != self.OriginatorID:
-                    raise XoException('invalid player 1')
+                    raise InvalidTransactionError('invalid player 1')
 
             if state == 'P2-NEXT' and 'Player2' in store[self._name]:
                 player1 = store[self._name]['Player2']
                 if player1 != self.OriginatorID:
-                    raise XoException('invalid player 2')
+                    raise InvalidTransactionError('invalid player 2')
 
             if store[self._name]['Board'][self._space - 1] != '-':
-                raise XoException('space already taken')
+                raise InvalidTransactionError('space already taken')
         else:
-            raise XoException('invalid action')
+            raise InvalidTransactionError('invalid action')
 
     def _is_win(self, board, letter):
         wins = ((1, 2, 3), (4, 5, 6), (7, 8, 9),
