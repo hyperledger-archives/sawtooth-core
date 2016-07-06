@@ -15,7 +15,6 @@
 
 
 import argparse
-import ConfigParser
 import importlib
 import getpass
 import logging
@@ -90,13 +89,28 @@ def setup_loggers(verbose_level):
     logger.addHandler(create_console_handler(verbose_level))
 
 
-def add_init_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('init', parents=[parent_parser])
+def add_keygen_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('keygen', parents=[parent_parser])
 
     parser.add_argument(
-        '--username',
-        type=str,
-        help='the name of the player')
+        'key_name',
+        help='name of the key to create',
+        nargs='?')
+
+    parser.add_argument(
+        '--key-dir',
+        help="directory to write key files")
+
+    parser.add_argument(
+        '--force',
+        help="overwrite files if they exist",
+        action='store_true')
+
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        help="print no output",
+        action='store_true')
 
 
 def add_submit_parser(subparsers, parent_parser):
@@ -115,9 +129,9 @@ def add_submit_parser(subparsers, parent_parser):
         help='a file containing the transaction JSON')
 
     parser.add_argument(
-        '--username',
+        '--key',
         type=str,
-        help='the name of the player')
+        help='the signing key')
 
     parser.add_argument(
         '--url',
@@ -150,66 +164,98 @@ def create_parser(prog_name):
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
-    add_init_parser(subparsers, parent_parser)
+    add_keygen_parser(subparsers, parent_parser)
     add_submit_parser(subparsers, parent_parser)
 
     return parser
 
 
-def do_init(args, config):
-    username = config.get('DEFAULT', 'username')
-    if args.username is not None:
-        username = args.username
-
-    config.set('DEFAULT', 'username', username)
-    print "set username: {}".format(username)
-
-    save_config(config)
-
-    wif_filename = config.get('DEFAULT', 'key_file')
-    if wif_filename.endswith(".wif"):
-        addr_filename = wif_filename[0:-len(".wif")] + ".addr"
+def do_keygen(args):
+    if args.key_name is not None:
+        key_name = args.key_name
     else:
-        addr_filename = wif_filename + ".addr"
+        key_name = getpass.getuser()
 
-    if not os.path.exists(wif_filename):
-        try:
-            if not os.path.exists(os.path.dirname(wif_filename)):
-                os.makedirs(os.path.dirname(wif_filename))
+    if args.key_dir is not None:
+        key_dir = args.key_dir
+        if not os.path.exists(key_dir):
+            raise ClientException('no such directory: {}'.format(key_dir))
+    else:
+        key_dir = os.path.join(os.path.expanduser('~'), '.sawtooth', 'keys')
+        if not os.path.exists(key_dir):
+            if not args.quiet:
+                print 'creating key directory: {}'.format(key_dir)
+            try:
+                os.makedirs(key_dir)
+            except IOError, e:
+                raise ClientException('IOError: {}'.format(str(e)))
 
-            privkey = pybitcointools.random_key()
-            encoded = pybitcointools.encode_privkey(privkey, 'wif')
-            addr = pybitcointools.privtoaddr(privkey)
+    wif_filename = os.path.join(key_dir, key_name + '.wif')
+    addr_filename = os.path.join(key_dir, key_name + '.addr')
 
-            with open(wif_filename, "w") as wif_fd:
-                print "writing file: {}".format(wif_filename)
-                wif_fd.write(encoded)
-                wif_fd.write("\n")
+    if not args.force:
+        file_exists = False
+        for filename in [wif_filename, addr_filename]:
+            if os.path.exists(filename):
+                file_exists = True
+                print >>sys.stderr, 'file exists: {}'.format(filename)
+        if file_exists:
+            raise ClientException(
+                'files exist, rerun with --force to overwrite existing files')
 
-            with open(addr_filename, "w") as addr_fd:
-                print "writing file: {}".format(addr_filename)
-                addr_fd.write(addr)
-                addr_fd.write("\n")
-        except IOError, ioe:
-            raise ClientException("IOError: {}".format(str(ioe)))
+    privkey = pybitcointools.random_key()
+    encoded = pybitcointools.encode_privkey(privkey, 'wif')
+    addr = pybitcointools.privtoaddr(privkey)
+
+    try:
+        wif_exists = os.path.exists(wif_filename)
+        with open(wif_filename, 'w') as wif_fd:
+            if not args.quiet:
+                if wif_exists:
+                    print 'overwriting file: {}'.format(wif_filename)
+                else:
+                    print 'writing file: {}'.format(wif_filename)
+            wif_fd.write(encoded)
+            wif_fd.write('\n')
+
+        addr_exists = os.path.exists(addr_filename)
+        with open(addr_filename, 'w') as addr_fd:
+            if not args.quiet:
+                if addr_exists:
+                    print 'overwriting file: {}'.format(addr_filename)
+                else:
+                    print 'writing file: {}'.format(addr_filename)
+            addr_fd.write(addr)
+            addr_fd.write('\n')
+    except IOError, ioe:
+        raise ClientException('IOError: {}'.format(str(ioe)))
 
 
-def do_submit(args, config):
-    username = config.get('DEFAULT', 'username')
-    if args.username is not None:
-        username = args.username
+def do_submit(args):
+    if args.key is not None:
+        key_name = args.key
+    else:
+        key_name = getpass.getuser()
 
-        # need to set url in config for substitution in key_file
-        config.set('DEFAULT', 'username', username)
-
-    url = config.get('DEFAULT', 'url')
     if args.url is not None:
         url = args.url
-
-    key_file = config.get('DEFAULT', 'key_file')
+    else:
+        url = 'http://localhost:8800'
 
     filename = args.filename
     family_name = args.family
+
+    # If we have a '/' in the key name, treat it as the full path to
+    # a wif file, without modification.  If it does not, then assume
+    # it is in ~/.sawtooth/keys/.
+    if '/' in key_name:
+        key_file = key_name
+    else:
+        key_dir = os.path.join(os.path.expanduser('~'), '.sawtooth', 'keys')
+        key_file = os.path.join(key_dir, key_name + '.wif')
+
+    if not os.path.exists(key_file):
+        raise ClientException('no such file: {}'.format(key_file))
 
     try:
         if filename == '-':
@@ -249,36 +295,6 @@ def do_submit(args, config):
             raise CliException("transaction was not successfully committed")
 
 
-def load_config():
-    home = os.path.expanduser("~")
-    real_user = getpass.getuser()
-
-    config_file = os.path.join(home, ".sawtooth", "sawtooth.cfg")
-    key_dir = os.path.join(home, ".sawtooth", "keys")
-
-    config = ConfigParser.SafeConfigParser()
-    config.set('DEFAULT', 'url', 'http://localhost:8800')
-    config.set('DEFAULT', 'key_dir', key_dir)
-    config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.wif')
-    config.set('DEFAULT', 'username', real_user)
-    if os.path.exists(config_file):
-        config.read(config_file)
-
-    return config
-
-
-def save_config(config):
-    home = os.path.expanduser("~")
-
-    config_file = os.path.join(home, ".sawtooth", "sawtooth.cfg")
-    if not os.path.exists(os.path.dirname(config_file)):
-        os.makedirs(os.path.dirname(config_file))
-
-    with open("{}.new".format(config_file), "w") as fd:
-        config.write(fd)
-    os.rename("{}.new".format(config_file), config_file)
-
-
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
@@ -290,12 +306,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
 
     setup_loggers(verbose_level=verbose_level)
 
-    config = load_config()
-
-    if args.command == 'init':
-        do_init(args, config)
+    if args.command == 'keygen':
+        do_keygen(args)
     elif args.command == 'submit':
-        do_submit(args, config)
+        do_submit(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
