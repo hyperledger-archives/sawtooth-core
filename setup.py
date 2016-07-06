@@ -114,7 +114,12 @@ setup(name='sawtooth-core',
       ext_modules=[enclavemod, ecdsamod],
       py_modules=['journal.consensus.poet.poet_enclave_simulator'
                   '.poet_enclave_simulator',
-                  'gossip.ECDSA.ECDSARecoverModule'])
+                  'gossip.ECDSA.ECDSARecoverModule'],
+      entry_points={
+          'console_scripts': [
+              'sawtooth = sawtooth.cli:main_wrapper'
+          ]
+      })
 
 if "clean" in sys.argv and "--all" in sys.argv:
     directory = os.path.dirname(os.path.realpath(__file__))
