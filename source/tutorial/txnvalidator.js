@@ -33,9 +33,6 @@
     "NetworkDelayRange" : [ 0.00, 0.10 ],
     "UseFixedDelay" : true,
 
-    ## configuration of logging
-    "LogLevel" : "INFO",
-    "LogFile"  : "{log_dir}/lottery-{node}.log",
 
     ## configuration of the transaction families to include
     ## in the validator
