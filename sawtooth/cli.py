@@ -115,7 +115,21 @@ def add_keygen_parser(subparsers, parent_parser):
 
 
 def add_submit_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('submit', parents=[parent_parser])
+    epilog = '''
+details:
+  A single dash '-' can be specified for FILENAME to read input from
+  stdin.
+
+examples:
+  # sawtooth submit -F sawtooth_xo --wait -f transactions.js
+  # cat transactions.js | sawtooth submit --wait -F sawtooth_xo -f -
+'''
+
+    parser = subparsers.add_parser(
+        'submit',
+        parents=[parent_parser],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=epilog)
 
     parser.add_argument(
         '-F', '--family',
