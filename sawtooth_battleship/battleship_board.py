@@ -124,9 +124,7 @@ class BoardLayout(object):
         return layout
 
     @staticmethod
-    def generate(size=10, ships=None, max_placement_attempts=100):
-        if ships is None:
-            ships = ["AAAAA", "BBBB", "CCC", "DD", "DD", "SSS", "SSS"]
+    def generate(ships, size=10, max_placement_attempts=100):
 
         remaining = list(ships)
         layout = BoardLayout(size)

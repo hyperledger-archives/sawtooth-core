@@ -203,7 +203,7 @@ def do_create(args, config):
     if args.ships is not None:
         ships = args.ships.split(' ')
     else:
-        ships = None
+        ships = ["AAAAA", "BBBB", "CCC", "DD", "DD", "SSS", "SSS"]
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
@@ -500,12 +500,12 @@ def print_board(board, size, is_target_board=True,
 def do_genstats(args, config):
     count = args.count
     size = args.size
-
+    ships = ["AAAAA", "BBBB", "CCC", "DD", "DD", "SSS", "SSS"]
     # Create a board which contains a count of the number of time
     # a space was used.
     count_board = [[0] * size for i in range(size)]
     for i in xrange(0, count):
-        layout = BoardLayout.generate(size=size)
+        layout = BoardLayout.generate(size=size, ships=ships)
         board = layout.render()
         for row in xrange(0, size):
             for col in xrange(0, size):
