@@ -467,6 +467,10 @@ def log_configuration(cfg):
                 print >>sys.stderr, "Could not read log config: {}"\
                     .format(str(ex))
                 sys.exit(1)
+        else:
+            print >>sys.stderr, "LogConfigFile type not supported: {}"\
+                .format(cfg['LogConfigFile'])
+            sys.exit(1)
 
     else:
         clog = logging.StreamHandler()
