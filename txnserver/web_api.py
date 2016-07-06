@@ -49,7 +49,8 @@ class RootPage(Resource):
             'block': self._handleblkrequest,
             'stat': self._handlestatrequest,
             'store': self._handlestorerequest,
-            'transaction': self._handletxnrequest
+            'transaction': self._handletxnrequest,
+            'status': self._hdl_status_request,
         }
 
         self.PostPageMap = {
@@ -458,6 +459,17 @@ class RootPage(Resource):
         else:
             raise Error(http.NOT_FOUND, 'no stat source specified')
 
+        return result
+
+    def _hdl_status_request(self, pathcomponents, args, testonly):
+        result = dict()
+        result['Status'] = self.Validator.status
+        result['Domain'] = self.Validator.EndpointDomain
+        result['Name'] = self.Ledger.LocalNode.Name
+        result['HttpPort'] = self.Validator.Config.get('HttpPort', None)
+        result['Host'] = self.Ledger.LocalNode.NetHost
+        result['NodeIdentifier'] = self.Ledger.LocalNode.Identifier
+        result['Port'] = self.Ledger.LocalNode.NetPort
         return result
 
 
