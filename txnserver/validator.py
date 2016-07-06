@@ -39,6 +39,7 @@ class Validator(object):
 
     def __init__(self, config, windows_service):
 
+        self.status = 'stopped'
         self.Config = config
 
         self.windows_service = windows_service
@@ -73,6 +74,7 @@ class Validator(object):
         on shutdown: 1) disconnect this node from the network, 2) close all the
         databases, and 3) shutdown twisted. We need time for each to finish.
         """
+        self.status = 'stopping'
 
         # send the transaction to remove this node from the endpoint
         # registry (or send it to the web server)
@@ -90,6 +92,7 @@ class Validator(object):
 
     def handle_shutdown(self):
         reactor.stop()
+        self.status = 'stopped'
 
     def initialize_common_configuration(self):
         self.GenesisLedger = self.Config.get('GenesisLedger', False)
@@ -183,6 +186,7 @@ class Validator(object):
             logger.debug("DelayStart is in effect, waiting for /start")
             reactor.callLater(1, self.pre_start)
         else:
+            self.status = 'starting'
             self.start()
 
     def start(self):
@@ -270,6 +274,8 @@ class Validator(object):
 
         assert self.Ledger
 
+        self.status = 'waiting for initial connections'
+
         min_peer_count = self.Config.get("InitialConnectivity", 1)
         current_peer_count = len(self.Ledger.peer_list())
 
@@ -355,6 +361,7 @@ class Validator(object):
         random_walk.start_topology_update(self.Ledger, callback)
 
     def start_journal_transfer(self):
+        self.status = 'transferring ledger'
         if not journal_transfer.start_journal_transfer(self.Ledger,
                                                        self.start_ledger):
             # this generally happens because there are no valid peers, for now
@@ -364,7 +371,7 @@ class Validator(object):
     def start_ledger(self):
         logger.info('ledger initialization complete')
         self.Ledger.initialization_complete()
-
+        self.status = 'started'
         self.register_endpoint(self.Ledger.LocalNode, self.EndpointDomain)
 
     def register_endpoint(self, node, domain='/'):
