@@ -18,6 +18,8 @@ import time
 
 from gossip import signed_object
 from journal.messages import transaction_message
+from sawtooth.exceptions import InvalidTransactionError
+
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,29 @@ class Transaction(signed_object.SignedObject):
 
     def __str__(self):
         return self.TransactionTypeName
+
+    def is_valid(self, store):
+        """Determines if the transaction is valid.
+
+        Args:
+            store (dict): Transaction store mapping.
+        """
+        try:
+            self.check_valid(store)
+        except InvalidTransactionError as e:
+            logger.debug('invalid transaction %s: %s', str(self), str(e))
+            return False
+
+        return True
+
+    def check_valid(self, store):
+        """Determines if the transaction is valid.
+
+        Args:
+            store (dict): Transaction store mapping.
+        """
+        if not super(Transaction, self).is_valid(store):
+            raise InvalidTransactionError("invalid signature")
 
     def apply(self, store):
         pass
