@@ -1521,6 +1521,11 @@ def log_configuration(cfg):
                     .format(str(ex))
                 sys.exit(1)
 
+        else:
+            print >>sys.stderr, "LogConfigFile type not supported: {}"\
+                .format(cfg['LogConfigFile'])
+            sys.exit(1)
+
     else:
         clog = logging.StreamHandler()
         clog.setFormatter(logging.Formatter(
