@@ -76,7 +76,6 @@ class TestXoCli(unittest.TestCase):
                         vnm_config['TransactionFamilies']:
                     vnm_config['TransactionFamilies'].append(
                         'sawtooth_xo')
-                vnm_config['LogLevel'] = 'DEBUG'
                 cls.vnm = ValidatorNetworkManager(
                     httpPort=8800, udpPort=9600, cfg=vnm_config)
                 cls.vnm.launch_network(5)
