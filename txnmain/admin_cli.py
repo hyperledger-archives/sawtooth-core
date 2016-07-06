@@ -15,11 +15,13 @@
 
 import argparse
 import cmd
+import json
+import yaml
 import os
 import re
 import socket
 import sys
-import logging
+import logging.config
 
 from gossip.common import pretty_print_dict
 
@@ -404,20 +406,19 @@ def parse_command_line(args):
                         help='configuration file',
                         default=['txnclient.js'],
                         nargs='+')
-    parser.add_argument('--loglevel', help='Logging level')
+    parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--keyfile', help='Name of the key file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument(
-        '--logfile',
-        help='Name of the log file, __screen__ for standard output',
-        default='__screen__')
     parser.add_argument('--url', help='Initial URL for the validator')
     parser.add_argument('--node', help='Short form name of the node')
     parser.add_argument('--set',
                         help='Specify arbitrary configuration options',
                         nargs=2,
                         action='append')
+    parser.add_argument('--verbose', '-v',
+                        action='count',
+                        default=0,
+                        help='increase output sent to stderr')
 
     return parser.parse_args(args)
 
@@ -427,17 +428,13 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
 
     options_config = ArgparseOptionsConfig(
         [
-            ('loglevel', 'LogLevel'),
+            ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('conf_dir', 'ConfigDirectory'),
-            ('log_dir', 'LogDirectory'),
-            ('logfile', 'LogFile'),
             ('url', 'LedgerURL'),
             ('node', 'NodeName'),
+            ('verbose', 'Verbose'),
         ], options)
-
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
 
     return get_validator_configuration(options.config, options_config, os_name,
                                        config_files_required)
@@ -447,6 +444,36 @@ def read_key_file(keyfile):
     with open(keyfile, "r") as fd:
         key = fd.read().strip()
     return key
+
+
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        clog = logging.StreamHandler()
+        clog.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        clog.setLevel(logging.WARNING)
+        logging.getLogger().addHandler(clog)
 
 
 def main(args=sys.argv[1:]):
@@ -459,7 +486,19 @@ def main(args=sys.argv[1:]):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg)
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    log_configuration(cfg)
+
+    log_setup.setup_loggers(cfg["Verbose"])
 
     if "KeyFile" in cfg:
         keyfile = cfg["KeyFile"]

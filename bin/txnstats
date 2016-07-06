@@ -17,7 +17,7 @@
 
 import argparse
 import json
-import logging
+import logging.config
 import os
 import sys
 import time
@@ -116,12 +116,8 @@ def parse_command_line(args):
                         help='configuration file',
                         default=['stats.js'],
                         nargs='+')
-    parser.add_argument('--loglevel', help='Logging level')
+    parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument(
-        '--logfile',
-        help='Name of the log file, __screen__ for standard output')
     parser.add_argument('--url', help='Default url for connection')
     parser.add_argument('--interval',
                         help='Average interval between transactions',
@@ -130,6 +126,10 @@ def parse_command_line(args):
                         help='Number of stat intervals to collect',
                         type=int)
     parser.add_argument('--blocks', help='Number of blocks to dump', type=int)
+    parser.add_argument('--verbose', '-v',
+                        action='count',
+                        default=0,
+                        help='increase output sent to stderr')
 
     return parser.parse_args(args)
 
@@ -145,17 +145,44 @@ def get_configuration(args):
             ('blocks', 'Blocks'),
             ('count', 'Count'),
             ('interval', 'Interval'),
-            ('log_dir', 'LogDirectory'),
-            ('logfile', 'LogFile'),
-            ('loglevel', 'LogLevel'),
+            ('log_config', 'LogConfigFile'),
             ('url', 'LedgerURL'),
+            ('verbose', 'Verbose')
         ], options)
-
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
 
     return get_validator_configuration(options.config, options_config)
 
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        log_filename = os.path.join(cfg["LogDirectory"],
+                                    "stats-" + cfg["CurrencyHost"])
+        flog = logging.FileHandler(log_filename+".log")
+        flog.setFormatter(logging.Formatter(
+        '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        flog.setLevel(logging.DEBUG)
+
+        logging.getLogger().addHandler(flog)
 
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -181,7 +208,19 @@ def main():
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg)
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    log_configuration(cfg)
+
+    log_setup.setup_loggers(cfg["Verbose"])
 
     logger.warn('start stats collection')
 

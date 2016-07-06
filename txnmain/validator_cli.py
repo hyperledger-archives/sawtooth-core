@@ -14,7 +14,9 @@
 # ------------------------------------------------------------------------------
 import argparse
 import importlib
-import logging
+import json
+import yaml
+import logging.config
 import os
 import sys
 import traceback
@@ -109,7 +111,6 @@ def parse_command_line(args):
                              'load. Alternatively, multiple --config '
                              'options can be specified.',
                         action='append')
-    parser.add_argument('--loglevel', help='Logging level')
     parser.add_argument('--keyfile', help='Name of the key file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
     parser.add_argument('--data-dir', help='Name of the data directory')
@@ -120,10 +121,7 @@ def parse_command_line(args):
         '--delay-start',
         help='Delay full startup sequence until /command/start',
         action='store_true', default=False)
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument(
-        '--logfile',
-        help='Name of the log file, __screen__ for standard output')
+    parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--peers',
                         help='Comma-separated list of peers to connect to. '
                              'Alterntively, multiple --peers options can '
@@ -203,13 +201,11 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
     options_config = ArgparseOptionsConfig(
         [
             ('conf_dir', 'ConfigDirectory'),
-            ('log_dir', 'LogDirectory'),
             ('data_dir', 'DataDirectory'),
             ('delay_start', 'DelayStart'),
             ('run_dir', 'RunDirectory'),
             ('type', 'LedgerType'),
-            ('logfile', 'LogFile'),
-            ('loglevel', 'LogLevel'),
+            ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('node', 'NodeName'),
             ('host', 'Host'),
@@ -229,6 +225,44 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
 
     return get_validator_configuration(options.config, options_config, os_name,
                                        config_files_required)
+
+
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        log_filename = os.path.join(cfg["LogDirectory"], cfg["NodeName"])
+        flogD = logging.FileHandler(log_filename + "-debug.log")
+        flogD.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        flogD.setLevel(logging.DEBUG)
+
+        flogE = logging.FileHandler(log_filename + "-error.log")
+        flogE.setFormatter(logging.Formatter(
+            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        flogE.setLevel(logging.ERROR)
+
+        logging.getLogger().addHandler(flogE)
+        logging.getLogger().addHandler(flogD)
 
 
 def read_key_file(keyfile):
@@ -282,6 +316,16 @@ def main(args, windows_service=False):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
     daemonize = cfg.get('Daemonize', False)
     if daemonize:
         verbose_level = 0
@@ -289,9 +333,9 @@ def main(args, windows_service=False):
         verbose_level = cfg['Verbose']
 
     log_setup.setup_loggers(
-        cfg,
         verbose_level=verbose_level,
         capture_std_output=daemonize)
+    log_configuration(cfg)
 
     for key, value in cfg.iteritems():
         logger.debug("CONFIG: %s = %s", key, value)

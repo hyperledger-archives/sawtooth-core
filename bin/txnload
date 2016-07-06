@@ -18,11 +18,12 @@
 import argparse
 import os
 import random
+import json
 import re
 import sys
 import time
 import urllib2
-import logging
+import logging.config
 
 from gossip import node, signed_object
 from gossip.common import pretty_print_dict
@@ -232,12 +233,8 @@ def parse_command_line(args):
                         default=['txnload.js'],
                         nargs='+')
     parser.add_argument('--keyfile', help='Name of the key file')
-    parser.add_argument('--loglevel', help='Logging level', default='info')
+    parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--conf-dir', help='Name of the config directory')
-    parser.add_argument('--log-dir', help='Name of the log directory')
-    parser.add_argument(
-        '--logfile',
-        help='Name of the log file, __screen__ for standard output')
     parser.add_argument('--symbol', help='Base string for symbols')
     parser.add_argument('--urls',
                         help='List of potential web server to contact',
@@ -249,6 +246,10 @@ def parse_command_line(args):
                         help='Number of messages to send',
                         type=int,
                         default=sys.maxint)
+    parser.add_argument('--verbose', '-v',
+                         action='count',
+                         default=0,
+                         help='increase output sent to stderr')
 
     return parser.parse_args(args)
 
@@ -263,16 +264,12 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('conf_dir', 'ConfigDirectory'),
             ('count', 'Count'),
             ('interval', 'Interval'),
-            ('log_dir', 'LogDirectory'),
-            ('logfile', 'LogFile'),
-            ('loglevel', 'LogLevel'),
+            ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('symbol', 'Symbol'),
             ('urls', 'URLs'),
+            ('verbose', 'Verbose')
         ], options)
-
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
 
     cfg = get_validator_configuration(options.config, options_config, os_name,
                                       config_files_required)
@@ -296,6 +293,36 @@ def read_key_file(keyfile):
         key = fd.read().strip()
     return key
 
+def log_configuration(cfg):
+    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+        log_config_file = cfg['LogConfigFile']
+        if log_config_file.split(".")[-1] == "js":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = json.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}" \
+                    .format(str(ex))
+                sys.exit(1)
+        elif log_config_file.split(".")[-1] == "yaml":
+            try:
+                with open(log_config_file) as log_config_fd:
+                    log_dic = yaml.load(log_config_fd)
+                    logging.config.dictConfig(log_dic)
+            except IOError, ex:
+                print >>sys.stderr, "Could not read log config: {}"\
+                    .format(str(ex))
+                sys.exit(1)
+
+    else:
+        log_filename = os.path.join(cfg["LogDirectory"],
+                                    "load-" + cfg["CurrencyHost"])
+        flog = logging.FileHandler(log_filename+".log")
+        flog.setFormatter(logging.Formatter(
+        '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        flog.setLevel(logging.INFO)
+        logging.getLogger().addHandler(flog)
 
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -309,7 +336,19 @@ def main(args):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    log_setup.setup_loggers(cfg)
+    if 'LogLevel' in cfg:
+        print >>sys.stderr, "LogLevel is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    if 'LogFile' in cfg:
+        print >>sys.stderr, "LogFile is no longer supported, use " \
+            "LogConfigFile instead"
+        sys.exit(1)
+
+    log_configuration(cfg)
+
+    log_setup.setup_loggers(cfg['Verbose'])
 
     if "KeyFile" in cfg:
         keyfile = cfg["KeyFile"]

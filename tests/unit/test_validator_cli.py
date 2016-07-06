@@ -60,14 +60,14 @@ class TestValidatorCLI(unittest.TestCase):
             cfg["DataDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\data")
 
-    def test_loglevel_arg(self):
+    def test_logconfig_arg(self):
         os.environ.clear()
 
-        cfg = get_configuration(args=["--loglevel=info"],
+        cfg = get_configuration(args=["--log-config=Logging.js"],
                                 config_files_required=False)
 
-        self.assertIn("LogLevel", cfg)
-        self.assertEquals(cfg["LogLevel"], "INFO")
+        self.assertIn("LogConfigFile", cfg)
+        self.assertEquals(cfg["LogConfigFile"], "Logging.js")
 
     def test_options_mapping_conf_dir(self):
         os.environ.clear()
@@ -77,15 +77,6 @@ class TestValidatorCLI(unittest.TestCase):
 
         self.assertIn("ConfigDirectory", cfg)
         self.assertEquals(cfg["ConfigDirectory"], "/test_path/etc")
-
-    def test_options_mapping_log_dir(self):
-        os.environ.clear()
-
-        cfg = get_configuration(args=["--log-dir=/test_path/logs"],
-                                config_files_required=False)
-
-        self.assertIn("LogDirectory", cfg)
-        self.assertEquals(cfg["LogDirectory"], "/test_path/logs")
 
     def test_options_mapping_data_dir(self):
         os.environ.clear()
@@ -104,15 +95,6 @@ class TestValidatorCLI(unittest.TestCase):
 
         self.assertIn("LedgerType", cfg)
         self.assertEquals(cfg["LedgerType"], "test")
-
-    def test_options_mapping_log_file(self):
-        os.environ.clear()
-
-        cfg = get_configuration(args=["--logfile=/test_path/logs/test.log"],
-                                config_files_required=False)
-
-        self.assertIn("LogFile", cfg)
-        self.assertEquals(cfg["LogFile"], "/test_path/logs/test.log")
 
     def test_options_mapping_key_file(self):
         os.environ.clear()

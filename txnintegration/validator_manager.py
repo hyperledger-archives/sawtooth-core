@@ -56,9 +56,11 @@ class ValidatorManager(object):
     def launch(self, launch=True):
         self.Url = "http://{}:{}".format(self.config['Host'],
                                          self.config['HttpPort'])
-        self.config['LogFile'] = os.path.join(self.dataDir,
-                                              "{}.log".format(self.Name))
-        self.logFile = self.config['LogFile']
+
+        self.config["LogDirectory"] = self.dataDir
+        self.logFile = os.path.join(self.dataDir,
+                                    "{}.log".format(self.Name))
+
         if os.path.exists(self.logFile):  # delete existing log file
             os.remove(self.logFile)
 
