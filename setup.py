@@ -77,7 +77,8 @@ else:
     run_dir = "/var/run/sawtooth-validator"
 
 data_files = [
-    (conf_dir, ['etc/txnvalidator.js']),
+    (conf_dir, ['etc/txnvalidator.js', "etc/txnvalidator-logging.js.example",
+                "etc/txnvalidator-logging.yaml.example"]),
     (os.path.join(conf_dir, "keys"), []),
     (log_dir, []),
     (data_dir, []),
