@@ -28,6 +28,7 @@ from colorlog import ColoredFormatter
 from gossip.common import json2dict
 from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import InvalidTransactionError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -319,6 +320,9 @@ def main_wrapper():
     try:
         main()
     except CliException as e:
+        print >>sys.stderr, "Error: {}".format(e)
+        sys.exit(1)
+    except InvalidTransactionError as e:
         print >>sys.stderr, "Error: {}".format(e)
         sys.exit(1)
     except ClientException as e:
