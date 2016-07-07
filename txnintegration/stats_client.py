@@ -348,13 +348,6 @@ class StatsManager(object):
 
         self.csv_enabled = False
 
-    def csv_init(self):
-        self.csv_enabled = True
-        self.csvmgr = CsvManager()
-        filename = "stats_client_" + str(int(time.time())) + ".csv"
-
-        self.csv_enabled = False
-
     def initialize_client_list(self, endpoint_urls):
         # add validator stats client for each url in endpoint_urls
         self.known_endpoint_urls = list(endpoint_urls)
