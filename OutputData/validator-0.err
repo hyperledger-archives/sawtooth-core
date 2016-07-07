@@ -7,5 +7,5 @@ Traceback (most recent call last):
     local_main(cfg, windows_service)
   File "/project/sawtooth-validator/txnmain/validator_cli.py", line 55, in local_main
     from txnserver import web_api
-  File "/project/sawtooth-validator/txnserver/web_api.py", line 455
-SyntaxError: Non-ASCII character '\xe2' in file /project/sawtooth-validator/txnserver/web_api.py on line 455, but no encoding declared; see http://www.python.org/peps/pep-0263.html for details
+  File "/project/sawtooth-validator/txnserver/web_api.py", line 458
+SyntaxError: Non-ASCII character '\xe2' in file /project/sawtooth-validator/txnserver/web_api.py on line 458, but no encoding declared; see http://www.python.org/peps/pep-0263.html for details

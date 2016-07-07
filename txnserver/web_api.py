@@ -453,33 +453,33 @@ class RootPage(Resource):
         if source == 'ledger':
             for domain in self.Ledger.StatDomains.iterkeys():
                 result[domain] = self.ledger.StatDomains[domain].get_stats()
-                return result 
+                return result
         if source == 'node':
-            for peer in self.Ledger.NodeMap.itervalues():  
-                result[peer.Name] = peer.Stats.get_stats() 
-                result[peer.Name]['IsPeer'] = peer.is_peer 
-            return result 
-        if source == 'platform':
-            result['platform'] = self.ps.get_data_as_dict() 
-            return result 
-        if source == 'all':
-            for domain in self.Ledger.StatDomains.iterkeys():  
-                result[domain] = self.Ledger.StatDomains[domain].get_stats() 
             for peer in self.Ledger.NodeMap.itervalues():
-                result[peer.Name] = peer.Stats.get_stats() 
-                result[peer.Name]['IsPeer'] = peer.is_peer 
-            result['platform'] = self.ps.get_data_as_dict() 
-            return result  
+                result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name]['IsPeer'] = peer.is_peer
+                return result
+        if source == 'platform':
+            result['platform'] = self.ps.get_data_as_dict()
+            return result
+        if source == 'all':
+            for domain in self.Ledger.StatDomains.iterkeys():
+                result[domain] = self.Ledger.StatDomains[domain].get_stats()
+            for peer in self.Ledger.NodeMap.itervalues():
+                result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name]['IsPeer'] = peer.is_peer
+            result['platform'] = self.ps.get_data_as_dict()
+            return result
 
         if 'ledger' in args:
-            for domain in self.Ledger.StatDomains.iterkeys():  
-                result[domain] = self.Ledger.StatDomains[domain].get_stats() 
-        if 'node' in args:  
+            for domain in self.Ledger.StatDomains.iterkeys():
+                result[domain] = self.Ledger.StatDomains[domain].get_stats()
+        if 'node' in args:
             for peer in self.Ledger.NodeMap.itervalues():
-                result[peer.Name] = peer.Stats.get_stats() 
-                result[peer.Name]['IsPeer'] = peer.is_peer 
-        if 'platform' in args:  
-        result['platform'] = self.ps.get_data_as_dict()  
+                result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name]['IsPeer'] = peer.is_peer
+        if 'platform' in args:
+            result['platform'] = self.ps.get_data_as_dict()
 
         # else:         #
         #  raise Error(http.NOT_FOUND, 'source or arg not found')  
