@@ -452,7 +452,7 @@ class RootPage(Resource):
         source = pathcomponents.pop(0)
         if source == 'ledger':
             for domain in self.Ledger.StatDomains.iterkeys():
-                result[domain] = self.Ledger.StatDomains[domain].get_stats() 
+                result[domain] = self.ledger.StatDomains[domain].get_stats()
                 return result 
         if source == 'node':
             for peer in self.Ledger.NodeMap.itervalues():  
