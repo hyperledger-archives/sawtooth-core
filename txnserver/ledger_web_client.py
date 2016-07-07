@@ -39,6 +39,17 @@ class LedgerWebClient(object):
         self.LedgerURL = url
         self.ProxyHandler = urllib2.ProxyHandler({})
 
+    def status_url(self):
+        """
+        status_url -- create a url to access a validator's status
+        :return: URL for accessing status
+        """
+        url = self.LedgerURL + '/status'
+        url = urlparse.urljoin(url,
+                               urlparse.urlparse(url).path.replace('//', '/'))
+        url = url.rstrip('/')
+        return url
+
     def store_url(self, txntype, key='', blockid='', delta=False):
         """
         store_url -- create a url to access a value store from the ledger
@@ -167,6 +178,13 @@ class LedgerWebClient(object):
                                urlparse.urlparse(url).path.replace('//', '/'))
 
         return url
+
+    def get_status(self):
+        """
+        get status of validator
+        :return: dictionary of status items
+        """
+        return self._geturl(self.status_url())
 
     def get_store(self, txntype, key='', blockid='', delta=False):
         """
