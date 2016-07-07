@@ -481,9 +481,10 @@ class RootPage(Resource):
         if 'platform' in args:
             result['platform'] = self.ps.get_data_as_dict()
 
-        # else:         #
-        #  raise Error(http.NOT_FOUND, 'source or arg not found')  
-        # return result 
+        # else:
+        #     raise Error(http.NOT_FOUND, 'source or arg not found')
+        #     return result
+
 
     def _hdl_status_request(self, pathcomponents, args, testonly):
         result = dict()
