@@ -45,7 +45,7 @@ Instructions for what to do with the repo are in the next section.
 Clone the Repository
 ====================
 
-From following the Sawtooth Lake Tutorial, You should already have several
+From following the Sawtooth Lake Tutorial, you should already have several
 repositories cloned:
 
 .. code-block:: console
@@ -219,7 +219,7 @@ looks like this:
 The ledger object being passed into this function is a type derived from
 journal.journal_core.Journal from `sawtooth-core <http://github.com/HyperLedger/sawtooth-core>`__
 (such as PoetJournal or QuorumJournal).  We
-register the standard transaction message handler
+register the standard transaction message handler to
 specify the message type of XoTransactionMessage, which is derived from
 transaction_message.TransactionMessage.
 
@@ -392,7 +392,7 @@ provides a couple methods for creating transactions:
         return self.sendtxn(XoTransaction, XoTransactionMessage, update)
 
 In both cases, an XoTransaction is sent (wrapped in a XoTransactionMessage),
-and, but the update has different actions.  The two allowable actions for
+but the update has different actions.  The two allowable actions for
 our tic-tac-toe implementation are CREATE and TAKE.  CREATE takes the name
 of the game to create, and TAKE takes the name of the game and the space.  We
 imply all other implementation from the state of the transaction family's
