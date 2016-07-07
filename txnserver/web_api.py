@@ -453,7 +453,7 @@ class RootPage(Resource):
         if source == 'ledger':
             for domain in self.Ledger.StatDomains.iterkeys():
                 result[domain] = self.Ledger.StatDomains[domain].get_stats() 
-            return result 
+                return result 
         if source == 'node':
             for peer in self.Ledger.NodeMap.itervalues():  
                 result[peer.Name] = peer.Stats.get_stats() 
@@ -480,7 +480,7 @@ class RootPage(Resource):
                 result[peer.Name]['IsPeer'] = peer.is_peer 
         if 'platform' in args:  
         result['platform'] = self.ps.get_data_as_dict()  
-                
+
         # else:         #
         #  raise Error(http.NOT_FOUND, 'source or arg not found')  
         # return result 
