@@ -16,12 +16,13 @@
 This module defines the core gossip class for communication between nodes.
 """
 
-import Queue
 import errno
 import logging
 import socket
 import time
+import copy
 
+from collections import deque
 from threading import Condition
 
 from twisted.internet import reactor, task
@@ -65,6 +66,11 @@ class MessageQueue(object):
 
     def __len__(self):
         return len(self._queue)
+
+    def __deepcopy__(self, memo):
+        newmq = MessageQueue()
+        newmq._queue = copy.deepcopy(self._queue, memo)
+        return newmq
 
     def appendleft(self, msg):
         self._condition.acquire()
@@ -637,7 +643,7 @@ class Gossip(object, DatagramProtocol):
         # to leave the socket open long enough to send the disconnect messages
         # that we just queued up
         self.ProcessIncomingMessages = False
-        self.MessageQueue.put(None)
+        self.MessageQueue.appendleft(None)
 
     def register_message_handler(self, msg, handler):
         """Register a function to handle incoming messages for the
@@ -789,7 +795,7 @@ class Gossip(object, DatagramProtocol):
 
         self.MessageHandledMap[msg.Identifier] = time.time(
         ) + self.ExpireMessageTime
-        self.MessageQueue.put(msg)
+        self.MessageQueue.appendleft(msg)
 
         # and now forward it on to the peers if it is marked for forwarding
         if msg.IsForward and msg.TimeToLive > 0:
