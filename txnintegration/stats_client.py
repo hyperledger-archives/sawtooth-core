@@ -25,11 +25,14 @@ from txnintegration.utils import StatsCollector
 from txnintegration.utils import PlatformStats
 
 import time
-import csv
 import collections
 
 import argparse
 import sys
+
+from txnintegration.stats_utils import ConsolePrint
+from txnintegration.stats_utils import CsvManager
+from txnintegration.stats_utils import StatsPrintManager
 
 curses_imported = True
 try:
@@ -38,128 +41,48 @@ except ImportError:
     curses_imported = False
 
 
-class ConsolePrint(object):
-
-    def __init__(self):
-        self.use_curses = True if curses_imported else False
-        self.start = True
-        self.scrn = None
-
-        if self.use_curses:
-            self.scrn = curses.initscr()
-
-    def cpprint(self, printstring, finish=False, reverse=False):
-        if self.use_curses:
-            attr = curses.A_NORMAL
-            if reverse:
-                attr = curses.A_REVERSE
-            if self.start:
-                self.scrn.erase()
-                self.start = False
-            hw = self.scrn.getmaxyx()
-            self.scrn.addstr(printstring[:hw[1] - 1] + "\n", attr)
-            if finish:
-                self.scrn.refresh()
-                self.start = True
-        else:
-            print printstring
-
-    def cpstop(self):
-        if self.use_curses:
-            curses.nocbreak()
-            self.scrn.keypad(0)
-            curses.echo()
-            curses.endwin()
-
-
-class CsvManager(object):
-    def __init__(self):
-        self.csvdata = []
-
-    def open_csv_file(self, filename, filepath=""):
-        self.file = open(filename, 'wt')
-        self.writer = csv.writer(self.file)
-
-    def close_csv_file(self):
-        self.file.close()
-
-    def csv_newline(self):
-        self.csvdata = []
-
-    def csv_append(self, datalist):
-        self.csvdata.extend(datalist)
-
-    def csv_write_header(self, headerlist=None):
-        if headerlist is not None:
-            self.csvdata.extend(headerlist)
-        self.csvdata.insert(0, "time")
-        self._csv_write()
-
-    def csv_write_data(self, datalist=None):
-        if datalist is not None:
-            self.csvdata.extend(datalist)
-        self.csvdata.insert(0, time.time())
-        self._csv_write()
-
-    def _csv_write(self):
-        self.writer.writerow(self.csvdata)
-        self.csvdata = []
-
-
 class StatsClient(object):
-    def __init__(self, val_id, baseurl, portnum):
+    def __init__(self, val_id, fullurl):
         self.id = val_id
-        self.url = baseurl + ":" + str(portnum)
-        self.name = ""
+        self.url = fullurl
+        self.name = "validator_{0}".format(val_id)
 
         self.validator_state = "UNKNWN"
 
         self.ledgerstats = {}
         self.nodestats = {}
 
-        self.responding = False
-        self.response_time = 0.0
-
         self.vsm = ValidatorStatsManager()
+
+        self.responding = False
 
         self.request_start = 0.0
         self.request_complete = 0.0
+        self.response_time = 0.0
 
-    def request(self):
+        self.vc = ValidatorCommunications()
+
+    def stats_request(self):
+        # initialize endpoint urls from specified validator url
         self.request_start = time.clock()
-        d = agent.request(
-            'GET',
-            self.url + '/stat/ledger',
-            Headers({'User-Agent': ['sawtooth stats collector']}),
-            None)
+        self.path = self.url + "/stat/ledger"
+        self.vc.get_request(self.path,
+                            self._stats_completion,
+                            self._stats_error)
 
-        d.addCallback(self.handlerequest)
-        d.addErrback(self.handleerror)
-
-        return d
-
-    def handlerequest(self, response):
+    def _stats_completion(self, body):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
+        self.vsm.update_stats(body, True, self.request_start,
+                              self.request_complete)
         self.responding = True
         self.validator_state = "RESPND"
-        d = readBody(response)
-        d.addCallback(self.handlebody)
-        return d
 
-    def handlebody(self, body):
-        self.ledgerstats = json.loads(body)
-        self.vsm.update_stats(self.ledgerstats, True, self.request_start,
-                              self.request_complete)
-
-    def handleerror(self, failed):
+    def _stats_error(self):
         self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
         self.validator_state = "NORESP"
         return
-
-    def shutdown(self, ignored):
-        reactor.stop()
 
 
 ValStats = collections.namedtuple('validatorstats',
@@ -407,7 +330,7 @@ class SystemStats(StatsCollector):
         self.msgs_acked = []
 
 
-class SystemStatsManager(object):
+class StatsManager(object):
     def __init__(self):
         self.cp = ConsolePrint()
 
@@ -417,7 +340,50 @@ class SystemStatsManager(object):
         self.last_net_bytes_recv = 0
         self.last_net_bytes_sent = 0
 
+        self.clients = []
+        self.known_endpoint_urls = []
+        self.stats_loop_count = 0
+
+        self.spm = StatsPrintManager(self.ss, self.ps, self.clients)
+
         self.csv_enabled = False
+
+    def initialize_client_list(self, endpoint_urls):
+        # add validator stats client for each url in endpoint_urls
+        self.known_endpoint_urls = list(endpoint_urls)
+
+        for val_num, url in enumerate(self.known_endpoint_urls):
+            c = StatsClient(val_num, url)
+            self.clients.append(c)
+
+    def update_client_list(self, endpoint_urls):
+        # add validator stats client for each new url in endpoint_urls
+        for url in endpoint_urls:
+            if url not in self.known_endpoint_urls:
+                val_num = len(self.known_endpoint_urls)
+                c = StatsClient(val_num, url)
+                self.clients.append(c)
+                self.known_endpoint_urls.append(url)
+
+    def stats_loop(self):
+        self.process_stats(self.clients)
+        self.print_stats()
+        self.write_stats()
+
+        for c in self.clients:
+            c.stats_request()
+
+        self.stats_loop_count += 1
+
+        return
+
+    def stats_loop_done(self, result):
+        print "Stats loop done."
+        reactor.stop()
+
+    def stats_loop_failed(self, failure):
+        print failure.getBriefTraceback()
+        reactor.stop()
 
     def process_stats(self, statsclients):
         self.ss.known_validators = len(statsclients)
@@ -437,99 +403,7 @@ class SystemStatsManager(object):
         self.last_net_bytes_sent = self.ps.net_stats.bytes_sent
 
     def print_stats(self):
-        self.cp.cpprint('    Validators: {0:8d} known'
-                        '          {1:8d} responding'
-                        '      {2:8f} avg time(s)'
-                        '     {3:8f} max time(s)'
-                        '    {4:8d} run time(s)'
-                        .format(self.ss.sys_client.known_validators,
-                                self.ss.sys_client.active_validators,
-                                self.ss.sys_client.avg_client_time,
-                                self.ss.sys_client.max_client_time,
-                                self.ss.sys_client.runtime),
-                        False)
-        self.cp.cpprint('        Blocks: {0:8d} max committed'
-                        '    {1:6d} max committed cnt'
-                        ' {2:6d} max pending'
-                        '       {3:6d} max pending cnt'
-                        '{4:8d} max claimed'
-                        '      {5:8d} min claimed'
-                        .format(self.ss.sys_blocks.blocks_max_committed,
-                                self.ss.sys_blocks.blocks_max_committed_count,
-                                self.ss.sys_blocks.blocks_max_pending,
-                                self.ss.sys_blocks.blocks_max_pending_count,
-                                self.ss.sys_blocks.blocks_max_claimed,
-                                self.ss.sys_blocks.blocks_min_claimed),
-                        False)
-        self.cp.cpprint('  Transactions: {0:8d} max committed'
-                        '    {1:6d} max committed cnt'
-                        ' {2:6d} max pending'
-                        '       {3:6d} max pending cnt'
-                        '{4:8d} rate (t/s)'
-                        .format(self.ss.sys_txns.txns_max_committed,
-                                self.ss.sys_txns.txns_max_committed_count,
-                                self.ss.sys_txns.txns_max_pending,
-                                self.ss.sys_txns.txns_max_pending_count,
-                                0),
-                        False)
-        self.cp.cpprint(' Packet totals: {0:8d} max dropped'
-                        '    {1:8d} min dropped'
-                        '     {2:8d} max duplicated'
-                        '  {3:8d} min duplicated'
-                        ' {4:8d} max aks received'
-                        ' {5:8d} min aks received'
-                        .format(self.ss.sys_packets.packets_max_dropped,
-                                self.ss.sys_packets.packets_min_dropped,
-                                self.ss.sys_packets.packets_max_duplicates,
-                                self.ss.sys_packets.packets_min_duplicates,
-                                self.ss.sys_packets.packets_max_acks_received,
-                                self.ss.sys_packets.packets_min_acks_received),
-                        False)
-        self.cp.cpprint('Message totals: {0:8d} max handled'
-                        '    {1:8d} min handled'
-                        '     {2:8d} max acked'
-                        '       {3:8d} min acked'
-                        .format(self.ss.sys_msgs.msgs_max_handled,
-                                self.ss.sys_msgs.msgs_min_handled,
-                                self.ss.sys_msgs.msgs_max_acked,
-                                self.ss.sys_msgs.msgs_min_acked),
-                        False)
-        self.cp.cpprint('Platform stats: {0:8f} cpu pct'
-                        '       {1:8f} vmem pct'
-                        '      {2:8d} net bytes tx'
-                        '  {3:8d} net bytes rx'
-                        .format(self.ps.cpu_stats.percent,
-                                self.ps.vmem_stats.percent,
-                                self.this_net_bytes_sent,
-                                self.this_net_bytes_recv),
-                        False)
-
-        self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
-                        '      TXNS     TXNS  VAL                VAL',
-                        reverse=True)
-        self.cp.cpprint('    ID   STATE      TIME   CLAIMED COMMITTED  PENDING'
-                        ' COMMITTED  PENDING  NAME               URL',
-                        reverse=True)
-
-        for c in clients:
-            if c.responding:
-                self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} '
-                                '{5:8d}  {6:8d} {7:8d}  {8:16}   {9:16}'
-                                .format(c.id, c.validator_state,
-                                        c.response_time,
-                                        c.vsm.vstats.blocks_claimed,
-                                        c.vsm.vstats.blocks_committed,
-                                        c.vsm.vstats.blocks_pending,
-                                        c.vsm.vstats.txns_committed,
-                                        c.vsm.vstats.txns_pending,
-                                        c.name[:16], c.url), False)
-            else:
-                self.cp.cpprint('{0:6d}  {1:6}                               '
-                                '                             {2:16}   {3:16}'
-                                .format(c.id, c.validator_state,
-                                        c.name[:16], c.url), False)
-
-        self.cp.cpprint("", True)
+        self.spm.print_stats()
 
     def csv_init(self):
         self.csv_enabled = True
@@ -549,49 +423,127 @@ class SystemStatsManager(object):
             data = self.ps.get_data()
             self.csvmgr.csv_write_data(data)
 
-    def ssmstop(self):
-        print "ssm is stopping"
+    def stats_stop(self):
+        print "StatsManager is stopping"
         self.cp.cpstop()
-
         if self.csv_enabled:
             self.csvmgr.close_csv_file()
 
 
-def workloop():
+class EndpointManager(object):
+    def __init__(self):
+        self.error_count = 0
+        self.no_endpoint_responders = False
+        self.endpoint_urls = []
+        self.vc = ValidatorCommunications()
 
-    ssm.process_stats(clients)
-    ssm.print_stats()
-    ssm.write_stats()
+    def initialize_endpoint_urls(self, url, init_cb):
+        # initialize endpoint urls from specified validator url
+        self.endpoint_completion_cb = init_cb
+        path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
+        self.init_path = path
+        self.vc.get_request(path,
+                            self.endpoint_urls_completion,
+                            self._init_terminate)
 
-    for c in clients:
-        c.request()
+    def endpoint_urls_completion(self, results):
+        # response has been received
+        # extract host url and port number for each validator identified
+        self.endpoint_urls = []
+        for endpoint in results.values():
+            self.endpoint_urls.append(
+                'http://{0}:{1}'.format(
+                    endpoint["Host"], endpoint["HttpPort"]))
+        self.endpoint_completion_cb(self.endpoint_urls)
 
-    return
+    def update_endpoint_urls(self, update_cb):
+        # initiates update of endpoint urls
+        self.endpoint_completion_cb = update_cb
+        self.contact_list = list(self.endpoint_urls)
+        url = self.contact_list.pop()
+        path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
+        self.vc.get_request(path,
+                            self.endpoint_urls_completion,
+                            self._update_endpoint_continue)
+
+    def _update_endpoint_continue(self):
+        # update response not received, try another url
+        # if all urls have been tried, set "no update" flag and be done
+        if len(self.contact_list) > 0:
+            url = self.contact_list.pop()
+            path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
+            self.vc.get_request(path,
+                                self.endpoint_urls_completion,
+                                self._update_endpoint_continue)
+        else:
+            self.no_endpoint_responders = True
+
+    def update_endpoint_done(self, result):
+        print "update endpoint loop done - stopping."
+        reactor.stop()
+
+    def update_endpoint_failed(self, failure):
+        print failure.getBriefTraceback()
+        reactor.stop()
+
+    def _init_terminate(self):
+        print "no response to endpoint request to {0}".format(self.init_path)
+        print "terminating session"
+        reactor.stop()
+        return
 
 
-def handleshutdown(ignored):
-    reactor.stop()
+class ValidatorCommunications(object):
+    def __init__(self):
+        self.request_count = 0
+        self.error_count = 0
+        self.agent = Agent(reactor)
 
+    def get_request(self, path, ccb=None, ecb=None):
+        self.completion_callback = self._completion_default if ccb is None \
+            else ccb
+        self.error_callback = self._error_default if ecb is None \
+            else ecb
 
-def handleloopdone(result):
-    print "Loop done."
-    reactor.stop()
+        self.request_path = path
+        d = self.agent.request(
+            'GET',
+            path,
+            Headers({'User-Agent': ['sawtooth stats collector']}),
+            None)
 
+        d.addCallback(self._handle_request)
+        d.addErrback(self._handle_error)
 
-def handleloopfailed(failure):
-    print failure.getBriefTraceback()
-    reactor.stop()
+        return d
+
+    def _handle_request(self, response):
+        self.responding = True
+        d = readBody(response)
+        d.addCallback(self._handle_body)
+        return d
+
+    def _handle_body(self, body):
+        self.data = json.loads(body)
+        self.completion_callback(self.data)
+
+    def _handle_error(self, failed):
+        self.error_count += 1
+        self.error_callback()
+
+    def _completion_default(self, data):
+        print "ValidatorCommunications.get_request() " \
+              "default completion handler"
+        print json.dumps(data, indent=4)
+
+    def _error_default(self):
+        print "ValidatorCommunications.get_request() " \
+              "default error handler"
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--count',
-                        metavar="",
-                        help='number of validators to monitor '
-                             '(default: %(default)s)',
-                        default=3,
-                        type=int)
     parser.add_argument('--url',
                         metavar="",
                         help='Base validator url '
@@ -603,15 +555,21 @@ def parse_args(args):
                              '(default: %(default)s)',
                         default=8800,
                         type=int)
-    parser.add_argument('--update-time',
+    parser.add_argument('--stats-time',
                         metavar="",
                         help='Interval between stats updates (s) '
                              '(default: %(default)s)',
                         default=3,
                         type=int)
+    parser.add_argument('--endpoint-time',
+                        metavar="",
+                        help='Interval between endpoint updates (s) '
+                             '(default: %(default)s)',
+                        default=30,
+                        type=int)
     parser.add_argument('--csv-enable',
                         metavar="",
-                        help='Enables csv file generation '
+                        help='Enables CSV file generation'
                              '(default: %(default)s)',
                         default=False,
                         type=bool)
@@ -619,47 +577,74 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def configure(opts):
+sm = StatsManager()
+epm = EndpointManager()
+loop_times = {"stats": 0, "endpoint": 0}
 
-    print "    validator count: ", opts.count
-    print " validator base url: ", opts.url
-    print "validator base port: ", opts.port
 
-clients = []
-agent = Agent(reactor)
-ssm = SystemStatsManager()
+def startup(urls):
+    sm.initialize_client_list(epm.endpoint_urls)
+
+    # start loop to periodically collect and report stats
+    stats_loop = task.LoopingCall(sm.stats_loop)
+    stats_loop_deferred = stats_loop.start(loop_times["stats"])
+    stats_loop_deferred.addCallback(sm.stats_loop_done)
+    stats_loop_deferred.addErrback(sm.stats_loop_failed)
+
+    # start loop to periodically update the list of validator endpoints
+    # and call WorkManager.update_client_list
+    ep_loop = task.LoopingCall(epm.update_endpoint_urls, sm.update_client_list)
+    ep_loop_deferred = ep_loop.start(loop_times["endpoint"], now=False)
+    ep_loop_deferred.addCallback(epm.update_endpoint_done)
+    ep_loop_deferred.addErrback(epm.update_endpoint_failed)
 
 
 def main():
     """
     Synopsis:
-    1) Creates a twisted instance of twisted http Agent
-    2) Creates a instance of SystemStatsManager.  This implement logic for:
-        a) Collecting stats from each stats client
-        b) processing stats to generate system stats
-        c) printing stats to console
-    3) Creates an instance of StatsClient for each validator
-    4) StatsClient implements the following key functions:
-        a) request: creates an agent.request() to send stats request to its
-            corresponding validator, and sets the handle_request() and
-            handle_error() functions as callbacks. Using twisted agent to
-            separate request and response this way allows requests by all
-            clients to be issued "simultaneously" without having to wait
-            for responses.
-        b) handle_request: handles the stats response
-        c) handle_error: handles any errors, including unresponsive validator
-    4) Creates twisted LoopingCall workloop.  Each time it executes it:
-        a) calls SystemStatsManager.process_stats()
-        b) calls SystemStatsManager.print_stats()
-        c) calls the request function of each StatsClient,
-            starting another round of stats collection
-    5) ConsolePrint() manages printing to console.  When printing to posix
-    (linux)console, curses allows a "top"-like non-scrolling display to be
-        implemented.  When printing to a non-posix non-posix console,
-        results simply scroll.
+    1) Twisted http Agent
+        a) Handles http communications
+    2) EndpointManager
+        a) Maintains list of validator endpoints and their associated urls
+        b) update_endpoint_urls is called periodically to update the list of
+            registered urls
+    3) StatsManager
+        a) Creates instance of SystemStats and PlatformStats
+        b) Maintains list of validator StatsClient instances
+            using url list maintained by EndpointManager
+        c) StatsManager.stats_loop is called periodically to...
+            i) Call SystemStats.process() to generate summary statistics
+            ii) Call StatsPrintManager.stats_print()
+            iii) Call CsvManager.write() to write stats to CSV file
+            iv) Call each StatsClient instance to initiate a stats request
+    4) StatsClient
+        a) Sends stats requests to its associated validator url
+        b) Handles stats response
+        c) Handles any errors, including unresponsive validator
+    5) Global
+        a) Creates instance of twisted http agent,
+            StatsManager, and EndpointManager
+    6) Main
+        a) calls endpoint manager to initialize url list.
+            i) Program continues at Setup() if request succeeds
+            ii) Program terminates request fails
+        b) sets up looping call for StatsManager.stats_loop
+        c) sets up looping call for EndpointManager.update_validator_urls
+    7) StatsPrintManager
+        a) Handles formatting of console output
+    8) ConsolePrint() manages low-level details of printing to console.
+        When printing to posix (linux)console, curses allows a "top"-like
+        non-scrolling display to be implemented.  When printing to a non-posix
+        console, results simply scroll.
+    9) CsvManager
+        a) Handles file management and timestamped output
+            for csv file generation
+    10) ValidatorCommunications
+        a) Handles low-level details of issuing an http request
+            via twisted http agent async i/o
      """
 
-    # prevents curses import from modifying normal terminal operation
+    # prevent curses import from modifying normal terminal operation
     # (suppression of cr-lf) during display of help screen, config settings
     if curses_imported:
         curses.endwin()
@@ -670,32 +655,23 @@ def main():
         # argparse reports details on the parameter error.
         sys.exit(1)
 
-    configure(opts)
-
-    validators = opts.count
     portnum = opts.port
     baseurl = opts.url
 
-    if opts.csv_enable:
-        ssm.csv_init()
+    loop_times["stats"] = opts.stats_time
+    loop_times["endpoint"] = opts.endpoint_time
 
-    for i in range(0, validators):
-        c = StatsClient(i, baseurl, portnum)
-        c.name = "validator_{0}".format(i)
-        clients.append(c)
-        portnum += 1
+    if opts.csv_enable is True:
+        sm.csv_init()
 
-    loop = task.LoopingCall(workloop)
+    full_path = baseurl + ":" + str(portnum)
 
-    loopdeferred = loop.start(3.0)
-
-    loopdeferred.addCallback(handleloopdone)
-    loopdeferred.addErrback(handleloopfailed)
+    # discover validator endpoints; if successful, continue with startup()
+    epm.initialize_endpoint_urls(full_path, startup)
 
     reactor.run()
 
-    ssm.ssmstop()
-
+    sm.stats_stop()
 
 if __name__ == "__main__":
     main()
