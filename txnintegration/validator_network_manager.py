@@ -45,7 +45,8 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'TopologyAlgorithm': u'RandomWalk',
                           u'TransactionFamilies': [
                               u'ledger.transaction.integer_key'],
-                          u'UseFixedDelay': True}
+                          u'UseFixedDelay': True,
+                          u'Profile': True}
 
 
 class ValidatorNetworkManager(object):
