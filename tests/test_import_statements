@@ -7,7 +7,7 @@ BASE_PYTHONPATH=$PYTHONPATH
 function do_test() {
     for file in $(find . -name \*.py | grep -v ./build | grep -v ./deb_dist | grep -v egg/)
     do
-       # Modfy PYTHONPATH for relative imports
+       # Modify PYTHONPATH for relative imports
        PYTHONPATH=$BASE_PYTHONPATH:$(dirname $file)
 
        grep "^import " $file | python
