@@ -16,6 +16,12 @@ from txnserver.endpoint_registry_client import EndpointRegistryClient
 from txnserver.ledger_web_client import LedgerWebClient
 
 
+ENABLE_STARTUP_TESTS = False
+if os.environ.get('ENABLE_STARTUP_TESTS') == '1':
+    ENABLE_STARTUP_TESTS = True
+
+
+@unittest.skipUnless(ENABLE_STARTUP_TESTS, "Startup Tests")
 class TestBasicStartup(unittest.TestCase):
 
     def setUp(self):
@@ -171,8 +177,6 @@ class TestBasicStartup(unittest.TestCase):
                     validators.append(v)
                     node_identifiers.append(v.Address)
                     p.step()
-                    # for each new validator we will wait_for_registration
-                    self.vnm.wait_for_registration(validators, validator)
             self.vnm.wait_for_registration(validators, validator)
             validator_urls = self.vnm.urls()
             ledger_web_clients = [
