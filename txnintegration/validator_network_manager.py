@@ -154,16 +154,15 @@ class ValidatorNetworkManager(object):
 
         return validators
 
-    def launch_network(self, count=1):
+    def launch_network(self, count=1, others_daemon=False):
         validators = []
 
         with Progress("Launching initial validator") as p:
             self.ValidatorConfig['LedgerURL'] = "**none**"
-            self.ValidatorConfig['GenesisLedger'] = True
             if self.blockChainArchive is not None:
                 self.ValidatorConfig['Restore'] = True
 
-            validator = self.launch_node()
+            validator = self.launch_node(genesis=True, daemon=False)
             validators.append(validator)
             while not validator.is_registered():
                 try:
@@ -177,10 +176,9 @@ class ValidatorNetworkManager(object):
 
         with Progress("Launching validator network") as p:
             self.ValidatorConfig['LedgerURL'] = validator.Url
-            self.ValidatorConfig['GenesisLedger'] = False
             self.ValidatorConfig['Restore'] = False
             for _ in range(1, count):
-                v = self.launch_node()
+                v = self.launch_node(genesis=False, daemon=others_daemon)
                 validators.append(v)
                 p.step()
 
@@ -188,7 +186,8 @@ class ValidatorNetworkManager(object):
 
         return validators
 
-    def launch_node(self, launch=True):
+    def launch_node(self, launch=True, genesis=False, daemon=False,
+                    delay=False):
         id = self.NextValidatorId
         self.NextValidatorId += 1
         cfg = self.ValidatorConfig.copy()
@@ -199,7 +198,7 @@ class ValidatorNetworkManager(object):
 
         v = ValidatorManager(self.txnvalidator, cfg, self.DataDir,
                              self.AdminNode)
-        v.launch(launch)
+        v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self.Validators.append(v)
         self.ValidatorMap[id] = v
         self.ValidatorMap[cfg['NodeName']] = v
