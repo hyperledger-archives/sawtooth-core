@@ -21,26 +21,14 @@ from collections import namedtuple, deque
 from twisted.internet import task
 from twisted.internet import reactor
 
-from sawtooth.client import TransactionStatus, ClientState
+from sawtooth.client import TransactionStatus
 from sawtooth.exceptions import MessageException
+from sawtooth.endpoint_client import EndpointClient
 
 
 PendingTransaction = namedtuple('PendingTransaction', ['id', 'validator'])
 
 LOGGER = logging.getLogger(__name__)
-
-
-class EndpointRegistryState(ClientState):
-    def __init__(self, base_url):
-        super(EndpointRegistryState, self).__init__(
-            base_url, 'EndpointRegistryTransaction')
-
-    @property
-    def validators(self):
-        self.fetch()
-        return ['http://{0}:{1}'.format(
-            transaction['Host'], transaction['HttpPort']) for
-            transaction in self.state.values()]
 
 
 class SawtoothWorkloadSimulator(object):
@@ -96,8 +84,8 @@ class SawtoothWorkloadSimulator(object):
             # pylint: disable=bare-except
             try:
                 status = \
-                    transaction.validator.headrequest(
-                        '/transaction/{0}'.format(transaction.id))
+                    transaction.validator.get_transaction_status(
+                        transaction.id)
                 if status == TransactionStatus.committed:
                     self._workload.on_transaction_committed(transaction.id)
                 else:
@@ -159,7 +147,8 @@ class SawtoothWorkloadSimulator(object):
                 #   candidates
                 # - add all newly-discovered validators to the discovered
                 new_validators = \
-                    [v for v in EndpointRegistryState(candidate).validators
+                    [v for v
+                     in EndpointClient(candidate).get_validator_url_list()
                      if v not in discovered]
                 candidates.extend(
                     [v for v in new_validators if v not in candidates])
