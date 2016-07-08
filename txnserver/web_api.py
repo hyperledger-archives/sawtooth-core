@@ -482,8 +482,9 @@ class RootPage(Resource):
         if 'platform' in args:
             result['platform'] = self.ps.get_data_as_dict()
 
-        elif ('ledger' not in args) & ('node' not in args) & ('platform' not in args):
-            raise Error(http.NOT_FOUND, 'not valide source or arg')
+        elif ('ledger' not in args) & ('node' not in args) \
+                & ('platform' not in args):
+            raise Error(http.NOT_FOUND, 'not valid source or arg')
 
         return result
 
