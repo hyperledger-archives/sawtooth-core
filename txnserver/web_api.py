@@ -45,6 +45,7 @@ class RootPage(Resource):
         Resource.__init__(self)
         self.Ledger = validator.Ledger
         self.Validator = validator
+        self.ps = PlatformStats()
 
         self.GetPageMap = {
             'block': self._handleblkrequest,
@@ -452,13 +453,13 @@ class RootPage(Resource):
         source = pathcomponents.pop(0)
         if source == 'ledger':
             for domain in self.Ledger.StatDomains.iterkeys():
-                result[domain] = self.ledger.StatDomains[domain].get_stats()
-                return result
+                result[domain] = self.Ledger.StatDomains[domain].get_stats()
+            return result
         if source == 'node':
             for peer in self.Ledger.NodeMap.itervalues():
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
-                return result
+            return result
         if source == 'platform':
             result['platform'] = self.ps.get_data_as_dict()
             return result
@@ -481,10 +482,10 @@ class RootPage(Resource):
         if 'platform' in args:
             result['platform'] = self.ps.get_data_as_dict()
 
-        # else:
-        #     raise Error(http.NOT_FOUND, 'source or arg not found')
-        #     return result
+        elif ('ledger' not in args) & ('node' not in args) & ('platform' not in args):
+            raise Error(http.NOT_FOUND, 'not valide source or arg')
 
+        return result
 
     def _hdl_status_request(self, pathcomponents, args, testonly):
         result = dict()
