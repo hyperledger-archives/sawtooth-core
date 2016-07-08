@@ -21,7 +21,6 @@ from enum import Enum
 from gossip import node, signed_object
 from gossip.common import json2dict, cbor2dict, dict2cbor
 from gossip.common import pretty_print_dict
-
 from sawtooth.exceptions import MessageException
 from sawtooth.exceptions import ClientException
 
@@ -36,7 +35,7 @@ class TransactionStatus(Enum):
     not_found = 404
 
 
-class Communication(object):
+class _Communication(object):
     """
     A class to encapsulate communication with the validator
     """
@@ -171,16 +170,20 @@ class Communication(object):
         return value
 
 
-class ClientState(Communication):
+class _ClientState(object):
     def __init__(self, base_url, store_name):
-        super(ClientState, self).__init__(base_url)
-
+        self._communication = _Communication(base_url)
         self._state = {}
+        self._base_url = base_url
         self._store_name = store_name
 
     @property
     def state(self):
         return self._state
+
+    @property
+    def base_url(self):
+        return self._base_url
 
     def fetch(self):
         """
@@ -192,13 +195,14 @@ class ClientState(Communication):
         """
 
         LOGGER.debug('fetch state from %s/%s/*',
-                     self.base_url,
+                     self._base_url,
                      self._store_name)
 
-        self._state = self.getmsg("/store/{0}/*".format(self._store_name))
+        self._state = \
+            self._communication.getmsg("/store/{0}/*".format(self._store_name))
 
 
-class SawtoothClient(Communication):
+class SawtoothClient(object):
     def __init__(self,
                  base_url,
                  store_name,
@@ -206,13 +210,17 @@ class SawtoothClient(Communication):
                  keystring=None,
                  keyfile=None,
                  state=None):
-        super(SawtoothClient, self).__init__(base_url)
+        self._communication = _Communication(base_url)
+        self._base_url = base_url
         self._last_transaction = None
+        self._local_node = None
+        self._current_state = state or _ClientState(base_url, store_name)
+        self.fetch_state()
 
-        self._current_state = state or ClientState(base_url, store_name)
-        self._current_state.fetch()
-
-        # set up the signing key
+        # Set up the signing key.  Note that if both the keystring and
+        # keyfile are not provided, then this is in essence a "read-only"
+        # client that may not issue transactions.
+        signingkey = None
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
             signingkey = signed_object.generate_signing_key(wifstr=keystring)
@@ -224,19 +232,26 @@ class SawtoothClient(Communication):
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))
-        else:
-            raise TypeError('expecting valid signing key, none provided')
 
-        identifier = signed_object.generate_identifier(signingkey)
-        self._local_node = node.Node(identifier=identifier,
-                                     signingkey=signingkey,
-                                     name=name)
+        if signingkey:
+            identifier = signed_object.generate_identifier(signingkey)
+            self._local_node = node.Node(identifier=identifier,
+                                         signingkey=signingkey,
+                                         name=name)
+
+    @property
+    def base_url(self):
+        return self._base_url
 
     def sendtxn(self, txn_type, txn_msg_type, minfo):
         """
         Build a transaction for the update, wrap it in a message with all
         of the appropriate signatures and post it to the validator
         """
+
+        if self._local_node is None:
+            raise ClientException(
+                'can not send transactions as a read-only client')
 
         txn = txn_type(minfo=minfo)
 
@@ -257,7 +272,7 @@ class SawtoothClient(Communication):
 
         try:
             LOGGER.debug('Posting transaction: %s', txnid)
-            result = self.postmsg(msg.MessageType, msg.dump())
+            result = self._communication.postmsg(msg.MessageType, msg.dump())
         except MessageException:
             return None
 
@@ -273,8 +288,39 @@ class SawtoothClient(Communication):
 
         return txnid
 
+    def fetch_state(self):
+        """
+        Refresh the state for the client.
+
+        Returns:
+            Nothing
+        """
+        self._current_state.fetch()
+
     def get_state(self):
+        """
+        Return the most-recently-cached state for the client.  Note that this
+        data may be stale and so it might be desirable to call fetch_state
+        first.
+
+        Returns:
+            The most-recently-cached state for the client.
+        """
         return self._current_state.state
+
+    def get_transaction_status(self, transaction_id):
+        """
+        Retrieves that status of a transaction.
+
+        Args:
+            transaction_id: The ID of the transaction to check.
+
+        Returns:
+            One of the TransactionStatus values (committed, etc.)
+        """
+        return \
+            self._communication.headrequest(
+                '/transaction/{0}'.format(transaction_id))
 
     def wait_for_commit(self, txnid=None, timetowait=5, iterations=12):
         """
@@ -297,7 +343,7 @@ class SawtoothClient(Communication):
         passes = 0
         while True:
             passes += 1
-            status = self.headrequest('/transaction/{0}'.format(txnid))
+            status = self.get_transaction_status(txnid)
 
             if status != TransactionStatus.committed and passes > iterations:
                 if status == TransactionStatus.not_found:
