@@ -322,11 +322,11 @@ class TestWebApi(unittest.TestCase):
         dic["ledgerconfig"] = ledger.StatDomains["ledgerconfig"].get_stats()
         dic["message"] = ledger.StatDomains["message"].get_stats()
         dic["packet"] = ledger.StatDomains["packet"].get_stats()
-        # GET /stats/ledger
-        request = self._create_get_request("/stat/ledger", {})
+        # GET /statistics/ledger
+        request = self._create_get_request("/statistics/ledger", {})
         self.assertEquals(yaml.load(root.render_GET(request)), dic)
-        # GET /stats/node - with no peers
-        request = self._create_get_request("/stat/node", {})
+        # GET /statistics/node - with no peers
+        request = self._create_get_request("/statistics/node", {})
         self.assertEquals(yaml.load(root.render_GET(request)), {})
         node = self._create_node(8804)
         ledger.add_node(node)

@@ -33,6 +33,7 @@ from gossip.common import dict2cbor
 from gossip.common import pretty_print_dict
 from journal import transaction
 from journal.messages import transaction_message
+from txnintegration.utils import PlatformStats
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +45,11 @@ class RootPage(Resource):
         Resource.__init__(self)
         self.Ledger = validator.Ledger
         self.Validator = validator
+        self.ps = PlatformStats()
 
         self.GetPageMap = {
             'block': self._handleblkrequest,
-            'stat': self._handlestatrequest,
+            'statistics': self._handlestatrequest,
             'store': self._handlestorerequest,
             'transaction': self._handletxnrequest,
             'status': self._hdl_status_request,
@@ -452,12 +454,37 @@ class RootPage(Resource):
         if source == 'ledger':
             for domain in self.Ledger.StatDomains.iterkeys():
                 result[domain] = self.Ledger.StatDomains[domain].get_stats()
-        elif source == 'node':
+            return result
+        if source == 'node':
             for peer in self.Ledger.NodeMap.itervalues():
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
-        else:
-            raise Error(http.NOT_FOUND, 'no stat source specified')
+            return result
+        if source == 'platform':
+            result['platform'] = self.ps.get_data_as_dict()
+            return result
+        if source == 'all':
+            for domain in self.Ledger.StatDomains.iterkeys():
+                result[domain] = self.Ledger.StatDomains[domain].get_stats()
+            for peer in self.Ledger.NodeMap.itervalues():
+                result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name]['IsPeer'] = peer.is_peer
+            result['platform'] = self.ps.get_data_as_dict()
+            return result
+
+        if 'ledger' in args:
+            for domain in self.Ledger.StatDomains.iterkeys():
+                result[domain] = self.Ledger.StatDomains[domain].get_stats()
+        if 'node' in args:
+            for peer in self.Ledger.NodeMap.itervalues():
+                result[peer.Name] = peer.Stats.get_stats()
+                result[peer.Name]['IsPeer'] = peer.is_peer
+        if 'platform' in args:
+            result['platform'] = self.ps.get_data_as_dict()
+
+        elif ('ledger' not in args) & ('node' not in args) \
+                & ('platform' not in args):
+            raise Error(http.NOT_FOUND, 'not valid source or arg')
 
         return result
 
