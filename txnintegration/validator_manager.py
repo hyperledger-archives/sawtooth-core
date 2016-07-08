@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import subprocess
+import signal
 import urllib2
 import os
 import sys
@@ -136,11 +137,14 @@ class ValidatorManager(object):
             if not self.handle.returncode:
                 if force:
                     try:
-                        self.handle.kill()
+                        self.handle.send_signal(signal.SIGKILL)
                     except OSError:
                         pass  # ignore invalid process and other os type errors
                 else:
-                    self.post_shutdown()
+                    try:
+                        self.handle.send_signal(signal.SIGINT)
+                    except OSError:
+                        pass
         if self.output and not self.output.closed:
             self.output.close()
         if self.outerr and not self.outerr.closed:

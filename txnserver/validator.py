@@ -17,6 +17,8 @@ import logging
 import random
 import signal
 import socket
+import os
+import cProfile
 
 from twisted.internet import reactor
 
@@ -38,9 +40,14 @@ class Validator(object):
     ]
 
     def __init__(self, config, windows_service):
-
         self.status = 'stopped'
         self.Config = config
+
+        self.profile = self.Config.get('Profile', False)
+
+        if self.profile:
+            self.pr = cProfile.Profile()
+            self.pr.enable()
 
         self.windows_service = windows_service
 
@@ -75,6 +82,13 @@ class Validator(object):
         databases, and 3) shutdown twisted. We need time for each to finish.
         """
         self.status = 'stopping'
+        if self.profile:
+            self.pr.create_stats()
+            loc = os.path.join(self.Config.get('DataDirectory', '/tmp'),
+                               '{0}.cprofile'.format(
+                                   self.Config.get('NodeName',
+                                                   str(os.getpid()))))
+            self.pr.dump_stats(loc)
 
         # send the transaction to remove this node from the endpoint
         # registry (or send it to the web server)

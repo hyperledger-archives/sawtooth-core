@@ -45,7 +45,8 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'TopologyAlgorithm': u'RandomWalk',
                           u'TransactionFamilies': [
                               u'ledger.transaction.integer_key'],
-                          u'UseFixedDelay': True}
+                          u'UseFixedDelay': True,
+                          u'Profile': True}
 
 
 class ValidatorNetworkManager(object):
@@ -266,10 +267,10 @@ class ValidatorNetworkManager(object):
             # no validators to shutdown
             return
 
-        with Progress("Sending shutdown message to validators: ") as p:
+        with Progress("Sending interrupt signal to validators: ") as p:
             for v in self.Validators:
                 if v.is_running():
-                    v.post_shutdown()
+                    v.shutdown()
                 p.step()
 
         running_count = 0
