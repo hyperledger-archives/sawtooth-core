@@ -2,9 +2,21 @@
 Contributing Code
 -----------------
 
-Code contributions are welcome! Distributed Ledger is Apache 2.0 licensed and
-accepts contributions via GitHub pull requests. When contributing code
-please do the following:
+Contributions by the community will help grow and optimize the capabilities of
+Sawtooth Lake.  Potential contribution areas include:
+
+* Bugs or Issues (issues or defects found when working with Sawtooth Lake)
+* Core Features & Enhancements (expanded capabilities or optimization)
+* Arcade Features (games that demonstrate Sawtooth Lake such as Go and Checkers)
+* New or Enhanced Documentation (improve existing documentation or creating new)
+* Testing Events and Results (functional, performance or scalability)
+
+==============
+Commit Process
+==============
+
+Distributed Ledger is Apache 2.0 licensed and accepts contributions via GitHub
+pull requests. When contributing code please do the following:
 
 * Fork the repository and make your changes in a feature branch. Please add a
   prefix to the branch name (XXXX-) where XXX is the Github bug or issue number.
