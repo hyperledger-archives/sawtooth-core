@@ -1,33 +1,70 @@
+$ErrorActionPreference = "Stop"
+
 # Necessary environment variables
 $env:PYTHONPATH += ";C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\"
-$env:PATH += ";c:\python27;C:\Program Files (x86)\NSIS"
-
-$build_dir = "c:\build"
+$env:PATH += ";c:\swig;c:\python27;C:\Program Files (x86)\NSIS"
 
 # this makes running commands easier
+$build_dir = "c:\project"
 $build_command = "python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'"
 $package_command = "makensis 'C:\Program Files (x86)\Intel\sawtooth-validator.nsi'"
 
 if (test-path "C:\Program Files (x86)\Intel\sawtooth-validator\") {
-	Remove-Item -Recurse -Force "C:\Program Files (x86)\Intel\sawtooth-validator\"
+    remove-item -recurse -force "C:\Program Files (x86)\Intel\sawtooth-validator\"
 }
 
-mkdir "C:\Program Files (x86)\Intel\sawtooth-validator\lib\python"
+if (test-path "C:\Program Files (x86)\Intel\sawtooth-validator.nsi") {
+    remove-item -force 'C:\Program Files (x86)\Intel\sawtooth-validator.nsi'
+}
 
+if (test-path "C:\Program Files (x86)\Intel\sawtooth-validator.exe") {
+    remove-item -force 'C:\Program Files (x86)\Intel\sawtooth-validator.exe'
+}
+
+mkdir 'C:\Program Files (x86)\Intel\sawtooth-validator\lib\python'
 
 # build and install the SawtoothLake packages
-cd $build_dir\sawtooth
-iex $build_command
-cd $build_dir\currency
-iex $build_command
-cd $build_dir\mktplace
-iex $build_command
 
-cp C:\vagrant\cryptopp561\x64\DLL_Output\Release\cryptopp.dll "C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\SawtoothLakeLedger-0.1.151207-py2.7.egg\"
+cd $build_dir\sawtooth-core
+python setup.py clean --all
+if ($lastexitcode -ne 0) { exit 1 }
+if (test-path $build_dir\sawtooth-core\deps ) {
+    remove-item -recurse -force $build_dir\sawtooth-core\deps
+    if ($lastexitcode -ne 0) { exit 1 }
+}
+mkdir $build_dir\sawtooth-core\deps
+copy-item -recurse $build_dir\deps\cryptopp\* $build_dir\sawtooth-core\deps
+copy-item -recurse -force $build_dir\deps\json-c\* $build_dir\sawtooth-core\deps
+if ($lastexitcode -ne 0) { exit 1 }
+python setup.py build
+if ($lastexitcode -ne 0) { exit 1 }
+iex $build_command
+if ($lastexitcode -ne 0) { exit 1 }
 
-cp c:\vagrant\currency\windows\sawtooth-validator.nsi "C:\Program Files (x86)\Intel\"
+
+cd $build_dir\sawtooth-validator
+python setup.py clean --all
+if ($lastexitcode -ne 0) { exit 1 }
+python setup.py build
+if ($lastexitcode -ne 0) { exit 1 }
+iex $build_command
+if ($lastexitcode -ne 0) { exit 1 }
+
+
+foreach ($script in (ls $PSScriptRoot\create_package.d)) {
+    Invoke-expression $PSScriptRoot\create_package.d\$script
+    if ($lastexitcode -ne 0) { write-host "ERROR: There were problems running $script"; exit 1 }
+}
+
+move-item 'C:\Program Files (x86)\Intel\sawtooth-validator\conf\txnvalidator.js' 'C:\Program Files (x86)\Intel\sawtooth-validator\conf\txnvalidator.js.example'
+
+remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-3.4-script.py'
+remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-3.4.exe'
+remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-script.py'
+remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install.exe'
+
+copy-item $build_dir\sawtooth-validator\packaging\sawtooth-validator.nsi "C:\Program Files (x86)\Intel"
 
 # Build the package
 iex $package_command
-
-ii "C:\Program Files (x86)\Intel\"
+if ($lastexitcode -ne 0) { exit 1 }
