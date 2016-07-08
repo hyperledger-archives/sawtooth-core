@@ -336,10 +336,10 @@ def main(args, windows_service=False):
     else:
         verbose_level = cfg['Verbose']
 
+    log_configuration(cfg)
     log_setup.setup_loggers(
         verbose_level=verbose_level,
         capture_std_output=daemonize)
-    log_configuration(cfg)
 
     for key, value in cfg.iteritems():
         logger.debug("CONFIG: %s = %s", key, value)
