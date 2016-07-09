@@ -46,8 +46,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.network "forwarded_port", guest: 8800, host: 8800
   config.vm.network "forwarded_port", guest: 8900, host: 8900
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
 
+  # rethinkdb
+  config.vm.network "forwarded_port", guest: 18080, host: 18080
 
   config.vm.provision :shell, path: "bootstrap.sh"
 
