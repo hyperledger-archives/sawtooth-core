@@ -83,7 +83,8 @@ disable=no-member,
     too-many-public-methods,
     too-many-locals,
     wrong-import-order,
-    locally-disabled
+    locally-disabled,
+    too-many-nested-blocks
 
 [REPORTS]
 

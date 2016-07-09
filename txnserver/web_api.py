@@ -19,6 +19,7 @@ This module implements the Web server supporting the web api
 
 import logging
 import traceback
+import copy
 
 from twisted.internet import reactor
 from twisted.web import http
@@ -31,6 +32,7 @@ from gossip.common import dict2json
 from gossip.common import cbor2dict
 from gossip.common import dict2cbor
 from gossip.common import pretty_print_dict
+from journal import global_store_manager
 from journal import transaction
 from journal.messages import transaction_message
 from txnintegration.utils import PlatformStats
@@ -195,7 +197,6 @@ class RootPage(Resource):
                                            'error processing http request {0}',
                                            request.path)
         else:
-
             try:
                 if encoding == 'application/json':
                     minfo = json2dict(data)
@@ -205,7 +206,6 @@ class RootPage(Resource):
                     return self.error_response(request, http.BAD_REQUEST,
                                                'unknown message encoding, {0}',
                                                encoding)
-
                 typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
                 if typename not in self.Ledger.MessageHandlerMap:
                     return self.error_response(
@@ -223,8 +223,87 @@ class RootPage(Resource):
                     'unabled to decode incoming request {0}',
                     data)
 
-            # and finally execute the associated method and send back the
-            # results
+            # determine if the message contains a valid transaction before
+            # we send the message to the network
+
+            # we need to start with a copy of the message due to cases
+            # where side effects of the validity check may impact objects
+            # related to msg
+            mymsg = copy.deepcopy(msg)
+
+            if hasattr(mymsg, 'Transaction') and mymsg.Transaction is not None:
+                mytxn = mymsg.Transaction
+                logger.info('starting local validation '
+                            'for txn id: %s type: %s',
+                            mytxn.Identifier,
+                            mytxn.TransactionTypeName)
+                blockid = self.Ledger.MostRecentCommittedBlockID
+
+                realstoremap = self.Ledger.GlobalStoreMap.get_block_store(
+                    blockid)
+                tempstoremap = global_store_manager.BlockStore(realstoremap)
+                if not tempstoremap:
+                    logger.info('no store map for block %s', blockid)
+                    return self.error_response(
+                        request, http.BAD_REQUEST,
+                        'unable to validate enclosed transaction {0}',
+                        data)
+
+                transtype = mytxn.TransactionTypeName
+                if transtype not in tempstoremap.TransactionStores:
+                    logger.info('transaction type %s not in global store map',
+                                transtype)
+                    return self.error_response(
+                        request, http.BAD_REQUEST,
+                        'unable to validate enclosed transaction {0}',
+                        data)
+
+                # clone a copy of the ledger's message queue so we can
+                # temporarily play forward all locally submitted yet
+                # uncommitted transactions
+                myqueue = copy.deepcopy(self.Ledger.MessageQueue)
+
+                # apply any enqueued messages
+                while len(myqueue) > 0:
+                    qmsg = myqueue.pop()
+                    if qmsg and \
+                       qmsg.MessageType in self.Ledger.MessageHandlerMap:
+                        if (hasattr(qmsg, 'Transaction') and
+                                qmsg.Transaction is not None):
+                            mystore = tempstoremap.get_transaction_store(
+                                qmsg.Transaction.TransactionTypeName)
+                            if qmsg.Transaction.is_valid(mystore):
+                                myqtxn = copy.copy(qmsg.Transaction)
+                                myqtxn.apply(mystore)
+
+                # apply any local pending transactions
+                for txnid in self.Ledger.PendingTransactions.iterkeys():
+                    pendtxn = self.Ledger.TransactionStore[txnid]
+                    mystore = tempstoremap.get_transaction_store(
+                        pendtxn.TransactionTypeName)
+                    if pendtxn and pendtxn.is_valid(mystore):
+                        mypendtxn = copy.copy(pendtxn)
+                        logger.debug('applying pending transaction '
+                                     '%s to temp store', txnid)
+                        mypendtxn.apply(mystore)
+
+                # determine validity of the POSTed transaction against our
+                # new temporary state
+                mystore = tempstoremap.get_transaction_store(
+                    mytxn.TransactionTypeName)
+                if not mytxn.is_valid(mystore):
+                    logger.info('submitted transaction is not valid %s; %s',
+                                request.path, mymsg.dump())
+                    return self.error_response(
+                        request, http.BAD_REQUEST,
+                        'enclosed transaction is not valid {0}',
+                        data)
+                else:
+                    logger.info('transaction %s is valid',
+                                msg.Transaction.Identifier)
+
+            # and finally execute the associated method
+            # and send back the results
             try:
                 response = self.PostPageMap[prefix](request, components, msg)
 
