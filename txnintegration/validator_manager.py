@@ -146,12 +146,18 @@ class ValidatorManager(object):
             if not self.handle.returncode:
                 if force:
                     try:
-                        self.handle.send_signal(signal.SIGKILL)
+                        if os.name == "nt":
+                            self.handle.kill()
+                        else:
+                            self.handle.send_signal(signal.SIGKILL)
                     except OSError:
                         pass  # ignore invalid process and other os type errors
                 else:
                     try:
-                        self.handle.send_signal(signal.SIGINT)
+                        if os.name == "nt":
+                            self.handle.terminate()
+                        else:
+                            self.handle.send_signal(signal.SIGINT)
                     except OSError:
                         pass
         if self.output and not self.output.closed:
