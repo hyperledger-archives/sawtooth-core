@@ -19,6 +19,7 @@ import sys
 import urllib
 import urllib2
 import urlparse
+from collections import OrderedDict
 from enum import Enum
 
 from gossip import node, signed_object
@@ -743,6 +744,6 @@ class LedgerWebClient(object):
         else:
             LOGGER.info('server responds with message %s of unknown type %s',
                         content, encoding)
-            value = dict()
+            value = OrderedDict()
 
         return value
