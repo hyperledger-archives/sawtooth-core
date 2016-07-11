@@ -375,7 +375,7 @@ class LedgerWebClient(object):
     GET_HEADER = {"Accept": "application/cbor"}
 
     def __init__(self, url):
-        self.LedgerURL = url
+        self.ledger_url = url
         self.ProxyHandler = urllib2.ProxyHandler({})
 
     def status_url(self):
@@ -383,7 +383,7 @@ class LedgerWebClient(object):
         status_url -- create a url to access a validator's status
         :return: URL for accessing status
         """
-        url = self.LedgerURL + '/status'
+        url = self.ledger_url + '/status'
         url = urlparse.urljoin(url,
                                urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
@@ -400,7 +400,7 @@ class LedgerWebClient(object):
             blockid - get the state of the store following the validation of
                 blockid
         """
-        url = self.LedgerURL + '/store' + txntype.TransactionTypeName
+        url = self.ledger_url + '/store' + txntype.TransactionTypeName
         if key:
             url += '/' + key
         url = urlparse.urljoin(url,
@@ -428,7 +428,7 @@ class LedgerWebClient(object):
         :return: URL for accessing block
         """
 
-        url = self.LedgerURL + '/block/' + blockid
+        url = self.ledger_url + '/block/' + blockid
         if field:
             url += '/' + field
 
@@ -446,7 +446,7 @@ class LedgerWebClient(object):
             implies all
         :return: URL for accessing block list
         """
-        url = self.LedgerURL + '/block'
+        url = self.ledger_url + '/block'
 
         url = urlparse.urljoin(url,
                                urlparse.urlparse(url).path.replace('//', '/'))
@@ -467,7 +467,7 @@ class LedgerWebClient(object):
         :return: URL for accessing transaction
         """
 
-        url = self.LedgerURL + '/transaction/' + txnid
+        url = self.ledger_url + '/transaction/' + txnid
         if field:
             url += '/' + field
 
@@ -485,7 +485,7 @@ class LedgerWebClient(object):
             to return, 0 implies all
         :return: URL for accessing transaction list
         """
-        url = self.LedgerURL + '/transaction'
+        url = self.ledger_url + '/transaction'
 
         url = urlparse.urljoin(url,
                                urlparse.urlparse(url).path.replace('//', '/'))
@@ -501,7 +501,7 @@ class LedgerWebClient(object):
         message_forward_url -- create the url for sending a message to a
         validator, the message will be sent on to the gossip network
         """
-        url = self.LedgerURL + '/forward'
+        url = self.ledger_url + '/forward'
         url = urlparse.urljoin(url,
                                urlparse.urlparse(url).path.replace('//', '/'))
 
@@ -512,7 +512,7 @@ class LedgerWebClient(object):
         message_initiate_url -- create the url for sending an unsigned message
         to a validator that will sign and forward the message
         """
-        url = self.LedgerURL + "/initiate"
+        url = self.ledger_url + "/initiate"
         url = urlparse.urljoin(url,
                                urlparse.urlparse(url).path.replace('//', '/'))
 
