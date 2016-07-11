@@ -290,7 +290,7 @@ def do_submit(args):
         txnfamily = importlib.import_module(family_name)
     except ImportError:
         raise CliException(
-            "transaction family not found: {}".format(txnfamily))
+            "transaction family not found: {}".format(family_name))
 
     fake_journal = FakeJournal()
     txnfamily.register_transaction_types(fake_journal)
