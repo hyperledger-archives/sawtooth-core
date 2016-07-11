@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from ledger.transaction import endpoint_registry
-from txnserver.ledger_web_client import LedgerWebClient
+from sawtooth.client import LedgerWebClient
 
 
 class EndpointRegistryClient(LedgerWebClient):

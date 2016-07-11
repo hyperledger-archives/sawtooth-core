@@ -44,7 +44,9 @@ from ledger.transaction.endpoint_registry import SpecialPingMessage
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
-from txnserver import ledger_web_client, log_setup
+from sawtooth.client import LedgerWebClient
+from sawtooth.exceptions import MessageException
+from txnserver import log_setup
 from txnserver.config import get_validator_configuration
 
 logger = logging.getLogger(__name__)
@@ -65,7 +67,7 @@ class ClientController(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.prompt = 'client> '
         self.CurrentState = {}
-        self.LedgerWebClient = ledger_web_client.LedgerWebClient(baseurl)
+        self.LedgerWebClient = LedgerWebClient(baseurl)
 
         signingkey = generate_signing_key(
             wifstr=keystring) if keystring else generate_signing_key()
@@ -86,7 +88,7 @@ class ClientController(cmd.Cmd):
             if result:
                 pretty_print_dict(result)
 
-        except ledger_web_client.MessageException as me:
+        except MessageException as me:
             print me
 
     # =================================================================

@@ -13,7 +13,7 @@ from txnintegration.utils import generate_private_key, Progress, TimeOut
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.validator_network_manager import defaultValidatorConfig
 from txnserver.endpoint_registry_client import EndpointRegistryClient
-from txnserver.ledger_web_client import LedgerWebClient
+from sawtooth.client import LedgerWebClient
 
 
 ENABLE_STARTUP_TESTS = False
