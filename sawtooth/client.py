@@ -376,7 +376,7 @@ class LedgerWebClient(object):
 
     def __init__(self, url):
         self.ledger_url = url
-        self.ProxyHandler = urllib2.ProxyHandler({})
+        self.proxy_handler = urllib2.ProxyHandler({})
 
     def status_url(self):
         """
@@ -587,7 +587,7 @@ class LedgerWebClient(object):
         try:
             request = urllib2.Request(url)
             request.get_method = lambda: 'HEAD'
-            opener = urllib2.build_opener(self.ProxyHandler)
+            opener = urllib2.build_opener(self.proxy_handler)
             response = opener.open(request, timeout=30)
             code = response.getcode()
             response.close()
@@ -653,7 +653,7 @@ class LedgerWebClient(object):
 
         try:
             request = urllib2.Request(url, headers=self.GET_HEADER)
-            opener = urllib2.build_opener(self.ProxyHandler)
+            opener = urllib2.build_opener(self.proxy_handler)
             response = opener.open(request, timeout=30)
 
         except urllib2.HTTPError as err:
@@ -708,7 +708,7 @@ class LedgerWebClient(object):
             request = urllib2.Request(url, data,
                                       {'Content-Type': 'application/cbor',
                                        'Content-Length': datalen})
-            opener = urllib2.build_opener(self.ProxyHandler)
+            opener = urllib2.build_opener(self.proxy_handler)
             response = opener.open(request, timeout=10)
 
         except urllib2.HTTPError as err:
