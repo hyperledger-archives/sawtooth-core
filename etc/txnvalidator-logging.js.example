@@ -1,45 +1,41 @@
 {
   "version" : 1,
   "disable_existing_loggers" : true,
-
   "formatters": {
         "simple": {
             "format":"[%(asctime)s %(name)s %(levelname)s] %(message)s",
             "datefmt":"%H:%M:%S"
         }
-    },
-
+  },
   "handlers" : {
     "debug" : {
       "class" : "logging.FileHandler",
       "level" : "DEBUG",
       "formatter" : "simple",
-      "filename" : ""
+      "filename" : "debug.log"
     },
-
     "error" : {
       "class" : "logging.FileHandler",
       "level" : "ERROR",
       "formatter" : "simple",
-      "filename" : ""
-    }
+      "filename" : "error.log"
+    },
     'gossip_core' : {
       "class" : "logging.FileHandler",
       "level" : "DEBUG",
       "formatter" : "simple",
-      "filename" : ""
+      "filename" : "gossip_core.log"
     }
-},
+  },
   "loggers": {
     "gossip.gossip_core" : {
       "level" : "INFO",
-      "handlers" : ["default"],
+      "handlers" : ["gossip_core"],
       "propagate" : "no"
     }
   },
-
   "root": {
     "level" : "INFO",
-    "handlers" : ["error", debug]
+    "handlers" : ["error", "debug"]
   }
 }
