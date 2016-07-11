@@ -228,7 +228,9 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
 
 
 def log_configuration(cfg):
-    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+    if 'LogConfigFile' in cfg and \
+            isinstance(cfg['LogConfigFile'], str) and \
+            len(cfg['LogConfigFile']) > 0:
         log_config_file = cfg['LogConfigFile']
         if log_config_file.split(".")[-1] == "js":
             try:
