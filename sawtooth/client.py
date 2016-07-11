@@ -606,10 +606,6 @@ class LedgerWebClient(object):
             LOGGER.error('peer operation on url %s failed: %s', url,
                          err.reason)
 
-        except:
-            LOGGER.error('no response from peer server for url %s; %s',
-                         url, sys.exc_info()[0])
-
         return transaction.Status.unknown
 
     def get_transaction_list(self, count=0):
