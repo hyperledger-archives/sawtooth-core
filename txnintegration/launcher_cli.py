@@ -28,7 +28,7 @@ import tarfile
 from txnintegration.exceptions import ExitError
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.utils import parse_configuration_file, \
-    prompt_yes_no, find_txn_validator
+    prompt_yes_no, find_txn_validator, load_log_config
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -140,12 +140,17 @@ def configure(args):
             raise ExitError(
                 "Default config file does not exist: {}".format(opts.config))
 
+    if opts.log_config is not None and not os.path.exists(opts.log_config):
+        raise ExitError("log-config file does not exist: {}"
+                        .format(opts.log_config))
+    else:
+        opts.log_config_dict = load_log_config(opts.log_config)
+
     keys = [
         'NodeName',
         'Host',
         'HttpPort',
         'Port',
-        'LogConfigFile'
         'KeyFile',
         "AdministrationNode",
         "DataDirectory",
@@ -158,11 +163,12 @@ def configure(args):
             if k in validator_config:
                 print "\t{}".format(k)
                 del validator_config[k]
+    if opts.log_config:
+        print "\tLogConfigFile"
+
+    opts.validator_config = validator_config
 
     opts.count = max(1, opts.count)
-    if opts.log_config:
-        validator_config['LogConfigFile'] = opts.log_config
-    opts.validator_config = validator_config
 
     print "Configuration:"
     pp.pprint(opts.__dict__)
@@ -310,19 +316,19 @@ def main():
     errorOccured = False
     try:
         opts = configure(sys.argv[1:])
-    except:
-        # argparse reports details on the parameter error.
+    except Exception as e:
+        print >> sys.stderr, str(e)
         sys.exit(1)
 
     try:
         networkManager = ValidatorNetworkManager(
             txnvalidator=opts['validator'],
             cfg=opts['validator_config'],
+            log_config=opts['log_config_dict'],
             dataDir=opts['data_dir'],
             blockChainArchive=opts['load_blockchain'])
         networkManager.staged_launch_network(opts['count'])
 
-        # wait ...
         ctrl = ValidatorNetworkConsole(networkManager)
         ctrl.cmdloop("\nWelcome to the sawtooth txnvalidator network "
                      "manager interactive console")

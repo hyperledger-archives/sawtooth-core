@@ -27,6 +27,7 @@ import collections
 
 import pybitcointools
 from colorlog import ColoredFormatter
+import yaml
 
 from txnintegration.exceptions import ExitError
 
@@ -206,6 +207,28 @@ def setup_loggers(config):
         clog.setFormatter(formatter)
         clog.setLevel(loglevel)
         logger.addHandler(clog)
+
+
+def load_log_config(log_config_file):
+    log_dic = None
+    if log_config_file.split(".")[-1] == "js":
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = json.load(log_config_fd)
+        except IOError, ex:
+            raise ExitError("Could not read log config: {}"
+                            .format(str(ex)))
+    elif log_config_file.split(".")[-1] == "yaml":
+        try:
+            with open(log_config_file) as log_config_fd:
+                log_dic = yaml.load(log_config_fd)
+        except IOError, ex:
+            raise ExitError("Could not read log config: {}"
+                            .format(str(ex)))
+    else:
+        raise ExitError("LogConfigFile type not supported: {}"
+                        .format(log_config_file))
+    return log_dic
 
 
 class StatsCollector(object):

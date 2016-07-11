@@ -64,7 +64,9 @@ class ValidatorNetworkManager(object):
                  dataDir=None,
                  httpPort=8800,
                  udpPort=8900,
-                 blockChainArchive=None):
+                 blockChainArchive=None,
+                 log_config=None,
+                 ):
 
         self.Validators = []
         self.ValidatorMap = {}
@@ -77,6 +79,7 @@ class ValidatorNetworkManager(object):
         if cfg is None:
             cfg = defaultValidatorConfig
         self.ValidatorConfig = cfg
+        self.validator_log_config = log_config
 
         if txnvalidator is None:
             txnvalidator = find_txn_validator()
@@ -193,7 +196,7 @@ class ValidatorNetworkManager(object):
         return validators
 
     def launch_node(self,
-                    overrides={},
+                    overrides=None,
                     launch=True,
                     genesis=False,
                     daemon=False,
@@ -201,14 +204,18 @@ class ValidatorNetworkManager(object):
         id = self.NextValidatorId
         self.NextValidatorId += 1
         cfg = self.ValidatorConfig.copy()
-        cfg.update(overrides)
+        if overrides:
+            cfg.update(overrides)
         cfg['id'] = id
         cfg['NodeName'] = "validator-{}".format(id)
         cfg['HttpPort'] = self.HttpPortBase + id
         cfg['Port'] = self.UdpPortBase + id
+        log_config = self.validator_log_config.copy() \
+            if self.validator_log_config \
+            else None
 
         v = ValidatorManager(self.txnvalidator, cfg, self.DataDir,
-                             self.AdminNode)
+                             self.AdminNode, log_config)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self.Validators.append(v)
         self.ValidatorMap[id] = v
