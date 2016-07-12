@@ -1,14 +1,12 @@
 {
   "version" : 1,
   "disable_existing_loggers" : false,
-
   "formatters": {
         "simple": {
             "format":"[%(asctime)s %(levelname)s %(name)s] %(message)s",
             "datefmt":"%H:%M:%S"
         }
-    },
-
+  },
   "handlers" : {
     "txnclient" : {
       "class" : "logging.StreamHandler",
@@ -17,7 +15,6 @@
       "stream" : "ext://sys.stdout"
     }
   },
-
   "root": {
     "level" : "INFO",
     "handlers" : ["txnclient"]

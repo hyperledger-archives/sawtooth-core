@@ -10,17 +10,17 @@
       class: logging.FileHandler
       level: DEBUG
       formatter: simple
-      filename: example.log
+      filename: example-debug.log
     error:
       class: logging.FileHandler
       level: ERROR
       formatter: simple
-      filename: example.log
+      filename: example-error.log
     gossip_core:
       class: logging.FileHandler
       level: DEBUG
       formatter: simple
-      filename: example.log
+      filename: example-gossip_core.log
   loggers:
     gossip.gossip_core:
       level: INFO

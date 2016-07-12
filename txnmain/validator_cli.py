@@ -124,7 +124,7 @@ def parse_command_line(args):
     parser.add_argument('--log-config', help='The python logging config file')
     parser.add_argument('--peers',
                         help='Comma-separated list of peers to connect to. '
-                             'Alterntively, multiple --peers options can '
+                             'Alternatively, multiple --peers options can '
                              'be specified.',
                         action='append')
     parser.add_argument('--genesis',
@@ -220,15 +220,14 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('daemon', 'Daemonize')
         ], options)
 
-    if "LogLevel" in options_config:
-        options_config["LogLevel"] = options_config["LogLevel"].upper()
-
     return get_validator_configuration(options.config, options_config, os_name,
                                        config_files_required)
 
 
 def log_configuration(cfg):
-    if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
+    if 'LogConfigFile' in cfg and \
+            isinstance(cfg['LogConfigFile'], basestring) and \
+            len(cfg['LogConfigFile']) > 0:
         log_config_file = cfg['LogConfigFile']
         if log_config_file.split(".")[-1] == "js":
             try:

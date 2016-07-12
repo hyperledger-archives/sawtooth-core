@@ -42,11 +42,12 @@ class ValidatorManager(object):
      - report log, stderr, and strout
     """
 
-    def __init__(self, txnvalidater, config, dataDir, adminNode):
+    def __init__(self, txnvalidater, config, dataDir, adminNode, log_config):
         self.txnvalidater = txnvalidater
         self.Id = config['id']
         self.Name = config['NodeName']
         self.config = config
+        self.log_config = log_config
         self.AdminNode = adminNode
 
         self.dataDir = dataDir
@@ -59,7 +60,7 @@ class ValidatorManager(object):
         self.Url = "http://{}:{}".format(self.config['Host'],
                                          self.config['HttpPort'])
 
-        self.config["LogDirectory"] = self.dataDir
+        self.config['LogDirectory'] = self.dataDir
         self.logFile = os.path.join(self.dataDir,
                                     "{}.log".format(self.Name))
 
@@ -75,6 +76,22 @@ class ValidatorManager(object):
         else:
             self.Key = read_key_file(self.config['KeyFile'])
             self.Address = get_address_from_private_key_wif(self.Key)
+
+        if self.log_config:
+            for v in self.log_config["handlers"].itervalues():
+                if 'filename' in v:
+                    filename = os.path.join(
+                        self.dataDir,
+                        "{}-{}".format(self.Name,
+                                       os.path.basename(v['filename'])))
+                    v['filename'] = filename
+
+            log_config_file = os.path.join(self.dataDir,
+                                           "{}-log-config.js"
+                                           .format(self.Name))
+            with open(log_config_file, 'w') as fp:
+                json.dump(self.log_config, fp)
+            self.config['LogConfigFile'] = log_config_file
 
         configFileName = "{}.json".format(self.Name)
         self.configFile = os.path.join(self.dataDir, configFileName)
@@ -147,12 +164,18 @@ class ValidatorManager(object):
             if not self.handle.returncode:
                 if force:
                     try:
-                        self.handle.send_signal(signal.SIGKILL)
+                        if os.name == "nt":
+                            self.handle.kill()
+                        else:
+                            self.handle.send_signal(signal.SIGKILL)
                     except OSError:
                         pass  # ignore invalid process and other os type errors
                 else:
                     try:
-                        self.handle.send_signal(signal.SIGINT)
+                        if os.name == "nt":
+                            self.handle.terminate()
+                        else:
+                            self.handle.send_signal(signal.SIGINT)
                     except OSError:
                         pass
         if self.output and not self.output.closed:

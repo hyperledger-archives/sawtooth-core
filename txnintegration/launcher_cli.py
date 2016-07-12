@@ -28,7 +28,7 @@ import tarfile
 from txnintegration.exceptions import ExitError
 from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.utils import parse_configuration_file, \
-    prompt_yes_no, find_txn_validator
+    prompt_yes_no, find_txn_validator, load_log_config
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -65,7 +65,8 @@ def parse_args(args):
                              'network',
                         default=None)
     parser.add_argument('--log-config',
-                        help='The python logging config file')
+                        help='The python logging config file to be passed '
+                             'to the validators.')
 
     return parser.parse_args(args)
 
@@ -85,7 +86,9 @@ def get_archive_config(data_dir, archive_name):
     return config
 
 
-def configure(opts):
+def configure(args):
+    opts = parse_args(args)
+
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 
     # Find the validator to use
@@ -137,12 +140,17 @@ def configure(opts):
             raise ExitError(
                 "Default config file does not exist: {}".format(opts.config))
 
+    if opts.log_config is not None and not os.path.exists(opts.log_config):
+        raise ExitError("log-config file does not exist: {}"
+                        .format(opts.log_config))
+    else:
+        opts.log_config_dict = load_log_config(opts.log_config)
+
     keys = [
         'NodeName',
         'Host',
         'HttpPort',
         'Port',
-        'LogConfigFile'
         'KeyFile',
         "AdministrationNode",
         "DataDirectory",
@@ -155,12 +163,17 @@ def configure(opts):
             if k in validator_config:
                 print "\t{}".format(k)
                 del validator_config[k]
+    if opts.log_config:
+        print "\tLogConfigFile"
+
+    opts.validator_config = validator_config
 
     opts.count = max(1, opts.count)
-    opts.validator_config = validator_config
 
     print "Configuration:"
     pp.pprint(opts.__dict__)
+
+    return vars(opts)
 
 
 class ValidatorNetworkConsole(cmd.Cmd):
@@ -302,23 +315,20 @@ def main():
     networkManager = None
     errorOccured = False
     try:
-        opts = parse_args(sys.argv[1:])
-    except:
-        # argparse reports details on the parameter error.
+        opts = configure(sys.argv[1:])
+    except Exception as e:
+        print >> sys.stderr, str(e)
         sys.exit(1)
 
     try:
-        # Discover configuration
-        configure(opts)
-
         networkManager = ValidatorNetworkManager(
-            txnvalidator=opts.validator,
-            cfg=opts.validator_config,
-            dataDir=opts.data_dir,
-            blockChainArchive=opts.load_blockchain)
-        networkManager.staged_launch_network(opts.count)
+            txnvalidator=opts['validator'],
+            cfg=opts['validator_config'],
+            log_config=opts['log_config_dict'],
+            dataDir=opts['data_dir'],
+            blockChainArchive=opts['load_blockchain'])
+        networkManager.staged_launch_network(opts['count'])
 
-        # wait ...
         ctrl = ValidatorNetworkConsole(networkManager)
         ctrl.cmdloop("\nWelcome to the sawtooth txnvalidator network "
                      "manager interactive console")
@@ -338,26 +348,26 @@ def main():
     if networkManager:
         networkManager.shutdown()
 
-    if opts.save_blockchain:
-        print "Saving blockchain to {}".format(opts.save_blockchain)
-        networkManager.create_result_archive(opts.save_blockchain)
+    if opts['save_blockchain']:
+        print "Saving blockchain to {}".format(opts['save_blockchain'])
+        networkManager.create_result_archive(opts['save_blockchain'])
 
     # if dir was auto-generated
     if opts and "data_dir_is_tmp" in opts \
-            and opts.data_dir_is_tmp \
-            and os.path.exists(opts.data_dir):
+            and opts['data_dir_is_tmp'] \
+            and os.path.exists(opts['data_dir']):
         deleteTestDir = True
         if errorOccured:
             deleteTestDir = prompt_yes_no(
                 "Do you want to delete the data dir(logs, configs, etc)")
         if deleteTestDir:
-            print "Cleaning temp data store {}".format(opts.data_dir)
-            if os.path.exists(opts.data_dir):
-                shutil.rmtree(opts.data_dir)
+            print "Cleaning temp data store {}".format(opts['data_dir'])
+            if os.path.exists(opts['data_dir']):
+                shutil.rmtree(opts['data_dir'])
         else:
-            print "Data directory {}".format(opts.data_dir)
+            print "Data directory {}".format(opts['data_dir'])
     else:
-        print "Data directory {}".format(opts.data_dir)
+        print "Data directory {}".format(opts['data_dir'])
 
 
 if __name__ == "__main__":

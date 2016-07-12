@@ -64,7 +64,9 @@ class ValidatorNetworkManager(object):
                  dataDir=None,
                  httpPort=8800,
                  udpPort=8900,
-                 blockChainArchive=None):
+                 blockChainArchive=None,
+                 log_config=None,
+                 ):
 
         self.Validators = []
         self.ValidatorMap = {}
@@ -77,6 +79,7 @@ class ValidatorNetworkManager(object):
         if cfg is None:
             cfg = defaultValidatorConfig
         self.ValidatorConfig = cfg
+        self.validator_log_config = log_config
 
         if txnvalidator is None:
             txnvalidator = find_txn_validator()
@@ -158,11 +161,13 @@ class ValidatorNetworkManager(object):
         validators = []
 
         with Progress("Launching initial validator") as p:
-            self.ValidatorConfig['LedgerURL'] = "**none**"
-            if self.blockChainArchive is not None:
-                self.ValidatorConfig['Restore'] = True
-
-            validator = self.launch_node(genesis=True, daemon=False)
+            cfg = {
+                'LedgerURL': "**none**",
+                'Restore': self.blockChainArchive,
+            }
+            validator = self.launch_node(overrides=cfg,
+                                         genesis=True,
+                                         daemon=False)
             validators.append(validator)
             while not validator.is_registered():
                 try:
@@ -175,10 +180,14 @@ class ValidatorNetworkManager(object):
                 time.sleep(1)
 
         with Progress("Launching validator network") as p:
-            self.ValidatorConfig['LedgerURL'] = validator.Url
-            self.ValidatorConfig['Restore'] = False
+            cfg = {
+                'LedgerURL': validator.Url,
+                'Restore': self.blockChainArchive,
+            }
             for _ in range(1, count):
-                v = self.launch_node(genesis=False, daemon=others_daemon)
+                v = self.launch_node(overrides=cfg,
+                                     genesis=False,
+                                     daemon=others_daemon)
                 validators.append(v)
                 p.step()
 
@@ -186,18 +195,27 @@ class ValidatorNetworkManager(object):
 
         return validators
 
-    def launch_node(self, launch=True, genesis=False, daemon=False,
+    def launch_node(self,
+                    overrides=None,
+                    launch=True,
+                    genesis=False,
+                    daemon=False,
                     delay=False):
         id = self.NextValidatorId
         self.NextValidatorId += 1
         cfg = self.ValidatorConfig.copy()
+        if overrides:
+            cfg.update(overrides)
         cfg['id'] = id
         cfg['NodeName'] = "validator-{}".format(id)
         cfg['HttpPort'] = self.HttpPortBase + id
         cfg['Port'] = self.UdpPortBase + id
+        log_config = self.validator_log_config.copy() \
+            if self.validator_log_config \
+            else None
 
         v = ValidatorManager(self.txnvalidator, cfg, self.DataDir,
-                             self.AdminNode)
+                             self.AdminNode, log_config)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self.Validators.append(v)
         self.ValidatorMap[id] = v
@@ -244,20 +262,22 @@ class ValidatorNetworkManager(object):
         count: new validators to launch against each running validator
         validator: running validator against which to verify registration
         """
-        validator = validators[0]
+        ledger_validator = validators[0]
         new_validators = []
 
         with Progress("Extending validator network") as p:
-            self.ValidatorConfig['GenesisLedger'] = False
-            self.ValidatorConfig['Restore'] = False
-            for validator in validators:
-                self.ValidatorConfig['LedgerURL'] = validator.Url
+            cfg = {
+                'LedgerURL': ledger_validator.Url
+            }
+            for _ in validators:
                 for _ in range(0, count):
-                    v = self.launch_node()
+                    v = self.launch_node(overrides=cfg)
                     new_validators.append(v)
                     p.step()
 
-        self.wait_for_registration(new_validators, validator, max_time=240)
+        self.wait_for_registration(new_validators,
+                                   ledger_validator,
+                                   max_time=240)
 
         return new_validators
 
