@@ -54,8 +54,10 @@ ECHO Creating Sawtooth python virtual environment.
 %PYTHON% -m pip install --upgrade virtualenv
 %PYTHON% -m virtualenv %ST_VE%
 CALL %ST_VE%scripts\activate.bat
-pip install enum setuptools colorlog pybitcointools cbor twisted requests nose2 coverage cov-core pypiwin32
+pip install enum setuptools colorlog pybitcointools cbor
+pip install twisted requests nose2 coverage cov-core pypiwin32
 pip install pylint setuptools-lint pep8
+pip install psutil pyyaml
 
 :EXIT
 POPD
