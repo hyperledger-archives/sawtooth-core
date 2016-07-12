@@ -22,7 +22,7 @@ import cProfile
 
 from twisted.internet import reactor
 
-from txnserver.ledger_web_client import MessageException
+from sawtooth.exceptions import MessageException
 from txnserver.endpoint_registry_client import EndpointRegistryClient
 from gossip import node, signed_object, token_bucket
 from gossip.messages import connect_message, shutdown_message

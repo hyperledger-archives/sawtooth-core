@@ -29,7 +29,7 @@ from txnintegration.integer_key_state import IntegerKeyState
 from txnintegration.integer_key_communication import MessageException
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
-from txnserver.ledger_web_client import LedgerWebClient
+from sawtooth.client import LedgerWebClient
 
 logger = logging.getLogger(__name__)
 

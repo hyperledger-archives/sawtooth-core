@@ -13,5 +13,5 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = ['config', 'ledger_web_client', 'log_setup', 'lottery_validator',
-           'web_api', 'validator', 'voting_validator']
+__all__ = ['config', 'log_setup', 'lottery_validator', 'web_api', 'validator',
+           'voting_validator']
