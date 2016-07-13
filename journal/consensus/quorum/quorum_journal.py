@@ -288,6 +288,13 @@ class QuorumJournal(Journal):
         logger.debug('complete the vote for block based on %s',
                      self.MostRecentCommittedBlockID)
 
+        if len(txnlist) == 0:
+            logger.warn('no transactions to commit')
+            self.CurrentQuorumVote = None
+            self.NextVoteTime = self._nextvotetime()
+            self.NextBallotTime = 0
+            return
+
         if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
             logger.warn(
                 'attempt complete vote on block %d, expecting block %d',
