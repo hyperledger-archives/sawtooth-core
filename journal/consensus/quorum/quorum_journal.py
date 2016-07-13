@@ -17,19 +17,21 @@ import logging
 import math
 import random
 import time
+import socket
 
+from gossip import common
+from gossip import node
 from journal.consensus.quorum import quorum_transaction_block
-from journal import journal_core
 from journal.consensus.quorum.messages import quorum_advertisement
 from journal.consensus.quorum.messages import quorum_debug
 from journal.consensus.quorum.messages import quorum_ballot
 from journal.consensus.quorum.protocols import quorum_vote
-from gossip import common
+from journal.journal_core import Journal
 
 logger = logging.getLogger(__name__)
 
 
-class QuorumJournal(journal_core.Journal):
+class QuorumJournal(Journal):
     """Implements a journal based on participant voting.
 
     Attributes:
@@ -73,13 +75,13 @@ class QuorumJournal(journal_core.Journal):
     # network size
     VotingQuorumTargetSize = 13
 
-    def __init__(self, node, **kwargs):
+    def __init__(self, nd, **kwargs):
         """Constructor for the QuorumJournal class.
 
         Args:
-            node (Node): The local node.
+            nd (Node): The local node.
         """
-        super(QuorumJournal, self).__init__(node, **kwargs)
+        super(QuorumJournal, self).__init__(nd, **kwargs)
 
         self.VotingQuorum = dict()
         # we are always a member of our own quorum
@@ -148,16 +150,16 @@ class QuorumJournal(journal_core.Journal):
     # CUSTOM JOURNAL API
     #
 
-    def add_quorum_node(self, node):
+    def add_quorum_node(self, nd):
         """Adds a node to this node's quorum set.
 
         Args:
-            node (Node): The node to add to the quorum set.
+            nd (Node): The node to add to the quorum set.
         """
-        logger.info('attempt to add quorum voting node %s to %s', str(node),
+        logger.info('attempt to add quorum voting node %s to %s', str(nd),
                     str(self.LocalNode))
 
-        if node.Identifier in self.VotingQuorum:
+        if nd.Identifier in self.VotingQuorum:
             logger.info('attempt to add duplicate node to quorum')
             return
 
@@ -165,12 +167,12 @@ class QuorumJournal(journal_core.Journal):
                      math.log(1.0 - random.random()))
         if len(self.VotingQuorum) - 1 > target:
             logger.debug('rejecting candidate %s: len(self.VotingQuorum) - '
-                         '1 [[%s]] > target [[%s]] ?', node,
+                         '1 [[%s]] > target [[%s]] ?', nd,
                          len(self.VotingQuorum) - 1, target)
             return
 
-        logger.info('add node %s to voting quorum', node.Identifier[:8])
-        self.VotingQuorum[node.Identifier] = node
+        logger.info('add node %s to voting quorum', nd.Identifier[:8])
+        self.VotingQuorum[nd.Identifier] = nd
 
     def initiate_vote(self):
         """Initiates a new vote.
