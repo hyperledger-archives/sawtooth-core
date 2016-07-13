@@ -20,7 +20,7 @@
       "formatter" : "simple",
       "filename" : "error.log"
     },
-    'gossip_core' : {
+    "gossip_core" : {
       "class" : "logging.FileHandler",
       "level" : "DEBUG",
       "formatter" : "simple",
