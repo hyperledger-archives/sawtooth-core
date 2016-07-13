@@ -22,7 +22,6 @@ import socket
 from gossip import common
 from gossip import node
 from journal.consensus.quorum import quorum_transaction_block
-from journal.consensus.quorum.messages import quorum_advertisement
 from journal.consensus.quorum.messages import quorum_debug
 from journal.consensus.quorum.messages import quorum_ballot
 from journal.consensus.quorum.protocols import quorum_vote
@@ -93,7 +92,6 @@ class QuorumJournal(Journal):
 
         self.onHeartbeatTimer += self._triggervote
 
-        quorum_advertisement.register_message_handlers(self)
         quorum_debug.register_message_handlers(self)
         quorum_ballot.register_message_handlers(self)
         quorum_transaction_block.register_message_handlers(self)
@@ -103,9 +101,9 @@ class QuorumJournal(Journal):
     #
 
     def post_initialize(self):
-        """Sends a quorum advertisement to the network.
+        """currently no-op
         """
-        quorum_advertisement.send_quorum_advertisement_message(self)
+        pass
 
     def build_transaction_block(self, force=False):
         """Builds the next transaction block for the journal.
