@@ -21,6 +21,7 @@ import time
 import logging
 from twisted.web import http
 
+from txnintegration.utils import StaticNetworkConfig
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
@@ -172,8 +173,9 @@ class IntKeyLoadTest(object):
 
 
 class TestSmoke(unittest.TestCase):
-    def _run_int_load(self, config, num_nodes, archive_name, tolerance=2,
-                      standard=5):
+    def _run_int_load(self, config, num_nodes, archive_name,
+                      tolerance=2, standard=5,
+                      static_network=None):
         """
         Args:
             config (dict): Default config for each node
@@ -195,6 +197,8 @@ class TestSmoke(unittest.TestCase):
                 to trivialize the test.  Therefore, as tolerance is increased
                 (if non-zero), we use standard to proportionally increase the
                 minimum number of overall blocks required by the test.
+            static_network (StaticNetworkConfig): optional static network
+                configuration
         """
         vnm = None
         urls = ""
@@ -204,7 +208,8 @@ class TestSmoke(unittest.TestCase):
                 print "Launching validator network."
                 vnm_config = config
                 vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
-                                              cfg=vnm_config)
+                                              cfg=vnm_config,
+                                              staticNetwork=static_network)
                 vnm.launch_network(num_nodes)
                 urls = vnm.urls()
             else:
@@ -280,4 +285,6 @@ class TestSmoke(unittest.TestCase):
         cfg['VoteTimeInterval'] = 2.0
         cfg['BallotTimeInterval'] = 1.0
         cfg['VotingQuorumTargetSize'] = 5
-        self._run_int_load(cfg, 1, "TestSmokeResultsQuorum", tolerance=0)
+        self._run_int_load(cfg, 1, "TestSmokeResultsQuorum",
+                           tolerance=0,
+                           static_network=network)

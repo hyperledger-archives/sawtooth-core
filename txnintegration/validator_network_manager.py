@@ -66,8 +66,10 @@ class ValidatorNetworkManager(object):
                  udpPort=8900,
                  blockChainArchive=None,
                  log_config=None,
+                 staticNetwork=None,
                  ):
 
+        self.staticNetwork = staticNetwork
         self.Validators = []
         self.ValidatorMap = {}
         self.ValidatorConfig = None
@@ -210,12 +212,24 @@ class ValidatorNetworkManager(object):
         cfg['NodeName'] = "validator-{}".format(id)
         cfg['HttpPort'] = self.HttpPortBase + id
         cfg['Port'] = self.UdpPortBase + id
+        staticNode = False
+        if self.staticNetwork is not None:
+            assert 'Nodes' in cfg.keys()
+            staticNode = True
+            nd = self.staticNetwork.get_node(id)
+            q = self.staticNetwork.get_quorum(id, dfl=cfg.get('Quorum', []))
+            cfg['NodeName'] = nd['ShortName']
+            cfg['HttpPort'] = nd['HttpPort']
+            cfg['Port'] = nd['Port']
+            cfg['SigningKey'] = self.staticNetwork.get_key(id)
+            cfg['Identifier'] = nd['Identifier']
+            cfg['Quorum'] = q
         log_config = self.validator_log_config.copy() \
             if self.validator_log_config \
             else None
 
         v = ValidatorManager(self.txnvalidator, cfg, self.DataDir,
-                             self.AdminNode, log_config)
+                             self.AdminNode, log_config, staticNode=staticNode)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self.Validators.append(v)
         self.ValidatorMap[id] = v

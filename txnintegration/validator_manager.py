@@ -42,21 +42,28 @@ class ValidatorManager(object):
      - report log, stderr, and strout
     """
 
-    def __init__(self, txnvalidater, config, dataDir, adminNode, log_config):
+    def __init__(self, txnvalidater, config, dataDir, adminNode, log_config,
+                 staticNode=False):
         self.txnvalidater = txnvalidater
         self.Id = config['id']
         self.Name = config['NodeName']
         self.config = config
         self.log_config = log_config
         self.AdminNode = adminNode
+        self.staticNode = staticNode
 
         self.dataDir = dataDir
 
-        # Generate key for validator
-        self.Key = generate_private_key()
-        self.Address = get_address_from_private_key_wif(self.Key)
+        # Handle validator keys
+        if self.staticNode:
+            self.Key = config['SigningKey']
+            self.Address = config['Identifier']
+        else:
+            self.Key = generate_private_key()
+            self.Address = get_address_from_private_key_wif(self.Key)
 
-    def launch(self, launch=True, genesis=False, daemon=False, delay=False):
+    def launch(self, launch=True, genesis=False, daemon=False, delay=False,
+               node=None):
         self.Url = "http://{}:{}".format(self.config['Host'],
                                          self.config['HttpPort'])
 
@@ -69,6 +76,9 @@ class ValidatorManager(object):
 
         self.config['KeyFile'] = os.path.join(self.dataDir,
                                               "{}.wif".format(self.Name))
+        if self.staticNode:
+            if os.path.isfile(self.config['KeyFile']):
+                os.remove(self.config['KeyFile'])
         if not os.path.isfile(self.config['KeyFile']):
             with open(self.config['KeyFile'], 'w') as fp:
                 fp.write(self.Key)
