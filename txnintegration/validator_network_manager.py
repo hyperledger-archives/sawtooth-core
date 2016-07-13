@@ -46,7 +46,8 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'TransactionFamilies': [
                               u'ledger.transaction.integer_key'],
                           u'UseFixedDelay': True,
-                          u'Profile': True}
+                          u'Profile': True,
+                          u'Host': u'localhost'}
 
 
 class ValidatorNetworkManager(object):
@@ -104,7 +105,6 @@ class ValidatorNetworkManager(object):
         self.AdminNode = ValidatorNetworkManager.AdminNode()
 
         self.ValidatorConfig['DataDirectory'] = self.DataDir
-        self.ValidatorConfig['Host'] = "localhost"
         self.ValidatorConfig["AdministrationNode"] = self.AdminNode.Address
         self.ValidatorConfig['Restore'] = False
 
