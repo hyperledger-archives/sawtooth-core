@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import math
 import random
 import time
 import socket
@@ -184,15 +183,8 @@ class QuorumJournal(Journal):
             logger.info('attempt to add duplicate node to quorum')
             return
 
-        target = int(-1.0 * self.VotingQuorumTargetSize *
-                     math.log(1.0 - random.random()))
-        if len(self.VotingQuorum) - 1 > target:
-            logger.debug('rejecting candidate %s: len(self.VotingQuorum) - '
-                         '1 [[%s]] > target [[%s]] ?', nd,
-                         len(self.VotingQuorum) - 1, target)
-            return
-
-        logger.info('add node %s to voting quorum', nd.Identifier[:8])
+        logger.info('add node %s to voting quorum as %s', nd.Name,
+                    nd.Identifier)
         self.VotingQuorum[nd.Identifier] = nd
 
     def initiate_vote(self):
