@@ -1,7 +1,7 @@
 
 !define APPNAME sawtooth-validator
-!define COMPANYNAME Intel
-!define DESCRIPTION "Sawtooth Lake Transaction Validator"
+!define COMPANYNAME "Intel Corporation"
+!define DESCRIPTION "Intel® Sawtooth Lake Validator"
 # These three must be integers
 !define VERSIONMAJOR 0
 !define VERSIONMINOR 0
@@ -16,10 +16,10 @@
 
 RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
  
-InstallDir "$PROGRAMFILES\${COMPANYNAME}\${APPNAME}"
+InstallDir "$PROGRAMFILES\Intel\${APPNAME}"
 
 # This will be in the installer/uninstaller's title bar
-Name "${COMPANYNAME} - ${APPNAME}"
+Name "${COMPANYNAME} - ${DESCRIPTION}"
 #Icon "logo.ico"
 outFile "sawtooth-validator.exe"
  
@@ -88,14 +88,14 @@ section "install"
 	writeUninstaller "$INSTDIR\uninstall.exe"
  
 	# Registry information for add/remove programs
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayName" "${COMPANYNAME} - ${APPNAME} - ${DESCRIPTION}"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayName" "${DESCRIPTION}"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "InstallLocation" "$\"$INSTDIR$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayIcon" "$\"$INSTDIR\logo.ico$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "Publisher" "$\"${COMPANYNAME}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "Publisher" "${COMPANYNAME}"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "HelpLink" "$\"${HELPURL}$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayVersion" "$\"${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayVersion" "${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}"
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "VersionMajor" ${VERSIONMAJOR}
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "VersionMinor" ${VERSIONMINOR}
 
@@ -106,7 +106,7 @@ section "install"
 	# Set the INSTALLSIZE constant (!defined at the top of this script) so Add/Remove Programs can accurately report the size
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
 
-	Exec '"$PROGRAMFILES\${COMPANYNAME}\${APPNAME}\bin\txnvalidator.exe" --startup=auto install'
+	Exec '"$PROGRAMFILES\Intel\${APPNAME}\bin\txnvalidator.exe" --startup=auto install'
 
 sectionEnd
  
