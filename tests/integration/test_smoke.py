@@ -40,8 +40,8 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 
 
 class IntKeyLoadTest(object):
-    def __init__(self):
-        pass
+    def __init__(self, timeout=None):
+        self.Timeout = 240 if timeout is None else timeout
 
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
@@ -66,7 +66,7 @@ class IntKeyLoadTest(object):
         return len(self.transactions)
 
     def _wait_for_transaction_commits(self):
-        to = TimeOut(240)
+        to = TimeOut(self.Timeout)
         txnCnt = len(self.transactions)
         with Progress("Waiting for %s transactions to commit" % (txnCnt)) as p:
             while not to() and txnCnt > 0:
@@ -176,6 +176,8 @@ class TestSmoke(unittest.TestCase):
     def _run_int_load(self, config, num_nodes, archive_name,
                       tolerance=2, standard=5, block_id=True,
                       static_network=None,
+                      vnm_timeout=None, txn_timeout=None,
+                      n_keys=100, n_runs=2,
                       ):
         """
         This test is getting really beat up and needs a refactor
@@ -202,18 +204,20 @@ class TestSmoke(unittest.TestCase):
             block_id (bool): check for block (hash) identity
             static_network (StaticNetworkConfig): optional static network
                 configuration
+            vnm_timeout (int): timeout for initiating network
+            txn_timeout (int): timeout for batch transactions
         """
         vnm = None
         urls = ""
         try:
-            test = IntKeyLoadTest()
+            test = IntKeyLoadTest(timeout=txn_timeout)
             if "TEST_VALIDATOR_URLS" not in os.environ:
                 print "Launching validator network."
                 vnm_config = config
                 vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
                                               cfg=vnm_config,
                                               staticNetwork=static_network)
-                vnm.launch_network(num_nodes)
+                vnm.launch_network(num_nodes, max_time=vnm_timeout)
                 urls = vnm.urls()
             else:
                 print "Fetching Urls of Running Validators"
@@ -222,8 +226,8 @@ class TestSmoke(unittest.TestCase):
                 # e.g. 'http://localhost:8800,http://localhost:8801'
                 urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
             print "Testing transaction load."
-            test.setup(urls, 100)
-            test.run(2)
+            test.setup(urls, n_keys)
+            test.run(n_runs)
             test.validate()
             if block_id:
                 # check for block id convergence across network:
@@ -284,12 +288,20 @@ class TestSmoke(unittest.TestCase):
 
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_intkey_load_quorum(self):
+        n = 4   # size of network
+        q = 4   # size of quorum
+        network = StaticNetworkConfig(n, q=q, use_quorum=True)
         cfg = defaultValidatorConfig.copy()
         cfg['LedgerType'] = 'quorum'
-        cfg['MaxTransactionsPerBlock'] = 64
-        cfg['VoteTimeInterval'] = 2.0
-        cfg['BallotTimeInterval'] = 1.0
-        cfg['VotingQuorumTargetSize'] = 5
-        self._run_int_load(cfg, 1, "TestSmokeResultsQuorum",
+        cfg['TopologyAlgorithm'] = "Quorum"
+        cfg["Minimumconnectivity"] = q
+        cfg["TargetConnectivity"] = q
+        cfg['VotingQuorumTargetSize'] = q
+        cfg['Nodes'] = network.get_nodes()
+        cfg['VoteTimeInterval'] = 48.0
+        cfg['BallotTimeInterval'] = 8.0
+        self._run_int_load(cfg, n, "TestSmokeResultsQuorum",
                            tolerance=0, block_id=False,
-                           static_network=network)
+                           static_network=network,
+                           vnm_timeout=240, txn_timeout=240,
+                           n_keys=100, n_runs=1)

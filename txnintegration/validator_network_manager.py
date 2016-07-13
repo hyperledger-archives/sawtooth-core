@@ -159,7 +159,7 @@ class ValidatorNetworkManager(object):
 
         return validators
 
-    def launch_network(self, count=1, others_daemon=False):
+    def launch_network(self, count=1, max_time=None, others_daemon=False):
         validators = []
 
         with Progress("Launching initial validator") as p:
@@ -196,7 +196,7 @@ class ValidatorNetworkManager(object):
                 validators.append(v)
                 p.step()
 
-        self.wait_for_registration(validators, validator)
+        self.wait_for_registration(validators, validator, max_time=max_time)
 
         return validators
 
@@ -230,7 +230,6 @@ class ValidatorNetworkManager(object):
         log_config = self.validator_log_config.copy() \
             if self.validator_log_config \
             else None
-
         v = ValidatorManager(self.txnvalidator, cfg, self.DataDir,
                              self.AdminNode, log_config, staticNode=staticNode)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
@@ -239,12 +238,13 @@ class ValidatorNetworkManager(object):
         self.ValidatorMap[cfg['NodeName']] = v
         return v
 
-    def wait_for_registration(self, validators, validator, max_time=120):
+    def wait_for_registration(self, validators, validator, max_time=None):
         """
         Wait for newly launched validators to register.
         validators: list of validators on which to wait
         validator: running validator against which to verify registration
         """
+        max_time = 120 if max_time is None else max_time
         unregCount = len(validators)
 
         with Progress("Waiting for registration of {0} validators".format(
