@@ -65,7 +65,7 @@ class StatsClient(object):
     def stats_request(self):
         # initialize endpoint urls from specified validator url
         self.request_start = time.clock()
-        self.path = self.url + "/stat/ledger"
+        self.path = self.url + "/statistics/ledger"
         self.vc.get_request(self.path,
                             self._stats_completion,
                             self._stats_error)
