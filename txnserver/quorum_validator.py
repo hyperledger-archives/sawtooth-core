@@ -21,11 +21,11 @@ from journal.consensus.quorum import quorum_journal
 logger = logging.getLogger(__name__)
 
 
-class VotingValidator(validator.Validator):
-    EndpointDomain = '/VotingValidator'
+class QuorumValidator(validator.Validator):
+    EndpointDomain = '/QuorumValidator'
 
     def __init__(self, config, windows_service=False):
-        super(VotingValidator, self).__init__(config, windows_service)
+        super(QuorumValidator, self).__init__(config, windows_service)
 
     def initialize_ledger_specific_configuration(self):
         """

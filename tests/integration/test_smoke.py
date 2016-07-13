@@ -273,11 +273,11 @@ class TestSmoke(unittest.TestCase):
         self._run_int_load(cfg, 5, "TestSmokeResultsLottery")
 
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load_voting(self):
+    def test_intkey_load_quorum(self):
         cfg = defaultValidatorConfig.copy()
-        cfg['LedgerType'] = 'voting'
+        cfg['LedgerType'] = 'quorum'
         cfg['MaxTransactionsPerBlock'] = 64
         cfg['VoteTimeInterval'] = 2.0
         cfg['BallotTimeInterval'] = 1.0
         cfg['VotingQuorumTargetSize'] = 5
-        self._run_int_load(cfg, 1, "TestSmokeResultsVoting", tolerance=0)
+        self._run_int_load(cfg, 1, "TestSmokeResultsQuorum", tolerance=0)

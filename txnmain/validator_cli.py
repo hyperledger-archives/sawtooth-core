@@ -51,7 +51,7 @@ def local_main(config, windows_service=False, daemonized=False):
     # Daemonize().  This is a side-effect of importing twisted.
     from twisted.internet import reactor
     from txnserver import lottery_validator
-    from txnserver import voting_validator
+    from txnserver import quorum_validator
     from txnserver import web_api
     from gossip.gossip_core import GossipException
 
@@ -66,8 +66,8 @@ def local_main(config, windows_service=False, daemonized=False):
             validator = lottery_validator.LotteryValidator(
                 config,
                 windows_service=windows_service)
-        elif ledgertype == 'voting':
-            validator = voting_validator.VotingValidator(
+        elif ledgertype == 'quorum':
+            validator = quorum_validator.QuorumValidator(
                 config,
                 windows_service=windows_service)
         else:

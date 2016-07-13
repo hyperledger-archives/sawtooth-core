@@ -222,11 +222,11 @@ class TestIntegration(unittest.TestCase):
                   "TestIntegrationResults.tar.gz"
             raise e
 
-    @unittest.skip("LedgerType voting is broken")
-    def test_intkey_load_voting(self):
+    @unittest.skip("LedgerType quorum is broken")
+    def test_intkey_load_quorum(self):
         vnm = None
         vote_cfg = defaultValidatorConfig.copy()
-        vote_cfg['LedgerType'] = 'voting'
+        vote_cfg['LedgerType'] = 'quorum'
         try:
             vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
                                           cfg=vote_cfg)
