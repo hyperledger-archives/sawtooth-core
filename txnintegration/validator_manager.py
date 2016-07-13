@@ -168,6 +168,20 @@ class ValidatorManager(object):
 
         return False
 
+    def is_started(self, url=None):
+        if not url:
+            url = self.Url
+        lwc = LedgerWebClient(url)
+        sta = None
+        try:
+            sta = lwc.get_status(verbose=False, timeout=2)
+        except MessageException as e:
+            print e.message
+            return False
+        if sta is not None:
+            return sta.get('Status', '') == 'started'
+        return False
+
     def shutdown(self, force=False):
         if self.handle:
             self.handle.poll()

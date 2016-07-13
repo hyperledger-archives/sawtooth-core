@@ -171,7 +171,10 @@ class ValidatorNetworkManager(object):
                                          genesis=True,
                                          daemon=False)
             validators.append(validator)
-            while not validator.is_registered():
+            probe_func = validator.is_registered
+            if self.ValidatorConfig.get('LedgerType', '') == 'quorum':
+                probe_func = validator.is_started
+            while not probe_func():
                 try:
                     validator.check_error()
                 except ValidatorManagerException as vme:
