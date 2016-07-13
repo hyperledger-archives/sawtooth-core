@@ -174,9 +174,11 @@ class IntKeyLoadTest(object):
 
 class TestSmoke(unittest.TestCase):
     def _run_int_load(self, config, num_nodes, archive_name,
-                      tolerance=2, standard=5,
-                      static_network=None):
+                      tolerance=2, standard=5, block_id=True,
+                      static_network=None,
+                      ):
         """
+        This test is getting really beat up and needs a refactor
         Args:
             config (dict): Default config for each node
             num_nodes (int): Total number of nodes in network simulation
@@ -197,6 +199,7 @@ class TestSmoke(unittest.TestCase):
                 to trivialize the test.  Therefore, as tolerance is increased
                 (if non-zero), we use standard to proportionally increase the
                 minimum number of overall blocks required by the test.
+            block_id (bool): check for block (hash) identity
             static_network (StaticNetworkConfig): optional static network
                 configuration
         """
@@ -222,42 +225,44 @@ class TestSmoke(unittest.TestCase):
             test.setup(urls, 100)
             test.run(2)
             test.validate()
-            # check for block id convergence across network:
-            sample_size = max(1, tolerance) * standard
-            print "Testing block-level convergence with min sample size: " \
-                "%s (after tolerance: %s)" % (sample_size, tolerance)
-            # ....get all blockids from each server, newest last
-            block_lists = [LedgerWebClient(x).get_block_list() for x in urls]
-            for ls in block_lists:
-                ls.reverse()
-            # ...establish preconditions
-            max_mag = len(max(block_lists, key=len))
-            min_mag = len(min(block_lists, key=len))
-            self.assertGreaterEqual(
-                tolerance,
-                max_mag - min_mag,
-                'block list magnitude differences (%s) '
-                'exceed tolerance (%s)' % (
-                    max_mag - min_mag, tolerance))
-            effective_sample_size = max_mag - tolerance
-            print 'effective sample size: %s' % (effective_sample_size)
-            self.assertGreaterEqual(
-                effective_sample_size,
-                sample_size,
-                'not enough target samples to determine convergence')
-            # ...(optionally) permit reasonable forks by normalizing lists
-            if tolerance > 0:
+            if block_id:
+                # check for block id convergence across network:
+                sample_size = max(1, tolerance) * standard
+                print "Testing block-level convergence with min sample size:",
+                print " %s (after tolerance: %s)" % (sample_size, tolerance)
+                # ...get all blockids from each server, newest last
                 block_lists = [
-                    block_list[0:effective_sample_size]
-                    for block_list in block_lists
-                ]
-            # ...id-check (possibly normalized) cross-server block chains
-            for (i, block_list) in enumerate(block_lists):
-                self.assertEqual(
-                    block_lists[0],
-                    block_list,
-                    '%s is divergent:\n\t%s vs.\n\t%s' % (
-                        urls[i], block_lists[0], block_list))
+                    LedgerWebClient(x).get_block_list() for x in urls]
+                for ls in block_lists:
+                    ls.reverse()
+                # ...establish preconditions
+                max_mag = len(max(block_lists, key=len))
+                min_mag = len(min(block_lists, key=len))
+                self.assertGreaterEqual(
+                    tolerance,
+                    max_mag - min_mag,
+                    'block list magnitude differences (%s) '
+                    'exceed tolerance (%s)' % (
+                        max_mag - min_mag, tolerance))
+                effective_sample_size = max_mag - tolerance
+                print 'effective sample size: %s' % (effective_sample_size)
+                self.assertGreaterEqual(
+                    effective_sample_size,
+                    sample_size,
+                    'not enough target samples to determine convergence')
+                # ...(optionally) permit reasonable forks by normalizing lists
+                if tolerance > 0:
+                    block_lists = [
+                        block_list[0:effective_sample_size]
+                        for block_list in block_lists
+                    ]
+                # ...id-check (possibly normalized) cross-server block chains
+                for (i, block_list) in enumerate(block_lists):
+                    self.assertEqual(
+                        block_lists[0],
+                        block_list,
+                        '%s is divergent:\n\t%s vs.\n\t%s' % (
+                            urls[i], block_lists[0], block_list))
             if vnm:
                 vnm.shutdown()
         except Exception:
@@ -286,5 +291,5 @@ class TestSmoke(unittest.TestCase):
         cfg['BallotTimeInterval'] = 1.0
         cfg['VotingQuorumTargetSize'] = 5
         self._run_int_load(cfg, 1, "TestSmokeResultsQuorum",
-                           tolerance=0,
+                           tolerance=0, block_id=False,
                            static_network=network)
