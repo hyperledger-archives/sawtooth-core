@@ -82,6 +82,7 @@ class QuorumJournal(Journal):
         """
         super(QuorumJournal, self).__init__(nd, **kwargs)
 
+        self.QuorumMap = dict()
         self.VotingQuorum = dict()
         # we are always a member of our own quorum
         self.VotingQuorum[self.LocalNode.Identifier] = self.LocalNode
@@ -95,6 +96,28 @@ class QuorumJournal(Journal):
         quorum_debug.register_message_handlers(self)
         quorum_ballot.register_message_handlers(self)
         quorum_transaction_block.register_message_handlers(self)
+
+    def initialize_quorum_map(self, config):
+        q = config.get('Quorum', [])
+        if self.LocalNode.Name not in q:
+            logger.fatal("node must be in its own quorum")
+            self.shutdown()
+            return
+        if len(q) < config.get("VotingQuorumTargetSize"):
+            logger.fatal('insufficient quorum configuration; need %s but " \
+                         "specified %s', len(q),
+                         config.get('VotingQuorumTargetSize', None))
+            self.shutdown()
+            return
+        self.QuorumMap = {}
+        for nd_dict in config.get("Nodes", []):
+            if nd_dict["ShortName"] in q:
+                addr = (socket.gethostbyname(nd_dict["Host"]), nd_dict["Port"])
+                nd = node.Node(address=addr,
+                               identifier=nd_dict["Identifier"],
+                               name=nd_dict["ShortName"])
+                nd.HttpPort = nd_dict["HttpPort"]
+                self.QuorumMap[nd_dict["ShortName"]] = nd
 
     #
     # GENERAL JOURNAL API
@@ -286,6 +309,9 @@ class QuorumJournal(Journal):
         self.CurrentQuorumVote = None
         self.NextVoteTime = self._nextvotetime()
         self.NextBallotTime = 0
+
+    def quorum_list(self):
+        return [x for x in self.QuorumMap.itervalues()]
 
     #
     # UTILITY FUNCTIONS
