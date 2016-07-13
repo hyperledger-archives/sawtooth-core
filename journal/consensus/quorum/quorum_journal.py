@@ -196,14 +196,18 @@ class QuorumJournal(Journal):
         logger.info('quorum, initiate, %s',
                     self.MostRecentCommittedBlockID[:8])
 
-        # Get the list of prepared transactions, if there aren't enough then
-        # reset the timers and return since there is nothing to vote on
+        # check alleged connectivity
+        if not self._connected():
+            self.NextVoteTime = self._nextvotetime()
+            self.NextBallotTime = 0
+            return
+
+        # check that we have enough transactions
         txnlist = self._preparetransactionlist(
             maxcount=self.MaximumTransactionsPerBlock)
         if len(txnlist) < self.MinimumTransactionsPerBlock:
             logger.debug('insufficient transactions for vote; %d out of %d',
                          len(txnlist), self.MinimumTransactionsPerBlock)
-
             self.NextVoteTime = self._nextvotetime()
             self.NextBallotTime = 0
             return
@@ -226,6 +230,8 @@ class QuorumJournal(Journal):
         Returns:
             bool: True if this is a new, valid vote, false otherwise.
         """
+        if not self._connected():
+            return False
         if self.MostRecentCommittedBlockID == common.NullIdentifier:
             logger.warn('self.MostRecentCommittedBlockID is %s',
                         self.MostRecentCommittedBlockID)
@@ -308,6 +314,12 @@ class QuorumJournal(Journal):
     #
     # UTILITY FUNCTIONS
     #
+
+    def _connected(self):
+        rslt = len(self.VotingQuorum.keys()) >= self.VotingQuorumTargetSize
+        if rslt is False:
+            logger.warn('not sufficiently connected')
+        return rslt
 
     def _triggervote(self, now):
         """
