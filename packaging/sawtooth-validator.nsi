@@ -107,6 +107,7 @@ section "install"
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
 
 	Exec '"$PROGRAMFILES\Intel\${APPNAME}\bin\txnvalidator.exe" --startup=auto install'
+	Exec '"$PROGRAMFILES\Intel\${APPNAME}\bin\txnkeygen.exe" --keydir "$PROGRAMFILES\Intel\${APPNAME}\conf\keys" validator'
 
 sectionEnd
  
