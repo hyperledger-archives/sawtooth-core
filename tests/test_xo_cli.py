@@ -77,7 +77,7 @@ class TestXoCli(unittest.TestCase):
                     vnm_config['TransactionFamilies'].append(
                         'sawtooth_xo')
                 cls.vnm = ValidatorNetworkManager(
-                    httpPort=8800, udpPort=9600, cfg=vnm_config)
+                    http_port=8800, udp_port=9600, cfg=vnm_config)
                 cls.vnm.launch_network(5)
                 # the url of the initial validator
                 cls.url = cls.vnm.urls()[0] + '/'
