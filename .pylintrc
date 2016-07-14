@@ -77,7 +77,8 @@ disable=
     global-variable-not-assigned,
     global-statement,
     too-many-lines,
-    locally-disabled
+    locally-disabled,
+    consider-iterating-dictionary
 
 [REPORTS]
 
