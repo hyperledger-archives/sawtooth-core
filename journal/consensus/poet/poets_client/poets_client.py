@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import os
 from urlparse import urljoin
 
 import requests
@@ -44,27 +43,13 @@ class PoetsClient(object):
         self._proxies = {}
         if "HttpsProxy" in kwargs:
             self._proxies["https"] = kwargs["PoetsHttpsProxy"]
-        self._client_cert = kwargs["PoetsClientCert"]
-        if not os.path.exists(self._client_cert):
-            raise IOError("ClientCert not found: {}".format(self._client_cert))
-
-        self._client_key = kwargs["PoetsClientKey"]
-        if not os.path.exists(self._client_key):
-            raise IOError("ClientKey not found: {}".format(self._client_key))
-
-        self._server_cert = kwargs["PoetsServerCert"]
-        if not os.path.exists(self._server_cert):
-            raise IOError("ServerCert not found: {}".format(self._server_cert))
 
     def _post_request(self, path, json):
 
         url = urljoin(self._poet_server_url, path)
-        result = requests.post(
-            url,
-            json=json,
-            # proxies=self._proxies,
-            cert=(self._client_cert, self._client_key),
-            verify=self._server_cert)
+        result = requests.post(url,
+                               json=json,
+                               proxies=self._proxies)
         return result
 
     def create_wait_timer(
@@ -78,10 +63,11 @@ class PoetsClient(object):
         json = {
             "ValidatorAddress": validator_address,
             "PreviousCertID": previous_certificate_id,
-            "LocalMean": local_mean}
-        result = self._post_request("CreateWaitTimer", json)
+            "LocalMean": local_mean
+        }
+        result = self._post_request("v1/CreateWaitTimer", json)
         if result.status_code != requests.codes.created:
-            logger.error("/CreateWaitTimer HTTP Error code : %d",
+            logger.error("CreateWaitTimer HTTP Error code : %d",
                          result.status_code)
             result.raise_for_status()
         return ascii_encode_dict(result.json())
@@ -94,10 +80,10 @@ class PoetsClient(object):
             "WaitTimer": waittimer,
             "BlockHash": block_hash,
         }
-        result = self._post_request("CreateWaitCertificate", json)
+        result = self._post_request("v1/CreateWaitCertificate", json)
         if result.status_code != requests.codes.created:
             logger.error(
-                "/CreateWaitCertificate HTTP Error code : %d",
+                "CreateWaitCertificate HTTP Error code : %d",
                 result.status_code)
             return None
 
@@ -110,10 +96,10 @@ class PoetsClient(object):
         json = {
             "WaitCertificate": wait_certificate,
         }
-        result = self._post_request("VerifyWaitCertificate", json)
+        result = self._post_request("v1/VerifyWaitCertificate", json)
         if result.status_code != requests.codes.ok:
             logger.error(
-                "/VerifyWaitCertificate HTTP Error code : %d",
+                "VerifyWaitCertificate HTTP Error code : %d",
                 result.status_code)
             result.raise_for_status()
             return False
