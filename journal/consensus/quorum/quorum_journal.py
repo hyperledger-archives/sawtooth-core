@@ -14,22 +14,22 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import math
 import random
 import time
+import socket
 
+from gossip import common
+from gossip import node
 from journal.consensus.quorum import quorum_transaction_block
-from journal import journal_core
-from journal.consensus.quorum.messages import quorum_advertisement
 from journal.consensus.quorum.messages import quorum_debug
 from journal.consensus.quorum.messages import quorum_ballot
 from journal.consensus.quorum.protocols import quorum_vote
-from gossip import common
+from journal.journal_core import Journal
 
 logger = logging.getLogger(__name__)
 
 
-class QuorumJournal(journal_core.Journal):
+class QuorumJournal(Journal):
     """Implements a journal based on participant voting.
 
     Attributes:
@@ -73,14 +73,15 @@ class QuorumJournal(journal_core.Journal):
     # network size
     VotingQuorumTargetSize = 13
 
-    def __init__(self, node, **kwargs):
+    def __init__(self, nd, **kwargs):
         """Constructor for the QuorumJournal class.
 
         Args:
-            node (Node): The local node.
+            nd (Node): The local node.
         """
-        super(QuorumJournal, self).__init__(node, **kwargs)
+        super(QuorumJournal, self).__init__(nd, **kwargs)
 
+        self.QuorumMap = dict()
         self.VotingQuorum = dict()
         # we are always a member of our own quorum
         self.VotingQuorum[self.LocalNode.Identifier] = self.LocalNode
@@ -91,19 +92,40 @@ class QuorumJournal(journal_core.Journal):
 
         self.onHeartbeatTimer += self._triggervote
 
-        quorum_advertisement.register_message_handlers(self)
         quorum_debug.register_message_handlers(self)
         quorum_ballot.register_message_handlers(self)
         quorum_transaction_block.register_message_handlers(self)
+
+    def initialize_quorum_map(self, config):
+        q = config.get('Quorum', [])
+        if self.LocalNode.Name not in q:
+            logger.fatal("node must be in its own quorum")
+            self.shutdown()
+            return
+        if len(q) < config.get("VotingQuorumTargetSize"):
+            logger.fatal('insufficient quorum configuration; need %s but " \
+                         "specified %s', len(q),
+                         config.get('VotingQuorumTargetSize', None))
+            self.shutdown()
+            return
+        self.QuorumMap = {}
+        for nd_dict in config.get("Nodes", []):
+            if nd_dict["ShortName"] in q:
+                addr = (socket.gethostbyname(nd_dict["Host"]), nd_dict["Port"])
+                nd = node.Node(address=addr,
+                               identifier=nd_dict["Identifier"],
+                               name=nd_dict["ShortName"])
+                nd.HttpPort = nd_dict["HttpPort"]
+                self.QuorumMap[nd_dict["ShortName"]] = nd
 
     #
     # GENERAL JOURNAL API
     #
 
     def post_initialize(self):
-        """Sends a quorum advertisement to the network.
+        """currently no-op
         """
-        quorum_advertisement.send_quorum_advertisement_message(self)
+        pass
 
     def build_transaction_block(self, force=False):
         """Builds the next transaction block for the journal.
@@ -148,29 +170,22 @@ class QuorumJournal(journal_core.Journal):
     # CUSTOM JOURNAL API
     #
 
-    def add_quorum_node(self, node):
+    def add_quorum_node(self, nd):
         """Adds a node to this node's quorum set.
 
         Args:
-            node (Node): The node to add to the quorum set.
+            nd (Node): The node to add to the quorum set.
         """
-        logger.info('attempt to add quorum voting node %s to %s', str(node),
+        logger.info('attempt to add quorum voting node %s to %s', str(nd),
                     str(self.LocalNode))
 
-        if node.Identifier in self.VotingQuorum:
+        if nd.Identifier in self.VotingQuorum:
             logger.info('attempt to add duplicate node to quorum')
             return
 
-        target = int(-1.0 * self.VotingQuorumTargetSize *
-                     math.log(1.0 - random.random()))
-        if len(self.VotingQuorum) - 1 > target:
-            logger.debug('rejecting candidate %s: len(self.VotingQuorum) - '
-                         '1 [[%s]] > target [[%s]] ?', node,
-                         len(self.VotingQuorum) - 1, target)
-            return
-
-        logger.info('add node %s to voting quorum', node.Identifier[:8])
-        self.VotingQuorum[node.Identifier] = node
+        logger.info('add node %s to voting quorum as %s', nd.Name,
+                    nd.Identifier)
+        self.VotingQuorum[nd.Identifier] = nd
 
     def initiate_vote(self):
         """Initiates a new vote.
@@ -181,14 +196,18 @@ class QuorumJournal(journal_core.Journal):
         logger.info('quorum, initiate, %s',
                     self.MostRecentCommittedBlockID[:8])
 
-        # Get the list of prepared transactions, if there aren't enough then
-        # reset the timers and return since there is nothing to vote on
+        # check alleged connectivity
+        if not self._connected():
+            self.NextVoteTime = self._nextvotetime()
+            self.NextBallotTime = 0
+            return
+
+        # check that we have enough transactions
         txnlist = self._preparetransactionlist(
             maxcount=self.MaximumTransactionsPerBlock)
         if len(txnlist) < self.MinimumTransactionsPerBlock:
             logger.debug('insufficient transactions for vote; %d out of %d',
                          len(txnlist), self.MinimumTransactionsPerBlock)
-
             self.NextVoteTime = self._nextvotetime()
             self.NextBallotTime = 0
             return
@@ -211,6 +230,8 @@ class QuorumJournal(journal_core.Journal):
         Returns:
             bool: True if this is a new, valid vote, false otherwise.
         """
+        if not self._connected():
+            return False
         if self.MostRecentCommittedBlockID == common.NullIdentifier:
             logger.warn('self.MostRecentCommittedBlockID is %s',
                         self.MostRecentCommittedBlockID)
@@ -267,6 +288,13 @@ class QuorumJournal(journal_core.Journal):
         logger.debug('complete the vote for block based on %s',
                      self.MostRecentCommittedBlockID)
 
+        if len(txnlist) == 0:
+            logger.warn('no transactions to commit')
+            self.CurrentQuorumVote = None
+            self.NextVoteTime = self._nextvotetime()
+            self.NextBallotTime = 0
+            return
+
         if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
             logger.warn(
                 'attempt complete vote on block %d, expecting block %d',
@@ -287,9 +315,18 @@ class QuorumJournal(journal_core.Journal):
         self.NextVoteTime = self._nextvotetime()
         self.NextBallotTime = 0
 
+    def quorum_list(self):
+        return [x for x in self.QuorumMap.itervalues()]
+
     #
     # UTILITY FUNCTIONS
     #
+
+    def _connected(self):
+        rslt = len(self.VotingQuorum.keys()) >= self.VotingQuorumTargetSize
+        if rslt is False:
+            logger.warn('not sufficiently connected')
+        return rslt
 
     def _triggervote(self, now):
         """

@@ -17,6 +17,8 @@ import logging
 from collections import OrderedDict
 
 from journal.consensus.quorum.messages import quorum_ballot
+from ledger.transaction.endpoint_registry import \
+    EndpointRegistryTransactionMessage
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,18 @@ class QuorumVote(object):
         self.QuorumVote = [QuorumBallot() for x in range(self.LastBallot)]
 
         for txnid in txnlist:
+            nd = vledger.LocalNode
+            txn = vledger.TransactionStore[txnid]
+            if (txn.TransactionTypeName == '/EndpointRegistryTransaction' and
+                    nd.Identifier == txn.Update.NodeIdentifier):
+                logger.debug('validator broadcasting self-promotion %s', txnid)
+                msg = EndpointRegistryTransactionMessage()
+                msg.Transaction = txn
+                msg.SenderID = str(nd.Identifier)
+                msg.sign_from_node(nd)
+                vledger.forward_message(msg)
             self.QuorumVote[self.Ballot].vote(self.ValidatorID, txnid)
+        logger.debug('txnlist: %s', txnlist)
 
         self.OldBallotMessageHandler = self.VotingLedger.get_message_handler(
             quorum_ballot.QuorumBallotMessage)

@@ -13,8 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import journal.consensus.quorum.messages.quorum_advertisement
 import journal.consensus.quorum.messages.quorum_debug
 import journal.consensus.quorum.messages.quorum_ballot
 
-__all__ = ['quorum_advertisement', 'quorum_debug', 'quorum_ballot']
+__all__ = ['quorum_debug', 'quorum_ballot']

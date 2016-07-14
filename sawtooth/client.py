@@ -518,12 +518,13 @@ class LedgerWebClient(object):
 
         return url
 
-    def get_status(self):
+    def get_status(self, verbose=True, timeout=30):
         """
         get status of validator
         :return: dictionary of status items
         """
-        return self._geturl(self.status_url())
+        return self._geturl(self.status_url(), verbose=verbose,
+                            timeout=timeout)
 
     def get_store(self, txntype, key='', blockid='', delta=False):
         """
@@ -571,7 +572,7 @@ class LedgerWebClient(object):
         """
         return self._geturl(self.transaction_url(txnid, field))
 
-    def get_transaction_status(self, txnid):
+    def get_transaction_status(self, txnid, timeout=30):
         """
         Send a HEAD request to the ledger web server to retrieve the status
         of a specific transaction id.
@@ -588,7 +589,7 @@ class LedgerWebClient(object):
             request = urllib2.Request(url)
             request.get_method = lambda: 'HEAD'
             opener = urllib2.build_opener(self.proxy_handler)
-            response = opener.open(request, timeout=30)
+            response = opener.open(request, timeout=timeout)
             code = response.getcode()
             response.close()
             if code == 200:
@@ -639,33 +640,37 @@ class LedgerWebClient(object):
         """
         return self._posturl(self.message_forward_url(), msg.dump())
 
-    def _geturl(self, url):
+    def _geturl(self, url, verbose=True, timeout=30):
         """
         Send an HTTP get request to the validator. If the resulting content is
         in JSON or CBOR form, parse it & return the corresponding dictionary.
         """
 
-        LOGGER.debug('get content from url <%s>', url)
+        if verbose:
+            LOGGER.debug('get content from url <%s>', url)
 
         try:
             request = urllib2.Request(url, headers=self.GET_HEADER)
             opener = urllib2.build_opener(self.proxy_handler)
-            response = opener.open(request, timeout=30)
+            response = opener.open(request, timeout=timeout)
 
         except urllib2.HTTPError as err:
-            LOGGER.error('peer operation on url %s failed with response: %d',
-                         url, err.code)
+            if verbose:
+                LOGGER.error('peer operation on url %s failed '
+                             'with response: %d', url, err.code)
             raise MessageException('operation failed '
                                    'with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
-            LOGGER.error('peer operation on url %s failed: %s',
-                         url, err.reason)
+            if verbose:
+                LOGGER.error('peer operation on url %s failed: %s',
+                             url, err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
 
         except:
-            LOGGER.error('no response from peer server for url %s; %s', url,
-                         sys.exc_info()[0])
+            if verbose:
+                LOGGER.error('no response from peer server for url %s; %s',
+                             url, sys.exc_info()[0])
             raise MessageException('no response from server')
 
         content = response.read()
