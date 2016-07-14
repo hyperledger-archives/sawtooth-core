@@ -221,14 +221,14 @@ class TestSmoke(unittest.TestCase):
                 vnm_config['TransactionFamilies'].append(
                     'mktplace.transactions.market_place')
             vnm = ValidatorNetworkManager(
-                httpPort=9500, udpPort=9600, cfg=vnm_config)
+                http_port=9500, udp_port=9600, cfg=vnm_config)
             vnm.launch_network(5)
 
             print "Testing transaction load."
             test_case = MktPlaceLoad(num_traders=5,
                                      iterations=1,
                                      urls=vnm.urls(),
-                                     test_dir=vnm.DataDir)
+                                     test_dir=vnm.data_dir)
             test_case.setup()
             test_case.run()
             test_case.validate()

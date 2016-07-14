@@ -40,7 +40,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                     vnm_config['TransactionFamilies'].append(
                         'mktplace.transactions.market_place')
                 cls.vnm = ValidatorNetworkManager(
-                    httpPort=9500, udpPort=9600, cfg=vnm_config)
+                    http_port=9500, udp_port=9600, cfg=vnm_config)
                 cls.vnm.launch_network(5)
                 # the url of the initial validator
                 cls.url = cls.vnm.urls()[0] + '/'

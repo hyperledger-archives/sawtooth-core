@@ -44,7 +44,7 @@ class TestAllTransactions(unittest.TestCase):
                 vnm_config['InitialWaitTime'] = 1
                 vnm_config['TargetWaitTime'] = 1
                 cls.vnm = ValidatorNetworkManager(
-                    httpPort=9500, udpPort=9600, cfg=vnm_config)
+                    http_port=9500, udp_port=9600, cfg=vnm_config)
                 cls.vnm.launch_network(1)
                 # the url of the initial validator
                 cls.url = cls.vnm.urls()[0] + '/'
