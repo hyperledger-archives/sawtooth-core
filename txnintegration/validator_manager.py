@@ -42,79 +42,94 @@ class ValidatorManager(object):
      - report log, stderr, and strout
     """
 
-    def __init__(self, txnvalidater, config, dataDir, adminNode, log_config,
-                 staticNode=False):
-        self.txnvalidater = txnvalidater
-        self.Id = config['id']
-        self.Name = config['NodeName']
+    def __init__(self,
+                 txn_validator,
+                 config,
+                 data_dir,
+                 admin_node,
+                 log_config,
+                 static_node=False):
+        self._txn_validator = txn_validator
+        self.id = config['id']
+        self.name = config['NodeName']
         self.config = config
         self.log_config = log_config
-        self.AdminNode = adminNode
-        self.staticNode = staticNode
+        self._admin_node = admin_node
+        self.staticNode = static_node
 
-        self.dataDir = dataDir
+        self._data_dir = data_dir
 
         # Handle validator keys
         if self.staticNode:
-            self.Key = config['SigningKey']
-            self.Address = config['Identifier']
+            self._key = config['SigningKey']
+            self._address = config['Identifier']
         else:
-            self.Key = generate_private_key()
-            self.Address = get_address_from_private_key_wif(self.Key)
+            self._key = generate_private_key()
+            self._address = get_address_from_private_key_wif(self._key)
+
+        self.url = None
+        self._command = None
+        self._stdout_file = None
+        self._output = None
+        self._stderr_file = None
+        self._outerr = None
+        self._config_file = None
+        self._log_file = None
+        self._handle = None
 
     def launch(self, launch=True, genesis=False, daemon=False, delay=False,
                node=None):
-        self.Url = "http://{}:{}".format(self.config['Host'],
+        self.url = "http://{}:{}".format(self.config['Host'],
                                          self.config['HttpPort'])
 
-        self.config['LogDirectory'] = self.dataDir
-        self.logFile = os.path.join(self.dataDir,
-                                    "{}.log".format(self.Name))
+        self.config['LogDirectory'] = self._data_dir
+        self._log_file = os.path.join(self._data_dir,
+                                      "{}.log".format(self.name))
 
-        if os.path.exists(self.logFile):  # delete existing log file
-            os.remove(self.logFile)
+        if os.path.exists(self._log_file):  # delete existing log file
+            os.remove(self._log_file)
 
-        self.config['KeyFile'] = os.path.join(self.dataDir,
-                                              "{}.wif".format(self.Name))
+        self.config['KeyFile'] = os.path.join(self._data_dir,
+                                              "{}.wif".format(self.name))
         if self.staticNode:
             if os.path.isfile(self.config['KeyFile']):
                 os.remove(self.config['KeyFile'])
         if not os.path.isfile(self.config['KeyFile']):
             with open(self.config['KeyFile'], 'w') as fp:
-                fp.write(self.Key)
+                fp.write(self._key)
                 fp.write("\n")
         else:
-            self.Key = read_key_file(self.config['KeyFile'])
-            self.Address = get_address_from_private_key_wif(self.Key)
+            self._key = read_key_file(self.config['KeyFile'])
+            self._address = get_address_from_private_key_wif(self._key)
 
         if self.log_config:
             for v in self.log_config["handlers"].itervalues():
                 if 'filename' in v:
                     filename = os.path.join(
-                        self.dataDir,
-                        "{}-{}".format(self.Name,
+                        self._data_dir,
+                        "{}-{}".format(self.name,
                                        os.path.basename(v['filename'])))
                     v['filename'] = filename
 
-            log_config_file = os.path.join(self.dataDir,
+            log_config_file = os.path.join(self._data_dir,
                                            "{}-log-config.js"
-                                           .format(self.Name))
+                                           .format(self.name))
             with open(log_config_file, 'w') as fp:
                 json.dump(self.log_config, fp)
             self.config['LogConfigFile'] = log_config_file
 
-        configFileName = "{}.json".format(self.Name)
-        self.configFile = os.path.join(self.dataDir, configFileName)
-        with open(self.configFile, 'w') as fp:
+        config_file_name = "{}.json".format(self.name)
+        self._config_file = os.path.join(self._data_dir, config_file_name)
+        with open(self._config_file, 'w') as fp:
             json.dump(self.config, fp)
 
         args = [
             sys.executable,  # Fix for windows, where script are not executable
-            self.txnvalidater,
+            self._txn_validator,
             "--conf-dir",
-            self.dataDir,
+            self._data_dir,
             "--config",
-            configFileName
+            config_file_name
         ]
 
         if genesis:
@@ -127,27 +142,27 @@ class ValidatorManager(object):
             args.append("--delay-start")
 
         # redirect stdout and stderror
-        self.stdoutFile = os.path.join(self.dataDir,
-                                       "{}.out".format(self.Name))
-        self.stderrFile = os.path.join(self.dataDir,
-                                       "{}.err".format(self.Name))
+        self._stdout_file = os.path.join(self._data_dir,
+                                         "{}.out".format(self.name))
+        self._stderr_file = os.path.join(self._data_dir,
+                                         "{}.err".format(self.name))
 
-        self.command = " ".join(args)
+        self._command = " ".join(args)
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
         if launch:
-            self.output = open(self.stdoutFile, 'w')
-            self.outerr = open(self.stderrFile, 'w')
-            self.handle = subprocess.Popen(args,
-                                           stdout=self.output,
-                                           stderr=self.outerr,
-                                           env=env)
+            self._output = open(self._stdout_file, 'w')
+            self._outerr = open(self._stderr_file, 'w')
+            self._handle = subprocess.Popen(args,
+                                            stdout=self._output,
+                                            stderr=self._outerr,
+                                            env=env)
         else:
-            self.handle = None
+            self._handle = None
 
     def is_registered(self, url=None):
         if not url:
-            url = self.Url
+            url = self.url
         url = "{}/store/EndpointRegistryTransaction".format(url)
 
         try:
@@ -162,15 +177,15 @@ class ValidatorManager(object):
                 or headers['Content-Type'] != 'application/json'):
             return False
 
-        idList = json.loads(content)
-        if idList is not None:
-            return self.Address in idList
+        id_list = json.loads(content)
+        if id_list is not None:
+            return self._address in id_list
 
         return False
 
     def is_started(self, url=None):
         if not url:
-            url = self.Url
+            url = self.url
         lwc = LedgerWebClient(url)
         sta = None
         try:
@@ -183,36 +198,36 @@ class ValidatorManager(object):
         return False
 
     def shutdown(self, force=False):
-        if self.handle:
-            self.handle.poll()
-            if not self.handle.returncode:
+        if self._handle:
+            self._handle.poll()
+            if not self._handle.returncode:
                 if force:
                     try:
                         if os.name == "nt":
-                            self.handle.kill()
+                            self._handle.kill()
                         else:
-                            self.handle.send_signal(signal.SIGKILL)
+                            self._handle.send_signal(signal.SIGKILL)
                     except OSError:
                         pass  # ignore invalid process and other os type errors
                 else:
                     try:
                         if os.name == "nt":
-                            self.handle.terminate()
+                            self._handle.terminate()
                         else:
-                            self.handle.send_signal(signal.SIGINT)
+                            self._handle.send_signal(signal.SIGINT)
                     except OSError:
                         pass
-        if self.output and not self.output.closed:
-            self.output.close()
-        if self.outerr and not self.outerr.closed:
-            self.outerr.close()
+        if self._output and not self._output.closed:
+            self._output.close()
+        if self._outerr and not self._outerr.closed:
+            self._outerr.close()
 
     def post_shutdown(self):
-        lwc = LedgerWebClient(self.Url)
+        lwc = LedgerWebClient(self.url)
 
         msg = shutdown_message.ShutdownMessage({})
-        msg.SenderID = self.AdminNode.Address
-        msg.sign_from_node(self.AdminNode)
+        msg.SenderID = self._admin_node.Address
+        msg.sign_from_node(self._admin_node)
 
         try:
             lwc.post_message(msg)
@@ -220,19 +235,19 @@ class ValidatorManager(object):
             print me
 
     def is_running(self):
-        if self.handle:
-            return self.handle.returncode is None
+        if self._handle:
+            return self._handle.returncode is None
         return False
 
     def check_error(self):
-        if self.handle:
-            if self.handle.returncode:
+        if self._handle:
+            if self._handle.returncode:
                 raise ValidatorManagerException("validator has exited")
             else:
                 if "PYCHARM_HOSTED" not in os.environ:
-                    err = os.stat(self.stderrFile)
+                    err = os.stat(self._stderr_file)
                     if err.st_size > 0:
-                        with open(self.stderrFile, 'r') as fd:
+                        with open(self._stderr_file, 'r') as fd:
                             lines = fd.readlines()
                             raise ValidatorManagerException(
                                 "stderr has output: line 1 of {}: {}".format(
@@ -242,9 +257,9 @@ class ValidatorManager(object):
             raise ValidatorManagerException("validator not running")
 
     def _check_log_error(self):
-        if os.path.exists(self.logFile):
+        if os.path.exists(self._log_file):
             reg = re.compile(r"^\[[\d:]*, ([\d]*), .*\]")
-            with open(self.logFile, 'r') as fin:
+            with open(self._log_file, 'r') as fin:
                 for line in fin:
                     match = reg.search(line)
                     if match and int(match.group(1)) >= 50:
@@ -265,26 +280,26 @@ class ValidatorManager(object):
 
     def status(self):
         st = "unk  "
-        if self.handle:
-            rc = self.handle.returncode
+        if self._handle:
+            rc = self._handle.returncode
             if rc:
                 st = " rc:{}".format(rc)
             else:
-                st = " pid:{}".format(self.handle.pid)
+                st = " pid:{}".format(self._handle.pid)
 
         log = ""
-        if os.path.exists(self.logFile):
-            s = os.stat(self.logFile)
+        if os.path.exists(self._log_file):
+            s = os.stat(self._log_file)
             if s.st_size > 0:
                 log = "log: {}".format(human_size(s.st_size))
         out = ""
-        if os.path.exists(self.stdoutFile):
-            s = os.stat(self.stdoutFile)
+        if os.path.exists(self._stdout_file):
+            s = os.stat(self._stdout_file)
             if s.st_size > 0:
                 out = "out: {}".format(human_size(s.st_size))
         err = ""
-        if os.path.exists(self.stderrFile):
-            s = os.stat(self.stderrFile)
+        if os.path.exists(self._stderr_file):
+            s = os.stat(self._stderr_file)
             if s.st_size > 0:
                 err = "err: {}".format(human_size(s.st_size))
         errors = ""
@@ -293,23 +308,23 @@ class ValidatorManager(object):
         except ValidatorManagerException:
             errors = "errs!"
 
-        return "{}: {} {} {} {} {}".format(self.Id, st, out, err, log, errors)
+        return "{}: {} {} {} {} {}".format(self.id, st, out, err, log, errors)
 
     def dump_config(self):
-        with open(self.configFile, 'r') as fin:
+        with open(self._config_file, 'r') as fin:
             print fin.read()
 
     def dump_log(self):
-        if os.path.exists(self.logFile):
-            with open(self.logFile, 'r') as fin:
+        if os.path.exists(self._log_file):
+            with open(self._log_file, 'r') as fin:
                 print fin.read()
 
     def dump_stdout(self):
-        if os.path.exists(self.stdoutFile):
-            with open(self.stdoutFile, 'r') as fin:
+        if os.path.exists(self._stdout_file):
+            with open(self._stdout_file, 'r') as fin:
                 print fin.read()
 
     def dump_stderr(self):
-        if os.path.exists(self.stderrFile):
-            with open(self.stderrFile, 'r') as fin:
+        if os.path.exists(self._stderr_file):
+            with open(self._stderr_file, 'r') as fin:
                 print fin.read()

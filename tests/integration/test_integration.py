@@ -198,7 +198,7 @@ class TestIntegration(unittest.TestCase):
             vnm_config = defaultValidatorConfig.copy()
             vnm_config['LogLevel'] = 'DEBUG'
 
-            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
+            vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
                                           cfg=vnm_config)
 
             firstwavevalidators = vnm.launch_network(5)
@@ -228,7 +228,7 @@ class TestIntegration(unittest.TestCase):
         vote_cfg = defaultValidatorConfig.copy()
         vote_cfg['LedgerType'] = 'quorum'
         try:
-            vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
+            vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
                                           cfg=vote_cfg)
             vnm.launch_network(5)
 

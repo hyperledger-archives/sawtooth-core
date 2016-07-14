@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import shutil
-import sys
 import tarfile
 import tempfile
 import time
@@ -52,36 +51,36 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
 
 class ValidatorNetworkManager(object):
     class AdminNode(object):
-        SigningKey = None
-        Address = None
+        signing_key = None
+        address = None
 
         def __init__(self):
-            self.SigningKey = pybitcointools.random_key()
-            self.Address = pybitcointools.privtoaddr(self.SigningKey)
+            self.signing_key = pybitcointools.random_key()
+            self.address = pybitcointools.privtoaddr(self.signing_key)
 
     def __init__(self,
                  txnvalidator=None,
                  cfg=None,
-                 dataDir=None,
-                 httpPort=8800,
-                 udpPort=8900,
-                 blockChainArchive=None,
+                 data_dir=None,
+                 http_port=8800,
+                 udp_port=5500,
+                 block_chain_archive=None,
                  log_config=None,
                  staticNetwork=None,
                  ):
 
         self.staticNetwork = staticNetwork
-        self.Validators = []
-        self.ValidatorMap = {}
-        self.ValidatorConfig = None
+        self._validators = []
+        self._validator_map = {}
+        self.validator_config = None
 
-        self.NextValidatorId = 0
-        self.HttpPortBase = httpPort
-        self.UdpPortBase = udpPort
+        self._next_validator_id = 0
+        self.HttpPortBase = http_port
+        self.UdpPortBase = udp_port
 
         if cfg is None:
             cfg = defaultValidatorConfig
-        self.ValidatorConfig = cfg
+        self.validator_config = cfg
         self.validator_log_config = log_config
 
         if txnvalidator is None:
@@ -89,57 +88,55 @@ class ValidatorNetworkManager(object):
         self.txnvalidator = txnvalidator
 
         self.tempDataDir = False
-        if dataDir is None:
+        if data_dir is None:
             self.tempDataDir = True
-            dataDir = tempfile.mkdtemp()
-        self.DataDir = dataDir
+            data_dir = tempfile.mkdtemp()
+        self.data_dir = data_dir
+        self.data_dir = data_dir
 
-        self.blockChainArchive = blockChainArchive
-        if blockChainArchive is not None:
-            if not os.path.isfile(blockChainArchive):
+        self.block_chain_archive = block_chain_archive
+        if block_chain_archive is not None:
+            if not os.path.isfile(block_chain_archive):
                 raise ExitError("Block chain archive to load {} does not "
-                                "exist.".format(blockChainArchive))
+                                "exist.".format(block_chain_archive))
             else:
-                self.unpack_blockchain(blockChainArchive)
+                self.unpack_blockchain(block_chain_archive)
 
         self.AdminNode = ValidatorNetworkManager.AdminNode()
 
-        self.ValidatorConfig['DataDirectory'] = self.DataDir
-        self.ValidatorConfig["AdministrationNode"] = self.AdminNode.Address
-        self.ValidatorConfig['Restore'] = False
+        self.validator_config['DataDirectory'] = self.data_dir
+        self.validator_config['Host'] = "localhost"
+        self.validator_config["AdministrationNode"] = self.AdminNode.address
+        self.validator_config['Restore'] = False
 
     def __del__(self):
         if self.tempDataDir:
-            if os.path.exists(self.DataDir):
-                shutil.rmtree(self.DataDir)
+            if os.path.exists(self.data_dir):
+                shutil.rmtree(self.data_dir)
 
     def validator(self, idx):
         v = None
-        try:
-            if idx in self.ValidatorMap:
-                v = self.ValidatorMap[idx]
-            else:
-                idx = int(idx)
-                if idx in self.ValidatorMap:
-                    v = self.ValidatorMap[idx]
-        except:
-            print sys.exc_info()[0]
+        if idx in self._validator_map:
+            v = self._validator_map[idx]
+        else:
+            idx = int(idx)
+            if idx in self._validator_map:
+                v = self._validator_map[idx]
 
         return v
 
     def staged_launch_network(self, count=1, stage1max=12, increment=12):
-        validators = []
-
         if count <= stage1max:
             validators = self.launch_network(count)
             print "Launch complete with {0} validators launched" \
-                .format(len(self.Validators))
+                .format(len(self._validators))
             return validators
         else:
             validators = self.launch_network(stage1max)
             print "Staged launch initiated with {0} validators launched" \
-                .format(len(self.Validators))
-            staged_validators = self.staged_expand_network(count - stage1max)
+                .format(len(self._validators))
+            staged_validators = self.staged_expand_network(count - stage1max,
+                                                           increment)
             validators += staged_validators
 
             return validators
@@ -149,13 +146,12 @@ class ValidatorNetworkManager(object):
         remaining_to_launch = count
         while remaining_to_launch > 0:
             number_to_launch = \
-                min([remaining_to_launch, increment, len(self.Validators)])
+                min([remaining_to_launch, increment, len(self._validators)])
             validators_to_use = \
-                self.Validators[len(self.Validators) - number_to_launch:]
+                self._validators[len(self._validators) - number_to_launch:]
             print "Staged launching {0} validators".format(number_to_launch)
-            stagedvals = self.expand_network(validators_to_use, 1)
+            validators += self.expand_network(validators_to_use, 1)
             remaining_to_launch -= number_to_launch
-            validators += stagedvals
 
         return validators
 
@@ -165,14 +161,14 @@ class ValidatorNetworkManager(object):
         with Progress("Launching initial validator") as p:
             cfg = {
                 'LedgerURL': "**none**",
-                'Restore': self.blockChainArchive,
+                'Restore': self.block_chain_archive,
             }
             validator = self.launch_node(overrides=cfg,
                                          genesis=True,
                                          daemon=False)
             validators.append(validator)
             probe_func = validator.is_registered
-            if self.ValidatorConfig.get('LedgerType', '') == 'quorum':
+            if self.validator_config.get('LedgerType', '') == 'quorum':
                 probe_func = validator.is_started
             while not probe_func():
                 try:
@@ -186,8 +182,8 @@ class ValidatorNetworkManager(object):
 
         with Progress("Launching validator network") as p:
             cfg = {
-                'LedgerURL': validator.Url,
-                'Restore': self.blockChainArchive,
+                'LedgerURL': validator.url,
+                'Restore': self.block_chain_archive,
             }
             for _ in range(1, count):
                 v = self.launch_node(overrides=cfg,
@@ -206,36 +202,37 @@ class ValidatorNetworkManager(object):
                     genesis=False,
                     daemon=False,
                     delay=False):
-        id = self.NextValidatorId
-        self.NextValidatorId += 1
-        cfg = self.ValidatorConfig.copy()
+        validator_id = self._next_validator_id
+        self._next_validator_id += 1
+        cfg = self.validator_config.copy()
         if overrides:
             cfg.update(overrides)
-        cfg['id'] = id
-        cfg['NodeName'] = "validator-{}".format(id)
-        cfg['HttpPort'] = self.HttpPortBase + id
-        cfg['Port'] = self.UdpPortBase + id
+        cfg['id'] = validator_id
+        cfg['NodeName'] = "validator-{}".format(validator_id)
+        cfg['HttpPort'] = self.HttpPortBase + validator_id
+        cfg['Port'] = self.UdpPortBase + validator_id
         staticNode = False
         if self.staticNetwork is not None:
             assert 'Nodes' in cfg.keys()
             staticNode = True
-            nd = self.staticNetwork.get_node(id)
-            q = self.staticNetwork.get_quorum(id, dfl=cfg.get('Quorum', []))
+            nd = self.staticNetwork.get_node(validator_id)
+            q = self.staticNetwork.get_quorum(validator_id,
+                                              dfl=cfg.get('Quorum', []))
             cfg['NodeName'] = nd['ShortName']
             cfg['HttpPort'] = nd['HttpPort']
             cfg['Port'] = nd['Port']
-            cfg['SigningKey'] = self.staticNetwork.get_key(id)
+            cfg['SigningKey'] = self.staticNetwork.get_key(validator_id)
             cfg['Identifier'] = nd['Identifier']
             cfg['Quorum'] = q
         log_config = self.validator_log_config.copy() \
             if self.validator_log_config \
             else None
-        v = ValidatorManager(self.txnvalidator, cfg, self.DataDir,
+        v = ValidatorManager(self.txnvalidator, cfg, self.data_dir,
                              self.AdminNode, log_config, staticNode=staticNode)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
-        self.Validators.append(v)
-        self.ValidatorMap[id] = v
-        self.ValidatorMap[cfg['NodeName']] = v
+        self._validators.append(v)
+        self._validator_map[validator_id] = v
+        self._validator_map[cfg['NodeName']] = v
         return v
 
     def wait_for_registration(self, validators, validator, max_time=None):
@@ -245,26 +242,26 @@ class ValidatorNetworkManager(object):
         validator: running validator against which to verify registration
         """
         max_time = 120 if max_time is None else max_time
-        unregCount = len(validators)
+        unregistered_count = len(validators)
 
         with Progress("Waiting for registration of {0} validators".format(
-                unregCount)) as p:
-            url = validator.Url
+                unregistered_count)) as p:
+            url = validator.url
             to = TimeOut(max_time)
 
-            while unregCount > 0:
+            while unregistered_count > 0:
                 if to():
                     raise ExitError(
                         "{} extended validators failed to register "
                         "within {}S.".format(
-                            unregCount, to.WaitTime))
+                            unregistered_count, to.WaitTime))
 
                 p.step()
                 time.sleep(1)
-                unregCount = 0
+                unregistered_count = 0
                 for v in validators:
                     if not v.is_registered(url):
-                        unregCount += 1
+                        unregistered_count += 1
                     try:
                         v.check_error()
                     except ValidatorManagerException as vme:
@@ -284,7 +281,7 @@ class ValidatorNetworkManager(object):
 
         with Progress("Extending validator network") as p:
             cfg = {
-                'LedgerURL': ledger_validator.Url
+                'LedgerURL': ledger_validator.url
             }
             for _ in validators:
                 for _ in range(0, count):
@@ -299,12 +296,12 @@ class ValidatorNetworkManager(object):
         return new_validators
 
     def shutdown(self):
-        if len(self.Validators) == 0:
+        if len(self._validators) == 0:
             # no validators to shutdown
             return
 
         with Progress("Sending interrupt signal to validators: ") as p:
-            for v in self.Validators:
+            for v in self._validators:
                 if v.is_running():
                     v.shutdown()
                 p.step()
@@ -314,7 +311,7 @@ class ValidatorNetworkManager(object):
         with Progress("Giving validators time to shutdown: ") as p:
             while True:
                 running_count = 0
-                for v in self.Validators:
+                for v in self._validators:
                     if v.is_running():
                         running_count = running_count + 1
                 if to.is_timed_out() or running_count == 0:
@@ -326,7 +323,7 @@ class ValidatorNetworkManager(object):
         if running_count != 0:
             with Progress("Killing {} intransigent validators: "
                           .format(running_count)) as p:
-                for v in self.Validators:
+                for v in self._validators:
                     if v.is_running():
                         v.shutdown(True)
                     p.step()
@@ -337,25 +334,25 @@ class ValidatorNetworkManager(object):
 
     def status(self):
         out = []
-        for v in self.Validators:
+        for v in self._validators:
             out.append(v.status())
         return out
 
     def urls(self):
         out = []
-        for v in self.Validators:
-            out.append(v.Url)
+        for v in self._validators:
+            out.append(v.url)
         return out
 
     def create_result_archive(self, archive_name):
-        if self.DataDir is not None \
-                and os.path.exists(self.DataDir) \
-                and len(self.Validators) != 0:
+        if self.data_dir is not None \
+                and os.path.exists(self.data_dir) \
+                and len(self._validators) != 0:
             tar = tarfile.open(archive_name, "w|gz")
             base_name = self.get_archive_base_name(archive_name)
-            for (dirpath, _, filenames) in walk(self.DataDir):
+            for (dir_path, _, filenames) in walk(self.data_dir):
                 for f in filenames:
-                    fp = os.path.join(dirpath, f)
+                    fp = os.path.join(dir_path, f)
                     tar.add(fp, os.path.join(base_name, f))
             tar.close()
             return True
@@ -369,13 +366,13 @@ class ValidatorNetworkManager(object):
             e = f.name[-2:]
             if e in ext or f.name.endswith("wif"):
                 base_name = os.path.basename(f.name)
-                dest_file = os.path.join(self.DataDir, base_name)
+                dest_file = os.path.join(self.data_dir, base_name)
                 if os.path.exists(dest_file):
                     os.remove(dest_file)
-                tar.extract(f, self.DataDir)
+                tar.extract(f, self.data_dir)
                 # extract put the file in a directory below DataDir
                 # move the file from extract location to dest_file
-                ext_file = os.path.join(self.DataDir, f.name)
+                ext_file = os.path.join(self.data_dir, f.name)
                 os.rename(ext_file, dest_file)
                 # and remember the extract directory for deletion
                 dirs.add(os.path.dirname(ext_file))

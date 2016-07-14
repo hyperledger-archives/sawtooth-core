@@ -163,16 +163,16 @@ class TestBasicStartup(unittest.TestCase):
 
     def test_initial_connectivity_n_minus_1(self):
         try:
-            self.vnm.ValidatorConfig['LedgerURL'] = "**none**"
-            self.vnm.ValidatorConfig['Restore'] = False
+            self.vnm.validator_config['LedgerURL'] = "**none**"
+            self.vnm.validator_config['Restore'] = False
             validator = self.vnm.launch_node(genesis=True)
             validators = [validator]
             with Progress("Launching validator network") as p:
-                self.vnm.ValidatorConfig['LedgerURL'] = validator.Url
-                self.vnm.ValidatorConfig['Restore'] = False
+                self.vnm.validator_config['LedgerURL'] = validator.Url
+                self.vnm.validator_config['Restore'] = False
                 node_identifiers = [validator.Address]
                 for i in range(1, 5):
-                    self.vnm.ValidatorConfig['InitialConnectivity'] = i
+                    self.vnm.validator_config['InitialConnectivity'] = i
                     v = self.vnm.launch_node(genesis=False, daemon=False)
                     validators.append(v)
                     node_identifiers.append(v.Address)
@@ -214,8 +214,8 @@ class TestBasicStartup(unittest.TestCase):
                 nodes.append(node)
             peers = [nodes[0]['ShortName'], nodes[2]['ShortName'],
                      'validator-x']
-            self.vnm.ValidatorConfig['Nodes'] = nodes
-            self.vnm.ValidatorConfig['Peers'] = peers
+            self.vnm.validator_config['Nodes'] = nodes
+            self.vnm.validator_config['Peers'] = peers
             v = self.vnm.launch_node()
             validator_urls.append(v.Url)
 

@@ -214,7 +214,7 @@ class TestSmoke(unittest.TestCase):
             if "TEST_VALIDATOR_URLS" not in os.environ:
                 print "Launching validator network."
                 vnm_config = config
-                vnm = ValidatorNetworkManager(httpPort=9000, udpPort=9100,
+                vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
                                               cfg=vnm_config,
                                               staticNetwork=static_network)
                 vnm.launch_network(num_nodes, max_time=vnm_timeout)
