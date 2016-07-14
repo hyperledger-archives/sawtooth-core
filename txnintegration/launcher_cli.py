@@ -90,7 +90,7 @@ def get_archive_config(data_dir, archive_name):
 def configure(args):
     opts = parse_args(args)
 
-    scriptdir = os.path.dirname(os.path.realpath(__file__))
+    script_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Find the validator to use
     if opts.validator is None:
@@ -123,8 +123,6 @@ def configure(args):
                 raise ExitError("Could not read config from Blockchain "
                                 "archive: {}".format(opts.load_blockchain))
 
-    validator_config = {}
-
     if opts.config is not None:
         if os.path.exists(opts.config):
             validator_config = parse_configuration_file(opts.config)
@@ -132,7 +130,7 @@ def configure(args):
             raise ExitError("Config file does not exist: {}".format(
                 opts.config))
     else:
-        opts.config = os.path.realpath(os.path.join(scriptdir, "..", "etc",
+        opts.config = os.path.realpath(os.path.join(script_dir, "..", "etc",
                                                     "txnvalidator.js"))
         print "No config file specified, loading  {}".format(opts.config)
         if os.path.exists(opts.config):
@@ -185,7 +183,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def __init__(self, vnm):
         self.prompt = 'launcher_cli.py> '
         cmd.Cmd.__init__(self)
-        self.networkManager = vnm
+        self.network_manager = vnm
 
     def do_config(self, args):
         """
@@ -202,7 +200,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
             options = parser.parse_args(args)
 
             id = options.id
-            v = self.networkManager.validator(id)
+            v = self.network_manager.validator(id)
             if v:
                 v.dump_config()
             else:
@@ -215,7 +213,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def do_log(self, args):
         try:
             id = args
-            v = self.networkManager.validator(id)
+            v = self.network_manager.validator(id)
             if v:
                 v.dump_log()
             else:
@@ -228,7 +226,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def do_out(self, args):
         try:
             id = args[0]
-            v = self.networkManager.validator(id)
+            v = self.network_manager.validator(id)
             if v:
                 v.dump_stdout()
             else:
@@ -241,7 +239,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def do_err(self, args):
         try:
             id = args[0]
-            v = self.networkManager.validator(id)
+            v = self.network_manager.validator(id)
             if v:
                 v.dump_stderr()
             else:
@@ -255,7 +253,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         """launch
         Launch another validator on the network
         """
-        v = self.networkManager.launch_node()
+        v = self.network_manager.launch_node()
         print "Validator {} launched.".format(v.Name)
         return False
 
@@ -264,7 +262,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         Give the command to launch another validator on the network. This can
         be used for creating a node to debug on  the validator network.
         """
-        v = self.networkManager.launch_node(False)
+        v = self.network_manager.launch_node(False)
         print v.command
         return False
 
@@ -274,7 +272,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         New validators connect to most recent existing validators
         """
         count = int(scount)
-        v = self.networkManager.staged_expand_network(count)
+        v = self.network_manager.staged_expand_network(count)
         print "Network expanded with {0} additional validators launched"\
             .format(len(v))
         return False
@@ -282,7 +280,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def do_kill(self, args):
         try:
             id = args[0]
-            v = self.networkManager.validator(id)
+            v = self.network_manager.validator(id)
             if v:
                 while v.is_running():
                     v.shutdown(True)
@@ -298,7 +296,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         """status
             Show the status of the running validators
         """
-        for l in self.networkManager.status():
+        for l in self.network_manager.status():
             print l
         return False
 
@@ -315,8 +313,8 @@ class ValidatorNetworkConsole(cmd.Cmd):
 
 
 def main():
-    networkManager = None
-    errorOccured = False
+    network_manager = None
+    error_occurred = False
     try:
         opts = configure(sys.argv[1:])
     except Exception as e:
@@ -324,15 +322,15 @@ def main():
         sys.exit(1)
 
     try:
-        networkManager = ValidatorNetworkManager(
+        network_manager = ValidatorNetworkManager(
             txnvalidator=opts['validator'],
             cfg=opts['validator_config'],
             log_config=opts['log_config_dict'],
-            dataDir=opts['data_dir'],
-            blockChainArchive=opts['load_blockchain'])
-        networkManager.staged_launch_network(opts['count'])
+            data_dir=opts['data_dir'],
+            block_chain_archive=opts['load_blockchain'])
+        network_manager.staged_launch_network(opts['count'])
 
-        ctrl = ValidatorNetworkConsole(networkManager)
+        ctrl = ValidatorNetworkConsole(network_manager)
         ctrl.cmdloop("\nWelcome to the sawtooth txnvalidator network "
                      "manager interactive console")
     except KeyboardInterrupt:
@@ -341,29 +339,29 @@ def main():
         # this is an expected error/exit, don't print stack trace -
         # the code raising this exception is expected to have printed the error
         # details
-        errorOccured = True
+        error_occurred = True
         print "\nFailed!\nExiting: {}".format(e)
     except:
-        errorOccured = True
+        error_occurred = True
         traceback.print_exc()
         print "\nFailed!\nExiting: {}".format(sys.exc_info()[0])
 
-    if networkManager:
-        networkManager.shutdown()
+    if network_manager:
+        network_manager.shutdown()
 
     if opts['save_blockchain']:
         print "Saving blockchain to {}".format(opts['save_blockchain'])
-        networkManager.create_result_archive(opts['save_blockchain'])
+        network_manager.create_result_archive(opts['save_blockchain'])
 
     # if dir was auto-generated
     if opts and "data_dir_is_tmp" in opts \
             and opts['data_dir_is_tmp'] \
             and os.path.exists(opts['data_dir']):
-        deleteTestDir = True
-        if errorOccured:
-            deleteTestDir = prompt_yes_no(
+        delete_test_dir = True
+        if error_occurred:
+            delete_test_dir = prompt_yes_no(
                 "Do you want to delete the data dir(logs, configs, etc)")
-        if deleteTestDir:
+        if delete_test_dir:
             print "Cleaning temp data store {}".format(opts['data_dir'])
             if os.path.exists(opts['data_dir']):
                 shutil.rmtree(opts['data_dir'])
