@@ -58,6 +58,13 @@ foreach ($script in (ls $PSScriptRoot\create_package.d)) {
 
 move-item 'C:\Program Files (x86)\Intel\sawtooth-validator\conf\txnvalidator.js' 'C:\Program Files (x86)\Intel\sawtooth-validator\conf\txnvalidator.js.example'
 
+# ensure config files have windows line endings
+
+foreach ($example in (ls "C:\Program Files (x86)\Intel\sawtooth-validator\conf\*.example")) {
+    $example_crlf = Get-Content $example
+    Set-Content $example $example_crlf
+}
+
 remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-3.4-script.py'
 remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-3.4.exe'
 remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-script.py'
