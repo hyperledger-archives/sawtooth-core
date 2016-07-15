@@ -173,8 +173,15 @@ class Update(object):
         update.Verb = 'reg'
         update.Domain = domain
         update.Name = nde.Name
-        update.NetHost = nde.NetHost
-        update.NetPort = nde.NetPort
+        # Take the host/port form the endpoint host/port (i.e., the externally-
+        # visible host/port) if it is present.  If not, take them from the
+        # locally-bound host/port.
+        update.NetHost = \
+            nde.EndpointHost if nde.EndpointHost is not None else nde.NetHost
+        if nde.EndpointPort is None or nde.EndpointPort == 0:
+            update.NetPort = nde.NetPort
+        else:
+            update.NetPort = nde.EndpointPort
         update.HttpPort = httpport
         update.NodeIdentifier = nde.Identifier
         return update
@@ -339,7 +346,7 @@ class EndpointRegistryTransaction(transaction.Transaction):
             domain (str): The domain of the endpoint.
 
         Returns:
-            endpoint_registry.Update: A transaction contiaining an update for
+            endpoint_registry.Update: A transaction containing an update for
                 registering the node's details.
         """
         regtxn = EndpointRegistryTransaction()

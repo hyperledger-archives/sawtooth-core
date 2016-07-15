@@ -73,12 +73,14 @@ class Node(object):
                  signingkey=None,
                  name=None,
                  rate=None,
-                 capacity=None):
+                 capacity=None,
+                 endpoint_address=(None, None)):
         """Constructor for the Node class.
 
         Args:
-            address (ordered pair of str): address of the node in the form
-                of (host, port).
+            address (ordered pair of str, int): address of the node in the
+                form of (host, port).  This is the local address to which the
+                node is bound.
             identifier (str): an identifier for the node.
             signingkey (str): used to create a signing key, in PEM format.
             name (str): a short, human-readable name for the node.
@@ -86,10 +88,17 @@ class Node(object):
                 per drip.
             capacity (int): the total capacity of tokens in the node's
                 TokenBucket.
+            endpoint_address (ordered pair of str, int): the publicly-
+                reachable address of the node in the form of (host, port).
+                If the node is publicly-reachable, this should be the same as
+                address.  If not, this is the address at the NAT used to route
+                to address.
         """
 
         self.NetHost = address[0]
         self.NetPort = address[1]
+        self.EndpointHost = endpoint_address[0]
+        self.EndpointPort = endpoint_address[1]
 
         self.SigningKey = signingkey
         self.Identifier = identifier
@@ -254,7 +263,7 @@ class Node(object):
         """Create a copy of the node, primarily useful for debugging
         multiple instances of a gossiper in one process.
         """
-        return Node(self.NetAddress, self.Identifier)
+        return Node(address=self.NetAddress, identifier=self.Identifier)
 
     def signing_address(self):
         return pybitcointools.pubtoaddr(
