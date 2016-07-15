@@ -14,18 +14,21 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from twisted.internet import reactor
 
 from txnserver import validator
 from journal.consensus.quorum import quorum_journal
+from gossip.topology import quorum as quorum_topology
 
 logger = logging.getLogger(__name__)
 
 
-class VotingValidator(validator.Validator):
-    EndpointDomain = '/VotingValidator'
+class QuorumValidator(validator.Validator):
+    EndpointDomain = '/QuorumValidator'
 
     def __init__(self, config, windows_service=False):
-        super(VotingValidator, self).__init__(config, windows_service)
+        super(QuorumValidator, self).__init__(config, windows_service)
+        self.Ledger.initialize_quorum_map(config)
 
     def initialize_ledger_specific_configuration(self):
         """
@@ -38,18 +41,26 @@ class VotingValidator(validator.Validator):
         if 'MaxTransactionsPerBlock' in self.Config:
             quorum_journal.QuorumJournal.MaximumTransactionsPerBlock = int(
                 self.Config['MaxTransactionsPerBlock'])
-
         if 'VoteTimeInterval' in self.Config:
             quorum_journal.QuorumJournal.VoteTimeInterval = float(
                 self.Config['VoteTimeInterval'])
-
         if 'BallotTimeInterval' in self.Config:
             quorum_journal.QuorumJournal.BallotTimeInterval = float(
                 self.Config['BallotTimeInterval'])
-
         if 'VotingQuorumTargetSize' in self.Config:
             quorum_journal.QuorumJournal.VotingQuorumTargetSize = int(
                 self.Config['VotingQuorumTargetSize'])
+
+    def start(self):
+        if self.GenesisLedger:
+            self.start_ledger()
+
+            def nop():
+                pass
+
+            reactor.callLater(2.0, self.initialize_ledger_topology, nop)
+            return
+        self.initialize_ledger_connection()
 
     def initialize_ledger_from_node(self, node):
         """
@@ -58,11 +69,34 @@ class VotingValidator(validator.Validator):
         """
         self.Ledger = quorum_journal.QuorumJournal(node, **self.Config)
 
-    def post_initialize_ledger(self):
-        '''
-        Socialize non-genesis nodes
-        '''
-        if not self.GenesisLedger:
-            nodelist = self.get_endpoints(0, self.EndpointDomain)
-            for node in nodelist:
-                self.Ledger.add_quorum_node(node)
+    def initialize_ledger_connection(self):
+        """
+        Connect the ledger to the rest of the network.
+        """
+        self.status = 'waiting for initial connections'
+        reactor.callLater(2.0, self.initialize_ledger_topology,
+                          self.start_journal_transfer)
+
+    def initialize_ledger_topology(self, callback):
+        """
+        Kick off the quorum topology generation protocol.
+        """
+        logger.debug('initialize ledger topology')
+        self._connectionattempts = 0
+        topology = self.Config.get("TopologyAlgorithm", "")
+        if topology != "Quorum":
+            logger.error("unknown topology protocol %s", topology)
+            self.shutdown()
+            return
+        if 'TargetConnectivity' in self.Config:
+            quorum_topology.TargetConnectivity = self.Config[
+                'TargetConnectivity']
+        if 'MinimumConnectivity' in self.Config:
+            quorum_topology.MinimumConnectivity = self.Config[
+                'MinimumConnectivity']
+        self.quorum_initialization(callback)
+
+    def quorum_initialization(self, callback):
+        logger.info("ledger connections using Quorum topology")
+        quorum_topology.start_topology_update(self.Ledger,
+                                              callback)

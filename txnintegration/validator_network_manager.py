@@ -45,7 +45,8 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'TransactionFamilies': [
                               u'ledger.transaction.integer_key'],
                           u'UseFixedDelay': True,
-                          u'Profile': True}
+                          u'Profile': True,
+                          u'Host': u'localhost'}
 
 
 class ValidatorNetworkManager(object):
@@ -65,8 +66,10 @@ class ValidatorNetworkManager(object):
                  udp_port=5500,
                  block_chain_archive=None,
                  log_config=None,
+                 staticNetwork=None,
                  ):
 
+        self.staticNetwork = staticNetwork
         self._validators = []
         self._validator_map = {}
         self.validator_config = None
@@ -152,7 +155,7 @@ class ValidatorNetworkManager(object):
 
         return validators
 
-    def launch_network(self, count=1, others_daemon=False):
+    def launch_network(self, count=1, max_time=None, others_daemon=False):
         validators = []
 
         with Progress("Launching initial validator") as p:
@@ -164,7 +167,10 @@ class ValidatorNetworkManager(object):
                                          genesis=True,
                                          daemon=False)
             validators.append(validator)
-            while not validator.is_registered():
+            probe_func = validator.is_registered
+            if self.validator_config.get('LedgerType', '') == 'quorum':
+                probe_func = validator.is_started
+            while not probe_func():
                 try:
                     validator.check_error()
                 except ValidatorManagerException as vme:
@@ -186,7 +192,7 @@ class ValidatorNetworkManager(object):
                 validators.append(v)
                 p.step()
 
-        self.wait_for_registration(validators, validator)
+        self.wait_for_registration(validators, validator, max_time=max_time)
 
         return validators
 
@@ -205,24 +211,38 @@ class ValidatorNetworkManager(object):
         cfg['NodeName'] = "validator-{}".format(validator_id)
         cfg['HttpPort'] = self.HttpPortBase + validator_id
         cfg['Port'] = self.UdpPortBase + validator_id
+        static_node = False
+        if self.staticNetwork is not None:
+            assert 'Nodes' in cfg.keys()
+            static_node = True
+            nd = self.staticNetwork.get_node(validator_id)
+            q = self.staticNetwork.get_quorum(validator_id,
+                                              dfl=cfg.get('Quorum', []))
+            cfg['NodeName'] = nd['ShortName']
+            cfg['HttpPort'] = nd['HttpPort']
+            cfg['Port'] = nd['Port']
+            cfg['SigningKey'] = self.staticNetwork.get_key(validator_id)
+            cfg['Identifier'] = nd['Identifier']
+            cfg['Quorum'] = q
         log_config = self.validator_log_config.copy() \
             if self.validator_log_config \
             else None
-
         v = ValidatorManager(self.txnvalidator, cfg, self.data_dir,
-                             self.AdminNode, log_config)
+                             self.AdminNode, log_config,
+                             static_node=static_node)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self._validators.append(v)
         self._validator_map[validator_id] = v
         self._validator_map[cfg['NodeName']] = v
         return v
 
-    def wait_for_registration(self, validators, validator, max_time=120):
+    def wait_for_registration(self, validators, validator, max_time=None):
         """
         Wait for newly launched validators to register.
         validators: list of validators on which to wait
         validator: running validator against which to verify registration
         """
+        max_time = 120 if max_time is None else max_time
         unregistered_count = len(validators)
 
         with Progress("Waiting for registration of {0} validators".format(
@@ -262,7 +282,7 @@ class ValidatorNetworkManager(object):
 
         with Progress("Extending validator network") as p:
             cfg = {
-                'LedgerURL': ledger_validator.Url
+                'LedgerURL': ledger_validator.url
             }
             for _ in validators:
                 for _ in range(0, count):

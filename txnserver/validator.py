@@ -151,19 +151,16 @@ class Validator(object):
     def initialize_ledger_object(self):
         # Create the local ledger instance
         name = self.Config['NodeName']
-        if name in self.NodeMap:
-            nd = self.NodeMap[name]
-        else:
-            host = self.Config['Host']
-            port = self.Config['Port']
-            addr = (socket.gethostbyname(host), port)
-            signingkey = signed_object.generate_signing_key(
-                wifstr=self.Config.get('SigningKey'))
-            identifier = signed_object.generate_identifier(signingkey)
-            nd = node.Node(address=addr,
-                           identifier=identifier,
-                           signingkey=signingkey,
-                           name=name)
+        host = self.Config['Host']
+        port = self.Config['Port']
+        addr = (socket.gethostbyname(host), port)
+        signingkey = signed_object.generate_signing_key(
+            wifstr=self.Config.get('SigningKey'))
+        identifier = signed_object.generate_identifier(signingkey)
+        nd = node.Node(address=addr,
+                       identifier=identifier,
+                       signingkey=signingkey,
+                       name=name)
 
         self.initialize_ledger_from_node(nd)
         assert self.Ledger

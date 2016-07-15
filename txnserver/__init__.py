@@ -14,4 +14,4 @@
 # ------------------------------------------------------------------------------
 
 __all__ = ['config', 'log_setup', 'lottery_validator', 'web_api', 'validator',
-           'voting_validator']
+           'quorum_validator']

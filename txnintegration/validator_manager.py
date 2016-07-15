@@ -47,19 +47,25 @@ class ValidatorManager(object):
                  config,
                  data_dir,
                  admin_node,
-                 log_config):
+                 log_config,
+                 static_node=False):
         self._txn_validator = txn_validator
         self.id = config['id']
         self.name = config['NodeName']
         self.config = config
         self.log_config = log_config
         self._admin_node = admin_node
+        self.static_node = static_node
 
         self._data_dir = data_dir
 
-        # Generate key for validator
-        self._key = generate_private_key()
-        self._address = get_address_from_private_key_wif(self._key)
+        # Handle validator keys
+        if self.static_node:
+            self._key = config['SigningKey']
+            self._address = config['Identifier']
+        else:
+            self._key = generate_private_key()
+            self._address = get_address_from_private_key_wif(self._key)
 
         self.url = None
         self._command = None
@@ -71,7 +77,8 @@ class ValidatorManager(object):
         self._log_file = None
         self._handle = None
 
-    def launch(self, launch=True, genesis=False, daemon=False, delay=False):
+    def launch(self, launch=True, genesis=False, daemon=False, delay=False,
+               node=None):
         self.url = "http://{}:{}".format(self.config['Host'],
                                          self.config['HttpPort'])
 
@@ -84,6 +91,9 @@ class ValidatorManager(object):
 
         self.config['KeyFile'] = os.path.join(self._data_dir,
                                               "{}.wif".format(self.name))
+        if self.static_node:
+            if os.path.isfile(self.config['KeyFile']):
+                os.remove(self.config['KeyFile'])
         if not os.path.isfile(self.config['KeyFile']):
             with open(self.config['KeyFile'], 'w') as fp:
                 fp.write(self._key)
@@ -173,6 +183,20 @@ class ValidatorManager(object):
 
         return False
 
+    def is_started(self, url=None):
+        if not url:
+            url = self.url
+        lwc = LedgerWebClient(url)
+        sta = None
+        try:
+            sta = lwc.get_status(verbose=False, timeout=2)
+        except MessageException as e:
+            print e.message
+            return False
+        if sta is not None:
+            return sta.get('Status', '') == 'started'
+        return False
+
     def shutdown(self, force=False):
         if self._handle:
             self._handle.poll()
@@ -199,7 +223,7 @@ class ValidatorManager(object):
             self._outerr.close()
 
     def post_shutdown(self):
-        lwc = LedgerWebClient(self.Url)
+        lwc = LedgerWebClient(self.url)
 
         msg = shutdown_message.ShutdownMessage({})
         msg.SenderID = self._admin_node.Address

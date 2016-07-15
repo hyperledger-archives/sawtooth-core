@@ -21,6 +21,7 @@ import time
 import logging
 from twisted.web import http
 
+from txnintegration.utils import StaticNetworkConfig
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
@@ -39,8 +40,8 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 
 
 class IntKeyLoadTest(object):
-    def __init__(self):
-        pass
+    def __init__(self, timeout=None):
+        self.Timeout = 240 if timeout is None else timeout
 
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
@@ -65,7 +66,7 @@ class IntKeyLoadTest(object):
         return len(self.transactions)
 
     def _wait_for_transaction_commits(self):
-        to = TimeOut(240)
+        to = TimeOut(self.Timeout)
         txnCnt = len(self.transactions)
         with Progress("Waiting for %s transactions to commit" % (txnCnt)) as p:
             while not to() and txnCnt > 0:
@@ -172,9 +173,14 @@ class IntKeyLoadTest(object):
 
 
 class TestSmoke(unittest.TestCase):
-    def _run_int_load(self, config, num_nodes, archive_name, tolerance=2,
-                      standard=5):
+    def _run_int_load(self, config, num_nodes, archive_name,
+                      tolerance=2, standard=5, block_id=True,
+                      static_network=None,
+                      vnm_timeout=None, txn_timeout=None,
+                      n_keys=100, n_runs=2,
+                      ):
         """
+        This test is getting really beat up and needs a refactor
         Args:
             config (dict): Default config for each node
             num_nodes (int): Total number of nodes in network simulation
@@ -195,17 +201,23 @@ class TestSmoke(unittest.TestCase):
                 to trivialize the test.  Therefore, as tolerance is increased
                 (if non-zero), we use standard to proportionally increase the
                 minimum number of overall blocks required by the test.
+            block_id (bool): check for block (hash) identity
+            static_network (StaticNetworkConfig): optional static network
+                configuration
+            vnm_timeout (int): timeout for initiating network
+            txn_timeout (int): timeout for batch transactions
         """
         vnm = None
         urls = ""
         try:
-            test = IntKeyLoadTest()
+            test = IntKeyLoadTest(timeout=txn_timeout)
             if "TEST_VALIDATOR_URLS" not in os.environ:
                 print "Launching validator network."
                 vnm_config = config
                 vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
-                                              cfg=vnm_config)
-                vnm.launch_network(num_nodes)
+                                              cfg=vnm_config,
+                                              staticNetwork=static_network)
+                vnm.launch_network(num_nodes, max_time=vnm_timeout)
                 urls = vnm.urls()
             else:
                 print "Fetching Urls of Running Validators"
@@ -214,45 +226,47 @@ class TestSmoke(unittest.TestCase):
                 # e.g. 'http://localhost:8800,http://localhost:8801'
                 urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
             print "Testing transaction load."
-            test.setup(urls, 100)
-            test.run(2)
+            test.setup(urls, n_keys)
+            test.run(n_runs)
             test.validate()
-            # check for block id convergence across network:
-            sample_size = max(1, tolerance) * standard
-            print "Testing block-level convergence with min sample size: " \
-                "%s (after tolerance: %s)" % (sample_size, tolerance)
-            # ....get all blockids from each server, newest last
-            block_lists = [LedgerWebClient(x).get_block_list() for x in urls]
-            for ls in block_lists:
-                ls.reverse()
-            # ...establish preconditions
-            max_mag = len(max(block_lists, key=len))
-            min_mag = len(min(block_lists, key=len))
-            self.assertGreaterEqual(
-                tolerance,
-                max_mag - min_mag,
-                'block list magnitude differences (%s) '
-                'exceed tolerance (%s)' % (
-                    max_mag - min_mag, tolerance))
-            effective_sample_size = max_mag - tolerance
-            print 'effective sample size: %s' % (effective_sample_size)
-            self.assertGreaterEqual(
-                effective_sample_size,
-                sample_size,
-                'not enough target samples to determine convergence')
-            # ...(optionally) permit reasonable forks by normalizing lists
-            if tolerance > 0:
+            if block_id:
+                # check for block id convergence across network:
+                sample_size = max(1, tolerance) * standard
+                print "Testing block-level convergence with min sample size:",
+                print " %s (after tolerance: %s)" % (sample_size, tolerance)
+                # ...get all blockids from each server, newest last
                 block_lists = [
-                    block_list[0:effective_sample_size]
-                    for block_list in block_lists
-                ]
-            # ...id-check (possibly normalized) cross-server block chains
-            for (i, block_list) in enumerate(block_lists):
-                self.assertEqual(
-                    block_lists[0],
-                    block_list,
-                    '%s is divergent:\n\t%s vs.\n\t%s' % (
-                        urls[i], block_lists[0], block_list))
+                    LedgerWebClient(x).get_block_list() for x in urls]
+                for ls in block_lists:
+                    ls.reverse()
+                # ...establish preconditions
+                max_mag = len(max(block_lists, key=len))
+                min_mag = len(min(block_lists, key=len))
+                self.assertGreaterEqual(
+                    tolerance,
+                    max_mag - min_mag,
+                    'block list magnitude differences (%s) '
+                    'exceed tolerance (%s)' % (
+                        max_mag - min_mag, tolerance))
+                effective_sample_size = max_mag - tolerance
+                print 'effective sample size: %s' % (effective_sample_size)
+                self.assertGreaterEqual(
+                    effective_sample_size,
+                    sample_size,
+                    'not enough target samples to determine convergence')
+                # ...(optionally) permit reasonable forks by normalizing lists
+                if tolerance > 0:
+                    block_lists = [
+                        block_list[0:effective_sample_size]
+                        for block_list in block_lists
+                    ]
+                # ...id-check (possibly normalized) cross-server block chains
+                for (i, block_list) in enumerate(block_lists):
+                    self.assertEqual(
+                        block_lists[0],
+                        block_list,
+                        '%s is divergent:\n\t%s vs.\n\t%s' % (
+                            urls[i], block_lists[0], block_list))
             if vnm:
                 vnm.shutdown()
         except Exception:
@@ -273,11 +287,21 @@ class TestSmoke(unittest.TestCase):
         self._run_int_load(cfg, 5, "TestSmokeResultsLottery")
 
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load_voting(self):
+    def test_intkey_load_quorum(self):
+        n = 4   # size of network
+        q = 4   # size of quorum
+        network = StaticNetworkConfig(n, q=q, use_quorum=True)
         cfg = defaultValidatorConfig.copy()
-        cfg['LedgerType'] = 'voting'
-        cfg['MaxTransactionsPerBlock'] = 64
-        cfg['VoteTimeInterval'] = 2.0
-        cfg['BallotTimeInterval'] = 1.0
-        cfg['VotingQuorumTargetSize'] = 5
-        self._run_int_load(cfg, 1, "TestSmokeResultsVoting", tolerance=0)
+        cfg['LedgerType'] = 'quorum'
+        cfg['TopologyAlgorithm'] = "Quorum"
+        cfg["Minimumconnectivity"] = q
+        cfg["TargetConnectivity"] = q
+        cfg['VotingQuorumTargetSize'] = q
+        cfg['Nodes'] = network.get_nodes()
+        cfg['VoteTimeInterval'] = 48.0
+        cfg['BallotTimeInterval'] = 8.0
+        self._run_int_load(cfg, n, "TestSmokeResultsQuorum",
+                           tolerance=0, block_id=False,
+                           static_network=network,
+                           vnm_timeout=240, txn_timeout=240,
+                           n_keys=100, n_runs=1)
