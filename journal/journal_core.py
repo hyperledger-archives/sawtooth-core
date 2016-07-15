@@ -721,8 +721,7 @@ class Journal(gossip_core.Gossip):
         tblock.update_block_weight(self)
 
         # time to apply the transactions in the block to get a new state
-        self.GlobalStoreMap.commit_block_store(tblock.Identifier,
-                                               newstore)
+        self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
         self.BlockStore[tblock.Identifier] = tblock
 
         # remove the block from the pending block list
