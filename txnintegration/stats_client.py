@@ -89,6 +89,8 @@ ValStats = collections.namedtuple('validatorstats',
                                   'blocks_claimed '
                                   'blocks_committed '
                                   'blocks_pending '
+                                  'local_mean '
+                                  'previous_blockid '
                                   'txns_committed '
                                   'txns_pending '
                                   'packets_dropped '
@@ -110,7 +112,8 @@ class ValidatorStats(ValStats, StatsCollector):
 
 class ValidatorStatsManager(object):
     def __init__(self):
-        self.vstats = ValidatorStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.vstats = ValidatorStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                     0, 0, 0, 0)
 
         self.val_name = None
         self.val_url = None
@@ -132,6 +135,8 @@ class ValidatorStatsManager(object):
                     jsonstats["ledger"]["BlocksClaimed"],
                     jsonstats["ledger"]["CommittedBlockCount"],
                     jsonstats["ledger"]["PendingBlockCount"],
+                    jsonstats["ledger"]["LocalMeanTime"],
+                    jsonstats["ledger"]["PreviousBlockID"],
                     jsonstats["ledger"]["CommittedTxnCount"],
                     jsonstats["ledger"]["PendingTxnCount"],
                     jsonstats["packet"]["DroppedPackets"],
@@ -254,7 +259,6 @@ class SystemStats(StatsCollector):
 
     def calculate_stats(self):
         self.runtime = int(time.time()) - self.starttime
-
         if self.active_validators > 0:
             self.avg_client_time = sum(self.response_times)\
                 / len(self.response_times)
@@ -351,9 +355,12 @@ class StatsManager(object):
     def initialize_client_list(self, endpoint_urls):
         # add validator stats client for each url in endpoint_urls
         self.known_endpoint_urls = list(endpoint_urls)
-
         for val_num, url in enumerate(self.known_endpoint_urls):
-            c = StatsClient(val_num, url)
+            try:
+                c = StatsClient(val_num, url)
+            except:
+                e = sys.exc_info()[0]
+                print ("error creating stats clients: ", e)
             self.clients.append(c)
 
     def update_client_list(self, endpoint_urls):

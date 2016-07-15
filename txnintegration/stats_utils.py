@@ -168,21 +168,26 @@ class StatsPrintManager(object):
                         False)
 
         self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
-                        '      TXNS     TXNS  VAL                VAL',
+                        '  LOCAL       PREVIOUS        TXNS     TXNS       '
+                        '  VAL              VAL',
                         reverse=True)
         self.cp.cpprint('    ID   STATE      TIME   CLAIMED COMMITTED  PENDING'
-                        ' COMMITTED  PENDING  NAME               URL',
+                        '  MEAN        BLOCKID       COMMITTED  PENDING    '
+                        '  NAME             URL',
                         reverse=True)
 
         for c in self.clients:
             if c.responding:
                 self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} '
-                                '{5:8d}  {6:8d} {7:8d}  {8:16}   {9:16}'
+                                '{5:8d}  {6:.2f}  {7:8s}  {8:8d} {9:8d}  '
+                                '{10:16}  {11:16}'
                                 .format(c.id, c.validator_state,
                                         c.response_time,
                                         c.vsm.vstats.blocks_claimed,
                                         c.vsm.vstats.blocks_committed,
                                         c.vsm.vstats.blocks_pending,
+                                        c.vsm.vstats.local_mean,
+                                        c.vsm.vstats.previous_blockid,
                                         c.vsm.vstats.txns_committed,
                                         c.vsm.vstats.txns_pending,
                                         c.name[:16], c.url), False)
