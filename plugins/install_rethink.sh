@@ -24,3 +24,6 @@ cp guest-files/rethinkdb.instance1.conf \
 
 /etc/init.d/rethinkdb restart
 
+# Required for ledger_sync
+pip install rethinkdb \
+            cachetools
