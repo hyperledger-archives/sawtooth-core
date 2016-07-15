@@ -114,32 +114,14 @@ class TestValidatorCLI(unittest.TestCase):
         self.assertIn("NodeName", cfg)
         self.assertEquals(cfg["NodeName"], "test000")
 
-    def test_options_mapping_host(self):
+    def test_options_mapping_listsn(self):
         os.environ.clear()
 
-        cfg = get_configuration(args=["--host=testhost"],
+        cfg = get_configuration(args=['--listen="localhost:5500/UDP gossip"'],
                                 config_files_required=False)
 
-        self.assertIn("Host", cfg)
-        self.assertEquals(cfg["Host"], "testhost")
-
-    def test_options_mapping_port(self):
-        os.environ.clear()
-
-        cfg = get_configuration(args=["--port=7777"],
-                                config_files_required=False)
-
-        self.assertIn("Port", cfg)
-        self.assertEquals(cfg["Port"], 7777)
-
-    def test_options_mapping_http(self):
-        os.environ.clear()
-
-        cfg = get_configuration(args=["--http=8888"],
-                                config_files_required=False)
-
-        self.assertIn("HttpPort", cfg)
-        self.assertEquals(cfg["HttpPort"], 8888)
+        self.assertIn("Listen", cfg)
+        self.assertEquals(cfg["Listen"], ['"localhost:5500/UDP gossip"'])
 
     def test_options_mapping_restore(self):
         os.environ.clear()

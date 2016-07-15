@@ -137,12 +137,6 @@ def parse_command_line(args):
              'options can be specified.',
         action='append')
     parser.add_argument('--node', help='Short form name of the node')
-    parser.add_argument('--host',
-                        help='Host name to use to access specific interface')
-    parser.add_argument('--port', help='UDP port to use', type=int)
-    parser.add_argument('--http',
-                        help='Port on which to run the http server',
-                        type=int)
     parser.add_argument('--restore',
                         help='Restore previous block chain',
                         action='store_true')
@@ -153,6 +147,11 @@ def parse_command_line(args):
                         help='increase output sent to stderr')
     parser.add_argument('--run-dir', help='Name of the run directory')
     parser.add_argument('--pidfile', help='Name of the PID file')
+    parser.add_argument('--listen',
+                        help='An IP/port/protocol combination the validator '
+                             'will listen on.  Multiple --listen options can '
+                             'be specified.',
+                        action='append')
 
     result = parser.parse_args(args)
 
@@ -208,16 +207,14 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('node', 'NodeName'),
-            ('host', 'Host'),
-            ('port', 'Port'),
-            ('http', 'HttpPort'),
             ('restore', 'Restore'),
             ('peers', 'Peers'),
             ('genesis', 'GenesisLedger'),
             ('url', 'LedgerURL'),
             ('verbose', 'Verbose'),
             ('pidfile', 'PidFile'),
-            ('daemon', 'Daemonize')
+            ('daemon', 'Daemonize'),
+            ('listen', 'Listen')
         ], options)
 
     return get_validator_configuration(options.config, options_config, os_name,

@@ -46,7 +46,7 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                               u'ledger.transaction.integer_key'],
                           u'UseFixedDelay': True,
                           u'Profile': True,
-                          u'Host': u'localhost'}
+                          u'Listen': [u'localhost:0/UDP gossip']}
 
 
 class ValidatorNetworkManager(object):
@@ -105,7 +105,6 @@ class ValidatorNetworkManager(object):
         self.AdminNode = ValidatorNetworkManager.AdminNode()
 
         self.validator_config['DataDirectory'] = self.data_dir
-        self.validator_config['Host'] = "localhost"
         self.validator_config["AdministrationNode"] = self.AdminNode.address
         self.validator_config['Restore'] = False
 
@@ -209,8 +208,10 @@ class ValidatorNetworkManager(object):
             cfg.update(overrides)
         cfg['id'] = validator_id
         cfg['NodeName'] = "validator-{}".format(validator_id)
-        cfg['HttpPort'] = self.HttpPortBase + validator_id
-        cfg['Port'] = self.UdpPortBase + validator_id
+        cfg['Listen'] = [
+            'localhost:{0}/UDP gossip'.format(self.UdpPortBase + validator_id),
+            'localhost:{0}/TCP http'.format(self.HttpPortBase + validator_id)
+        ]
         static_node = False
         if self.staticNetwork is not None:
             assert 'Nodes' in cfg.keys()
@@ -219,8 +220,10 @@ class ValidatorNetworkManager(object):
             q = self.staticNetwork.get_quorum(validator_id,
                                               dfl=cfg.get('Quorum', []))
             cfg['NodeName'] = nd['ShortName']
-            cfg['HttpPort'] = nd['HttpPort']
-            cfg['Port'] = nd['Port']
+            cfg['Listen'] = [
+                'localhost:{0}/UDP gossip'.format(nd['Port']),
+                'localhost:{0}/TCP http'.format(nd['HttpPort'])
+            ]
             cfg['SigningKey'] = self.staticNetwork.get_key(validator_id)
             cfg['Identifier'] = nd['Identifier']
             cfg['Quorum'] = q

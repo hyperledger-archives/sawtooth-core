@@ -26,6 +26,7 @@ from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
 from txnintegration.utils import read_key_file
+from txnserver.config import parse_listen_directives
 from gossip.messages import shutdown_message
 from sawtooth.client import LedgerWebClient
 from sawtooth.exceptions import MessageException
@@ -79,8 +80,9 @@ class ValidatorManager(object):
 
     def launch(self, launch=True, genesis=False, daemon=False, delay=False,
                node=None):
-        self.url = "http://{}:{}".format(self.config['Host'],
-                                         self.config['HttpPort'])
+        listen_directives = parse_listen_directives(self.config)
+        self.url = "http://{}:{}".format(listen_directives['http'].host,
+                                         listen_directives['http'].port)
 
         self.config['LogDirectory'] = self._data_dir
         self._log_file = os.path.join(self._data_dir,
