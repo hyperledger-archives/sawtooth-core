@@ -66,7 +66,8 @@ def parse_args(args):
                         default=None)
     parser.add_argument('--log-config',
                         help='The python logging config file to be passed '
-                             'to the validators.')
+                             'to the validators.',
+                        default=None)
 
     return parser.parse_args(args)
 
@@ -138,11 +139,13 @@ def configure(args):
             raise ExitError(
                 "Default config file does not exist: {}".format(opts.config))
 
-    if opts.log_config is not None and not os.path.exists(opts.log_config):
-        raise ExitError("log-config file does not exist: {}"
-                        .format(opts.log_config))
-    else:
-        opts.log_config_dict = load_log_config(opts.log_config)
+    opts.log_config_dict = None
+    if opts.log_config is not None:
+        if not os.path.exists(opts.log_config):
+            raise ExitError("log-config file does not exist: {}"
+                            .format(opts.log_config))
+        else:
+            opts.log_config_dict = load_log_config(opts.log_config)
 
     keys = [
         'NodeName',

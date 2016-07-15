@@ -313,7 +313,7 @@ class ValidatorNetworkManager(object):
                 running_count = 0
                 for v in self._validators:
                     if v.is_running():
-                        running_count = running_count + 1
+                        running_count += 1
                 if to.is_timed_out() or running_count == 0:
                     break
                 else:
