@@ -211,10 +211,10 @@ class ValidatorNetworkManager(object):
         cfg['NodeName'] = "validator-{}".format(validator_id)
         cfg['HttpPort'] = self.HttpPortBase + validator_id
         cfg['Port'] = self.UdpPortBase + validator_id
-        staticNode = False
+        static_node = False
         if self.staticNetwork is not None:
             assert 'Nodes' in cfg.keys()
-            staticNode = True
+            static_node = True
             nd = self.staticNetwork.get_node(validator_id)
             q = self.staticNetwork.get_quorum(validator_id,
                                               dfl=cfg.get('Quorum', []))
@@ -228,7 +228,8 @@ class ValidatorNetworkManager(object):
             if self.validator_log_config \
             else None
         v = ValidatorManager(self.txnvalidator, cfg, self.data_dir,
-                             self.AdminNode, log_config, staticNode=staticNode)
+                             self.AdminNode, log_config,
+                             static_node=static_node)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self._validators.append(v)
         self._validator_map[validator_id] = v

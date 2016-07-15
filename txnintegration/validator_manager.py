@@ -55,12 +55,12 @@ class ValidatorManager(object):
         self.config = config
         self.log_config = log_config
         self._admin_node = admin_node
-        self.staticNode = static_node
+        self.static_node = static_node
 
         self._data_dir = data_dir
 
         # Handle validator keys
-        if self.staticNode:
+        if self.static_node:
             self._key = config['SigningKey']
             self._address = config['Identifier']
         else:
@@ -91,7 +91,7 @@ class ValidatorManager(object):
 
         self.config['KeyFile'] = os.path.join(self._data_dir,
                                               "{}.wif".format(self.name))
-        if self.staticNode:
+        if self.static_node:
             if os.path.isfile(self.config['KeyFile']):
                 os.remove(self.config['KeyFile'])
         if not os.path.isfile(self.config['KeyFile']):
