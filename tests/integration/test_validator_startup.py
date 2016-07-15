@@ -110,7 +110,7 @@ class TestBasicStartup(unittest.TestCase):
             delayed_validator = self.vnm.launch_node(delay=True)
             time.sleep(5)
 
-            command_url = delayed_validator.Url + '/command'
+            command_url = delayed_validator.url + '/command'
             request = urllib2.Request(
                 url=command_url,
                 headers={'Content-Type': 'application/json'})
@@ -120,7 +120,7 @@ class TestBasicStartup(unittest.TestCase):
             self.assertEqual(response.code, 200,
                              "Successful post to delayed validator")
 
-            validator_urls.append(delayed_validator.Url)
+            validator_urls.append(delayed_validator.url)
             ledger_web_clients = [
                 LedgerWebClient(url=u) for u in validator_urls
             ]
@@ -157,7 +157,7 @@ class TestBasicStartup(unittest.TestCase):
             self.vnm.shutdown()
             if delayed_validator is not None and \
                     validator_urls is not [] and \
-                    delayed_validator.Url not in validator_urls:
+                    delayed_validator.url not in validator_urls:
                 delayed_validator.shutdown()
             self.vnm.create_result_archive("TestDelayedStart.tar.gz")
 
@@ -168,7 +168,7 @@ class TestBasicStartup(unittest.TestCase):
             validator = self.vnm.launch_node(genesis=True)
             validators = [validator]
             with Progress("Launching validator network") as p:
-                self.vnm.validator_config['LedgerURL'] = validator.Url
+                self.vnm.validator_config['LedgerURL'] = validator.url
                 self.vnm.validator_config['Restore'] = False
                 node_identifiers = [validator.Address]
                 for i in range(1, 5):
@@ -217,7 +217,7 @@ class TestBasicStartup(unittest.TestCase):
             self.vnm.validator_config['Nodes'] = nodes
             self.vnm.validator_config['Peers'] = peers
             v = self.vnm.launch_node()
-            validator_urls.append(v.Url)
+            validator_urls.append(v.url)
 
             self.vnm.wait_for_registration([v], validators[0])
             ledger_web_clients = [
