@@ -43,6 +43,19 @@ class TestLedgerWebCLient(unittest.TestCase):
             "http://localhost:8800/store/EndpointRegistryTransaction/t1"
             "?blockid=b2")
 
+        self.assertEquals(
+            lwc.store_url(endpoint_registry.EndpointRegistryTransaction, 't1',
+                          delta=True),
+            "http://localhost:8800/store/EndpointRegistryTransaction/t1"
+            "?delta=1")
+
+        self.assertEquals(
+            lwc.store_url(endpoint_registry.EndpointRegistryTransaction, 't1',
+                          blockid='b3',
+                          delta=True),
+            "http://localhost:8800/store/EndpointRegistryTransaction/t1"
+            "?blockid=b3&delta=1")
+
 
 if __name__ == '__main__':
     unittest.main()
