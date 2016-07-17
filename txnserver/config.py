@@ -278,6 +278,44 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
         self['BaseDirectory'] = os.path.abspath(os.path.dirname(__file__))
         self['CurrencyHost'] = "localhost"
         self['NodeName'] = "base000"
+        self['KeyFile'] = '{key_dir}/{node}.wif'
+
+        # configuration of network
+        self["Listen"] = [
+            "localhost:0/UDP gossip",
+            "localhost:8800/TCP http"
+        ]
+
+        # configuration of startup options
+        self['LedgerURL'] = 'http://localhost:8800/'
+        self['GenesisLedger'] = False
+        self['Restore'] = False
+
+        # configuration of the ledger wait time certificate
+        self['TargetWaitTime'] = 30.0
+        self['InitialWaitTime'] = 750.0
+        self['CertificateSampleLength'] = 30
+
+        # configuration of the block sizes
+        self['MinTransactionsPerBlock'] = 1
+        self['MaxTransactionsPerBlock'] = 1000
+
+        # configuration of the topology
+        self['TopologyAlgorithm'] = 'RandomWalk'
+        self['MaximumConnectivity'] = 15
+        self['MinimumConnectivity'] = 1
+        self['TargetConnectivity'] = 3
+
+        # configuration of the network flow control
+        self['NetworkFlowRate'] = 96000
+        self['NetworkBurstRate'] = 128000
+        self['NetworkDelayRange'] = [0.00, 0.10]
+        self['UseFixedDelay'] = True
+
+        # configuratio the transaction families
+        self['TransactionFamilies'] = [
+            'ledger.transaction.integer_key'
+        ]
 
 
 class CurrencyEnvConfig(sawtooth.config.EnvConfig):
