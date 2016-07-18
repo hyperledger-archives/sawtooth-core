@@ -149,9 +149,7 @@ def configure(args):
 
     keys = [
         'NodeName',
-        'Host',
-        'HttpPort',
-        'Port',
+        'Listen',
         'KeyFile',
         "AdministrationNode",
         "DataDirectory",

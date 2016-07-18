@@ -36,6 +36,8 @@ from journal import global_store_manager
 from journal import transaction
 from journal.messages import transaction_message
 from txnintegration.utils import PlatformStats
+from txnserver.config import parse_listen_directives
+
 
 logger = logging.getLogger(__name__)
 
@@ -594,7 +596,21 @@ class ApiSite(Site):
 
 
 def initialize_web_server(config, validator):
-    if 'HttpPort' in config and config["HttpPort"] > 0:
+    # Parse the listen directives from the configuration so
+    # we know what to bind HTTP protocol to
+    listen_directives = parse_listen_directives(config)
+
+    if 'http' in listen_directives:
         root = RootPage(validator)
         site = ApiSite(root)
-        reactor.listenTCP(config["HttpPort"], site)
+        interface = listen_directives['http'].host
+        if interface is None:
+            interface = ''
+        logger.info(
+            "listen for HTTP requests on (ip='%s', port=%s)",
+            interface,
+            listen_directives['http'].port)
+        reactor.listenTCP(
+            listen_directives['http'].port,
+            site,
+            interface=interface)

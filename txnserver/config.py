@@ -19,9 +19,15 @@ import re
 import sys
 import warnings
 
+from collections import namedtuple
+
 import sawtooth.config
 from sawtooth.config import AggregateConfig
 from sawtooth.config import load_config_files
+
+
+ListenListEntry = namedtuple('ListenListEntry', ['host', 'port', 'protocol'])
+ListenData = namedtuple('ListenData', ['host', 'port'])
 
 
 def parse_configuration_files(cfiles, search_path):
@@ -131,6 +137,116 @@ def get_validator_configuration(config_files,
         'run_dir': 'RunDirectory'
     })
     return resolved
+
+
+__IPV4_REGEX = \
+    r'(?:(?:\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])\.){3}' \
+    r'(?:\d|[1-9]\d|1[0-9]{2}|2[0-4]\d|25[0-5])'
+__HOST_NAME_REGEX = \
+    r'localhost|(?:(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])' \
+    r'(?:\.(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))+)'
+__PORT_REGEX = \
+    r'[0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|' \
+    r'655[0-2][0-9]|6553[0-5]'
+__TRANSPORT_REGEX = r'UDP|TCP'
+__PROTOCOL_REGEX = r'gossip|http'
+__FULL_REGEX = \
+    r'^(?:(?P<host>{0}|{1})(?::))?(?P<port>{2})(?:(?:/)(?P<transport>{3}))' \
+    r'?\s+(?P<protocol>{4})$'.format(
+        __IPV4_REGEX,
+        __HOST_NAME_REGEX,
+        __PORT_REGEX,
+        __TRANSPORT_REGEX,
+        __PROTOCOL_REGEX)
+__LISTEN_REGEX = re.compile(__FULL_REGEX)
+
+
+def _parse_listen_directive(value):
+    """
+    An internal helper that parses a listen entry, checks for validity,
+    and fills in defaults for missing values.
+
+    Args:
+        value: A listen string that is expected to be in the form
+         "[IP_OR_HOST_NAME:]PORT[/TRANSPORT] PROTOCOL"
+
+    Returns:
+        A named tuple of (host, port, protocol)
+    """
+
+    # Beat the string senseless using a regex.  If there is not a match, then
+    # it is malformed
+    match = __LISTEN_REGEX.match(value)
+    if match is None:
+        raise Exception('listen directive "{}" is malformed'.format(value))
+
+    # Extract the pieces of data we need.  Note that for optional pieces
+    # host and transport, missing values will be None.  For a missing host
+    # value, we will provide 0.0.0.0, which basically means listen on all
+    # interfaces.
+    host = match.group('host')
+    if host is None:
+        host = '0.0.0.0'
+    port = int(match.group('port'))
+    transport = match.group('transport')
+    protocol = match.group('protocol')
+
+    # Make sure that if there is a transport that it matches the protocol
+    if transport is not None:
+        if protocol == 'gossip' and transport != 'UDP':
+            raise Exception('gossip listen directive requires UDP')
+        if protocol == 'http' and transport != 'TCP':
+            raise Exception('http listen directive requires TCP')
+
+    # For HTTP, we don't allow listening on an ephemeral port
+    if protocol == 'http' and port == 0:
+        raise Exception('http listen directive requires non-zero port')
+
+    return ListenListEntry(
+        host=host,
+        port=port,
+        protocol=protocol)
+
+
+def parse_listen_directives(config):
+    """
+    From the configuration object, parses the list of entries for "Listen"
+    and returns a dictionary of mapping from protocol to address/hostname
+    and port.
+
+    Args:
+        config: The object holding validator configuration
+
+    Returns:
+        A dictionary mapping a protocol name to a ListenData named tuple.
+    """
+
+    listen_mapping = {}
+
+    # First try to parse the "Listen" entries if one exists
+    if 'Listen' in config:
+        for value in config['Listen']:
+            directive = _parse_listen_directive(value)
+
+            # No duplicates for protocols allowed
+            if directive.protocol in listen_mapping:
+                raise Exception(
+                    'configuration has more than one {0} listen '
+                    'directive'.format(directive.protocol))
+
+            listen_mapping[directive.protocol] = \
+                ListenData(host=directive.host, port=directive.port)
+
+        # If there was no gossip listen directive, then flag an error
+        if 'gossip' not in listen_mapping:
+            raise Exception('configuration requires gossip listen directive')
+
+    # Otherwise, we are going to set defaults for both gossip and HTTP
+    else:
+        listen_mapping['gossip'] = ListenData(host='0.0.0.0', port=5500)
+        listen_mapping['http'] = ListenData(host='0.0.0.0', port=8800)
+
+    return listen_mapping
 
 
 class ValidatorDefaultConfig(sawtooth.config.Config):

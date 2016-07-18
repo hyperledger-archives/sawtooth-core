@@ -1,7 +1,15 @@
 {
-    "HttpPort" : 8800,
-    "Host" : "localhost",
-    "Port" : 0,
+    "Listen" : [
+        "localhost:0/UDP gossip",
+        "localhost:8800/TCP http"
+    ],
+    ## configuration of publicly-visible endpoint information
+    ## used if validator is behind NAT
+    ##"Endpoint" : {
+    ##    "Host" : "localhost",
+    ##      "Port" : 5500,
+    ##    "HttpPort" : 8800
+    ##},
     "NodeName" : "base000",
     "LedgerURL" : "http://localhost:8800/",
 
