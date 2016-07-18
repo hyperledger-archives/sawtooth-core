@@ -406,15 +406,13 @@ class LedgerWebClient(object):
         url = urlparse.urljoin(url,
                                urlparse.urlparse(url).path.replace('//', '/'))
         url = url.rstrip('/')
-        if blockid:
-            url += '?blockid={0}'.format(blockid)
 
         if blockid or delta:
             params = dict()
-        if blockid:
-            params['blockid'] = blockid
-        if delta:
-            params['delta'] = '1'
+            if blockid:
+                params['blockid'] = blockid
+            if delta:
+                params['delta'] = '1'
             url += '?' + urllib.urlencode(params)
 
         return url
