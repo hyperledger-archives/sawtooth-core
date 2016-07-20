@@ -2,14 +2,41 @@
 Contributing Code
 -----------------
 
+=========================
+The Value of Contributing
+=========================
+
 Contributions by the community will help grow and optimize the capabilities of
-Sawtooth Lake.  Potential contribution areas include:
+Sawtooth Lake. It will also allow contributors to work with the system and
+influence potential applications of the platform.
+
+**Here are the different ways you can contribue**
 
 * Bugs or Issues (issues or defects found when working with Sawtooth Lake)
 * Core Features & Enhancements (expanded capabilities or optimization)
 * Arcade Features (games that demonstrate Sawtooth Lake such as Go and Checkers)
 * New or Enhanced Documentation (improve existing documentation or creating new)
 * Testing Events and Results (functional, performance or scalability)
+
+**Ideas from our Backlog**
+
+Here is a list of pending items from our backlog that would be great
+contributions from the community:
+
+* Implement UTXO Transaction Family
+* Separate Participant Class from Marketplace
+* Test Scenario for Unregistering and Dangling References
+* Refactor validator startup to be responsive to API and SIG-TERM
+* Add Transaction logger to MktClient
+* Add section to tutorial on joining an existing network
+
+**Before you start developement...**
+
+Get your virtual development environment running by following the Tutorial here:
+http://intelledger.github.io/tutorial.html
+
+Be sure to review the Sawtooth Developer's Guide located here:
+http://intelledger.github.io/sawtooth_developers_guide.html
 
 ==============
 Commit Process
@@ -28,7 +55,7 @@ pull requests. When contributing code please do the following:
 **Commit Guidelines**
 
 Commits should have logical groupings. A bug fix should be a single commit.
-A newfeature should be a single commit.
+A new feature should be a single commit.
 
 Commit messages should be clear on what is being fixed or added to the code
 base. If a commit is addressing an open issue, please start the commit message
