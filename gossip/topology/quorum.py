@@ -37,6 +37,7 @@ TargetConnectivity = 3
 
 def start_topology_update(gossiper, callback):
     """Initiates a quorum topology update.
+
     Args:
         gossiper (Node): The local node.
         callback (function): The function to call once the quorum topology
