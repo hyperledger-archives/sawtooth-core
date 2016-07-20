@@ -145,7 +145,6 @@ class Gossip(object, DatagramProtocol):
 
         self.PendingAckMap = {}
         self.MessageHandledMap = {}
-        self.MessageHandlerMap = {}
 
         self.SequenceNumber = 0
         self.NextCleanup = time.time() + self.CleanupInterval
