@@ -1,3 +1,4 @@
+param([string] $build_dir ="c:\project")
 $ErrorActionPreference = "Stop"
 
 # Necessary environment variables
@@ -5,7 +6,6 @@ $env:PYTHONPATH += ";C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\
 $env:PATH += ";c:\swig;c:\python27;C:\Program Files (x86)\NSIS"
 
 # this makes running commands easier
-$build_dir = "c:\project"
 $build_command = "python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'"
 $package_command = "makensis 'C:\Program Files (x86)\Intel\sawtooth-validator.nsi'"
 
