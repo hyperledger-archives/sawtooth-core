@@ -63,6 +63,8 @@ class PoetJournal(journal_core.Journal):
 
         # initialize stats specifically for the block chain journal
         self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
+        self.JournalStats.add_metric(stats.Value('LocalMeanTime', 0))
+        self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
 
         # propagate the maximum blocks to keep
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
@@ -107,6 +109,8 @@ class PoetJournal(journal_core.Journal):
             self.LocalNode.signing_address(),
             self._build_certificate_list(nblock))
 
+        self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
+        self.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
         # must put a cap on the transactions in the block
         if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:
             nblock.TransactionIDs = \
