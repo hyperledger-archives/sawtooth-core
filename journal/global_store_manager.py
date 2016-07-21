@@ -34,7 +34,7 @@ class GlobalStoreManager(object):
     """The GlobalStoreManager class encapsulates persistent management
     of state associated with blocks in the ledger.
 
-    To use the the class, first create a BlockStore that is initialized with
+    To use the class, first create a BlockStore that is initialized with
     an empty store (which should be a subclass of the KeyValueStore class)
     for each transaction family in the ledger. Commit the initial block
     with the method CommitRootBlock. This step is necessary whether or not
