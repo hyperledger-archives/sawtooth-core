@@ -198,6 +198,12 @@ SysMsgs = collections.namedtuple('sys_messages',
                                  'msgs_max_acked '
                                  'msgs_min_acked')
 
+PoetStats = collections.namedtuple('poet_stats',
+                                   'avg_local_mean '
+                                   'max_local_mean '
+                                   'min_local_mean '
+                                   'last_unique_blockID')
+
 
 class SystemStats(StatsCollector):
     def __init__(self):
@@ -217,8 +223,10 @@ class SystemStats(StatsCollector):
         self.sys_packets = SysPackets(0, 0, 0, 0, 0, 0)
         self.sys_msgs = SysMsgs(0, 0, 0, 0)
 
+        self.poet_stats = PoetStats(0, 0, 0, ' ')
+
         self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
-                          self.sys_packets, self.sys_msgs]
+                          self.sys_packets, self.sys_msgs, self.poet_stats]
 
         # accumulators
 
@@ -234,6 +242,9 @@ class SystemStats(StatsCollector):
         self.packets_acks_received = []
         self.msgs_handled = []
         self.msgs_acked = []
+
+        self.local_mean = []
+        self.previous_blockid = []
 
     def collect_stats(self, statsclients):
         # must clear the accumulators at start of each sample interval
@@ -256,6 +267,9 @@ class SystemStats(StatsCollector):
                     .append(c.vsm.vstats.packets_acks_received)
                 self.msgs_handled.append(c.vsm.vstats.msgs_handled)
                 self.msgs_acked.append(c.vsm.vstats.msgs_acked)
+
+                self.local_mean.append(c.vsm.vstats.local_mean)
+                self.previous_blockid.append(c.vsm.vstats.previous_blockid)
 
     def calculate_stats(self):
         self.runtime = int(time.time()) - self.starttime
@@ -316,6 +330,20 @@ class SystemStats(StatsCollector):
                 min(self.msgs_acked)
             )
 
+            self.avg_local_mean = sum(self.local_mean) \
+                / len(self.local_mean)
+
+            unique_blockid_list = []
+            unique_blockid_list = list(set(self.previous_blockid))
+            self.last_unique_blockID = \
+                unique_blockid_list[len(unique_blockid_list) - 1]
+            self.poet_stats = PoetStats(
+                self.avg_local_mean,
+                max(self.local_mean),
+                min(self.local_mean),
+                self.last_unique_blockID
+            )
+
             # because named tuples are immutable,
             #  must create new stats list each time stats are updated
             self.statslist = [self.sys_client, self.sys_blocks,
@@ -332,6 +360,9 @@ class SystemStats(StatsCollector):
         self.packets_acks_received = []
         self.msgs_handled = []
         self.msgs_acked = []
+
+        self.local_mean = []
+        self.previous_blockid = []
 
 
 class StatsManager(object):
