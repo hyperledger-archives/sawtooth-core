@@ -167,6 +167,16 @@ class StatsPrintManager(object):
                                 self.ps.net_stats.bytes_recv),
                         False)
 
+        self.cp.cpprint('Poet Stats: {0:.2f} avg local mean,'
+                        '       {1:.2f} max local mean,'
+                        '       {2:.2f} min local mean,'
+                        '       {3:8s} last unique blockID'
+                        .format(self.ss.poet_stats.avg_local_mean,
+                                self.ss.poet_stats.max_local_mean,
+                                self.ss.poet_stats.min_local_mean,
+                                self.ss.poet_stats.last_unique_blockID),
+                        False)
+
         self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
                         '  LOCAL       PREVIOUS        TXNS     TXNS       '
                         '  VAL              VAL',
