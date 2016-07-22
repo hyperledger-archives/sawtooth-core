@@ -135,8 +135,8 @@ def topology_request_handler(msg, gossiper):
         return
 
     reply = TopologyReplyMessage()
-    reply.NetHost = gossiper.LocalNode.NetHost
-    reply.NetPort = gossiper.LocalNode.NetPort
+    reply.NetHost = gossiper.LocalNode.endpoint_host
+    reply.NetPort = gossiper.LocalNode.endpoint_port
     reply.NodeIdentifier = gossiper.LocalNode.Identifier
     reply.Name = gossiper.LocalNode.Name
     reply.InReplyTo = msg.Identifier

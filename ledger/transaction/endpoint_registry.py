@@ -176,12 +176,8 @@ class Update(object):
         # Take the host/port form the endpoint host/port (i.e., the externally-
         # visible host/port) if it is present.  If not, take them from the
         # locally-bound host/port.
-        update.NetHost = \
-            nde.EndpointHost if nde.EndpointHost is not None else nde.NetHost
-        if nde.EndpointPort is None or nde.EndpointPort == 0:
-            update.NetPort = nde.NetPort
-        else:
-            update.NetPort = nde.EndpointPort
+        update.NetHost = nde.endpoint_host
+        update.NetPort = nde.endpoint_port
         update.HttpPort = httpport
         update.NodeIdentifier = nde.Identifier
         return update
