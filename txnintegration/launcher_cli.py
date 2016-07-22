@@ -68,6 +68,12 @@ def parse_args(args):
                         help='The python logging config file to be passed '
                              'to the validators.',
                         default=None)
+    parser.add_argument('--port',
+                        help='The base gossip UDP port to use',
+                        default=5500)
+    parser.add_argument('--http-port',
+                        help='The base HTTP port to use',
+                        default=8800)
 
     return parser.parse_args(args)
 
@@ -151,9 +157,10 @@ def configure(args):
         'NodeName',
         'Listen',
         'KeyFile',
-        "AdministrationNode",
-        "DataDirectory",
-        "GenesisLedger",
+        'AdministrationNode',
+        'DataDirectory',
+        'GenesisLedger',
+        'LedgerURL',
     ]
     if any(k in validator_config for k in keys):
         print "Overriding the following keys from validator configuration " \
@@ -325,7 +332,10 @@ def main():
             cfg=opts['validator_config'],
             log_config=opts['log_config_dict'],
             data_dir=opts['data_dir'],
-            block_chain_archive=opts['load_blockchain'])
+            block_chain_archive=opts['load_blockchain'],
+            http_port=int(opts['http_port']),
+            udp_port=int(opts['port'])
+        )
         network_manager.staged_launch_network(opts['count'])
 
         ctrl = ValidatorNetworkConsole(network_manager)

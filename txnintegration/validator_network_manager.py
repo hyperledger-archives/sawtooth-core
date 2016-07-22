@@ -51,12 +51,13 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
 
 class ValidatorNetworkManager(object):
     class AdminNode(object):
-        signing_key = None
-        address = None
-
+        """
+            This is a stand-in for a node when signing admin messages.
+            Hence the non pep8 names.
+        """
         def __init__(self):
-            self.signing_key = pybitcointools.random_key()
-            self.address = pybitcointools.privtoaddr(self.signing_key)
+            self.SigningKey = pybitcointools.random_key()
+            self.Address = pybitcointools.privtoaddr(self.SigningKey)
 
     def __init__(self,
                  txnvalidator=None,
@@ -66,32 +67,27 @@ class ValidatorNetworkManager(object):
                  udp_port=5500,
                  block_chain_archive=None,
                  log_config=None,
-                 staticNetwork=None,
+                 static_network=None,
                  ):
 
-        self.staticNetwork = staticNetwork
+        self.static_network = static_network
         self._validators = []
         self._validator_map = {}
         self.validator_config = None
 
         self._next_validator_id = 0
-        self.HttpPortBase = http_port
-        self.UdpPortBase = udp_port
+        self._http_port_base = http_port
+        self._udp_port_base = udp_port
 
-        if cfg is None:
-            cfg = defaultValidatorConfig
-        self.validator_config = cfg
+        self.validator_config = cfg or defaultValidatorConfig
         self.validator_log_config = log_config
 
-        if txnvalidator is None:
-            txnvalidator = find_txn_validator()
-        self.txnvalidator = txnvalidator
+        self.txnvalidator = txnvalidator or find_txn_validator()
 
-        self.tempDataDir = False
+        self.temp_data_dir = False
         if data_dir is None:
-            self.tempDataDir = True
+            self.temp_data_dir = True
             data_dir = tempfile.mkdtemp()
-        self.data_dir = data_dir
         self.data_dir = data_dir
 
         self.block_chain_archive = block_chain_archive
@@ -102,14 +98,14 @@ class ValidatorNetworkManager(object):
             else:
                 self.unpack_blockchain(block_chain_archive)
 
-        self.AdminNode = ValidatorNetworkManager.AdminNode()
+        self.admin_node = ValidatorNetworkManager.AdminNode()
 
         self.validator_config['DataDirectory'] = self.data_dir
-        self.validator_config["AdministrationNode"] = self.AdminNode.address
+        self.validator_config["AdministrationNode"] = self.admin_node.Address
         self.validator_config['Restore'] = False
 
     def __del__(self):
-        if self.tempDataDir:
+        if self.temp_data_dir:
             if os.path.exists(self.data_dir):
                 shutil.rmtree(self.data_dir)
 
@@ -179,19 +175,22 @@ class ValidatorNetworkManager(object):
                 p.step()
                 time.sleep(1)
 
-        with Progress("Launching validator network") as p:
-            cfg = {
-                'LedgerURL': validator.url,
-                'Restore': self.block_chain_archive,
-            }
-            for _ in range(1, count):
-                v = self.launch_node(overrides=cfg,
-                                     genesis=False,
-                                     daemon=others_daemon)
-                validators.append(v)
-                p.step()
+        if count > 1:
+            with Progress("Launching validator network") as p:
+                cfg = {
+                    'LedgerURL': validator.url,
+                    'Restore': self.block_chain_archive,
+                }
+                for _ in range(1, count):
+                    v = self.launch_node(overrides=cfg,
+                                         genesis=False,
+                                         daemon=others_daemon)
+                    validators.append(v)
+                    p.step()
 
-        self.wait_for_registration(validators, validator, max_time=max_time)
+            self.wait_for_registration(validators,
+                                       validator,
+                                       max_time=max_time)
 
         return validators
 
@@ -209,29 +208,31 @@ class ValidatorNetworkManager(object):
         cfg['id'] = validator_id
         cfg['NodeName'] = "validator-{}".format(validator_id)
         cfg['Listen'] = [
-            'localhost:{0}/UDP gossip'.format(self.UdpPortBase + validator_id),
-            'localhost:{0}/TCP http'.format(self.HttpPortBase + validator_id)
+            'localhost:{0}/UDP gossip'.format(self._udp_port_base +
+                                              validator_id),
+            'localhost:{0}/TCP http'.format(self._http_port_base +
+                                            validator_id)
         ]
         static_node = False
-        if self.staticNetwork is not None:
+        if self.static_network is not None:
             assert 'Nodes' in cfg.keys()
             static_node = True
-            nd = self.staticNetwork.get_node(validator_id)
-            q = self.staticNetwork.get_quorum(validator_id,
-                                              dfl=cfg.get('Quorum', []))
+            nd = self.static_network.get_node(validator_id)
+            q = self.static_network.get_quorum(validator_id,
+                                               dfl=cfg.get('Quorum', []))
             cfg['NodeName'] = nd['ShortName']
             cfg['Listen'] = [
                 'localhost:{0}/UDP gossip'.format(nd['Port']),
                 'localhost:{0}/TCP http'.format(nd['HttpPort'])
             ]
-            cfg['SigningKey'] = self.staticNetwork.get_key(validator_id)
+            cfg['SigningKey'] = self.static_network.get_key(validator_id)
             cfg['Identifier'] = nd['Identifier']
             cfg['Quorum'] = q
         log_config = self.validator_log_config.copy() \
             if self.validator_log_config \
             else None
         v = ValidatorManager(self.txnvalidator, cfg, self.data_dir,
-                             self.AdminNode, log_config,
+                             self.admin_node, log_config,
                              static_node=static_node)
         v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
         self._validators.append(v)
@@ -311,7 +312,7 @@ class ValidatorNetworkManager(object):
                 p.step()
 
         running_count = 0
-        to = TimeOut(10)
+        to = TimeOut(1)
         with Progress("Giving validators time to shutdown: ") as p:
             while True:
                 running_count = 0
@@ -331,10 +332,6 @@ class ValidatorNetworkManager(object):
                     if v.is_running():
                         v.shutdown(True)
                     p.step()
-
-        # wait for windows to learn that the subprocess are dead.
-        if os.name == "nt":
-            time.sleep(5)
 
     def status(self):
         out = []
