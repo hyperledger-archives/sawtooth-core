@@ -100,8 +100,8 @@ class _Communication(object):
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)
-            raise MessageException('operation failed with resonse: {0}'.format(
-                err.code))
+            raise MessageException(
+                'operation failed with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             LOGGER.warn('operation failed: %s', err.reason)
@@ -146,8 +146,8 @@ class _Communication(object):
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)
-            raise MessageException('operation failed with resonse: {0}'.format(
-                err.code))
+            raise MessageException(
+                'operation failed with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             LOGGER.warn('operation failed: %s', err.reason)
@@ -713,8 +713,8 @@ class LedgerWebClient(object):
         except urllib2.HTTPError as err:
             LOGGER.error('peer operation on url %s failed with response: %d',
                          url, err.code)
-            raise MessageException('operation failed with resonse: {0}'.format(
-                err.code))
+            raise MessageException(
+                'operation failed with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             LOGGER.error('peer operation on url %s failed: %s', url,
