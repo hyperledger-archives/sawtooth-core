@@ -90,8 +90,8 @@ class MarketPlaceCommunication(object):
 
         except urllib2.HTTPError as err:
             logger.warn('operation failed with response: %s', err.code)
-            raise MessageException('operation failed with resonse: {0}'.format(
-                err.code))
+            raise MessageException(
+                'operation failed with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             logger.warn('operation failed: %s', err.reason)
@@ -138,8 +138,8 @@ class MarketPlaceCommunication(object):
 
         except urllib2.HTTPError as err:
             logger.warn('operation failed with response: %s', err.code)
-            raise MessageException('operation failed with resonse: {0}'.format(
-                err.code))
+            raise MessageException(
+                'operation failed with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             logger.warn('operation failed: %s', err.reason)
