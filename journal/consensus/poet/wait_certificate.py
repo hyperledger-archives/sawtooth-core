@@ -65,9 +65,15 @@ class WaitCertificate(object):
             journal.consensus.poet.wait_certificate.WaitCertificate: A new wait
                  certificate.
         """
-        cert = cls.poet_enclave.create_wait_certificate(
-            timer.enclave_wait_timer,
-            block_hash)
+        try:
+            cert = cls.poet_enclave.create_wait_certificate(
+                timer.enclave_wait_timer,
+                block_hash)
+        except ValueError as e:
+            logger.error('Received error create_wait_certificate '
+                         'from enclave : %s', e.message)
+            cert = None
+
         if not cert:
             logger.warn('invalid timer: %s', timer)
             raise Exception(
