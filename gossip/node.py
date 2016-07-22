@@ -97,8 +97,8 @@ class Node(object):
 
         self.NetHost = address[0]
         self.NetPort = address[1]
-        self.EndpointHost = endpoint_address[0]
-        self.EndpointPort = endpoint_address[1]
+        self._endpoint_host = endpoint_address[0]
+        self._endpoint_port = endpoint_address[1]
 
         self.SigningKey = signingkey
         self.Identifier = identifier
@@ -125,6 +125,37 @@ class Node(object):
         the node.
         """
         return (self.NetHost, self.NetPort)
+
+    @property
+    def endpoint_host(self):
+        """
+        Returns the endpoint host address, i.e., the externally-visible
+        address.  If not set, it returns the net host as that is both the
+        host address bound to as well as the externally-visible one.
+        """
+        return \
+            self._endpoint_host \
+            if self._endpoint_host is not None else self.NetHost
+
+    @property
+    def endpoint_port(self):
+        """
+        Returns the endpoint port, i.e., the externally-visible port.  If not
+        set or zero, returns the net port as that is both the host port bound
+        to as well as the externally-visible one.
+        """
+        if self._endpoint_port is None or self._endpoint_port == 0:
+            return self.NetPort
+
+        return self._endpoint_port
+
+    @property
+    def endpoint_address(self):
+        """
+        Returns an ordered pair containing the endpoint host and port of the
+        node.
+        """
+        return (self.endpoint_host, self.endpoint_port)
 
     def __str__(self):
         return self.Name

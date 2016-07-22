@@ -36,8 +36,8 @@ def send_random_walk_message(gossiper):
         gossiper (Node): The local node.
     """
     msg = RandomWalkMessage()
-    msg.NetHost = gossiper.LocalNode.NetHost
-    msg.NetPort = gossiper.LocalNode.NetPort
+    msg.NetHost = gossiper.LocalNode.endpoint_host
+    msg.NetPort = gossiper.LocalNode.endpoint_port
     msg.NodeIdentifier = gossiper.LocalNode.Identifier
     msg.Name = gossiper.LocalNode.Name
 
