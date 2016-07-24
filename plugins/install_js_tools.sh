@@ -24,15 +24,28 @@ if [ ! -e cache/lein ]; then
 fi
 mv cache/lein /usr/local/bin/lein
 
+
+VER=$(lsb_release -sr)
+
+if [ "$VER" = "16.04" ] ; then
+    apt-get install -y -q \
+        ruby\
+        openjdk-8-jdk
+    GEM=gem
+else
+    # Run setup-node.sh
+    apt-get install -y -q \
+        ruby2.0\
+        openjdk-7-jdk
+    GEM=gem2.0
+fi
+
 # Run setup-node.sh
 apt-get install -y -q \
     rlwrap \
     phantomjs \
-    nodejs \
-    ruby2.0 \
-    openjdk-7-jdk
-
-gem2.0 install sass
+    nodejs
+$GEM install sass
 
 sudo -i -u vagrant npm set progress=false
 
