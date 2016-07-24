@@ -168,7 +168,8 @@ class BattleshipTransaction(transaction.Transaction):
                 raise InvalidTransactionError('Game board is not valid size')
             for row in xrange(0, self._size):
                 if len(self._board[row]) != self._size:
-                    raise InvalidTransactionError('Game board is not valid size')
+                    raise InvalidTransactionError(
+                        'Game board is not valid size')
 
             # Validate that self._board contains hash-like strings
             for row in xrange(0, self._size):
@@ -209,7 +210,8 @@ class BattleshipTransaction(transaction.Transaction):
                 raise InvalidTransactionError('game complete')
 
             if state == 'NEW':
-                raise InvalidTransactionError("Game doesn't have enough players.")
+                raise InvalidTransactionError(
+                    "Game doesn't have enough players.")
 
             player = None
             if state == 'P1-NEXT':
@@ -223,7 +225,8 @@ class BattleshipTransaction(transaction.Transaction):
                 if player != self.OriginatorID:
                     raise InvalidTransactionError('invalid player 2')
             else:
-                raise InvalidTransactionError("invalid state: {}".format(state))
+                raise InvalidTransactionError(
+                    "invalid state: {}".format(state))
 
             # Check whether the board's column and row have already been
             # fired upon.

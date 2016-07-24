@@ -18,9 +18,6 @@ import logging
 
 from collections import namedtuple
 from datetime import datetime
-from tempfile import NamedTemporaryFile
-
-import pybitcointools
 
 from sawtooth.simulator_workload import SawtoothWorkload
 from sawtooth_xo.xo_client import XoClient
@@ -53,8 +50,8 @@ class XoWorkload(SawtoothWorkload):
     # use all 9 spaces (makes game management easier)
     _space_order = [1, 2, 3, 6, 9, 8, 7, 4, 5]
 
-    def __init__(self, delegate):
-        super(XoWorkload, self).__init__(delegate)
+    def __init__(self, delegate, config):
+        super(XoWorkload, self).__init__(delegate, config)
 
         self._clients = []
         self._games = {}
@@ -68,20 +65,10 @@ class XoWorkload(SawtoothWorkload):
 
     def on_validator_discovered(self, url):
         # We need a key file for the client, but as soon as the client is
-        # created, we don't need it any more, so a temporary file is
-        # sufficient
-        key_file = NamedTemporaryFile()
-        private_key = pybitcointools.random_key()
-        encoded_key = pybitcointools.encode_privkey(private_key, 'wif')
-        key_file.write(encoded_key)
-        key_file.write('\n')
-        key_file.flush()
-
-        # Create a new client and add it to our cadre of clients to use
-        self._clients.append(XoClient(url, key_file.name))
-
-        # Closing the temporary file will cause it to also be deleted
-        key_file.close()
+        # created, we don't need it any more.  Then create a new client and
+        # add it to our cadre of clients to use
+        with self._create_temporary_key_file() as key_file:
+            self._clients.append(XoClient(url, key_file.name))
 
     def on_validator_removed(self, url):
         # Remove validator from our list of clients so that we don't try to
