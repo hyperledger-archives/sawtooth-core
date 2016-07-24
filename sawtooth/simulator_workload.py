@@ -15,6 +15,10 @@
 
 # pylint: disable=no-self-use
 
+from tempfile import NamedTemporaryFile
+
+import pybitcointools
+
 
 class SawtoothWorkload(object):
     """
@@ -24,12 +28,13 @@ class SawtoothWorkload(object):
        hold onto one property for derived classes.
     """
 
-    def __init__(self, delegate):
+    def __init__(self, delegate, config):
         """
         Initializes the base class.
 
         Args:
             delegate: The object that supports delegate methods
+            config: A Config object that has run-time configuration
 
         The workload generator uses the delegate object to alert the
         simulator of certain events.
@@ -42,15 +47,41 @@ class SawtoothWorkload(object):
         This client is the one to which the transaction was submitted.
         """
         self._delegate = delegate
+        self._config = config
 
     @property
     def delegate(self):
         return self._delegate
 
+    @property
+    def config(self):
+        return self._config
+
+    @staticmethod
+    def _create_temporary_key_file():
+        """
+        A useful helper method for derived classes.  Remember to close the
+        returned temporary file so that it gets deleted.
+
+        Returns:
+            A NamedTemporaryFile object.
+        """
+        key_file = NamedTemporaryFile()
+        private_key = pybitcointools.random_key()
+        encoded_key = pybitcointools.encode_privkey(private_key, 'wif')
+        key_file.write(encoded_key)
+        key_file.write('\n')
+        key_file.flush()
+
+        return key_file
+
     def on_will_start(self):
         """
         Called by the simulator to let the workload generator do any final
         setup before the simulator begins.
+
+        Args:
+            base_validator: The base validator used to prime the simulator.
 
         Returns:
             Nothing
@@ -70,7 +101,9 @@ class SawtoothWorkload(object):
     def on_validator_discovered(self, url):
         """
         Called by the simulator to let the workload generator know that it has
-        discovered a new validator in the network.
+        discovered a new validator in the network.  Note that the simulator
+        will begin calling this before on_will_start to let the workload
+        generator know about the initial list of clients.
 
         Args:
             url: The URL for the validator
