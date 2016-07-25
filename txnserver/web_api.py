@@ -176,7 +176,7 @@ class RootPage(Resource):
                             request.path, traceback.format_exc(20))
                 return self.error_response(
                     request, http.BAD_REQUEST,
-                    'unabled to decode incoming request {0}',
+                    'unable to decode incoming request {0}',
                     data)
 
             # process /command

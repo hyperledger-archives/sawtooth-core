@@ -86,7 +86,7 @@ class ValidatorManager(object):
 
         self.config['LogDirectory'] = self._data_dir
         self._log_file = os.path.join(self._data_dir,
-                                      "{}.log".format(self.name))
+                                      "{}-debug.log".format(self.name))
 
         if os.path.exists(self._log_file):  # delete existing log file
             os.remove(self._log_file)
@@ -112,18 +112,24 @@ class ValidatorManager(object):
                         "{}-{}".format(self.name,
                                        os.path.basename(v['filename'])))
                     v['filename'] = filename
+                    # pick the last log file... not sure
+                    # how we can pick a better one with out completely
+                    # parsing the log config or adding our own entry
+                    self._log_file = filename
 
             log_config_file = os.path.join(self._data_dir,
                                            "{}-log-config.js"
                                            .format(self.name))
             with open(log_config_file, 'w') as fp:
-                json.dump(self.log_config, fp)
+                json.dump(self.log_config, fp, sort_keys=True,
+                          indent=4, separators=(',', ': '))
             self.config['LogConfigFile'] = log_config_file
 
         config_file_name = "{}.json".format(self.name)
         self._config_file = os.path.join(self._data_dir, config_file_name)
         with open(self._config_file, 'w') as fp:
-            json.dump(self.config, fp)
+            json.dump(self.config, fp, sort_keys=True,
+                      indent=4, separators=(',', ': '))
 
         args = [
             sys.executable,  # Fix for windows, where script are not executable
@@ -175,8 +181,8 @@ class ValidatorManager(object):
         content = response.read()
         headers = response.info()
         response.close()
-        if ('Content-Type' not in headers
-                or headers['Content-Type'] != 'application/json'):
+        if ('Content-Type' not in headers or
+                headers['Content-Type'] != 'application/json'):
             return False
 
         id_list = json.loads(content)
@@ -246,14 +252,16 @@ class ValidatorManager(object):
             if self._handle.returncode:
                 raise ValidatorManagerException("validator has exited")
             else:
-                if "PYCHARM_HOSTED" not in os.environ:
-                    err = os.stat(self._stderr_file)
-                    if err.st_size > 0:
-                        with open(self._stderr_file, 'r') as fd:
-                            lines = fd.readlines()
-                            raise ValidatorManagerException(
-                                "stderr has output: line 1 of {}: {}".format(
-                                    len(lines), lines[0]))
+                err = os.stat(self._stderr_file)
+                if err.st_size > 0:
+                    with open(self._stderr_file, 'r') as fd:
+                        lines = fd.readlines()
+                        for line in lines:
+                            if not (line.startswith('pydev') or
+                                    line.strip() == ''):
+                                raise ValidatorManagerException(
+                                    "stderr has output: line 1 of {}: {}"
+                                    .format(len(lines), lines[0]))
                     self._check_log_error()
         else:
             raise ValidatorManagerException("validator not running")
@@ -312,21 +320,27 @@ class ValidatorManager(object):
 
         return "{}: {} {} {} {} {}".format(self.id, st, out, err, log, errors)
 
-    def dump_config(self):
+    def dump_config(self, out=sys.stdout):
         with open(self._config_file, 'r') as fin:
-            print fin.read()
+            print >>out, fin.read()
 
-    def dump_log(self):
+    def dump_log(self, out=sys.stdout):
         if os.path.exists(self._log_file):
             with open(self._log_file, 'r') as fin:
-                print fin.read()
+                print >>out, fin.read()
+                if fin.tell() == 0:
+                    print >>out, '<empty>'
 
-    def dump_stdout(self):
+    def dump_stdout(self, out=sys.stdout):
         if os.path.exists(self._stdout_file):
             with open(self._stdout_file, 'r') as fin:
-                print fin.read()
+                print >>out, fin.read()
+                if fin.tell() == 0:
+                    print >>out, '<empty>'
 
-    def dump_stderr(self):
+    def dump_stderr(self, out=sys.stdout):
         if os.path.exists(self._stderr_file):
             with open(self._stderr_file, 'r') as fin:
-                print fin.read()
+                print >>out, fin.read()
+                if fin.tell() == 0:
+                    print >>out, '<empty>'
