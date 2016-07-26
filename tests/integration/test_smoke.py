@@ -317,3 +317,9 @@ class TestSmoke(unittest.TestCase):
                            static_network=network,
                            vnm_timeout=240, txn_timeout=240,
                            n_keys=100, n_runs=1)
+
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+    def test_intkey_load_dev_mode(self):
+        cfg = defaultValidatorConfig.copy()
+        cfg['LedgerType'] = 'dev_mode'
+        self._run_int_load(cfg, 1, "TestSmokeResultsDevMode")
