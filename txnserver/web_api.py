@@ -38,6 +38,7 @@ from journal.messages import transaction_message
 from txnintegration.utils import PlatformStats
 from txnserver.config import parse_listen_directives
 
+from sawtooth.exceptions import InvalidTransactionError
 
 logger = logging.getLogger(__name__)
 
@@ -293,16 +294,29 @@ class RootPage(Resource):
                 # new temporary state
                 mystore = tempstoremap.get_transaction_store(
                     mytxn.TransactionTypeName)
-                if not mytxn.is_valid(mystore):
-                    logger.info('submitted transaction is not valid %s; %s',
+                try:
+                    mytxn.check_valid(mystore)
+                except InvalidTransactionError as e:
+                    logger.info('submitted transaction fails transaction '
+                                'family validation check: %s; %s',
                                 request.path, mymsg.dump())
                     return self.error_response(
                         request, http.BAD_REQUEST,
-                        'enclosed transaction is not valid {0}',
+                        "enclosed transaction failed transaction "
+                        "family validation check: {}".format(str(e)),
                         data)
-                else:
-                    logger.info('transaction %s is valid',
-                                msg.Transaction.Identifier)
+                except:
+                    logger.info('submitted transaction is '
+                                'not valid %s; %s; %s',
+                                request.path, mymsg.dump(),
+                                traceback.format_exc(20))
+                    return self.error_response(
+                        request, http.BAD_REQUEST,
+                        "enclosed transaction is not valid",
+                        data)
+
+                logger.info('transaction %s is valid',
+                            msg.Transaction.Identifier)
 
             # and finally execute the associated method
             # and send back the results
