@@ -32,19 +32,19 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SawtoothWorkloadSimulator(object):
-    def __init__(self, opts):
+    def __init__(self, config):
         self._loop = None
         self._pending_transactions = deque()
-        self._base_validator = opts.url
+        self._base_validator = config.get('Simulator', 'url')
         self._validators = []
 
         # Dynamically load the workload class' module and create a workload
         # generator
-        components = opts.workload.split('.')
+        components = config.get('Simulator', 'workload').split('.')
         module = __import__('.'.join(components[:-1]),
                             fromlist=[components[-1]])
         workload = getattr(module, components[-1])
-        self._workload = workload(delegate=self)
+        self._workload = workload(delegate=self, config=config)
 
         # Prime the workload generator with the validators we currently know
         # about
@@ -58,18 +58,19 @@ class SawtoothWorkloadSimulator(object):
         # provided rate is number of transactions per minute, so we calculate
         # the number of seconds between transactions and that becomes the
         # loop rate.
-        LOGGER.info('Simulator will generate %s transaction(s)/minute',
-                    opts.rate)
+        rate = config.getint('Simulator', 'rate')
+        LOGGER.info('Simulator will generate %d transaction(s)/minute', rate)
         loop = task.LoopingCall(self._step)
-        deferred = loop.start(60.0 / float(opts.rate), now=False)
+        deferred = loop.start(60.0 / rate, now=False)
         deferred.addCallback(self._loop_cleanup)
 
         # Set up the looping call for discovering validators.  The provided
         # rate is in minutes between checks, so convert to seconds.
-        LOGGER.info('Simulator will discover validators every %s minute(s)',
-                    opts.discover)
+        discover = config.getint('Simulator', 'discover')
+        LOGGER.info('Simulator will discover validators every %d minute(s)',
+                    discover)
         loop = task.LoopingCall(self._discover_validators)
-        loop.start(opts.discover * 60, now=False)
+        loop.start(discover * 60, now=False)
 
     def run(self):
         # pylint: disable=no-self-use
