@@ -34,9 +34,8 @@ from sawtooth.client import LedgerWebClient
 
 logger = logging.getLogger(__name__)
 
-ENABLE_INTEGRATION_TESTS = False
-if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
-    ENABLE_INTEGRATION_TESTS = True
+ENABLE_INTEGRATION_TESTS = True \
+    if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1" else False
 
 
 class IntKeyLoadTest(object):
@@ -67,23 +66,24 @@ class IntKeyLoadTest(object):
 
     def _wait_for_transaction_commits(self):
         to = TimeOut(self.Timeout)
-        txnCnt = len(self.transactions)
-        with Progress("Waiting for %s transactions to commit" % (txnCnt)) as p:
-            while not to() and txnCnt > 0:
+        txn_cnt = len(self.transactions)
+        with Progress("Waiting for %s transactions to commit" % (txn_cnt)) \
+                as p:
+            while not to() and txn_cnt > 0:
                 p.step()
                 time.sleep(1)
-                txnCnt = self._update_uncommitted_transactions()
+                txn_cnt = self._update_uncommitted_transactions()
 
-        if txnCnt != 0:
+        if txn_cnt != 0:
             if len(self.transactions) != 0:
                 print "Uncommitted transactions: ", self.transactions
             raise Exception("{} transactions failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
+                txn_cnt, to.WaitTime))
 
-    def setup(self, urls, numKeys):
+    def setup(self, urls, num_keys):
         self.localState = {}
         self.transactions = []
-        self.lastKeyTxn = {}
+        self.last_key_txn = {}
         self.clients = []
         self.state = IntegerKeyState(urls[0])
 
@@ -95,7 +95,7 @@ class IntKeyLoadTest(object):
                     p.step()
                 except MessageException:
                     logger.warn("Unable to connect to Url: %s ", u)
-            if self.clients == []:
+            if len(self.clients) == 0:
                 return
 
         # add check for if a state already exists
@@ -106,61 +106,72 @@ class IntKeyLoadTest(object):
                 self.localState[k] = v
 
         with Progress("Creating initial key values") as p:
-            for n in range(1, numKeys + 1):
+            for n in range(1, num_keys + 1):
                 n = str(n)
                 if n not in keys:
                     c = self._get_client()
                     v = random.randint(5, 1000)
                     self.localState[n] = v
-                    txnid = c.set(n, v, txndep=None)
-                    if txnid is None:
+                    txn_id = c.set(n, v, txndep=None)
+                    if txn_id is None:
                         raise Exception("Failed to set {} to {}".format(n, v))
-                    self.transactions.append(txnid)
-                    self.lastKeyTxn[n] = txnid
+                    self.transactions.append(txn_id)
+                    self.last_key_txn[n] = txn_id
 
         self._wait_for_transaction_commits()
 
     def run(self, rounds=1):
-        if self.clients == []:
+        if len(self.clients) == 0:
             return
 
         self.state.fetch()
         keys = self.state.State.keys()
 
         for r in range(1, rounds + 1):
-            for c in self.clients:
-                c.CurrentState.fetch()
-            print "Round {}".format(r)
-            for k in keys:
-                c = self._get_client()
-                self.localState[k] += 2
-                if k in self.lastKeyTxn:
-                    txndep = self.lastKeyTxn[k]
-                else:
-                    txndep = None
-                txnid = c.inc(k, 2, txndep)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to inc key:{} value:{} by 2".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                self.lastKeyTxn[k] = txnid
-            for k in keys:
-                c = self._get_client()
-                self.localState[k] -= 1
-                txndep = self.lastKeyTxn[k]
-                txnid = c.dec(k, 1, txndep)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to dec key:{} value:{} by 1".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                self.lastKeyTxn[k] = txnid
+            with Progress("Updating clients state") as p:
+                for c in self.clients:
+                    c.CurrentState.fetch()
+                    p.step()
+
+            cnt = 0
+            with Progress("Round {}".format(r)) as p:
+                for k in keys:
+                    c = self._get_client()
+                    self.localState[k] += 2
+                    if k in self.last_key_txn:
+                        txn_dep = self.last_key_txn[k]
+                    else:
+                        txn_dep = None
+                    txn_id = c.inc(k, 2, txn_dep)
+                    if txn_id is None:
+                        raise Exception(
+                            "Failed to inc key:{} value:{} by 2".format(
+                                k, self.localState[k]))
+                    self.transactions.append(txn_id)
+                    self.last_key_txn[k] = txn_id
+                    cnt += 1
+                    if cnt % 10 == 0:
+                        p.step()
+
+                for k in keys:
+                    c = self._get_client()
+                    self.localState[k] -= 1
+                    txn_dep = self.last_key_txn[k]
+                    txn_id = c.dec(k, 1, txn_dep)
+                    if txn_id is None:
+                        raise Exception(
+                            "Failed to dec key:{} value:{} by 1".format(
+                                k, self.localState[k]))
+                    self.transactions.append(txn_id)
+                    self.last_key_txn[k] = txn_id
+                    cnt += 1
+                    if cnt % 10 == 0:
+                        p.step()
 
             self._wait_for_transaction_commits()
 
     def validate(self):
-        if self.clients == []:
+        if len(self.clients) == 0:
             logger.warn("Unable to connect to Validators, No Clients created")
             return
         self.state.fetch()
@@ -222,7 +233,7 @@ class TestSmoke(unittest.TestCase):
             else:
                 print "Fetching Urls of Running Validators"
                 # TEST_VALIDATORS_RUNNING is a list of validators urls
-                # seperated by commas.
+                # separated by commas.
                 # e.g. 'http://localhost:8800,http://localhost:8801'
                 urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
             print "Testing transaction load."
@@ -284,6 +295,7 @@ class TestSmoke(unittest.TestCase):
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_intkey_load_lottery(self):
         cfg = defaultValidatorConfig.copy()
+        cfg['LedgerType'] = 'lottery'
         self._run_int_load(cfg, 5, "TestSmokeResultsLottery")
 
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
@@ -294,7 +306,7 @@ class TestSmoke(unittest.TestCase):
         cfg = defaultValidatorConfig.copy()
         cfg['LedgerType'] = 'quorum'
         cfg['TopologyAlgorithm'] = "Quorum"
-        cfg["Minimumconnectivity"] = q
+        cfg["MinimumConnectivity"] = q
         cfg["TargetConnectivity"] = q
         cfg['VotingQuorumTargetSize'] = q
         cfg['Nodes'] = network.get_nodes()

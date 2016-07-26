@@ -56,24 +56,25 @@ class IntKeyLoadTest(object):
 
     def _wait_for_transaction_commits(self):
         to = TimeOut(900)
-        txnCnt = len(self.transactions)
-        with Progress("Waiting for %s transactions to commit" % (txnCnt)) as p:
-            while not to() and txnCnt > 0:
+        txn_cnt = len(self.transactions)
+        with Progress("Waiting for %s transactions to commit" % (txn_cnt)) \
+                as p:
+            while not to() and txn_cnt > 0:
                 p.step()
                 time.sleep(1)
                 self._has_uncommitted_transactions()
-                txnCnt = len(self.transactions)
+                txn_cnt = len(self.transactions)
 
-        if txnCnt != 0:
+        if txn_cnt != 0:
             if len(self.transactions) != 0:
                 print "Uncommitted transactions: ", self.transactions
             raise Exception("{} transactions failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
+                txn_cnt, to.WaitTime))
 
     def setup(self, urls):
-        self.GlobalStore = {}
-        self.RunningUrlList = urls
-        self.GlobalKeys = []
+        self.global_store = {}
+        self.running_url_list = urls
+        self.global_keys = []
         self.transactions = []
         self.lastKeyTxn = {}
         self.clients = []
@@ -81,7 +82,7 @@ class IntKeyLoadTest(object):
 
         with Progress("Creating clients") as p:
             print "Creating clients"
-            for u in self.RunningUrlList:
+            for u in self.running_url_list:
                 try:
                     key = generate_private_key()
                     self.clients.append(IntegerKeyClient(u, keystring=key))
@@ -94,37 +95,37 @@ class IntKeyLoadTest(object):
             return
         prev = ""
         self.state.fetch()
-        self.GlobalKeys = self.state.State.keys()
+        self.global_keys = self.state.State.keys()
         for k, v in self.state.State.iteritems():
-            self.GlobalStore[k] = v
+            self.global_store[k] = v
 
         while count > 0:
             count -= 1
             c = self._get_client()
             c.CurrentState.fetch()
-            k = str(random.randint(0, len(self.GlobalKeys) + 1))
+            k = str(random.randint(0, len(self.global_keys) + 1))
             # Stops the inc of a key that was just set
             while k == prev:
-                k = str(random.randint(0, len(self.GlobalKeys) + 1))
-            if k in self.GlobalKeys:
-                self.GlobalStore[k] += 1
+                k = str(random.randint(0, len(self.global_keys) + 1))
+            if k in self.global_keys:
+                self.global_store[k] += 1
                 if k in self.lastKeyTxn:
-                    txndep = self.lastKeyTxn[k]
+                    txn_dep = self.lastKeyTxn[k]
                 else:
-                    txndep = None
-                txnid = c.inc(k, 1, txndep)
+                    txn_dep = None
+                txnid = c.inc(k, 1, txn_dep)
                 if txnid is None:
                     raise Exception(
                         "Failed to inc key:{} value:{} by 1".format(
-                            k, self.GlobalStore[k]))
+                            k, self.global_store[k]))
                 self.transactions.append(txnid)
                 self.lastKeyTxn[k] = txnid
                 time.sleep(interval)
 
             else:
-                self.GlobalKeys += [k]
+                self.global_keys += [k]
                 v = random.randint(5, 1000)
-                self.GlobalStore[k] = v
+                self.global_store[k] = v
                 txnid = c.set(k, v, txndep=None)
                 prev = k
                 if txnid is None:
@@ -142,10 +143,10 @@ class IntKeyLoadTest(object):
         self.state.fetch()
         print "Validating IntegerKey State"
         for k, v in self.state.State.iteritems():
-            if self.GlobalStore[k] != v:
+            if self.global_store[k] != v:
                 print "key {} is {} expected to be {}".format(
                     k, v, self.localState[k])
-            assert self.GlobalStore[k] == v
+            assert self.global_store[k] == v
 
 
 class TestIntKey(unittest.TestCase):
