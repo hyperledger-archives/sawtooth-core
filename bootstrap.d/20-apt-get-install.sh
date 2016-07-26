@@ -16,6 +16,7 @@ apt-get install -y -q \
     python-setuptools \
     python-pip \
     python-enum \
+    python-yaml \
     g++ \
     swig3.0 \
     libjson0 \
