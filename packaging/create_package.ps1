@@ -2,6 +2,8 @@ param([string] $build_dir ="c:\project",
       [string] $build_version=$(Get-Date -format s))
 $ErrorActionPreference = "Stop"
 
+. $PSScriptRoot\functions.ps1
+
 # Necessary environment variables
 $env:PYTHONPATH += ";C:\Program Files (x86)\Intel\sawtooth-validator\lib\python\"
 $env:PATH += ";c:\swig;c:\python27;C:\Program Files (x86)\NSIS"
@@ -32,6 +34,7 @@ Add-Content ` 'C:\Program Files (x86)\Intel\sawtooth-validator\versions.txt' `
 cd $build_dir\sawtooth-core
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
+Git-Version
 if (test-path $build_dir\sawtooth-core\deps ) {
     remove-item -recurse -force $build_dir\sawtooth-core\deps
     if ($lastexitcode -ne 0) { exit 1 }
@@ -49,6 +52,7 @@ if ($lastexitcode -ne 0) { exit 1 }
 cd $build_dir\sawtooth-validator
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
+Git-Version
 python setup.py build
 if ($lastexitcode -ne 0) { exit 1 }
 iex $build_command
