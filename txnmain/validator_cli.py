@@ -52,6 +52,7 @@ def local_main(config, windows_service=False, daemonized=False):
     from twisted.internet import reactor
     from txnserver import lottery_validator
     from txnserver import quorum_validator
+    from txnserver import dev_mode_validator
     from txnserver import web_api
     from gossip.gossip_core import GossipException
 
@@ -68,6 +69,10 @@ def local_main(config, windows_service=False, daemonized=False):
                 windows_service=windows_service)
         elif ledgertype == 'quorum':
             validator = quorum_validator.QuorumValidator(
+                config,
+                windows_service=windows_service)
+        elif ledgertype == 'dev_mode':
+            validator = dev_mode_validator.DevModeValidator(
                 config,
                 windows_service=windows_service)
         else:
@@ -392,9 +397,9 @@ def main(args, windows_service=False):
 
 
 def main_wrapper():
-    if (os.name == "nt" and len(sys.argv) > 1
-            and sys.argv[1] in ['start', 'stop', 'install', 'remove',
-                                '--startup=auto']):
+    if (os.name == "nt" and len(sys.argv) > 1 and
+            sys.argv[1] in ['start', 'stop', 'install', 'remove',
+                            '--startup=auto']):
         win32serviceutil.HandleCommandLine(SawtoothValidatorService)
     else:
         main(sys.argv[1:])
