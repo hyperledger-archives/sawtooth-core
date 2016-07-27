@@ -225,12 +225,6 @@ class Validator(object):
         """
         self.Ledger = None
 
-    def post_initialize_ledger(self):
-        """
-        Run optional ledger-specific post-initialization tasks
-        """
-        pass
-
     def add_transaction_family(self, txnfamily):
         txnfamily.register_transaction_types(self.Ledger)
 
@@ -251,7 +245,6 @@ class Validator(object):
         # if this isn't the genesis ledger then we need to connect
         # this node into the validator network
         self.initialize_ledger_connection()
-        self.post_initialize_ledger()
 
     def handle_node_disconnect_event(self, nodeid):
         """
