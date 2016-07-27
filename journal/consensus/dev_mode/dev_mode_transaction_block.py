@@ -62,7 +62,7 @@ class DevModeTransactionBlock(transaction_block.TransactionBlock):
             the transaction block type.
         DevModeTransactionBlock.MessageType (type): The dev_mode transaction
             block message class.
-        DevModeTransactionBlock.WaitTimer (wait_timer.WaitTimer): The wait
+        DevModeTransactionBlock.WaitTimer (poet.wait_timer.WaitTimer): The wait
             timer for the block.
     """
     TransactionBlockTypeName = '/TransactionBlock/TransactionBlock'
