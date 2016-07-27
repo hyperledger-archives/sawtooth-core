@@ -475,10 +475,6 @@ The properties of a Liability include:
    the identifier of the participant who registered the
    account object
 
-:creator:
-   the identifier of the participant who registered the
-   account object
-
 :account:
    the identifier of the account used to scope the holding
 
