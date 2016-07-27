@@ -1,4 +1,5 @@
-param([string] $build_dir ="c:\project")
+param([string] $build_dir ="c:\project",
+      [string] $build_version=$(Get-Date -format s))
 $ErrorActionPreference = "Stop"
 
 # Necessary environment variables
@@ -7,7 +8,7 @@ $env:PATH += ";c:\swig;c:\python27;C:\Program Files (x86)\NSIS"
 
 # this makes running commands easier
 $build_command = "python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'"
-$package_command = "makensis 'C:\Program Files (x86)\Intel\sawtooth-validator.nsi'"
+$package_command = "makensis /DVERSION=$build_version 'C:\Program Files (x86)\Intel\sawtooth-validator.nsi'"
 
 if (test-path "C:\Program Files (x86)\Intel\sawtooth-validator\") {
     remove-item -recurse -force "C:\Program Files (x86)\Intel\sawtooth-validator\"
@@ -22,6 +23,9 @@ if (test-path "C:\Program Files (x86)\Intel\sawtooth-validator.exe") {
 }
 
 mkdir 'C:\Program Files (x86)\Intel\sawtooth-validator\lib\python'
+
+Add-Content ` 'C:\Program Files (x86)\Intel\sawtooth-validator\versions.txt' `
+            "Build number: $build_version"
 
 # build and install the SawtoothLake packages
 
