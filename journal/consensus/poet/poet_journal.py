@@ -70,6 +70,11 @@ class PoetJournal(journal_core.Journal):
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
                                        WaitTimer.certificate_sample_length)
 
+        if "TieBreaker" in kwargs:
+            self.TieBreaker = kwargs["TieBreaker"]
+        else:
+            self.TieBreaker = "Simple"
+
     def build_transaction_block(self, force=False):
         """Builds a transaction block that is specific to this particular
         consensus mechanism, in this case we build a block that contains a
@@ -99,7 +104,8 @@ class PoetJournal(journal_core.Journal):
                     self.MostRecentCommittedBlockID[:8], len(txnlist))
 
         # Create a new block from all of our pending transactions
-        nblock = poet_transaction_block.PoetTransactionBlock()
+        nblock = poet_transaction_block.PoetTransactionBlock({"TieBreaker":
+                                                             self.TieBreaker})
         nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
             + 1 if self.MostRecentCommittedBlock else 0
         nblock.PreviousBlockID = self.MostRecentCommittedBlockID
