@@ -752,12 +752,15 @@ class Journal(gossip_core.Gossip):
             blockid (UUID) -- head of the chain to commit
             forkid (UUID) -- point where the fork occurred
         """
-        if blockid == forkid:
-            return
-
-        block = self.BlockStore[blockid]
-        self._commitblockchain(block.PreviousBlockID, forkid)
-        self._commitblock(block)
+        chain = []
+        b_id = blockid
+        while b_id != forkid:
+            block = self.BlockStore[b_id]
+            chain.append(block)
+            b_id = block.PreviousBlockID
+        chain.reverse()
+        for block in chain:
+            self._commitblock(block)
 
     def _commitblock(self, tblock):
         """
