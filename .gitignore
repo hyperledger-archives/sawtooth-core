@@ -2,3 +2,4 @@
 /cache/
 conf-local.sh
 bashrc-local
+vagrant.local.yaml

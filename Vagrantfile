@@ -1,5 +1,15 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
+require 'yaml'
+
+
+box = "ubuntu/trusty64"
+forward_ports = true
+if File.file?('vagrant.local.yaml')
+    conf = YAML.load_file 'vagrant.local.yaml'
+    box = conf['vagrant'].fetch('box', box)
+    forward_ports = conf['vagrant'].fetch('forward_ports', forward_ports)
+end
 
 VAGRANTFILE_API_VERSION = "2"
 
@@ -41,18 +51,20 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     v.cpus = 2
   end
 
-  config.vm.box = "ubuntu/trusty64"
-  #config.vm.box = "bento/opensuse-13.2"
+  config.vm.box = box
 
-  config.vm.network "forwarded_port", guest: 8800, host: 8800
-  config.vm.network "forwarded_port", guest: 8900, host: 8900
+  puts config.vm.box
 
-  # rethinkdb
-  config.vm.network "forwarded_port", guest: 18080, host: 18080
+  if forward_ports
+      config.vm.network "forwarded_port", guest: 8800, host: 8800
+      config.vm.network "forwarded_port", guest: 8900, host: 8900
 
-  # nodejs
-  config.vm.network "forwarded_port", guest: 3000, host: 3000
+      # rethinkdb
+      config.vm.network "forwarded_port", guest: 18080, host: 18080
 
+      # nodejs
+      config.vm.network "forwarded_port", guest: 3000, host: 3000
+  end
   config.vm.provision :shell, path: "bootstrap.sh"
 
   config.vm.synced_folder "../", "/project"
