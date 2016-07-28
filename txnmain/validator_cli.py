@@ -383,7 +383,8 @@ def main(args, windows_service=False):
 
     keep_fds = []
     for handler in logging.getLogger().handlers:
-        keep_fds.append(handler.stream.fileno())
+        if hasattr(handler, 'stream'):
+            keep_fds.append(handler.stream.fileno())
 
     if cfg.get("Daemonize", False):
         daemon = Daemonize(
