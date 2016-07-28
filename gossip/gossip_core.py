@@ -407,7 +407,9 @@ class Gossip(object, DatagramProtocol):
             return False
 
         try:
-            sentbytes = self.transport.write(msg, peer.NetAddress)
+            host, port = peer.NetAddress
+            ip = socket.gethostbyname(host)
+            sentbytes = self.transport.write(msg, (ip, port))
         except socket.error as serr:
             if serr.errno == errno.EWOULDBLOCK:
                 logger.error('outbound queue is full, dropping message to %s',
