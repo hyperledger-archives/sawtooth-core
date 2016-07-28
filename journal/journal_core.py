@@ -561,8 +561,15 @@ class Journal(gossip_core.Gossip):
         """
         assert tblock.Status == transaction_block.Status.valid
 
-        self._commitblock(tblock)
-        self.PendingTransactionBlock = self.build_transaction_block()
+        pending = self.PendingTransactionBlock
+        self.PendingTransactionBlock = None
+        try:
+            self._commitblock(tblock)
+            self.PendingTransactionBlock = self.build_transaction_block()
+        except Exception as e:
+            logger.error("Error advancing block chain: %s", e)
+            self.PendingTransactionBlock = pending
+            raise
 
     def handle_fork(self, tblock):
         """Handle the case where we are attempting to commit a block
@@ -572,46 +579,56 @@ class Journal(gossip_core.Gossip):
             tblock (Transaction.TransactionBlock): A disconnected block.
         """
 
-        assert tblock.Status == transaction_block.Status.valid
+        pending = self.PendingTransactionBlock
+        self.PendingTransactionBlock = None
+        try:
+            assert tblock.Status == transaction_block.Status.valid
 
-        logger.info(
-            'received a disconnected block %s from %s with previous id %s, '
-            'expecting %s',
-            tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
-            tblock.PreviousBlockID[:8], self.MostRecentCommittedBlockID[:8])
+            logger.info(
+                'received a disconnected block %s from %s with previous id %s,'
+                ' expecting %s',
+                tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
+                tblock.PreviousBlockID[:8],
+                self.MostRecentCommittedBlockID[:8])
 
-        # First see if the chain rooted in tblock is the one we should use, if
-        # it is not, then we are building on the correct block and nothing
-        # needs to change
+            # First see if the chain rooted in tblock is the one we should use,
+            # if it is not, then we are building on the correct block and
+            # nothing needs to change
 
-        assert self.MostRecentCommittedBlockID != common.NullIdentifier
-        if cmp(tblock, self.MostRecentCommittedBlock) < 0:
-            logger.info('existing chain is the valid one')
-            return
+            assert self.MostRecentCommittedBlockID != common.NullIdentifier
+            if cmp(tblock, self.MostRecentCommittedBlock) < 0:
+                logger.info('existing chain is the valid one')
+                self.PendingTransactionBlock = pending
+                return
 
-        logger.info('new chain is the valid one, replace the current chain')
+            logger.info('new chain is the valid one, replace the current '
+                        'chain')
 
-        # now find the root of the fork, first handle the common case of
-        # not looking very deeply for the common block, then handle the
-        # expensive case of searching the entire chain
-        forkid = self._findfork(tblock, 5)
-        if not forkid:
-            forkid = self._findfork(tblock, 0)
+            # now find the root of the fork, first handle the common case of
+            # not looking very deeply for the common block, then handle the
+            # expensive case of searching the entire chain
+            fork_id = self._findfork(tblock, 5)
+            if not fork_id:
+                fork_id = self._findfork(tblock, 0)
 
-        assert forkid
+            assert fork_id
 
-        # at this point we have a new chain that is longer than the current
-        # one, need to move the blocks in the current chain that follow the
-        # fork into the orphaned pool and then move the blocks from the new
-        # chain into the committed pool and finally rebuild the global store
+            # at this point we have a new chain that is longer than the current
+            # one, need to move the blocks in the current chain that follow the
+            # fork into the orphaned pool and then move the blocks from the new
+            # chain into the committed pool and finally rebuild the global
+            # store
 
-        # move the previously committed blocks into the orphaned list
-        self._decommitblockchain(forkid)
+            # move the previously committed blocks into the orphaned list
+            self._decommitblockchain(fork_id)
 
-        # move the new blocks from the orphaned list to the committed list
-        self._commitblockchain(tblock.Identifier, forkid)
-        self.PendingTransactionBlock = self.build_transaction_block()
-
+            # move the new blocks from the orphaned list to the committed list
+            self._commitblockchain(tblock.Identifier, fork_id)
+            self.PendingTransactionBlock = self.build_transaction_block()
+        except Exception as e:
+            logger.error("Error resolving fork: %s", e)
+            self.PendingTransactionBlock = pending
+            raise
     #
     # UTILITY FUNCTIONS
     #
