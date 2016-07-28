@@ -151,8 +151,7 @@ class Journal(gossip_core.Gossip):
         self.InvalidBlockIDs = set()
 
         # Set up the global store and transaction handlers
-        self.GlobalStoreMap = GlobalStoreManager(
-            shelvedir + "/" + str(self.LocalNode) + "_gs", shelveflag)
+        self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_gs", shelveflag)
 
         # initialize the ledger stats data structures
         self._initledgerstats()
