@@ -46,14 +46,22 @@ public:
     std::string serialize(void);
     bool deserialize(std::string encoded);
 
+
 public:
     double duration;
     double local_mean;
     std::string previous_certificate_id;
     double request_time;
+    int sequence_id;
     std::string validator_address;
 
     std::string signature;
+
+private:
+    static int sequence_id_counter;
+public:
+    static int get_current_sequence_id();
+
 };
 
 WaitTimer* create_wait_timer(std::string validator_address,
