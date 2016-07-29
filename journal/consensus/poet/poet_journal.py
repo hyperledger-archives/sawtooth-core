@@ -75,13 +75,13 @@ class PoetJournal(journal_core.Journal):
         else:
             self.TieBreaker = "Simple"
 
-    def build_transaction_block(self, force=False):
+    def build_transaction_block(self, genesis=False):
         """Builds a transaction block that is specific to this particular
         consensus mechanism, in this case we build a block that contains a
         wait certificate.
 
         Args:
-            force (boolean): Whether to force creation of the initial
+            genesis (boolean): Whether to force creation of the initial
                 block.
 
         Returns:
@@ -95,7 +95,7 @@ class PoetJournal(journal_core.Journal):
         # then just return
         txnlist = self._preparetransactionlist(
             self.MaximumTransactionsPerBlock)
-        if len(txnlist) < self.MinimumTransactionsPerBlock and not force:
+        if len(txnlist) < self.MinimumTransactionsPerBlock and not genesis:
             logger.debug('no transactions found, no block constructed')
             return None
 
@@ -116,6 +116,10 @@ class PoetJournal(journal_core.Journal):
             self._build_certificate_list(nblock))
 
         self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
+
+        if genesis:
+            nblock.AggregateLocalMean = nblock.WaitTimer.local_mean
+
         self.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
         # must put a cap on the transactions in the block
         if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:

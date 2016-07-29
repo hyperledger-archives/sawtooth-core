@@ -552,14 +552,14 @@ class Journal(gossip_core.Gossip):
                                  exceptions=exceptions,
                                  initialize=False)
 
-    def build_transaction_block(self, force=False):
+    def build_transaction_block(self, genesis=False):
         """Builds the next transaction block for the ledger.
 
         Note:
             This method will generally be overridden by derived classes.
 
         Args:
-            force (bool): Whether to force the creation of the
+            genesis (bool): Whether to force the creation of the
                 initial block.
         """
 
