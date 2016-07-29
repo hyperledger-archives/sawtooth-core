@@ -14,144 +14,45 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import time
+from sawtooth.client import SawtoothClient
 
-from twisted.web import http
-
-from gossip import node, signed_object
-from txnintegration.integer_key_communication import IntegerKeyCommunication
-from txnintegration.integer_key_communication import MessageException
-from txnintegration.integer_key_state import IntegerKeyState
 from ledger.transaction import integer_key
 
 logger = logging.getLogger(__name__)
 
 
-class IntegerKeyClient(IntegerKeyCommunication):
+class IntegerKeyClient(SawtoothClient):
     def __init__(self,
                  baseurl,
                  name='IntegerKeyClient',
                  keystring=None,
                  keyfile=None,
                  state=None):
-        super(IntegerKeyClient, self).__init__(baseurl)
-        self.LastTransaction = None
+        super(IntegerKeyClient, self).__init__(
+            base_url=baseurl,
+            name=name,
+            store_name="IntegerKeyTransaction",
+            keystring=keystring,
+            keyfile=keyfile)
 
-        self.CurrentState = state or IntegerKeyState(self.BaseURL)
-        self.CurrentState.fetch()
-
-        # set up the signing key
-        if keystring:
-            logger.debug("set signing key from string\n%s", keystring)
-            signingkey = signed_object.generate_signing_key(wifstr=keystring)
-        elif keyfile:
-            logger.debug("set signing key from file %s", keyfile)
-            signingkey = signed_object.generate_signing_key(
-                wifstr=open(keyfile, "r").read().strip())
-        else:
-            raise TypeError('expecting valid signing key, none provided')
-
-        identifier = signed_object.generate_identifier(signingkey)
-        self.LocalNode = node.Node(identifier=identifier,
-                                   signingkey=signingkey,
-                                   name=name)
+        # Compatibility shim until the integration and smoke tests get
+        # refactored.
+        self.waitforcommit = self.wait_for_commit
+        self.headrequest = self.get_transaction_status
 
     def _sendtxn(self, update, txndep=None, postmsg=True):
         """
-        Build a transaction for the update, wrap it in a message with all
-        of the appropriate signatures and post it to the validator
+        Compatibility shim until the integration and smoke tests get
+         refactored.
         """
+        minfo = {"Updates": [update.dump()]}
+        if txndep:
+            minfo["Dependencies"] = [txndep]
 
-        txn = integer_key.IntegerKeyTransaction()
-        txn.Updates = [update]
-
-        # if dependent transaction is not explicitly specified, then...
-        # add the last transaction submitted to ensure that the ordering
-        # in the journal matches the order in which we generated them
-        if txndep is None:
-            if self.LastTransaction:
-                txn.Dependencies = [self.LastTransaction]
-        else:
-            txn.Dependencies = [txndep]
-
-        update.Transaction = txn
-        txn.sign_from_node(self.LocalNode)
-        txnid = txn.Identifier
-
-        if not txn.is_valid(self.CurrentState.State):
-            logger.warn('transaction failed to apply')
-            return None
-
-        msg = integer_key.IntegerKeyTransactionMessage()
-        msg.Transaction = txn
-        msg.SenderID = self.LocalNode.Identifier
-        msg.sign_from_node(self.LocalNode)
-
-        if postmsg:
-            try:
-                logger.debug('Posting transaction: %s', txnid)
-                result = self.postmsg(msg.MessageType, msg.dump())
-
-            except MessageException:
-                return None
-
-            except:
-                logger.debug('message post failed for some unusual reason')
-                return None
-
-            # if there was no exception thrown
-            # then all transactions should return
-            # a value which is a dictionary
-            # with the message that was sent
-            assert result
-
-            # if the message was successfully posted,
-            # then save the transaction
-            # id for future dependencies this could be
-            # a problem if the transaction
-            # fails during application
-
-        # self.LastTransaction = txnid
-        if txndep is None:
-            self.LastTransaction = txnid
-        else:
-            self.LastTransaction = []
-
-        txn.apply(self.CurrentState.State)
-
-        return txnid
-
-    def waitforcommit(self, txnid=None, timetowait=5, iterations=12):
-        """
-        Wait until a specified transaction shows up in the ledger's committed
-        transaction list
-
-        :param id txnid: the transaction to wait for, the last transaction by
-            default
-        :param int timetowait: time to wait between polling the ledger
-        :param int iterations: number of iterations to wait before giving up
-        """
-
-        if not txnid:
-            txnid = self.LastTransaction
-        if not txnid:
-            logger.info('no transaction specified for wait')
-            return True
-
-        passes = 0
-        while True:
-            passes += 1
-            status = self.headrequest('/transaction/{0}'.format(txnid))
-
-            if status == http.NOT_FOUND and passes > iterations:
-                logger.warn('unknown transaction %s', txnid)
-                return False
-
-            if status == http.OK:
-                return True
-
-            logger.debug('waiting for transaction %s to commit', txnid)
-            time.sleep(timetowait)
+        return self.sendtxn(
+            txn_msg_type=integer_key.IntegerKeyTransactionMessage,
+            txn_type=integer_key.IntegerKeyTransaction,
+            minfo=minfo)
 
     def set(self, key, value, txndep=None, postmsg=True):
         """Creates an update object which sets the value associated with a key.

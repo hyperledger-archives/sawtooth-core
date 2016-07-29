@@ -47,7 +47,7 @@ class IntKeyLoadTest(object):
         # transaction.
         for c in self.clients:
             for t in self.transactions:
-                status = c.headrequest('/transaction/{0}'.format(t))
+                status = c.get_transaction_status(t)
                 # If the transaction has not been committed and we don't
                 # already have it in our list of uncommitted transactions
                 # then add it.
@@ -138,7 +138,7 @@ class IntKeyLoadTest(object):
 
         for r in range(0, rounds):
             for c in self.clients:
-                c.CurrentState.fetch()
+                c.fetch_state()
             print "Round {}".format(r)
             # for k in keys:
             starttime = time.clock()
