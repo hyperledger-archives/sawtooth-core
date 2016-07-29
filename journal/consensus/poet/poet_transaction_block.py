@@ -132,11 +132,11 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             # Criteria #1: if both blocks share the same previous block,
             # then the block with the smallest duration wins
             if self.PreviousBlockID == other.PreviousBlockID:
-                if self.WaitCertificate.Duration < \
-                        other.WaitCertificate.Duration:
+                if self.WaitCertificate.duration < \
+                        other.WaitCertificate.duration:
                     return 1
-                elif self.WaitCertificate.Duration > \
-                        other.WaitCertificate.Duration:
+                elif self.WaitCertificate.duration > \
+                        other.WaitCertificate.duration:
                     return -1
             # Criteria #2: if there is a difference between the immediate
             # ancestors then pick the chain with the highest aggregate
