@@ -1486,11 +1486,6 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
     cfg = get_mktplace_configuration(options.config, options_config, os_name,
                                      config_files_required)
 
-    if 'LogLevel' in cfg:
-        print >>sys.stderr, "LogLevel is no longer supported, use " \
-            "LogConfigFile instead"
-        sys.exit(1)
-
     # General options
     if options.set:
         for (k, v) in options.set:
