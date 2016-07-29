@@ -99,6 +99,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         else:
             self.TieBreaker = "Simple"
 
+        self.AggregateLocalMean = 0.0
+
     def __str__(self):
         return "{0}, {1}, {2}, {3:0.2f}, {4}".format(
             self.BlockNum, self.Identifier[:8], len(self.TransactionIDs),
