@@ -122,11 +122,6 @@ class QuorumJournal(Journal):
     # GENERAL JOURNAL API
     #
 
-    def post_initialize(self):
-        """currently no-op
-        """
-        pass
-
     def build_transaction_block(self, force=False):
         """Builds the next transaction block for the journal.
 

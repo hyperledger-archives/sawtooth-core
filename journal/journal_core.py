@@ -326,7 +326,6 @@ class Journal(gossip_core.Gossip):
                             'recomputing')
                 self.MostRecentCommittedBlockID = self.compute_chain_root()
 
-            self.post_initialize()
             return
 
         for txn in self.InitialTransactions:
@@ -336,9 +335,6 @@ class Journal(gossip_core.Gossip):
         for block in self.InitialBlockList:
             self.commit_transaction_block(block)
         self.InitialBlockList = None
-
-        # Let the subclasses handle their on post initialization
-        self.post_initialize()
 
         # generate a block, if none exists then generate and commit the root
         # block
@@ -353,15 +349,6 @@ class Journal(gossip_core.Gossip):
                 return
 
         logger.info('finished processing initial transactions and blocks')
-
-    def post_initialize(self):
-        """Called after initialization completes and before the initial
-        block is created.
-
-        Note:
-            This is intended for subclasses to specialize more easily.
-        """
-        pass
 
     def add_pending_transaction(self, txn):
         """Adds a transaction to the list of candidates for commit.
