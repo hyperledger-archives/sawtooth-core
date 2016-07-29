@@ -350,7 +350,7 @@ class Journal(gossip_core.Gossip):
 
         logger.info('finished processing initial transactions and blocks')
 
-    def add_pending_transaction(self, txn):
+    def add_pending_transaction(self, txn, prepend=False):
         """Adds a transaction to the list of candidates for commit.
 
         Args:
@@ -372,7 +372,13 @@ class Journal(gossip_core.Gossip):
         txn.Status = transaction.Status.pending
         self.TransactionStore[txn.Identifier] = txn
         if txn.add_to_pending():
-            self.PendingTransactions[txn.Identifier] = True
+            if prepend:
+                pending = OrderedDict()
+                pending[txn.Identifier] = True
+                pending.update(self.PendingTransactions)
+                self.PendingTransactions = pending
+            else:
+                self.PendingTransactions[txn.Identifier] = True
 
         # if this is a transaction we requested, then remove it from the list
         # and look for any blocks that might be completed as a result of
