@@ -109,9 +109,20 @@ WaitCertificate* create_wait_certificate(WaitTimer *timer, string block_hash)
         return NULL;
     }
 
-    // and the timer must have expired or the previous cert must be the nullidentifier
-    if (timer->previous_certificate_id != NULL_IDENTIFIER && (! timer->is_expired()))
+    if (timer->sequence_id != WaitTimer::get_current_sequence_id())
+    {
         return NULL;
+    }
+
+
+    // and the timer must have expired or the previous cert must be the nullidentifier
+    if (timer->previous_certificate_id != NULL_IDENTIFIER
+        && (! timer->is_expired()))
+    {
+        return NULL;
+    }
+
+
 
     WaitCertificate *cert = new WaitCertificate(timer, block_hash);
     cert->signature = SignMessage(GlobalPrivateKey, cert->serialize());

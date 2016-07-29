@@ -60,6 +60,12 @@ WaitTimer::WaitTimer(string encoded, string signature)
     this->deserialize(encoded);
 }
 
+int WaitTimer::sequence_id_counter = 0;
+int WaitTimer::get_current_sequence_id()
+{
+    return WaitTimer::sequence_id_counter;
+}
+
 WaitTimer::WaitTimer(
     string validator_address,
     string previous_certificate_id,
@@ -80,6 +86,8 @@ WaitTimer::WaitTimer(
 
     this->previous_certificate_id = previous_certificate_id;
     this->validator_address = validator_address;
+
+    this->sequence_id = ++WaitTimer::sequence_id_counter;
 }
 
 bool WaitTimer::is_expired(void)
@@ -110,6 +118,9 @@ bool WaitTimer::deserialize(string serialized)
     if (json_object_object_get_ex(jobj, "RequestTime", &obj))
         request_time = json_object_get_double(obj);
 
+    if (json_object_object_get_ex(jobj, "SequenceId", &obj))
+        sequence_id = json_object_get_int(obj);
+
     if (json_object_object_get_ex(jobj, "ValidatorAddress", &obj))
         validator_address = json_object_get_string(obj);
 
@@ -125,6 +136,7 @@ string WaitTimer::serialize()
     json_object_object_add(jobj, "LocalMean", json_object_new_double(local_mean));
     json_object_object_add(jobj, "PreviousCertID", json_object_new_string((char *)previous_certificate_id.c_str()));
     json_object_object_add(jobj, "RequestTime", json_object_new_double(request_time));
+    json_object_object_add(jobj, "SequenceId", json_object_new_int(sequence_id));
     json_object_object_add(jobj, "ValidatorAddress", json_object_new_string((char *)validator_address.c_str()));
 
     string serialized = (char *)json_object_to_json_string(jobj);
