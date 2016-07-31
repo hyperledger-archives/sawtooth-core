@@ -154,7 +154,9 @@ class PoetJournal(journal_core.Journal):
         self.onClaimBlock.fire(self, nblock)
 
         # And send out the message that we won
-        msg = poet_transaction_block.PoetTransactionBlockMessage()
+        msg = poet_transaction_block.\
+            PoetTransactionBlockMessage({'TransactionBlock': {"TieBreaker":
+                                         self.TieBreaker}})
         msg.TransactionBlock = nblock
         msg.SenderID = self.LocalNode.Identifier
         msg.sign_from_node(self.LocalNode)
