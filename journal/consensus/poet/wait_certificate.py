@@ -15,7 +15,6 @@
 
 import logging
 import hashlib
-from time import time
 from journal.consensus.poet.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
@@ -198,13 +197,6 @@ class WaitCertificate(object):
         if self.validator_address != originator_id:
             logger.warn('Originator Id mismatch: %s != %s',
                         self.validator_address, originator_id)
-            return False
-
-        end_time = self.request_time + self.duration
-        cur_time = time()
-        if end_time > cur_time:
-            logger.warn('Wait Certificate expires in the future: %f < %f',
-                        end_time, cur_time)
             return False
 
         return self.poet_enclave.verify_wait_certificate(cert)
