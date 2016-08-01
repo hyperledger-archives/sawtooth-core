@@ -232,6 +232,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 transaction block.
         """
         result = super(PoetTransactionBlock, self).dump()
+        result["TieBreaker"] = self.TieBreaker
         result['WaitCertificate'] = self.WaitCertificate.dump()
 
         return result
