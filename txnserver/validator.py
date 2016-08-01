@@ -312,19 +312,11 @@ class Validator(object):
 
         return peerset
 
-    def initialize_ledger_connection(self):
-        """
-        Connect the ledger to the rest of the network.
-        """
-
-        assert self.Ledger
-
-        self.status = 'waiting for initial connections'
-
+    def _connect_to_peers(self):
         min_peer_count = self.Config.get("InitialConnectivity", 1)
         current_peer_count = len(self.Ledger.peer_list())
 
-        logger.debug("initial peer count is %d of %d",
+        logger.debug("peer count is %d of %d",
                      current_peer_count, min_peer_count)
 
         if current_peer_count < min_peer_count:
@@ -343,6 +335,20 @@ class Validator(object):
                     logger.info('requested connection to unknown peer %s',
                                 peername)
 
+            return False
+        else:
+            return True
+
+    def initialize_ledger_connection(self):
+        """
+        Connect the ledger to the rest of the network.
+        """
+
+        assert self.Ledger
+
+        self.status = 'waiting for initial connections'
+
+        if not self._connect_to_peers():
             reactor.callLater(2.0, self.initialize_ledger_connection)
         else:
             reactor.callLater(2.0, self.initialize_ledger_topology,
@@ -356,12 +362,7 @@ class Validator(object):
 
         logger.debug('initialize ledger topology')
 
-        # make sure there is at least one connection already confirmed
-        if len(self.Ledger.peer_list()) == 0:
-            logger.info('no peers connected during topology update, '
-                        'trying to reconnect')
-            for peer in self.Ledger.peer_list(allflag=True):
-                connect_message.send_connection_request(self.Ledger, peer)
+        if not self._connect_to_peers():
             reactor.callLater(2.0, self.initialize_ledger_topology,
                               callback)
             return
