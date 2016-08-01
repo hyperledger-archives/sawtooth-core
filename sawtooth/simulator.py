@@ -26,7 +26,7 @@ from sawtooth.exceptions import MessageException
 from sawtooth.endpoint_client import EndpointClient
 
 
-PendingTransaction = namedtuple('PendingTransaction', ['id', 'validator'])
+PendingTransaction = namedtuple('PendingTransaction', ['id', 'client'])
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class SawtoothWorkloadSimulator(object):
             # pylint: disable=bare-except
             try:
                 status = \
-                    transaction.validator.get_transaction_status(
+                    transaction.client.get_transaction_status(
                         transaction.id)
                 if status == TransactionStatus.committed:
                     self._workload.on_transaction_committed(transaction.id)
@@ -104,12 +104,11 @@ class SawtoothWorkloadSimulator(object):
                 # from the list of validators and immediately let the
                 # workload generator know that it has gone away.
                 LOGGER.warn('Validator %s not responding: %s',
-                            transaction.validator.base_url,
+                            transaction.client.base_url,
                             e)
-                if transaction.validator.base_url in self._validators:
-                    self._workload.on_validator_removed(
-                        transaction.validator.base_url)
-                    self._validators.remove(transaction.validator.base_url)
+                if transaction.client.base_url in self._validators:
+                    self._remove_unresponsive_validator(
+                        transaction.client.base_url)
             except:
                 # Something has gone really wrong.  Print out a traceback
                 # and then stop the reactor, which stops the simulator.
@@ -174,11 +173,27 @@ class SawtoothWorkloadSimulator(object):
             LOGGER.info('Discovered a new validator: %s', validator)
             self._workload.on_validator_discovered(validator)
         for validator in removed:
-            LOGGER.info('Remove validator: %s', validator)
-            self._workload.on_validator_removed(validator)
+            self._remove_unresponsive_validator(validator)
 
         # Save off the list of validators
         self._validators = validators
+
+    def _remove_unresponsive_validator(self, validator):
+        # Iterate through all pending transactions and purge the ones that
+        # were submitted to the client representing this validator as it is a
+        # waste to check on them.  Let the workload generator know that the
+        # validator has been removed and then remove it from the list of
+        # known validators.
+        #
+        # If the validator happens to come back, we will pick it up again
+        # later when discovering validators.
+        LOGGER.info('Remove validator: %s', validator)
+        self._pending_transactions = \
+            deque(
+                [t for t in self._pending_transactions
+                 if t.client.base_url != validator])
+        self._workload.on_validator_removed(validator)
+        self._validators.remove(validator)
 
     def on_new_transaction(self, transaction_id, client):
         """
@@ -195,7 +210,7 @@ class SawtoothWorkloadSimulator(object):
         """
         if transaction_id is not None:
             self._pending_transactions.append(
-                PendingTransaction(id=transaction_id, validator=client))
+                PendingTransaction(id=transaction_id, client=client))
 
     def _loop_cleanup(self, result):
         self._workload.on_will_stop()
