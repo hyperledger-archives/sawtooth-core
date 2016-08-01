@@ -353,7 +353,7 @@ class Journal(gossip_core.Gossip):
 
         logger.info('finished processing initial transactions and blocks')
 
-    def add_pending_transaction(self, txn, prepend=False):
+    def add_pending_transaction(self, txn, prepend=False, build_block=True):
         """Adds a transaction to the list of candidates for commit.
 
         Args:
@@ -402,7 +402,7 @@ class Journal(gossip_core.Gossip):
         # there is a chance the we deferred creating a transaction block
         # because there were insufficient transactions, this is where we check
         # to see if there are now enough to run the validation algorithm
-        if not self.PendingTransactionBlock:
+        if not self.PendingTransactionBlock and build_block:
             self.PendingTransactionBlock = self.build_transaction_block()
 
     def commit_transaction_block(self, tblock):
