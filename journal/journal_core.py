@@ -52,6 +52,8 @@ class Journal(gossip_core.Gossip):
         Restore (bool): Whether or not to restore block data.
         onGenesisBlock (EventHandler): An EventHandler for functions
             to call when processing a genesis block.
+        onPreBuildBlock (EventHandler): An EventHandler for functions
+            to call when before processing a build block.
         onBuildBlock (EventHandler): An EventHandler for functions
             to call when processing a build block.
         onClaimBlock (EventHandler): An EventHandler for functions
@@ -123,6 +125,7 @@ class Journal(gossip_core.Gossip):
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
+        self.onPreBuildBlock = event_handler.EventHandler('onPreBuildBlock')
         self.onBuildBlock = event_handler.EventHandler('onBuildBlock')
         self.onClaimBlock = event_handler.EventHandler('onClaimBlock')
         self.onCommitBlock = event_handler.EventHandler('onCommitBlock')
@@ -555,6 +558,7 @@ class Journal(gossip_core.Gossip):
                 initial block.
         """
 
+        self.onPreBuildBlock.fire(self, None)
         self.onBuildBlock.fire(self, None)
 
     def handle_advance(self, tblock):

@@ -86,6 +86,7 @@ class DevModeJournal(journal_core.Journal):
         new_block.BlockNum = self.MostRecentCommittedBlock.BlockNum \
             + 1 if self.MostRecentCommittedBlock else 0
         new_block.PreviousBlockID = self.MostRecentCommittedBlockID
+        self.onPreBuildBlock.fire(self, new_block)
 
         # must put a cap on the transactions in the block
         if len(new_block.TransactionIDs) >= self.MaximumTransactionsPerBlock:

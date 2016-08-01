@@ -86,6 +86,14 @@ class PoetJournal(journal_core.Journal):
         logger.debug('attempt to build transaction block extending %s',
                      self.MostRecentCommittedBlockID[:8])
 
+        # Create a new block from all of our pending transactions
+        nblock = poet_transaction_block.PoetTransactionBlock()
+        nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
+            + 1 if self.MostRecentCommittedBlock else 0
+        nblock.PreviousBlockID = self.MostRecentCommittedBlockID
+
+        self.onPreBuildBlock.fire(self, nblock)
+
         # Get the list of prepared transactions, if there aren't enough
         # then just return
         txnlist = self._preparetransactionlist(
