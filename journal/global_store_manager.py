@@ -511,11 +511,19 @@ class KeyValueStore(object):
         Returns:
             set: The set of valid keys in the store.
         """
-        kset = self.PrevStore._keys() if self.PrevStore else set()
-        kset -= self._deletedkeys
-        kset |= set(self._store.keys())
-
-        return kset
+        # construct and reverse historical references
+        stores = []
+        store = self
+        while store is not None:
+            stores.append(store)
+            store = store.PrevStore
+        stores.reverse()
+        # reconstruct history
+        retval = set()
+        for store in stores:
+            retval -= store._deletedkeys
+            retval |= set(store._store.keys())
+        return retval
 
     def keys(self):
         """Computes the set of valid keys used in the store.
@@ -546,14 +554,16 @@ class KeyValueStore(object):
         Returns:
             bool: Whether the key exists in the store.
         """
-
-        if key in self._store:
-            return True
-
-        if key in self._deletedkeys:
-            return False
-
-        return self.PrevStore and self.PrevStore.__contains__(key)
+        retval = False
+        store = self
+        while store is not None:
+            if key in store._store:
+                retval = True
+                break
+            if key in self._deletedkeys:
+                break
+            store = store.PrevStore
+        return retval
 
     def dump(self, readonly=False):
         """Returns a dict containing information about the store.
