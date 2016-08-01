@@ -93,9 +93,8 @@ class Validator(object):
 
         self.windows_service = windows_service
 
-        # this is going to be used as a flag to indicate that a
-        # topology update is in progress
-        self._connectionattempts = 0
+        # flag to indicate that a topology update is in progress
+        self._topology_update_in_progress = False
         self.delaystart = self.Config['DelayStart']
 
         # set up signal handlers for shutdown
@@ -254,7 +253,7 @@ class Validator(object):
         logger.info('node %s dropped, reassess connectivity', nodeid)
 
         # first see if we are already handling the situation
-        if self._connectionattempts > 0:
+        if self._topology_update_in_progress:
             logger.info('topology update already in progress')
             return
 
@@ -263,14 +262,14 @@ class Validator(object):
         # connectivity as a lower threshhold
         minpeercount = self.Config.get("InitialConnectivity", 1)
         peerlist = self.Ledger.peer_list()
-        if len(peerlist) <= minpeercount and self._connectionattempts == 0:
+        if len(peerlist) <= minpeercount:
             def disconnect_callback():
                 logger.info('topology update finished, %s peers connected',
                             len(self.Ledger.peer_list()))
 
             logger.info('connectivity has dropped below mimimal levels, '
                         'kick off topology update')
-            self._connectionattempts = 3
+            self._topology_update_in_progress = True
             reactor.callLater(2.0, self.initialize_ledger_topology,
                               disconnect_callback)
 
@@ -359,22 +358,15 @@ class Validator(object):
 
         # make sure there is at least one connection already confirmed
         if len(self.Ledger.peer_list()) == 0:
-            self._connectionattempts -= 1
-            if self._connectionattempts > 0:
-                logger.info('initial connection attempts failed, '
-                            'try again [%s]', self._connectionattempts)
-                for peer in self.Ledger.peer_list(allflag=True):
-                    connect_message.send_connection_request(self.Ledger, peer)
-                reactor.callLater(2.0, self.initialize_ledger_topology,
-                                  callback)
-                return
-            else:
-                logger.critical('failed to connect to selected peers, '
-                                'shutting down')
-                self.shutdown()
-                return
+            logger.info('no peers connected during topology update, '
+                        'trying to reconnect')
+            for peer in self.Ledger.peer_list(allflag=True):
+                connect_message.send_connection_request(self.Ledger, peer)
+            reactor.callLater(2.0, self.initialize_ledger_topology,
+                              callback)
+            return
 
-        self._connectionattempts = 0
+        self._topology_update_in_progress = False
 
         # and now its time to pick the topology protocol
         topology = self.Config.get("TopologyAlgorithm", "RandomWalk")
