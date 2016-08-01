@@ -50,7 +50,7 @@ class EndpointClient(SawtoothClient):
         # endpoint in the endpoint registry return a list of those that match
         # the domain
         self.fetch_state()
-        return [endpoint for endpoint in self.get_state().values()
+        return [endpoint for _, endpoint in self.get_state().iteritems()
                 if endpoint.get('Domain', '/').startswith(domain)]
 
     def get_validator_url_list(self, domain='/'):
@@ -71,4 +71,5 @@ class EndpointClient(SawtoothClient):
         # Rely upon base endpoint list fetch and simply create a new list
         # of validator URLs (i.e., the concatenation of host and HTTP port)
         return ['http://{0}:{1}'.format(e['Host'], e['HttpPort']) for e
-                in self.get_endpoint_list(domain)]
+                in self.get_endpoint_list(domain)
+                if 'HttpPort' in e and e['HttpPort'] != 0]

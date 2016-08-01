@@ -20,15 +20,17 @@ import urllib
 import urllib2
 import urlparse
 from collections import OrderedDict
-from enum import Enum
+try:  # weird windows behavior
+    from enum import IntEnum as Enum
+except ImportError:
+    from enum import Enum
 
 from gossip import node, signed_object
 from gossip.common import json2dict, dict2json
 from gossip.common import cbor2dict, dict2cbor
 from gossip.common import pretty_print_dict
-from sawtooth.exceptions import MessageException
-from sawtooth.exceptions import ClientException
-from journal import transaction
+from journal import global_store_manager, transaction
+from sawtooth.exceptions import ClientException, MessageException
 
 
 LOGGER = logging.getLogger(__name__)
@@ -177,35 +179,104 @@ class _Communication(object):
 
 
 class _ClientState(object):
-    def __init__(self, base_url, store_name):
-        self._communication = _Communication(base_url)
-        self._state = {}
-        self._base_url = base_url
+    def __init__(self,
+                 communication,
+                 store_name,
+                 state_type=global_store_manager.KeyValueStore):
+        self._communication = communication
+        self._state_type = state_type
+        self._state = None
+        self._current_state = None
+        if self._communication is None:
+            self._state = self._state_type()
+            self._current_state = self._state.clone_store()
         self._store_name = store_name
+        self._current_block_id = None
 
     @property
     def state(self):
-        return self._state
-
-    @property
-    def base_url(self):
-        return self._base_url
+        return self._current_state
 
     def fetch(self):
         """
         Retrieve the current state from the validator. Rebuild
         the name, type, and id maps for the resulting objects.
-
-        :param str store: optional, the name of the marketplace store to
-            retrieve
         """
 
-        LOGGER.debug('fetch state from %s/%s/*',
-                     self._base_url,
-                     self._store_name)
+        if self._communication is None:
+            return
 
-        self._state = \
-            self._communication.getmsg("/store/{0}/*".format(self._store_name))
+        LOGGER.debug('fetch state from %s/%s/*',
+                     self._communication.base_url, self._store_name)
+
+        # get the last ten block ids
+        block_ids = self._communication.getmsg('/block?blockcount=10')
+        block_id = block_ids[0]
+
+        # if the latest block is the one we have.
+        if block_id == self._current_block_id:
+            return
+
+        # look for the last common block.
+        if self._current_block_id in block_ids:
+            fetch_list = block_ids[:block_ids.index(self._current_block_id)]
+            # request the updates for all the new blocks we don't have
+            for fetch_id in reversed(fetch_list):
+                LOGGER.debug('only fetch delta of state for block %s',
+                             fetch_id)
+                delta = self._communication.getmsg(
+                    '/store/{0}/*?delta=1&blockid={1}'
+                    .format(self._store_name, fetch_id))
+                self._state = self._state.clone_store(delta)
+        else:
+            # no common block re-fetch full state.
+            LOGGER.debug('full fetch of state for block %s', block_id)
+            state = self._communication.getmsg(
+                "/store/{0}/*?blockid={1}".format(self._store_name, block_id))
+            self._state = self._state_type(prevstore=None,
+                                           storeinfo={'Store': state,
+                                                      'DeletedKeys': []})
+
+        # State is actually a clone of the block state, this is a free
+        # operation because of the copy on write implementation of the global
+        # store. This way clients can update the state speculatively
+        # without corrupting the synchronized storage
+        self._current_state = self._state.clone_store()
+        self._current_block_id = block_id
+
+
+class UpdateBatch(object):
+    """
+        Helper object to allow group updates submission using
+         sawtooth client.
+
+         the block
+          try:
+            client.start_batch()
+            client.send_txn(...)
+            client.send_txn(...)
+            client.send_batch()
+          except:
+            client.reset_batch()
+
+         becomes:
+
+            with UpdateBatch(client) as _:
+                client.send_txn()
+                client.send_txn()
+    """
+    def __init__(self, client):
+        self.client = client
+
+    def __enter__(self):
+        self.client.start_batch()
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        if exception_type is None:
+            self.client.send_batch()
+        else:
+            self.client.reset_batch()
 
 
 class SawtoothClient(object):
@@ -213,41 +284,136 @@ class SawtoothClient(object):
                  base_url,
                  store_name,
                  name='SawtoothClient',
+                 transaction_type=None,
+                 message_type=None,
                  keystring=None,
-                 keyfile=None,
-                 state=None):
-        self._communication = _Communication(base_url)
+                 keyfile=None):
+        self._transaction_type = transaction_type
+        self._message_type = message_type
         self._base_url = base_url
+        self._communication = _Communication(base_url)
         self._last_transaction = None
         self._local_node = None
-        self._current_state = state or _ClientState(base_url, store_name)
+        state_communication = self._communication if base_url else None
+        self._current_state = _ClientState(
+            communication=state_communication,
+            store_name=store_name,
+            state_type=transaction_type.TransactionStoreType
+            if transaction_type else global_store_manager.KeyValueStore)
+        self._update_batch = None
         self.fetch_state()
 
-        # Set up the signing key.  Note that if both the keystring and
-        # keyfile are not provided, then this is in essence a "read-only"
-        # client that may not issue transactions.
-        signingkey = None
+        signing_key = None
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            signingkey = signed_object.generate_signing_key(wifstr=keystring)
+            signing_key = signed_object.generate_signing_key(wifstr=keystring)
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                signingkey = signed_object.generate_signing_key(
+                signing_key = signed_object.generate_signing_key(
                     wifstr=open(keyfile, "r").read().strip())
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))
 
-        if signingkey:
-            identifier = signed_object.generate_identifier(signingkey)
+        if signing_key:
+            identifier = signed_object.generate_identifier(signing_key)
             self._local_node = node.Node(identifier=identifier,
-                                         signingkey=signingkey,
+                                         signingkey=signing_key,
                                          name=name)
 
     @property
     def base_url(self):
         return self._base_url
+
+    @property
+    def state(self):
+        return self._current_state.state
+
+    @property
+    def last_transaction_id(self):
+        return self._last_transaction
+
+    def start_batch(self):
+        """
+        Start a batch of updates to be sent in a single transaction to
+        the validator.
+        Returns:
+
+        """
+        if self._update_batch is not None:
+            raise ClientException(
+                "Update batch already in progress.")
+        self._update_batch = {
+            'Updates': [],
+            'Dependencies': []
+        }
+
+    def reset_batch(self):
+        """
+        Abandon the current batch.
+        Returns:
+            None
+        """
+        self._update_batch = None
+
+    def send_batch(self):
+        """
+        Sends the current batch of transactions to the Validator.
+        Args:
+            txn_type:
+            txn_msg_type:
+
+        Returns:
+
+        """
+        if len(self._update_batch) == 0:
+            raise ClientException("No updates in batch.")
+        msg_info = self._update_batch
+        self._update_batch = None
+
+        return self.sendtxn(
+            minfo=msg_info,
+            txn_type=self._transaction_type,
+            txn_msg_type=self._message_type)
+
+    def send_update(self, updates, dependencies=None):
+        """
+            Send an update or list of updates to the validator or
+            add them to an existing batch.
+        Args:
+            updates: single update or list of updates to be sent.
+            dependencies: ids of transactions dependencies.
+
+        Returns:
+            transaction_id if the update is sent, None if it is add to a
+            batch.
+        """
+        if self._update_batch is not None:
+            # if we are in batching mode.
+            if isinstance(updates, dict):  # accept single update
+                self._update_batch['Updates'].append(updates)
+            elif isinstance(updates, (list, tuple)):  # or a list
+                self._update_batch['Updates'] += updates
+            else:
+                raise ClientException(
+                    "Unexpected updates type {}.".format(type(updates)))
+            if dependencies:
+                self._update_batch['Dependencies'] += dependencies
+            return None  # there is no transaction id yet.
+        else:
+            if isinstance(updates, dict):  # accept single update
+                updates = [updates]
+
+        dependencies = dependencies or []
+
+        return self.sendtxn(
+            minfo={
+                'Updates': updates,
+                'Dependencies': dependencies,
+            },
+            txn_type=self._transaction_type,
+            txn_msg_type=self._message_type)
 
     def sendtxn(self, txn_type, txn_msg_type, minfo):
         """
@@ -259,12 +425,16 @@ class SawtoothClient(object):
             raise ClientException(
                 'can not send transactions as a read-only client')
 
+        txn_type = txn_type or self._transaction_type
+        txn_msg_type = txn_msg_type or self._message_type
+
         txn = txn_type(minfo=minfo)
 
-        # add the last transaction submitted to ensure that the ordering
-        # in the journal matches the order in which we generated them
-        if self._last_transaction:
-            txn.Dependencies = [self._last_transaction]
+        if len(minfo.get('Dependencies', [])) == 0:
+            # add the last transaction submitted to ensure that the ordering
+            # in the journal matches the order in which we generated them
+            if self._last_transaction:
+                txn.Dependencies = [self._last_transaction]
 
         txn.sign_from_node(self._local_node)
         txnid = txn.Identifier
@@ -291,7 +461,6 @@ class SawtoothClient(object):
         # fails during application
         self._last_transaction = txnid
         txn.apply(self._current_state.state)
-
         return txnid
 
     def fetch_state(self):
@@ -350,7 +519,6 @@ class SawtoothClient(object):
         while True:
             passes += 1
             status = self.get_transaction_status(txnid)
-
             if status != TransactionStatus.committed and passes > iterations:
                 if status == TransactionStatus.not_found:
                     LOGGER.warn('unknown transaction %s', txnid)
