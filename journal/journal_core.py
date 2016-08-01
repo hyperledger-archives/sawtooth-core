@@ -790,6 +790,7 @@ class Journal(gossip_core.Gossip):
         # Remove all of the newly committed transactions from the pending list
         # and put them in the committed list
         for txnid in tblock.TransactionIDs:
+            assert txnid in self.TransactionStore
             if txnid in self.PendingTransactions:
                 del self.PendingTransactions[txnid]
 
