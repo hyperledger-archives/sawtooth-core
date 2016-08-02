@@ -258,12 +258,14 @@ def log_configuration(cfg):
         log_filename = os.path.join(cfg["LogDirectory"], cfg["NodeName"])
         flogD = logging.FileHandler(log_filename + "-debug.log")
         flogD.setFormatter(logging.Formatter(
-            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+            '[%(asctime)s [%(threadName)s] %(name)s %(levelname)s] '
+            '%(message)s', "%H:%M:%S"))
         flogD.setLevel(logging.DEBUG)
 
         flogE = logging.FileHandler(log_filename + "-error.log")
         flogE.setFormatter(logging.Formatter(
-            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+            '[%(asctime)s [%(threadName)s] %(name)s %(levelname)s] '
+            '%(message)s', "%H:%M:%S"))
         flogE.setLevel(logging.ERROR)
 
         logging.getLogger().addHandler(flogE)

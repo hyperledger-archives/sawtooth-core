@@ -183,7 +183,8 @@ def log_configuration(cfg):
                                     "stats-" + cfg["CurrencyHost"])
         flog = logging.FileHandler(log_filename+".log")
         flog.setFormatter(logging.Formatter(
-        '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+        '[%(asctime)s [%(threadName)s] %(name)s %(levelname)s] '
+        '%(message)s', "%H:%M:%S"))
         flog.setLevel(logging.DEBUG)
 
         logging.getLogger().addHandler(flog)
