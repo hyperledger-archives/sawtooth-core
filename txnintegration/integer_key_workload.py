@@ -14,294 +14,140 @@
 # ------------------------------------------------------------------------------
 
 import random
-import time
-from twisted.web import http
+import logging
 
-from txnintegration.utils import generate_private_key
-from txnintegration.utils import Progress
-from txnintegration.utils import TimeOut
+from collections import namedtuple
+from datetime import datetime
+
+import pybitcointools
+
+from sawtooth.simulator_workload import SawtoothWorkload
 from txnintegration.integer_key_client import IntegerKeyClient
-from txnintegration.integer_key_state import IntegerKeyState
-
-import argparse
-import sys
 
 
-class IntKeyLoadTest(object):
-    def __init__(self):
-        print "start inkeyloadtest"
-        self.localState = {}
-        self.transactions = []
-        self.clients = []
-        self.state = None
+LOGGER = logging.getLogger(__name__)
 
-    def _get_client(self):
-        return self.clients[random.randint(0, len(self.clients) - 1)]
-
-    def _update_uncommitted_transactions(self):
-        remaining = []
-
-        # For each client, we want to verify that its corresponding validator
-        # has the transaction.  For a transaction to be considered committed,
-        # all validators must have it in its blockchain as a committed
-        # transaction.
-        for c in self.clients:
-            for t in self.transactions:
-                status = c.headrequest('/transaction/{0}'.format(t))
-                # If the transaction has not been committed and we don't
-                # already have it in our list of uncommitted transactions
-                # then add it.
-                if (status != http.OK) and (t not in remaining):
-                    remaining.append(t)
-
-        self.transactions = remaining
-        return len(self.transactions)
-
-    def _wait_for_transaction_commits(self):
-        to = TimeOut(240)
-        txnCnt = len(self.transactions)
-        with Progress("Waiting for transactions to commit") as p:
-            while not to() and txnCnt > 0:
-                p.step()
-                time.sleep(1)
-                txnCnt = self._update_uncommitted_transactions()
-
-        if txnCnt != 0:
-            if len(self.transactions) != 0:
-                print "Uncommitted transactions: ", self.transactions
-            raise Exception("{} transactions failed to commit in {}s".format(
-                txnCnt, to.WaitTime))
-
-    def _wait_for_no_transaction_commits(self):
-        # for the case where no transactions are expected to commit
-        to = TimeOut(120)
-        starting_txn_count = len(self.transactions)
-
-        remaining_txn_cnt = len(self.transactions)
-        with Progress("Waiting for transactions to NOT commit") as p:
-            while not to() and remaining_txn_cnt > 0:
-                p.step()
-                time.sleep(1)
-                remaining_txn_cnt = self._update_uncommitted_transactions()
-
-        if remaining_txn_cnt != starting_txn_count:
-            committedtxncount = starting_txn_count - remaining_txn_cnt
-            raise Exception("{} transactions with missing dependencies "
-                            "were committed in {}s"
-                            .format(committedtxncount, to.WaitTime))
-        else:
-            print "No transactions with missing dependencies " \
-                  "were committed in {0}s".format(to.WaitTime)
-
-    def setup(self, urls, numkeys):
-        self.localState = {}
-        self.transactions = []
-        self.clients = []
-        self.state = IntegerKeyState(urls[0])
-
-        with Progress("Creating clients") as p:
-            for u in urls:
-                key = generate_private_key()
-                self.clients.append(IntegerKeyClient(u, keystring=key))
-                p.step()
-
-        print "Checking for pre-existing state"
-        self.state.fetch()
-        keys = self.state.State.keys()
-
-        for k, v in self.state.State.iteritems():
-            self.localState[k] = v
-
-        with Progress("Populating initial key values") as p:
-            txncount = 0
-            starttime = time.clock()
-            for n in range(1, numkeys + 1):
-                n = str(n)
-                if n not in keys:
-                    c = self._get_client()
-                    v = random.randint(5, 1000)
-                    self.localState[n] = v
-                    txnid = c.set(n, v)
-                    if txnid is None:
-                        raise Exception("Failed to set {} to {}".format(n, v))
-                    self.transactions.append(txnid)
-                    txncount += 1
-            self.txnrate(starttime, txncount)
-        self._wait_for_transaction_commits()
-
-    def run(self, numkeys, rounds=1, txintv=0):
-        self.state.fetch()
-
-        print "Running {0} rounds for {1} keys " \
-              "with {2} second inter-transaction time" \
-            .format(rounds, numkeys, txintv)
-
-        for r in range(0, rounds):
-            for c in self.clients:
-                c.CurrentState.fetch()
-            print "Round {}".format(r)
-            # for k in keys:
-            starttime = time.clock()
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = self._get_client()
-                self.localState[k] += 2
-                txnid = c.inc(k, 2)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to inc key:{} value:{} by 2".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                time.sleep(txintv)
-            # for k in keys:
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = self._get_client()
-                self.localState[k] -= 1
-                txnid = c.dec(k, 1)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to dec key:{} value:{} by 1".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                time.sleep(txintv)
-            self.txnrate(starttime, 2 * numkeys)
-            self._wait_for_transaction_commits()
-
-    def validate(self):
-        self.state.fetch()
-
-        print "Validating IntegerKey State"
-        for k, v in self.state.State.iteritems():
-            if self.localState[k] != v:
-                print "key {} is {} expected to be {}".format(
-                    k, v, self.localState[k])
-            assert self.localState[k] == v
-
-    def ledgerstate(self):
-        self.state.fetch()
-
-        print "state: "
-        for k, v in self.state.State.iteritems():
-            print k, v
-        print
-
-    def txnrate(self, starttime, numtxns):
-        if numtxns > 0:
-            endtime = time.clock()
-            totaltime = endtime - starttime
-            avgrate = (numtxns / totaltime)
-            print "Sent {0} transaction in {1} seconds averaging {2} t/s" \
-                .format(numtxns, totaltime, avgrate)
-
-    def run_with_missing_dep(self, numkeys, rounds=1):
-        self.state.fetch()
-
-        print "Running {0} rounds for {1} keys " \
-              "with missing transactions" \
-            .format(rounds, numkeys)
-
-        for r in range(1, rounds + 1):
-            for c in self.clients:
-                c.CurrentState.fetch()
-            print "Round {}".format(r)
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = c = self._get_client()
-                missingid = c.inc(k, 1, txndep=None, postmsg=False)
-                dependingtid = c.inc(k, 1, txndep=missingid)
-                self.transactions.append(dependingtid)
-
-            self._wait_for_no_transaction_commits()
+IntKeyState = namedtuple('IntKeyState', ['name', 'client', 'value'])
 
 
-def parse_args(args):
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawTextHelpFormatter)
+class IntegerKeyWorkload(SawtoothWorkload):
+    """
+    This workload is for the Sawtooth Integer Key transaction family.  In
+    order to guarantee that transactions are submitted at a relatively-
+    constant rate, when the transaction callbacks occur the following
+    actions occur:
 
-    parser.add_argument('--count',
-                        metavar="",
-                        help='Validators to monitor (default: %(default)s)',
-                        default=3,
-                        type=int)
-    parser.add_argument('--url',
-                        metavar="",
-                        help='Base validator url (default: %(default)s)',
-                        default="http://localhost")
-    parser.add_argument('--port',
-                        metavar="",
-                        help='Base validator http port (default: %(default)s)',
-                        default=8800,
-                        type=int)
-    parser.add_argument('--keys',
-                        metavar="",
-                        help='Keys to create/exercise (default: %(default)s)',
-                        default=10,
-                        type=int)
-    parser.add_argument('--rounds',
-                        metavar="",
-                        help='Rounds to execute (default: %(default)s)',
-                        default=2,
-                        type=int)
-    parser.add_argument('--interval',
-                        metavar="",
-                        help='Inter-txn time (mS) (default: %(default)s)',
-                        default=0,
-                        type=int)
-    parser.add_argument('--missingdep',
-                        metavar="",
-                        help="""Execute missing dependency test once
-after transaction rounds are complete (default: %(default)s)""",
-                        default=False,
-                        type=bool)
+    1.  If there are no pending transactions (on_all_transactions_committed),
+        a new key is created.
+    2.  If a transaction is committed, the corresponding key is > 1000000
+        either a increment is made (if < 10000000) or a new
+        key is created (if >= 10000000).
+    3.  If a transaction's status has been checked and it has not been
+        committed, create a key  (to get a new transaction) and let
+        the simulator know that the old transaction should be put back in
+        the queue to be checked again.
+    """
 
-    return parser.parse_args(args)
+    def __init__(self, delegate, config):
+        super(IntegerKeyWorkload, self).__init__(delegate, config)
 
+        self._clients = []
+        self._keys = {}
+        self._pending_transactions = {}
 
-def configure(opts):
-    print "     validator count: ", opts.count
-    print "  validator base url: ", opts.url
-    print " validator base port: ", opts.port
-    print "                keys: ", opts.keys
-    print "              rounds: ", opts.rounds
-    print "transaction interval: ", opts.interval
+    def on_will_start(self):
+        pass
 
+    def on_will_stop(self):
+        pass
 
-def main():
-    try:
-        opts = parse_args(sys.argv[1:])
-    except:
-        # argparse reports details on the parameter error.
-        sys.exit(1)
+    def on_validator_discovered(self, url):
+        # We need a key file for the client, but as soon as the client is
+        # created, we don't need it any more.  Then create a new client and
+        # add it to our cadre of clients to use
 
-    configure(opts)
+        keystring = pybitcointools.encode_privkey(
+            pybitcointools.random_key(), 'wif')
+        self._clients.append(IntegerKeyClient(
+            baseurl=url,
+            keystring=keystring))
 
-    urls = []
+    def on_validator_removed(self, url):
+        # Remove validator from our list of clients so that we don't try to
+        # submit new transactions to it.
+        self._clients = [c for c in self._clients if c.base_url != url]
 
-    vcount = opts.count
-    baseurl = opts.url
-    portnum = opts.port
+        # Remove any pending transactions for the validator that has been
+        # removed.
+        self._pending_transactions = \
+            {t: g for t, g in self._pending_transactions.iteritems()
+             if g.client.base_url != url}
 
-    for i in range(0, vcount):
-        url = baseurl + ":" + str(portnum + i)
-        urls.append(url)
+    def on_all_transactions_committed(self):
+        # Since there are no outstanding transactions, we are going to create a
+        # new key
+        self._create_new_key()
 
-    print "validator urls: ", urls
+    def on_transaction_committed(self, transaction_id):
+        # Look up the transaction ID to find the key.  Since we will no longer
+        # track this transaction, we can remove it from the dictionary.
+        key = self._pending_transactions.pop(transaction_id, None)
+        if key is not None:
+            # If the keys is not at max value, we will increment it,
+            # update the key state, and add a new pending transaction
+            if key.value < 1000000:
+                new_transaction_id = key.client.inc(
+                    key.name, 1)
+                LOGGER.info('Increment key %s on validator %s with '
+                            'transaction ID %s',
+                            key.name,
+                            key.client.base_url,
+                            new_transaction_id)
 
-    keys = opts.keys
-    rounds = opts.rounds
-    txn_intv = opts.interval
+                # Map the new transaction ID to the key state so we can look
+                # it up later and let the delegate know that there is a new
+                # pending transaction
+                self._pending_transactions[new_transaction_id] = \
+                    IntKeyState(
+                        name=key.name,
+                        client=key.client,
+                        value=key.value + 1)
 
-    print "Testing transaction load."
+                self.delegate.on_new_transaction(
+                    new_transaction_id, key.client)
+            # Otherwise, create new key.
+            else:
+                LOGGER.info('Key %s completed', key.name)
+                self._create_new_key()
 
-    test = IntKeyLoadTest()
-    test.setup(urls, keys)
-    test.validate()
-    test.run(keys, rounds, txn_intv)
-    if opts.missingdep:
-        test.run_with_missing_dep(keys)
-    test.validate()
+    def on_transaction_not_yet_committed(self, transaction_id):
+        # Because we want to generate transactions at the rate requested, let's
+        # create a new key
+        self._create_new_key()
 
+        # Let the caller know that we want the transaction checked again
+        return True
 
-if __name__ == "__main__":
-    main()
+    def _create_new_key(self):
+        # Pick a random client for the key.  So that we don't have to ensure
+        # that the entire validator network has the transactions for a key
+        # committed, all of the transaction for a particular key will be
+        # submitted to a single client.
+        if len(self._clients) > 0:
+            client = random.choice(self._clients)
+
+            name = datetime.now().isoformat()
+            transaction_id = client.set(name, 0)
+
+            if transaction_id is not None:
+                LOGGER.info('New key %s with transaction ID %s on %s',
+                            name,
+                            transaction_id,
+                            client.base_url)
+
+                # Map the transaction ID to the key state so we can look it
+                # up later and let the delegate know that there is a new
+                # pending transaction
+                self._pending_transactions[transaction_id] = \
+                    IntKeyState(name=name, client=client, value=0)
+                self.delegate.on_new_transaction(transaction_id, client)

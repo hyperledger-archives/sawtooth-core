@@ -47,7 +47,7 @@ class IntKeyLoadTest(object):
     def _has_uncommitted_transactions(self):
         remaining = []
         for t in self.transactions:
-            status = self.clients[0].headrequest('/transaction/{0}'.format(t))
+            status = self.clients[0].get_transaction_status(t)
             if status != http.OK:
                 remaining.append(t)
 
@@ -102,7 +102,7 @@ class IntKeyLoadTest(object):
         while count > 0:
             count -= 1
             c = self._get_client()
-            c.CurrentState.fetch()
+            c.fetch_state()
             k = str(random.randint(0, len(self.global_keys) + 1))
             # Stops the inc of a key that was just set
             while k == prev:

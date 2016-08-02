@@ -54,7 +54,7 @@ class IntKeyLoadTest(object):
         # transaction.
         for c in self.clients:
             for t in self.transactions:
-                status = c.headrequest('/transaction/{0}'.format(t))
+                status = c.get_transaction_status(t)
                 # If the transaction has not been committed and we don't
                 # already have it in our list of uncommitted transactions
                 # then add it.
@@ -101,22 +101,22 @@ class IntKeyLoadTest(object):
         # add check for if a state already exists
         with Progress("Checking for pre-existing state") as p:
             self.state.fetch()
-            keys = self.state.State.keys()
             for k, v in self.state.State.iteritems():
                 self.localState[k] = v
+                p.step()
 
         with Progress("Creating initial key values") as p:
             for n in range(1, num_keys + 1):
                 n = str(n)
-                if n not in keys:
-                    c = self._get_client()
-                    v = random.randint(5, 1000)
-                    self.localState[n] = v
-                    txn_id = c.set(n, v, txndep=None)
-                    if txn_id is None:
-                        raise Exception("Failed to set {} to {}".format(n, v))
-                    self.transactions.append(txn_id)
-                    self.last_key_txn[n] = txn_id
+                c = self._get_client()
+                v = random.randint(5, 1000)
+                self.localState[n] = v
+                txn_id = c.set(n, v, txndep=None)
+                if txn_id is None:
+                    raise Exception("Failed to set {} to {}".format(n, v))
+                self.transactions.append(txn_id)
+                self.last_key_txn[n] = txn_id
+                p.step()
 
         self._wait_for_transaction_commits()
 
@@ -130,7 +130,7 @@ class IntKeyLoadTest(object):
         for r in range(1, rounds + 1):
             with Progress("Updating clients state") as p:
                 for c in self.clients:
-                    c.CurrentState.fetch()
+                    c.fetch_state()
                     p.step()
 
             cnt = 0
@@ -219,7 +219,6 @@ class TestSmoke(unittest.TestCase):
             txn_timeout (int): timeout for batch transactions
         """
         vnm = None
-        urls = ""
         try:
             test = IntKeyLoadTest(timeout=txn_timeout)
             if "TEST_VALIDATOR_URLS" not in os.environ:
@@ -260,7 +259,7 @@ class TestSmoke(unittest.TestCase):
                     'exceed tolerance (%s)' % (
                         max_mag - min_mag, tolerance))
                 effective_sample_size = max_mag - tolerance
-                print 'effective sample size: %s' % (effective_sample_size)
+                print 'effective sample size: %s' % effective_sample_size
                 self.assertGreaterEqual(
                     effective_sample_size,
                     sample_size,
@@ -288,7 +287,7 @@ class TestSmoke(unittest.TestCase):
             raise
         finally:
             if vnm:
-                vnm.create_result_archive("%s.tar.gz" % (archive_name))
+                vnm.create_result_archive("%s.tar.gz" % archive_name)
             else:
                 print "No Validator data and logs to preserve"
 
