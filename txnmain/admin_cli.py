@@ -477,7 +477,8 @@ def log_configuration(cfg):
     else:
         clog = logging.StreamHandler()
         clog.setFormatter(logging.Formatter(
-            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
+            '[%(asctime)s [%(threadName)s] %(name)s %(levelname)s] '
+            '%(message)s', "%H:%M:%S"))
         clog.setLevel(logging.WARNING)
         logging.getLogger().addHandler(clog)
 
