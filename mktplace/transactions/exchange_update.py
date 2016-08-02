@@ -284,6 +284,10 @@ class Exchange(object):
 
         self._AdjustmentList = None
 
+    def __str__(self):
+        return "({0}, {1}, {2})".format(self.UpdateType, self.OriginatorID,
+                                        self.ObjectID)
+
     @property
     def References(self):
         return [self.InitialLiabilityID, self.FinalLiabilityID] \
@@ -354,6 +358,7 @@ class Exchange(object):
         return True
 
     def is_valid(self, store):
+        logger.debug('market update: %s', str(self))
 
         # check to make sure that the originator has permission to decrement
         # the InitialLiability
