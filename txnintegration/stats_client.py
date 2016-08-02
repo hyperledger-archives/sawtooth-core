@@ -13,7 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import argparse
+import collections
 import json
+import sys
+import time
 
 from twisted.internet import task
 from twisted.internet import reactor
@@ -23,12 +27,6 @@ from twisted.web.http_headers import Headers
 
 from txnintegration.utils import StatsCollector
 from txnintegration.utils import PlatformStats
-
-import time
-import collections
-
-import argparse
-import sys
 
 from txnintegration.stats_utils import ConsolePrint
 from txnintegration.stats_utils import CsvManager
@@ -229,7 +227,6 @@ class SystemStats(StatsCollector):
                           self.sys_packets, self.sys_msgs, self.poet_stats]
 
         # accumulators
-
         self.response_times = []
 
         self.blocks_claimed = []
@@ -246,11 +243,11 @@ class SystemStats(StatsCollector):
         self.local_mean = []
         self.previous_blockid = []
 
-    def collect_stats(self, statsclients):
+    def collect_stats(self, stats_clients):
         # must clear the accumulators at start of each sample interval
         self.clear_accumulators()
 
-        for c in statsclients:
+        for c in stats_clients:
             if c.responding:
                 self.active_validators += 1
 
@@ -287,29 +284,29 @@ class SystemStats(StatsCollector):
                 self.max_client_time
             )
 
-            blocksmaxcommited = max(self.blocks_committed)
-            blocksmaxpending = max(self.blocks_pending)
+            blocks_max_commited = max(self.blocks_committed)
+            blocks_max_pending = max(self.blocks_pending)
 
             self.sys_blocks = SysBlocks(
-                blocksmaxcommited,
-                self.blocks_committed.count(blocksmaxcommited),
+                blocks_max_commited,
+                self.blocks_committed.count(blocks_max_commited),
                 min(self.blocks_committed),
-                blocksmaxpending,
-                self.blocks_pending.count(blocksmaxpending),
+                blocks_max_pending,
+                self.blocks_pending.count(blocks_max_pending),
                 min(self.blocks_pending),
                 max(self.blocks_claimed),
                 min(self.blocks_claimed)
             )
 
-            txnsmaxcommited = max(self.txns_committed)
-            txnsmaxpending = max(self.txns_pending)
+            txns_max_commited = max(self.txns_committed)
+            txns_max_pending = max(self.txns_pending)
 
             self.sys_txns = SysTxns(
-                txnsmaxcommited,
-                self.txns_committed.count(txnsmaxcommited),
+                txns_max_commited,
+                self.txns_committed.count(txns_max_commited),
                 min(self.txns_committed),
-                txnsmaxpending,
-                self.txns_pending.count(txnsmaxpending),
+                txns_max_pending,
+                self.txns_pending.count(txns_max_pending),
                 min(self.txns_pending),
                 0
             )
@@ -416,7 +413,6 @@ class StatsManager(object):
         return
 
     def stats_loop_done(self, result):
-        print "Stats loop done."
         reactor.stop()
 
     def stats_loop_failed(self, failure):
@@ -517,7 +513,6 @@ class EndpointManager(object):
             self.no_endpoint_responders = True
 
     def update_endpoint_done(self, result):
-        print "update endpoint loop done - stopping."
         reactor.stop()
 
     def update_endpoint_failed(self, failure):
@@ -536,6 +531,9 @@ class ValidatorCommunications(object):
         self.request_count = 0
         self.error_count = 0
         self.agent = Agent(reactor)
+        self.completion_callback = None
+        self.error_callback = None
+        self.request_path = None
 
     def get_request(self, path, ccb=None, ecb=None):
         self.completion_callback = self._completion_default if ccb is None \
@@ -586,13 +584,7 @@ def parse_args(args):
                         metavar="",
                         help='Base validator url '
                              '(default: %(default)s)',
-                        default="http://localhost")
-    parser.add_argument('--port',
-                        metavar="",
-                        help='Base validator http port '
-                             '(default: %(default)s)',
-                        default=8800,
-                        type=int)
+                        default="http://localhost:8800")
     parser.add_argument('--stats-time',
                         metavar="",
                         help='Interval between stats updates (s) '
@@ -687,14 +679,9 @@ def main():
     if curses_imported:
         curses.endwin()
 
-    try:
-        opts = parse_args(sys.argv[1:])
-    except:
-        # argparse reports details on the parameter error.
-        sys.exit(1)
+    opts = parse_args(sys.argv[1:])
 
-    portnum = opts.port
-    baseurl = opts.url
+    base_url = opts.url
 
     loop_times["stats"] = opts.stats_time
     loop_times["endpoint"] = opts.endpoint_time
@@ -702,7 +689,7 @@ def main():
     if opts.csv_enable is True:
         sm.csv_init()
 
-    full_path = baseurl + ":" + str(portnum)
+    full_path = base_url
 
     # discover validator endpoints; if successful, continue with startup()
     epm.initialize_endpoint_urls(full_path, startup)

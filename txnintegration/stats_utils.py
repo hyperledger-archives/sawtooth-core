@@ -33,21 +33,33 @@ class ConsolePrint(object):
         if self.use_curses:
             self.scrn = curses.initscr()
 
-    def cpprint(self, printstring, finish=False, reverse=False):
+    def cpprint(self, print_string, finish=False, reverse=False):
         if self.use_curses:
-            attr = curses.A_NORMAL
-            if reverse:
-                attr = curses.A_REVERSE
-            if self.start:
-                self.scrn.erase()
-                self.start = False
-            hw = self.scrn.getmaxyx()
-            self.scrn.addstr(printstring[:hw[1] - 1] + "\n", attr)
-            if finish:
-                self.scrn.refresh()
-                self.start = True
+            try:
+                attr = curses.A_NORMAL
+                if reverse:
+                    attr = curses.A_REVERSE
+                if self.start:
+                    self.scrn.erase()
+                    self.start = False
+                hw = self.scrn.getmaxyx()
+                pos = self.scrn.getyx()
+                if pos[0] < hw[0] and pos[1] == 0:
+                    print_string = print_string[:hw[1] - 1]
+                    self.scrn.addstr(print_string, attr)
+                    if pos[0] + 1 < hw[0]:
+                        self.scrn.move(pos[0] + 1, 0)
+                if finish:
+                    self.scrn.refresh()
+                    self.start = True
+            except curses.CursesError as e:
+                # show curses errors at top of screen for easier debugging
+                self.scrn.move(0, 0)
+                self.scrn.addstr("{} {} {} {}\n".format(type(e), e, pos, hw),
+                                 attr)
+                self.scrn.addstr(print_string + "\n", attr)
         else:
-            print printstring
+            print print_string
 
     def cpstop(self):
         if self.use_curses:
@@ -60,6 +72,8 @@ class ConsolePrint(object):
 class CsvManager(object):
     def __init__(self):
         self.csvdata = []
+        self.file = None
+        self.writer = None
 
     def open_csv_file(self, filename, filepath=""):
         self.file = open(filename, 'wt')
@@ -108,8 +122,7 @@ class StatsPrintManager(object):
                                 self.ss.sys_client.active_validators,
                                 self.ss.sys_client.avg_client_time,
                                 self.ss.sys_client.max_client_time,
-                                self.ss.sys_client.runtime),
-                        False)
+                                self.ss.sys_client.runtime))
 
         self.cp.cpprint('        Blocks: {0:8d} max committed,'
                         ' {1:8d} min committed,'
@@ -122,8 +135,7 @@ class StatsPrintManager(object):
                                 self.ss.sys_blocks.blocks_max_pending,
                                 self.ss.sys_blocks.blocks_min_pending,
                                 self.ss.sys_blocks.blocks_max_claimed,
-                                self.ss.sys_blocks.blocks_min_claimed),
-                        False)
+                                self.ss.sys_blocks.blocks_min_claimed))
         self.cp.cpprint('  Transactions: {0:8d} max committed,'
                         ' {1:8d} min committed,'
                         '   {2:8d} max pending,'
@@ -133,8 +145,7 @@ class StatsPrintManager(object):
                                 self.ss.sys_txns.txns_min_committed,
                                 self.ss.sys_txns.txns_max_pending,
                                 self.ss.sys_txns.txns_min_pending,
-                                0),
-                        False)
+                                0))
         self.cp.cpprint(' Packet totals: {0:8d} max dropped,'
                         '   {1:8d} min dropped,'
                         '     {2:8d} max duplicated,'
@@ -146,8 +157,7 @@ class StatsPrintManager(object):
                                 self.ss.sys_packets.packets_max_duplicates,
                                 self.ss.sys_packets.packets_min_duplicates,
                                 self.ss.sys_packets.packets_max_acks_received,
-                                self.ss.sys_packets.packets_min_acks_received),
-                        False)
+                                self.ss.sys_packets.packets_min_acks_received))
         self.cp.cpprint('Message totals: {0:8d} max handled,'
                         '   {1:8d} min handled,'
                         '     {2:8d} max acked,'
@@ -155,8 +165,7 @@ class StatsPrintManager(object):
                         .format(self.ss.sys_msgs.msgs_max_handled,
                                 self.ss.sys_msgs.msgs_min_handled,
                                 self.ss.sys_msgs.msgs_max_acked,
-                                self.ss.sys_msgs.msgs_min_acked),
-                        False)
+                                self.ss.sys_msgs.msgs_min_acked))
         self.cp.cpprint('Platform stats: {0:8f} cpu pct,'
                         '       {1:8f} vmem pct,'
                         '       {2:8d} net bytes tx,'
@@ -164,8 +173,7 @@ class StatsPrintManager(object):
                         .format(self.ps.cpu_stats.percent,
                                 self.ps.vmem_stats.percent,
                                 self.ps.net_stats.bytes_sent,
-                                self.ps.net_stats.bytes_recv),
-                        False)
+                                self.ps.net_stats.bytes_recv))
 
         self.cp.cpprint('Poet Stats: {0:.2f} avg local mean,'
                         '       {1:.2f} max local mean,'
@@ -174,8 +182,7 @@ class StatsPrintManager(object):
                         .format(self.ss.poet_stats.avg_local_mean,
                                 self.ss.poet_stats.max_local_mean,
                                 self.ss.poet_stats.min_local_mean,
-                                self.ss.poet_stats.last_unique_blockID),
-                        False)
+                                self.ss.poet_stats.last_unique_blockID))
 
         self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
                         '  LOCAL       PREVIOUS        TXNS     TXNS       '
@@ -200,11 +207,11 @@ class StatsPrintManager(object):
                                         c.vsm.vstats.previous_blockid,
                                         c.vsm.vstats.txns_committed,
                                         c.vsm.vstats.txns_pending,
-                                        c.name[:16], c.url), False)
+                                        c.name[:16], c.url))
             else:
                 self.cp.cpprint('{0:6d}  {1:6}                               '
                                 '                             {2:16}   {3:16}'
                                 .format(c.id, c.validator_state,
-                                        c.name[:16], c.url), False)
+                                        c.name[:16], c.url))
 
         self.cp.cpprint("", True)
