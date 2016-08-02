@@ -82,7 +82,7 @@ def parse_args(args):
                              'corresponding values in the configuration file')
     parser.add_argument('-v', '--verbose',
                         action='count',
-                        help='enable more verbose output')
+                        help='Enable more verbose output')
 
     opts = parser.parse_args(args)
 
@@ -111,10 +111,12 @@ def load_configuration(opts):
     config = ConfigParser.SafeConfigParser()
     config.add_section('Simulator')
     config.set('Simulator', 'url', 'http://127.0.0.1:8800')
-    config.set('Simulator', 'workload', 'sawtooth_xo.xo_workload.XoWorkload')
+    config.set('Simulator',
+               'workload',
+               'txnintegration.integer_key_workload.IntegerKeyWorkload')
     config.set('Simulator', 'rate', '12')
     config.set('Simulator', 'discover', '15')
-    config.set('Simulator', 'verbose', '0')
+    config.set('Simulator', 'verbose', '1')
 
     # If there was a configuration file command-line option, then we
     # will read it to override any of the defaults
