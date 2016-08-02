@@ -346,6 +346,7 @@ class Journal(gossip_core.Gossip):
                         self.LocalNode.Name)
             self.onGenesisBlock.fire(self)
             self.claim_transaction_block(self.build_transaction_block(True))
+            self.GenesisLedger = False
         else:
             if self.MostRecentCommittedBlockID == common.NullIdentifier:
                 logger.critical('no ledger for a new network node')
