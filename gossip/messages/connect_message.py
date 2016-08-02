@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def send_connection_request(gossiper, peer):
-    """Sends a connection request message to a peer node.
+    """Sends a connection request (syn message) to a candidate peer node.
 
     Args:
         gossiper (Node): The local node.
@@ -38,7 +38,7 @@ def send_connection_request(gossiper, peer):
 
     gossiper.add_node(peer)
 
-    request = ConnectRequestMessage()
+    request = ConnectSynMessage()
     request.NetHost = gossiper.LocalNode.endpoint_host
     request.NetPort = gossiper.LocalNode.endpoint_port
     request.Name = gossiper.LocalNode.Name
@@ -52,21 +52,23 @@ def register_message_handlers(gossiper):
     Args:
         gossiper (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(ConnectRequestMessage,
-                                      connect_request_handler)
-    gossiper.register_message_handler(ConnectReplyMessage,
-                                      connect_reply_handler)
+    gossiper.register_message_handler(ConnectSynMessage,
+                                      connect_syn_handler)
+    gossiper.register_message_handler(ConnectAckMessage,
+                                      connect_ack_handler)
+    gossiper.register_message_handler(ConnectSynAckMessage,
+                                      connect_syn_ack_handler)
     gossiper.register_message_handler(DisconnectRequestMessage,
                                       disconnect_request_handler)
     gossiper.register_message_handler(KeepAliveMessage, keep_alive_handler)
 
 
-class ConnectRequestMessage(message.Message):
-    """Connection request messages are sent to a peer node to initiate
-    a gossip connection.
+class ConnectSynMessage(message.Message):
+    """Connection syn messages are sent to a candidate peer node to initiate a
+    gossip connection.
 
     Attributes:
-        ConnectRequestMessage.MessageType (str): The class name of the message.
+        ConnectSynMessage.MessageType (str): The class name of the message.
         Reliable (bool): Whether or not the message requires reliable
             delivery.
         NetHost (str): Hostname or IP address identifying the node.
@@ -78,15 +80,15 @@ class ConnectRequestMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/gossip.messages.ConnectMessage/ConnectRequest"
+    MessageType = "/gossip.messages.ConnectMessage/ConnectSyn"
 
     def __init__(self, minfo={}):
-        """Constructor for the ConnectRequestMessage class.
+        """Constructor for the ConnectSynMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
-        super(ConnectRequestMessage, self).__init__(minfo)
+        super(ConnectSynMessage, self).__init__(minfo)
         self.Reliable = False
 
         self.NetHost = minfo.get('Host', "127.0.0.1")
@@ -112,7 +114,7 @@ class ConnectRequestMessage(message.Message):
         Returns:
             dict: A mapping of object attribute names to values.
         """
-        result = super(ConnectRequestMessage, self).dump()
+        result = super(ConnectSynMessage, self).dump()
 
         result['Host'] = self.NetHost
         result['Port'] = self.NetPort
@@ -121,11 +123,12 @@ class ConnectRequestMessage(message.Message):
         return result
 
 
-def connect_request_handler(msg, gossiper):
-    """Handles connection request events.
+def connect_syn_handler(msg, gossiper):
+    """Handles connection syn events.
 
-    When a connection request message arrives, the requesting node is added
-    as a peer and a reply message is sent.
+    When a connection syn message arrives, the requesting node is added
+    as a node and an ack message is sent.  We do not yet know whether the
+    requester can hear us, so we'll not set the node to a peer just yet.
 
     Args:
         msg (message.Message): The received connection request message.
@@ -143,20 +146,19 @@ def connect_request_handler(msg, gossiper):
     orignode = node.Node(address=msg.NetAddress,
                          identifier=msg.OriginatorID,
                          name=name)
-    orignode.is_peer = True
     gossiper.add_node(orignode)
 
-    reply = ConnectReplyMessage()
+    reply = ConnectAckMessage()
     reply.InReplyTo = msg.Identifier
     gossiper.send_message(reply, msg.OriginatorID)
 
 
-class ConnectReplyMessage(message.Message):
-    """Connection reply messages are sent to a peer node in response to
-    an incoming connection request message.
+class ConnectAckMessage(message.Message):
+    """Connection ack messages are sent to a candidate peer node in response to
+    an incoming connection syn message.
 
     Attributes:
-        ConnectReplyMessage.MessageType (str): The class name of the message.
+        ConnectAckMessage.MessageType (str): The class name of the message.
         InReplyTo (str): The node identifier of the originator of the
             connection request message.
         IsSystemMessage (bool): Whether or not this is a system message.
@@ -165,15 +167,15 @@ class ConnectReplyMessage(message.Message):
             forwarded.
         IsReliable (bool): Whether reliable delivery is required.
     """
-    MessageType = "/gossip.messages.ConnectMessage/ConnectReply"
+    MessageType = "/gossip.messages.ConnectMessage/ConnectAck"
 
     def __init__(self, minfo={}):
-        """Constructor for the ConnectReplyMessage class.
+        """Constructor for the ConnectAckMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
-        super(ConnectReplyMessage, self).__init__(minfo)
+        super(ConnectAckMessage, self).__init__(minfo)
         self.InReplyTo = minfo.get('InReplyTo', common.NullIdentifier)
 
         self.IsSystemMessage = True
@@ -186,15 +188,17 @@ class ConnectReplyMessage(message.Message):
         Returns:
             dict: A mapping of object attribute names to values.
         """
-        result = super(ConnectReplyMessage, self).dump()
+        result = super(ConnectAckMessage, self).dump()
         return result
 
 
-def connect_reply_handler(msg, gossiper):
-    """Handles connection reply events.
+def connect_ack_handler(msg, gossiper):
+    """Handles connection ack events.
 
-    When a connection reply message arrives, the replying node is added
-    as a peer.
+    When a connection ack message arrives, the local node can reason that 2-way
+    communication with the replying node is (or was momentarily) possible, so
+    it promotes the replying node from node to peer, and sends its new peer a
+    syn_ack message.
 
     Args:
         msg (message.Message): The received connection reply message.
@@ -205,6 +209,63 @@ def connect_reply_handler(msg, gossiper):
 
     # we have confirmation that this peer is currently up, so add it to our
     # list
+    if msg.OriginatorID in gossiper.NodeMap:
+        gossiper.NodeMap[msg.OriginatorID].is_peer = True
+
+    # send syn_ack back to new peer to demonstrate 2-way communication line
+    reply = ConnectSynAckMessage()
+    reply.InReplyTo = msg.Identifier
+    gossiper.send_message(reply, msg.OriginatorID)
+
+
+class ConnectSynAckMessage(message.Message):
+    """Connection syn_ack messages are sent to a peer node in response to
+    an incoming connection ack message, in order to allow the remote node to
+    verify 2-way communication with the local node.
+
+    Attributes:
+        ConnectAckMessage.MessageType (str): The class name of the message.
+        InReplyTo (str): The node identifier of the originator of the
+            connection request message.
+        IsSystemMessage (bool): Whether or not this is a system message.
+            System messages have special delivery priority rules.
+        IsForward (bool): Whether the message should be automatically
+            forwarded.
+        IsReliable (bool): Whether reliable delivery is required.
+    """
+    MessageType = "/gossip.messages.ConnectMessage/ConnectSynAck"
+
+    def __init__(self, minfo={}):
+        super(ConnectSynAckMessage, self).__init__(minfo)
+        self.InReplyTo = minfo.get('InReplyTo', common.NullIdentifier)
+        self.IsSystemMessage = True
+        self.IsForward = False
+        self.IsReliable = True
+
+    def dump(self):
+        result = super(ConnectSynAckMessage, self).dump()
+        return result
+
+
+def connect_syn_ack_handler(msg, gossiper):
+    """Handles connection syn_ack events.
+
+    When a connection syn_ack message arrives, the local node can reason that
+    2-way communication with the replying node is (or was momentarily)
+    possible, so it promotes the replying node from node to peer, completing
+    the three way handshake connection protocol.
+
+    Args:
+        msg (message.Message): The received connection reply message.
+        gossiper (Node): The local node.
+    """
+    if msg.SenderID != msg.OriginatorID:
+        logger.error('connection request must originate from peer; %s not %s',
+                     msg.OriginatorID, msg.SenderID)
+        return
+    logger.info('received connect syn_ack from node %s',
+                gossiper.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8]))
+    # add peer now that we know 2-directional communication is possible
     if msg.OriginatorID in gossiper.NodeMap:
         gossiper.NodeMap[msg.OriginatorID].is_peer = True
 
@@ -270,7 +331,7 @@ def disconnect_request_handler(msg, gossiper):
 
 class KeepAliveMessage(message.Message):
     """Keep alive messages represent a request from a node to keep the
-    conneciton alive.
+    connection alive.
 
     Attributes:
         KeepAliveMessage.MessageType (str): The class name of the message.
