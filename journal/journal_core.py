@@ -332,7 +332,7 @@ class Journal(gossip_core.Gossip):
             return
 
         for txn in self.InitialTransactions:
-            self.add_pending_transaction(txn)
+            self.add_pending_transaction(txn, build_block=False)
         self.InitialTransactions = None
 
         for block in self.InitialBlockList:

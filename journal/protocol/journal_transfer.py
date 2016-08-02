@@ -295,7 +295,8 @@ class JournalTransfer(object):
 
         try:
             for txnid, txn in self.TransactionMap.iteritems():
-                self.Journal.add_pending_transaction(txn)
+                self.Journal.add_pending_transaction(txn,
+                                                     build_block=False)
 
             for blkid, blk in self.BlockMap.iteritems():
                 self.Journal.commit_transaction_block(blk)
