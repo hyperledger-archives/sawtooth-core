@@ -259,7 +259,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         Launch another validator on the network
         """
         v = self.network_manager.launch_node()
-        print "Validator {} launched.".format(v.Name)
+        print "Validator {} launched.".format(v.name)
         return False
 
     def do_launch_cmd(self, args):
