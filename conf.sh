@@ -1,6 +1,13 @@
 
-if [[ -e /vagrant/conf-local.sh ]]; then
+if [[ -e conf-local.sh ]]; then
+    . conf-local.sh
+elif [[ -e /vagrant/conf-local.sh ]]; then
     . /vagrant/conf-local.sh
 fi
-. /vagrant/conf-defaults.sh
+
+if [[ -e conf-defaults.sh ]]; then
+    . conf-defaults.sh
+else
+    . /vagrant/conf-defaults.sh
+fi
 
