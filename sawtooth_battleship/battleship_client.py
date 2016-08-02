@@ -18,7 +18,6 @@ import logging
 from sawtooth.client import SawtoothClient
 
 from sawtooth_battleship.txn_family import BattleshipTransaction
-from sawtooth_battleship.txn_family import BattleshipTransactionMessage
 
 
 LOGGER = logging.getLogger(__name__)
@@ -32,6 +31,8 @@ class BattleshipClient(SawtoothClient):
             base_url=base_url,
             store_name='BattleshipTransaction',
             name='BattleshipClient',
+            transaction_type=BattleshipTransaction,
+            message_type=BattleshipTransaction.MessageType,
             keyfile=keyfile)
 
     def create(self, name, ships):
@@ -45,7 +46,7 @@ class BattleshipClient(SawtoothClient):
 
         return self.sendtxn(
             BattleshipTransaction,
-            BattleshipTransactionMessage,
+            BattleshipTransaction.MessageType,
             update)
 
     def join(self, name, board):
@@ -59,7 +60,7 @@ class BattleshipClient(SawtoothClient):
 
         return self.sendtxn(
             BattleshipTransaction,
-            BattleshipTransactionMessage,
+            BattleshipTransaction.MessageType,
             update)
 
     def fire(self, name, column, row, reveal_space, reveal_nonce):
@@ -80,5 +81,5 @@ class BattleshipClient(SawtoothClient):
 
         return self.sendtxn(
             BattleshipTransaction,
-            BattleshipTransactionMessage,
+            BattleshipTransaction.MessageType,
             update)

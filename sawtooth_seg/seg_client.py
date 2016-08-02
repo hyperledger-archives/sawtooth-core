@@ -16,7 +16,6 @@
 from sawtooth.client import SawtoothClient
 
 from sawtooth_seg.txn_family import SegTransaction
-from sawtooth_seg.txn_family import SegTransactionMessage
 
 
 class SegClient(SawtoothClient):
@@ -27,6 +26,8 @@ class SegClient(SawtoothClient):
             base_url=base_url,
             store_name='SegTransaction',
             name='SegClient',
+            transaction_type=SegTransaction,
+            message_type=SegTransaction.MessageType,
             keyfile=keyfile)
 
     def guess(self, address, balance, block):
@@ -38,4 +39,5 @@ class SegClient(SawtoothClient):
             'Block': block
         }
 
-        return self.sendtxn(SegTransaction, SegTransactionMessage, update)
+        return \
+            self.sendtxn(SegTransaction, SegTransaction.MessageType, update)
