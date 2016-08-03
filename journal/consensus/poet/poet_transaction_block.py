@@ -94,11 +94,6 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 WaitCertificate.deserialize_wait_certificate(
                     serialized, signature)
 
-        if "TieBreaker" in minfo:
-            self.TieBreaker = minfo["TieBreaker"]
-        else:
-            self.TieBreaker = "Simple"
-
         self.AggregateLocalMean = 0.0
 
     def __str__(self):
@@ -120,52 +115,38 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             raise ValueError('block {0} must be valid for comparison'.format(
                 other.Identifier))
 
-        if self.TieBreaker == "Simple":
-            if self.TransactionDepth > other.TransactionDepth:
+        # Criteria #1: if both blocks share the same previous block,
+        # then the block with the smallest duration wins
+        if self.PreviousBlockID == other.PreviousBlockID:
+            if self.WaitCertificate.duration < \
+                    other.WaitCertificate.duration:
                 return 1
-
-            elif self.TransactionDepth < other.TransactionDepth:
+            elif self.WaitCertificate.duration > \
+                    other.WaitCertificate.duration:
                 return -1
-            else:
-                return cmp(self.Identifier, other.Identifier)
-        elif self.TieBreaker == "LargestLocalMean":
-            # Criteria #1: if both blocks share the same previous block,
-            # then the block with the smallest duration wins
-            if self.PreviousBlockID == other.PreviousBlockID:
-                if self.WaitCertificate.duration < \
-                        other.WaitCertificate.duration:
-                    return 1
-                elif self.WaitCertificate.duration > \
-                        other.WaitCertificate.duration:
-                    return -1
-            # Criteria #2: if there is a difference between the immediate
-            # ancestors then pick the chain with the highest aggregate
-            # local mean, this will be the largest population (more or less)
-            else:
-                if self.AggregateLocalMean > other.AggregateLocalMean:
-                    return 1
-                elif self.AggregateLocalMean < other.AggregateLocalMean:
-                    return -1
-            # Criteria #3... use number of transactions as a tie breaker, this
-            # should not happen except in very rare cases
-            return super(PoetTransactionBlock, self).__cmp__(other)
+        # Criteria #2: if there is a difference between the immediate
+        # ancestors then pick the chain with the highest aggregate
+        # local mean, this will be the largest population (more or less)
+        else:
+            if self.AggregateLocalMean > other.AggregateLocalMean:
+                return 1
+            elif self.AggregateLocalMean < other.AggregateLocalMean:
+                return -1
+        # Criteria #3... use number of transactions as a tie breaker, this
+        # should not happen except in very rare cases
+        return super(PoetTransactionBlock, self).__cmp__(other)
 
     def update_block_weight(self, journal):
-        if self.TieBreaker == "Simple":
-            assert self.Status == transaction_block.Status.valid
-            super(PoetTransactionBlock, self).update_block_weight(journal)
+        assert self.Status == transaction_block.Status.valid
+        super(PoetTransactionBlock, self).update_block_weight(journal)
 
-        elif self.TieBreaker == "LargestLocalMean":
-            assert self.Status == transaction_block.Status.valid
-            super(PoetTransactionBlock, self).update_block_weight(journal)
+        assert self.WaitCertificate
+        self.AggregateLocalMean = self.WaitCertificate.local_mean
 
-            assert self.WaitCertificate
-            self.AggregateLocalMean = self.WaitCertificate.local_mean
-
-            if self.PreviousBlockID != NullIdentifier:
-                assert self.PreviousBlockID in journal.BlockStore
-                self.AggregateLocalMean += \
-                    journal.BlockStore[self.PreviousBlockID].AggregateLocalMean
+        if self.PreviousBlockID != NullIdentifier:
+            assert self.PreviousBlockID in journal.BlockStore
+            self.AggregateLocalMean += \
+                journal.BlockStore[self.PreviousBlockID].AggregateLocalMean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
@@ -232,7 +213,6 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 transaction block.
         """
         result = super(PoetTransactionBlock, self).dump()
-        result["TieBreaker"] = self.TieBreaker
         result['WaitCertificate'] = self.WaitCertificate.dump()
 
         return result
