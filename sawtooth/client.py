@@ -338,7 +338,9 @@ class SawtoothClient(object):
         """
         Start a batch of updates to be sent in a single transaction to
         the validator.
+
         Returns:
+            None
 
         """
         if self._update_batch is not None:
@@ -352,6 +354,7 @@ class SawtoothClient(object):
     def reset_batch(self):
         """
         Abandon the current batch.
+
         Returns:
             None
         """
@@ -360,11 +363,9 @@ class SawtoothClient(object):
     def send_batch(self):
         """
         Sends the current batch of transactions to the Validator.
-        Args:
-            txn_type:
-            txn_msg_type:
 
         Returns:
+            transaction_id of the update transaction
 
         """
         if len(self._update_batch) == 0:
@@ -379,16 +380,17 @@ class SawtoothClient(object):
 
     def send_update(self, updates, dependencies=None):
         """
-            Send an update or list of updates to the validator or
-            add them to an existing batch.
+        Send an update or list of updates to the validator or add them to an
+        existing batch.
+
         Args:
             updates: single update or list of updates to be sent.
             dependencies: ids of transactions dependencies.
 
         Returns:
-            transaction_id if the update is sent, None if it is add to a
-            batch.
+            transaction_id if update is sent, None if it is added to a batch.
         """
+
         if self._update_batch is not None:
             # if we are in batching mode.
             if isinstance(updates, dict):  # accept single update
