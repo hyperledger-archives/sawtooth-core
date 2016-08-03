@@ -16,7 +16,6 @@
 from sawtooth.client import SawtoothClient
 
 from sawtooth_xo.txn_family import XoTransaction
-from sawtooth_xo.txn_family import XoTransactionMessage
 
 
 class XoClient(SawtoothClient):
@@ -27,6 +26,8 @@ class XoClient(SawtoothClient):
             base_url=base_url,
             store_name='XoTransaction',
             name='XoClient',
+            transaction_type=XoTransaction,
+            message_type=XoTransaction.MessageType,
             keyfile=keyfile)
 
     def create(self, name):
@@ -37,7 +38,7 @@ class XoClient(SawtoothClient):
             'Name': name
         }
 
-        return self.sendtxn(XoTransaction, XoTransactionMessage, update)
+        return self.sendtxn(XoTransaction, XoTransaction.MessageType, update)
 
     def take(self, name, space):
         """
@@ -48,4 +49,4 @@ class XoClient(SawtoothClient):
             'Space': space,
         }
 
-        return self.sendtxn(XoTransaction, XoTransactionMessage, update)
+        return self.sendtxn(XoTransaction, XoTransaction.MessageType, update)
