@@ -289,10 +289,18 @@ class Validator(object):
         else:
             urls = self.Config.get('LedgerURL', [])
 
+        # We randomize the url list here so that we avoid the
+        # condition of a small number of validators referencing
+        # each other's empty EndpointRegistries forever.
+        random.shuffle(urls)
         for url in urls:
             logger.info('attempting to load peers using url %s', url)
             try:
                 peers = self.get_endpoint_nodes(url)
+                # If the Endpoint Registry is empty, try the next
+                # url in the shuffled list
+                if len(peers) == 0:
+                    continue
                 for peer in peers:
                     self.NodeMap[peer.Name] = peer
                 break
