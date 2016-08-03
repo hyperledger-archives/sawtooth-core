@@ -52,6 +52,8 @@ class Journal(gossip_core.Gossip):
         Restore (bool): Whether or not to restore block data.
         onGenesisBlock (EventHandler): An EventHandler for functions
             to call when processing a genesis block.
+        onPreBuildBlock (EventHandler): An EventHandler for functions
+            to call when before processing a build block.
         onBuildBlock (EventHandler): An EventHandler for functions
             to call when processing a build block.
         onClaimBlock (EventHandler): An EventHandler for functions
@@ -123,6 +125,7 @@ class Journal(gossip_core.Gossip):
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
+        self.onPreBuildBlock = event_handler.EventHandler('onPreBuildBlock')
         self.onBuildBlock = event_handler.EventHandler('onBuildBlock')
         self.onClaimBlock = event_handler.EventHandler('onClaimBlock')
         self.onCommitBlock = event_handler.EventHandler('onCommitBlock')
@@ -329,7 +332,7 @@ class Journal(gossip_core.Gossip):
             return
 
         for txn in self.InitialTransactions:
-            self.add_pending_transaction(txn)
+            self.add_pending_transaction(txn, build_block=False)
         self.InitialTransactions = None
 
         for block in self.InitialBlockList:
@@ -343,6 +346,7 @@ class Journal(gossip_core.Gossip):
                         self.LocalNode.Name)
             self.onGenesisBlock.fire(self)
             self.claim_transaction_block(self.build_transaction_block(True))
+            self.GenesisLedger = False
         else:
             if self.MostRecentCommittedBlockID == common.NullIdentifier:
                 logger.critical('no ledger for a new network node')
@@ -350,7 +354,7 @@ class Journal(gossip_core.Gossip):
 
         logger.info('finished processing initial transactions and blocks')
 
-    def add_pending_transaction(self, txn, prepend=False):
+    def add_pending_transaction(self, txn, prepend=False, build_block=True):
         """Adds a transaction to the list of candidates for commit.
 
         Args:
@@ -399,7 +403,7 @@ class Journal(gossip_core.Gossip):
         # there is a chance the we deferred creating a transaction block
         # because there were insufficient transactions, this is where we check
         # to see if there are now enough to run the validation algorithm
-        if not self.PendingTransactionBlock:
+        if not self.PendingTransactionBlock and build_block:
             self.PendingTransactionBlock = self.build_transaction_block()
 
     def commit_transaction_block(self, tblock):
@@ -555,6 +559,7 @@ class Journal(gossip_core.Gossip):
                 initial block.
         """
 
+        self.onPreBuildBlock.fire(self, None)
         self.onBuildBlock.fire(self, None)
 
     def handle_advance(self, tblock):
