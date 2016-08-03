@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth.client import SawtoothClient
+from ledger.transaction.endpoint_registry import EndpointRegistryTransaction
 
 
 class EndpointClient(SawtoothClient):
@@ -31,7 +32,9 @@ class EndpointClient(SawtoothClient):
         super(EndpointClient, self).__init__(
             base_url=base_url,
             store_name='EndpointRegistryTransaction',
-            name='EndpointClient')
+            name='EndpointClient',
+            transaction_type=EndpointRegistryTransaction,
+            message_type=EndpointRegistryTransaction.MessageType)
 
     def get_endpoint_list(self, domain='/'):
         """
