@@ -111,7 +111,7 @@ class TestWebApi(unittest.TestCase):
         data = msg.dump()
         # Post /forward
         request = self._create_post_request("forward", data)
-        r = yaml.load(root.render_POST(request))
+        r = yaml.load(root.do_post(request))
         self.assertEquals(r, data)
         self.assertIn(msg.Identifier, node1.MessageQ.Messages)
         self.assertIn(msg.Identifier, node2.MessageQ.Messages)
@@ -127,11 +127,11 @@ class TestWebApi(unittest.TestCase):
         msg = shutdown_message.ShutdownMessage()
         data = msg.dump()
         request = self._create_post_request("/initiate", data)
-        r = root.render_POST(request)
+        r = root.do_post(request)
         self.assertEquals(r, "error processing http request /initiate\n")
         request.client = address.IPv4Address("TCP", '127.0.0.1', 8806)
         # Post /initiate - This should sign the message
-        r = yaml.load(root.render_POST(request))
+        r = yaml.load(root.do_post(request))
         sig = r["__SIGNATURE__"]
         r.pop("__SIGNATURE__", None)
         data.pop("__SIGNATURE__", None)
@@ -151,7 +151,7 @@ class TestWebApi(unittest.TestCase):
         data = msg.dump()
         # POST /echo
         request = self._create_post_request("/echo", data)
-        self.assertEquals(yaml.load(root.render_POST(request)), data)
+        self.assertEquals(yaml.load(root.do_post(request)), data)
 
     def test_web_api_store(self):
         # Test _handlestorerequest
@@ -164,7 +164,7 @@ class TestWebApi(unittest.TestCase):
         try:
             # Test no GlobalStore
             ledger.GlobalStore = None
-            root.render_GET(request)
+            root.do_get(request)
             self.fail("This should throw an error.")
         except:
             self.assertIsNotNone(ledger.GlobalStore)
@@ -173,30 +173,30 @@ class TestWebApi(unittest.TestCase):
         ledger.GlobalStore.TransactionStores["/TestTransaction"].set("TestKey",
                                                                      0)
         # GET /store
-        self.assertEquals(root.render_GET(request), '["/TestTransaction"]')
+        self.assertEquals(root.do_get(request), '["/TestTransaction"]')
 
         # GET /store/TestTransaction
         request = self._create_get_request("/store/TestTransaction", {})
-        self.assertEquals(root.render_GET(request), '["TestKey"]')
+        self.assertEquals(root.do_get(request), '["TestKey"]')
         # GET /store/TestTransaction/*
         request = self._create_get_request("/store/TestTransaction/*", {})
-        self.assertEquals(root.render_GET(request), '{"TestKey": 0}')
+        self.assertEquals(root.do_get(request), '{"TestKey": 0}')
         # GET /store/TestTransaction/*?delta=1
         request = self._create_get_request("/store/TestTransaction/*",
                                            {"delta": ['1']})
-        self.assertEquals(root.render_GET(request),
+        self.assertEquals(root.do_get(request),
                           '{"DeletedKeys": [], "Store": {"TestKey": 0}}')
         # GET /store/TestTransaction/TestKey
         request = self._create_get_request("/store/TestTransaction/TestKey",
                                            {})
-        self.assertEquals(root.render_GET(request), "0")
+        self.assertEquals(root.do_get(request), "0")
 
         try:
             blockstore = BlockStore()
             ledger.GlobalStoreMap.commit_block_store("123", blockstore)
             request = self._create_get_request("/store/TestTransaction/*",
                                                {"blockid": ["123"]})
-            root.render_GET(request)
+            root.do_get(request)
             self.fail("This should throw an error")
         except:
             blockstore = BlockStore()
@@ -206,7 +206,7 @@ class TestWebApi(unittest.TestCase):
         # GET /store/TestTransaction/*?blockid=123
         request = self._create_get_request("/store/TestTransaction/*",
                                            {"blockid": ["123"]})
-        self.assertEquals(root.render_GET(request), '{"TestKey": 0}')
+        self.assertEquals(root.do_get(request), '{"TestKey": 0}')
 
     def test_web_api_block(self):
         # Test _handleblkrequest
@@ -229,26 +229,26 @@ class TestWebApi(unittest.TestCase):
         request = self._create_get_request("/block", {})
         string = '["' + str(transBlock2.Identifier) + '", "' + \
             str(transBlock.Identifier) + '"]'
-        self.assertEquals(root.render_GET(request), string)
+        self.assertEquals(root.do_get(request), string)
         # GET /block?blockcount=2
         request = self._create_get_request("/block", {"blockcount": [2]})
-        self.assertEquals(root.render_GET(request), string)
+        self.assertEquals(root.do_get(request), string)
         # GET /block?blockcount=1
         string = '["' + str(transBlock2.Identifier) + '"]'
         request = self._create_get_request("/block", {"blockcount": [1]})
-        self.assertEquals(root.render_GET(request), string)
+        self.assertEquals(root.do_get(request), string)
         # Add identifier to dictionary
         dictB = transBlock.dump()
         dictB["Identifier"] = transBlock.Identifier
         # GET /block/{BlockId}
         request = self._create_get_request("/block/" + transBlock.Identifier,
                                            {})
-        self.assertEquals(yaml.load(root.render_GET(request)), dictB)
+        self.assertEquals(yaml.load(root.do_get(request)), dictB)
         # GET /block/{BlockId}/Signature
         request = self._create_get_request("/block/" +
                                            transBlock.Identifier +
                                            "/Signature", {})
-        self.assertEquals(root.render_GET(request), '"' +
+        self.assertEquals(root.do_get(request), '"' +
                           transBlock.Signature + '"')
 
     def test_web_api_transaction(self):
@@ -276,13 +276,13 @@ class TestWebApi(unittest.TestCase):
         request = self._create_get_request("/transaction", {})
         # GET /transaction
         request = self._create_get_request("/transaction", {})
-        r = root.render_GET(request)
+        r = root.do_get(request)
         r = r[1:-1].replace('"', "")
         r = r.replace(" ", "").split(",")
         self.assertEquals(r, txns)
         # GET /transaction?blockcount=1
         request = self._create_get_request("/transaction", {"blockcount": [1]})
-        r = root.render_GET(request)
+        r = root.do_get(request)
         r = r[1:-1].replace('"', "")
         r = r.replace(" ", "").split(",")
         self.assertEquals(r, txns)
@@ -295,11 +295,11 @@ class TestWebApi(unittest.TestCase):
         tinfo['Status'] = txn.Status
         if txn.Status == tStatus.committed:
             tinfo['InBlock'] = txn.InBlock
-        self.assertEquals(yaml.load(root.render_GET(request)), tinfo)
+        self.assertEquals(yaml.load(root.do_get(request)), tinfo)
         # GET /transaction/{TransactionID{}/InBlock
         request = self._create_get_request("/transaction/" + txns[1] +
                                            "/InBlock", {})
-        self.assertEquals(root.render_GET(request).replace('"', ""),
+        self.assertEquals(root.do_get(request).replace('"', ""),
                           txn.InBlock)
 
     def test_web_api_stats(self):
@@ -312,7 +312,7 @@ class TestWebApi(unittest.TestCase):
         root = RootPage(validator)
         request = self._create_get_request("/stat", {})
         try:
-            root.render_GET(request)
+            root.do_get(request)
             self.fail("This should cause an error")
         except:
             self.assertIsNotNone(root)
@@ -324,18 +324,18 @@ class TestWebApi(unittest.TestCase):
         dic["packet"] = ledger.StatDomains["packet"].get_stats()
         # GET /statistics/ledger
         request = self._create_get_request("/statistics/ledger", {})
-        self.assertEquals(yaml.load(root.render_GET(request)), dic)
+        self.assertEquals(yaml.load(root.do_get(request)), dic)
         # GET /statistics/node - with no peers
         request = self._create_get_request("/statistics/node", {})
-        self.assertEquals(yaml.load(root.render_GET(request)), {})
+        self.assertEquals(yaml.load(root.do_get(request)), {})
         node = self._create_node(8804)
         ledger.add_node(node)
         dic2 = {}
         dic2[node.Name] = node.Stats.get_stats()
         dic2[node.Name]["IsPeer"] = node.is_peer
         # GET /stats/node - with one peer
-        self.assertEquals(yaml.load(root.render_GET(request)), dic2)
+        self.assertEquals(yaml.load(root.do_get(request)), dic2)
 
         request = self._create_get_request("AnythingElse", {})
-        dic3 = root.render_GET(request)
+        dic3 = root.do_get(request)
         self.assertEquals(dic3, 'unknown request AnythingElse\n')
