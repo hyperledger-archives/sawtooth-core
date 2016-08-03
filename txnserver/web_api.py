@@ -18,6 +18,7 @@ This module implements the Web server supporting the web api
 """
 
 import logging
+import os
 import traceback
 import copy
 
@@ -27,6 +28,7 @@ from twisted.web import http, server
 from twisted.web.error import Error
 from twisted.web.resource import Resource
 from twisted.web.server import Site
+from twisted.web.static import File
 
 
 from gossip.common import json2dict
@@ -70,6 +72,10 @@ class RootPage(Resource):
             'echo': self._msg_echo
         }
 
+        static_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "static_content")
+        self.static_content = File(static_dir)
+
     def error_response(self, request, response, *msgargs):
         """
         Generate a common error response for broken requests
@@ -106,15 +112,15 @@ class RootPage(Resource):
         prefix = components.pop(0) if components else 'error'
 
         if prefix not in self.GetPageMap:
-            return self.error_response(request, http.BAD_REQUEST,
-                                       'unknown request {0}', request.path)
+            # attempt to serve static content if present.
+            resource = self.static_content.getChild(request.path[1:], request)
+            return resource.render(request)
 
         test_only = (request.method == 'HEAD')
 
         try:
             response = self.GetPageMap[prefix](components, request.args,
                                                test_only)
-
             if test_only:
                 return ''
 
