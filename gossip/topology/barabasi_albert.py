@@ -98,7 +98,7 @@ def _sendconnectionrequest(gossiper, peer):
 
     gossiper.add_node(peer)
 
-    request = connect_message.ConnectRequestMessage()
+    request = connect_message.ConnectSynMessage()
     request.NetHost = gossiper.LocalNode.endpoint_host
     request.NetPort = gossiper.LocalNode.endpoint_port
     request.Name = gossiper.LocalNode.Name
