@@ -113,105 +113,132 @@ class StatsPrintManager(object):
         self.clients = clients
 
     def print_stats(self):
-        self.cp.cpprint('    Validators: {0:8d} known,'
-                        '         {1:8d} responding,'
-                        '      {2:8f} avg time(s),'
-                        '    {3:8f} max time(s),'
-                        '    {4:8d} run time(s)'
-                        .format(self.ss.sys_client.known_validators,
-                                self.ss.sys_client.active_validators,
-                                self.ss.sys_client.avg_client_time,
-                                self.ss.sys_client.max_client_time,
-                                self.ss.sys_client.runtime))
 
-        self.cp.cpprint('        Blocks: {0:8d} max committed,'
-                        ' {1:8d} min committed,'
-                        '   {2:8d} max pending,'
-                        '    {3:8d} min pending,'
-                        '    {4:8d} max claimed,'
-                        '      {5:8d} min claimed'
-                        .format(self.ss.sys_blocks.blocks_max_committed,
-                                self.ss.sys_blocks.blocks_min_committed,
-                                self.ss.sys_blocks.blocks_max_pending,
-                                self.ss.sys_blocks.blocks_min_pending,
-                                self.ss.sys_blocks.blocks_max_claimed,
-                                self.ss.sys_blocks.blocks_min_claimed))
-        self.cp.cpprint('  Transactions: {0:8d} max committed,'
-                        ' {1:8d} min committed,'
-                        '   {2:8d} max pending,'
-                        '    {3:8d} min pending,'
-                        '    {4:8d} rate (t/s)'
-                        .format(self.ss.sys_txns.txns_max_committed,
-                                self.ss.sys_txns.txns_min_committed,
-                                self.ss.sys_txns.txns_max_pending,
-                                self.ss.sys_txns.txns_min_pending,
-                                0))
-        self.cp.cpprint(' Packet totals: {0:8d} max dropped,'
-                        '   {1:8d} min dropped,'
-                        '     {2:8d} max duplicated,'
-                        ' {3:8d} min duplicated,'
-                        ' {4:8d} max aks received,'
-                        ' {5:8d} min aks received'
-                        .format(self.ss.sys_packets.packets_max_dropped,
-                                self.ss.sys_packets.packets_min_dropped,
-                                self.ss.sys_packets.packets_max_duplicates,
-                                self.ss.sys_packets.packets_min_duplicates,
-                                self.ss.sys_packets.packets_max_acks_received,
-                                self.ss.sys_packets.packets_min_acks_received))
-        self.cp.cpprint('Message totals: {0:8d} max handled,'
-                        '   {1:8d} min handled,'
-                        '     {2:8d} max acked,'
-                        '      {3:8d} min acked'
-                        .format(self.ss.sys_msgs.msgs_max_handled,
-                                self.ss.sys_msgs.msgs_min_handled,
-                                self.ss.sys_msgs.msgs_max_acked,
-                                self.ss.sys_msgs.msgs_min_acked))
-        self.cp.cpprint('Platform stats: {0:8f} cpu pct,'
-                        '       {1:8f} vmem pct,'
-                        '       {2:8d} net bytes tx,'
-                        '  {3:8d} net bytes rx'
-                        .format(self.ps.cpu_stats.percent,
-                                self.ps.vmem_stats.percent,
-                                self.ps.net_stats.bytes_sent,
-                                self.ps.net_stats.bytes_recv))
+        validator_formatter = \
+            '{0:>15} ' \
+            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9.3f} {6:14.14} ' \
+            '{7:9.3f} {8:14.14} {9:9d} {10:14.14}'
+        self.cp.cpprint(validator_formatter.format(
+            "Validators:",
+            self.ss.sys_client.known_validators, "known",
+            self.ss.sys_client.active_validators, "responding",
+            self.ss.sys_client.avg_client_time, "avg time(s)",
+            self.ss.sys_client.max_client_time, "max time(s)",
+            self.ss.sys_client.runtime, "run time(s)"))
 
-        self.cp.cpprint('Poet Stats: {0:.2f} avg local mean,'
-                        '       {1:.2f} max local mean,'
-                        '       {2:.2f} min local mean,'
-                        '       {3:8s} last unique blockID'
-                        .format(self.ss.poet_stats.avg_local_mean,
-                                self.ss.poet_stats.max_local_mean,
-                                self.ss.poet_stats.min_local_mean,
-                                self.ss.poet_stats.last_unique_blockID))
+        blocks_formatter = \
+            '{0:>15} ' \
+            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
+            '{7:9d} {8:14.14} {9:9d} {10:14.14}'
+        self.cp.cpprint(blocks_formatter.format(
+            "Blocks:",
+            self.ss.sys_blocks.blocks_max_committed, "max committed",
+            self.ss.sys_blocks.blocks_min_committed, "min committed",
+            self.ss.sys_blocks.blocks_max_pending, "max pending",
+            self.ss.sys_blocks.blocks_min_pending, "min pending",
+            self.ss.sys_blocks.blocks_max_claimed, "max claimed",
+            self.ss.sys_blocks.blocks_min_claimed, "min claimed"))
 
-        self.cp.cpprint('   VAL     VAL  RESPONSE    BLOCKS    BLOCKS   BLOCKS'
-                        '  LOCAL       PREVIOUS        TXNS     TXNS       '
-                        '  VAL              VAL',
-                        reverse=True)
-        self.cp.cpprint('    ID   STATE      TIME   CLAIMED COMMITTED  PENDING'
-                        '  MEAN        BLOCKID       COMMITTED  PENDING    '
-                        '  NAME             URL',
-                        reverse=True)
+        txns_formatter = \
+            '{0:>15} ' \
+            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
+            '{7:9d} {8:14.14} {9:9d} {10:14.14}'
+        self.cp.cpprint(txns_formatter.format(
+            "Transactions:",
+            self.ss.sys_txns.txns_max_committed, "max committed",
+            self.ss.sys_txns.txns_min_committed, "min committed",
+            self.ss.sys_txns.txns_max_pending, "max pending",
+            self.ss.sys_txns.txns_min_pending, "min pending",
+            0, "rate (t/s)"))
+
+        pkt_formatter = \
+            '{0:>15} ' \
+            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
+            '{7:9d} {8:14.14} {9:9d} {10:14.14} {11:9d} {12:14.14}'
+        self.cp.cpprint(pkt_formatter.format(
+            "Packet totals:",
+            self.ss.sys_packets.packets_max_dropped, "max dropped",
+            self.ss.sys_packets.packets_min_dropped, "min dropped",
+            self.ss.sys_packets.packets_max_duplicates, "max duplicated",
+            self.ss.sys_packets.packets_min_duplicates, "min duplicated",
+            self.ss.sys_packets.packets_max_acks_received, "max acks rcvd",
+            self.ss.sys_packets.packets_min_acks_received, "min acks rcvd"))
+
+        msg_formatter = \
+            '{0:>15} ' \
+            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
+            '{7:9d} {8:14.14}'
+        self.cp.cpprint(msg_formatter.format(
+            "Message totals:",
+            self.ss.sys_msgs.msgs_max_handled, "max handled",
+            self.ss.sys_msgs.msgs_min_handled, "min handled",
+            self.ss.sys_msgs.msgs_max_acked, "max acked",
+            self.ss.sys_msgs.msgs_min_acked, "min acked"))
+
+        platform_formatter = \
+            '{0:>15} ' \
+            '{1:9.2f} {2:14.14} {3:9.2f} {4:14.14} {5:9d} {6:14.14} ' \
+            '{7:9d} {8:14.14}'
+        self.cp.cpprint(platform_formatter.format(
+            "Platform stats:",
+            self.ps.cpu_stats.percent, "cpu pct",
+            self.ps.vmem_stats.percent, "vmem pct",
+            self.ps.interval_net_bytes_sent, "ntwrk bytes tx",
+            self.ps.interval_net_bytes_recv, "ntwrk bytes rx"))
+
+        poet_formatter = \
+            '{0:>15} ' \
+            '{1:9.2f} {2:14.14} {3:9.2f} {4:14.14} {5:9.2f} {6:14.14} ' \
+            '{7:>26.16} {8:22.22}'
+        self.cp.cpprint(poet_formatter.format(
+            "Poet stats:",
+            self.ss.poet_stats.avg_local_mean, "avg local mean",
+            self.ss.poet_stats.max_local_mean, "max local mean",
+            self.ss.poet_stats.min_local_mean, "min local mean",
+            self.ss.poet_stats.last_unique_blockID, "last unique block ID"))
+
+        header_formatter = \
+            '{0:>6} {1:>7} {2:>9} {3:>9} {4:>9} {5:>9} ' \
+            '{6:>7}  {7:>16} {8:>9} {9:>9} {10:>18.18} {11:>28.28}'
+        resp_formatter = \
+            '{0:6d} {1:>7} {2:9.3f} {3:9d} {4:9d} {5:9d} ' \
+            '{6:7.2f}  {7:>16.16} {8:9d} {9:9d} {10:>18.18} {11:>28.28}'
+        no_resp_formatter = \
+            '{0:6d} {1:>7} {2:>9} {3:>9} {4:>9} {5:>9} ' \
+            '{6:>7}  {7:>16} {8:>9} {9:>9} {10:>18.18} {11:>28.28}'
+
+        self.cp.cpprint(header_formatter.format(
+            'VAL', 'VAL', 'RESPONSE', 'BLOCKS', 'BLOCKS', 'BLOCKS',
+            'LOCAL', 'PREVIOUS', 'TXNS', 'TXNS', ' VAL', 'VAL'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'STATE', 'TIME(S)', 'CLAIMED', 'COMMITTED', 'PENDING',
+            'MEAN', 'BLOCKID', 'COMMITTED', 'PENDING', 'NAME', 'URL'),
+            reverse=True)
 
         for c in self.clients:
             if c.responding:
-                self.cp.cpprint('{0:6d}  {1:6}  {2:8f}  {3:8d}  {4:8d} '
-                                '{5:8d}  {6:.2f}  {7:8s}  {8:8d} {9:8d}  '
-                                '{10:16}  {11:16}'
-                                .format(c.id, c.validator_state,
-                                        c.response_time,
-                                        c.vsm.vstats.blocks_claimed,
-                                        c.vsm.vstats.blocks_committed,
-                                        c.vsm.vstats.blocks_pending,
-                                        c.vsm.vstats.local_mean,
-                                        c.vsm.vstats.previous_blockid,
-                                        c.vsm.vstats.txns_committed,
-                                        c.vsm.vstats.txns_pending,
-                                        c.name[:16], c.url))
+                self.cp.cpprint(resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    c.response_time,
+                    c.vsm.vstats.blocks_claimed,
+                    c.vsm.vstats.blocks_committed,
+                    c.vsm.vstats.blocks_pending,
+                    c.vsm.vstats.local_mean,
+                    c.vsm.vstats.previous_blockid,
+                    c.vsm.vstats.txns_committed,
+                    c.vsm.vstats.txns_pending,
+                    c.name[:16],
+                    c.url),
+                    False)
             else:
-                self.cp.cpprint('{0:6d}  {1:6}                               '
-                                '                             {2:16}   {3:16}'
-                                .format(c.id, c.validator_state,
-                                        c.name[:16], c.url))
-
+                self.cp.cpprint(no_resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    "", "", "", "", "", "", "", "", "",
+                    c.name[:16],
+                    c.url),
+                    False)
         self.cp.cpprint("", True)

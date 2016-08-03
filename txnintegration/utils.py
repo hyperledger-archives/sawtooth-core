@@ -352,6 +352,12 @@ CpuStats = collections.namedtuple("scpu",
 class PlatformStats(StatsCollector):
     def __init__(self):
         super(PlatformStats, self).__init__()
+
+        self.interval_net_bytes_sent = 0
+        self.interval_net_bytes_recv = 0
+        self.previous_net_bytes_sent = 0
+        self.previous_net_bytes_recv = 0
+
         self.get_stats()
 
     def get_stats(self):
@@ -368,3 +374,11 @@ class PlatformStats(StatsCollector):
         # because named tuples are immutable
         self.statslist = [self.cpu_stats, self.vmem_stats, self.disk_stats,
                           self.net_stats]
+
+        # calculate interval stats
+        self.interval_net_bytes_sent = \
+            self.net_stats.bytes_sent - self.previous_net_bytes_sent
+        self.interval_net_bytes_recv = \
+            self.net_stats.bytes_recv - self.previous_net_bytes_recv
+        self.previous_net_bytes_sent = self.net_stats.bytes_sent
+        self.previous_net_bytes_recv = self.net_stats.bytes_recv
