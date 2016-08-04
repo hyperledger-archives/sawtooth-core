@@ -338,4 +338,4 @@ class TestWebApi(unittest.TestCase):
 
         request = self._create_get_request("AnythingElse", {})
         dic3 = root.do_get(request)
-        self.assertEquals(dic3, 'unknown request AnythingElse\n')
+        self.assertTrue('404 - No Such Resource' in dic3)

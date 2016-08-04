@@ -207,6 +207,9 @@ class ValidatorNetworkManager(object):
             cfg.update(overrides)
         cfg['id'] = validator_id
         cfg['NodeName'] = "validator-{}".format(validator_id)
+        if 'LedgerURL' not in cfg:
+            cfg['LedgerURL'] = self._validators[0].url
+
         cfg['Listen'] = [
             'localhost:{0}/UDP gossip'.format(self._udp_port_base +
                                               validator_id),

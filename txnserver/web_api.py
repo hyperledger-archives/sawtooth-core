@@ -18,6 +18,7 @@ This module implements the Web server supporting the web api
 """
 
 import logging
+import os
 import traceback
 import copy
 
@@ -27,6 +28,7 @@ from twisted.web import http, server
 from twisted.web.error import Error
 from twisted.web.resource import Resource
 from twisted.web.server import Site
+from twisted.web.static import File
 
 
 from gossip.common import json2dict
@@ -55,20 +57,24 @@ class RootPage(Resource):
         self.ps = PlatformStats()
 
         self.GetPageMap = {
-            'block': self._handleblkrequest,
-            'statistics': self._handlestatrequest,
-            'store': self._handlestorerequest,
-            'transaction': self._handletxnrequest,
+            'block': self._handle_blk_request,
+            'statistics': self._handle_stat_request,
+            'store': self._handle_store_request,
+            'transaction': self._handle_txn_request,
             'status': self._hdl_status_request,
         }
 
         self.PostPageMap = {
-            'default': self._msgforward,
-            'forward': self._msgforward,
-            'initiate': self._msginitiate,
-            'command': self._docommand,
-            'echo': self._msgecho
+            'default': self._msg_forward,
+            'forward': self._msg_forward,
+            'initiate': self._msg_initiate,
+            'command': self._do_command,
+            'echo': self._msg_echo
         }
+
+        static_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "static_content")
+        self.static_content = File(static_dir)
 
     def error_response(self, request, response, *msgargs):
         """
@@ -106,16 +112,16 @@ class RootPage(Resource):
         prefix = components.pop(0) if components else 'error'
 
         if prefix not in self.GetPageMap:
-            return self.error_response(request, http.BAD_REQUEST,
-                                       'unknown request {0}', request.path)
+            # attempt to serve static content if present.
+            resource = self.static_content.getChild(request.path[1:], request)
+            return resource.render(request)
 
-        testonly = (request.method == 'HEAD')
+        test_only = (request.method == 'HEAD')
 
         try:
             response = self.GetPageMap[prefix](components, request.args,
-                                               testonly)
-
-            if testonly:
+                                               test_only)
+            if test_only:
                 return ''
 
             cbor = (request.getHeader('Accept') == 'application/cbor')
@@ -247,22 +253,23 @@ class RootPage(Resource):
                             'for txn id: %s type: %s',
                             mytxn.Identifier,
                             mytxn.TransactionTypeName)
-                blockid = self.Ledger.MostRecentCommittedBlockID
+                block_id = self.Ledger.MostRecentCommittedBlockID
 
-                realstoremap = self.Ledger.GlobalStoreMap.get_block_store(
-                    blockid)
-                tempstoremap = global_store_manager.BlockStore(realstoremap)
-                if not tempstoremap:
-                    logger.info('no store map for block %s', blockid)
+                real_store_map = self.Ledger.GlobalStoreMap.get_block_store(
+                    block_id)
+                temp_store_map = \
+                    global_store_manager.BlockStore(real_store_map)
+                if not temp_store_map:
+                    logger.info('no store map for block %s', block_id)
                     return self.error_response(
                         request, http.BAD_REQUEST,
                         'unable to validate enclosed transaction {0}',
                         data)
 
-                transtype = mytxn.TransactionTypeName
-                if transtype not in tempstoremap.TransactionStores:
+                transaction_type = mytxn.TransactionTypeName
+                if transaction_type not in temp_store_map.TransactionStores:
                     logger.info('transaction type %s not in global store map',
-                                transtype)
+                                transaction_type)
                     return self.error_response(
                         request, http.BAD_REQUEST,
                         'unable to validate enclosed transaction {0}',
@@ -271,38 +278,38 @@ class RootPage(Resource):
                 # clone a copy of the ledger's message queue so we can
                 # temporarily play forward all locally submitted yet
                 # uncommitted transactions
-                myqueue = copy.deepcopy(self.Ledger.MessageQueue)
+                my_queue = copy.deepcopy(self.Ledger.MessageQueue)
 
                 # apply any enqueued messages
-                while len(myqueue) > 0:
-                    qmsg = myqueue.pop()
+                while len(my_queue) > 0:
+                    qmsg = my_queue.pop()
                     if qmsg and \
                        qmsg.MessageType in self.Ledger.MessageHandlerMap:
                         if (hasattr(qmsg, 'Transaction') and
                                 qmsg.Transaction is not None):
-                            mystore = tempstoremap.get_transaction_store(
+                            my_store = temp_store_map.get_transaction_store(
                                 qmsg.Transaction.TransactionTypeName)
-                            if qmsg.Transaction.is_valid(mystore):
+                            if qmsg.Transaction.is_valid(my_store):
                                 myqtxn = copy.copy(qmsg.Transaction)
-                                myqtxn.apply(mystore)
+                                myqtxn.apply(my_store)
 
                 # apply any local pending transactions
-                for txnid in self.Ledger.PendingTransactions.iterkeys():
-                    pendtxn = self.Ledger.TransactionStore[txnid]
-                    mystore = tempstoremap.get_transaction_store(
-                        pendtxn.TransactionTypeName)
-                    if pendtxn and pendtxn.is_valid(mystore):
-                        mypendtxn = copy.copy(pendtxn)
+                for txn_id in self.Ledger.PendingTransactions.iterkeys():
+                    pend_txn = self.Ledger.TransactionStore[txn_id]
+                    my_store = temp_store_map.get_transaction_store(
+                        pend_txn.TransactionTypeName)
+                    if pend_txn and pend_txn.is_valid(my_store):
+                        my_pend_txn = copy.copy(pend_txn)
                         logger.debug('applying pending transaction '
-                                     '%s to temp store', txnid)
-                        mypendtxn.apply(mystore)
+                                     '%s to temp store', txn_id)
+                        my_pend_txn.apply(my_store)
 
                 # determine validity of the POSTed transaction against our
                 # new temporary state
-                mystore = tempstoremap.get_transaction_store(
+                my_store = temp_store_map.get_transaction_store(
                     mytxn.TransactionTypeName)
                 try:
-                    mytxn.check_valid(mystore)
+                    mytxn.check_valid(my_store)
                 except InvalidTransactionError as e:
                     logger.info('submitted transaction fails transaction '
                                 'family validation check: %s; %s',
@@ -372,14 +379,14 @@ class RootPage(Resource):
         d.addErrback(self.errback, request)
         return server.NOT_DONE_YET
 
-    def _msgforward(self, request, components, msg):
+    def _msg_forward(self, request, components, msg):
         """
         Forward a signed message through the gossip network.
         """
         self.Ledger.handle_message(msg)
         return msg
 
-    def _msginitiate(self, request, components, msg):
+    def _msg_initiate(self, request, components, msg):
         """
         Sign and echo a message
         """
@@ -396,13 +403,13 @@ class RootPage(Resource):
         self.Ledger.handle_message(msg)
         return msg
 
-    def _msgecho(self, request, components, msg):
+    def _msg_echo(self, request, components, msg):
         """
         Sign and echo a message
         """
         return msg
 
-    def _docommand(self, request, components, cmd):
+    def _do_command(self, request, components, cmd):
         """
         Process validator control commands
         """
@@ -420,7 +427,7 @@ class RootPage(Resource):
 
         return cmd
 
-    def _handlestorerequest(self, pathcomponents, args, testonly):
+    def _handle_store_request(self, path_components, args, test_only):
         """
         Handle a store request. There are four types of requests:
             empty path -- return a list of known stores
@@ -432,29 +439,29 @@ class RootPage(Resource):
         if not self.Ledger.GlobalStore:
             raise Error(http.BAD_REQUEST, 'no global store')
 
-        blockid = self.Ledger.MostRecentCommittedBlockID
+        block_id = self.Ledger.MostRecentCommittedBlockID
         if 'blockid' in args:
-            blockid = args.get('blockid').pop(0)
+            block_id = args.get('blockid').pop(0)
 
-        storemap = self.Ledger.GlobalStoreMap.get_block_store(blockid)
+        storemap = self.Ledger.GlobalStoreMap.get_block_store(block_id)
         if not storemap:
             raise Error(http.BAD_REQUEST,
-                        'no store map for block <{0}>'.format(blockid))
+                        'no store map for block <{0}>'.format(block_id))
 
-        if len(pathcomponents) == 0:
+        if len(path_components) == 0:
             return storemap.TransactionStores.keys()
 
-        storename = '/' + pathcomponents.pop(0)
-        if storename not in storemap.TransactionStores:
+        store_name = '/' + path_components.pop(0)
+        if store_name not in storemap.TransactionStores:
             raise Error(http.BAD_REQUEST,
-                        'no such store <{0}>'.format(storename))
+                        'no such store <{0}>'.format(store_name))
 
-        store = storemap.get_transaction_store(storename)
+        store = storemap.get_transaction_store(store_name)
 
-        if len(pathcomponents) == 0:
+        if len(path_components) == 0:
             return store.keys()
 
-        key = pathcomponents[0]
+        key = path_components[0]
         if key == '*':
             if 'delta' in args and args.get('delta').pop(0) == '1':
                 return store.dump(True)
@@ -465,7 +472,7 @@ class RootPage(Resource):
 
         return store[key]
 
-    def _handleblkrequest(self, pathcomponents, args, testonly):
+    def _handle_blk_request(self, path_components, args, test_only):
         """
         Handle a block request. There are three types of requests:
             empty path -- return a list of the committed block ids
@@ -479,32 +486,32 @@ class RootPage(Resource):
         Blocks are returned newest to oldest.
         """
 
-        if not pathcomponents:
+        if not path_components:
             count = 0
             if 'blockcount' in args:
                 count = int(args.get('blockcount').pop(0))
 
-            blockids = self.Ledger.committed_block_ids(count)
-            return blockids
+            block_ids = self.Ledger.committed_block_ids(count)
+            return block_ids
 
-        blockid = pathcomponents.pop(0)
-        if blockid not in self.Ledger.BlockStore:
-            raise Error(http.BAD_REQUEST, 'unknown block {0}'.format(blockid))
+        block_id = path_components.pop(0)
+        if block_id not in self.Ledger.BlockStore:
+            raise Error(http.BAD_REQUEST, 'unknown block {0}'.format(block_id))
 
-        binfo = self.Ledger.BlockStore[blockid].dump()
-        binfo['Identifier'] = blockid
+        binfo = self.Ledger.BlockStore[block_id].dump()
+        binfo['Identifier'] = block_id
 
-        if not pathcomponents:
+        if not path_components:
             return binfo
 
-        field = pathcomponents.pop(0)
+        field = path_components.pop(0)
         if field not in binfo:
             raise Error(http.BAD_REQUEST,
                         'unknown block field {0}'.format(field))
 
         return binfo[field]
 
-    def _handletxnrequest(self, pathcomponents, args, testonly):
+    def _handle_txn_request(self, path_components, args, test_only):
         """
         Handle a transaction request. There are four types of requests:
             empty path -- return a list of the committed transactions ids
@@ -523,7 +530,7 @@ class RootPage(Resource):
 
         Transactions are returned from oldest to newest.
         """
-        if len(pathcomponents) == 0:
+        if len(path_components) == 0:
             blkcount = 0
             if 'blockcount' in args:
                 blkcount = int(args.get('blockcount').pop(0))
@@ -535,7 +542,7 @@ class RootPage(Resource):
                 txnids.extend(self.Ledger.BlockStore[blockid].TransactionIDs)
             return txnids
 
-        txnid = pathcomponents.pop(0)
+        txnid = path_components.pop(0)
 
         if txnid not in self.Ledger.TransactionStore:
             raise Error(http.NOT_FOUND,
@@ -543,7 +550,7 @@ class RootPage(Resource):
 
         txn = self.Ledger.TransactionStore[txnid]
 
-        if testonly:
+        if test_only:
             if txn.Status == transaction.Status.committed:
                 return None
             else:
@@ -556,23 +563,23 @@ class RootPage(Resource):
         if txn.Status == transaction.Status.committed:
             tinfo['InBlock'] = txn.InBlock
 
-        if not pathcomponents:
+        if not path_components:
             return tinfo
 
-        field = pathcomponents.pop(0)
+        field = path_components.pop(0)
         if field not in tinfo:
             raise Error(http.BAD_REQUEST,
                         'unknown transaction field {0}'.format(field))
 
         return tinfo[field]
 
-    def _handlestatrequest(self, pathcomponents, args, testonly):
-        if not pathcomponents:
+    def _handle_stat_request(self, path_components, args, testonly):
+        if not path_components:
             raise Error(http.BAD_REQUEST, 'missing stat family')
 
         result = dict()
 
-        source = pathcomponents.pop(0)
+        source = path_components.pop(0)
         if source == 'ledger':
             for domain in self.Ledger.StatDomains.iterkeys():
                 result[domain] = self.Ledger.StatDomains[domain].get_stats()
