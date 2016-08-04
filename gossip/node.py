@@ -21,6 +21,8 @@ by the Node implementation.
 import logging
 import random
 import time
+from threading import Lock
+
 from heapq import heappop, heappush, heapify
 
 import pybitcointools
@@ -365,6 +367,7 @@ class TransmissionQueue(object):
         self._messages = {}
         self._times = {}  # this allows reinsertion of a message
         self._heap = []
+        self._lock = Lock()
 
     def __str__(self):
         idlist = self._times.keys()
@@ -385,14 +388,15 @@ class TransmissionQueue(object):
             timetosend (float): python time when message should be sent,
                 0 for system message.
         """
-        messageid = msg.Identifier
-        assert messageid not in self._messages
-        assert messageid not in self._times
+        with self._lock:
+            messageid = msg.Identifier
+            assert messageid not in self._messages
+            assert messageid not in self._times
 
-        self._messages[messageid] = msg
-        self._times[messageid] = timetosend
+            self._messages[messageid] = msg
+            self._times[messageid] = timetosend
 
-        heappush(self._heap, (timetosend, messageid))
+            heappush(self._heap, (timetosend, messageid))
 
     def dequeue_message(self, msg):
         """Removes a message from the transmission queue if it exists.
@@ -403,26 +407,27 @@ class TransmissionQueue(object):
         Args:
             msg (message): the message to remove.
         """
+        with self._lock:
+            self._messages.pop(msg.Identifier, None)
+            self._times.pop(msg.Identifier, None)
 
-        self._messages.pop(msg.Identifier, None)
-        self._times.pop(msg.Identifier, None)
-
-        self._buildheap()
+            self._buildheap()
 
     @property
     def Head(self):
         """Returns the next message in the transmission queue and the time
         when it should be sent.
         """
-        self._trimheap()
-        if len(self._heap) == 0:
-            return None
+        with self._lock:
+            self._trimheap()
+            if len(self._heap) == 0:
+                return None
 
-        (timetosend, messageid) = self._heap[0]
-        assert messageid in self._messages
-        assert messageid in self._times
+            (timetosend, messageid) = self._heap[0]
+            assert messageid in self._messages
+            assert messageid in self._times
 
-        return (timetosend, self._messages[messageid])
+            return (timetosend, self._messages[messageid])
 
     @property
     def Count(self):
