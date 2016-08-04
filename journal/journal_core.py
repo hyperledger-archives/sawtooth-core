@@ -356,7 +356,8 @@ class Journal(gossip_core.Gossip):
         Args:
             txn (Transaction.Transaction): The newly arrived transaction
         """
-        logger.debug('incoming transaction %s', txn.Identifier[:8])
+        logger.debug('txnid: %s - add_pending_transaction',
+                     txn.Identifier[:8])
 
         # nothing more to do, we are initializing
         if self.Initializing:
@@ -384,7 +385,7 @@ class Journal(gossip_core.Gossip):
         # and look for any blocks that might be completed as a result of
         # processing the transaction
         if txn.Identifier in self.RequestedTransactions:
-            logger.info('catching up on old transaction %s',
+            logger.info('txnid %s - catching up',
                         txn.Identifier[:8])
             del self.RequestedTransactions[txn.Identifier]
 
@@ -409,20 +410,21 @@ class Journal(gossip_core.Gossip):
             tblock (Transaction.TransactionBlock): A block of
                 transactions which nodes agree to commit.
         """
-        logger.debug('processing incoming transaction block %s',
+        logger.debug('blkid: %s - processing incoming transaction block',
                      tblock.Identifier[:8])
 
         # Make sure this is a valid block, for now this will just check the
         # signature... more later
         if not tblock.verify_signature():
-            logger.warn('invalid block %s received from %s', tblock.Identifier,
+            logger.warn('blkid: %s - invalid block received from %s',
+                        tblock.Identifier,
                         tblock.OriginatorID)
             return
 
         # Don't do anything with incoming blocks if we are initializing, wait
         # for the connections to be fully established
         if self.Initializing:
-            logger.debug('adding block %s to the pending queue',
+            logger.debug('blkid: %s - adding block to the pending queue',
                          tblock.Identifier[:8])
 
             # this is an ugly hack to ensure that we don't treat this as a
@@ -445,7 +447,7 @@ class Journal(gossip_core.Gossip):
 
         # Make sure that we have not already processed this block
         if tblock.Identifier in self.BlockStore:
-            logger.info('found previously committed block %s',
+            logger.info('blkid: %s - previously committed block',
                         tblock.Identifier[:8])
             return
 
@@ -517,29 +519,30 @@ class Journal(gossip_core.Gossip):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
-        logger.info('missing_txn called')
+        logger.info('txnid: %s - missing_txn called', txnid[:8])
 
         now = time.time()
 
         if txnid in self.RequestedTransactions and now < \
                 self.RequestedTransactions[txnid]:
-            logger.info('missing txnid is already in RequestedTxn')
+            logger.info('txnid: %s - already in RequestedTxn', txnid[:8])
             return
 
         self.RequestedTransactions[txnid] = now + self.MissingRequestInterval
-        logger.info('New Txn placed in RequestedTxn')
 
         self.JournalStats.MissingTxnRequestCount.increment()
 
         # if the request for the missing block came from another node, then
         # we need to reuse the request or we'll process multiple copies
         if not request:
-            logger.info('new request from same node')
+            logger.info('txnid: %s - new request from same node(%s)',
+                        txnid[:8], self.LocalNode.Name)
             request = transaction_message.TransactionRequestMessage(
                 {'TransactionID': txnid})
             self.forward_message(request, exceptions=exceptions)
         else:
-            logger.info('new request fr another node')
+            logger.info('txnid: %s - new request from another node(%s)  ',
+                        txnid[:8], self._id2name(request.SenderID))
             self.forward_message(request,
                                  exceptions=exceptions,
                                  initialize=False)
@@ -574,7 +577,8 @@ class Journal(gossip_core.Gossip):
             self._commitblock(tblock)
             self.PendingTransactionBlock = self.build_transaction_block()
         except Exception as e:
-            logger.error("Error advancing block chain: %s", e)
+            logger.error("blkid: %s - Error advancing block chain: %s",
+                         tblock.Identifier[:8], e)
             self.PendingTransactionBlock = pending
             raise
 
@@ -592,9 +596,10 @@ class Journal(gossip_core.Gossip):
             assert tblock.Status == transaction_block.Status.valid
 
             logger.info(
-                'received a disconnected block %s from %s with previous id %s,'
-                ' expecting %s',
-                tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
+                'blkid: %s - (fork) received disconnected from %s with'
+                ' previous id %s, expecting %s',
+                tblock.Identifier[:8],
+                self._id2name(tblock.OriginatorID),
                 tblock.PreviousBlockID[:8],
                 self.MostRecentCommittedBlockID[:8])
 
@@ -604,12 +609,19 @@ class Journal(gossip_core.Gossip):
 
             assert self.MostRecentCommittedBlockID != common.NullIdentifier
             if cmp(tblock, self.MostRecentCommittedBlock) < 0:
-                logger.info('existing chain is the valid one')
+                logger.info('blkid: %s - (fork) existing chain is the '
+                            'valid one, discarding blkid: %s',
+                            self.MostRecentCommittedBlockID[:8],
+                            tblock.Identifier[:8],
+                            )
                 self.PendingTransactionBlock = pending
                 return
 
-            logger.info('new chain is the valid one, replace the current '
-                        'chain')
+            logger.info('blkid: %s - (fork) new chain is the valid one, '
+                        ' replace the current chain blkid: %s',
+                        tblock.Identifier[:8],
+                        self.MostRecentCommittedBlockID[:8]
+                        )
 
             # now find the root of the fork, first handle the common case of
             # not looking very deeply for the common block, then handle the
@@ -633,7 +645,8 @@ class Journal(gossip_core.Gossip):
             self._commitblockchain(tblock.Identifier, fork_id)
             self.PendingTransactionBlock = self.build_transaction_block()
         except Exception as e:
-            logger.error("Error resolving fork: %s", e)
+            logger.error("blkid: %s - (fork) Error resolving fork: %s",
+                         tblock.Identifier[:8], e)
             self.PendingTransactionBlock = pending
             raise
     #
@@ -697,7 +710,8 @@ class Journal(gossip_core.Gossip):
         # specific to the various transaction families or consensus mechanisms
         if (not tblock.is_valid(self)
                 or not self.onBlockTest.fire(self, tblock)):
-            logger.debug('block test failed for %s', tblock.Identifier[:8])
+            logger.debug('blkid: %s - block test failed',
+                         tblock.Identifier[:8])
             self.PendingBlockIDs.discard(tblock.Identifier)
             self.InvalidBlockIDs.add(tblock.Identifier)
             tblock.Status = transaction_block.Status.invalid
@@ -708,7 +722,7 @@ class Journal(gossip_core.Gossip):
         # block is valid independently and build the new data store
         newstore = self._testandapplyblock(tblock)
         if newstore is None:
-            logger.debug('transaction validity test failed for %s',
+            logger.debug('blkid: %s - transaction validity test failed',
                          tblock.Identifier[:8])
             self.PendingBlockIDs.discard(tblock.Identifier)
             self.InvalidBlockIDs.add(tblock.Identifier)
@@ -785,7 +799,7 @@ class Journal(gossip_core.Gossip):
                  be committed
         """
 
-        logger.info('commit block %s from %s with previous id %s',
+        logger.info('blkid: %s - commit block from %s with previous blkid: %s',
                     tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
                     tblock.PreviousBlockID[:8])
 
@@ -897,8 +911,9 @@ class Journal(gossip_core.Gossip):
 
                 txn.apply(txnstore)
         except:
-            logger.exception('unexpected exception when testing'
-                             ' transaction block validity')
+            logger.exception('txnid: %s - unexpected exception when testing'
+                             ' transaction block validity, ',
+                             txnid[:8])
             return None
 
         return teststore
@@ -949,7 +964,7 @@ class Journal(gossip_core.Gossip):
         # we know that they will never be valid
         for txnid in deltxns:
             self.JournalStats.InvalidTxnCount.increment()
-            logger.info('found a transaction that will never apply; %s',
+            logger.info('txnid: %s - will never apply',
                         txnid[:8])
             if txnid in self.TransactionStore:
                 del self.TransactionStore[txnid]
@@ -972,8 +987,9 @@ class Journal(gossip_core.Gossip):
             True if the transaction is valid
         """
 
-        logger.debug('add transaction %s with id %s', str(txn),
-                     txn.Identifier[:8])
+        logger.debug('txnid: %s - add transaction %s',
+                     txn.Identifier[:8],
+                     str(txn))
 
         # Because the dependencies may reorder transactions in the block
         # in a way that is different from the arrival order, this transaction
@@ -985,8 +1001,8 @@ class Journal(gossip_core.Gossip):
         # sure that all dependent transactions are in the list already
         ready = True
         for dependencyID in txn.Dependencies:
-            logger.debug('check dependency %s of transaction %s',
-                         dependencyID[:8], txn.Identifier[:8])
+            logger.debug('txnid: %s - check dependency %s',
+                         txn.Identifier[:8], dependencyID[:8])
 
             # check to see if the dependency has already been committed
             if (dependencyID in self.TransactionStore and
@@ -1002,7 +1018,7 @@ class Journal(gossip_core.Gossip):
             # deleted, if so then this transaction will never be valid and we
             # can just get rid of it
             if dependencyID in deltxns:
-                logger.info('transaction %s depends on deleted transaction %s',
+                logger.info('txnid: %s - depends on deleted transaction %s',
                             txn.Identifier[:8], dependencyID[:8])
                 deltxns.append(txn.Identifier)
                 ready = False
@@ -1020,6 +1036,8 @@ class Journal(gossip_core.Gossip):
             # can just throw it away if the dependencies cannot be met
             ready = False
 
+            logger.info('txnid: %s - missing, calling request_missing_txn',
+                        dependencyID[:8])
             self.request_missing_txn(dependencyID)
             self.JournalStats.MissingTxnDepCount.increment()
 
@@ -1033,7 +1051,7 @@ class Journal(gossip_core.Gossip):
         # encoded in the transaction itself are met
         txnstore = store.get_transaction_store(txn.TransactionTypeName)
         if txn.is_valid(txnstore):
-            logger.debug('txn with id %s is valid, adding to block',
+            logger.debug('txnid: %s - is valid, adding to block',
                          txn.Identifier[:8])
             addtxns.append(txn.Identifier)
             txn.apply(txnstore)
@@ -1043,8 +1061,8 @@ class Journal(gossip_core.Gossip):
         # invalid we know that this transaction is broken and we can simply
         # throw it away
         logger.warn(
-            'transaction %s with id %s is not valid for this block, dropping',
-            str(txn), txn.Identifier[:8])
+            'txnid: %s - is not valid for this block, dropping - %s',
+            txn.Identifier[:8], str(txn))
         logger.info(common.pretty_print_dict(txn.dump()))
         deltxns.append(txn.Identifier)
         return False
