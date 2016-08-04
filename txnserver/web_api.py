@@ -592,6 +592,8 @@ class RootPage(Resource):
         result['Host'] = self.Ledger.LocalNode.NetHost
         result['NodeIdentifier'] = self.Ledger.LocalNode.Identifier
         result['Port'] = self.Ledger.LocalNode.NetPort
+        result['Peers'] = [x.Name
+                           for x in self.Ledger.peer_list(allflag=False)]
         return result
 
 
