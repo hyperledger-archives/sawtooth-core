@@ -319,6 +319,7 @@ class Journal(gossip_core.Gossip):
             try:
                 self.MostRecentCommittedBlockID = \
                     self.ChainStore['MostRecentBlockID']
+                logger.info('commit head: %s', self.MostRecentCommittedBlockID)
             except KeyError:
                 logger.warn('unable to load the most recent block id, '
                             'recomputing')
