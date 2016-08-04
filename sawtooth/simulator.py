@@ -169,13 +169,18 @@ class SawtoothWorkloadSimulator(object):
         removed = [v for v in self._validators if v not in validators]
 
         # First let the workload generator know about additions then removals
+        LOGGER.info('Discovered %d new validators', len(discovered))
         for validator in discovered:
             LOGGER.info('Discovered a new validator: %s', validator)
             self._workload.on_validator_discovered(validator)
+        LOGGER.info('Removed %d non-responsive validators', len(removed))
         for validator in removed:
             self._remove_unresponsive_validator(validator)
 
         # Save off the list of validators
+        LOGGER.info(
+            'Running simulated workload on %d validators',
+            len(validators))
         self._validators = validators
 
     def _remove_unresponsive_validator(self, validator):
