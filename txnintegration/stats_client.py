@@ -158,7 +158,6 @@ class ValidatorStatsManager(object):
             self.request_time = starttime
             self.response_time = endtime - starttime
 
-
 SysClient = collections.namedtuple('sys_client',
                                    'starttime '
                                    'runtime '
@@ -284,12 +283,12 @@ class SystemStats(StatsCollector):
                 self.max_client_time
             )
 
-            blocks_max_commited = max(self.blocks_committed)
+            blocks_max_committed = max(self.blocks_committed)
             blocks_max_pending = max(self.blocks_pending)
 
             self.sys_blocks = SysBlocks(
-                blocks_max_commited,
-                self.blocks_committed.count(blocks_max_commited),
+                blocks_max_committed,
+                self.blocks_committed.count(blocks_max_committed),
                 min(self.blocks_committed),
                 blocks_max_pending,
                 self.blocks_pending.count(blocks_max_pending),
@@ -298,12 +297,12 @@ class SystemStats(StatsCollector):
                 min(self.blocks_claimed)
             )
 
-            txns_max_commited = max(self.txns_committed)
+            txns_max_committed = max(self.txns_committed)
             txns_max_pending = max(self.txns_pending)
 
             self.sys_txns = SysTxns(
-                txns_max_commited,
-                self.txns_committed.count(txns_max_commited),
+                txns_max_committed,
+                self.txns_committed.count(txns_max_committed),
                 min(self.txns_committed),
                 txns_max_pending,
                 self.txns_pending.count(txns_max_pending),
@@ -369,8 +368,8 @@ class StatsManager(object):
         self.ss = SystemStats()
         self.ps = PlatformStats()
 
-        self.last_net_bytes_recv = 0
-        self.last_net_bytes_sent = 0
+        self.previous_net_bytes_recv = 0
+        self.previous_net_bytes_sent = 0
 
         self.clients = []
         self.known_endpoint_urls = []
@@ -427,14 +426,6 @@ class StatsManager(object):
         self.ss.calculate_stats()
 
         self.ps.get_stats()
-
-        self.this_net_bytes_recv = self.ps.net_stats.bytes_recv - \
-            self.last_net_bytes_recv
-        self.last_net_bytes_recv = self.ps.net_stats.bytes_recv
-
-        self.this_net_bytes_sent = self.ps.net_stats.bytes_sent - \
-            self.last_net_bytes_sent
-        self.last_net_bytes_sent = self.ps.net_stats.bytes_sent
 
     def print_stats(self):
         self.spm.print_stats()
