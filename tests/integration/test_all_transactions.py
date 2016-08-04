@@ -116,6 +116,49 @@ class TestAllTransactions(unittest.TestCase):
         self.assertIsNone(state.n2i("//user/user/holding/good/paper"))
         self.assertIsNone(state.n2i("//user/user/holding/good/paper"))
 
+    def test_transactions_unr_dangling_ref(self):
+        import sys
+        from StringIO import StringIO
+        saved_stdout = sys.stdout
+        try:
+            out = StringIO()
+            sys.stdout = out
+            client_cli.main(args=["--name", "user",
+                                  "--script",
+                                  os.path.join(self.script_path,
+                                               "unr_transactions"),
+                                  "--echo",
+                                  "--url",
+                                  self.url])
+            output = out.getvalue().strip()
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /user/liability/currency/USD")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /user/holding/currency/USD")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /user/holding/token")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /asset/currency/USD")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /asset/good/paper")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /asset-type/currency")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                             "unr --name /asset-type/good")
+                             == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                                         "unr --name /user/account") == -1)
+            self.assertFalse(output.find("An error occurred processing "
+                                         "unr --name //user") == -1)
+        finally:
+            sys.stdout = saved_stdout
+
     @classmethod
     def tearDownClass(cls):
         if cls.vnm is not None:
