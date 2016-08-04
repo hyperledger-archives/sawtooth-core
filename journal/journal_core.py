@@ -314,13 +314,8 @@ class Journal(gossip_core.Gossip):
 
         self.Initializing = False
 
-        # this is a very special case where the ledger is started with an
-        # existing database but no validation network. the situation can (and
-        # has) occurred with deployments where all validators fail. so this is
-        # really the solution of last resort, it assumes that all databases are
-        # successfully restored
-        if self.GenesisLedger and self.Restore:
-            logger.warn('restore ledger state from the backup data stores')
+        if self.Restore:
+            logger.info('restore ledger state from the backup data stores')
             try:
                 self.MostRecentCommittedBlockID = \
                     self.ChainStore['MostRecentBlockID']

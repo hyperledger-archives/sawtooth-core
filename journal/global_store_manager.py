@@ -209,6 +209,12 @@ class GlobalStoreManager(object):
 
         self.flush_block_store(blockstore.PreviousBlockID)
 
+    def persistmap_keys(self):
+        '''
+        Returns: a list of the block ids in the persistent store
+        '''
+        return self._persistmap.keys()
+
 
 class BlockStore(object):
     """The BlockManager class captures the ledger state associated with

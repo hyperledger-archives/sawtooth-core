@@ -50,11 +50,13 @@ def start_journal_transfer(journal, oncomplete):
     Returns:
         bool: Whether or not a journal transfer was initiated.
     """
-    # if there are no peers then bad stuff has happened or else we
-    # are the first one
-    if len(journal.peer_list()) == 0:
-        logger.warn('no peers found for journal transfer')
-        return False
+
+    if journal.Restore is True:
+        if len(journal.GlobalStoreMap.persistmap_keys()) > 1:
+            # we have persistence; do not fetch remote ledger
+            return False
+        else:
+            logger.warn('restoration from persistence layer not possible')
 
     transfer = JournalTransfer(journal, oncomplete)
     transfer.initiate_journal_transfer()
@@ -84,6 +86,10 @@ class JournalTransfer(object):
     def initiate_journal_transfer(self):
         """Initiates journal transfer to peers.
         """
+        if len(self.Journal.peer_list()) == 0:
+            reactor.callLater(10, self.initiate_journal_transfer)
+            return
+
         self.Peer = random.choice(self.Journal.peer_list())
         logger.info('initiate journal transfer from %s', self.Peer)
 
