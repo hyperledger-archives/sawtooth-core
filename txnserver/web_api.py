@@ -22,10 +22,12 @@ import traceback
 import copy
 
 from twisted.internet import reactor
-from twisted.web import http
+from twisted.internet import threads
+from twisted.web import http, server
 from twisted.web.error import Error
 from twisted.web.resource import Resource
 from twisted.web.server import Site
+
 
 from gossip.common import json2dict
 from gossip.common import dict2json
@@ -82,7 +84,12 @@ class RootPage(Resource):
 
         return "" if request.method == 'HEAD' else (msg + '\n')
 
-    def render_GET(self, request):
+    def errback(self, failure, request):
+        failure.printTraceback()
+        request.processingFailed(failure)
+        return None
+
+    def do_get(self, request):
         """
         Handle a GET request on the HTTP interface. Three paths are accepted:
             /store[/<storename>[/<key>|*]]
@@ -142,15 +149,15 @@ class RootPage(Resource):
                                        'error processing http request {0}',
                                        request.path)
 
-    def render_POST(self, request):
+    def do_post(self, request):
         """
         Handle two types of HTTP POST requests:
          - gossip messages.  relayed to the gossip network as is
          - validator command and control (/command)
         """
-        # pylint: disable=invalid-name
 
         # break the path into its component parts
+
         components = request.path.split('/')
         while components and components[0] == '':
             components.pop(0)
@@ -344,6 +351,27 @@ class RootPage(Resource):
                                            'error processing http request {0}',
                                            request.path)
 
+    def final(self, message, request):
+        request.write(message)
+        try:
+            request.finish()
+        except RuntimeError:
+            logger.error("No connection when request.finish called")
+
+    def render_GET(self, request):
+        # pylint: disable=invalid-name
+        d = threads.deferToThread(self.do_get, request)
+        d.addCallback(self.final, request)
+        d.addErrback(self.errback, request)
+        return server.NOT_DONE_YET
+
+    def render_POST(self, request):
+        # pylint: disable=invalid-name
+        d = threads.deferToThread(self.do_post, request)
+        d.addCallback(self.final, request)
+        d.addErrback(self.errback, request)
+        return server.NOT_DONE_YET
+
     def _msgforward(self, request, components, msg):
         """
         Forward a signed message through the gossip network.
@@ -372,7 +400,6 @@ class RootPage(Resource):
         """
         Sign and echo a message
         """
-
         return msg
 
     def _docommand(self, request, components, cmd):
