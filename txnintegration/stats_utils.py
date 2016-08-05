@@ -15,6 +15,7 @@
 
 import time
 import csv
+import collections
 
 curses_imported = True
 try:
@@ -103,6 +104,61 @@ class CsvManager(object):
     def _csv_write(self):
         self.writer.writerow(self.csvdata)
         self.csvdata = []
+
+
+class TransactionRate(object):
+    def __init__(self):
+        self.txn_history = collections.deque()
+        self.previous_block_count = 0
+        self.avg_txn_rate = 0.0
+        self.avg_block_time = 0.0
+        self.window_time = 0.0
+        self.window_txn_count = 0
+
+    def calculate_txn_rate(self, current_block_count, current_txn_count,
+                           window_size=10):
+        """
+
+        Args:
+            current_block_count: current number of committed blocks
+            current_txn_count: current number of committed transactions
+            window_size: number of blocks to average over
+
+        Synopsis:
+            Each time the block count changes, a snapshot of the
+            current number of committed txns and current time is placed in
+            the queue.  If there are two or more entries in the queue, the
+            average txn rate and average block commit time is calculated.
+            If there are more than window_size transactions in the queue,
+            the oldest entry is popped from the queue.
+
+        Returns:
+            avg_txn_rate: average number of transactions per second
+            avg_block_time: average block commit time
+
+        """
+        if not current_block_count == self.previous_block_count:
+            self.previous_block_count = current_block_count
+            current_block_time = time.time()
+            self.txn_history.append([current_txn_count, current_block_time])
+            # if less than 2 samples, can't do anything
+            if len(self.txn_history) < 2:
+                self.avg_txn_rate = 0.0
+                self.avg_block_time = 0.0
+                return self.avg_txn_rate, self.avg_block_time
+            # otherwise calculate from tip to tail; current is tip, [0] is tail
+            past_txn_count, past_block_time = self.txn_history[0]
+            self.window_time = current_block_time - past_block_time
+            self.window_txn_count = current_txn_count - past_txn_count
+            self.avg_txn_rate = \
+                float(self.window_txn_count) / self.window_time
+            self.avg_block_time = \
+                (self.window_time) / (len(self.txn_history) - 1)
+            # if more than "window_size" samples, discard oldest
+            if len(self.txn_history) > window_size:
+                self.txn_history.popleft()
+
+            return self.avg_txn_rate, self.avg_block_time
 
 
 class StatsPrintManager(object):
@@ -198,23 +254,28 @@ class StatsPrintManager(object):
             self.ss.poet_stats.last_unique_blockID, "last unique block ID"))
 
         header_formatter = \
-            '{0:>6} {1:>7} {2:>9} {3:>9} {4:>9} {5:>9} ' \
-            '{6:>7}  {7:>16} {8:>9} {9:>9} {10:>18.18} {11:>28.28}'
+            '{0:>6} {1:>7} {2:>8} {3:>7} {4:>9} {5:>7} ' \
+            '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
+            '{12:>18.18} {13:>28.28}'
         resp_formatter = \
-            '{0:6d} {1:>7} {2:9.3f} {3:9d} {4:9d} {5:9d} ' \
-            '{6:7.2f}  {7:>16.16} {8:9d} {9:9d} {10:>18.18} {11:>28.28}'
+            '{0:6d} {1:>7} {2:8.3f} {3:7d} {4:9d} {5:7d} ' \
+            '{6:11d} {7:7d} {8:9.2f} {9:7.2f} {10:8.2f}  {11:>16.16} ' \
+            '{12:>18.18} {13:>28.28}'
         no_resp_formatter = \
-            '{0:6d} {1:>7} {2:>9} {3:>9} {4:>9} {5:>9} ' \
-            '{6:>7}  {7:>16} {8:>9} {9:>9} {10:>18.18} {11:>28.28}'
+            '{0:6d} {1:>7} {2:>8} {3:>7} {4:>9} {5:>7} ' \
+            '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
+            '{12:>18.18} {13:>28.28}'
 
         self.cp.cpprint(header_formatter.format(
             'VAL', 'VAL', 'RESPONSE', 'BLOCKS', 'BLOCKS', 'BLOCKS',
-            'LOCAL', 'PREVIOUS', 'TXNS', 'TXNS', ' VAL', 'VAL'),
+            'TXNS', 'TXNS', 'AVG TXN', 'AVG BLK', 'LOCAL', 'PREVIOUS',
+            ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
         self.cp.cpprint(header_formatter.format(
             'ID', 'STATE', 'TIME(S)', 'CLAIMED', 'COMMITTED', 'PENDING',
-            'MEAN', 'BLOCKID', 'COMMITTED', 'PENDING', 'NAME', 'URL'),
+            'COMMITTED', 'PENDING', 'RATE(T/S)', 'TIME(S)', 'MEAN', 'BLOCKID',
+            'NAME', 'URL'),
             reverse=True)
 
         for c in self.clients:
@@ -226,10 +287,12 @@ class StatsPrintManager(object):
                     c.vsm.vstats.blocks_claimed,
                     c.vsm.vstats.blocks_committed,
                     c.vsm.vstats.blocks_pending,
-                    c.vsm.vstats.local_mean,
-                    c.vsm.vstats.previous_blockid,
                     c.vsm.vstats.txns_committed,
                     c.vsm.vstats.txns_pending,
+                    c.vsm.v_txn_rate.avg_txn_rate,
+                    c.vsm.v_txn_rate.avg_block_time,
+                    c.vsm.vstats.local_mean,
+                    c.vsm.vstats.previous_blockid,
                     c.name[:16],
                     c.url),
                     False)
@@ -237,7 +300,7 @@ class StatsPrintManager(object):
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
-                    "", "", "", "", "", "", "", "", "",
+                    "", "", "", "", "", "", "", "", "", "",
                     c.name[:16],
                     c.url),
                     False)
