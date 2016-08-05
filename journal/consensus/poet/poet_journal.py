@@ -65,6 +65,9 @@ class PoetJournal(journal_core.Journal):
         self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
         self.JournalStats.add_metric(stats.Value('LocalMeanTime', 0))
         self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
+        self.JournalStats.add_metric(stats.Value('AggregateLocalMean', '0'))
+        self.JournalStats.add_metric(stats.Value('PopulationEstimate', '0'))
+        self.JournalStats.add_metric(stats.Counter('InvalidTxnCount'))
 
         # propagate the maximum blocks to keep
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
@@ -118,6 +121,9 @@ class PoetJournal(journal_core.Journal):
             self._build_certificate_list(nblock))
 
         self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
+        self.JournalStats.PopulationEstimate.Value = \
+            round(nblock.WaitTimer.local_mean /
+                  nblock.WaitTimer.target_wait_time, 2)
 
         if genesis:
             nblock.AggregateLocalMean = nblock.WaitTimer.local_mean

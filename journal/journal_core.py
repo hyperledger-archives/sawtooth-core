@@ -721,6 +721,10 @@ class Journal(gossip_core.Gossip):
         tblock.CommitTime = time.time() - self.StartTime
         tblock.update_block_weight(self)
 
+        if hasattr(tblock, 'AggregateLocalMean'):
+            self.JournalStats.AggregateLocalMean.Value = \
+                tblock.AggregateLocalMean
+
         # time to apply the transactions in the block to get a new state
         self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
         self.BlockStore[tblock.Identifier] = tblock
@@ -944,6 +948,7 @@ class Journal(gossip_core.Gossip):
         # so go ahead and get rid of them, since these had all dependencies met
         # we know that they will never be valid
         for txnid in deltxns:
+            self.JournalStats.InvalidTxnCount.increment()
             logger.info('found a transaction that will never apply; %s',
                         txnid[:8])
             if txnid in self.TransactionStore:
@@ -1015,7 +1020,6 @@ class Journal(gossip_core.Gossip):
             # can just throw it away if the dependencies cannot be met
             ready = False
 
-            logger.info('calling missing Txn')
             self.request_missing_txn(dependencyID)
             self.JournalStats.MissingTxnDepCount.increment()
 
