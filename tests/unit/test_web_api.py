@@ -38,6 +38,15 @@ from journal.journal_core import Journal
 class TestValidator(object):
     def __init__(self, testLedger):
         self.Ledger = testLedger
+        self.web_thread_pool = TestThreadPool()
+
+
+class TestThreadPool(object):
+    def __init__(self):
+        pass
+
+    def start(self):
+        pass
 
 
 class TestWebApi(unittest.TestCase):

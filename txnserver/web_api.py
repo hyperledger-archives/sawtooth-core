@@ -55,6 +55,8 @@ class RootPage(Resource):
         self.Ledger = validator.Ledger
         self.Validator = validator
         self.ps = PlatformStats()
+        self.thread_pool = validator.web_thread_pool
+        self.thread_pool.start()
 
         self.GetPageMap = {
             'block': self._handle_blk_request,
@@ -367,17 +369,29 @@ class RootPage(Resource):
 
     def render_GET(self, request):
         # pylint: disable=invalid-name
-        d = threads.deferToThread(self.do_get, request)
-        d.addCallback(self.final, request)
-        d.addErrback(self.errback, request)
-        return server.NOT_DONE_YET
+        if self.thread_pool.workers > 7:
+            return self.error_response(
+                request, http.SERVICE_UNAVAILABLE,
+                'Service is unavailable at this time, Please try again later')
+        else:
+            d = threads.deferToThreadPool(reactor, self.thread_pool,
+                                          self.do_get, request)
+            d.addCallback(self.final, request)
+            d.addErrback(self.errback, request)
+            return server.NOT_DONE_YET
 
     def render_POST(self, request):
         # pylint: disable=invalid-name
-        d = threads.deferToThread(self.do_post, request)
-        d.addCallback(self.final, request)
-        d.addErrback(self.errback, request)
-        return server.NOT_DONE_YET
+        if self.thread_pool.workers > 7:
+            return self.error_response(
+                request, http.SERVICE_UNAVAILABLE,
+                'Service is unavailable at this time, Please try again later')
+        else:
+            d = threads.deferToThreadPool(reactor, self.thread_pool,
+                                          self.do_post, request)
+            d.addCallback(self.final, request)
+            d.addErrback(self.errback, request)
+            return server.NOT_DONE_YET
 
     def _msg_forward(self, request, components, msg):
         """
