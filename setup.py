@@ -102,7 +102,7 @@ setup(
     url='http://www.intel.com',
     packages=find_packages(),
     install_requires=['sawtooth-core', 'cbor>=0.1.23', 'colorlog',
-                      'twisted'],
+                      'twisted', 'PyYAML'],
     data_files=data_files,
     entry_points={
         'console_scripts': [
