@@ -149,6 +149,15 @@ class ValidatorManager(object):
         if delay:
             args.append("--delay-start")
 
+        cmd_file = os.path.join(self._data_dir,
+                                "{}.sh"
+                                .format(self.name))
+        with open(cmd_file, 'w') as fp:
+            fp.write('#!/usr/bin/env bash\n')
+            fp.write(' '.join(args))
+            fp.write('\n')
+        os.chmod(cmd_file, 0744)
+
         # redirect stdout and stderror
         self._stdout_file = os.path.join(self._data_dir,
                                          "{}.out".format(self.name))
