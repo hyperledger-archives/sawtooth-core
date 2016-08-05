@@ -1042,6 +1042,9 @@ identifiers, ///$name
                 objectid = self.MarketState.n2i(options.name)
                 txnid = self.MarketClient.unregister_participant(objectid)
 
+                if txnid:
+                    self.prompt = '//UNKNOWN> '
+
             self._finish(txnid, options.waitforcommit)
             return
 
