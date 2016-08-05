@@ -282,6 +282,7 @@ class Validator(object):
         variable. If that is not enough, then pick more at random from the
         list.
         """
+
         # Continue to support existing config files with single
         # string values.
         if isinstance(self.Config.get('LedgerURL'), basestring):
@@ -307,6 +308,15 @@ class Validator(object):
             except MessageException as e:
                 logger.error("Unable to get endpoints from LedgerURL: %s",
                              str(e))
+
+        # We may also be able to rediscover peers via the persistence layer.
+        if self.Ledger.Restore:
+            for blockid in self.Ledger.GlobalStoreMap.persistmap_keys():
+                blk = self.Ledger.GlobalStoreMap.get_block_store(blockid)
+                sto = blk.get_transaction_store('/EndpointRegistryTransaction')
+                for key in sto:
+                    nd = self._endpoint_info_to_node(sto[key])
+                    self.NodeMap[nd.Name] = nd
 
         # Build a list of nodes that we can use for the initial connection
         minpeercount = self.Config.get("InitialConnectivity", 1)
@@ -411,8 +421,6 @@ class Validator(object):
         self.status = 'transferring ledger'
         if not journal_transfer.start_journal_transfer(self.Ledger,
                                                        self.start_ledger):
-            # this generally happens because there are no valid peers, for now
-            # assume that we are the first validator and go with it
             self.start_ledger()
 
     def start_ledger(self):
