@@ -65,6 +65,8 @@ class ValidatorNetworkManager(object):
                  data_dir=None,
                  http_port=8800,
                  udp_port=5500,
+                 host='localhost',
+                 endpoint_host=None,
                  block_chain_archive=None,
                  log_config=None,
                  static_network=None,
@@ -76,8 +78,10 @@ class ValidatorNetworkManager(object):
         self.validator_config = None
 
         self._next_validator_id = 0
+        self._host = host or 'localhost'
         self._http_port_base = http_port
         self._udp_port_base = udp_port
+        self._endpoint_host = endpoint_host
 
         self.validator_config = cfg or defaultValidatorConfig
         self.validator_log_config = log_config
@@ -155,7 +159,6 @@ class ValidatorNetworkManager(object):
 
         with Progress("Launching initial validator") as p:
             cfg = {
-                'LedgerURL': "**none**",
                 'Restore': self.block_chain_archive,
             }
             validator = self.launch_node(overrides=cfg,
@@ -207,16 +210,24 @@ class ValidatorNetworkManager(object):
             cfg.update(overrides)
         cfg['id'] = validator_id
         cfg['NodeName'] = "validator-{}".format(validator_id)
-        if 'LedgerURL' not in cfg:
+        if 'LedgerURL' not in cfg and\
+                len(self._validators) != 0:
             cfg['LedgerURL'] = self._validators[0].url
 
         cfg['Listen'] = [
-            'localhost:{0}/UDP gossip'.format(self._udp_port_base +
-                                              validator_id),
-            'localhost:{0}/TCP http'.format(self._http_port_base +
-                                            validator_id)
+            '{0}:{1}/UDP gossip'.format(self._host, self._udp_port_base +
+                                        validator_id),
+            '{0}:{1}/TCP http'.format(self._host, self._http_port_base +
+                                      validator_id)
         ]
+        if self._endpoint_host:
+            cfg['Endpoint'] = {
+                "Host": self._endpoint_host,
+                "Port": self._udp_port_base + validator_id,
+                "HttpPort": self._http_port_base + validator_id
+            }
         static_node = False
+
         if self.static_network is not None:
             assert 'Nodes' in cfg.keys()
             static_node = True
@@ -224,10 +235,6 @@ class ValidatorNetworkManager(object):
             q = self.static_network.get_quorum(validator_id,
                                                dfl=cfg.get('Quorum', []))
             cfg['NodeName'] = nd['ShortName']
-            cfg['Listen'] = [
-                'localhost:{0}/UDP gossip'.format(nd['Port']),
-                'localhost:{0}/TCP http'.format(nd['HttpPort'])
-            ]
             cfg['SigningKey'] = self.static_network.get_key(validator_id)
             cfg['Identifier'] = nd['Identifier']
             cfg['Quorum'] = q

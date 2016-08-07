@@ -40,7 +40,6 @@ class ValidatorManager(object):
      - shutdown
      - check status
      - detect errors
-     - report log, stderr, and strout
     """
 
     def __init__(self,
@@ -81,15 +80,16 @@ class ValidatorManager(object):
     def launch(self, launch=True, genesis=False, daemon=False, delay=False,
                node=None):
         listen_directives = parse_listen_directives(self.config)
-        self.url = "http://{}:{}".format(listen_directives['http'].host,
+        http_host = listen_directives['http'].host
+        if "Endpoint" in self.config:
+            http_host = self.config["Endpoint"]["Host"]
+
+        self.url = "http://{}:{}".format(http_host,
                                          listen_directives['http'].port)
 
         self.config['LogDirectory'] = self._data_dir
         self._log_file = os.path.join(self._data_dir,
                                       "{}-debug.log".format(self.name))
-
-        if os.path.exists(self._log_file):  # delete existing log file
-            os.remove(self._log_file)
 
         self.config['KeyFile'] = os.path.join(self._data_dir,
                                               "{}.wif".format(self.name))
@@ -181,7 +181,6 @@ class ValidatorManager(object):
         if not url:
             url = self.url
         url = "{}/store/EndpointRegistryTransaction".format(url)
-
         try:
             response = urllib2.urlopen(url)
         except:
