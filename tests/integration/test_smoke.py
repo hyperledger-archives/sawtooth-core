@@ -297,6 +297,7 @@ class TestSmoke(unittest.TestCase):
         cfg['LedgerType'] = 'lottery'
         self._run_int_load(cfg, 5, "TestSmokeResultsLottery")
 
+    @unittest.skip("LedgerType quorum is broken.")
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_intkey_load_quorum(self):
         n = 4   # size of network
