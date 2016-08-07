@@ -96,6 +96,13 @@ class Journal(gossip_core.Gossip):
     # Minimum number of transactions per block
     MinimumTransactionsPerBlock = 1
 
+    # Amount of time(in sec) transactions can wait to meet the
+    # MinimumTransactionsPerBlock before a block gets built with
+    # less then the MinimumTransactionsPerBlock count.
+    # This is a safety measure to allow the validator network to function
+    # with low transaction volume, such as network start up.
+    MaximumTransactionsWaitTime = 60
+
     # Maximum number of transactions per block
     MaximumTransactionsPerBlock = 1000
 
@@ -138,6 +145,7 @@ class Journal(gossip_core.Gossip):
         shelvedir = kwargs.get('DataDirectory', 'db')
 
         self.PendingTransactions = OrderedDict()
+        self.TransactionEnqueueTime = None
 
         dbprefix = shelvedir + "/" + str(self.LocalNode)
         self.TransactionStore = shelve.open(dbprefix + "_txn", shelveflag)
@@ -380,6 +388,8 @@ class Journal(gossip_core.Gossip):
                 self.PendingTransactions = pending
             else:
                 self.PendingTransactions[txn.Identifier] = True
+            if self.TransactionEnqueueTime is None:
+                self.TransactionEnqueueTime = time.time()
 
         # if this is a transaction we requested, then remove it from the list
         # and look for any blocks that might be completed as a result of

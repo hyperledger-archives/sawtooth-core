@@ -17,6 +17,8 @@ import collections
 import logging
 import importlib
 
+from time import time
+
 from gossip import common, stats
 from journal import journal_core
 from journal.consensus.poet import poet_transaction_block
@@ -104,12 +106,28 @@ class PoetJournal(journal_core.Journal):
         # then just return
         txnlist = self._preparetransactionlist(
             self.MaximumTransactionsPerBlock)
-        if len(txnlist) < self.MinimumTransactionsPerBlock and not genesis:
-            logger.debug('Not enough transactions(%d) found to build block, '
-                         'no block constructed, %d required',
+        transaction_time_waiting = time() - self.TransactionEnqueueTime\
+            if self.TransactionEnqueueTime is not None else 0
+        if len(txnlist) < self.MinimumTransactionsPerBlock and\
+                not genesis and\
+                transaction_time_waiting < self.MaximumTransactionsWaitTime:
+            logger.debug('Not enough transactions(%d, %d required) to '
+                         'build block, no block constructed. Mandatory block '
+                         'creation in %f seconds',
                          len(txnlist),
-                         self.MinimumTransactionsPerBlock)
+                         self.MinimumTransactionsPerBlock,
+                         self.MaximumTransactionsWaitTime -
+                         transaction_time_waiting)
             return None
+        else:
+            # we know that the transaction list is a subset of the
+            # pending transactions, if it is less then all of them
+            # then set the TransactionEnqueueTime we can track these
+            # transactions wait time.
+            remaining_transactions = len(self.PendingTransactions) - \
+                len(txnlist)
+            self.TransactionEnqueueTime =\
+                time() if remaining_transactions > 0 else None
 
         logger.info('build transaction block to extend %s with %s '
                     'transactions',
@@ -199,6 +217,14 @@ class PoetJournal(journal_core.Journal):
         return list(certs)
 
     def _check_certificate(self, now):
-        if self.PendingTransactionBlock \
-                and self.PendingTransactionBlock.wait_timer_is_expired(now):
-            self.claim_transaction_block(self.PendingTransactionBlock)
+        if self.PendingTransactionBlock:
+            if self.PendingTransactionBlock.wait_timer_is_expired(now):
+                self.claim_transaction_block(self.PendingTransactionBlock)
+        else:
+            # No transaction block - check if we must make one due to time
+            # waited
+            transaction_time_waiting = time() - self.TransactionEnqueueTime \
+                if self.TransactionEnqueueTime is not None else 0
+            if transaction_time_waiting > self.MaximumTransactionsWaitTime:
+                logger.debug("Transaction wait timeout calling build block")
+                self.PendingTransactionBlock = self.build_transaction_block()
