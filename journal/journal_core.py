@@ -94,10 +94,10 @@ class Journal(gossip_core.Gossip):
     MaximumBlocksToKeep = 50
 
     # Minimum number of transactions per block
-    MinimumTransactionsPerBlock = 10
+    MinimumTransactionsPerBlock = 1
 
     # Maximum number of transactions per block
-    MaximumTransactionsPerBlock = 200
+    MaximumTransactionsPerBlock = 1000
 
     # Time between sending requests for a missing transaction block
     MissingRequestInterval = 30.0

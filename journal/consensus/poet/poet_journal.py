@@ -105,7 +105,10 @@ class PoetJournal(journal_core.Journal):
         txnlist = self._preparetransactionlist(
             self.MaximumTransactionsPerBlock)
         if len(txnlist) < self.MinimumTransactionsPerBlock and not genesis:
-            logger.debug('no transactions found, no block constructed')
+            logger.debug('Not enough transactions(%d) found to build block, '
+                         'no block constructed, %d required',
+                         len(txnlist),
+                         self.MinimumTransactionsPerBlock)
             return None
 
         logger.info('build transaction block to extend %s with %s '
