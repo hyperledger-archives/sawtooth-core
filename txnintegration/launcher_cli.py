@@ -30,6 +30,8 @@ from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.utils import parse_configuration_file, \
     prompt_yes_no, find_txn_validator, load_log_config
 
+from txnintegration.stats_client import run_stats
+
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -74,7 +76,10 @@ def parse_args(args):
     parser.add_argument('--http-port',
                         help='The base HTTP port to use',
                         default=8800)
-
+    parser.add_argument('-i', '--interactive',
+                        help='Launch in interactive mode (console)',
+                        action='store_true',
+                        default=False)
     return parser.parse_args(args)
 
 
@@ -183,8 +188,6 @@ def configure(args):
 
 
 class ValidatorNetworkConsole(cmd.Cmd):
-    pformat = '> '
-
     def __init__(self, vnm):
         self.prompt = 'launcher_cli.py> '
         cmd.Cmd.__init__(self)
@@ -208,45 +211,6 @@ class ValidatorNetworkConsole(cmd.Cmd):
             v = self.network_manager.validator(id)
             if v:
                 v.dump_config()
-            else:
-                print "Invalid validator id: {}".format(args[0])
-        except:
-            print sys.exc_info()[0]
-
-        return False
-
-    def do_log(self, args):
-        try:
-            id = args
-            v = self.network_manager.validator(id)
-            if v:
-                v.dump_log()
-            else:
-                print "Invalid validator  id: {}".format(args[0])
-        except:
-            print sys.exc_info()[0]
-
-        return False
-
-    def do_out(self, args):
-        try:
-            id = args[0]
-            v = self.network_manager.validator(id)
-            if v:
-                v.dump_stdout()
-            else:
-                print "Invalid validator id: {}".format(args[0])
-        except:
-            print sys.exc_info()[0]
-
-        return False
-
-    def do_err(self, args):
-        try:
-            id = args[0]
-            v = self.network_manager.validator(id)
-            if v:
-                v.dump_stderr()
             else:
                 print "Invalid validator id: {}".format(args[0])
         except:
@@ -336,11 +300,13 @@ def main():
             http_port=int(opts['http_port']),
             udp_port=int(opts['port'])
         )
-        network_manager.staged_launch_network(opts['count'])
 
-        ctrl = ValidatorNetworkConsole(network_manager)
-        ctrl.cmdloop("\nWelcome to the sawtooth txnvalidator network "
-                     "manager interactive console")
+        network_manager.staged_launch_network(opts['count'])
+        if opts['interactive']:
+            console = ValidatorNetworkConsole(network_manager)
+            console.cmdloop("\nWelcome to the sawtooth validator network ")
+        else:
+            run_stats(network_manager.urls()[0])
     except KeyboardInterrupt:
         print "\nExiting"
     except ExitError as e:

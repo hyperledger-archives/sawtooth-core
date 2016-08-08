@@ -136,10 +136,10 @@ class ValidatorStatsManager(object):
                     jsonstats["ledger"]["BlocksClaimed"],
                     jsonstats["ledger"]["CommittedBlockCount"],
                     jsonstats["ledger"]["PendingBlockCount"],
-                    jsonstats["ledger"]["LocalMeanTime"],
-                    jsonstats["ledger"]["PreviousBlockID"],
-                    jsonstats["ledger"]["CommittedTxnCount"],
-                    jsonstats["ledger"]["PendingTxnCount"],
+                    jsonstats["ledger"].get("LocalMeanTime", 0.0),
+                    jsonstats["ledger"].get("PreviousBlockID", 'broken'),
+                    jsonstats["ledger"].get("CommittedTxnCount", 0),
+                    jsonstats["ledger"].get("PendingTxnCount", 0),
                     jsonstats["packet"]["DroppedPackets"],
                     jsonstats["packet"]["DuplicatePackets"],
                     jsonstats["packet"]["AcksReceived"],
@@ -228,7 +228,7 @@ class SystemStats(StatsCollector):
         self.sys_packets = SysPackets(0, 0, 0, 0, 0, 0)
         self.sys_msgs = SysMsgs(0, 0, 0, 0)
 
-        self.poet_stats = PoetStats(0, 0, 0, ' ')
+        self.poet_stats = PoetStats(0.0, 0.0, 0.0, '')
 
         self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
                           self.sys_packets, self.sys_msgs, self.poet_stats]
@@ -337,7 +337,6 @@ class SystemStats(StatsCollector):
             self.avg_local_mean = sum(self.local_mean) \
                 / len(self.local_mean)
 
-            unique_blockid_list = []
             unique_blockid_list = list(set(self.previous_blockid))
             self.last_unique_blockID = \
                 unique_blockid_list[len(unique_blockid_list) - 1]
@@ -470,9 +469,10 @@ class EndpointManager(object):
         self.endpoint_urls = []
         self.vc = ValidatorCommunications()
 
-    def initialize_endpoint_urls(self, url, init_cb):
+    def initialize_endpoint_urls(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
         self.endpoint_completion_cb = init_cb
+        self.endpoint_completion_cb_args = init_args or {}
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.init_path = path
         self.vc.get_request(path,
@@ -487,11 +487,13 @@ class EndpointManager(object):
             self.endpoint_urls.append(
                 'http://{0}:{1}'.format(
                     endpoint["Host"], endpoint["HttpPort"]))
-        self.endpoint_completion_cb(self.endpoint_urls)
+        self.endpoint_completion_cb(self.endpoint_urls,
+                                    **self.endpoint_completion_cb_args)
 
     def update_endpoint_urls(self, update_cb):
         # initiates update of endpoint urls
         self.endpoint_completion_cb = update_cb
+        self.endpoint_completion_cb_args = {}
         self.contact_list = list(self.endpoint_urls)
         url = self.contact_list.pop()
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
@@ -563,6 +565,7 @@ class ValidatorCommunications(object):
         self.completion_callback(self.data)
 
     def _handle_error(self, failed):
+        print failed
         self.error_count += 1
         self.error_callback()
 
@@ -606,26 +609,63 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-sm = StatsManager()
-epm = EndpointManager()
-loop_times = {"stats": 0, "endpoint": 0}
-
-
-def startup(urls):
-    sm.initialize_client_list(epm.endpoint_urls)
+def startup(urls, loop_times, stats_man, ep_man):
+    stats_man.initialize_client_list(ep_man.endpoint_urls)
 
     # start loop to periodically collect and report stats
-    stats_loop = task.LoopingCall(sm.stats_loop)
+    stats_loop = task.LoopingCall(stats_man.stats_loop)
     stats_loop_deferred = stats_loop.start(loop_times["stats"])
-    stats_loop_deferred.addCallback(sm.stats_loop_done)
-    stats_loop_deferred.addErrback(sm.stats_loop_failed)
+    stats_loop_deferred.addCallback(stats_man.stats_loop_done)
+    stats_loop_deferred.addErrback(stats_man.stats_loop_failed)
 
     # start loop to periodically update the list of validator endpoints
     # and call WorkManager.update_client_list
-    ep_loop = task.LoopingCall(epm.update_endpoint_urls, sm.update_client_list)
+    ep_loop = task.LoopingCall(ep_man.update_endpoint_urls,
+                               stats_man.update_client_list)
     ep_loop_deferred = ep_loop.start(loop_times["endpoint"], now=False)
-    ep_loop_deferred.addCallback(epm.update_endpoint_done)
-    ep_loop_deferred.addErrback(epm.update_endpoint_failed)
+    ep_loop_deferred.addCallback(ep_man.update_endpoint_done)
+    ep_loop_deferred.addErrback(ep_man.update_endpoint_failed)
+
+
+def run_stats(url,
+              stats_update_frequency=3,
+              endpoint_update_frequency=30,
+              csv_enable=False
+              ):
+    try:
+        # initialize globals when we are read for stats display. This keeps
+        # curses from messing up the status prints prior to stats start up.
+        epm = EndpointManager()
+        sm = StatsManager()  # sm assumes epm is created!
+
+        if csv_enable is True:
+            sm.csv_init()
+
+        # prevent curses import from modifying normal terminal operation
+        # (suppression of cr-lf) during display of help screen, config settings
+        if curses_imported:
+            curses.endwin()
+
+        # discover validator endpoints; if successful, continue with startup()
+        epm.initialize_endpoint_urls(
+            url,
+            startup,
+            {
+                'loop_times': {
+                    "stats": stats_update_frequency,
+                    'endpoint': endpoint_update_frequency},
+                'stats_man': sm,
+                'ep_man': epm
+            })
+
+        reactor.run()
+
+        sm.stats_stop()
+    except Exception as e:
+        if curses_imported:
+            curses.endwin()
+        sys.stderr.write(e)
+        raise
 
 
 def main():
@@ -672,30 +712,12 @@ def main():
         a) Handles low-level details of issuing an http request
             via twisted http agent async i/o
      """
-
-    # prevent curses import from modifying normal terminal operation
-    # (suppression of cr-lf) during display of help screen, config settings
-    if curses_imported:
-        curses.endwin()
-
     opts = parse_args(sys.argv[1:])
 
-    base_url = opts.url
-
-    loop_times["stats"] = opts.stats_time
-    loop_times["endpoint"] = opts.endpoint_time
-
-    if opts.csv_enable is True:
-        sm.csv_init()
-
-    full_path = base_url
-
-    # discover validator endpoints; if successful, continue with startup()
-    epm.initialize_endpoint_urls(full_path, startup)
-
-    reactor.run()
-
-    sm.stats_stop()
+    run_stats(opts.url,
+              csv_enable=opts.csv_enable,
+              stats_update_frequency=opts.stats_time,
+              endpoint_update_frequency=opts.endpoint_time)
 
 if __name__ == "__main__":
     main()
