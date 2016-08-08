@@ -31,6 +31,7 @@ from txnintegration.utils import PlatformStats
 from txnintegration.stats_utils import ConsolePrint
 from txnintegration.stats_utils import CsvManager
 from txnintegration.stats_utils import StatsPrintManager
+from txnintegration.stats_utils import TransactionRate
 
 curses_imported = True
 try:
@@ -119,6 +120,8 @@ class ValidatorStatsManager(object):
         self.request_time = 0.0
         self.response_time = 0.0
 
+        self.v_txn_rate = TransactionRate()
+
     def update_stats(self, jsonstats, active, starttime, endtime):
 
         if active:
@@ -157,6 +160,11 @@ class ValidatorStatsManager(object):
             self.active = False
             self.request_time = starttime
             self.response_time = endtime - starttime
+
+        self.v_txn_rate.calculate_txn_rate(
+            self.vstats.blocks_committed,
+            self.vstats.txns_committed
+        )
 
 SysClient = collections.namedtuple('sys_client',
                                    'starttime '
