@@ -68,6 +68,9 @@ class PoetJournal(journal_core.Journal):
         self.JournalStats.add_metric(stats.Value('AggregateLocalMean', '0'))
         self.JournalStats.add_metric(stats.Value('PopulationEstimate', '0'))
         self.JournalStats.add_metric(stats.Counter('InvalidTxnCount'))
+        self.JournalStats.add_metric(stats.Value('ExpectedExpirationTime',
+                                                 '0'))
+        self.JournalStats.add_metric(stats.Value('Duration', '0'))
 
         # propagate the maximum blocks to keep
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
@@ -129,6 +132,7 @@ class PoetJournal(journal_core.Journal):
             nblock.AggregateLocalMean = nblock.WaitTimer.local_mean
 
         self.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
+
         # must put a cap on the transactions in the block
         if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:
             nblock.TransactionIDs = \
@@ -137,6 +141,13 @@ class PoetJournal(journal_core.Journal):
         logger.debug('created new pending block with timer <%s> and '
                      '%d transactions', nblock.WaitTimer,
                      len(nblock.TransactionIDs))
+
+        self.JournalStats.ExpectedExpirationTime.Value = \
+            round(nblock.WaitTimer.request_time +
+                  nblock.WaitTimer.duration, 2)
+
+        self.JournalStats.Duration.Value = \
+            round(nblock.WaitTimer.duration, 2)
 
         # fire the build block event handlers
         self.onBuildBlock.fire(self, nblock)
