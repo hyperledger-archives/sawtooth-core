@@ -30,6 +30,7 @@ def register_message_handlers(journal):
     journal.register_message_handler(TransactionBlockMessage,
                                      transaction_block_message_handler)
     journal.register_message_handler(BlockRequestMessage, _blkrequesthandler)
+    journal.register_message_handler(BlockRetryMessage, _blk_retry_handler)
 
 
 class TransactionBlockMessage(message.Message):
@@ -157,3 +158,48 @@ def _blkrequesthandler(msg, journal):
     journal.request_missing_block(msg.BlockID,
                                   exceptions=[msg.SenderID],
                                   request=msg)
+
+
+class BlockRetryMessage(message.Message):
+    """Represents the message format for block retry.
+
+    Attributes:
+        transaction_block_message.BlockRequestMessage.MessageType (str):
+            The class name of the message.
+        IsSystemMessage (bool): Whether or not this message is
+            a system message.
+        IsForward (bool): Whether or not this message is forwarded.
+        IsReliable (bool): Whether or not this message should
+            use reliable delivery.
+    """
+    MessageType = "/journal.messages.TransactionBlockMessage/BlockRetry"
+
+    def __init__(self, minfo=None):
+        """Constructor for the BlockRequestMessage class.
+
+        Args:
+            minfo (dict): A dict of initial values for the
+                new BlockRetryMessage.
+        """
+        if minfo is None:
+            minfo = {}
+        super(BlockRetryMessage, self).__init__(minfo)
+
+        self.IsSystemMessage = False
+        self.IsForward = False
+        self.IsReliable = False
+
+    def dump(self):
+        """Returns a dict containing information about the
+        BlockRequestMessage.
+
+        Returns:
+            dict: A dict containing information about the
+                BlockRequestMessage.
+        """
+        result = super(BlockRetryMessage, self).dump()
+        return result
+
+
+def _blk_retry_handler(msg, journal):
+    journal.retry_blocks()
