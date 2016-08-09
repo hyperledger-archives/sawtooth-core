@@ -89,6 +89,7 @@ ValStats = collections.namedtuple('validatorstats',
                                   'blocks_committed '
                                   'blocks_pending '
                                   'local_mean '
+                                  'expected_expiration '
                                   'previous_blockid '
                                   'txns_committed '
                                   'txns_pending '
@@ -112,7 +113,7 @@ class ValidatorStats(ValStats, StatsCollector):
 class ValidatorStatsManager(object):
     def __init__(self):
         self.vstats = ValidatorStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 0, 0)
+                                     0, 0, 0, 0, 0)
 
         self.val_name = None
         self.val_url = None
@@ -136,10 +137,13 @@ class ValidatorStatsManager(object):
                     jsonstats["ledger"]["BlocksClaimed"],
                     jsonstats["ledger"]["CommittedBlockCount"],
                     jsonstats["ledger"]["PendingBlockCount"],
+
                     jsonstats["ledger"].get("LocalMeanTime", 0.0),
+                    jsonstats["ledger"].get("ExpectedExpirationTime"),
                     jsonstats["ledger"].get("PreviousBlockID", 'broken'),
                     jsonstats["ledger"].get("CommittedTxnCount", 0),
                     jsonstats["ledger"].get("PendingTxnCount", 0),
+
                     jsonstats["packet"]["DroppedPackets"],
                     jsonstats["packet"]["DuplicatePackets"],
                     jsonstats["packet"]["AcksReceived"],

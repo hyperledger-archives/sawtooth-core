@@ -256,26 +256,26 @@ class StatsPrintManager(object):
         header_formatter = \
             '{0:>6} {1:>7} {2:>8} {3:>7} {4:>9} {5:>7} ' \
             '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
-            '{12:>18.18} {13:>28.28}'
+            '{12:>16} {13:>18.18} {14:>28.28}'
         resp_formatter = \
             '{0:6d} {1:>7} {2:8.3f} {3:7d} {4:9d} {5:7d} ' \
             '{6:11d} {7:7d} {8:9.2f} {9:7.2f} {10:8.2f}  {11:>16.16} ' \
-            '{12:>18.18} {13:>28.28}'
+            '{12:16.2f} {13:>18.18} {14:>28.28}'
         no_resp_formatter = \
             '{0:6d} {1:>7} {2:>8} {3:>7} {4:>9} {5:>7} ' \
             '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
-            '{12:>18.18} {13:>28.28}'
+            '{12:>16} {13:>18.18} {14:>28.28}'
 
         self.cp.cpprint(header_formatter.format(
             'VAL', 'VAL', 'RESPONSE', 'BLOCKS', 'BLOCKS', 'BLOCKS',
             'TXNS', 'TXNS', 'AVG TXN', 'AVG BLK', 'LOCAL', 'PREVIOUS',
-            ' VALIDATOR', 'VALIDATOR'),
+            'EXPECTED', 'VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
         self.cp.cpprint(header_formatter.format(
             'ID', 'STATE', 'TIME(S)', 'CLAIMED', 'COMMITTED', 'PENDING',
             'COMMITTED', 'PENDING', 'RATE(T/S)', 'TIME(S)', 'MEAN', 'BLOCKID',
-            'NAME', 'URL'),
+            'EXPIRATION', 'NAME', 'URL'),
             reverse=True)
 
         for c in self.clients:
@@ -293,6 +293,7 @@ class StatsPrintManager(object):
                     c.vsm.v_txn_rate.avg_block_time,
                     c.vsm.vstats.local_mean,
                     c.vsm.vstats.previous_blockid,
+                    c.vsm.vstats.expected_expiration,
                     c.name[:16],
                     c.url),
                     False)
@@ -300,7 +301,7 @@ class StatsPrintManager(object):
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
-                    "", "", "", "", "", "", "", "", "", "",
+                    "", "", "", "", "", "", "", "", "", "", "",
                     c.name[:16],
                     c.url),
                     False)
