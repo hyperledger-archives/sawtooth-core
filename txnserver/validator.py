@@ -21,6 +21,7 @@ import os
 import cProfile
 
 from twisted.internet import reactor
+from twisted.python.threadpool import ThreadPool
 
 from sawtooth.exceptions import MessageException
 from txnserver.endpoint_registry_client import EndpointRegistryClient
@@ -112,6 +113,8 @@ class Validator(object):
         # ---------- Initialize the Ledger ----------
         self.initialize_ledger_object()
 
+        self.web_thread_pool = ThreadPool(0, 8, "WebThreadPool")
+
     def handle_shutdown_signal(self, signum, frame):
         logger.warn('received shutdown signal')
         self.shutdown()
@@ -146,6 +149,7 @@ class Validator(object):
         reactor.callLater(1.0, self.handle_shutdown)
 
     def handle_shutdown(self):
+        self.web_thread_pool.stop()
         reactor.stop()
         self.status = 'stopped'
 
