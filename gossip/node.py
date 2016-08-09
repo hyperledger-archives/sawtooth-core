@@ -390,13 +390,17 @@ class TransmissionQueue(object):
         """
         with self._lock:
             messageid = msg.Identifier
-            assert messageid not in self._messages
-            assert messageid not in self._times
+            if (messageid not in self._messages and
+                    messageid not in self._times):
+                self._messages[messageid] = msg
+                self._times[messageid] = timetosend
 
-            self._messages[messageid] = msg
-            self._times[messageid] = timetosend
-
-            heappush(self._heap, (timetosend, messageid))
+                heappush(self._heap, (timetosend, messageid))
+            else:
+                logger.debug('tried to enqueue a message already '
+                             'enqueued. messageid %s, self._messages %s',
+                             messageid,
+                             self._messages)
 
     def dequeue_message(self, msg):
         """Removes a message from the transmission queue if it exists.
