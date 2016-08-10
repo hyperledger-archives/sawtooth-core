@@ -56,12 +56,14 @@ class PingMessage(message.Message):
     """
     MessageType = "/gossip.messages.GossipDebug/Ping"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the PingMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(PingMessage, self).__init__(minfo)
 
         self.IsSystemMessage = True
@@ -97,12 +99,14 @@ class DumpConnectionsMessage(message.Message):
     """
     MessageType = "/gossip.messages.GossipDebug/DumpConnections"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the DumpConnectionsMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(DumpConnectionsMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -153,12 +157,14 @@ class DumpPeerStatsMessage(message.Message):
     """
     MessageType = "/gossip.messages.GossipDebug/DumpPeerStats"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the DumpPeerStatsMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(DumpPeerStatsMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -214,12 +220,14 @@ class ResetPeerStatsMessage(message.Message):
     """
     MessageType = "/gossip.messages.GossipDebug/ResetPeerStats"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the ResetPeerStatsMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(ResetPeerStatsMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -275,12 +283,14 @@ class DumpNodeStatsMessage(message.Message):
     """
     MessageType = "/gossip.messages.GossipDebug/DumpNodeStats"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the DumpNodeStatsMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(DumpNodeStatsMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -334,12 +344,14 @@ class ResetStatsMessage(message.Message):
     """
     MessageType = "/gossip.messages.GossipDebug/ResetStats"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the ResetStatsMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(ResetStatsMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

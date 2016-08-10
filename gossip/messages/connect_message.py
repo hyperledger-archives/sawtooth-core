@@ -82,12 +82,14 @@ class ConnectSynMessage(message.Message):
     """
     MessageType = "/gossip.messages.ConnectMessage/ConnectSyn"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the ConnectSynMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(ConnectSynMessage, self).__init__(minfo)
         self.Reliable = False
 
@@ -169,12 +171,14 @@ class ConnectAckMessage(message.Message):
     """
     MessageType = "/gossip.messages.ConnectMessage/ConnectAck"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the ConnectAckMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(ConnectAckMessage, self).__init__(minfo)
         self.InReplyTo = minfo.get('InReplyTo', common.NullIdentifier)
 
@@ -235,7 +239,9 @@ class ConnectSynAckMessage(message.Message):
     """
     MessageType = "/gossip.messages.ConnectMessage/ConnectSynAck"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(ConnectSynAckMessage, self).__init__(minfo)
         self.InReplyTo = minfo.get('InReplyTo', common.NullIdentifier)
         self.IsSystemMessage = True
@@ -287,12 +293,14 @@ class DisconnectRequestMessage(message.Message):
     """
     MessageType = "/ConnectMessage/DisconnectRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the DisconnectRequestMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(DisconnectRequestMessage, self).__init__(minfo)
         self.Reliable = False
 
@@ -345,12 +353,14 @@ class KeepAliveMessage(message.Message):
     """
     MessageType = "/gossip.messages.ConnectMessage/KeepAlive"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the KeepAliveMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(KeepAliveMessage, self).__init__(minfo)
         self.Reliable = False
 

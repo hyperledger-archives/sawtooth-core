@@ -82,7 +82,9 @@ class SpecialPingMessage(message.Message):
 
     MessageType = "/" + __name__ + "/SpecialPing"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(SpecialPingMessage, self).__init__(minfo)
 
         self.IsSystemMessage = True
@@ -132,7 +134,9 @@ class EndpointRegistryTransactionMessage(
     """
     MessageType = "/ledger.transaction.EndpointRegistry/Transaction"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(EndpointRegistryTransactionMessage, self).__init__(minfo)
 
         tinfo = minfo.get('Transaction', {})
@@ -191,13 +195,15 @@ class Update(object):
 
         return update
 
-    def __init__(self, txn=None, minfo={}):
+    def __init__(self, txn=None, minfo=None):
         """Constructor for Update class.
 
         Args:
             minfo (dict): Dictionary of values for update fields.
         """
 
+        if minfo is None:
+            minfo = {}
         self.Transaction = txn
         self.Verb = minfo.get('Verb', 'reg')
 
@@ -357,7 +363,9 @@ class EndpointRegistryTransaction(transaction.Transaction):
 
         return unrtxn
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(EndpointRegistryTransaction, self).__init__(minfo)
 
         self.Update = None

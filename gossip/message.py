@@ -194,13 +194,15 @@ class Message(SignedObject):
     MessageType = "/gossip.Message/MessageBase"
     DefaultTimeToLive = 2 ** 31
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the Message class.
 
         Args:
             minfo (dict): dictionary of values for message fields,
                 generally created from a call to dump().
         """
+        if minfo is None:
+            minfo = {}
         super(Message, self).__init__(minfo, signkey='__SIGNATURE__')
 
         self.Nonce = minfo.get('__NONCE__', time.time())

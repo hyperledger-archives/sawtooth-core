@@ -56,12 +56,14 @@ class ShutdownMessage(message.Message):
     """
     MessageType = "/gossip.messages.ShutdownMessage/ShutdownMessage"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the ShutdownMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(ShutdownMessage, self).__init__(minfo)
 
         # We are not going to hang around waiting for acks to come back

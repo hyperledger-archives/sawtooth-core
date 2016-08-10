@@ -65,7 +65,6 @@ disable=
     bad-continuation,
     no-member,
     missing-docstring,
-    dangerous-default-value,
     bare-except,
     unused-argument,
     superfluous-parens,

@@ -30,7 +30,9 @@ def register_message_handlers(journal):
 class TransactionMessage(message.Message):
     MessageType = "/journal.messages.TransactionMessage/Transaction"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(TransactionMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -69,7 +71,9 @@ def transaction_message_handler(msg, journal):
 class TransactionRequestMessage(message.Message):
     MessageType = "/journal.messages.TransactionMessage/TransactionRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(TransactionRequestMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

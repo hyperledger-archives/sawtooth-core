@@ -78,12 +78,14 @@ class RandomWalkMessage(message.Message):
     """
     MessageType = "/gossip.messages.RandomWalkMessage/Topology/RandomWalk"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the RandomWalkMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(RandomWalkMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

@@ -45,7 +45,9 @@ class IntegerKeyTransactionMessage(transaction_message.TransactionMessage):
     """
     MessageType = "/ledger.transaction.IntegerKey/Transaction"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(IntegerKeyTransactionMessage, self).__init__(minfo)
 
         tinfo = minfo.get('Transaction', {})
@@ -64,12 +66,14 @@ class Update(object):
     """
     KnownVerbs = ['set', 'inc', 'dec']
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the Update class.
 
         Args:
             minfo (dict): Dictionary of values for update fields.
         """
+        if minfo is None:
+            minfo = {}
         self.Verb = minfo['Verb'] if 'Verb' in minfo else 'set'
         self.Name = minfo['Name'] if 'Name' in minfo else None
         self.Value = long(minfo['Value']) if 'Value' in minfo else 0
@@ -160,12 +164,14 @@ class IntegerKeyTransaction(transaction.Transaction):
     TransactionStoreType = global_store_manager.KeyValueStore
     MessageType = IntegerKeyTransactionMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the IntegerKeyTransaction class.
 
         Args:
             minfo: Dictionary of values for transaction fields.
         """
+        if minfo is None:
+            minfo = {}
         super(IntegerKeyTransaction, self).__init__(minfo)
 
         self.Updates = []

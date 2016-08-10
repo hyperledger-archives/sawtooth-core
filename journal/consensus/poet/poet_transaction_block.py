@@ -49,7 +49,9 @@ class PoetTransactionBlockMessage(
     MessageType = \
         "/journal.consensus.poet.PoetTransactionBlock/TransactionBlock"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(PoetTransactionBlockMessage, self).__init__(minfo)
 
         tinfo = minfo.get('TransactionBlock', {})
@@ -74,13 +76,15 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
     TransactionBlockTypeName = '/Lottery/PoetTransactionBlock'
     MessageType = PoetTransactionBlockMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the PoetTransactionBlock class.
 
         Args:
             minfo (dict): A dict of values for initializing
                 PoetTransactionBlocks.
         """
+        if minfo is None:
+            minfo = {}
         super(PoetTransactionBlock, self).__init__(minfo)
 
         self.WaitTimer = None

@@ -101,7 +101,7 @@ class SignedObject(object):
 
     """
 
-    def __init__(self, minfo={}, signkey='Signature'):
+    def __init__(self, minfo=None, signkey='Signature'):
         """Constructor for the SignedObject class.
 
         Args:
@@ -109,6 +109,8 @@ class SignedObject(object):
             signkey (str): the field name for the signature within the
                 object data
         """
+        if minfo is None:
+            minfo = {}
         self.Signature = minfo.get(signkey)
         self.SignatureKey = signkey
 

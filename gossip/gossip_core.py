@@ -208,7 +208,7 @@ class Gossip(object, DatagramProtocol):
             'message': self.MessageStats
         }
 
-    def peer_list(self, allflag=False, exceptions=[]):
+    def peer_list(self, allflag=False, exceptions=None):
         """Returns a list of peer nodes.
 
         Args:
@@ -219,6 +219,8 @@ class Gossip(object, DatagramProtocol):
         Returns:
             list: A list of Nodes considered peers.
         """
+        if exceptions is None:
+            exceptions = []
         peers = []
         for peer in self.NodeMap.itervalues():
             if peer.is_peer or allflag:
@@ -226,7 +228,7 @@ class Gossip(object, DatagramProtocol):
                     peers.append(peer)
         return peers
 
-    def peer_id_list(self, allflag=False, exceptions=[]):
+    def peer_id_list(self, allflag=False, exceptions=None):
         """Returns a list of peer node identifiers.
 
         Args:
@@ -239,6 +241,8 @@ class Gossip(object, DatagramProtocol):
 
         """
 
+        if exceptions is None:
+            exceptions = []
         return [p.Identifier for p in self.peer_list(allflag, exceptions)]
 
     def next_sequence_number(self):
@@ -719,7 +723,7 @@ class Gossip(object, DatagramProtocol):
         except:
             pass
 
-    def forward_message(self, msg, exceptions=[], initialize=True):
+    def forward_message(self, msg, exceptions=None, initialize=True):
         """Forward a previously received message on to our peers.
 
         This is useful for request messages that only need to be
@@ -733,6 +737,8 @@ class Gossip(object, DatagramProtocol):
                 for initial send of the message.
         """
 
+        if exceptions is None:
+            exceptions = []
         self.multicast_message(
             msg,
             self.peer_id_list(exceptions=exceptions),

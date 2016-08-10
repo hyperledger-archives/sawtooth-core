@@ -95,12 +95,14 @@ class TopologyRequestMessage(message.Message):
     """
     MessageType = "/gossip.messages.TopologyMessage/ToplogyRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the TopologyRequestMessage class.
 
         Args:
             minfo (dict): Dictionary of values for message fields.
         """
+        if minfo is None:
+            minfo = {}
         super(TopologyRequestMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -169,7 +171,9 @@ class TopologyReplyMessage(message.Message):
     """
     MessageType = "/gossip.messages.TopologyMessage/TopologyReply"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(TopologyReplyMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

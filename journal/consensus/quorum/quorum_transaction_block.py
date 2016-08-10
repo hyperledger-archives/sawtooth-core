@@ -46,13 +46,15 @@ class QuorumTransactionBlockMessage(
     MessageType = \
         "/journal.consensus.quorum.QuorumTransactionBlock/TransactionBlock"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for QuorumTransactionBlockMessage.
 
         Args:
             minfo (dict): A dict of initial values for the new
                 QuorumTransactionBlockMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(QuorumTransactionBlockMessage, self).__init__(minfo)
 
         tinfo = minfo.get('TransactionBlock', {})
@@ -73,13 +75,15 @@ class QuorumTransactionBlock(transaction_block.TransactionBlock):
     TransactionBlockTypeName = '/Quorum'
     MessageType = QuorumTransactionBlockMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the QuorumTransactionBlock class.
 
         Args:
             minfo (dict): A dict containing intitial values for
                 the new QuorumTransactionBlock.
         """
+        if minfo is None:
+            minfo = {}
         super(QuorumTransactionBlock, self).__init__(minfo)
         self.BlockNumber = minfo.get('BlockNumber', 0)
 
