@@ -62,7 +62,6 @@ confidence=
 disable=bad-continuation,
   bare-except,
   broad-except,
-  dangerous-default-value,
   duplicate-code,
   global-statement,
   locally-disabled,
