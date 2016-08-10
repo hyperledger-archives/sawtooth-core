@@ -68,7 +68,9 @@ def _sendmsg(baseurl, msgtype, info):
 
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-def reset_stats(baseurl, metrics=[]):
+def reset_stats(baseurl, metrics=None):
+    if metrics is None:
+        metrics = []
     _sendmsg(
         baseurl,
         gossip_debug.ResetStatsMessage.MessageType,
@@ -77,14 +79,18 @@ def reset_stats(baseurl, metrics=[]):
 
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-def collect_peer_stats(baseurl, metrics=[]):
+def collect_peer_stats(baseurl, metrics=None):
+    if metrics is None:
+        metrics = []
     _sendmsg(baseurl, gossip_debug.DumpPeerStatsMessage.MessageType,
              {'MetricList': metrics})
 
 
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-def collect_node_stats(baseurl, metrics=[]):
+def collect_node_stats(baseurl, metrics=None):
+    if metrics is None:
+        metrics = []
     _sendmsg(baseurl, gossip_debug.DumpNodeStatsMessage.MessageType,
              {'MetricList': metrics})
 
