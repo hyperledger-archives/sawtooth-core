@@ -46,6 +46,7 @@ class StatisticsPage(BasePage):
                 result[peer.Name]['IsPeer'] = peer.is_peer
             return result
         if source == 'platform':
+            self.ps.get_stats()
             result['platform'] = self.ps.get_data_as_dict()
             return result
         if source == 'all':
@@ -54,6 +55,7 @@ class StatisticsPage(BasePage):
             for peer in self.Ledger.NodeMap.itervalues():
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
+            self.ps.get_stats()
             result['platform'] = self.ps.get_data_as_dict()
             return result
 
@@ -65,6 +67,7 @@ class StatisticsPage(BasePage):
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
         if 'platform' in args:
+            self.ps.get_stats()
             result['platform'] = self.ps.get_data_as_dict()
 
         elif ('ledger' not in args) & ('node' not in args) \

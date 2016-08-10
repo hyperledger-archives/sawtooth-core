@@ -28,10 +28,12 @@ from twisted.web.http_headers import Headers
 from txnintegration.utils import StatsCollector
 from txnintegration.utils import PlatformStats
 
-from txnintegration.stats_utils import ConsolePrint
+from txnintegration.stats_print import ConsolePrint
+from txnintegration.stats_print import StatsPrintManager
+
 from txnintegration.stats_utils import CsvManager
-from txnintegration.stats_utils import StatsPrintManager
 from txnintegration.stats_utils import TransactionRate
+from txnintegration.stats_utils import PlatformIntervalStats
 
 curses_imported = True
 try:
@@ -64,15 +66,15 @@ class StatsClient(object):
     def stats_request(self):
         # initialize endpoint urls from specified validator url
         self.request_start = time.clock()
-        self.path = self.url + "/statistics/ledger"
+        self.path = self.url + "/statistics/all"
         self.vc.get_request(self.path,
                             self._stats_completion,
                             self._stats_error)
 
-    def _stats_completion(self, body):
+    def _stats_completion(self, json_stats):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
-        self.vsm.update_stats(body, True, self.request_start,
+        self.vsm.update_stats(json_stats, True, self.request_start,
                               self.request_complete)
         self.responding = True
         self.validator_state = "RESPND"
@@ -121,34 +123,39 @@ class ValidatorStatsManager(object):
         self.request_time = 0.0
         self.response_time = 0.0
 
-        self.v_txn_rate = TransactionRate()
+        self.val_stats = None
 
-    def update_stats(self, jsonstats, active, starttime, endtime):
+        self.txn_rate = TransactionRate()
+        self.psis = PlatformIntervalStats()
+
+    def update_stats(self, json_stats, active, starttime, endtime):
 
         if active:
 
+            self.val_stats = json_stats
+
             try:
                 bytes_received_total, bytes_received_average = \
-                    jsonstats["packet"]["BytesReceived"]
+                    json_stats["packet"]["BytesReceived"]
                 bytes_sent_total, bytes_sent_average = \
-                    jsonstats["packet"]["BytesSent"]
+                    json_stats["packet"]["BytesSent"]
 
                 self.vstats = ValStats(
-                    jsonstats["ledger"]["BlocksClaimed"],
-                    jsonstats["ledger"]["CommittedBlockCount"],
-                    jsonstats["ledger"]["PendingBlockCount"],
+                    json_stats["ledger"]["BlocksClaimed"],
+                    json_stats["ledger"]["CommittedBlockCount"],
+                    json_stats["ledger"]["PendingBlockCount"],
 
-                    jsonstats["ledger"].get("LocalMeanTime", 0.0),
-                    jsonstats["ledger"].get("ExpectedExpirationTime", 0.0),
-                    jsonstats["ledger"].get("PreviousBlockID", 'broken'),
-                    jsonstats["ledger"].get("CommittedTxnCount", 0),
-                    jsonstats["ledger"].get("PendingTxnCount", 0),
+                    json_stats["ledger"].get("LocalMeanTime", 0.0),
+                    json_stats["ledger"].get("ExpectedExpirationTime", 0.0),
+                    json_stats["ledger"].get("PreviousBlockID", 'broken'),
+                    json_stats["ledger"].get("CommittedTxnCount", 0),
+                    json_stats["ledger"].get("PendingTxnCount", 0),
 
-                    jsonstats["packet"]["DroppedPackets"],
-                    jsonstats["packet"]["DuplicatePackets"],
-                    jsonstats["packet"]["AcksReceived"],
-                    jsonstats["packet"]["MessagesHandled"],
-                    jsonstats["packet"]["MessagesAcked"],
+                    json_stats["packet"]["DroppedPackets"],
+                    json_stats["packet"]["DuplicatePackets"],
+                    json_stats["packet"]["AcksReceived"],
+                    json_stats["packet"]["MessagesHandled"],
+                    json_stats["packet"]["MessagesAcked"],
                     bytes_received_total,
                     bytes_received_average,
                     bytes_sent_total,
@@ -160,12 +167,14 @@ class ValidatorStatsManager(object):
             self.active = True
             self.request_time = starttime
             self.response_time = endtime - starttime
+
+            self.psis.calculate_interval_stats(self.val_stats)
         else:
             self.active = False
             self.request_time = starttime
             self.response_time = endtime - starttime
 
-        self.v_txn_rate.calculate_txn_rate(
+        self.txn_rate.calculate_txn_rate(
             self.vstats.blocks_committed,
             self.vstats.txns_committed
         )
@@ -377,7 +386,10 @@ class StatsManager(object):
         self.cp = ConsolePrint()
 
         self.ss = SystemStats()
+
         self.ps = PlatformStats()
+        self.psis = PlatformIntervalStats()
+        self.ps.psis = self.psis
 
         self.previous_net_bytes_recv = 0
         self.previous_net_bytes_sent = 0
@@ -437,6 +449,8 @@ class StatsManager(object):
         self.ss.calculate_stats()
 
         self.ps.get_stats()
+        psr = {"platform": self.ps.get_data_as_dict()}
+        self.psis.calculate_interval_stats(psr)
 
     def print_stats(self):
         self.spm.print_stats()
@@ -565,8 +579,8 @@ class ValidatorCommunications(object):
         return d
 
     def _handle_body(self, body):
-        self.data = json.loads(body)
-        self.completion_callback(self.data)
+        self.json_stats = json.loads(body)
+        self.completion_callback(self.json_stats)
 
     def _handle_error(self, failed):
         print failed
