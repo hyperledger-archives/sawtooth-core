@@ -15,6 +15,7 @@
 
 import random
 import logging
+import threading
 
 from collections import namedtuple
 from datetime import datetime
@@ -52,8 +53,8 @@ class IntegerKeyWorkload(SawtoothWorkload):
         super(IntegerKeyWorkload, self).__init__(delegate, config)
 
         self._clients = []
-        self._keys = {}
         self._pending_transactions = {}
+        self._lock = threading.Lock()
 
     def on_will_start(self):
         pass
@@ -68,20 +69,22 @@ class IntegerKeyWorkload(SawtoothWorkload):
 
         keystring = pybitcointools.encode_privkey(
             pybitcointools.random_key(), 'wif')
-        self._clients.append(IntegerKeyClient(
-            baseurl=url,
-            keystring=keystring))
+        with self._lock:
+            self._clients.append(IntegerKeyClient(
+                baseurl=url,
+                keystring=keystring))
 
     def on_validator_removed(self, url):
-        # Remove validator from our list of clients so that we don't try to
-        # submit new transactions to it.
-        self._clients = [c for c in self._clients if c.base_url != url]
+        with self._lock:
+            # Remove validator from our list of clients so that we don't try
+            # to submit new transactions to it.
+            self._clients = [c for c in self._clients if c.base_url != url]
 
-        # Remove any pending transactions for the validator that has been
-        # removed.
-        self._pending_transactions = \
-            {t: g for t, g in self._pending_transactions.iteritems()
-             if g.client.base_url != url}
+            # Remove any pending transactions for the validator that has been
+            # removed.
+            self._pending_transactions = \
+                {t: g for t, g in self._pending_transactions.iteritems()
+                 if g.client.base_url != url}
 
     def on_all_transactions_committed(self):
         # Since there are no outstanding transactions, we are going to create a
@@ -91,9 +94,11 @@ class IntegerKeyWorkload(SawtoothWorkload):
     def on_transaction_committed(self, transaction_id):
         # Look up the transaction ID to find the key.  Since we will no longer
         # track this transaction, we can remove it from the dictionary.
-        key = self._pending_transactions.pop(transaction_id, None)
+        with self._lock:
+            key = self._pending_transactions.pop(transaction_id, None)
+
         if key is not None:
-            # If the keys is not at max value, we will increment it,
+            # If the key is not at max value, we will increment it,
             # update the key state, and add a new pending transaction
             if key.value < 1000000:
                 new_transaction_id = key.client.inc(
@@ -107,11 +112,12 @@ class IntegerKeyWorkload(SawtoothWorkload):
                 # Map the new transaction ID to the key state so we can look
                 # it up later and let the delegate know that there is a new
                 # pending transaction
-                self._pending_transactions[new_transaction_id] = \
-                    IntKeyState(
-                        name=key.name,
-                        client=key.client,
-                        value=key.value + 1)
+                with self._lock:
+                    self._pending_transactions[new_transaction_id] = \
+                        IntKeyState(
+                            name=key.name,
+                            client=key.client,
+                            value=key.value + 1)
 
                 self.delegate.on_new_transaction(
                     new_transaction_id, key.client)
@@ -133,9 +139,12 @@ class IntegerKeyWorkload(SawtoothWorkload):
         # that the entire validator network has the transactions for a key
         # committed, all of the transaction for a particular key will be
         # submitted to a single client.
-        if len(self._clients) > 0:
-            client = random.choice(self._clients)
+        with self._lock:
+            client = \
+                random.choice(self._clients) \
+                if len(self._clients) > 0 else None
 
+        if client is not None:
             name = datetime.now().isoformat()
             transaction_id = client.set(name, 0)
 
@@ -148,6 +157,7 @@ class IntegerKeyWorkload(SawtoothWorkload):
                 # Map the transaction ID to the key state so we can look it
                 # up later and let the delegate know that there is a new
                 # pending transaction
-                self._pending_transactions[transaction_id] = \
-                    IntKeyState(name=name, client=client, value=0)
+                with self._lock:
+                    self._pending_transactions[transaction_id] = \
+                        IntKeyState(name=name, client=client, value=0)
                 self.delegate.on_new_transaction(transaction_id, client)
