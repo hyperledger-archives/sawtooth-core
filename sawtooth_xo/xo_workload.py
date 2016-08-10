@@ -15,6 +15,7 @@
 
 import random
 import logging
+import threading
 
 from collections import namedtuple
 from datetime import datetime
@@ -54,8 +55,8 @@ class XoWorkload(SawtoothWorkload):
         super(XoWorkload, self).__init__(delegate, config)
 
         self._clients = []
-        self._games = {}
         self._pending_transactions = {}
+        self._lock = threading.Lock()
 
     def on_will_start(self):
         pass
@@ -67,19 +68,22 @@ class XoWorkload(SawtoothWorkload):
         # We need a key file for the client, but as soon as the client is
         # created, we don't need it any more.  Then create a new client and
         # add it to our cadre of clients to use
-        with self._create_temporary_key_file() as key_file:
-            self._clients.append(XoClient(url, key_file.name))
+        with self._lock:
+            with self._create_temporary_key_file() as key_file:
+                self._clients.append(
+                    XoClient(base_url=url, keyfile=key_file.name))
 
     def on_validator_removed(self, url):
         # Remove validator from our list of clients so that we don't try to
         # submit new transactions to it.
-        self._clients = [c for c in self._clients if c.base_url != url]
+        with self._lock:
+            self._clients = [c for c in self._clients if c.base_url != url]
 
-        # Remove any pending transactions for the validator that has been
-        # removed.
-        self._pending_transactions = \
-            {t: g for t, g in self._pending_transactions.iteritems()
-             if g.client.base_url != url}
+            # Remove any pending transactions for the validator that has been
+            # removed.
+            self._pending_transactions = \
+                {t: g for t, g in self._pending_transactions.iteritems()
+                 if g.client.base_url != url}
 
     def on_all_transactions_committed(self):
         # Since there are no outstanding transactions, we are going to create a
@@ -89,7 +93,9 @@ class XoWorkload(SawtoothWorkload):
     def on_transaction_committed(self, transaction_id):
         # Look up the transaction ID to find the game.  Since we will no longer
         # track this transaction, we can remove it from the dictionary.
-        game = self._pending_transactions.pop(transaction_id, None)
+        with self._lock:
+            game = self._pending_transactions.pop(transaction_id, None)
+
         if game is not None:
             # If the game board is not full, we will take a new space,
             # update the game state, and add a new pending transaction
@@ -107,11 +113,12 @@ class XoWorkload(SawtoothWorkload):
                 # Map the new transaction ID to the game state so we can look
                 # it up later and let the delegate know that there is a new
                 # pending transaction
-                self._pending_transactions[new_transaction_id] = \
-                    GameState(
-                        name=game.name,
-                        client=game.client,
-                        spaces_taken=game.spaces_taken + 1)
+                with self._lock:
+                    self._pending_transactions[new_transaction_id] = \
+                        GameState(
+                            name=game.name,
+                            client=game.client,
+                            spaces_taken=game.spaces_taken + 1)
 
                 self.delegate.on_new_transaction(
                     new_transaction_id, game.client)
@@ -133,9 +140,12 @@ class XoWorkload(SawtoothWorkload):
         # that the entire validator network has the transactions for a game
         # committed, all of the transaction for a particular game will be
         # submitted to a single client.
-        if len(self._clients) > 0:
-            client = self._clients[random.randint(0, len(self._clients) - 1)]
+        with self._lock:
+            client = \
+                random.choice(self._clients) \
+                if len(self._clients) > 0 else None
 
+        if client is not None:
             name = datetime.now().isoformat()
             transaction_id = client.create(name)
 
@@ -148,6 +158,7 @@ class XoWorkload(SawtoothWorkload):
                 # Map the transaction ID to the game state so we can look it
                 # up later and let the delegate know that there is a new
                 # pending transaction
-                self._pending_transactions[transaction_id] = \
-                    GameState(name=name, client=client, spaces_taken=0)
+                with self._lock:
+                    self._pending_transactions[transaction_id] = \
+                        GameState(name=name, client=client, spaces_taken=0)
                 self.delegate.on_new_transaction(transaction_id, client)
