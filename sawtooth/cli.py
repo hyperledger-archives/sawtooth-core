@@ -25,11 +25,13 @@ import pybitcointools
 
 from colorlog import ColoredFormatter
 
-from gossip.common import json2dict
+from gossip.common import json2dict, pretty_print_dict
+from sawtooth.client import LedgerWebClient
 from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
-
+from sawtooth.exceptions import MessageException
+from journal import transaction
 
 LOGGER = logging.getLogger(__name__)
 
@@ -160,6 +162,146 @@ examples:
         help='wait for this commit before exiting')
 
 
+def add_block_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('block')
+
+    grand_parsers = parser.add_subparsers(title='grandchildcommands',
+                                          dest='subcommand')
+
+    epilog = '''
+    details:
+      list the committed block IDs from the newest to the oldest.
+    '''
+
+    list_parser = grand_parsers.add_parser('list', epilog=epilog)
+    list_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+    list_parser.add_argument(
+        '--blockcount',
+        type=int,
+        default=10,
+        help='list the maximum number of committed block IDs. Default: 10')
+    list_parser.add_argument(
+        '-a', '--all',
+        action='store_true',
+        help='list all of committed block IDs')
+
+    epilog = '''
+    details:
+      show the contents of block or the value associated with key
+      within the block.
+    '''
+    show_parser = grand_parsers.add_parser('show', epilog=epilog)
+    show_parser.add_argument(
+        'blockID',
+        type=str,
+        help='the id of the block')
+    show_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the key within the block')
+    show_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+
+
+def add_transaction_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('transaction')
+
+    grand_parsers = parser.add_subparsers(title='grandchildcommands',
+                                          dest='subcommand')
+
+    epilog = '''
+    details:
+      list the transaction IDs from the newest to the oldest.
+    '''
+
+    list_parser = grand_parsers.add_parser('list', epilog=epilog)
+    list_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+    list_parser.add_argument(
+        '--blockcount',
+        type=int,
+        default=10,
+        help='list the maximum number of transaction IDs. Default: 10')
+    list_parser.add_argument(
+        '-a', '--all',
+        action='store_true',
+        help='list all of transaction IDs')
+
+    epilog = '''
+    details:
+      show the contents of transaction or the value associated with key
+      within the transaction.
+    '''
+    show_parser = grand_parsers.add_parser('show', epilog=epilog)
+    show_parser.add_argument(
+        'transactionID',
+        type=str,
+        help='the id of the transaction')
+    show_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the key within the transaction')
+    show_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+
+    epilog = '''
+    details:
+      show the status of a specific transaction id.
+    '''
+    status_parser = grand_parsers.add_parser('status', epilog=epilog)
+    status_parser.add_argument(
+        'transactionID',
+        type=str,
+        help='the id of the transaction')
+    status_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+
+
+def add_store_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('store')
+
+    grand_parsers = parser.add_subparsers(title='grandchildcommands',
+                                          dest='subcommand')
+    list_parser = grand_parsers.add_parser('list')
+    list_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+
+    show_parser = grand_parsers.add_parser('show')
+    show_parser.add_argument(
+        'transactionTypeName',
+        type=str,
+        help='the name of the transaction type')
+    show_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the key within the store')
+    show_parser.add_argument(
+        '--blockID',
+        type=str,
+        help='the id of the block')
+    show_parser.add_argument(
+        '--incremental',
+        action='store_true',
+        help='incremental')
+    show_parser.add_argument(
+        '--url',
+        type=str,
+        help='the URL to the validator')
+
+
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -181,6 +323,9 @@ def create_parser(prog_name):
 
     add_keygen_parser(subparsers, parent_parser)
     add_submit_parser(subparsers, parent_parser)
+    add_block_parser(subparsers, parent_parser)
+    add_transaction_parser(subparsers, parent_parser)
+    add_store_parser(subparsers, parent_parser)
 
     return parser
 
@@ -310,6 +455,129 @@ def do_submit(args):
             raise CliException("transaction was not successfully committed")
 
 
+def _get_webclient(args):
+    if args.url is not None:
+        url = args.url
+    else:
+        url = 'http://localhost:8800'
+
+    return LedgerWebClient(url)
+
+
+def do_block(args):
+    subcommands = ['list', 'show']
+    if args.subcommand not in subcommands:
+        print 'Unknown sub-command, expecting one of {0}'.format(
+            subcommands)
+        return
+
+    web_client = _get_webclient(args)
+
+    try:
+        if args.subcommand == 'list':
+            if args.all:
+                blockids = web_client.get_block_list()
+            else:
+                blockids = web_client.get_block_list(args.blockcount)
+            print pretty_print_dict(blockids)
+            return
+        elif args.subcommand == 'show':
+            if args.key is not None:
+                block_info = web_client.get_block(args.blockID, args.key)
+            else:
+                block_info = web_client.get_block(args.blockID)
+            print pretty_print_dict(block_info)
+            return
+
+    except MessageException as e:
+        print 'An error occurred processing {0}: {1}'.format(args, str(e))
+        return
+
+
+def do_transaction(args):
+    subcommands = ['list', 'show', 'status']
+
+    if args.subcommand not in subcommands:
+        print 'Unknown sub-command, expecting one of {0}'.format(
+            subcommands)
+        return
+
+    web_client = _get_webclient(args)
+
+    try:
+        if args.subcommand == 'list':
+            if args.all:
+                tsctids = web_client.get_transaction_list()
+            else:
+                tsctids = web_client.get_transaction_list(args.blockcount)
+            print pretty_print_dict(tsctids)
+            return
+        elif args.subcommand == 'show':
+            if args.key is not None:
+                tsct_info = web_client.get_transaction(args.transactionID,
+                                                       args.key)
+            else:
+                tsct_info = web_client.get_transaction(args.transactionID)
+            print pretty_print_dict(tsct_info)
+            return
+        elif args.subcommand == 'status':
+            tsct_status = web_client.get_transaction_status(args.transactionID)
+            if tsct_status == transaction.Status.committed:
+                print 'transaction committed'
+            elif tsct_status == transaction.Status.pending:
+                print 'transaction still uncommitted'
+            elif tsct_status == transaction.Status.unknown:
+                print 'unknown transaction'
+            elif tsct_status == transaction.Status.failed:
+                print 'transaction failed to validate.'
+            else:
+                print 'transaction returned unexpected status code {0}'\
+                    .format(tsct_status)
+            return
+
+    except MessageException as e:
+        print 'An error occurred processing {0}: {1}'.format(args, str(e))
+        return
+
+
+def do_store(args):
+    subcommands = ['list', 'show']
+
+    if args.subcommand not in subcommands:
+        print 'Unknown sub-command, expecting one of {0}'.format(
+            subcommands)
+        return
+
+    web_client = _get_webclient(args)
+
+    try:
+        if args.subcommand == 'list':
+            transaction_type_name = web_client.get_store_by_name()
+            print pretty_print_dict(transaction_type_name)
+            return
+        elif args.subcommand == 'show':
+            if args.blockID is not None:
+                block_id = args.blockID
+            else:
+                block_id = ''
+
+            if args.key is not None:
+                key = args.key
+            else:
+                key = ''
+
+            store_info = web_client.get_store_by_name(args.transactionTypeName,
+                                                      key,
+                                                      block_id,
+                                                      args.incremental)
+            print pretty_print_dict(store_info)
+            return
+
+    except MessageException as e:
+        print 'An error occurred processing {0}: {1}'.format(args, str(e))
+        return
+
+
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
@@ -325,6 +593,12 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_keygen(args)
     elif args.command == 'submit':
         do_submit(args)
+    elif args.command == 'block':
+        do_block(args)
+    elif args.command == 'transaction':
+        do_transaction(args)
+    elif args.command == 'store':
+        do_store(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
