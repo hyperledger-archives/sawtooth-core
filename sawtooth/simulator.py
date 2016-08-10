@@ -16,6 +16,7 @@
 import logging
 import traceback
 import sys
+import threading
 
 from collections import namedtuple, deque
 from twisted.internet import task
@@ -34,9 +35,22 @@ LOGGER = logging.getLogger(__name__)
 class SawtoothWorkloadSimulator(object):
     def __init__(self, config):
         self._loop = None
-        self._pending_transactions = deque()
         self._base_validator = config.get('Simulator', 'url')
+
+        self._lock = threading.Lock()
+
+        # For now, let's try 20 maximum outstanding work requests.  Through
+        # experimentation it appears that the twisted reactor main thread pool
+        # has 10 threads.  We are going to allow twice as many outstanding
+        # work requests before we start to throttle them.
+        self._maximum_outstanding_work_requests = 20
+
+        # These attributes need to be protected by self._lock.  Ensure
+        # that any threaded access grabs the lock before reading/writing.
+        self._pending_transactions = deque()
         self._validators = []
+        self._is_performing_discovery = False
+        self._number_of_outstanding_work_requests = 0
 
         # Dynamically load the workload class' module and create a workload
         # generator
@@ -55,12 +69,12 @@ class SawtoothWorkloadSimulator(object):
         self._workload.on_will_start()
 
         # Set up the looping call for stepping through the simulator.  The
-        # provided rate is number of transactions per minute, so we calculate
-        # the number of seconds between transactions and that becomes the
-        # loop rate.
+        # provided rate is the number of transactions per minute, so we
+        # calculate the number of seconds between transactions and that
+        # becomes the loop rate.
         rate = config.getint('Simulator', 'rate')
         LOGGER.info('Simulator will generate %d transaction(s)/minute', rate)
-        loop = task.LoopingCall(self._step)
+        loop = task.LoopingCall(self._simulator_loop)
         deferred = loop.start(60.0 / rate, now=False)
         deferred.addCallback(self._loop_cleanup)
 
@@ -69,19 +83,59 @@ class SawtoothWorkloadSimulator(object):
         discover = config.getint('Simulator', 'discover')
         LOGGER.info('Simulator will discover validators every %d minute(s)',
                     discover)
-        loop = task.LoopingCall(self._discover_validators)
+        loop = task.LoopingCall(self._discover_validators_loop)
         loop.start(discover * 60, now=False)
 
     def run(self):
         # pylint: disable=no-self-use
         reactor.run()
 
-    def _step(self):
-        # If there are pending transactions, then pull off the first one
-        # and check its status.
-        if len(self._pending_transactions) > 0:
-            transaction = self._pending_transactions.popleft()
+    def _simulator_loop(self):
+        with self._lock:
+            # Only push work off to a worker thread if we have not hit the
+            # maximum number of outstanding requests.  If we have hit the
+            # maximum number then there really is no use issuing another
+            # transaction as the validators are not keeping up right now.
+            # Throttle back a little bit and let them catch their breath.
+            if self._number_of_outstanding_work_requests \
+                    < self._maximum_outstanding_work_requests:
 
+                self._number_of_outstanding_work_requests += 1
+
+                # If there are pending transactions, then pull off the first
+                # one.
+                transaction = \
+                    self._pending_transactions.popleft() \
+                    if len(self._pending_transactions) > 0 else None
+
+                # Let a worker thread work handle the actual work as we don't
+                # want to block the main reactor thread.
+                reactor.callInThread(self._check_on_transaction, transaction)
+            else:
+                LOGGER.warning(
+                    'Simulator is throttling work requests as the number of '
+                    'outstanding work requests has reached its limit of '
+                    '{}'.format(
+                        self._maximum_outstanding_work_requests
+                    ))
+
+    def _discover_validators_loop(self):
+        # Discovering validators may take a while, so push it off into
+        # another thread so we don't block the reactor main thread and thus
+        # our simulator.
+        #
+        # Because discovery may be time consuming, we are not going to
+        # allow multiple discoveries to occur at the same time as we would
+        # prefer that our worker threads be issuing transactions.
+        with self._lock:
+            if not self._is_performing_discovery:
+                self._is_performing_discovery = True
+                reactor.callInThread(self._discover_validators)
+
+    def _check_on_transaction(self, transaction):
+        # If the transaction is not None, then we will check it status and
+        # perform the appropriate callback into the workload generator
+        if transaction is not None:
             # pylint: disable=bare-except
             try:
                 status = \
@@ -96,7 +150,8 @@ class SawtoothWorkloadSimulator(object):
                     # "step" as this is the oldest transaction.
                     if self._workload.on_transaction_not_yet_committed(
                             transaction.id):
-                        self._pending_transactions.appendleft(transaction)
+                        with self._lock:
+                            self._pending_transactions.appendleft(transaction)
 
             except MessageException as e:
                 # A MessageException means that we cannot talk to the
@@ -119,10 +174,16 @@ class SawtoothWorkloadSimulator(object):
                 traceback.print_exc(file=sys.stderr)
                 reactor.stop()
 
-        # Otherwise, let workload generator know that there are no
-        # uncommitted transactions
+        # If the transaction ID is None, then it means there were no
+        # transactions to check during the reactor loop callback that fired
+        # off this method.
         else:
             self._workload.on_all_transactions_committed()
+
+        # Now that we are done, we can decrement the number of outstanding
+        # work requests.
+        with self._lock:
+            self._number_of_outstanding_work_requests -= 1
 
     def _discover_validators(self):
         # Find out which validators are in the network currently.  Because
@@ -132,10 +193,12 @@ class SawtoothWorkloadSimulator(object):
         # we know about and then as we discover new ones, we add them to
         # the list of candidates.  If we don't have any validators, we will
         # rely on the base validator to prime the list for us.
+        with self._lock:
+            discovered = \
+                list(self._validators) \
+                if len(self._validators) > 0 else [self._base_validator]
+
         validators = []
-        discovered = \
-            list(self._validators) \
-            if len(self._validators) > 0 else [self._base_validator]
         candidates = list(discovered)
         while len(candidates) > 0:
             # Grab a candidate to query
@@ -177,11 +240,13 @@ class SawtoothWorkloadSimulator(object):
         for validator in removed:
             self._remove_unresponsive_validator(validator)
 
-        # Save off the list of validators
+        # Save off the list of validators and reset the discovery flag
         LOGGER.info(
             'Running simulated workload on %d validators',
             len(validators))
-        self._validators = validators
+        with self._lock:
+            self._validators = validators
+            self._is_performing_discovery = False
 
     def _remove_unresponsive_validator(self, validator):
         # Iterate through all pending transactions and purge the ones that
@@ -193,12 +258,14 @@ class SawtoothWorkloadSimulator(object):
         # If the validator happens to come back, we will pick it up again
         # later when discovering validators.
         LOGGER.info('Remove validator: %s', validator)
-        self._pending_transactions = \
-            deque(
-                [t for t in self._pending_transactions
-                 if t.client.base_url != validator])
+        with self._lock:
+            self._pending_transactions = \
+                deque(
+                    [t for t in self._pending_transactions
+                     if t.client.base_url != validator])
+            if validator in self._validators:
+                self._validators.remove(validator)
         self._workload.on_validator_removed(validator)
-        self._validators.remove(validator)
 
     def on_new_transaction(self, transaction_id, client):
         """
@@ -214,8 +281,9 @@ class SawtoothWorkloadSimulator(object):
             Nothing
         """
         if transaction_id is not None:
-            self._pending_transactions.append(
-                PendingTransaction(id=transaction_id, client=client))
+            with self._lock:
+                self._pending_transactions.append(
+                    PendingTransaction(id=transaction_id, client=client))
 
     def _loop_cleanup(self, result):
         self._workload.on_will_stop()
