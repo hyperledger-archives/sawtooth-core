@@ -63,13 +63,15 @@ class DumpJournalBlocksMessage(message.Message):
     """
     MessageType = "/journal.messages.JournalDebug/DumpJournalBlocks"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for DumpJournalBlocksMessage class.
 
         Args:
             minfo (dict): A dict containing intialization values
                 for a DumpJournalBlocksMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(DumpJournalBlocksMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -135,13 +137,15 @@ class DumpJournalValueMessage(message.Message):
     """
     MessageType = "/journal.messages.JournalDebug/DumpJournalValue"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the DumpJournalValueMessage class.
 
         Args:
             minfo (dict): A dict containing initial values for
                 the new DumpJournalValueMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(DumpJournalValueMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

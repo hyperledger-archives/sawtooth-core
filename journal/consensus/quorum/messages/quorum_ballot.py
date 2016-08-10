@@ -55,13 +55,15 @@ class QuorumBallotMessage(message.Message):
     MessageType = \
         "/journal.consensus.quorum.messages.QuorumBallot/Quorum/Ballot"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for QuorumBallotMessage.
 
         Args:
             minfo (dict): A dict containing initial values for the
                 new QuorumBallotMessages.
         """
+        if minfo is None:
+            minfo = {}
         super(QuorumBallotMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -125,13 +127,15 @@ class QuorumInitiateVoteMessage(message.Message):
     MessageType = \
         "/journal.consensus.quorum.messages.QuorumBallot/Quorum/InitiateVote"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for QuorumInitiateVoteMessage.
 
         Args:
             minfo (dict): A dict containing initial values for
                 the new QuorumInitiateVoteMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(QuorumInitiateVoteMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -185,13 +189,15 @@ class QuorumCompleteVoteMessage(message.Message):
     MessageType = \
         "/journal.consensus.quorum.messages.QuorumBallot/Quorum/CompleteVote"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for QuorumCompleteVoteMessage.
 
         Args:
             minfo (dict): A dict containing initial values for the
                 new QuorumCompleteVoteMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(QuorumCompleteVoteMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

@@ -46,7 +46,9 @@ class DevModeTransactionBlockMessage(
     MessageType = \
         "/DevMode/TransactionBlock"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(DevModeTransactionBlockMessage, self).__init__(minfo)
 
         tinfo = minfo.get('TransactionBlock', {})
@@ -68,13 +70,15 @@ class DevModeTransactionBlock(transaction_block.TransactionBlock):
     TransactionBlockTypeName = '/TransactionBlock/TransactionBlock'
     MessageType = DevModeTransactionBlockMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the DevModeTransactionBlock class.
 
         Args:
             minfo (dict): A dict of values for initializing
                 DevModeTransactionBlocks.
         """
+        if minfo is None:
+            minfo = {}
         super(DevModeTransactionBlock, self).__init__(minfo)
 
     def __str__(self):

@@ -55,13 +55,15 @@ class DumpQuorumMessage(message.Message):
     MessageType = \
         "/journal.consensus.quorum.messages.QuorumDebug/Quorum/DumpQuorum"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for DumpQuorumMessage class.
 
         Args:
             minfo (dict): A dict containing initial values for the
                 new DumpQuorumMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(DumpQuorumMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

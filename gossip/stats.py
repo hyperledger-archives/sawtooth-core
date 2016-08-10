@@ -66,13 +66,15 @@ class Stats(object):
 
         raise AttributeError("no metric of type %r", attr)
 
-    def get_stats(self, metrics=[]):
+    def get_stats(self, metrics=None):
         """
         Return a dictionary with current value of the statistics
 
         Args:
             metrics (list of Metric): A list of metrics to dump.
         """
+        if metrics is None:
+            metrics = []
         if len(metrics) == 0:
             metrics = self.Metrics.keys()
 
@@ -83,7 +85,7 @@ class Stats(object):
 
         return result
 
-    def dump_stats(self, batchid, metrics=[]):
+    def dump_stats(self, batchid, metrics=None):
         """Dumps associated metrics information to the log.
 
         Args:
@@ -91,6 +93,8 @@ class Stats(object):
                output with an event.
             metrics (list of Metric): A list of metrics to dump.
         """
+        if metrics is None:
+            metrics = []
         if len(metrics) == 0:
             metrics = self.Metrics.keys()
 
@@ -103,7 +107,7 @@ class Stats(object):
             if metric in self.Metrics:
                 self.Metrics[metric].dump_metric(identifier)
 
-    def reset_stats(self, metrics=[]):
+    def reset_stats(self, metrics=None):
         """Resets the specified metrics.
 
         If no metrics are provided, all metrics are reset.
@@ -111,6 +115,8 @@ class Stats(object):
         Args:
             metrics (list of Metric): A list of metrics to reset.
         """
+        if metrics is None:
+            metrics = []
         if len(metrics) == 0:
             metrics = self.Metrics.keys()
 

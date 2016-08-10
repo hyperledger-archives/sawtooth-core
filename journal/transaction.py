@@ -84,12 +84,14 @@ class Transaction(signed_object.SignedObject):
     TransactionTypeName = '/Transaction'
     MessageType = transaction_message.TransactionMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the Transaction class.
 
         Args:
             minfo (dict): A dict of key/values for transaction.
         """
+        if minfo is None:
+            minfo = {}
         super(Transaction, self).__init__(minfo)
 
         self.Nonce = minfo.get('Nonce', time.time())

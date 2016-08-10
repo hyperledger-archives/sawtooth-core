@@ -55,13 +55,15 @@ class TransactionBlock(signed_object.SignedObject):
     TransactionBlockTypeName = "/TransactionBlock"
     MessageType = transaction_block_message.TransactionBlockMessage
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the TransactionBlock class.
 
         Args:
             minfo (dict): A dict of values for initializing
                 TransactionBlocks.
         """
+        if minfo is None:
+            minfo = {}
         super(TransactionBlock, self).__init__(minfo)
 
         self.BlockNum = minfo.get('BlockNum', 0)

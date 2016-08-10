@@ -49,13 +49,15 @@ class TransactionBlockMessage(message.Message):
     """
     MessageType = "/journal.messages.TransactionBlockMessage/TransactionBlock"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the TransactionBlockMessage class.
 
         Args:
             minfo (dict): A dict of initial values for the new
                 TransactionBlockMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(TransactionBlockMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False
@@ -114,13 +116,15 @@ class BlockRequestMessage(message.Message):
     """
     MessageType = "/journal.messages.TransactionBlockMessage/BlockRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
         """Constructor for the BlockRequestMessage class.
 
         Args:
             minfo (dict): A dict of initial values for the
                 new BlockRequestMessage.
         """
+        if minfo is None:
+            minfo = {}
         super(BlockRequestMessage, self).__init__(minfo)
 
         self.IsSystemMessage = False

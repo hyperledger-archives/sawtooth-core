@@ -472,7 +472,7 @@ class Journal(gossip_core.Gossip):
         self.onClaimBlock.fire(self, block)
         self.commit_transaction_block(block)
 
-    def request_missing_block(self, blockid, exceptions=[], request=None):
+    def request_missing_block(self, blockid, exceptions=None, request=None):
         """Requests neighbors to send a transaction block.
 
         This method is called when one block references another block
@@ -486,6 +486,8 @@ class Journal(gossip_core.Gossip):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
+        if exceptions is None:
+            exceptions = []
         now = time.time()
 
         if blockid in self.RequestedBlocks and now < self.RequestedBlocks[
@@ -505,7 +507,7 @@ class Journal(gossip_core.Gossip):
                                  exceptions=exceptions,
                                  initialize=False)
 
-    def request_missing_txn(self, txnid, exceptions=[], request=None):
+    def request_missing_txn(self, txnid, exceptions=None, request=None):
         """Requests that neighbors send a transaction.
 
         This method is called when a block references a transaction
@@ -519,6 +521,8 @@ class Journal(gossip_core.Gossip):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
+        if exceptions is None:
+            exceptions = []
         logger.info('txnid: %s - missing_txn called', txnid[:8])
 
         now = time.time()

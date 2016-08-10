@@ -36,7 +36,9 @@ def register_message_handlers(journal):
 class BlockListRequestMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/BlockListRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(BlockListRequestMessage, self).__init__(minfo)
         self.BlockListIndex = minfo.get('BlockListIndex', 0)
 
@@ -89,7 +91,9 @@ def _blocklistrequesthandler(msg, journal):
 class BlockListReplyMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/BlockListReply"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(BlockListReplyMessage, self).__init__(minfo)
 
         self.InReplyTo = minfo.get('InReplyTo')
@@ -120,7 +124,9 @@ class BlockListReplyMessage(message.Message):
 class UncommittedListRequestMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/UncommittedListRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(UncommittedListRequestMessage, self).__init__(minfo)
         self.TransactionListIndex = minfo.get('TransactionListIndex', 0)
 
@@ -172,7 +178,9 @@ def _uncommittedlistrequesthandler(msg, journal):
 class UncommittedListReplyMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/UncommittedListReply"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(UncommittedListReplyMessage, self).__init__(minfo)
 
         self.InReplyTo = minfo.get('InReplyTo')
@@ -198,7 +206,9 @@ class UncommittedListReplyMessage(message.Message):
 class BlockRequestMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/BlockRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(BlockRequestMessage, self).__init__(minfo)
         self.BlockID = minfo.get('BlockID')
 
@@ -242,7 +252,9 @@ def _blockrequesthandler(msg, journal):
 class BlockReplyMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/BlockReply"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(BlockReplyMessage, self).__init__(minfo)
 
         # TransactionBlockMessage is the encapsulated, transaction block
@@ -266,7 +278,9 @@ class BlockReplyMessage(message.Message):
 class TransactionRequestMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/TransactionRequest"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(TransactionRequestMessage, self).__init__(minfo)
         self.TransactionID = minfo[
             'TransactionID'] if 'TransactionID' in minfo else []
@@ -313,7 +327,9 @@ def _txnrequesthandler(msg, journal):
 class TransactionReplyMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/TransactionReply"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(TransactionReplyMessage, self).__init__(minfo)
 
         # TransactionMessage is the encapsulated, transaction-type specific
@@ -336,7 +352,9 @@ class TransactionReplyMessage(message.Message):
 class TransferFailedMessage(message.Message):
     MessageType = "/journal.messages.JournalTransfer/TransferFailed"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(TransferFailedMessage, self).__init__(minfo)
 
         self.IsSystemMessage = True
