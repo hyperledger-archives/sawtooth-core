@@ -139,7 +139,7 @@ class ValidatorStatsManager(object):
                     jsonstats["ledger"]["PendingBlockCount"],
 
                     jsonstats["ledger"].get("LocalMeanTime", 0.0),
-                    jsonstats["ledger"].get("ExpectedExpirationTime"),
+                    jsonstats["ledger"].get("ExpectedExpirationTime", 0.0),
                     jsonstats["ledger"].get("PreviousBlockID", 'broken'),
                     jsonstats["ledger"].get("CommittedTxnCount", 0),
                     jsonstats["ledger"].get("PendingTxnCount", 0),
