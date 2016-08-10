@@ -26,8 +26,10 @@ class IncentiveUpdate(object):
     CreatorType = participant_update.ParticipantObject
     ValidationTokenAssetID = None
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
 
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
 
         self.HoldingID = None

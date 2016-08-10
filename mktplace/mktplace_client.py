@@ -284,7 +284,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
             logger.debug('waiting for transaction %s to commit', txnid)
             time.sleep(timetowait)
 
-    def exchange(self, payer, payee, count, offerids=[]):
+    def exchange(self, payer, payee, count, offerids=None):
         """
         Generate an exchange transaction for moving assets amongst holdings
 
@@ -300,6 +300,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: exchange transaction id
         :rtype: id
         """
+        if offerids is None:
+            offerids = []
         update = exchange_update.Exchange()
 
         # Check current state for the correctness of the arguments

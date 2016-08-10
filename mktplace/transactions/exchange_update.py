@@ -273,8 +273,10 @@ class Exchange(object):
     UpdateType = '/mktplace.transactions.ExchangeUpdate/Exchange'
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
 
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
         self.InitialLiabilityID = minfo.get('InitialLiabilityID',
                                             '**UNKNOWN**')

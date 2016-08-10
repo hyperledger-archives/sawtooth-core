@@ -365,7 +365,9 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
 class MarketPlaceTransactionMessage(transaction_message.TransactionMessage):
     MessageType = "/mktplace.transactions.MarketPlace/Transaction"
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(MarketPlaceTransactionMessage, self).__init__(minfo)
 
         tinfo = minfo.get('Transaction', {})
@@ -446,7 +448,9 @@ class MarketPlaceTransaction(transaction.Transaction):
         payment.PayFromHolding.PaymentType: payment.PayFromHolding
     }
 
-    def __init__(self, minfo={}):
+    def __init__(self, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(MarketPlaceTransaction, self).__init__(minfo)
 
         self.Update = None

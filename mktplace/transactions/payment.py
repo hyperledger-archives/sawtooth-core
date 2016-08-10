@@ -25,7 +25,9 @@ class Payment(object):
     PaymentType = '/mktplace.transactions.Payment/Payment'
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
 
     def __str__(self):
@@ -68,7 +70,9 @@ class PayFromHolding(Payment):
     PaymentType = '/mktplace.transactions.Payment/PayFromHolding'
     ValidationTokenAssetID = None
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(PayFromHolding, self).__init__(transaction, minfo)
 
         self.CreatorID = None

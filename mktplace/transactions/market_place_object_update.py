@@ -56,7 +56,9 @@ class MarketPlaceObject(object):
 
         return cls(objectid, obj)
 
-    def __init__(self, objectid=None, minfo={}):
+    def __init__(self, objectid=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         self.ObjectID = objectid
 
     def dump(self):
@@ -67,7 +69,9 @@ class MarketPlaceObject(object):
 class Register(object):
     UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/Register'
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
 
     def __str__(self):
@@ -154,7 +158,9 @@ class Register(object):
 class Unregister(object):
     UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/Unregister'
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
 
         self.ObjectID = minfo.get('ObjectID')
@@ -210,7 +216,9 @@ class UpdateDescription(object):
     UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate' \
                  '/UpdateDescription'
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
 
         self.ObjectID = None
@@ -285,7 +293,9 @@ class UpdateDescription(object):
 class UpdateName(object):
     UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/UpdateName'
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         self.Transaction = transaction
 
         self.ObjectID = None

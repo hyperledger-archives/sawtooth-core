@@ -38,7 +38,9 @@ class ParticipantObject(market_place_object_update.MarketPlaceObject):
 
         return True
 
-    def __init__(self, participantid=None, minfo={}):
+    def __init__(self, participantid=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(ParticipantObject, self).__init__(participantid, minfo)
 
         self.Address = minfo.get('address', '**UNKNOWN**')
@@ -60,7 +62,9 @@ class Register(market_place_object_update.Register):
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(Register, self).__init__(transaction, minfo)
 
         self.Description = minfo.get('Description', '')
@@ -123,7 +127,9 @@ class Unregister(market_place_object_update.Unregister):
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(Unregister, self).__init__(transaction, minfo)
 
     def is_valid(self, store):
@@ -147,7 +153,9 @@ class UpdateDescription(market_place_object_update.UpdateDescription):
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(UpdateDescription, self).__init__(transaction, minfo)
 
     def is_valid(self, store):
@@ -168,7 +176,9 @@ class UpdateName(market_place_object_update.UpdateName):
     CreatorType = ParticipantObject
 
     # -----------------------------------------------------------------
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(UpdateName, self).__init__(transaction, minfo)
 
     # -----------------------------------------------------------------

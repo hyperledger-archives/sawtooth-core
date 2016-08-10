@@ -60,7 +60,9 @@ class SellOfferObject(market_place_object_update.MarketPlaceObject):
 
         return True
 
-    def __init__(self, objectid=None, minfo={}):
+    def __init__(self, objectid=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(SellOfferObject, self).__init__(objectid, minfo)
 
         self.CreatorID = minfo.get('creator', '**UNKNOWN**')
@@ -96,7 +98,9 @@ class Register(market_place_object_update.Register):
     ObjectType = SellOfferObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(Register, self).__init__(transaction, minfo)
 
         self.CreatorID = minfo.get('CreatorID', '**UNKNOWN**')
@@ -197,7 +201,9 @@ class Unregister(market_place_object_update.Unregister):
     ObjectType = SellOfferObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo={}):
+    def __init__(self, transaction=None, minfo=None):
+        if minfo is None:
+            minfo = {}
         super(Unregister, self).__init__(transaction, minfo)
 
     def is_valid(self, store):
