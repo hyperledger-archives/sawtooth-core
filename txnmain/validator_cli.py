@@ -199,7 +199,7 @@ def remove_false_key(namespace, key):
     return None
 
 
-def get_configuration(args, os_name=os.name, config_files_required=True):
+def get_configuration(args, os_name=os.name, config_files_required=None):
     options = parse_command_line(args)
 
     options_config = ArgparseOptionsConfig(
