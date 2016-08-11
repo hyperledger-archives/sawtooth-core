@@ -1166,14 +1166,16 @@ class ThreadSafeShelf(Shelf):
             Shelf.__setitem__(self, key, value)
 
     def __getitem__(self, item):
-        ret = None
         with self._lock:
-            ret = Shelf.__getitem__(self, item)
-        return ret
+            return Shelf.__getitem__(self, item)
 
     def __delitem__(self, key):
         with self._lock:
             Shelf.__delitem__(self, key)
+
+    def __len__(self):
+        with self._lock:
+            return Shelf.__len__(self)
 
 
 class ShelfFromFilename(ThreadSafeShelf):
