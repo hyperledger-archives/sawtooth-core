@@ -136,6 +136,10 @@ def connect_syn_handler(msg, gossiper):
         msg (message.Message): The received connection request message.
         gossiper (Node): The local node.
     """
+    if msg.OriginatorID in gossiper.blacklist:
+        logger.warning('msg originator %s blacklisted', msg.OriginatorID)
+        return
+
     if msg.SenderID != msg.OriginatorID:
         logger.error('connection request must originate from peer; %s not %s',
                      msg.OriginatorID, msg.SenderID)
@@ -208,6 +212,10 @@ def connect_ack_handler(msg, gossiper):
         msg (message.Message): The received connection reply message.
         gossiper (Node): The local node.
     """
+    if msg.OriginatorID in gossiper.blacklist:
+        logger.warning('msg originator %s blacklisted', msg.OriginatorID)
+        return
+
     logger.info('received connect confirmation from node %s',
                 gossiper.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8]))
 
@@ -265,6 +273,10 @@ def connect_syn_ack_handler(msg, gossiper):
         msg (message.Message): The received connection reply message.
         gossiper (Node): The local node.
     """
+    if msg.OriginatorID in gossiper.blacklist:
+        logger.warning('msg originator %s blacklisted', msg.OriginatorID)
+        return
+
     if msg.SenderID != msg.OriginatorID:
         logger.error('connection request must originate from peer; %s not %s',
                      msg.OriginatorID, msg.SenderID)

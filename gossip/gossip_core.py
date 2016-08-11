@@ -135,6 +135,8 @@ class Gossip(object, DatagramProtocol):
 
         super(Gossip, self).__init__()
 
+        self.blacklist = []
+
         if 'MinimumRetries' in kwargs:
             self.MinimumRetries = kwargs['MinimumRetries']
         if 'RetryInterval' in kwargs:
