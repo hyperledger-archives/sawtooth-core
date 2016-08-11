@@ -234,7 +234,7 @@ class ValidatorNetworkManager(object):
             nd = self.static_network.get_node(validator_id)
             q = self.static_network.get_quorum(validator_id,
                                                dfl=cfg.get('Quorum', []))
-            cfg['NodeName'] = nd['ShortName']
+            cfg['NodeName'] = nd['NodeName']
             cfg['SigningKey'] = self.static_network.get_key(validator_id)
             cfg['Identifier'] = nd['Identifier']
             cfg['Quorum'] = q

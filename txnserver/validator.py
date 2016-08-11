@@ -190,8 +190,8 @@ class Validator(object):
             addr = (socket.gethostbyname(nodedata["Host"]), nodedata["Port"])
             nd = node.Node(address=addr,
                            identifier=nodedata["Identifier"],
-                           name=nodedata["ShortName"])
-            self.NodeMap[nodedata["ShortName"]] = nd
+                           name=nodedata["NodeName"])
+            self.NodeMap[nodedata["NodeName"]] = nd
 
     def initialize_ledger_object(self):
         # Create the local ledger instance

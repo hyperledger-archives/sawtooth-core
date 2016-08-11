@@ -210,9 +210,9 @@ class TestBasicStartup(unittest.TestCase):
                 node['Host'] = epl['Host']
                 node['Port'] = epl['Port']
                 node['Identifier'] = epl['NodeIdentifier']
-                node['ShortName'] = epl['Name']
+                node['NodeName'] = epl['Name']
                 nodes.append(node)
-            peers = [nodes[0]['ShortName'], nodes[2]['ShortName'],
+            peers = [nodes[0]['NodeName'], nodes[2]['NodeName'],
                      'validator-x']
             self.vnm.validator_config['Nodes'] = nodes
             self.vnm.validator_config['Peers'] = peers

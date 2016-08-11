@@ -43,7 +43,7 @@ class StaticNetworkConfig(object):
         self.keys = [generate_private_key() for _ in range(n)]
         self.nodes = [
             {
-                "ShortName": "{0}-{1}".format(base_name, idx),
+                "NodeName": "{0}-{1}".format(base_name, idx),
                 "Identifier": get_address_from_private_key_wif(wif),
                 "Host": "localhost",
                 "Port": base_port + idx,
@@ -64,13 +64,13 @@ class StaticNetworkConfig(object):
             tgt: node index for which we need a peer list
             dfl: Q override if not self.use_quorum
         Returns:
-            peers: a list of q node ShortNames (including the requestor)
+            peers: a list of q node NodeNames (including the requestor)
             gathered by modulating around the nodelist
         '''
         dfl = [] if dfl is None else dfl
         peers = dfl
         if self.use_quorum:
-            peers = [x['ShortName'] for x in self.nodes]
+            peers = [x['NodeName'] for x in self.nodes]
             assert len(peers) == len(set(peers))
             return [peers[(tgt + i) % (self.n_mag)] for i in range(self.q_mag)]
 
