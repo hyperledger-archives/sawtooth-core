@@ -110,13 +110,13 @@ class QuorumJournal(Journal):
             return
         self.QuorumMap = {}
         for nd_dict in config.get("Nodes", []):
-            if nd_dict["ShortName"] in q:
+            if nd_dict["NodeName"] in q:
                 addr = (socket.gethostbyname(nd_dict["Host"]), nd_dict["Port"])
                 nd = node.Node(address=addr,
                                identifier=nd_dict["Identifier"],
-                               name=nd_dict["ShortName"])
+                               name=nd_dict["NodeName"])
                 nd.HttpPort = nd_dict["HttpPort"]
-                self.QuorumMap[nd_dict["ShortName"]] = nd
+                self.QuorumMap[nd_dict["NodeName"]] = nd
 
     #
     # GENERAL JOURNAL API
