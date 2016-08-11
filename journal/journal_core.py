@@ -16,7 +16,7 @@
 import anydbm
 import logging
 from shelve import Shelf
-from threading import Lock
+from threading import RLock
 import time
 from collections import OrderedDict
 
@@ -1157,7 +1157,7 @@ class Journal(gossip_core.Gossip):
 
 class ThreadSafeShelf(Shelf):
     def __init__(self, d, protocol=None, writeback=False):
-        self._lock = Lock()
+        self._lock = RLock()
         # super is not used because Shelf is an OldStyle class
         Shelf.__init__(self, d, protocol, writeback)
 
@@ -1173,9 +1173,33 @@ class ThreadSafeShelf(Shelf):
         with self._lock:
             Shelf.__delitem__(self, key)
 
+    def __del__(self):
+        with self._lock:
+            Shelf.__del__(self)
+
     def __len__(self):
         with self._lock:
             return Shelf.__len__(self)
+
+    def __contains__(self, item):
+        with self._lock:
+            return Shelf.__contains__(self, item)
+
+    def get(self, key, default=None):
+        with self._lock:
+            return Shelf.get(self, key, default)
+
+    def sync(self):
+        with self._lock:
+            Shelf.sync(self)
+
+    def close(self):
+        with self._lock:
+            Shelf.close(self)
+
+    def keys(self):
+        with self._lock:
+            return Shelf.keys(self)
 
 
 class ShelfFromFilename(ThreadSafeShelf):
