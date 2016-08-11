@@ -104,7 +104,7 @@ def get_config_directory(configs):
 def get_validator_configuration(config_files,
                                 options_config,
                                 os_name=os.name,
-                                config_files_required=True):
+                                config_files_required=None):
     env_config = CurrencyEnvConfig()
 
     default_config = ValidatorDefaultConfig(os_name=os_name)
@@ -115,6 +115,13 @@ def get_validator_configuration(config_files,
     # Determine the configuration file search path
     search_path = [conf_dir, '.', os.path.join(
         os.path.dirname(__file__), "..", "etc")]
+
+    # Require the config files unless it is an empty list or the
+    # default of txnvalidator.js.
+    if config_files_required is None:
+        config_files_required = len(config_files) != 0 and \
+            not (len(config_files) == 1 and
+                 config_files[0] == 'txnvalidator.js')
 
     file_configs = load_config_files(config_files, search_path,
                                      config_files_required)
