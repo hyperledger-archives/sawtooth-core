@@ -299,8 +299,8 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
         self['Restore'] = False
 
         # configuration of the ledger wait time certificate
-        self['TargetWaitTime'] = 30.0
-        self['InitialWaitTime'] = 750.0
+        self['TargetWaitTime'] = 5.0
+        self['InitialWaitTime'] = 5.0
         self['CertificateSampleLength'] = 30
 
         # configuration of the block sizes

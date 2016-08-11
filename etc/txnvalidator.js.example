@@ -18,9 +18,14 @@
     "GenesisLedger" : false,
 
     ## configuration of the ledger wait time certificate 
-    "TargetWaitTime" : 30.0,
-    "InitialWaitTime" : 750.0,
+    ## suggested settings for single node dev environment
+    "TargetWaitTime" : 5.0,
+    "InitialWaitTime" : 5.0,
     "CertificateSampleLength" : 30,
+
+    ## suggested settings for a 25 node network
+    ## "TargetWaitTime" : 30.0,
+    ## "InitialWaitTime" : 750.0,
 
     ## configuration of the block sizes
     "MinTransactionsPerBlock" : 1,
