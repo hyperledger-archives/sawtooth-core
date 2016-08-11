@@ -240,6 +240,8 @@ class Validator(object):
             self.start()
 
     def start(self):
+        # add blacklist before we attempt any peering
+        self.Ledger.blacklist = self.Config.get('Blacklist', [])
         # if this is the genesis ledger then there isn't anything left to do
         if self.GenesisLedger:
             self.start_ledger()
