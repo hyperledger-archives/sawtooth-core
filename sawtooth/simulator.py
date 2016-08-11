@@ -17,6 +17,7 @@ import logging
 import traceback
 import sys
 import threading
+import time
 
 from collections import namedtuple, deque
 from twisted.internet import task
@@ -36,21 +37,29 @@ class SawtoothWorkloadSimulator(object):
     def __init__(self, config):
         self._loop = None
         self._base_validator = config.get('Simulator', 'url')
-
+        self._is_throttling = False
         self._lock = threading.Lock()
 
         # For now, let's try 20 maximum outstanding work requests.  Through
         # experimentation it appears that the twisted reactor main thread pool
         # has 10 threads.  We are going to allow twice as many outstanding
         # work requests before we start to throttle them.
-        self._maximum_outstanding_work_requests = 20
+        self._maximum_outstanding_requests = 20
 
         # These attributes need to be protected by self._lock.  Ensure
         # that any threaded access grabs the lock before reading/writing.
         self._pending_transactions = deque()
         self._validators = []
         self._is_performing_discovery = False
-        self._number_of_outstanding_work_requests = 0
+        self._number_of_outstanding_requests = 0
+        self._submitted_transactions_sample = 0
+        self._committed_transactions_sample = 0
+
+        # Used to calculate rough approximations of transactions/minute.
+        # We'll set it to a real time later.
+        self._time_since_last_check = 0
+        self._submitted_transaction_samples = deque()
+        self._committed_transaction_samples = deque()
 
         # Dynamically load the workload class' module and create a workload
         # generator
@@ -87,20 +96,65 @@ class SawtoothWorkloadSimulator(object):
         loop.start(discover * 60, now=False)
 
     def run(self):
+        self._time_since_last_check = time.time()
+
         # pylint: disable=no-self-use
         reactor.run()
 
     def _simulator_loop(self):
         with self._lock:
+            # Check the time.  If at least a minute has passed since we have
+            # last report transactions/minute, then let's do so
+            now = time.time()
+            delta = now - self._time_since_last_check
+            if delta >= 60:
+                # Take the samples and normalize to a minute.
+                sample = 60 * self._submitted_transactions_sample / delta
+                self._submitted_transaction_samples.append(sample)
+                LOGGER.info(
+                    'Transaction submission rate for last sample period is '
+                    '%.2f tpm',
+                    sample)
+
+                sample = 60 * self._committed_transactions_sample / delta
+                self._committed_transaction_samples.append(sample)
+                LOGGER.info(
+                    'Transaction commit rate for last sample period is '
+                    '%.2f tpm',
+                    sample)
+
+                # We are going to only use at most the last 10 samples to
+                # calculate the moving average
+                if len(self._submitted_transaction_samples) == 11:
+                    self._submitted_transaction_samples.popleft()
+                    self._committed_transaction_samples.popleft()
+
+                LOGGER.info(
+                    'Transaction submission rate for last %d sample(s) '
+                    'is %.2f tpm',
+                    len(self._submitted_transaction_samples),
+                    sum(self._submitted_transaction_samples) /
+                    len(self._submitted_transaction_samples))
+                LOGGER.info(
+                    'Transaction commit rate for last %d sample(s) '
+                    'is %.2f tpm',
+                    len(self._committed_transaction_samples),
+                    sum(self._committed_transaction_samples) /
+                    len(self._committed_transaction_samples))
+
+                self._submitted_transactions_sample = 0
+                self._committed_transactions_sample = 0
+                self._time_since_last_check = now
+
             # Only push work off to a worker thread if we have not hit the
             # maximum number of outstanding requests.  If we have hit the
             # maximum number then there really is no use issuing another
             # transaction as the validators are not keeping up right now.
             # Throttle back a little bit and let them catch their breath.
-            if self._number_of_outstanding_work_requests \
-                    < self._maximum_outstanding_work_requests:
-
-                self._number_of_outstanding_work_requests += 1
+            if self._number_of_outstanding_requests \
+                    < self._maximum_outstanding_requests:
+                self._is_throttling = False
+                self._number_of_outstanding_requests += 1
 
                 # If there are pending transactions, then pull off the first
                 # one.
@@ -112,12 +166,16 @@ class SawtoothWorkloadSimulator(object):
                 # want to block the main reactor thread.
                 reactor.callInThread(self._check_on_transaction, transaction)
             else:
-                LOGGER.warning(
-                    'Simulator is throttling work requests as the number of '
-                    'outstanding work requests has reached its limit of '
-                    '{}'.format(
-                        self._maximum_outstanding_work_requests
-                    ))
+                # Only print a message when we first detect we are throttling.
+                # There's no use continuing to spew the messages to the log for
+                # every time we detect it.
+                if not self._is_throttling:
+                    LOGGER.warning(
+                        'Simulator is throttling work requests as the number '
+                        'of outstanding work requests has reached its limit '
+                        'of %d',
+                        self._maximum_outstanding_requests)
+                    self._is_throttling = True
 
     def _discover_validators_loop(self):
         # Discovering validators may take a while, so push it off into
@@ -142,7 +200,20 @@ class SawtoothWorkloadSimulator(object):
                     transaction.client.get_transaction_status(
                         transaction.id)
                 if status == TransactionStatus.committed:
+                    with self._lock:
+                        self._committed_transactions_sample += 1
+
                     self._workload.on_transaction_committed(transaction.id)
+                elif status == TransactionStatus.server_busy:
+                    # If the server is busy, we are going to take a short
+                    # breather from issuing transactions and place this
+                    # at the end of the pending transactions to give the
+                    # validator time to catch up.
+                    with self._lock:
+                        LOGGER.warn(
+                            'Validator %s is responding as busy',
+                            transaction.client.base_url)
+                        self._pending_transactions.append(transaction)
                 else:
                     # If the workload generator wants the pending
                     # transaction to be checked again, we are going to make
@@ -183,7 +254,7 @@ class SawtoothWorkloadSimulator(object):
         # Now that we are done, we can decrement the number of outstanding
         # work requests.
         with self._lock:
-            self._number_of_outstanding_work_requests -= 1
+            self._number_of_outstanding_requests -= 1
 
     def _discover_validators(self):
         # Find out which validators are in the network currently.  Because
@@ -282,6 +353,7 @@ class SawtoothWorkloadSimulator(object):
         """
         if transaction_id is not None:
             with self._lock:
+                self._submitted_transactions_sample += 1
                 self._pending_transactions.append(
                     PendingTransaction(id=transaction_id, client=client))
 

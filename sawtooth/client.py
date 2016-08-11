@@ -41,6 +41,7 @@ class TransactionStatus(Enum):
     committed = 200
     pending = 302
     not_found = 404
+    server_busy = 503
 
 
 class _Communication(object):
