@@ -571,7 +571,19 @@ class LedgerWebClient(object):
             blockid - get the state of the store following the validation of
                 blockid
         """
-        url = self.ledger_url + '/store' + txntype.TransactionTypeName
+        return self.store_url_by_name(txntype.TransactionTypeName,
+                                      key, blockid, delta)
+
+    def store_url_by_name(self,
+                          txntypename='',
+                          key='',
+                          blockid='',
+                          delta=False):
+        if txntypename == '':
+            url = self.ledger_url + '/store'
+            return url
+
+        url = self.ledger_url + '/store' + txntypename
         if key:
             url += '/' + key
         url = urlparse.urljoin(url,
@@ -706,6 +718,14 @@ class LedgerWebClient(object):
             key -- a specific identifier to retrieve
         """
         return self._geturl(self.store_url(txntype, key, blockid, delta))
+
+    def get_store_by_name(self,
+                          txntypename='',
+                          key='',
+                          blockid='',
+                          delta=False):
+        return self._geturl(self.store_url_by_name(txntypename, key,
+                                                   blockid, delta))
 
     def get_block(self, blockid, field=None):
         """
