@@ -48,17 +48,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   conf.each_pair {|key,value| puts "#{key} = #{value}"}
 
   if ARGV.include? "up"
-    repo_error = false
-    ["../sawtooth-core", "../sawtooth-validator", "../sawtooth-mktplace"].each do |repo|
-      if !File.directory?(repo)
-        STDERR.puts("Repository " + repo + " needs to exist")
-        repo_error = true
-      end
-    end
-    if repo_error
-      exit
-    end
-
     if Vagrant.has_plugin?("vagrant-proxyconf")
         puts "Configuring proxyconf plugin!"
         if ENV["http_proxy"]
