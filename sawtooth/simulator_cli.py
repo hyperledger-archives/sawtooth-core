@@ -28,7 +28,7 @@ from sawtooth.simulator import SawtoothWorkloadSimulator
 LOGGER = logging.getLogger(__name__)
 
 
-def create_console_handler(verbose_level):
+def create_console_handler():
     logger = logging.StreamHandler()
     formatter = ColoredFormatter(
         fmt='%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s '
@@ -43,13 +43,6 @@ def create_console_handler(verbose_level):
             'CRITICAL': 'red',
         })
     logger.setFormatter(formatter)
-
-    if verbose_level == 0:
-        logger.setLevel(logging.WARN)
-    elif verbose_level == 1:
-        logger.setLevel(logging.INFO)
-    else:
-        logger.setLevel(logging.DEBUG)
 
     return logger
 
@@ -73,14 +66,13 @@ def create_file_handler(config):
             backupCount=config.getint('Simulator', 'log_backup_count'))
     formatter = \
         logging.Formatter(
-            fmt='[%(asctime)s.%(msecs).03d %(levelname)-8s%(module)s] '
+            fmt='%(asctime)s.%(msecs).03d,%(levelname)s,%(module)s,'
                 '%(message)s',
             datefmt='%Y-%m-%dT%H:%M:%S')
 
     formatter.converter = time.gmtime
 
     logger.setFormatter(formatter)
-    logger.setLevel(logging.INFO)
 
     return logger
 
@@ -88,10 +80,26 @@ def create_file_handler(config):
 def set_up_loggers(config):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    logger.addHandler(
-        create_console_handler(
-            verbose_level=config.getint('Simulator', 'verbose')))
-    logger.addHandler(create_file_handler(config))
+
+    # Convert the configuration verbose level to a logging module level
+    logging_level = logging.DEBUG
+    verbose_level = config.getint('Simulator', 'verbose')
+    if verbose_level == 0:
+        logging_level = logging.WARN
+    elif verbose_level == 1:
+        logging_level = logging.INFO
+
+    # Create a logger for console and add it as a handler
+    console_logger = create_console_handler()
+    console_logger.setLevel(logging_level)
+    logger.addHandler(console_logger)
+
+    # Only add a file handler if the option has been specified
+    # to do so.
+    if config.getboolean('Simulator', 'log_file_enable'):
+        file_logger = create_file_handler(config)
+        file_logger.setLevel(logging_level)
+        logger.addHandler(file_logger)
 
     return logger
 
@@ -116,11 +124,18 @@ def parse_args(args):
                              'the simulator and (possibly) the workload '
                              'generator.  Command-line options override '
                              'corresponding values in the configuration file.')
+    parser.add_argument('--log-file-enable',
+                        help='Log all console messages to a file also.  If '
+                             'this option is not specified or log_file_enable '
+                             'is not set to True in the configuration file, '
+                             'all other log file related options are ignored.',
+                        action='store_true',
+                        default=None)
     parser.add_argument('--log-file',
-                        help='Name of file used for logging')
+                        help='Name of file used for logging.')
     parser.add_argument('--log-dir',
                         help='Name of directory into which log file will be '
-                             'saved')
+                             'saved.')
     parser.add_argument('--log-max-size',
                         type=int,
                         help='The maximum size, in MB, of the log file '
@@ -129,7 +144,8 @@ def parse_args(args):
                              'not specified on the command line, is 0, or '
                              'log_max_size is not specified in the '
                              'configuration file the log file is not '
-                             'rotated and --log-backup-count is ignored.')
+                             'rotated and --log-backup-count is ignored.  '
+                             'Ignored if --log-file-enable is not specified.')
     parser.add_argument('--log-backup-count',
                         type=int,
                         help='The number of backup log files to retain.  If '
@@ -140,10 +156,9 @@ def parse_args(args):
                              'ignored.')
     parser.add_argument('-v', '--verbose',
                         action='count',
-                        help='Enable more verbose output to the console (can '
-                             'be specified multiple times to generate more '
-                             'verbose logging).  Note that file logging will '
-                             'always use INFO verbosity level.')
+                        help='Enable more verbose output (can be specified '
+                             'multiple times to generate more verbose logging'
+                             ').')
 
     opts = parser.parse_args(args)
 
@@ -181,6 +196,7 @@ def load_configuration(opts):
                'txnintegration.integer_key_workload.IntegerKeyWorkload')
     config.set('Simulator', 'rate', '12')
     config.set('Simulator', 'discover', '15')
+    config.set('Simulator', 'log_file_enable', 'False')
     config.set('Simulator', 'log_file', 'simulator.log')
     config.set(
         'Simulator',
@@ -249,6 +265,8 @@ def load_configuration(opts):
         config.set('Simulator', 'discover', str(opts.discover))
     if opts.verbose is not None:
         config.set('Simulator', 'verbose', str(opts.verbose))
+    if opts.log_file_enable is not None:
+        config.set('Simulator', 'log_file_enable', str(opts.log_file_enable))
     if opts.log_file is not None:
         config.set('Simulator', 'log_file', opts.log_file)
     if opts.log_dir is not None:
