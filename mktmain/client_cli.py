@@ -1459,7 +1459,7 @@ def parse_command_line(args):
                         required=False,
                         action='store_true',
                         default=False)
-    parser.add_argument('--verbose', '-v',
+    parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
                         help='increase output sent to stderr')
