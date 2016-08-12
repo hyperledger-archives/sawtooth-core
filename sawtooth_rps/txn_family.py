@@ -89,9 +89,9 @@ class RPSTransaction(transaction.Transaction):
                 raise InvalidTransactionError('game already exists')
             if (not isinstance(self._players, (int, long)) or not
                     self._players > 0):
-                raise InvalidTransactionError('players must be a positive integer' +
-                                   'larger then 0: %s (%s)' %
-                                   (self._players, type(self._players)))
+                raise InvalidTransactionError(
+                    'players must be a positive integer larger then 0: %s '
+                    '(%s)' % (self._players, type(self._players)))
         elif self._action == 'SHOOT':
             if self._hand is None:
                 raise InvalidTransactionError('SHOOT requires hand')
@@ -107,8 +107,9 @@ class RPSTransaction(transaction.Transaction):
             if state == 'COMPLETE':
                 raise InvalidTransactionError('game complete')
             elif len(store[self._name]['Hands']) >= players:
-                raise InvalidTransactionError('all players shown their hand but' +
-                                   'game state not set to complete')
+                raise InvalidTransactionError(
+                    'all players shown their hand but game state not set to '
+                    'complete')
             elif state == 'OPEN':
                 recorded_hand = store[self._name]['Hands']\
                     .get(self.OriginatorID)
@@ -134,8 +135,9 @@ class RPSTransaction(transaction.Transaction):
         for a, b, resolution in resolutions:
             if hand_a == a and hand_b == b:
                 return resolution
-        raise InvalidTransactionError("no resolution found for hand_a: %s, hand_b: %s"
-                           % (hand_a, hand_b))
+        raise InvalidTransactionError(
+            'no resolution found for hand_a: %s, hand_b: %s' %
+            (hand_a, hand_b))
 
     def apply(self, store):
         logger.debug('apply %s', str(self))
@@ -143,8 +145,9 @@ class RPSTransaction(transaction.Transaction):
         if self._name in store:
             game = store[self._name].copy()
         elif self._hand is not None:
-            raise InvalidTransactionError("Hand to be played without a" +
-                               "game registered (should not happen)")
+            raise InvalidTransactionError(
+                'Hand to be played without a game registered (should not '
+                'happen)')
         else:
             if self._players == 1:
                 game = {
