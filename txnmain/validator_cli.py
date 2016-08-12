@@ -146,7 +146,7 @@ def parse_command_line(args):
                         help='Restore previous block chain',
                         action='store_true')
     parser.add_argument('--type', help='Type of ledger to create')
-    parser.add_argument('--verbose', '-v',
+    parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
                         help='increase output sent to stderr')

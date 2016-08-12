@@ -132,7 +132,7 @@ def parse_command_line(args):
                         help='Number of stat intervals to collect',
                         type=int)
     parser.add_argument('--blocks', help='Number of blocks to dump', type=int)
-    parser.add_argument('--verbose', '-v',
+    parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
                         help='increase output sent to stderr')
