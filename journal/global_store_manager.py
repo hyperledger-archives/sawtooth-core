@@ -445,12 +445,12 @@ class KeyValueStore(object):
         Returns:
             object: The value associated with the key.
         """
-        if key in self._store:
-            return copy.deepcopy(self._store[key])
+        store = self
+        while store is not None and key not in store._deletedkeys:
+            if key in store._store:
+                return copy.deepcopy(store._store[key])
 
-        if self.PrevStore and key not in self._deletedkeys:
-            return self.PrevStore.get(key)
-
+            store = store.PrevStore
         raise KeyError('attempt to access missing key', key)
 
     def __getitem__(self, key):
