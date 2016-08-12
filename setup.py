@@ -77,7 +77,7 @@ setup(
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['sawtooth-core', 'cbor>=0.1.23', 'colorlog'],
+    install_requires=['sawtooth-core', 'cbor>=0.1.23', 'colorlog', 'PyYAML'],
     entry_points={
         'console_scripts': [
             'mktclient = mktmain.client_cli:main'
