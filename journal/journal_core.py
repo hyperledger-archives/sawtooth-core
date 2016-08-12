@@ -26,6 +26,8 @@ from journal.messages import journal_transfer
 from journal.messages import transaction_block_message
 from journal.messages import transaction_message
 
+from sawtooth.exceptions import NotAvailableException
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +42,8 @@ class Journal(gossip_core.Gossip):
             per block.
         MissingRequestInterval (float): Time in seconds between sending
             requests for a missing transaction block.
+        BlockRetryInterval (float): Time in seconds between retrying
+            block validations that
         StartTime (float): The initialization time of the journal in
             seconds since the epoch.
         Initializing (bool): Whether or not the journal is in an
@@ -109,6 +113,9 @@ class Journal(gossip_core.Gossip):
     # Time between sending requests for a missing transaction block
     MissingRequestInterval = 30.0
 
+    # Time between sending requests for a missing transaction block
+    BlockRetryInterval = 10.0
+
     def __init__(self, node, **kwargs):
         """Constructor for the Journal class.
 
@@ -154,6 +161,9 @@ class Journal(gossip_core.Gossip):
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
+
+        self.next_block_retry = time.time() + self.BlockRetryInterval
+        self.onHeartbeatTimer += self._trigger_retry_blocks
 
         self.MostRecentCommittedBlockID = common.NullIdentifier
         self.PendingTransactionBlock = None
@@ -668,6 +678,7 @@ class Journal(gossip_core.Gossip):
     #
 
     def _handleblock(self, tblock):
+        # pylint: disable=redefined-variable-type
         """
         Attempt to add a block to the chain.
         """
@@ -722,14 +733,22 @@ class Journal(gossip_core.Gossip):
 
         # fifth test... run the checks for a valid block, generally these are
         # specific to the various transaction families or consensus mechanisms
-        if (not tblock.is_valid(self)
-                or not self.onBlockTest.fire(self, tblock)):
-            logger.debug('blkid: %s - block test failed',
-                         tblock.Identifier[:8])
-            self.PendingBlockIDs.discard(tblock.Identifier)
-            self.InvalidBlockIDs.add(tblock.Identifier)
-            tblock.Status = transaction_block.Status.invalid
+        try:
+            if (not tblock.is_valid(self)
+                    or not self.onBlockTest.fire(self, tblock)):
+                logger.debug('blkid: %s - block test failed',
+                             tblock.Identifier[:8])
+                self.PendingBlockIDs.discard(tblock.Identifier)
+                self.InvalidBlockIDs.add(tblock.Identifier)
+                tblock.Status = transaction_block.Status.invalid
+                self.BlockStore[tblock.Identifier] = tblock
+                return
+        except NotAvailableException:
+            tblock.Status = transaction_block.Status.retry
             self.BlockStore[tblock.Identifier] = tblock
+            logger.debug('blkid: %s - NotAvailableException - not able to '
+                         'verify, will retry later',
+                         tblock.Identifier[:8])
             return
 
         # sixth test... verify that every transaction in the now complete
@@ -772,10 +791,12 @@ class Journal(gossip_core.Gossip):
 
         self._cleantransactionblocks()
 
-        # last thing is to check the other orphaned blocks to see if this
+        # check the other orphaned blocks to see if this
         # block connects one to the chain, if a new block is connected to
         # the chain then we need to go through the entire process again with
         # the newly connected block
+        # Also checks if we have pending blocks that need to be retried. If so
+        # adds them to the list to be handled.
         blockids = set()
         for blockid in self.PendingBlockIDs:
             if self.BlockStore[blockid].PreviousBlockID == tblock.Identifier:
@@ -783,6 +804,36 @@ class Journal(gossip_core.Gossip):
 
         for blockid in blockids:
             self._handleblock(self.BlockStore[blockid])
+
+        self.retry_blocks()
+
+    def retry_blocks(self):
+        # check the orphaned blocks to see if any had a recoverable validation
+        # failure, if the did and the retry time has expired then send the
+        # block to be revalidated. We only process the first expired block
+        # in the list, as that will call this function that will process
+        # the next block ready for retry. The retry will modify the
+        # PendingBlockIDs set, so we can not be iterating the set as
+        # the retry happens.
+        retry_block = None
+        for blockid in self.PendingBlockIDs:
+            block = self.BlockStore[blockid]
+            if block.Status == transaction_block.Status.retry:
+                retry_block = block
+                break
+
+        if retry_block:
+            logger.debug('blkid: %s - Retrying block validation.',
+                         retry_block.Identifier[:8])
+            self._handleblock(retry_block)
+
+    def _trigger_retry_blocks(self, now):
+        if time.time() > self.next_block_retry:
+            self.next_block_retry = time.time() + self.BlockRetryInterval
+            msg = transaction_block_message.BlockRetryMessage()
+            msg.SenderID = self.LocalNode.Identifier
+            msg.sign_from_node(self.LocalNode)
+            self.handle_message(msg)
 
     def _commitblockchain(self, blockid, forkid):
         """

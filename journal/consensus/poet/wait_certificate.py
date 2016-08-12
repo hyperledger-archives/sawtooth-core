@@ -15,6 +15,9 @@
 
 import logging
 import hashlib
+from requests import Timeout
+
+from sawtooth.exceptions import NotAvailableException
 from journal.consensus.poet.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
@@ -151,6 +154,7 @@ class WaitCertificate(object):
         Returns:
             bool: Whether or not the wait certificate is valid.
         """
+
         if not isinstance(originator_id, basestring):
             raise TypeError
 
@@ -199,7 +203,10 @@ class WaitCertificate(object):
                         self.validator_address, originator_id)
             return False
 
-        return self.poet_enclave.verify_wait_certificate(cert)
+        try:
+            return self.poet_enclave.verify_wait_certificate(cert)
+        except Timeout:
+            raise NotAvailableException
 
     def __str__(self):
         return "CERT, {0:0.2f}, {1:0.2f}, {2}, {3}".format(

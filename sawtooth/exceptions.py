@@ -31,6 +31,14 @@ class MessageException(Exception):
     pass
 
 
+class NotAvailableException(Exception):
+    """
+    Indicates a required service is not available and the action should be
+    tried again later.
+    """
+    pass
+
+
 class TransactionException(SawtoothException):
     """
     Exception raised from Transaction implementations.

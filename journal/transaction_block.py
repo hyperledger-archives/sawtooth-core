@@ -29,11 +29,14 @@ class Status(object):
         complete -- all transactions present, not confirmed
         valid -- all transaction present, confirmed valid
         invalid -- all transactions present, confirmed invalid
+        retry -- all transactions present, service required for verification
+            was unavailable, try again later.
     """
     incomplete = 0
     complete = 1
     valid = 2
-    invalid = 3
+    invalid = 3,
+    retry = 4
 
 
 class TransactionBlock(signed_object.SignedObject):
