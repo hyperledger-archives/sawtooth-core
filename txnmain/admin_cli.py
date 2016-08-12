@@ -417,7 +417,7 @@ def parse_command_line(args):
                         help='Specify arbitrary configuration options',
                         nargs=2,
                         action='append')
-    parser.add_argument('--verbose', '-v',
+    parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
                         help='increase output sent to stderr')

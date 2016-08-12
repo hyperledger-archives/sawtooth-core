@@ -246,7 +246,7 @@ def parse_command_line(args):
                         help='Number of messages to send',
                         type=int,
                         default=sys.maxint)
-    parser.add_argument('--verbose', '-v',
+    parser.add_argument('-v', '--verbose',
                          action='count',
                          default=0,
                          help='increase output sent to stderr')
