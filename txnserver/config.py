@@ -260,6 +260,7 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
     def __init__(self, os_name=os.name):
         super(ValidatorDefaultConfig, self).__init__(name="default")
 
+        # file paths for validator data and process information
         if 'CURRENCYHOME' in os.environ:
             self['ConfigDirectory'] = '{home}/etc'
             self['LogDirectory'] = '{home}/logs'
@@ -281,48 +282,94 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
             self['KeyDirectory'] = '/etc/sawtooth-validator/keys'
             self['RunDirectory'] = '/var/run/sawtooth-validator'
             self['PidFile'] = '{run_dir}/{node}.pid'
-
         self['BaseDirectory'] = os.path.abspath(os.path.dirname(__file__))
-        self['CurrencyHost'] = "localhost"
+
+        # validator identity
         self['NodeName'] = "base000"
         self['KeyFile'] = '{key_dir}/{node}.wif'
 
-        # configuration of network
+        # validator network exposure
         self["Listen"] = [
             "localhost:0/UDP gossip",
             "localhost:8800/TCP http"
         ]
+        # publicly-visible endpoint information if validator is behind NAT
+        # self["Endpoint"] = {
+        #     "Host" : "localhost",
+        #     "Port" : 5500,
+        #     "HttpPort" : 8800
+        # }
+        self['Endpoint'] = None
 
-        # configuration of startup options
-        self['LedgerURL'] = 'http://localhost:8800/'
-        self['GenesisLedger'] = False
-        self['Restore'] = False
-
-        # configuration of the ledger wait time certificate
-        self['TargetWaitTime'] = 5.0
-        self['InitialWaitTime'] = 5.0
-        self['CertificateSampleLength'] = 30
-
-        # configuration of the block sizes
-        self['MinTransactionsPerBlock'] = 1
-        self['MaxTransactionsPerBlock'] = 1000
-
-        # configuration of the topology
-        self['TopologyAlgorithm'] = 'RandomWalk'
-        self['MaximumConnectivity'] = 15
-        self['MinimumConnectivity'] = 1
-        self['TargetConnectivity'] = 3
-
-        # configuration of the network flow control
+        # network flow control
         self['NetworkFlowRate'] = 96000
         self['NetworkBurstRate'] = 128000
         self['NetworkDelayRange'] = [0.00, 0.10]
         self['UseFixedDelay'] = True
 
-        # configuratio the transaction families
+        # startup options
+        self['LedgerURL'] = 'http://localhost:8800/'
+        self['GenesisLedger'] = False
+        self['Restore'] = False
+
+        # topological configuration
+        self['TopologyAlgorithm'] = 'RandomWalk'
+        self['InitialConnectivity'] = 1
+        self['TargetConnectivity'] = 3
+        self['MaximumConnectivity'] = 15
+        self['MinimumConnectivity'] = 1
+
+        # concrete topologic specification
+        # Nodes specifies apriori validators for e.g. fixed topologies, e.g:
+        # self['Nodes'] = [
+        #     {
+        #         'NodeName': <a validator's name>,
+        #         'Identity': <said validator's public key>,
+        #         'Host': <said validator's hostname>,
+        #         'Port': <said validator's gossip/udp port>,
+        #         'HttpPort': <said validator's web api port>,
+        #     },
+        # ]
+        self['Nodes'] = []
+        # Peers specifies peers from Nodes (above) by validator name, e.g.:
+        # self['Peers'] = [<a validator's name>, ]
+        self["Peers"] = []
+
+        # PoET wait time certificates
+        self['CertificateSampleLength'] = 30
+        # the values TargetWaitTime and InitialWaitTime are a function of
+        # network size.  The defaults of 5.0, 5.0 are geared toward very small
+        # developer networks.  A larger network of n nodes might use 30.0 for
+        # TargetWaitTime, and then set InitialWaitTime to n * TargetWaitTime
+        self['TargetWaitTime'] = 5.0
+        self['InitialWaitTime'] = 5.0
+
+        # ledger type (PoET default)
+        self['LedgerType'] = 'lottery'
+
+        # quorum specific configuration
+        self['VotingQuorumTargetSize'] = None
+        self['VoteTimeInterval'] = 30.0
+        self['BallotTimeInterval'] = 5.0
+        self["Quorum"] = []
+
+        # block-chain transaction limits
+        self['MinTransactionsPerBlock'] = 1
+        self['MaxTransactionsPerBlock'] = 1000
+
+        # transaction families
         self['TransactionFamilies'] = [
             'ledger.transaction.integer_key'
         ]
+
+        # public key allowed to send shutdown messages
+        self['AdministrationNode'] = None
+
+        # R&D options
+        self['Profile'] = True
+
+        # legacy settings
+        self['CurrencyHost'] = "localhost"
 
 
 class CurrencyEnvConfig(sawtooth.config.EnvConfig):
