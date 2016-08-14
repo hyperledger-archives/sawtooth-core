@@ -24,8 +24,8 @@ REM Setup environment
 ECHO Setting Sawtooth environment.
 SET STHOME=%~dp0\..\..\
 SET SAWTOOTHHOME=%STHOME%sawtooth-core\
-SET SAWTOOTHVALIDATORHOME=%STHOME%sawtooth-validator\
-SET MKTPLACEHOME=%STHOME%sawtooth-mktplace\
+SET SAWTOOTHVALIDATORHOME=%STHOME%validator\
+SET MKTPLACEHOME=%STHOME%extensions\mktplace\
 
 SET POETHOME=%STHOME%sawtooth-poet\
 

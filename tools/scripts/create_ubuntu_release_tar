@@ -53,17 +53,17 @@ fi
 
 rm -f $pkg_dir/python-sawtooth*.deb
 
-cd $root/sawtooth-core
+cd $root/sawtooth-core/core
 python setup.py clean --all
 python setup.py --command-packages=stdeb.command bdist_deb
 cp deb_dist/python-sawtooth-core*.deb $pkg_dir
 
-cd $root/sawtooth-mktplace
+cd $root/sawtooth-core/extensions/mktplace
 python setup.py clean --all
 python setup.py --command-packages=stdeb.command bdist_deb
 cp deb_dist/python-sawtooth-mktplace*.deb $pkg_dir
 
-cd $root/sawtooth-validator
+cd $root/sawtooth-core/validator
 python setup.py clean --all
 python setup.py --command-packages=stdeb.command bdist_deb
 cp deb_dist/python-sawtooth-validator*.deb $pkg_dir

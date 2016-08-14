@@ -2,7 +2,7 @@
 
 cd /project
 
-if [ -e /project/sawtooth-dev-tools/guest-files/bashrc-local ]; then
-    source /project/sawtooth-dev-tools/guest-files/bashrc-local
+if [ -e /project/sawtooth-core/tools/guest-files/bashrc-local ]; then
+    source /project/sawtooth-core/tools/guest-files/bashrc-local
 fi
 

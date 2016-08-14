@@ -2,4 +2,4 @@
 
 
 
-export PATH=$PATH:/project/sawtooth-validator/bin
+export PATH=$PATH:/project/sawtooth-core/bin

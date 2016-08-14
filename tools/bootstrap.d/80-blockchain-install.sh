@@ -11,14 +11,14 @@ fi
 
 set -e
 
-cd /project/sawtooth-core
+cd /project/sawtooth-core/core
 python setup.py build
 python setup.py install 
 
-cd /project/sawtooth-mktplace
+cd /project/sawtooth-core/extensions/mktplace
 python setup.py build
 python setup.py install 
 
-cd /project/sawtooth-validator
+cd /project/sawtooth-core/validator
 python setup.py build
 python setup.py install 
