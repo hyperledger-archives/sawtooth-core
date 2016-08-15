@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -e
+
+find_packages() {
+    topdir=$1
+
+    pushd $1 1>/dev/null
+
+    directories=$(find . -maxdepth 2 -name __init__.py | awk -F/ '{print $2}')
+
+    if [ -d "$topdir/tests" ]; then
+        directories="$directories tests"
+    fi
+
+    for dir in $directories
+    do
+        for file in $(find $dir -name \*.py)
+        do
+            [ $file = "gossip/ECDSA/ECDSARecoverModule.py" ] && continue
+            [ $file = "journal/consensus/poet/Enclave/EnclaveModule.py" ] && continue
+            [ $file = "journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.py" ] && continue
+
+            echo "$topdir/$file"
+        done
+    done
+
+    popd 1>/dev/null
+}
+
+pep8 --config=.pep8
+
+pylint \
+    --rcfile=.pylintrc-strict \
+    --reports=no \
+    $(find_packages core/sawtooth)
+
+pylint \
+    --rcfile=.pylintrc-core \
+    --reports=no \
+    $(find_packages core)
+
+pylint \
+    --rcfile=.pylintrc-validator \
+    --reports=no \
+    $(find_packages validator)
+
+pylint \
+    --rcfile=.pylintrc-mktplace \
+    --reports=no \
+    $(find_packages extensions/mktplace)
+
+pylint \
+    --rcfile=.pylintrc-arcade \
+    --reports=no \
+    $(find_packages extensions/arcade)
+
