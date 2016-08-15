@@ -334,7 +334,6 @@ class StatsCollector(object):
 
         for stat in self.statslist:
             statname = type(stat).__name__
-            print "the stats name is: ", statname
             p_stats[statname] = stat._asdict()
 
         return p_stats
