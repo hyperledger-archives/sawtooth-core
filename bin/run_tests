@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+for dir in core validator extensions/mktplace extensions/arcade
+do
+    cd $dir
+    nose2 -v
+    cd ..
+done
