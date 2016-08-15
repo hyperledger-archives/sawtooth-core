@@ -208,7 +208,6 @@ class ValidatorNetworkManager(object):
         cfg = self.validator_config.copy()
         if overrides:
             cfg.update(overrides)
-        cfg['id'] = validator_id
         cfg['NodeName'] = "validator-{}".format(validator_id)
         if 'LedgerURL' not in cfg and\
                 len(self._validators) != 0:
