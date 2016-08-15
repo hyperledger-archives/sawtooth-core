@@ -32,23 +32,10 @@ On Windows, you will also need to install:
 Git for Windows will provide not only git to clone the repositories, but also
 ssh which is required by Vagrant. During installation, accept all defaults.
 
-Clone Repositories
-==================
+Clone Repository
+================
 
-All five repositories (sawtooth-core, sawtooth-dev-tools, sawtooth-docs,
-sawtooth-mktplace, and sawtooth-validator) must be cloned into the same parent
-directory as follows:
-
-.. code-block:: console
-
-  project/
-    sawtooth-core/
-    sawtooth-dev-tools/
-    sawtooth-docs/
-    sawtooth-mktplace/
-    sawtooth-validator/
-
-This can be done by opening up a terminal and running the following:
+Open up a terminal and run the following:
 
 .. code-block:: console
 
@@ -56,32 +43,16 @@ This can be done by opening up a terminal and running the following:
    % mkdir project
    % cd project
    % git clone https://github.com/IntelLedger/sawtooth-core.git
-   % git clone https://github.com/IntelLedger/sawtooth-dev-tools.git
-   % git clone https://github.com/IntelLedger/sawtooth-docs.git
-   % git clone https://github.com/IntelLedger/sawtooth-mktplace.git
-   % git clone https://github.com/IntelLedger/sawtooth-validator.git
-
-.. note::
-
-   When Vagrant is started (covered in the next section), the configuration
-   will check for the presence of these repositories. If any of the
-   repositories are missing, Vagrant will print an error to stderr and exit:
-
-   .. code-block:: console
-
-      % vagrant up
-      ...
-      Repository ../sawtooth-core needs to exist
 
 Environment Startup
 ===================
 
 In order to start the vagrant VM, change the current working directory to
-sawtooth-dev-tools on the host and run:
+sawtooth-core/tools on the host and run:
 
 .. code-block:: console
 
-  % cd sawtooth-dev-tools
+  % cd sawtooth-core/tools
   % vagrant up
 
 .. note::
@@ -110,7 +81,7 @@ Resetting the Environment
 =========================
 
 If the VM needs to be reset for any reason, it can be returned to the default
-state by running the following commands from the sawtooth-dev-tools directory
+state by running the following commands from the sawtooth-core/tools directory
 on the host:
 
 .. code-block:: console
@@ -132,7 +103,7 @@ build, run the following inside vagrant:
 
 .. code-block:: console
 
-  $ cd /project/sawtooth-core
+  $ cd /project/sawtooth-core/core
   $ python setup.py build
 
 Running txnvalidator
@@ -143,7 +114,7 @@ and run the following command:
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-validator
+   $ cd /project/sawtooth-core
    $ ./bin/txnvalidator -v --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
 
 This will startup txnvalidator and logging output will be printed to the
@@ -199,7 +170,7 @@ To test the changes, startup txnvalidator:
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-validator
+   $ cd /project/sawtooth-core
    $ ./bin/txnvalidator -v --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
 
 Keep txnvalidator running while we interact with it using mktclient below.
@@ -207,7 +178,7 @@ Open a new terminal in your **host** OS and type:
 
 .. code-block:: console
 
-   $ cd $HOME/project/sawtooth-dev-tools
+   $ cd $HOME/project/sawtooth-core/tools
    $ vagrant ssh
 
 Key Generation
@@ -226,10 +197,10 @@ generate a key for each of them:
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-validator
-   $ ./bin/txnkeygen --keydir keys mkt
-   $ ./bin/txnkeygen --keydir keys alice
-   $ ./bin/txnkeygen --keydir keys bob
+   $ cd /project/sawtooth-core
+   $ ./bin/txnkeygen --keydir validator/keys mkt
+   $ ./bin/txnkeygen --keydir validator/keys alice
+   $ ./bin/txnkeygen --keydir validator/keys bob
 
 .. _mktplace-object-names-label:
 
@@ -265,7 +236,7 @@ Start mktclient as The Marketplace participant:
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-mktplace
+   $ cd /project/sawtooth-core
    $ ./bin/mktclient --name mkt
 
 Now execute commands as The Marketplace participant (mkt) using the
@@ -354,7 +325,7 @@ First, let's register Bob.  Startup mktclient using the name of Bob's key file
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-mktplace
+   $ cd /project/sawtooth-core
    $ ./bin/mktclient --name bob
 
 Register Bob as a participant and create his account:
@@ -393,7 +364,7 @@ Alice's key file (alice):
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-mktplace
+   $ cd /project/sawtooth-core
    $ ./bin/mktclient --name alice
 
 Alice's initalization is the same as Bob's:
@@ -422,7 +393,7 @@ Start mktclient with Bob's key:
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-mktplace
+   $ cd /project/sawtooth-core
    $ ./bin/mktclient --name bob
 
 Let's create a new holding representing Bob's batch of cookies and initialize
@@ -470,7 +441,7 @@ exchange offer.
 
 .. code-block:: console
 
-   $ cd /project/sawtooth-mktplace
+   $ cd /project/sawtooth-core
    $ ./bin/mktclient --name alice
 
 Execute an exchange (accepting Bob's offer):
