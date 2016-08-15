@@ -9,5 +9,8 @@ PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/extensions/mktplace
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/extensions/arcade
 export PYTHONPATH
 
+PATH=$PATH:/project/sawtooth-core/bin
+export PATH
+
 export ENABLE_INTEGRATION_TESTS=1
 #export ENABLE_STARTUP_TESTS=1
