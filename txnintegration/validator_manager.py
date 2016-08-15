@@ -50,7 +50,6 @@ class ValidatorManager(object):
                  log_config,
                  static_node=False):
         self._txn_validator = txn_validator
-        self.id = config['id']
         self.name = config['NodeName']
         self.config = config
         self.log_config = log_config
@@ -326,7 +325,8 @@ class ValidatorManager(object):
         except ValidatorManagerException:
             errors = "errs!"
 
-        return "{}: {} {} {} {} {}".format(self.id, st, out, err, log, errors)
+        return "{} {}: {} {} {} {} {}".format(
+            self._address, self.name, st, out, err, log, errors)
 
     def dump_config(self, out=sys.stdout):
         with open(self._config_file, 'r') as fin:
