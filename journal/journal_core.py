@@ -13,8 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import anydbm
 import logging
-import shelve
+from shelve import Shelf
+from threading import RLock
 import time
 from collections import OrderedDict
 
@@ -70,11 +72,11 @@ class Journal(gossip_core.Gossip):
             to call when processing a block test.
         PendingTransactions (dict): A dict of pending, unprocessed
             transactions.
-        TransactionStore (Shelf): A dict-like object representing
+        TransactionStore (ThreadSafeShelf): A dict-like object representing
             the persisted copy of the transaction store.
-        BlockStore (Shelf): A dict-like object representing the
+        BlockStore (ThreadSafeShelf): A dict-like object representing the
             persisted copy of the block store.
-        ChainStore (Shelf): A dict-like object representing the
+        ChainStore (ThreadSafeShelf): A dict-like object representing the
             persisted copy of the chain store.
         RequestedTransactions (dict): A dict of transactions which are
             not in the local cache, the details of which have been
@@ -155,9 +157,10 @@ class Journal(gossip_core.Gossip):
         self.TransactionEnqueueTime = None
 
         dbprefix = shelvedir + "/" + str(self.LocalNode)
-        self.TransactionStore = shelve.open(dbprefix + "_txn", shelveflag)
-        self.BlockStore = shelve.open(dbprefix + "_cb", shelveflag)
-        self.ChainStore = shelve.open(dbprefix + "_cs", shelveflag)
+        self.TransactionStore = threadsafeshelf_open(dbprefix + "_txn",
+                                                     shelveflag)
+        self.BlockStore = threadsafeshelf_open(dbprefix + "_cb", shelveflag)
+        self.ChainStore = threadsafeshelf_open(dbprefix + "_cs", shelveflag)
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
@@ -1201,3 +1204,62 @@ class Journal(gossip_core.Gossip):
             return str(store[nodeid]['Name'])
 
         return nodeid[:8]
+
+
+class ThreadSafeShelf(Shelf):
+    def __init__(self, d, protocol=None, writeback=False):
+        self._lock = RLock()
+        # super is not used because Shelf is an OldStyle class
+        Shelf.__init__(self, d, protocol, writeback)
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            Shelf.__setitem__(self, key, value)
+
+    def __getitem__(self, item):
+        with self._lock:
+            return Shelf.__getitem__(self, item)
+
+    def __delitem__(self, key):
+        with self._lock:
+            Shelf.__delitem__(self, key)
+
+    def __del__(self):
+        with self._lock:
+            Shelf.__del__(self)
+
+    def __len__(self):
+        with self._lock:
+            return Shelf.__len__(self)
+
+    def __contains__(self, item):
+        with self._lock:
+            return Shelf.__contains__(self, item)
+
+    def get(self, key, default=None):
+        with self._lock:
+            return Shelf.get(self, key, default)
+
+    def sync(self):
+        with self._lock:
+            Shelf.sync(self)
+
+    def close(self):
+        with self._lock:
+            Shelf.close(self)
+
+    def keys(self):
+        with self._lock:
+            return Shelf.keys(self)
+
+
+class ShelfFromFilename(ThreadSafeShelf):
+
+    def __init__(self, filename, flag='c', protocol=None, writeback=False):
+        ThreadSafeShelf.__init__(self,
+                                 anydbm.open(filename, flag),
+                                 protocol, writeback)
+
+
+def threadsafeshelf_open(filename, flag='c', protocol=None, writeback=False):
+    return ShelfFromFilename(filename, flag, protocol, writeback)
