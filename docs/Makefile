@@ -7,8 +7,8 @@ SPHINXBUILD   = sphinx-build
 SPHINXAPIDOC  = sphinx-apidoc
 PAPER         =
 BUILDDIR      = build
-SAWTOOTH_REPO = ../sawtooth-core
-MKTPLACE_REPO = ../sawtooth-mktplace
+SAWTOOTH_DIR = ../core
+MKTPLACE_DIR = ../extensions/mktplace
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -55,10 +55,10 @@ clean:
 	rm -rf $(BUILDDIR)/* source/sawtooth_api source/mktplace_api
 
 sawtooth_apidoc:
-	$(SPHINXAPIDOC) -o source/sawtooth_api -M -f -e -H "Distributed Ledger Python API" $(SAWTOOTH_REPO) $(SAWTOOTH_REPO)/setup.py
+	$(SPHINXAPIDOC) -o source/sawtooth_api -M -f -e -H "Distributed Ledger Python API" $(SAWTOOTH_DIR) $(SAWTOOTH_DIR)/setup.py
 
 mktplace_apidoc:
-	$(SPHINXAPIDOC) -o source/mktplace_api -M -f -e -H "MarketPlace Python API" $(MKTPLACE_REPO) $(MKTPLACE_REPO)/setup.py
+	$(SPHINXAPIDOC) -o source/mktplace_api -M -f -e -H "MarketPlace Python API" $(MKTPLACE_DIR) $(MKTPLACE_DIR)/setup.py
 
 html: sawtooth_apidoc mktplace_apidoc
 	@mkdir -p source/_static
