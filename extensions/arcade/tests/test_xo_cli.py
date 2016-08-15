@@ -19,7 +19,6 @@ import shutil
 import string
 import sys
 import tempfile
-import time
 import unittest
 
 from contextlib import contextmanager
@@ -119,9 +118,9 @@ class TestXoCli(unittest.TestCase):
 
         with clean_home_directory():
             with std_output() as (out, err):
-                    xo_cli.main(prog_name='xo', args=['init'])
-                    xo_cli.main(prog_name='xo',
-                                args=['create', game_name, '--wait'])
+                xo_cli.main(prog_name='xo', args=['init'])
+                xo_cli.main(prog_name='xo',
+                            args=['create', game_name, '--wait'])
 
             self.assertEquals(err.getvalue(), '')
 
