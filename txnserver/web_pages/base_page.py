@@ -186,7 +186,7 @@ class BasePage(Resource):
 
     def render_GET(self, request):
         # pylint: disable=invalid-name
-        if self.thread_pool.workers > 7:
+        if len(self.thread_pool.working) > 7:
             return self.error_response(
                 request, http.SERVICE_UNAVAILABLE,
                 'Service is unavailable at this time, Please try again later')
@@ -199,7 +199,7 @@ class BasePage(Resource):
 
     def render_POST(self, request):
         # pylint: disable=invalid-name
-        if self.thread_pool.workers > 7:
+        if len(self.thread_pool.working) > 7:
             return self.error_response(
                 request, http.SERVICE_UNAVAILABLE,
                 'Service is unavailable at this time, Please try again later')
