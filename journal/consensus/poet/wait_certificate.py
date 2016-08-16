@@ -15,6 +15,7 @@
 
 import logging
 import hashlib
+from requests import ConnectionError
 from requests import Timeout
 
 from sawtooth.exceptions import NotAvailableException
@@ -206,6 +207,8 @@ class WaitCertificate(object):
         try:
             return self.poet_enclave.verify_wait_certificate(cert)
         except Timeout:
+            raise NotAvailableException
+        except ConnectionError:
             raise NotAvailableException
 
     def __str__(self):
