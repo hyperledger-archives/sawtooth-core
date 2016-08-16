@@ -650,12 +650,8 @@ class Journal(gossip_core.Gossip):
                         self.MostRecentCommittedBlockID[:8]
                         )
 
-            # now find the root of the fork, first handle the common case of
-            # not looking very deeply for the common block, then handle the
-            # expensive case of searching the entire chain
-            fork_id = self._findfork(tblock, 5)
-            if not fork_id:
-                fork_id = self._findfork(tblock, 0)
+            # now find the root of the fork
+            fork_id = self._findfork(tblock)
 
             assert fork_id
 
@@ -986,7 +982,7 @@ class Journal(gossip_core.Gossip):
 
         return teststore
 
-    def _findfork(self, tblock, depth):
+    def _findfork(self, tblock):
         """
         Find most recent predecessor of tblock that is in the committed
         chain, searching through at most depth blocks
@@ -995,7 +991,7 @@ class Journal(gossip_core.Gossip):
         :param depth int: depth in the current chain to search, 0 implies all
         """
 
-        blockids = set(self.committed_block_ids(depth))
+        blockids = set(self.committed_block_ids(0))
         forkid = tblock.PreviousBlockID
         while True:
             if forkid == common.NullIdentifier or forkid in blockids:
