@@ -18,8 +18,10 @@ This module defines the SignedObject class which processes and validates
 objects signed by a signing key.
 """
 
+from collections import deque
 import hashlib
 import logging
+from threading import Lock
 
 import pybitcointools
 
@@ -27,6 +29,35 @@ from gossip.ECDSA import ECDSARecoverModule as nativeECDSA
 from gossip.common import dict2cbor
 
 logger = logging.getLogger(__name__)
+
+
+class LruCache(object):
+    """
+    A simple thread-safe lru cache of the recovered public key and address.
+    This prevents multiple key recoveries on signed objects during validation.
+    """
+    def __init__(self):
+        self.max_size = 100
+        self.order = deque(maxlen=self.max_size)
+        self.values = {}
+        self.lock = Lock()
+
+    def __setitem__(self, key, value):
+        with self.lock:
+            self.values[key] = value
+            while len(self.order) >= self.max_size:
+                v = self.order.pop()
+                del self.values[v]
+            self.order.appendleft(key)
+
+    def __getitem__(self, key):
+        with self.lock:
+            result = self.values.get(key, (None, None))
+            if result[0] is not None:
+                self.order.remove(key)
+                self.order.appendleft(key)
+
+        return result
 
 
 def generate_identifier(signingkey):
@@ -100,6 +131,7 @@ class SignedObject(object):
             Used to build dict return types.
 
     """
+    signature_cache = LruCache()
 
     def __init__(self, minfo=None, signkey='Signature'):
         """Constructor for the SignedObject class.
@@ -114,8 +146,8 @@ class SignedObject(object):
         self.Signature = minfo.get(signkey)
         self.SignatureKey = signkey
 
-        self._identifier = hashlib.sha256(self.Signature).hexdigest(
-        ) if self.Signature else None
+        self._identifier = hashlib.sha256(
+            self.Signature).hexdigest() if self.Signature else None
         self._originatorid = None
         self._verifyingkey = None
 
@@ -143,6 +175,21 @@ class SignedObject(object):
 
         return self._identifier[:16]
 
+    def _recover_verifying_key(self):
+        assert self.Signature
+
+        if not self._verifyingkey:
+            self._verifyingkey, self._originatorid =\
+                self.signature_cache[self.Signature]
+            if not self._verifyingkey:
+                serialized = self.serialize(signable=True)
+                self._verifyingkey = \
+                    get_verifying_key(serialized, self.Signature)
+                self._originatorid = \
+                    pybitcointools.pubtoaddr(self._verifyingkey)
+                self.signature_cache[self.Signature] = \
+                    (self._verifyingkey, self._originatorid)
+
     @property
     def OriginatorID(self):
         """Return the address of the object originator based on the
@@ -151,13 +198,8 @@ class SignedObject(object):
         Returns:
             str: The address of the signer of the object.
         """
-        assert self.Signature
-
-        if not self._verifyingkey:
-            serialized = self.serialize(signable=True)
-            self._verifyingkey = get_verifying_key(serialized, self.Signature)
-            self._originatorid = pybitcointools.pubtoaddr(self._verifyingkey)
-
+        if self._originatorid is None:
+            self._recover_verifying_key()
         return self._originatorid
 
     def is_valid(self, store):
@@ -191,17 +233,7 @@ class SignedObject(object):
         """
 
         try:
-            assert self.Signature
-
-            if not self._verifyingkey:
-                serialized = self.serialize(signable=True)
-                self._verifyingkey = get_verifying_key(serialized,
-                                                       self.Signature)
-                self._originatorid = pybitcointools.pubtoaddr(
-                    self._verifyingkey)
-
-            return originatorid is None or self._originatorid == originatorid
-
+            return originatorid is None or self.OriginatorID == originatorid
         except:
             logger.exception('unable to verify transaction signature')
             return False
@@ -226,9 +258,7 @@ class SignedObject(object):
         serialized = self.serialize(signable=True)
         self.Signature = pybitcointools.ecdsa_sign(serialized, signingkey)
 
-        if not self._verifyingkey:
-            self._verifyingkey = get_verifying_key(serialized, self.Signature)
-            self._originatorid = pybitcointools.pubtoaddr(self._verifyingkey)
+        self._recover_verifying_key()
 
         self._identifier = hashlib.sha256(self.Signature).hexdigest()
 
