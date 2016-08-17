@@ -131,8 +131,6 @@ class ForwardPage(BasePage):
                         pend_txn.TransactionTypeName)
                     if pend_txn and pend_txn.is_valid(my_store):
                         my_pend_txn = copy.copy(pend_txn)
-                        LOGGER.debug('applying pending transaction '
-                                     '%s to temp store', txn_id)
                         my_pend_txn.apply(my_store)
 
                 # determine validity of the POSTed transaction against our
