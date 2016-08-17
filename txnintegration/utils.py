@@ -329,7 +329,6 @@ class StatsCollector(object):
         """
         Returns: returns platform stats as dictionary - for stats web interface
         """
-
         p_stats = collections.OrderedDict()
 
         for stat in self.statslist:

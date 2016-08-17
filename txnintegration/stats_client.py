@@ -31,9 +31,11 @@ from txnintegration.utils import PlatformStats
 from txnintegration.stats_print import ConsolePrint
 from txnintegration.stats_print import StatsPrintManager
 
-from txnintegration.stats_utils import CsvManager
 from txnintegration.stats_utils import TransactionRate
 from txnintegration.stats_utils import PlatformIntervalStats
+
+from txnintegration.stats_utils import SummaryStatsCsvManager
+from txnintegration.stats_utils import ValidatorStatsCsvManager
 
 curses_imported = True
 try:
@@ -396,36 +398,44 @@ class StatsManager(object):
 
         self.clients = []
         self.known_endpoint_urls = []
+        self.known_endpoint_names = []
         self.stats_loop_count = 0
 
         self.spm = StatsPrintManager(self.ss, self.ps, self.clients)
 
-        self.csv_enabled = False
+        self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
+        self.vscm = ValidatorStatsCsvManager(self.clients)
 
-    def initialize_client_list(self, endpoint_urls):
-        # add validator stats client for each url in endpoint_urls
-        self.known_endpoint_urls = list(endpoint_urls)
-        for val_num, url in enumerate(self.known_endpoint_urls):
+    def initialize_client_list(self, endpoints):
+        # add validator stats client for each endpoint
+        for val_num, endpoint in enumerate(endpoints.values()):
+            url = 'http://{0}:{1}'.format(
+                endpoint["Host"], endpoint["HttpPort"])
             try:
                 c = StatsClient(val_num, url)
+                c.name = endpoint["Name"]
+                self.known_endpoint_names.append(endpoint["Name"])
             except:
                 e = sys.exc_info()[0]
                 print ("error creating stats clients: ", e)
             self.clients.append(c)
 
-    def update_client_list(self, endpoint_urls):
-        # add validator stats client for each new url in endpoint_urls
-        for url in endpoint_urls:
-            if url not in self.known_endpoint_urls:
-                val_num = len(self.known_endpoint_urls)
+    def update_client_list(self, endpoints):
+        # add validator stats client for each endpoint name
+        for val_num, endpoint in enumerate(endpoints.values()):
+            if endpoint["Name"] not in self.known_endpoint_names:
+                val_num = len(self.known_endpoint_names)
+                url = 'http://{0}:{1}'.format(
+                    endpoint["Host"], endpoint["HttpPort"])
                 c = StatsClient(val_num, url)
+                c.name = endpoint["Name"]
                 self.clients.append(c)
-                self.known_endpoint_urls.append(url)
+                self.known_endpoint_names.append(endpoint["Name"])
 
     def stats_loop(self):
         self.process_stats(self.clients)
         self.print_stats()
-        self.write_stats()
+        self.csv_write()
 
         for c in self.clients:
             c.stats_request()
@@ -455,29 +465,24 @@ class StatsManager(object):
     def print_stats(self):
         self.spm.print_stats()
 
-    def csv_init(self):
-        self.csv_enabled = True
-        self.csvmgr = CsvManager()
-        filename = "stats_client_" + str(int(time.time())) + ".csv"
+    def csv_init(self, enable_summary, enable_validator):
+        if enable_summary is True:
+            self.sscm.initialize()
+        if enable_validator is True:
+            self.vscm.initialize()
 
-        self.csvmgr.open_csv_file(filename)
-        header = self.ss.get_names()
-        self.csvmgr.csv_append(header)
-        header = self.ps.get_names()
-        self.csvmgr.csv_write_header(header)
+    def csv_write(self):
+        self.sscm.write_stats()
+        self.vscm.write_stats()
 
-    def write_stats(self):
-        if self.csv_enabled:
-            data = self.ss.get_data()
-            self.csvmgr.csv_append(data)
-            data = self.ps.get_data()
-            self.csvmgr.csv_write_data(data)
+    def csv_stop(self):
+        self.sscm.stop()
+        self.vscm.stop()
 
     def stats_stop(self):
         print "StatsManager is stopping"
         self.cp.cpstop()
-        if self.csv_enabled:
-            self.csvmgr.close_csv_file()
+        self.csv_stop()
 
 
 class EndpointManager(object):
@@ -485,30 +490,32 @@ class EndpointManager(object):
         self.error_count = 0
         self.no_endpoint_responders = False
         self.endpoint_urls = []
+        self.endpoints = None
         self.vc = ValidatorCommunications()
 
-    def initialize_endpoint_urls(self, url, init_cb, init_args=None):
+    def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
         self.endpoint_completion_cb = init_cb
         self.endpoint_completion_cb_args = init_args or {}
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.init_path = path
         self.vc.get_request(path,
-                            self.endpoint_urls_completion,
+                            self.endpoint_discovery_completion,
                             self._init_terminate)
 
-    def endpoint_urls_completion(self, results):
+    def endpoint_discovery_completion(self, results):
         # response has been received
         # extract host url and port number for each validator identified
         self.endpoint_urls = []
+        self.endpoints = results
         for endpoint in results.values():
             self.endpoint_urls.append(
                 'http://{0}:{1}'.format(
                     endpoint["Host"], endpoint["HttpPort"]))
-        self.endpoint_completion_cb(self.endpoint_urls,
+        self.endpoint_completion_cb(self.endpoints,
                                     **self.endpoint_completion_cb_args)
 
-    def update_endpoint_urls(self, update_cb):
+    def update_endpoint_discovery(self, update_cb):
         # initiates update of endpoint urls
         self.endpoint_completion_cb = update_cb
         self.endpoint_completion_cb_args = {}
@@ -516,7 +523,7 @@ class EndpointManager(object):
         url = self.contact_list.pop()
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.vc.get_request(path,
-                            self.endpoint_urls_completion,
+                            self.endpoint_discovery_completion,
                             self._update_endpoint_continue)
 
     def _update_endpoint_continue(self):
@@ -526,7 +533,7 @@ class EndpointManager(object):
             url = self.contact_list.pop()
             path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
             self.vc.get_request(path,
-                                self.endpoint_urls_completion,
+                                self.endpoint_discovery_completion,
                                 self._update_endpoint_continue)
         else:
             self.no_endpoint_responders = True
@@ -617,9 +624,15 @@ def parse_args(args):
                              '(default: %(default)s)',
                         default=30,
                         type=int)
-    parser.add_argument('--csv-enable',
+    parser.add_argument('--csv-enable-summary',
                         metavar="",
-                        help='Enables CSV file generation'
+                        help='Enables summary CSV file generation'
+                             '(default: %(default)s)',
+                        default=False,
+                        type=bool)
+    parser.add_argument('--csv-enable-validator',
+                        metavar="",
+                        help='Enables per-validator CSV file generation'
                              '(default: %(default)s)',
                         default=False,
                         type=bool)
@@ -628,7 +641,7 @@ def parse_args(args):
 
 
 def startup(urls, loop_times, stats_man, ep_man):
-    stats_man.initialize_client_list(ep_man.endpoint_urls)
+    stats_man.initialize_client_list(ep_man.endpoints)
 
     # start loop to periodically collect and report stats
     stats_loop = task.LoopingCall(stats_man.stats_loop)
@@ -638,7 +651,7 @@ def startup(urls, loop_times, stats_man, ep_man):
 
     # start loop to periodically update the list of validator endpoints
     # and call WorkManager.update_client_list
-    ep_loop = task.LoopingCall(ep_man.update_endpoint_urls,
+    ep_loop = task.LoopingCall(ep_man.update_endpoint_discovery,
                                stats_man.update_client_list)
     ep_loop_deferred = ep_loop.start(loop_times["endpoint"], now=False)
     ep_loop_deferred.addCallback(ep_man.update_endpoint_done)
@@ -648,7 +661,8 @@ def startup(urls, loop_times, stats_man, ep_man):
 def run_stats(url,
               stats_update_frequency=3,
               endpoint_update_frequency=30,
-              csv_enable=False
+              csv_enable_summary=False,
+              csv_enable_validator=False
               ):
     try:
         # initialize globals when we are read for stats display. This keeps
@@ -656,8 +670,9 @@ def run_stats(url,
         epm = EndpointManager()
         sm = StatsManager()  # sm assumes epm is created!
 
-        if csv_enable is True:
-            sm.csv_init()
+        # initialize csv stats file generation
+        print "initializing csv"
+        sm.csv_init(csv_enable_summary, csv_enable_validator)
 
         # prevent curses import from modifying normal terminal operation
         # (suppression of cr-lf) during display of help screen, config settings
@@ -665,7 +680,7 @@ def run_stats(url,
             curses.endwin()
 
         # discover validator endpoints; if successful, continue with startup()
-        epm.initialize_endpoint_urls(
+        epm.initialize_endpoint_discovery(
             url,
             startup,
             {
@@ -733,7 +748,8 @@ def main():
     opts = parse_args(sys.argv[1:])
 
     run_stats(opts.url,
-              csv_enable=opts.csv_enable,
+              csv_enable_summary=opts.csv_enable_summary,
+              csv_enable_validator=opts.csv_enable_validator,
               stats_update_frequency=opts.stats_time,
               endpoint_update_frequency=opts.endpoint_time)
 
