@@ -479,7 +479,8 @@ def do_block(args):
                 blockids = web_client.get_block_list()
             else:
                 blockids = web_client.get_block_list(args.blockcount)
-            print pretty_print_dict(blockids)
+            for block_id in blockids:
+                print block_id
             return
         elif args.subcommand == 'show':
             if args.key is not None:
