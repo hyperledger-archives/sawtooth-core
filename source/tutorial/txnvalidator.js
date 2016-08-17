@@ -1,19 +1,31 @@
 {
-    "HttpPort" : 8800,
-    "Host" : "localhost",
-    "Port" : 0,
+    "Listen" : [
+        "localhost:5500/UDP gossip",
+        "localhost:8800/TCP http"
+    ],
+    ## configuration of publicly-visible endpoint information
+    ## used if validator is behind NAT
+    ##"Endpoint" : {
+    ##      "Host" : "localhost",
+    ##      "Port" : 5500,
+    ##      "HttpPort" : 8800
+    ##},
     "NodeName" : "base000",
-    "LedgerURL" : "http://localhost:8800/",
+    "LedgerURL" : ["http://localhost:8800/"],
 
     ## pick the ledger type
     "LedgerType" : "lottery",
     "GenesisLedger" : true,
 
     ## configuration of the ledger wait time certificate 
-    "MinimumWaitTime" : 1.0,
+    ## suggested settings for single node dev environment
     "TargetWaitTime" : 5.0,
     "InitialWaitTime" : 5.0,
     "CertificateSampleLength" : 30,
+
+    ## suggested settings for a 25 node network
+    ## "TargetWaitTime" : 30.0,
+    ## "InitialWaitTime" : 750.0,
 
     ## configuration of the block sizes
     "MinTransactionsPerBlock" : 1,
@@ -32,7 +44,6 @@
     "NetworkBurstRate" : 128000,
     "NetworkDelayRange" : [ 0.00, 0.10 ],
     "UseFixedDelay" : true,
-
 
     ## configuration of the transaction families to include
     ## in the validator
