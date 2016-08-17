@@ -510,7 +510,8 @@ def do_transaction(args):
                 tsctids = web_client.get_transaction_list()
             else:
                 tsctids = web_client.get_transaction_list(args.blockcount)
-            print pretty_print_dict(tsctids)
+            for txn_id in tsctids:
+                print txn_id
             return
         elif args.subcommand == 'show':
             if args.key is not None:
