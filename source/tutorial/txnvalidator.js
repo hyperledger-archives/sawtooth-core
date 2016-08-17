@@ -15,7 +15,7 @@
 
     ## pick the ledger type
     "LedgerType" : "lottery",
-    "GenesisLedger" : false,
+    "GenesisLedger" : true,
 
     ## configuration of the ledger wait time certificate 
     ## suggested settings for single node dev environment
