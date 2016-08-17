@@ -491,8 +491,7 @@ def do_block(args):
             return
 
     except MessageException as e:
-        print 'An error occurred processing {0}: {1}'.format(args, str(e))
-        return
+        raise CliException(e)
 
 
 def do_transaction(args):
@@ -537,8 +536,7 @@ def do_transaction(args):
             return
 
     except MessageException as e:
-        print 'An error occurred processing {0}: {1}'.format(args, str(e))
-        return
+        raise CliException(e)
 
 
 def do_store(args):
@@ -575,8 +573,7 @@ def do_store(args):
             return
 
     except MessageException as e:
-        print 'An error occurred processing {0}: {1}'.format(args, str(e))
-        return
+        raise CliException(e)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
