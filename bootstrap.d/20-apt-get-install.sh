@@ -29,6 +29,7 @@ apt-get install -y -q \
     python-setuptools \
     python-pip \
     python-yaml \
+    python-numpy \
     g++ \
     swig3.0 \
     libjson0 \
