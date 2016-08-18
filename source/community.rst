@@ -2,18 +2,15 @@
 Community
 *********
 
-Distributed Ledger uses several forums for project participants to
-discuss ideas, pose questions and chat about the project. Information
-about the forums, becoming a contributor and reporting issues, can be found in
-the associated links below.
+Welcome to the Sawtooth Lake community!
 
-When participating, please be respectful and courteous. 
+For help topics, we recommend joining us on Slack (link below).
 
 .. toctree::
    :maxdepth: 2
 
-   community/slack
-   community/issues
+   community/join_the_discussion
+   community/issue_tracking
    community/contributing
-   community/how_to_report
+   community/code_of_conduct
 
