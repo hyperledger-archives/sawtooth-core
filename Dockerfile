@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y -q \
    python-twisted \
    python-twisted-web \
    swig3.0 \
+   python-numpy \
    && apt-get clean \
    && rm -rf /var/lib/apt/lists/*
 
