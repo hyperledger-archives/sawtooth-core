@@ -479,7 +479,8 @@ def do_block(args):
                 blockids = web_client.get_block_list()
             else:
                 blockids = web_client.get_block_list(args.blockcount)
-            print pretty_print_dict(blockids)
+            for block_id in blockids:
+                print block_id
             return
         elif args.subcommand == 'show':
             if args.key is not None:
@@ -490,8 +491,7 @@ def do_block(args):
             return
 
     except MessageException as e:
-        print 'An error occurred processing {0}: {1}'.format(args, str(e))
-        return
+        raise CliException(e)
 
 
 def do_transaction(args):
@@ -510,7 +510,8 @@ def do_transaction(args):
                 tsctids = web_client.get_transaction_list()
             else:
                 tsctids = web_client.get_transaction_list(args.blockcount)
-            print pretty_print_dict(tsctids)
+            for txn_id in tsctids:
+                print txn_id
             return
         elif args.subcommand == 'show':
             if args.key is not None:
@@ -536,8 +537,7 @@ def do_transaction(args):
             return
 
     except MessageException as e:
-        print 'An error occurred processing {0}: {1}'.format(args, str(e))
-        return
+        raise CliException(e)
 
 
 def do_store(args):
@@ -574,8 +574,7 @@ def do_store(args):
             return
 
     except MessageException as e:
-        print 'An error occurred processing {0}: {1}'.format(args, str(e))
-        return
+        raise CliException(e)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
