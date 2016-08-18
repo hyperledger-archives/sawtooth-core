@@ -18,6 +18,7 @@ import logging
 import traceback
 
 from twisted.web import http
+from twisted.web.error import Error
 
 from gossip.common import json2dict
 from gossip.common import cbor2dict
@@ -42,32 +43,26 @@ class ForwardPage(BasePage):
         """
         encoding = request.getHeader('Content-Type')
         data = request.content.getvalue()
-
         try:
             if encoding == 'application/json':
                 minfo = json2dict(data)
+
             elif encoding == 'application/cbor':
                 minfo = cbor2dict(data)
             else:
-                return self.error_response(request, http.BAD_REQUEST,
-                                           'unknown message encoding, {0}',
-                                           encoding)
+                raise Error("", 'unknown message'
+                            ' encoding: {0}'.format(encoding))
             typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
             if typename not in self.Ledger.MessageHandlerMap:
-                return self.error_response(
-                    request, http.BAD_REQUEST,
-                    'received request for unknown message type, {0}',
-                    typename)
-
+                raise Error("",
+                            'received request for unknown message'
+                            ' type, {0}'.format(typename))
             msg = self.Ledger.MessageHandlerMap[typename][0](minfo)
-
-        except:
+        except Error as e:
             LOGGER.info('exception while decoding http request %s; %s',
                         request.path, traceback.format_exc(20))
-            return self.error_response(
-                request, http.BAD_REQUEST,
-                'unabled to decode incoming request {0}',
-                data)
+            raise Error(http.BAD_REQUEST,
+                        'unable to decode incoming request: {0}'.format(e))
 
         if self.Validator.Config.get("LocalValidation", True):
             # determine if the message contains a valid transaction before
@@ -92,19 +87,17 @@ class ForwardPage(BasePage):
                     global_store_manager.BlockStore(real_store_map)
                 if not temp_store_map:
                     LOGGER.info('no store map for block %s', block_id)
-                    return self.error_response(
-                        request, http.BAD_REQUEST,
-                        'unable to validate enclosed transaction {0}',
-                        data)
+                    raise Error(http.BAD_REQUEST,
+                                'unable to validate enclosed'
+                                ' transaction {0}'.format(data))
 
                 transaction_type = mytxn.TransactionTypeName
                 if transaction_type not in temp_store_map.TransactionStores:
                     LOGGER.info('transaction type %s not in global store map',
                                 transaction_type)
-                    return self.error_response(
-                        request, http.BAD_REQUEST,
-                        'unable to validate enclosed transaction {0}',
-                        data)
+                    raise Error(http.BAD_REQUEST,
+                                'unable to validate enclosed'
+                                ' transaction {0}'.format(data))
 
                 # clone a copy of the ledger's message queue so we can
                 # temporarily play forward all locally submitted yet
@@ -143,20 +136,17 @@ class ForwardPage(BasePage):
                     LOGGER.info('submitted transaction fails transaction '
                                 'family validation check: %s; %s',
                                 request.path, mymsg.dump())
-                    return self.error_response(
-                        request, http.BAD_REQUEST,
-                        "enclosed transaction failed transaction "
-                        "family validation check: {}".format(str(e)),
-                        data)
+                    raise Error(http.BAD_REQUEST,
+                                "enclosed transaction failed transaction "
+                                "family validation check: {}".format(str(e)))
                 except:
                     LOGGER.info('submitted transaction is '
                                 'not valid %s; %s; %s',
                                 request.path, mymsg.dump(),
                                 traceback.format_exc(20))
-                    return self.error_response(
-                        request, http.BAD_REQUEST,
-                        "enclosed transaction is not valid",
-                        data)
+                    raise Error(http.BAD_REQUEST,
+                                "enclosed transaction is not"
+                                " valid {}".format(data))
 
                 LOGGER.info('transaction %s is valid',
                             msg.Transaction.Identifier)
