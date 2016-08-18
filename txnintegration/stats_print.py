@@ -90,6 +90,14 @@ class StatsPrintManager(object):
             self.print_general_view()
         elif self.view_mode is "platform":
             self.print_platform_view()
+        elif self.view_mode is "consensus":
+            self.print_consensus_view()
+        elif self.view_mode is "packet":
+            self.print_packet_view()
+        elif self.view_mode is "network":
+            self.print_network_view()
+        elif self.view_mode is "transaction":
+            self.print_transaction_view()
         self.cp.cpprint("", True)
 
     def check_mode(self):
@@ -98,6 +106,14 @@ class StatsPrintManager(object):
             self.view_mode = "general"
         elif char_buffer == ord('p'):
             self.view_mode = "platform"
+        elif char_buffer == ord('c'):
+            self.view_mode = "consensus"
+        elif char_buffer == ord('n'):
+            self.view_mode = "network"
+        elif char_buffer == ord('t'):
+            self.view_mode = "transaction"
+        elif char_buffer == ord('k'):
+            self.view_mode = "packet"
 
         return self.view_mode
 
@@ -232,7 +248,8 @@ class StatsPrintManager(object):
                     c.vsm.txn_rate.avg_txn_rate,
                     c.vsm.txn_rate.avg_block_time,
                     c.vsm.val_stats["ledger"].get("LocalMeanTime", 0.0),
-                    c.vsm.val_stats["ledger"].get("PreviousBlockID", 'error'),
+                    c.vsm.val_stats["ledger"].get("PreviousBlockID",
+                                                  'not reported'),
                     c.name[:16],
                     c.url),
                     False)
@@ -291,10 +308,9 @@ class StatsPrintManager(object):
                     c.vsm.val_stats["platform"]["scpu"]["system_time"],
                     c.vsm.val_stats["platform"]["scpu"]["idle_time"],
                     c.vsm.val_stats["platform"]["svmem"]["percent"],
-                    c.vsm.val_stats
-                    ["platform"]["svmem"]["total"] / 1000000,
-                    c.vsm.val_stats
-                    ["platform"]["svmem"]["available"] / 1000000,
+                    c.vsm.val_stats["platform"]["svmem"]["total"] / 1000000,
+                    c.vsm.val_stats["platform"]["svmem"]["available"]
+                    / 1000000,
                     c.vsm.psis.intv_disk_bytes_read,
                     c.vsm.psis.intv_disk_bytes_write,
                     c.vsm.psis.intv_disk_count_read,
@@ -308,6 +324,224 @@ class StatsPrintManager(object):
                     c.validator_state,
                     "", "", "", "", "",
                     "", "", "",
+                    "", "", "", "",
+                    c.name[:16],
+                    c.url),
+                    False)
+
+    def print_consensus_view(self):
+        header_formatter = \
+            '{0:>6} {1:>7} ' \
+            '{2:>8} {3:>10} {4:>12} {5:>16} ' \
+            '{6:>18.18} {7:>28.28}'
+        resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:8.2f} {3:10.2f} {4:12.2f} {5:16.16} ' \
+            '{6:>18.18} {7:>28.28}'
+        no_resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:>8} {3:>10} {4:>12} {5:>16} ' \
+            '{6:>18.18} {7:>28.28}'
+
+        self.cp.cpprint(header_formatter.format(
+            'VAL', 'VAL',
+            'LOCAL', 'POPULATION', 'AGGREGATE', 'LAST',
+            ' VALIDATOR', 'VALIDATOR'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'STATE',
+            'MEAN', 'ESTIMATE', 'LOCALMEAN', 'BLOCKID',
+            'NAME', 'URL'),
+            reverse=True)
+
+        for c in self.clients:
+            if c.responding:
+                self.cp.cpprint(resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    c.vsm.val_stats["ledger"].get("LocalMeanTime", 0.0),
+                    c.vsm.val_stats["ledger"].get("PopulationEstimate", 0.0),
+                    c.vsm.val_stats["ledger"].get("AggregateLocalMean", 0.0),
+                    c.vsm.val_stats["ledger"].get("PreviousBlockID", 'error'),
+
+                    c.name[:16],
+                    c.url),
+                    False)
+            else:
+                self.cp.cpprint(no_resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    "", "", "", "",
+                    c.name[:16],
+                    c.url),
+                    False)
+
+    def print_packet_view(self):
+        header_formatter = \
+            '{0:>6} {1:>7} ' \
+            '{2:>10} {3:>10} {4:>10} {5:>10} ' \
+            '{6:>12} {7:>12} {8:>12} {9:>12}' \
+            '{10:>18.18} {11:>28.28}'
+        resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:10d} {3:10d} {4:10d} {5:10d} ' \
+            '{6:12d} {7:12d} {8:12d} {9:12d}' \
+            '{10:>18.18} {11:>28.28}'
+        no_resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:>10} {3:>10} {4:>10} {5:>10} ' \
+            '{6:>12} {7:>12} {8:>12} {9:>12}' \
+            '{10:>18.18} {11:>28.28}'
+
+        self.cp.cpprint(header_formatter.format(
+            'VAL', 'VAL',
+            'ACKS', 'BYTES', 'BYTES', 'PACKETS',
+            'PACKETS', 'UNACKED', 'MESSAGE', 'MESSAGE',
+            ' VALIDATOR', 'VALIDATOR'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'STATE',
+            'RECEIVED', 'RECEIVED', 'SENT', 'DROPPED',
+            'DUPLICATED', 'PACKETCOUNT', 'ACKED', 'HANDLED',
+            'NAME', 'URL'),
+            reverse=True)
+
+        for c in self.clients:
+            if c.responding:
+                self.cp.cpprint(resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    c.vsm.val_stats["packet"]["AcksReceived"],
+                    c.vsm.val_stats["packet"]["BytesReceived"][0],
+                    c.vsm.val_stats["packet"]["BytesSent"][0],
+                    c.vsm.val_stats["packet"]["DroppedPackets"],
+                    c.vsm.val_stats["packet"]["DuplicatePackets"],
+                    c.vsm.val_stats["packet"]["UnackedPacketCount"],
+                    c.vsm.val_stats["packet"]["MessagesAcked"],
+                    c.vsm.val_stats["packet"]["MessagesHandled"],
+
+                    c.name[:16],
+                    c.url),
+                    False)
+            else:
+                self.cp.cpprint(no_resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    "", "", "", "",
+                    c.name[:16],
+                    c.url),
+                    False)
+
+    def print_network_view(self):
+        header_formatter = \
+            '{0:>6} {1:>7} ' \
+            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
+            '{6:>12} {7:>12} {8:>14} {9:>14}' \
+            '{10:>18.18} {11:>28.28}'
+        resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:10d} {3:10d} {4:12d} {5:12d} ' \
+            '{6:12d} {7:12d} {8:14d} {9:14d}' \
+            '{10:>18.18} {11:>28.28}'
+        no_resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
+            '{6:>12} {7:>12} {8:>14} {9:>14}' \
+            '{10:>18.18} {11:>28.28}'
+
+        self.cp.cpprint(header_formatter.format(
+            'VAL', 'VAL',
+            'SEND', 'RECEIVE', 'SEND', 'RECEIVE',
+            'SEND', 'RECEIVE', 'SEND', 'RECEIVE',
+            ' VALIDATOR', 'VALIDATOR'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'STATE',
+            'BYTES', 'BYTES', 'PCKT BYTES', 'PCKT BYTES',
+            'BYTES ERR', 'BYTES ERR', 'DROPPED PCKTS', 'DROPPED PCKTS',
+            'NAME', 'URL'),
+            reverse=True)
+
+        for c in self.clients:
+            if c.responding:
+                self.cp.cpprint(resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    c.vsm.val_stats["platform"]["snetio"]["bytes_recv"],
+                    c.vsm.val_stats["platform"]["snetio"]["bytes_sent"],
+                    c.vsm.val_stats["platform"]["snetio"]["packets_recv"],
+                    c.vsm.val_stats["platform"]["snetio"]["packets_sent"],
+                    c.vsm.val_stats["platform"]["snetio"]["errout"],
+                    c.vsm.val_stats["platform"]["snetio"]["errin"],
+                    c.vsm.val_stats["platform"]["snetio"]["dropout"],
+                    c.vsm.val_stats["platform"]["snetio"]["dropin"],
+
+                    c.name[:16],
+                    c.url),
+                    False)
+            else:
+                self.cp.cpprint(no_resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    "", "", "", "",
+                    c.name[:16],
+                    c.url),
+                    False)
+
+    def print_transaction_view(self):
+        header_formatter = \
+            '{0:>6} {1:>7} ' \
+            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
+            '{6:>16} {7:>14} {8:>14}' \
+            '{9:>18.18} {10:>28.28}'
+        resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:10d} {3:10d} {4:12d} {5:12d} ' \
+            '{6:16d} {7:14d} {8:14d}' \
+            '{9:>18.18} {10:>28.28}'
+        no_resp_formatter = \
+            '{0:6d} {1:>7} ' \
+            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
+            '{6:>16} {7:>14} {8:>14}' \
+            '{9:>18.18} {10:>28.28}'
+
+        self.cp.cpprint(header_formatter.format(
+            'VAL', 'VAL',
+            'BLOCK', 'BLOCK', 'TXN', 'TXN',
+            'MISSING TXN', 'MISSING TXN', 'INVALID',
+            ' VALIDATOR', 'VALIDATOR'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'STATE',
+            'COMMITTED', 'PENDING', 'COMMITTED', 'PENDING',
+            'DEPENDENCY CNT', 'BLOCK CNT', 'TXN CNT',
+            'NAME', 'URL'),
+            reverse=True)
+
+        for c in self.clients:
+            if c.responding:
+                self.cp.cpprint(resp_formatter.format(
+                    c.id,
+                    c.validator_state,
+                    c.vsm.val_stats["ledger"]["CommittedBlockCount"],
+                    c.vsm.val_stats["ledger"]["PendingBlockCount"],
+                    c.vsm.val_stats["ledger"]["CommittedTxnCount"],
+                    c.vsm.val_stats["ledger"]["PendingTxnCount"],
+                    c.vsm.val_stats["ledger"]["MissingTxnDepCount"],
+                    c.vsm.val_stats["ledger"]["MissingTxnFromBlockCount"],
+                    c.vsm.val_stats["ledger"]["InvalidTxnCount"],
+
+                    c.name[:16],
+                    c.url),
+                    False)
+            else:
+                self.cp.cpprint(no_resp_formatter.format(
+                    c.id,
+                    c.validator_state,
                     "", "", "", "",
                     c.name[:16],
                     c.url),
