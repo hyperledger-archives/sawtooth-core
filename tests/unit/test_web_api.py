@@ -43,6 +43,7 @@ class TestValidator(object):
     def __init__(self, test_ledger):
         self.Ledger = test_ledger
         self.web_thread_pool = TestThreadPool()
+        self.Config = {}
 
 
 class TestThreadPool(object):
