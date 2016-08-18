@@ -41,16 +41,13 @@ class CommandPage(BasePage):
             if encoding == 'application/json':
                 minfo = json2dict(data)
             else:
-                return self.error_response(request, http.BAD_REQUEST,
-                                           'bad message encoding, {0}',
-                                           encoding)
-        except:
+                raise Error("", 'unknown message'
+                            ' encoding: {0}'.format(encoding))
+        except Error as e:
             LOGGER.info('exception while decoding http request %s; %s',
                         request.path, traceback.format_exc(20))
-            return self.error_response(
-                request, http.BAD_REQUEST,
-                'unable to decode incoming request {0}',
-                data)
+            raise Error(http.BAD_REQUEST,
+                        'unable to decode incoming request {0}'.format(str(e)))
 
         # process /command
         try:
@@ -70,16 +67,15 @@ class CommandPage(BasePage):
             result = dict2json(minfo)
             return result
         except Error as e:
-            return self.error_response(
-                request, int(e.status),
-                'exception while processing request {0}; {1}',
-                request.path, str(e))
+            raise Error(int(e.status),
+                        'exception while processing'
+                        ' request {0}; {1}'.format(request.path, str(e)))
 
         except:
             LOGGER.info('exception while processing http request %s; %s',
                         request.path, traceback.format_exc(20))
-            return self.error_response(request, http.BAD_REQUEST,
-                                       'error processing http request {0}',
-                                       request.path)
+            raise Error(http.BAD_REQUEST,
+                        'error processing http request'
+                        ' {0}'.format(request.path))
 
         return msg
