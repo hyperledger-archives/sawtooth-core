@@ -28,6 +28,8 @@ var cbor = require('cbor');
 
 const _respondWith = (fixture, code, body) => {
     var response = new PassThrough();
+    response.headers = {};
+    response.headers['content-type'] = 'application/json';
     response.statusCode = code;
     if(body) {
         response.write(JSON.stringify(body));
@@ -334,7 +336,10 @@ describe('validator', () => {
         describe('sendTransaction()', () => {
 
             it('should send a transaction', (done) => {
-                _respondWith(fixture, 200, 'some_txn_id');
+                _respondWith(fixture, 200, {
+                    Transaction: {
+                        Signature: 'ING9fBk6tbrEmAGOXvKYpAhQbl4PKpJxZSJ0b9z2yowMFRviZRZf1IfxDNEMs5z71AzYfObrznqHDyqMgClO6FE=',
+                    }});
 
                 let cborTxn = cbor.encode(signed_object.createSignableObj({a: 1, b: 2}).toJS());
                 let promise = fixture.validator.sendTransaction('/my_txn_family', cborTxn);
@@ -352,7 +357,7 @@ describe('validator', () => {
                 _getReqestArgs(fixture));  
 
                 promise.then((txnId) => {
-                    assert.equal('some_txn_id', txnId);
+                    assert.equal('080299fa5038fe58', txnId);
                 })
                 .then(done)
                 .catch(done);
@@ -360,8 +365,11 @@ describe('validator', () => {
 
             it('should send a string transaction as json', (done) => {
 
-                _respondWith(fixture, 200, 'some_other_txn_id');
-
+                _respondWith(fixture, 200, {
+                    Transaction: {
+                        Signature: 'H2K8jRxEmNz8MRHmuoKFwr7rjgTG1Ro71yu3XZlpJ9kuVkVsm0hFzOiI1x0IQcT4eugeQ7V+lFB1txfpPbhDB9U=',
+                    }
+                });
                 let txnStr = "{x: 1, y: 2}";
                 let promise = fixture.validator.sendTransaction('/my_txn_family', txnStr);
 
@@ -378,17 +386,35 @@ describe('validator', () => {
                 _getReqestArgs(fixture));  
 
                 promise.then((txnId) => {
-                    assert.equal('some_other_txn_id', txnId);
+                    assert.equal('3ec81a83cede0739', txnId);
                 })
                 .then(done)
                 .catch(done);
             });
 
 
-            it('should fail on any non-success result', (done) => {
-                _respondWith(fixture, 400);
+            it('should parse an error if one is in the response', (done) => {
+                _respondWith(fixture, 400, 'bad id: must be 10 chars');
                 fixture.validator
-                    .getStore('/my_store')
+                    .sendTransaction('/my_txn_family', '{x: 1, y: 2}')
+                    .then((e) => {
+                        assert.isNotOk(e);
+                    })
+                    .catch((e) => {
+                       assert.deepEqual({
+                           statusCode: 400,
+                           errorTypeMessage: 'bad id',
+                           errorMessage: 'must be 10 chars',
+                       }, e);
+                    })
+                    .then(done)
+                    .catch(done);
+            });
+
+            it('should throw an exception on a badly formatted request response', (done) => {
+                _respondWith(fixture, 400, 'unable to decode incoming request');
+                fixture.validator
+                    .sendTransaction('/my_txn_family', '{x: 1, y: 2')
                     .then((e) => {
                         assert.isNotOk(e);
                     })
@@ -399,7 +425,20 @@ describe('validator', () => {
                     .then(done)
                     .catch(done);
             });
-
+            it('should throw an exception on a badly formatted request response: old version', (done) => {
+                _respondWith(fixture, 400, 'unabled to decode incoming request');
+                fixture.validator
+                    .sendTransaction('/my_txn_family', '{x: 1, y: 2')
+                    .then((e) => {
+                        assert.isNotOk(e);
+                    })
+                    .catch((e) => {
+                        assert.instanceOf(e, Error);
+                        assert.equal('Invalid Request: 400', e.message);
+                    })
+                    .then(done)
+                    .catch(done);
+            });
         });
     
     });

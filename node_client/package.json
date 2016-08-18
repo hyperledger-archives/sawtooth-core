@@ -10,9 +10,11 @@
   "license": "ISC",
   "dependencies": {
     "bigi": "1.4.1",
+    "binstring": "0.2.1",
     "bitcoinjs-lib": "2.2.0",
     "cbor": "1.0.4",
     "immutable": "3.8.1",
+    "sha256": "0.2.0",
     "underscore": "1.8.3"
   },
   "devDependencies": {

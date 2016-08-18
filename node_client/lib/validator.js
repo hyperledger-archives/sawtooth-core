@@ -23,19 +23,35 @@
 var assert = require('assert');
 var http = require('http');
 var _ = require('underscore');
+var cbor = require('cbor');
+var sha256 = require('sha256');
+var conv = require('binstring');
 
 function _httpRequest(options, data) {
     return new Promise(function (resolve, reject) {
         var req = http.request(options, function(response) {
-            var str = '';
+            var buffer = new Buffer([]);
             response.on('data', function(chunk) {
-                str += chunk;
+                buffer = Buffer.concat([buffer, chunk]);
             });
             response.on('end', function() {
-                resolve({
-                    body: str,
-                    headers: response.headers,
-                    statusCode: response.statusCode,
+
+                var p = null;
+                if (response.headers['content-type'] === 'application/cbor') {
+                    p = cbor.decodeAll(buffer);
+                } else if (response.headers['content-type'] === 'application/json') {
+                    p = Promise.resolve(
+                            buffer.length > 0 ? JSON.parse(buffer.toString()) : null);
+                } else {
+                    p = Promise.resolve(buffer.toString());
+                }
+
+                p.then(function(str) {
+                    resolve({
+                        body: str,
+                        headers: response.headers,
+                        statusCode: response.statusCode,
+                    });
                 });
             });
         });
@@ -58,17 +74,27 @@ function _post(options, data) {
     return _httpRequest(_.assign(options, {method: 'POST'}), data);
 }
 
-function _parseJSONResponse(result) {
+function _unwrapResponseBody(result) {
     if(result.statusCode === 200) {
-        return JSON.parse(result.body);
+        return result.body;
     }
 
     // Check for 400, which is the validator's current
     // repsonse for not found, but this may be corrected
     // in the future.
-    if(result.statusCode === 400 ||
-            result.statusCode === 404) {
+    if(result.statusCode === 404) {
         return null;
+    }
+
+    if (result.statusCode === 400) {
+        if(!/^unable[d]? to decode incoming request.*/.exec(result.body)) {
+            let msgs = result.body.split(":");
+            throw ({
+                statusCode: 400,
+                errorTypeMessage: msgs[0] ? msgs[0].trim() : null,
+                errorMessage: msgs.length > 1 ? msgs.slice(1).join(':').trim() : null
+            });
+        }
     }
 
     throw new Error("Invalid Request: " + result.statusCode);
@@ -95,26 +121,25 @@ function _sendTransaction(validatorHost, validatorPort, txnFamily, txn, opts) {
         opts = {};
     }
 
+    var contentType = Buffer.isBuffer(txn) ? 'application/cbor' : 'application/json';
+    var data = (Buffer.isBuffer(txn) || typeof txn === 'string') ? txn : JSON.stringify(txn);
     var postArgs = {
         hostname: validatorHost,
         port: validatorPort,
         path: txnFamily,
         headers: {
-            'Content-Type': Buffer.isBuffer(txn) ?
-                'application/cbor' :
-                'application/json',
-            'Content-Length': txn.length
+            'Content-Type': contentType,
+            'Content-Length': data.length,
         }
     };
 
-    return _post(postArgs, txn)
-        .then(function(result) {
-            if(result.statusCode !== 200) {
-                throw new Error("Invalid Request: " + result.statusCode);
-            }
-            return result;
-        })
-        .then(_parseJSONResponse);
+    return _post(postArgs, data)
+        .then(_unwrapResponseBody)
+        .then(function(txn) {
+            var sha = sha256(txn.Transaction.Signature, {asBytes: true});
+            var hex = conv(sha, {out : 'hex'});
+            return hex.toString().substring(0,16);
+        });
 }
 
 function _patherize(s) {
@@ -147,7 +172,7 @@ function _getStoreApi(validatorHost, validatorPort, storeName, key) {
     };
 
     return _get(getArgs)
-        .then(_parseJSONResponse);
+        .then(_unwrapResponseBody);
 } 
 
 
