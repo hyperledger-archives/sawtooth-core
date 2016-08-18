@@ -779,24 +779,34 @@ class LedgerWebClient(object):
             request.get_method = lambda: 'HEAD'
             opener = urllib2.build_opener(self.proxy_handler)
             response = opener.open(request, timeout=timeout)
-            code = response.getcode()
-            response.close()
-            if code == 200:
-                return transaction.Status.committed
-            elif code == 302:
-                return transaction.Status.pending
-            else:
-                return transaction.Status.unknown
 
         except urllib2.HTTPError as err:
             LOGGER.error('peer operation on url %s failed with response: %d',
                          url, err.code)
+            if err.code == 302:
+                return transaction.Status.pending
+
+            raise MessageException('operation failed '
+                                   'with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             LOGGER.error('peer operation on url %s failed: %s', url,
                          err.reason)
+            raise MessageException('operation failed: {0}'.format(err.reason))
 
-        return transaction.Status.unknown
+        except:
+            LOGGER.error('no response from peer server for url %s; %s',
+                         url, sys.exc_info()[0])
+            raise MessageException('no response from server')
+
+        code = response.getcode()
+        response.close()
+        if code == 200:
+            return transaction.Status.committed
+        elif code == 302:
+            return transaction.Status.pending
+        else:
+            return transaction.Status.unknown
 
     def get_transaction_list(self, count=0):
         """
