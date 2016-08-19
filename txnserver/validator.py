@@ -113,7 +113,8 @@ class Validator(object):
         # ---------- Initialize the Ledger ----------
         self.initialize_ledger_object()
 
-        self.web_thread_pool = ThreadPool(0, 8, "WebThreadPool")
+        maxsize = self.Config.get("WebPoolSize", 8)
+        self.web_thread_pool = ThreadPool(0, maxsize, "WebThreadPool")
 
     def handle_shutdown_signal(self, signum, frame):
         logger.warn('received shutdown signal')

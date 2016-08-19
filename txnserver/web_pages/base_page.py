@@ -41,7 +41,7 @@ class BasePage(Resource):
         self.Ledger = validator.Ledger
         self.Validator = validator
         self.thread_pool = validator.web_thread_pool
-
+        self.max_workers = self.Validator.Config.get("MaxWebWorkers", 7)
         if page_name is None:
             self.page_name = self.__class__.__name__.lower()
             loc = self.page_name.find("page")
@@ -186,7 +186,7 @@ class BasePage(Resource):
 
     def render_GET(self, request):
         # pylint: disable=invalid-name
-        if len(self.thread_pool.working) > 7:
+        if len(self.thread_pool.working) > self.max_workers:
             return self.error_response(
                 request, http.SERVICE_UNAVAILABLE,
                 'Service is unavailable at this time, Please try again later')
@@ -199,7 +199,7 @@ class BasePage(Resource):
 
     def render_POST(self, request):
         # pylint: disable=invalid-name
-        if len(self.thread_pool.working) > 7:
+        if len(self.thread_pool.working) > self.max_workers:
             return self.error_response(
                 request, http.SERVICE_UNAVAILABLE,
                 'Service is unavailable at this time, Please try again later')
