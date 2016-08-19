@@ -77,7 +77,7 @@ class TestSignedObject(unittest.TestCase):
     def test_signed_node(self):
         # Verify that signed_node and sign_object does not invalidate the
         # signed object and can be returned to original
-        # create intial signed object
+        # create initial signed object
         signkey = SigObj.generate_signing_key()
         temp = SignedObject({signkey: "test"}, signkey)
         # save origanl OriginatorID before creating node
@@ -95,8 +95,8 @@ class TestSignedObject(unittest.TestCase):
 
         self.assertNotEqual(idAfterNode, idBeforeNode)
         # check that the signed_object signature is still valid and reset
-        # orignatorId back to original
-        self.assertTrue(temp.is_valid("unused paramter"))
+        # OrignatorId back to original
+        self.assertTrue(temp.is_valid("unused parameter"))
         self.assertNotEqual(temp.OriginatorID, idBeforeNode)
 
     def test_sign_node_assertion(self):

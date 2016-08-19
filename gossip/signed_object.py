@@ -22,7 +22,6 @@ from collections import deque
 import hashlib
 import logging
 from threading import Lock
-
 import pybitcointools
 
 from gossip.ECDSA import ECDSARecoverModule as nativeECDSA
@@ -36,27 +35,30 @@ class LruCache(object):
     A simple thread-safe lru cache of the recovered public key and address.
     This prevents multiple key recoveries on signed objects during validation.
     """
-    def __init__(self):
-        self.max_size = 100
+    def __init__(self, max_size=100):
+        self.max_size = max_size
         self.order = deque(maxlen=self.max_size)
         self.values = {}
         self.lock = Lock()
 
     def __setitem__(self, key, value):
         with self.lock:
-            self.values[key] = value
-            while len(self.order) >= self.max_size:
-                v = self.order.pop()
-                del self.values[v]
-            self.order.appendleft(key)
-
-    def __getitem__(self, key):
-        with self.lock:
-            result = self.values.get(key, (None, None))
-            if result[0] is not None:
-                self.order.remove(key)
+            if key not in self.values:
+                while len(self.order) >= self.max_size:
+                    v = self.order.pop()
+                    del self.values[v]
+                self.values[key] = value
                 self.order.appendleft(key)
 
+    def __getitem__(self, key):
+        self.get(key)
+
+    def get(self, key, default=None):
+        with self.lock:
+            result = self.values.get(key, default)
+            if result is not default:
+                self.order.remove(key)
+                self.order.appendleft(key)
         return result
 
 
@@ -148,9 +150,7 @@ class SignedObject(object):
 
         self._identifier = hashlib.sha256(
             self.Signature).hexdigest() if self.Signature else None
-        self._originatorid = None
-        self._verifyingkey = None
-
+        self._originator_id = None
         self._data = None
 
     def __repr__(self):
@@ -175,20 +175,17 @@ class SignedObject(object):
 
         return self._identifier[:16]
 
-    def _recover_verifying_key(self):
+    def _recover_verifying_address(self):
         assert self.Signature
 
-        if not self._verifyingkey:
-            self._verifyingkey, self._originatorid =\
+        if not self._originator_id:
+            self._originator_id = \
                 self.signature_cache[self.Signature]
-            if not self._verifyingkey:
+            if not self._originator_id:
                 serialized = self.serialize(signable=True)
-                self._verifyingkey = \
-                    get_verifying_key(serialized, self.Signature)
-                self._originatorid = \
-                    pybitcointools.pubtoaddr(self._verifyingkey)
-                self.signature_cache[self.Signature] = \
-                    (self._verifyingkey, self._originatorid)
+                verifying_key = get_verifying_key(serialized, self.Signature)
+                self._originator_id = pybitcointools.pubtoaddr(verifying_key)
+                self.signature_cache[self.Signature] = self._originator_id
 
     @property
     def OriginatorID(self):
@@ -198,9 +195,9 @@ class SignedObject(object):
         Returns:
             str: The address of the signer of the object.
         """
-        if self._originatorid is None:
-            self._recover_verifying_key()
-        return self._originatorid
+        if self._originator_id is None:
+            self._recover_verifying_address()
+        return self._originator_id
 
     def is_valid(self, store):
         """Determines if the signature on the object is valid.
@@ -255,11 +252,11 @@ class SignedObject(object):
             signingkey (str): hex encoded private key
         """
 
+        self._originator_id = None
         serialized = self.serialize(signable=True)
         self.Signature = pybitcointools.ecdsa_sign(serialized, signingkey)
 
-        self._recover_verifying_key()
-
+        self._recover_verifying_address()
         self._identifier = hashlib.sha256(self.Signature).hexdigest()
 
     def serialize(self, signable=False):
