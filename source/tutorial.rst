@@ -144,7 +144,7 @@ and run the following command:
 .. code-block:: console
 
    $ cd /project/sawtooth-validator
-   $ ./bin/txnvalidator -v --http 8800 --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
+   $ ./bin/txnvalidator -v --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
 
 This will startup txnvalidator and logging output will be printed to the
 terminal window.
