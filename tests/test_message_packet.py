@@ -124,7 +124,7 @@ class TestMessage(unittest.TestCase):
         # Will cause warning from SignedObject identifier
         msg = Message({'__SIGNATURE__': "Test"})
         string = str(msg)
-        self.assertEquals(string, "MSG:{0}:{1}".format(msg._originatorid[:8],
+        self.assertEquals(string, "MSG:{0}:{1}".format(msg.OriginatorID[:8],
                                                        msg._identifier[:8]))
 
     def test_str_assertion(self):
