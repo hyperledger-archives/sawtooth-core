@@ -16,6 +16,7 @@
 A class to canonicalize communication with the marketplace
 """
 
+import base64
 import logging
 import urllib2
 
@@ -126,8 +127,8 @@ class MarketPlaceCommunication(object):
         datalen = len(data)
         url = self.BaseURL + msgtype
 
-        logger.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
-                     datalen, data)
+        logger.debug('post transaction to %s with DATALEN=%d, '
+                     'base64(DATA)=<%s>', url, datalen, base64.b64encode(data))
 
         try:
             request = urllib2.Request(url, data,
