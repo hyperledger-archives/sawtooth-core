@@ -21,6 +21,7 @@ import time
 import logging
 from twisted.web import http
 
+from txnintegration.utils import is_convergent
 from txnintegration.utils import StaticNetworkConfig
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import Progress
@@ -240,43 +241,8 @@ class TestSmoke(unittest.TestCase):
             test.run(n_runs)
             test.validate()
             if block_id:
-                # check for block id convergence across network:
-                sample_size = max(1, tolerance) * standard
-                print "Testing block-level convergence with min sample size:",
-                print " %s (after tolerance: %s)" % (sample_size, tolerance)
-                # ...get all blockids from each server, newest last
-                block_lists = [
-                    LedgerWebClient(x).get_block_list() for x in urls]
-                for ls in block_lists:
-                    ls.reverse()
-                # ...establish preconditions
-                max_mag = len(max(block_lists, key=len))
-                min_mag = len(min(block_lists, key=len))
-                self.assertGreaterEqual(
-                    tolerance,
-                    max_mag - min_mag,
-                    'block list magnitude differences (%s) '
-                    'exceed tolerance (%s)' % (
-                        max_mag - min_mag, tolerance))
-                effective_sample_size = max_mag - tolerance
-                print 'effective sample size: %s' % effective_sample_size
-                self.assertGreaterEqual(
-                    effective_sample_size,
-                    sample_size,
-                    'not enough target samples to determine convergence')
-                # ...(optionally) permit reasonable forks by normalizing lists
-                if tolerance > 0:
-                    block_lists = [
-                        block_list[0:effective_sample_size]
-                        for block_list in block_lists
-                    ]
-                # ...id-check (possibly normalized) cross-server block chains
-                for (i, block_list) in enumerate(block_lists):
-                    self.assertEqual(
-                        block_lists[0],
-                        block_list,
-                        '%s is divergent:\n\t%s vs.\n\t%s' % (
-                            urls[i], block_lists[0], block_list))
+                self.assertEqual(True, is_convergent(urls, tolerance=tolerance,
+                                                     standard=standard))
             if vnm:
                 vnm.shutdown()
         except Exception:
