@@ -31,17 +31,17 @@ Add-Content ` 'C:\Program Files (x86)\Intel\sawtooth-validator\versions.txt' `
 
 # build and install the SawtoothLake packages
 
-cd $build_dir\sawtooth-core
+cd $build_dir\sawtooth-core\core
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
 Git-Version
-if (test-path $build_dir\sawtooth-core\deps ) {
-    remove-item -recurse -force $build_dir\sawtooth-core\deps
+if (test-path $build_dir\sawtooth-core\core\deps ) {
+    remove-item -recurse -force $build_dir\sawtooth-core\core\deps
     if ($lastexitcode -ne 0) { exit 1 }
 }
-mkdir $build_dir\sawtooth-core\deps
-copy-item -recurse $build_dir\deps\cryptopp\* $build_dir\sawtooth-core\deps
-copy-item -recurse -force $build_dir\deps\json-c\* $build_dir\sawtooth-core\deps
+mkdir $build_dir\sawtooth-core\core\deps
+copy-item -recurse $build_dir\deps\cryptopp\* $build_dir\sawtooth-core\core\deps
+copy-item -recurse -force $build_dir\deps\json-c\* $build_dir\sawtooth-core\core\deps
 if ($lastexitcode -ne 0) { exit 1 }
 python setup.py build
 if ($lastexitcode -ne 0) { exit 1 }
@@ -49,7 +49,7 @@ iex $build_command
 if ($lastexitcode -ne 0) { exit 1 }
 
 
-cd $build_dir\sawtooth-validator
+cd $build_dir\sawtooth-core\validator
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
 Git-Version
@@ -78,7 +78,7 @@ remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-3.
 remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install-script.py'
 remove-item 'C:\Program Files (x86)\Intel\sawtooth-validator\bin\easy_install.exe'
 
-copy-item $build_dir\sawtooth-validator\packaging\sawtooth-validator.nsi "C:\Program Files (x86)\Intel"
+copy-item $build_dir\sawtooth-core\validator\packaging\sawtooth-validator.nsi "C:\Program Files (x86)\Intel"
 
 # Build the package
 iex $package_command
