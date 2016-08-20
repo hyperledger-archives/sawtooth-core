@@ -230,7 +230,9 @@ class SignedObject(object):
         """
 
         try:
-            return originatorid is None or self.OriginatorID == originatorid
+            # force validation of the signature
+            recovered_id = self.OriginatorID
+            return originatorid is None or recovered_id == originatorid
         except:
             logger.exception('unable to verify transaction signature')
             return False
