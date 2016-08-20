@@ -30,6 +30,84 @@ from colorlog import ColoredFormatter
 import yaml
 
 from txnintegration.exceptions import ExitError
+from sawtooth.client import LedgerWebClient
+
+
+def get_blocklists(urls):
+    ret = None
+    try:
+        ret = [(LedgerWebClient(url=u)).get_block_list() for u in urls]
+    except Exception as e:
+        print e.message
+        raise
+    for arr in ret:
+        arr.reverse()
+    return ret
+
+
+def is_convergent(urls, tolerance=2, standard=5):
+    # check for block id convergence across network:
+    sample_size = max(1, tolerance) * standard
+    print "testing block-level convergence with min sample size:",
+    print " %s (after tolerance: %s)" % (sample_size, tolerance)
+    # ...get all blockids from each server, newest last
+    block_lists = get_blocklists(urls)
+    # ...establish preconditions
+    max_mag = len(max(block_lists, key=len))
+    min_mag = len(min(block_lists, key=len))
+    if max_mag - min_mag > tolerance:
+        print 'block list magnitude differences (%s) ' \
+              'exceed tolerance (%s)' % (max_mag - min_mag, tolerance)
+        return False
+    effective_sample_size = max_mag - tolerance
+    print 'effective sample size: %s' % effective_sample_size
+    if effective_sample_size < sample_size:
+        print 'not enough target samples to determine convergence'
+        return False
+    # ...(optionally) permit reasonable forks by normalizing lists
+    if tolerance > 0:
+        block_lists = [
+            block_list[0:effective_sample_size]
+            for block_list in block_lists
+        ]
+    # ...id-check (possibly normalized) cross-server block chains
+    for (i, block_list) in enumerate(block_lists):
+        if block_lists[0] != block_list:
+            print '%s is divergent:\n\t%s vs.\n\t%s' % (
+                urls[i], block_lists[0], block_list)
+            return False
+    print 'network exhibits tolerable convergence'
+    return True
+
+
+def get_statuslist(urls):
+    ret = None
+    try:
+        ret = [(LedgerWebClient(url=u)).get_status() for u in urls]
+    except Exception as e:
+        print e
+        raise
+    return ret
+
+
+def sit_rep(urls, verbosity=1):
+    def print_helper(data, tag, key):
+        print tag
+        for x in data:
+            print '\t%s: %s' % (x['Status']['Name'], x['Status'][key])
+    statuslist = get_statuslist(urls)
+    reports = [{'Status': statuslist[i]} for i in range(len(urls))]
+    blocklists = get_blocklists(urls)
+    for (idx, rpt) in enumerate(reports):
+        rpt['Name'] = rpt['Status']['Name']
+        rpt['Status']['Blocks'] = [x[:4] for x in blocklists[idx]]
+    if verbosity > 1:
+        print_helper(reports, 'blacklist', "Blacklist")
+        print_helper(reports, 'allpeers', "AllPeers")
+    if verbosity > 0:
+        print_helper(reports, 'peers', "Peers")
+        print_helper(reports, 'blocks', "Blocks")
+    return reports
 
 
 class StaticNetworkConfig(object):
