@@ -1,0 +1,6 @@
+echo Running: scenario_b_2_dealer
+offers --creator //BANK-trader
+exchange --waitforcommit --src /paper --dst /USD --offers //BANK-trader/offer-b --count 1
+holdings --creator //BANK-dealer
+holdings --creator //BANK-trader
+exit

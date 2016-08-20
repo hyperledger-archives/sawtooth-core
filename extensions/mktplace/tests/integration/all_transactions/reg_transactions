@@ -1,0 +1,19 @@
+echo Running: All register transaction test
+participant reg --name user --description "Participant"
+account reg --name /user/account
+assettype reg --name /asset-type/currency --description "Currency asset type"
+assettype reg --name /asset-type/good --description "Good asset type" --no-restricted
+asset reg --name /asset/currency/USD --type /asset-type/currency
+asset reg --name /asset/good/paper --type /asset-type/good --no-restricted
+waitforcommit
+holding reg --name /user/holding/currency/USD --count 200000000 --account /user/account --asset /asset/currency/USD
+holding reg --name /user/holding/good/paper --count 200000000 --account /user/account --asset /asset/good/paper
+holding reg --name /user/holding/token --count 1 --account /user/account --asset //marketplace/asset/token
+liability reg --name /user/liability/currency/USD --guarantor user  --account /user/account --type /asset-type/currency --count 1000000 --description "Currency liability type"
+waitforcommit
+
+exchangeoffer reg --input /user/holding/good/paper --output /user/holding/currency/USD --ratio 1 9 --name /offer-a --waitforcommit
+selloffer reg --input /user/holding/good/paper --output /user/holding/currency/USD --ratio 1 9 --name /offer-b --waitforcommit
+waitforcommit
+
+exit
