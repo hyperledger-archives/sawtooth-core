@@ -1,0 +1,75 @@
+#!/bin/bash
+
+set -e
+
+root=/project
+build_dir=$root/build-sles
+tmp_dir=/tmp/build-sles
+pkg_dir=$build_dir/packages-sles
+release=sawtoothlake-x.y.z-sles-packages
+
+mkdir -p $build_dir
+mkdir -p $tmp_dir
+mkdir -p $pkg_dir
+
+zypper install -y \
+    python-setuptools \
+    rpmbuild \
+    swig3.0 \
+    gcc-c++ \
+    python-devel \
+    libjson-c-devel 
+
+zypper addrepo \
+    http://download.opensuse.org/repositories/devel:/libraries:/c_c++/openSUSE_13.2/devel:libraries:c_c++.repo \
+    || /bin/true
+
+zypper refresh
+
+zypper install -y libcryptopp-devel
+
+if [ ! -f $pkg_dir/python-cbor_0.1.24-1_amd64.deb ]; then
+    cd $tmp_dir
+    wget https://pypi.python.org/packages/source/c/cbor/cbor-0.1.24.tar.gz
+    tar xvfz cbor-0.1.24.tar.gz
+    cd cbor-0.1.24
+    python setup.py bdist_rpm
+    cp dist/cbor*.x86_64.rpm $pkg_dir
+fi
+
+if [ ! -f $pkg_dir/python-pybitcointools_1.1.15-1_all.deb ]; then
+    cd $tmp_dir
+    wget https://pypi.python.org/packages/source/p/pybitcointools/pybitcointools-1.1.15.tar.gz
+    tar xvfz pybitcointools-1.1.15.tar.gz
+    cd pybitcointools-1.1.15
+    python setup.py bdist_rpm
+    cp dist/pybitcointools*.noarch.rpm $pkg_dir
+fi
+
+rm -f $pkg_dir/python-sawtoothlake*.rpm
+
+rsync -avH $root/sawtooth/ $tmp_dir/sawtooth/
+cd $tmp_dir/sawtooth
+python setup.py clean
+python setup.py bdist_rpm
+cp dist/SawtoothLakeLedger*x86_64.rpm $pkg_dir
+
+rsync -avH $root/mktplace/ $tmp_dir/mktplace/
+cd $tmp_dir/mktplace
+python setup.py clean
+python setup.py bdist_rpm
+cp dist/SawtoothLakeMarket*noarch.rpm $pkg_dir
+
+rsync -avH $root/currency/ $tmp_dir/currency/
+cd $tmp_dir/currency
+python setup.py clean
+python setup.py bdist_rpm
+cp dist/SawtoothLakeValidator*noarch.rpm $pkg_dir
+
+cd $build_dir
+rsync -avH $pkg_dir/ $release/
+tar cvfj $release.tar.bz2 $release
+
+echo "-----"
+echo "Created:"
+echo "$build_dir/$release.tar.bz2"

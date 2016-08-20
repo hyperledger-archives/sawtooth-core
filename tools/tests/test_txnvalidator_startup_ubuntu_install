@@ -1,0 +1,56 @@
+#!/bin/bash
+
+ps -ef | grep -v grep | grep -q "python.*txnvalidator "
+if [ $? = 0 ]; then 
+    stop sawtooth-validator
+fi
+
+ps -ef | grep -v grep | grep -q "python.*txnvalidator "
+if [ $? = 0 ]; then 
+    echo "ERROR: txnvalidator already running, didn't stop $?"
+    exit 1
+fi
+
+if $(dpkg -l | grep -q python-sawtooth); then
+    dpkg -P \
+	python-sawtooth-core \
+	python-sawtooth-mktplace \
+	python-sawtooth-validator \
+	|| exit 1
+fi
+
+rm -rf /etc/sawtooth-validator
+rm -rf /project/build
+
+/vagrant/scripts/create_ubuntu_release_tar || exit 1
+/vagrant/scripts/install_ubuntu_release_tar || exit 1
+
+start sawtooth-validator || exit 1
+
+ps -ef | grep -v grep | grep -q "python.*txnvalidator "
+if [ $? = 1 ]; then 
+    echo "ERROR: txnvalidator not running"
+    exit 1
+fi
+
+stop sawtooth-validator || exit 1
+
+ps -ef | grep -v grep | grep -q "python.*txnvalidator "
+if [ $? = 0 ]; then 
+    echo "ERROR: txnvalidator running after stop"
+    exit 1
+fi
+
+dpkg -P \
+    python-sawtooth-core \
+    python-sawtooth-mktplace \
+    python-sawtooth-validator \
+    || exit 1
+
+dpkg -l | grep -q python-sawtooth
+if [ $? = 0 ]; then
+    echo "ERROR: sawtooth debian packages still exist"
+    exit 1
+fi
+
+echo "SUCCESS"

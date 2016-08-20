@@ -1,0 +1,14 @@
+# rename to vagrant.local.yaml to override default vagrant file options
+
+# Valid options "ubuntu/trusty64", "boxcutter/ubuntu1604", "bento/opensuse-13.2"
+VAGRANT_BOX: "ubuntu/trusty64"
+
+# Whether to enable or disable forwarding of the vagrant ports to host. These
+# commonly conflict if vagrant is started more than once.
+VAGRANT_FORWORD_PORTS: true
+
+# The amount of memory for the VM
+VAGRANT_MEMORY: 2048
+
+# The number of CPUs for the VM
+VAGRANT_CPUS: 2
