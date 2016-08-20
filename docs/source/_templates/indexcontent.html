@@ -1,0 +1,35 @@
+{%- extends "layout.html" %}
+{% set title = 'Overview' %}
+{% block body %}
+
+  <h1>Sawtooth Lake documentation</h1>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("introduction") }}">{% trans %}Introduction{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}learn about Sawtooth Lake{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("tutorial") }}">{% trans %}Tutorial{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}get the Sawtooth Lake up and running{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("txn_family_tutorial") }}">{% trans %}Transaction Family Tutorial{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}create a new Sawtooth Lake transaction family{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("sawtooth_developers_guide") }}">{% trans %}Distributed Ledger Developer's Guide{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}extend or contribute code and documentation{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("mktplace_developers_guide") }}">{% trans %}MarketPlace Developer's Guide{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}understanding the MarketPlace transaction family{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("sysadmin_guide") }}">{% trans %}System Administrator's Guide{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}installation, configuration, and maintenance{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("community") }}">{% trans %}Community{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}join the conversation{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("faq") }}">{% trans %}FAQ{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}frequently asked questions{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("contents") }}">{% trans %}Table of Contents{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}detailed list of documentation sections{% endtrans %}</span></p>
+
+
+{% endblock %}
