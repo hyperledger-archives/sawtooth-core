@@ -157,4 +157,3 @@ class NetworkConfig(object):
     def print_config_list(self):
         val = self.get_config_list()
         print json.dumps(val, indent=4)
-

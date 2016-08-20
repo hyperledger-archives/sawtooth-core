@@ -25,7 +25,8 @@ from txnintegration.netconfig import gen_dfl_cfg_poet
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.simcontroller import NopEdgeController
 from txnintegration.simcontroller import SimController
-from txnintegration.validator_collection_controller import ValidatorCollectionController
+from txnintegration.validator_collection_controller import \
+    ValidatorCollectionController
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.utils import is_convergent
 from txnintegration.utils import sit_rep
@@ -136,4 +137,3 @@ class TestPartitionRecovery(unittest.TestCase):
             sit_rep(top.urls())
         finally:
             top.shutdown(archive_name="TestPartitionRecoveryResults")
-

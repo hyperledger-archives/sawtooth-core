@@ -55,7 +55,6 @@ def set_default_topology(topology,
     return topology
 
 
-
 class SimController(object):
     def __init__(self, n_mag, ledger_type='lottery'):
         self.n_mag = n_mag

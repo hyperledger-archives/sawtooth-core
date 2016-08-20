@@ -109,6 +109,7 @@ def sit_rep(urls, verbosity=1):
         print_helper(reports, 'blocks', "Blocks")
     return reports
 
+
 class StaticNetworkConfig(object):
     def __init__(self, n, q=None, base_name='validator', base_port=9000,
                  base_http_port=8000, use_quorum=False):
