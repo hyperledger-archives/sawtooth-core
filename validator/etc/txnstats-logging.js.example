@@ -1,0 +1,22 @@
+{
+  "version" : 1,
+  "disable_existing_loggers" : false,
+  "formatters": {
+        "simple": {
+            "format":"[%(asctime)s [%(threadName)s] %(name)s %(levelname)s] %(message)s",
+            "datefmt":"%H:%M:%S"
+        }
+  },
+  "handlers" : {
+    "stats" : {
+      "class" : "logging.FileHandler",
+      "level" : "INFO",
+      "formatter" : "simple",
+      "filename" : "example.log"
+    }
+  },
+  "root": {
+    "level" : "INFO",
+    "handlers" : ["stats"]
+  }
+}
