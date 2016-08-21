@@ -51,7 +51,7 @@ class LruCache(object):
                 self.order.appendleft(key)
 
     def __getitem__(self, key):
-        self.get(key)
+        return self.get(key)
 
     def get(self, key, default=None):
         with self.lock:
