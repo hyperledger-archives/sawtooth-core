@@ -331,6 +331,9 @@ def do_join(args, config):
                                  "battleship-{}.data".format(username))
         with open(data_file + ".new", 'w') as fd:
             json.dump(data, fd, sort_keys=True, indent=4)
+        if os.name == 'nt':
+            if os.path.exists(data_file):
+                os.remove(data_file)
         os.rename(data_file + ".new", data_file)
     else:
         print "Board and nonces already defined for game, reusing..."
@@ -559,6 +562,9 @@ def save_config(config):
 
     with open("{}.new".format(config_file), "w") as fd:
         config.write(fd)
+    if os.name == 'nt':
+        if os.path.exists(config_file):
+            os.remove(config_file)
     os.rename("{}.new".format(config_file), config_file)
 
 
