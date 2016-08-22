@@ -17,6 +17,7 @@
 "use strict";
 
 var I = require('immutable');
+var cbor = require('cbor');
 
 function Ratio(n) {
     this.n = n;
@@ -32,12 +33,13 @@ Ratio.prototype.encodeCBOR = function (encoder) {
  * produce a map of just the fields.
  * @private
  */
-var _cloneData = (obj) => 
+var _cloneData = function(obj) {
     // This doesn't seem like the fastest way to do this, but it is
     // the most accurate
-    JSON.parse(JSON.stringify(obj));
+    return JSON.parse(JSON.stringify(obj));
+};
 
-var _convertRatios = (ratioKeys) => {
+var _convertRatios = function(ratioKeys) {
     let f = (v, k) => {
         if(I.Iterable.isIterable(v)) {
             return v.map(f);
@@ -49,7 +51,7 @@ var _convertRatios = (ratioKeys) => {
     return f;
 };
 
-var _removeRatios = (v, k) => {
+var _removeRatios = function(v, k) {
     if(I.Iterable.isIterable(v)) {
         return v.map(_removeRatios);
     } else if (v instanceof Ratio) {
@@ -58,23 +60,36 @@ var _removeRatios = (v, k) => {
     return v;
 };
 
-var _byKey = (v, k) => k;
+var _byKey = function(v, k) {
+    return k;
+};
 
-var _toOrdered = (k, v) => I.Iterable.isIndexed(v) ? v.toList() : v.toOrderedMap().sortBy(_byKey);
+var _toOrdered = function(k, v) {
+    return I.Iterable.isIndexed(v) ? v.toList() : v.toOrderedMap().sortBy(_byKey);
+};
 
-var _createSignableObj = (obj, opts) => { 
+var _createSignableObj = function(obj, opts) { 
     opts = opts || {};
-   return I.fromJS(_cloneData(obj), _toOrdered)
+    return I.fromJS(_cloneData(obj), _toOrdered)
             .map(_convertRatios(I.List(opts.ratios || [])));
 };
 
-var _toJS = (signableObj) =>
-    signableObj.map(_removeRatios)
-               .sortBy(_byKey)
-               .toJS();
+var _toJS = function(signableObj) {
+    return signableObj.map(_removeRatios)
+                      .sortBy(_byKey)
+                      .toJSON();
+};
+
+var _toCBOR = function(signableObj) {
+        return cbor.encode(signableObj.sortBy(_byKey).toJSON());
+};
 
 module.exports = {
     createSignableObj: _createSignableObj,
     toJS: _toJS,
-    Ratio,
+    toJSON: function(obj) {
+        return JSON.stringify(_toJS(obj));
+    },
+    toCBOR: _toCBOR,
+    Ratio: Ratio,
 };
