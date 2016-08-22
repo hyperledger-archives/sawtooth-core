@@ -29,9 +29,15 @@ var cbor = require('cbor');
 const _respondWith = (fixture, code, body) => {
     var response = new PassThrough();
     response.headers = {};
-    response.headers['content-type'] = 'application/json';
+    if(body && Buffer.isBuffer(body)) {
+        response.headers['content-type'] = 'application/cbor';
+    } else {
+        response.headers['content-type'] = 'application/json';
+    }
     response.statusCode = code;
-    if(body) {
+    if(body && Buffer.isBuffer(body)) {
+        response.write(body);
+    } else if(body) {
         response.write(JSON.stringify(body));
     }
     response.end();
@@ -336,10 +342,11 @@ describe('validator', () => {
         describe('sendTransaction()', () => {
 
             it('should send a transaction', (done) => {
-                _respondWith(fixture, 200, {
+                _respondWith(fixture, 200, cbor.encode({
                     Transaction: {
                         Signature: 'ING9fBk6tbrEmAGOXvKYpAhQbl4PKpJxZSJ0b9z2yowMFRviZRZf1IfxDNEMs5z71AzYfObrznqHDyqMgClO6FE=',
-                    }});
+                    }
+                }));
 
                 let cborTxn = cbor.encode(signed_object.createSignableObj({a: 1, b: 2}).toJS());
                 let promise = fixture.validator.sendTransaction('/my_txn_family', cborTxn);
@@ -364,7 +371,6 @@ describe('validator', () => {
             });
 
             it('should send a string transaction as json', (done) => {
-
                 _respondWith(fixture, 200, {
                     Transaction: {
                         Signature: 'H2K8jRxEmNz8MRHmuoKFwr7rjgTG1Ro71yu3XZlpJ9kuVkVsm0hFzOiI1x0IQcT4eugeQ7V+lFB1txfpPbhDB9U=',
@@ -391,7 +397,6 @@ describe('validator', () => {
                 .then(done)
                 .catch(done);
             });
-
 
             it('should parse an error if one is in the response', (done) => {
                 _respondWith(fixture, 400, 'bad id: must be 10 chars');

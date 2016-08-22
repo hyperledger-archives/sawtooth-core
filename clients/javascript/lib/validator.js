@@ -38,7 +38,7 @@ function _httpRequest(options, data) {
 
                 var p = null;
                 if (response.headers['content-type'] === 'application/cbor') {
-                    p = cbor.decodeAll(buffer);
+                    p = cbor.decodeFirst(buffer);
                 } else if (response.headers['content-type'] === 'application/json') {
                     p = Promise.resolve(
                             buffer.length > 0 ? JSON.parse(buffer.toString()) : null);
