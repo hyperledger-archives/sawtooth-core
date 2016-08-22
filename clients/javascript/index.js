@@ -19,4 +19,5 @@
 module.exports = {
     signUpdate: require('./lib/ecdsa_encryption').signUpdate,
     ValidatorClient: require('./lib/validator').ValidatorClient,
+    SignedObject: require('./lib/signed_object'),
 };

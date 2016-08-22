@@ -22,7 +22,9 @@ chai.use(chaiImmutable);
 
 var assert = chai.assert;
 
-var {Ratio, createSignableObj, toJS} = require('../lib/signed_object');
+var cbor = require('cbor');
+
+var {Ratio, createSignableObj, toJS, toCBOR} = require('../lib/signed_object');
 var {OrderedMap} = require('immutable');
 
 describe('signed_object', () => {
@@ -65,4 +67,12 @@ describe('signed_object', () => {
             assert.deepEqual({x: 2, y: 4}, jsObj);
         });
     });
+
+    describe('#toCBOR', () => {
+        it('should return the cbor from the immutable object', () => {
+            let cborObj = toCBOR(OrderedMap({y: 1, x: 2}));
+            assert.deepEqual(cbor.encode({x: 2, y: 1}), cborObj);
+        });
+    });
+
 });

@@ -49,7 +49,7 @@ var _doSign = (field, signingKey, obj, opts) => {
 
     var signature = bitcoin.message.sign(keyPair, objectInCbor).toString('base64'); 
 
-    return signedObject.toJS(signableObj.set(field, signature));
+    return signableObj.set(field, signature);
 };
 
 var _signTransaction = _.partial(_doSign, 'Signature');
@@ -84,12 +84,12 @@ function signUpdate(txnType, update, signingKey, opts) {
     var signedMsg = _signMessage(signingKey, message, opts);
 
     if(opts.output == 'json') {
-        return JSON.stringify(signedObject.createSignableObj(signedMsg, opts).toJSON());
+        return signedObject.toJSON(signedMsg);
     } else if (opts.output == 'cbor') {
-        return cbor.encode(signedObject.createSignableObj(signedMsg, opts).toJSON());
+        return signedObject.toCBOR(signedMsg);
     }
 
-    return signedMsg;
+    return signedObject.toJS(signedMsg);
 }
 
 function verify(address, signedMessage, opts) {
