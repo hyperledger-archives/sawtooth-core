@@ -303,6 +303,9 @@ def save_config(config):
 
     with open("{}.new".format(config_file), "w") as fd:
         config.write(fd)
+    if os.name == 'nt':
+        if os.path.exists(config_file):
+            os.remove(config_file)
     os.rename("{}.new".format(config_file), config_file)
 
 
