@@ -38,6 +38,8 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 
 @contextmanager
 def clean_home_directory():
+    if os.name == 'nt':
+        os.environ['HOME'] = os.path.expanduser("~")
     saved_home = os.environ['HOME']
     tmp_home = tempfile.mkdtemp(prefix='xo_test_home_')
     os.environ['HOME'] = tmp_home
