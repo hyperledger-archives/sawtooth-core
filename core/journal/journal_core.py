@@ -88,9 +88,9 @@ class Journal(gossip_core.Gossip):
             recently committed block.
         PendingTransactionBlock (TransactionBlock): The constructed
             pending transaction block.
-        PendingBlockIDs (set): A set of pending block identifiers.
-        InvalidBlockIDs (set): A set of invalid block identifiers.
-        FrontierBlockIDs (set): A set of block identifiers for blocks
+        PendingBlockIDs (builtin set): A set of pending block identifiers.
+        InvalidBlockIDs (builtin set): A set of invalid block identifiers.
+        FrontierBlockIDs (builtin set): A set of block identifiers for blocks
             which still need to be processed.
         GlobalStoreMap (GlobalStoreManager): Manages access to the
             various persistence stores.
