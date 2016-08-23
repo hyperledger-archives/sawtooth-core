@@ -15,6 +15,7 @@
 
 import logging
 import hashlib
+from threading import RLock
 
 from journal import transaction_block
 from journal.messages import transaction_block_message
@@ -87,6 +88,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             minfo = {}
         super(PoetTransactionBlock, self).__init__(minfo)
 
+        self._lock = RLock()
         self.WaitTimer = None
         self.WaitCertificate = None
 
@@ -99,6 +101,15 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                     serialized, signature)
 
         self.AggregateLocalMean = 0.0
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['_lock']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._lock = RLock()
 
     def __str__(self):
         return "{0}, {1}, {2}, {3:0.2f}, {4}".format(
@@ -141,16 +152,17 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         return super(PoetTransactionBlock, self).__cmp__(other)
 
     def update_block_weight(self, journal):
-        assert self.Status == transaction_block.Status.valid
-        super(PoetTransactionBlock, self).update_block_weight(journal)
+        with self._lock:
+            assert self.Status == transaction_block.Status.valid
+            super(PoetTransactionBlock, self).update_block_weight(journal)
 
-        assert self.WaitCertificate
-        self.AggregateLocalMean = self.WaitCertificate.local_mean
+            assert self.WaitCertificate
+            self.AggregateLocalMean = self.WaitCertificate.local_mean
 
-        if self.PreviousBlockID != NullIdentifier:
-            assert self.PreviousBlockID in journal.BlockStore
-            self.AggregateLocalMean += \
-                journal.BlockStore[self.PreviousBlockID].AggregateLocalMean
+            if self.PreviousBlockID != NullIdentifier:
+                assert self.PreviousBlockID in journal.BlockStore
+                self.AggregateLocalMean += \
+                    journal.BlockStore[self.PreviousBlockID].AggregateLocalMean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
@@ -161,17 +173,18 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         Args:
             journal (PoetJorunal): Journal for pulling context.
         """
-        if not super(PoetTransactionBlock, self).is_valid(journal):
-            return False
+        with self._lock:
+            if not super(PoetTransactionBlock, self).is_valid(journal):
+                return False
 
-        if not self.WaitCertificate:
-            logger.info('not a valid block, no wait certificate')
-            return False
+            if not self.WaitCertificate:
+                logger.info('not a valid block, no wait certificate')
+                return False
 
-        return self.WaitCertificate.is_valid_wait_certificate(
-            self.OriginatorID,
-            journal._build_certificate_list(self),
-            self.TransactionIDs)
+            return self.WaitCertificate.is_valid_wait_certificate(
+                self.OriginatorID,
+                journal._build_certificate_list(self),
+                self.TransactionIDs)
 
     def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list
@@ -180,25 +193,26 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         Args:
             certlist (list): A list of wait certificates.
         """
-
-        self.WaitTimer = WaitTimer.create_wait_timer(
-            validator_address,
-            certlist)
+        with self._lock:
+            self.WaitTimer = WaitTimer.create_wait_timer(
+                validator_address,
+                certlist)
 
     def create_wait_certificate(self):
         """Create a wait certificate for the journal based on the
         wait timer.
         """
-        hasher = hashlib.sha256()
-        for tid in self.TransactionIDs:
-            hasher.update(tid)
-        block_hash = hasher.hexdigest()
+        with self._lock:
+            hasher = hashlib.sha256()
+            for tid in self.TransactionIDs:
+                hasher.update(tid)
+            block_hash = hasher.hexdigest()
 
-        self.WaitCertificate = WaitCertificate.create_wait_certificate(
-            self.WaitTimer,
-            block_hash)
-        if self.WaitCertificate:
-            self.WaitTimer = None
+            self.WaitCertificate = WaitCertificate.create_wait_certificate(
+                self.WaitTimer,
+                block_hash)
+            if self.WaitCertificate:
+                self.WaitTimer = None
 
     def wait_timer_is_expired(self, now):
         """Determines if the wait timer is expired.
@@ -206,7 +220,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         Returns:
             bool: Whether or not the wait timer is expired.
         """
-        return self.WaitTimer.is_expired(now)
+        with self._lock:
+            return self.WaitTimer.is_expired(now)
 
     def dump(self):
         """Returns a dict with information about the poet transaction
@@ -216,7 +231,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             dict: A dict containing information about the poet
                 transaction block.
         """
-        result = super(PoetTransactionBlock, self).dump()
-        result['WaitCertificate'] = self.WaitCertificate.dump()
+        with self._lock:
+            result = super(PoetTransactionBlock, self).dump()
+            result['WaitCertificate'] = self.WaitCertificate.dump()
 
-        return result
+            return result
