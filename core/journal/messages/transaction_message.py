@@ -58,14 +58,17 @@ def transaction_message_handler(msg, journal):
     logger.debug('handle transaction message with identifier %s',
                  msg.Transaction.Identifier)
 
-    if journal.TransactionStore.get(msg.Transaction.Identifier):
-        return
+    with journal._txn_lock:
+        if journal.TransactionStore.get(msg.Transaction.Identifier):
+            return
 
-    if journal.PendingTransactions.get(msg.Transaction.Identifier):
-        return
+        if journal.PendingTransactions.get(msg.Transaction.Identifier):
+            return
 
-    journal.add_pending_transaction(msg.Transaction)
-    journal.forward_message(msg, exceptions=[msg.SenderID], initialize=False)
+        journal.add_pending_transaction(msg.Transaction)
+        journal.forward_message(msg,
+                                exceptions=[msg.SenderID],
+                                initialize=False)
 
 
 class TransactionRequestMessage(message.Message):
@@ -93,12 +96,13 @@ def _txnrequesthandler(msg, journal):
     # a transaction might be in the committed transaction list only as a
     # placeholder, so we have to make sure that it is there and that it is not
     # None
-    txn = journal.TransactionStore.get(msg.TransactionID)
-    if txn:
-        reply = txn.build_message()
-        journal.forward_message(reply)
-        return
+    with journal._txn_lock:
+        txn = journal.TransactionStore.get(msg.TransactionID)
+        if txn:
+            reply = txn.build_message()
+            journal.forward_message(reply)
+            return
 
-    journal.request_missing_txn(msg.TransactionID,
-                                exceptions=[msg.SenderID],
-                                request=msg)
+        journal.request_missing_txn(msg.TransactionID,
+                                    exceptions=[msg.SenderID],
+                                    request=msg)

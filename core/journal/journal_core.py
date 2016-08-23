@@ -153,6 +153,7 @@ class Journal(gossip_core.Gossip):
         shelveflag = 'c' if self.Restore else 'n'
         shelvedir = kwargs.get('DataDirectory', 'db')
 
+        self._txn_lock = RLock()
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
@@ -377,54 +378,57 @@ class Journal(gossip_core.Gossip):
         Args:
             txn (Transaction.Transaction): The newly arrived transaction
         """
-        logger.debug('txnid: %s - add_pending_transaction',
-                     txn.Identifier[:8])
+        with self._txn_lock:
+            logger.debug('txnid: %s - add_pending_transaction',
+                         txn.Identifier[:8])
 
-        # nothing more to do, we are initializing
-        if self.Initializing:
-            self.InitialTransactions.append(txn)
-            return
+            # nothing more to do, we are initializing
+            if self.Initializing:
+                self.InitialTransactions.append(txn)
+                return
 
-        # if we already have the transaction there is nothing to do
-        if txn.Identifier in self.TransactionStore:
-            assert self.TransactionStore[txn.Identifier]
-            return
+            # if we already have the transaction there is nothing to do
+            if txn.Identifier in self.TransactionStore:
+                assert self.TransactionStore[txn.Identifier]
+                return
 
-        # add it to the transaction store
-        txn.Status = transaction.Status.pending
-        self.TransactionStore[txn.Identifier] = txn
-        if txn.add_to_pending():
-            if prepend:
-                pending = OrderedDict()
-                pending[txn.Identifier] = True
-                pending.update(self.PendingTransactions)
-                self.PendingTransactions = pending
-            else:
-                self.PendingTransactions[txn.Identifier] = True
-            if self.TransactionEnqueueTime is None:
-                self.TransactionEnqueueTime = time.time()
+            # add it to the transaction store
+            txn.Status = transaction.Status.pending
+            self.TransactionStore[txn.Identifier] = txn
+            if txn.add_to_pending():
+                if prepend:
+                    pending = OrderedDict()
+                    pending[txn.Identifier] = True
+                    pending.update(self.PendingTransactions)
+                    self.PendingTransactions = pending
+                else:
+                    self.PendingTransactions[txn.Identifier] = True
+                if self.TransactionEnqueueTime is None:
+                    self.TransactionEnqueueTime = time.time()
 
-        # if this is a transaction we requested, then remove it from the list
-        # and look for any blocks that might be completed as a result of
-        # processing the transaction
-        if txn.Identifier in self.RequestedTransactions:
-            logger.info('txnid %s - catching up',
-                        txn.Identifier[:8])
-            del self.RequestedTransactions[txn.Identifier]
+            # if this is a transaction we requested, then remove it from
+            # the list and look for any blocks that might be completed
+            # as a result of processing the transaction
+            if txn.Identifier in self.RequestedTransactions:
+                logger.info('txnid %s - catching up',
+                            txn.Identifier[:8])
+                del self.RequestedTransactions[txn.Identifier]
 
-            blockids = []
-            for blockid in self.PendingBlockIDs:
-                if txn.Identifier in self.BlockStore[blockid].TransactionIDs:
-                    blockids.append(blockid)
+                blockids = []
+                for blockid in self.PendingBlockIDs:
+                    if txn.Identifier in \
+                            self.BlockStore[blockid].TransactionIDs:
+                        blockids.append(blockid)
 
-            for blockid in blockids:
-                self._handleblock(self.BlockStore[blockid])
+                for blockid in blockids:
+                    self._handleblock(self.BlockStore[blockid])
 
-        # there is a chance the we deferred creating a transaction block
-        # because there were insufficient transactions, this is where we check
-        # to see if there are now enough to run the validation algorithm
-        if not self.PendingTransactionBlock and build_block:
-            self.PendingTransactionBlock = self.build_transaction_block()
+            # there is a chance the we deferred creating a transaction block
+            # because there were insufficient transactions, this is where
+            # we check to see if there are now enough to run the validation
+            # algorithm
+            if not self.PendingTransactionBlock and build_block:
+                self.PendingTransactionBlock = self.build_transaction_block()
 
     def commit_transaction_block(self, tblock):
         """Commits a block of transactions to the chain.
@@ -863,35 +867,39 @@ class Journal(gossip_core.Gossip):
                  be committed
         """
 
-        logger.info('blkid: %s - commit block from %s with previous blkid: %s',
-                    tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
-                    tblock.PreviousBlockID[:8])
+        with self._txn_lock:
+            logger.info('blkid: %s - commit block from %s with previous '
+                        'blkid: %s',
+                        tblock.Identifier[:8],
+                        self._id2name(tblock.OriginatorID),
+                        tblock.PreviousBlockID[:8])
 
-        assert tblock.Status == transaction_block.Status.valid
+            assert tblock.Status == transaction_block.Status.valid
 
-        # Remove all of the newly committed transactions from the pending list
-        # and put them in the committed list
-        for txnid in tblock.TransactionIDs:
-            assert txnid in self.TransactionStore
-            if txnid in self.PendingTransactions:
-                del self.PendingTransactions[txnid]
+            # Remove all of the newly committed transactions from the
+            # pending list and put them in the committed list
+            for txnid in tblock.TransactionIDs:
+                assert txnid in self.TransactionStore
+                if txnid in self.PendingTransactions:
+                    del self.PendingTransactions[txnid]
 
-            txn = self.TransactionStore[txnid]
-            txn.Status = transaction.Status.committed
-            txn.InBlock = tblock.Identifier
-            self.TransactionStore[txnid] = txn
+                txn = self.TransactionStore[txnid]
+                txn.Status = transaction.Status.committed
+                txn.InBlock = tblock.Identifier
+                self.TransactionStore[txnid] = txn
 
-        # Update the head of the chain
-        self.MostRecentCommittedBlockID = tblock.Identifier
-        self.ChainStore['MostRecentBlockID'] = self.MostRecentCommittedBlockID
+            # Update the head of the chain
+            self.MostRecentCommittedBlockID = tblock.Identifier
+            self.ChainStore['MostRecentBlockID'] = \
+                self.MostRecentCommittedBlockID
 
-        # Update stats
-        self.JournalStats.CommittedBlockCount.increment()
-        self.JournalStats.CommittedTxnCount.increment(len(
-            tblock.TransactionIDs))
+            # Update stats
+            self.JournalStats.CommittedBlockCount.increment()
+            self.JournalStats.CommittedTxnCount.increment(len(
+                tblock.TransactionIDs))
 
-        # fire the event handler for block commit
-        self.onCommitBlock.fire(self, tblock)
+            # fire the event handler for block commit
+            self.onCommitBlock.fire(self, tblock)
 
     def _decommitblockchain(self, forkid):
         """
@@ -911,40 +919,43 @@ class Journal(gossip_core.Gossip):
         orphaned pool and move all transactions in the block back into the
         pending transaction list.
         """
-        blockid = self.MostRecentCommittedBlockID
-        block = self.BlockStore[blockid]
-        assert block.Status == transaction_block.Status.valid
 
-        # fire the event handler for block decommit
-        self.onDecommitBlock.fire(self, block)
+        with self._txn_lock:
+            blockid = self.MostRecentCommittedBlockID
+            block = self.BlockStore[blockid]
+            assert block.Status == transaction_block.Status.valid
 
-        # move the head of the chain back
-        self.MostRecentCommittedBlockID = block.PreviousBlockID
-        self.ChainStore['MostRecentBlockID'] = self.MostRecentCommittedBlockID
+            # fire the event handler for block decommit
+            self.onDecommitBlock.fire(self, block)
 
-        # this bizarre bit of code is intended to preserve the ordering of
-        # transactions, where all committed transactions occur before pending
-        # transactions
-        pending = OrderedDict()
-        for txnid in block.TransactionIDs:
-            # there is a chance that this block is incomplete and some of the
-            # transactions have not arrived, don't put transactions into
-            # pending if we dont have the transaction
-            txn = self.TransactionStore.get(txnid)
-            if txn:
-                txn.Status = transaction.Status.pending
-                self.TransactionStore[txnid] = txn
+            # move the head of the chain back
+            self.MostRecentCommittedBlockID = block.PreviousBlockID
+            self.ChainStore['MostRecentBlockID'] = \
+                self.MostRecentCommittedBlockID
 
-                if txn.add_to_pending():
-                    pending[txnid] = True
+            # this bizarre bit of code is intended to preserve the ordering of
+            # transactions, where all committed transactions occur before
+            # pending transactions
+            pending = OrderedDict()
+            for txnid in block.TransactionIDs:
+                # there is a chance that this block is incomplete and some
+                # of the transactions have not arrived, don't put
+                # transactions into pending if we dont have the transaction
+                txn = self.TransactionStore.get(txnid)
+                if txn:
+                    txn.Status = transaction.Status.pending
+                    self.TransactionStore[txnid] = txn
 
-        pending.update(self.PendingTransactions)
-        self.PendingTransactions = pending
+                    if txn.add_to_pending():
+                        pending[txnid] = True
 
-        # update stats
-        self.JournalStats.CommittedBlockCount.increment(-1)
-        self.JournalStats.CommittedTxnCount.increment(-len(
-            block.TransactionIDs))
+            pending.update(self.PendingTransactions)
+            self.PendingTransactions = pending
+
+            # update stats
+            self.JournalStats.CommittedBlockCount.increment(-1)
+            self.JournalStats.CommittedTxnCount.increment(-len(
+                block.TransactionIDs))
 
     def _testandapplyblock(self, tblock):
         """Test and apply transactions to the previous block's global
@@ -957,30 +968,32 @@ class Journal(gossip_core.Gossip):
             GlobalStore
         """
 
-        assert tblock.Status == transaction_block.Status.complete
+        with self._txn_lock:
+            assert tblock.Status == transaction_block.Status.complete
 
-        # make a copy of the store from the previous block, the previous
-        # block must be complete if this block is complete
-        teststore = self.GlobalStoreMap.get_block_store(
-            tblock.PreviousBlockID).clone_block()
+            # make a copy of the store from the previous block, the previous
+            # block must be complete if this block is complete
+            teststore = self.GlobalStoreMap.get_block_store(
+                tblock.PreviousBlockID).clone_block()
 
-        # apply the transactions
-        try:
-            for txnid in tblock.TransactionIDs:
-                txn = self.TransactionStore[txnid]
-                txnstore = teststore.get_transaction_store(
-                    txn.TransactionTypeName)
-                if not txn.is_valid(txnstore):
-                    return None
+            # apply the transactions
+            try:
+                for txnid in tblock.TransactionIDs:
+                    txn = self.TransactionStore[txnid]
+                    txnstore = teststore.get_transaction_store(
+                        txn.TransactionTypeName)
+                    if not txn.is_valid(txnstore):
+                        return None
 
-                txn.apply(txnstore)
-        except:
-            logger.exception('txnid: %s - unexpected exception when testing'
-                             ' transaction block validity, ',
-                             txnid[:8])
-            return None
+                    txn.apply(txnstore)
+            except:
+                logger.exception('txnid: %s - unexpected exception '
+                                 'when testing transaction block '
+                                 'validity.',
+                                 txnid[:8])
+                return None
 
-        return teststore
+            return teststore
 
     def _findfork(self, tblock):
         """
@@ -1011,31 +1024,32 @@ class Journal(gossip_core.Gossip):
             list of Transaction.Transaction
         """
 
-        # generate a list of valid transactions to place in the new block
-        addtxns = []
-        deltxns = []
-        store = self.GlobalStore.clone_block()
-        for txnid in self.PendingTransactions.iterkeys():
-            txn = self.TransactionStore[txnid]
-            if txn:
-                self._preparetransaction(addtxns, deltxns, store, txn)
+        with self._txn_lock:
+            # generate a list of valid transactions to place in the new block
+            addtxns = []
+            deltxns = []
+            store = self.GlobalStore.clone_block()
+            for txnid in self.PendingTransactions.iterkeys():
+                txn = self.TransactionStore[txnid]
+                if txn:
+                    self._preparetransaction(addtxns, deltxns, store, txn)
 
-            if maxcount and len(addtxns) >= maxcount:
-                break
+                if maxcount and len(addtxns) >= maxcount:
+                    break
 
-        # as part of the process, we may identify transactions that are invalid
-        # so go ahead and get rid of them, since these had all dependencies met
-        # we know that they will never be valid
-        for txnid in deltxns:
-            self.JournalStats.InvalidTxnCount.increment()
-            logger.info('txnid: %s - will never apply',
-                        txnid[:8])
-            if txnid in self.TransactionStore:
-                del self.TransactionStore[txnid]
-            if txnid in self.PendingTransactions:
-                del self.PendingTransactions[txnid]
+            # as part of the process, we may identify transactions that
+            # are invalid so go ahead and get rid of them, since these
+            # had all dependencies met we know that they will never be valid
+            for txnid in deltxns:
+                self.JournalStats.InvalidTxnCount.increment()
+                logger.info('txnid: %s - will never apply',
+                            txnid[:8])
+                if txnid in self.TransactionStore:
+                    del self.TransactionStore[txnid]
+                if txnid in self.PendingTransactions:
+                    del self.PendingTransactions[txnid]
 
-        return addtxns
+            return addtxns
 
     def _preparetransaction(self, addtxns, deltxns, store, txn):
         """
@@ -1051,85 +1065,89 @@ class Journal(gossip_core.Gossip):
             True if the transaction is valid
         """
 
-        logger.debug('txnid: %s - add transaction %s',
-                     txn.Identifier[:8],
-                     str(txn))
+        with self._txn_lock:
+            logger.debug('txnid: %s - add transaction %s',
+                         txn.Identifier[:8],
+                         str(txn))
 
-        # Because the dependencies may reorder transactions in the block
-        # in a way that is different from the arrival order, this transaction
-        # might already be in the block
-        if txn.Identifier in addtxns:
-            return True
+            # Because the dependencies may reorder transactions in the block
+            # in a way that is different from the arrival order, this
+            # transaction might already be in the block
+            if txn.Identifier in addtxns:
+                return True
 
-        # First step in adding the transaction to the list is to make
-        # sure that all dependent transactions are in the list already
-        ready = True
-        for dependencyID in txn.Dependencies:
-            logger.debug('txnid: %s - check dependency %s',
-                         txn.Identifier[:8], dependencyID[:8])
+            # First step in adding the transaction to the list is to make
+            # sure that all dependent transactions are in the list already
+            ready = True
+            for dependencyID in txn.Dependencies:
+                logger.debug('txnid: %s - check dependency %s',
+                             txn.Identifier[:8], dependencyID[:8])
 
-            # check to see if the dependency has already been committed
-            if (dependencyID in self.TransactionStore and
-                    (self.TransactionStore[dependencyID].Status ==
-                     transaction.Status.committed)):
-                continue
+                # check to see if the dependency has already been committed
+                if (dependencyID in self.TransactionStore and
+                        (self.TransactionStore[dependencyID].Status ==
+                         transaction.Status.committed)):
+                    continue
 
-            # check to see if the dependency is already in this block
-            if dependencyID in addtxns:
-                continue
+                # check to see if the dependency is already in this block
+                if dependencyID in addtxns:
+                    continue
 
-            # check to see if the dependency is among the transactions to be
-            # deleted, if so then this transaction will never be valid and we
-            # can just get rid of it
-            if dependencyID in deltxns:
-                logger.info('txnid: %s - depends on deleted transaction %s',
-                            txn.Identifier[:8], dependencyID[:8])
-                deltxns.append(txn.Identifier)
+                # check to see if the dependency is among the transactions to
+                # be deleted, if so then this transaction will never be valid
+                # and we can just get rid of it
+                if dependencyID in deltxns:
+                    logger.info('txnid: %s - depends on deleted '
+                                'transaction %s',
+                                txn.Identifier[:8], dependencyID[:8])
+                    deltxns.append(txn.Identifier)
+                    ready = False
+                    continue
+
+                # recurse into the dependency, note that we need to make sure
+                # there are no loops in the dependencies but not doing that
+                # right now
+                deptxn = self.TransactionStore.get(dependencyID)
+                if deptxn and self._preparetransaction(addtxns, deltxns, store,
+                                                       deptxn):
+                    continue
+
+                # at this point we cannot find the dependency so send out a
+                # request for it and wait, we should set a timer on this
+                # transaction so we can just throw it away if the dependencies
+                # cannot be met
                 ready = False
-                continue
 
-            # recurse into the dependency, note that we need to make sure there
-            # are no loops in the dependencies but not doing that right now
-            deptxn = self.TransactionStore.get(dependencyID)
-            if deptxn and self._preparetransaction(addtxns, deltxns, store,
-                                                   deptxn):
-                continue
+                logger.info('txnid: %s - missing, calling request_missing_txn',
+                            dependencyID[:8])
+                self.request_missing_txn(dependencyID)
+                self.JournalStats.MissingTxnDepCount.increment()
 
-            # at this point we cannot find the dependency so send out a request
-            # for it and wait, we should set a timer on this transaction so we
-            # can just throw it away if the dependencies cannot be met
-            ready = False
+            # if all of the dependencies have not been met then there isn't any
+            # point in continuing on so bail out
+            if not ready:
+                return False
 
-            logger.info('txnid: %s - missing, calling request_missing_txn',
-                        dependencyID[:8])
-            self.request_missing_txn(dependencyID)
-            self.JournalStats.MissingTxnDepCount.increment()
+            # after all that work... we know the dependencies are met, so
+            # see if # the transaction is valid, that is that all of the
+            # preconditions encoded in the transaction itself are met
+            txnstore = store.get_transaction_store(txn.TransactionTypeName)
+            if txn.is_valid(txnstore):
+                logger.debug('txnid: %s - is valid, adding to block',
+                             txn.Identifier[:8])
+                addtxns.append(txn.Identifier)
+                txn.apply(txnstore)
+                return True
 
-        # if all of the dependencies have not been met then there isn't any
-        # point in continuing on so bail out
-        if not ready:
+            # because we have all of the dependencies but the transaction is
+            # still invalid we know that this transaction is broken and we
+            # can simply throw it away
+            logger.warn(
+                'txnid: %s - is not valid for this block, dropping - %s',
+                txn.Identifier[:8], str(txn))
+            logger.info(common.pretty_print_dict(txn.dump()))
+            deltxns.append(txn.Identifier)
             return False
-
-        # after all that work... we know the dependencies are met, so see if
-        # the transaction is valid, that is that all of the preconditions
-        # encoded in the transaction itself are met
-        txnstore = store.get_transaction_store(txn.TransactionTypeName)
-        if txn.is_valid(txnstore):
-            logger.debug('txnid: %s - is valid, adding to block',
-                         txn.Identifier[:8])
-            addtxns.append(txn.Identifier)
-            txn.apply(txnstore)
-            return True
-
-        # because we have all of the dependencies but the transaction is still
-        # invalid we know that this transaction is broken and we can simply
-        # throw it away
-        logger.warn(
-            'txnid: %s - is not valid for this block, dropping - %s',
-            txn.Identifier[:8], str(txn))
-        logger.info(common.pretty_print_dict(txn.dump()))
-        deltxns.append(txn.Identifier)
-        return False
 
     def _cleantransactionblocks(self):
         """
@@ -1137,29 +1155,31 @@ class Journal(gossip_core.Gossip):
         high probability no longer going to change, clean out the bulk of the
         memory used to store the block and the corresponding transactions
         """
-        self.ChainStore.sync()
-        self.TransactionStore.sync()
-        self.BlockStore.sync()
+        with self._txn_lock:
+            self.ChainStore.sync()
+            self.TransactionStore.sync()
+            self.BlockStore.sync()
 
-        # with the state storage, we can flatten old blocks to reduce memory
-        # footprint, they can always be recovered from persistent storage
-        # later on, however, the flattening process increases memory usage
-        # so we don't want to do it too often, the code below keeps the number
-        # of blocks kept in memory less than 2 * self.MaximumBlocksToKeep
-        if self.MostRecentCommittedBlock.BlockNum \
-                % self.MaximumBlocksToKeep == 0:
-            logger.info('compress global state for block number %s',
-                        self.MostRecentCommittedBlock.BlockNum)
-            depth = 0
-            blockid = self.MostRecentCommittedBlockID
-            while (blockid != common.NullIdentifier and
-                   depth < self.MaximumBlocksToKeep):
-                blockid = self.BlockStore[blockid].PreviousBlockID
-                depth += 1
+            # with the state storage, we can flatten old blocks to reduce
+            # memory footprint, they can always be recovered from
+            # persistent storage later on, however, the flattening
+            # process increases memory usage so we don't want to do
+            # it too often, the code below keeps the number of blocks
+            # kept in memory less than 2 * self.MaximumBlocksToKeep
+            if self.MostRecentCommittedBlock.BlockNum \
+                    % self.MaximumBlocksToKeep == 0:
+                logger.info('compress global state for block number %s',
+                            self.MostRecentCommittedBlock.BlockNum)
+                depth = 0
+                blockid = self.MostRecentCommittedBlockID
+                while (blockid != common.NullIdentifier and
+                       depth < self.MaximumBlocksToKeep):
+                    blockid = self.BlockStore[blockid].PreviousBlockID
+                    depth += 1
 
-            if blockid != common.NullIdentifier:
-                logger.debug('flatten storage for block %s', blockid)
-                self.GlobalStoreMap.flatten_block_store(blockid)
+                if blockid != common.NullIdentifier:
+                    logger.debug('flatten storage for block %s', blockid)
+                    self.GlobalStoreMap.flatten_block_store(blockid)
 
     def _initledgerstats(self):
         self.JournalStats = stats.Stats(self.LocalNode.Name, 'ledger')
