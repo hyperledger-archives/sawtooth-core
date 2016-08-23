@@ -72,19 +72,25 @@ class ConsolePrint(object):
 
 
 class StatsPrintManager(object):
-    def __init__(self, system_stats, platform_stats, clients):
+    def __init__(self,
+                 system_stats,
+                 platform_stats,
+                 topology_stats,
+                 clients):
+
         self.cp = ConsolePrint()
         self.ss = system_stats
         self.ps = platform_stats
+        self.ts = topology_stats
         self.clients = clients
 
         self.view_mode = "general"
 
     def print_stats(self):
 
-        self.print_summary()
-
         self.check_mode()
+
+        self.print_summary()
 
         if self.view_mode is "general":
             self.print_general_view()
@@ -119,9 +125,9 @@ class StatsPrintManager(object):
 
     def print_summary(self):
         validator_formatter = \
-            '{0:>15} ' \
-            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9.3f} {6:14.14} ' \
-            '{7:9.3f} {8:14.14} {9:9d} {10:14.14}'
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9.3f} {6:16.16} ' \
+            '{7:9.3f} {8:16.16} {9:9d} {10:17.17}'
         self.cp.cpprint(validator_formatter.format(
             "Validators:",
             self.ss.sys_client.known_validators, "known",
@@ -131,9 +137,9 @@ class StatsPrintManager(object):
             self.ss.sys_client.runtime, "run time(s)"))
 
         blocks_formatter = \
-            '{0:>15} ' \
-            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
-            '{7:9d} {8:14.14} {9:9d} {10:14.14}'
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16} {9:9d} {10:17.17}'
         self.cp.cpprint(blocks_formatter.format(
             "Blocks:",
             self.ss.sys_blocks.blocks_max_committed, "max committed",
@@ -144,9 +150,9 @@ class StatsPrintManager(object):
             self.ss.sys_blocks.blocks_min_claimed, "min claimed"))
 
         txns_formatter = \
-            '{0:>15} ' \
-            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
-            '{7:9d} {8:14.14} {9:9d} {10:14.14}'
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16} {9:9d} {10:17.17}'
         self.cp.cpprint(txns_formatter.format(
             "Transactions:",
             self.ss.sys_txns.txns_max_committed, "max committed",
@@ -156,9 +162,9 @@ class StatsPrintManager(object):
             0, "rate (t/s)"))
 
         pkt_formatter = \
-            '{0:>15} ' \
-            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
-            '{7:9d} {8:14.14} {9:9d} {10:14.14} {11:9d} {12:14.14}'
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16} {9:9d} {10:17.17} {11:9d} {12:17.17}'
         self.cp.cpprint(pkt_formatter.format(
             "Packet totals:",
             self.ss.sys_packets.packets_max_dropped, "max dropped",
@@ -169,9 +175,9 @@ class StatsPrintManager(object):
             self.ss.sys_packets.packets_min_acks_received, "min acks rcvd"))
 
         msg_formatter = \
-            '{0:>15} ' \
-            '{1:9d} {2:14.14} {3:9d} {4:14.14} {5:9d} {6:14.14} ' \
-            '{7:9d} {8:14.14}'
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16}'
         self.cp.cpprint(msg_formatter.format(
             "Message totals:",
             self.ss.sys_msgs.msgs_max_handled, "max handled",
@@ -180,28 +186,65 @@ class StatsPrintManager(object):
             self.ss.sys_msgs.msgs_min_acked, "min acked"))
 
         platform_formatter = \
-            '{0:>15} ' \
-            '{1:9.2f} {2:14.14} {3:9.2f} {4:14.14} {5:9d} {6:14.14} ' \
-            '{7:9d} {8:14.14}'
+            '{0:>16} ' \
+            '{1:9.2f} {2:16.16} {3:9.2f} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16}'
         self.cp.cpprint(platform_formatter.format(
-            "Platform stats:",
+            "Platform:",
             self.ps.cpu_stats.percent, "cpu pct",
             self.ps.vmem_stats.percent, "vmem pct",
             self.ps.psis.intv_net_bytes_sent, "ntwrk bytes tx",
             self.ps.psis.intv_net_bytes_recv, "ntwrk bytes rx"))
 
+        topo_1_formatter = \
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16} {9:9.2f} {10:17.17}'
+        self.cp.cpprint(topo_1_formatter.format(
+            "Topology:",
+            self.ts.connected_component_count, "components",
+            self.ts.node_count, "nodes",
+            self.ts.edge_count, "edges",
+            self.ts.maximum_degree, "max peers",
+            self.ts.minimum_degree, "min peers"))
+
+        topo_2_formatter = \
+            '{0:>16} ' \
+            '{1:9.2f} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9.2f} {8:16.16} {9:9.2f} {10:17.17}'
+        self.cp.cpprint(topo_2_formatter.format(
+            "Topology:",
+            self.ts.average_shortest_path_length, "avg shortest pth",
+            self.ts.maximum_shortest_path_length, "max shortest pth",
+            self.ts.minimum_connectivity, "min connectivity",
+            self.ts.maximum_degree_centrality, "max degree cent",
+            self.ts.maximum_between_centrality, "max between cent"))
+
         poet_formatter = \
-            '{0:>15} ' \
-            '{1:9.2f} {2:14.14} {3:9.2f} {4:14.14} {5:9.2f} {6:14.14} ' \
+            '{0:>16} ' \
+            '{1:9.2f} {2:16.16} {3:9.2f} {4:16.16} {5:9.2f} {6:16.16} ' \
             '{7:>26.16} {8:22.22}'
         self.cp.cpprint(poet_formatter.format(
-            "Poet stats:",
+            "Poet:",
             self.ss.poet_stats.avg_local_mean, "avg local mean",
             self.ss.poet_stats.max_local_mean, "max local mean",
             self.ss.poet_stats.min_local_mean, "min local mean",
             self.ss.poet_stats.last_unique_blockID, "last unique block ID"))
 
-        self.cp.cpprint("view: {}".format(self.view_mode))
+        view_formatter = \
+            '{0:>16} ' \
+            '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
+            '{7:>9} {8:16.16} {9:>9} {10:17.17} {11:>9} {12:17.17} '\
+            '{13:>9} {14:17.17}'
+        self.cp.cpprint(view_formatter.format(
+            "View ({0:1.8}):".format(self.view_mode),
+            "(g)", "general",
+            "(t)", "transaction",
+            "(k)", "packet",
+            "(c)", "consensus",
+            "(o)", "topology",
+            "(p)", "platform",
+            "(n)", "network"))
 
     def print_general_view(self):
         header_formatter = \

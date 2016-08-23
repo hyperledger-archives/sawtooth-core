@@ -19,23 +19,23 @@ import json
 import sys
 import time
 
-from twisted.internet import task
 from twisted.internet import reactor
+from twisted.internet import task
+
 from twisted.web.client import Agent
 from twisted.web.client import readBody
 from twisted.web.http_headers import Headers
 
-from txnintegration.utils import StatsCollector
-from txnintegration.utils import PlatformStats
-
 from txnintegration.stats_print import ConsolePrint
 from txnintegration.stats_print import StatsPrintManager
-
-from txnintegration.stats_utils import TransactionRate
 from txnintegration.stats_utils import PlatformIntervalStats
-
 from txnintegration.stats_utils import SummaryStatsCsvManager
+from txnintegration.stats_utils import TopologyManager
+from txnintegration.stats_utils import TransactionRate
 from txnintegration.stats_utils import ValidatorStatsCsvManager
+
+from txnintegration.utils import PlatformStats
+from txnintegration.utils import StatsCollector
 
 curses_imported = True
 try:
@@ -401,7 +401,13 @@ class StatsManager(object):
         self.known_endpoint_names = []
         self.stats_loop_count = 0
 
-        self.spm = StatsPrintManager(self.ss, self.ps, self.clients)
+        self.tm = TopologyManager(self.clients)
+
+        self.spm = StatsPrintManager(
+            self.ss,
+            self.ps,
+            self.tm.topology_stats,
+            self.clients)
 
         self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
         self.vscm = ValidatorStatsCsvManager(self.clients)
@@ -448,7 +454,8 @@ class StatsManager(object):
         reactor.stop()
 
     def stats_loop_failed(self, failure):
-        print failure.getBriefTraceback()
+        self.cp.cpstop()
+        print failure
         reactor.stop()
 
     def process_stats(self, statsclients):
@@ -461,6 +468,8 @@ class StatsManager(object):
         self.ps.get_stats()
         psr = {"platform": self.ps.get_data_as_dict()}
         self.psis.calculate_interval_stats(psr)
+
+        self.tm.update_topology()
 
     def print_stats(self):
         self.spm.print_stats()
@@ -542,7 +551,8 @@ class EndpointManager(object):
         reactor.stop()
 
     def update_endpoint_failed(self, failure):
-        print failure.getBriefTraceback()
+        self.cp.cpstop()
+        print failure
         reactor.stop()
 
     def _init_terminate(self):
@@ -697,7 +707,7 @@ def run_stats(url,
     except Exception as e:
         if curses_imported:
             curses.endwin()
-        sys.stderr.write(e)
+        print e
         raise
 
 
