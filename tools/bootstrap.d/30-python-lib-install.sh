@@ -2,16 +2,27 @@
 
 set -e
 
-pip install cbor
-pip install pybitcointools
-pip install colorlog
-pip install coverage
-pip install nose2
-pip install cov-core
-pip install pylint
-pip install setuptools-lint
-pip install pep8
-pip install networkx
-pip install daemonize
-pip install psutil
-pip install demjson
+function install_requires {
+    cat $1 \
+        | grep -v "sawtooth-core" \
+        | pip install -r /dev/stdin
+}
+
+# Packages for testing
+pip install -r /project/sawtooth-core/tools/requirements-testing.txt
+
+# sawtooth-core/core
+(cd /project/sawtooth-core/core/ && python setup.py egg_info)
+pip install -r /project/sawtooth-core/core/sawtooth_core.egg-info/requires.txt
+
+# sawtooth-core/validator
+(cd /project/sawtooth-core/validator/ && python setup.py egg_info)
+install_requires /project/sawtooth-core/validator/sawtooth_validator.egg-info/requires.txt
+
+# sawtooth-core/extensions/mktplace
+(cd /project/sawtooth-core/extensions/mktplace/ && python setup.py egg_info)
+install_requires /project/sawtooth-core/extensions/mktplace/sawtooth_mktplace.egg-info/requires.txt
+
+# sawtooth-core/extensions/arcade
+(cd /project/sawtooth-core/extensions/arcade/ && python setup.py egg_info)
+install_requires /project/sawtooth-core/extensions/arcade/sawtooth_arcade.egg-info/requires.txt
