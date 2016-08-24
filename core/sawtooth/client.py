@@ -432,13 +432,6 @@ class SawtoothClient(object):
         txn_msg_type = txn_msg_type or self._message_type
 
         txn = txn_type(minfo=minfo)
-
-        if len(minfo.get('Dependencies', [])) == 0:
-            # add the last transaction submitted to ensure that the ordering
-            # in the journal matches the order in which we generated them
-            if self._last_transaction:
-                txn.Dependencies = [self._last_transaction]
-
         txn.sign_from_node(self._local_node)
         txnid = txn.Identifier
 
