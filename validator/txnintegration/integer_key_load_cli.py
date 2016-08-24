@@ -114,7 +114,7 @@ class IntKeyLoadTest(object):
 
         with Progress("Populating initial key values") as p:
             txncount = 0
-            starttime = time.clock()
+            starttime = time.time()
             for n in range(1, numkeys + 1):
                 n = str(n)
                 if n not in keys:
@@ -126,8 +126,9 @@ class IntKeyLoadTest(object):
                         raise Exception("Failed to set {} to {}".format(n, v))
                     self.transactions.append(txnid)
                     txncount += 1
-            self.txnrate(starttime, txncount)
+            self.txnrate(starttime, txncount, "submitted")
         self._wait_for_transaction_commits()
+        self.txnrate(starttime, txncount, "committed")
 
     def run(self, numkeys, rounds=1, txintv=0):
         self.state.fetch()
@@ -141,7 +142,7 @@ class IntKeyLoadTest(object):
                 c.fetch_state()
             print "Round {}".format(r)
             # for k in keys:
-            starttime = time.clock()
+            starttime = time.time()
             for k in range(1, numkeys + 1):
                 k = str(k)
                 c = self._get_client()
@@ -165,8 +166,10 @@ class IntKeyLoadTest(object):
                             k, self.localState[k]))
                 self.transactions.append(txnid)
                 time.sleep(txintv)
-            self.txnrate(starttime, 2 * numkeys)
+            txn_count = len(self.transactions)
+            self.txnrate(starttime, txn_count, "submitted")
             self._wait_for_transaction_commits()
+            self.txnrate(starttime, txn_count, "commited")
 
     def validate(self):
         self.state.fetch()
@@ -186,13 +189,13 @@ class IntKeyLoadTest(object):
             print k, v
         print
 
-    def txnrate(self, starttime, numtxns):
+    def txnrate(self, starttime, numtxns, purpose):
         if numtxns > 0:
-            endtime = time.clock()
+            endtime = time.time()
             totaltime = endtime - starttime
             avgrate = (numtxns / totaltime)
-            print "Sent {0} transaction in {1} seconds averaging {2} t/s" \
-                .format(numtxns, totaltime, avgrate)
+            print "{0} transaction in {1} seconds averaging {2} t/s " \
+                  "{3}" .format(numtxns, totaltime, avgrate, purpose)
 
     def run_with_missing_dep(self, numkeys, rounds=1):
         self.state.fetch()
