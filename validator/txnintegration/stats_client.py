@@ -58,6 +58,7 @@ class StatsClient(object):
         self.vsm = ValidatorStatsManager()
 
         self.responding = False
+        self.no_response_reason = ""
 
         self.request_start = 0.0
         self.request_complete = 0.0
@@ -73,18 +74,23 @@ class StatsClient(object):
                             self._stats_completion,
                             self._stats_error)
 
-    def _stats_completion(self, json_stats):
+    def _stats_completion(self, json_stats, response_code):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
-        self.vsm.update_stats(json_stats, True, self.request_start,
-                              self.request_complete)
-        self.responding = True
-        self.validator_state = "RESPND"
+        self.validator_state = "RESP_{}".format(response_code)
+        if response_code is 200:
+            self.vsm.update_stats(json_stats, True, self.request_start,
+                                  self.request_complete)
+            self.responding = True
+        else:
+            self.responding = False
+            self.no_response_reason = ""
 
-    def _stats_error(self):
+    def _stats_error(self, failure):
         self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
-        self.validator_state = "NORESP"
+        self.validator_state = "NO_RESP"
+        self.no_response_reason = failure.type.__name__
         return
 
 
@@ -453,7 +459,7 @@ class StatsManager(object):
     def stats_loop_done(self, result):
         reactor.stop()
 
-    def stats_loop_failed(self, failure):
+    def stats_loop_error(self, failure):
         self.cp.cpstop()
         print failure
         reactor.stop()
@@ -498,31 +504,21 @@ class EndpointManager(object):
     def __init__(self):
         self.error_count = 0
         self.no_endpoint_responders = False
+        self.initial_discovery = True
         self.endpoint_urls = []
         self.endpoints = None
         self.vc = ValidatorCommunications()
 
     def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
+        self.initial_url = url
         self.endpoint_completion_cb = init_cb
         self.endpoint_completion_cb_args = init_args or {}
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.init_path = path
         self.vc.get_request(path,
-                            self.endpoint_discovery_completion,
+                            self.endpoint_discovery_response,
                             self._init_terminate)
-
-    def endpoint_discovery_completion(self, results):
-        # response has been received
-        # extract host url and port number for each validator identified
-        self.endpoint_urls = []
-        self.endpoints = results
-        for endpoint in results.values():
-            self.endpoint_urls.append(
-                'http://{0}:{1}'.format(
-                    endpoint["Host"], endpoint["HttpPort"]))
-        self.endpoint_completion_cb(self.endpoints,
-                                    **self.endpoint_completion_cb_args)
 
     def update_endpoint_discovery(self, update_cb):
         # initiates update of endpoint urls
@@ -532,32 +528,61 @@ class EndpointManager(object):
         url = self.contact_list.pop()
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.vc.get_request(path,
-                            self.endpoint_discovery_completion,
+                            self.endpoint_discovery_response,
                             self._update_endpoint_continue)
 
-    def _update_endpoint_continue(self):
-        # update response not received, try another url
+    def endpoint_discovery_response(self, results, response_code):
+        # response has been received
+        # if response OK, then get host url & port number of each validator
+        # if response not OK, then validator must be busy,
+        # if initial discovery, try again, else try another validator
+        if response_code is 200:
+            self.endpoint_urls = []
+            self.endpoints = results
+            for endpoint in results.values():
+                self.endpoint_urls.append(
+                    'http://{0}:{1}'.format(
+                        endpoint["Host"], endpoint["HttpPort"]))
+            self.endpoint_completion_cb(self.endpoints,
+                                        **self.endpoint_completion_cb_args)
+            self.initial_discovery = False
+            self.no_endpoint_responders = False
+        else:
+            if self.initial_discovery is True:
+                print "endpoint discovery: " \
+                      "validator response not 200 - retrying"
+                self.contact_list = [self.initial_url]
+
+            self._update_endpoint_continue(None)
+
+    def _update_endpoint_continue(self, failure):
+        # if no response (or did not respond with 200 - see above),
+        # then try with another url from the contact list
         # if all urls have been tried, set "no update" flag and be done
         if len(self.contact_list) > 0:
             url = self.contact_list.pop()
             path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
             self.vc.get_request(path,
-                                self.endpoint_discovery_completion,
+                                self.endpoint_discovery_response,
                                 self._update_endpoint_continue)
         else:
             self.no_endpoint_responders = True
 
-    def update_endpoint_done(self, result):
+    def update_endpoint_loop_done(self, result):
         reactor.stop()
 
-    def update_endpoint_failed(self, failure):
-        self.cp.cpstop()
+    def update_endpoint_loop_error(self, failure):
+        print "update endpoint loop error: "
         print failure
         reactor.stop()
 
-    def _init_terminate(self):
-        print "no response to endpoint request to {0}".format(self.init_path)
-        print "terminating session"
+    def _init_terminate(self, failure):
+        print "failure during initial endpoint discovery"
+        print "request to {} returned {}".format(
+            self.init_path, failure.type.__name__)
+        print "error message: "
+        print failure.getErrorMessage()
+        print "stopping stats client"
         reactor.stop()
         return
 
@@ -570,6 +595,11 @@ class ValidatorCommunications(object):
         self.completion_callback = None
         self.error_callback = None
         self.request_path = None
+
+        self.error_value = None
+        self.error_type = None
+        self.error_name = None
+        self.error_message = None
 
     def get_request(self, path, ccb=None, ecb=None):
         self.completion_callback = self._completion_default if ccb is None \
@@ -591,18 +621,26 @@ class ValidatorCommunications(object):
 
     def _handle_request(self, response):
         self.responding = True
+        self.response_code = response.code
         d = readBody(response)
         d.addCallback(self._handle_body)
         return d
 
     def _handle_body(self, body):
-        self.json_stats = json.loads(body)
-        self.completion_callback(self.json_stats)
+        if self.response_code is 200:
+            self.json_stats = json.loads(body)
+        else:
+            self.json_stats = None
+        self.completion_callback(self.json_stats, self.response_code)
 
-    def _handle_error(self, failed):
-        print failed
+    def _handle_error(self, failure):
+        self.error_value = failure.value
+        self.error_type = failure.type
+        self.error_name = failure.type.__name__
+        self.error_message = failure.getErrorMessage()
+
         self.error_count += 1
-        self.error_callback()
+        self.error_callback(failure)
 
     def _completion_default(self, data):
         print "ValidatorCommunications.get_request() " \
@@ -632,7 +670,7 @@ def parse_args(args):
                         metavar="",
                         help='Interval between endpoint updates (s) '
                              '(default: %(default)s)',
-                        default=30,
+                        default=10,
                         type=int)
     parser.add_argument('--csv-enable-summary',
                         metavar="",
@@ -657,15 +695,15 @@ def startup(urls, loop_times, stats_man, ep_man):
     stats_loop = task.LoopingCall(stats_man.stats_loop)
     stats_loop_deferred = stats_loop.start(loop_times["stats"])
     stats_loop_deferred.addCallback(stats_man.stats_loop_done)
-    stats_loop_deferred.addErrback(stats_man.stats_loop_failed)
+    stats_loop_deferred.addErrback(stats_man.stats_loop_error)
 
     # start loop to periodically update the list of validator endpoints
     # and call WorkManager.update_client_list
     ep_loop = task.LoopingCall(ep_man.update_endpoint_discovery,
                                stats_man.update_client_list)
     ep_loop_deferred = ep_loop.start(loop_times["endpoint"], now=False)
-    ep_loop_deferred.addCallback(ep_man.update_endpoint_done)
-    ep_loop_deferred.addErrback(ep_man.update_endpoint_failed)
+    ep_loop_deferred.addCallback(ep_man.update_endpoint_loop_done)
+    ep_loop_deferred.addErrback(ep_man.update_endpoint_loop_error)
 
 
 def run_stats(url,
