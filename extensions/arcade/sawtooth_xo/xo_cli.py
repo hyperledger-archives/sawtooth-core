@@ -76,6 +76,12 @@ def add_create_parser(subparsers, parent_parser):
         help='an identifier for the new game')
 
     parser.add_argument(
+        '--disable-client-validation',
+        action='store_true',
+        default=False,
+        help='disable client validation')
+
+    parser.add_argument(
         '--wait',
         action='store_true',
         default=False,
@@ -118,6 +124,12 @@ def add_take_parser(subparsers, parent_parser):
         help='the square number to take')
 
     parser.add_argument(
+        '--disable-client-validation',
+        action='store_true',
+        default=False,
+        help='disable client validation')
+
+    parser.add_argument(
         '--wait',
         action='store_true',
         default=False,
@@ -158,7 +170,9 @@ def do_create(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = XoClient(base_url=url, keyfile=key_file)
+    client = XoClient(base_url=url,
+                      keyfile=key_file,
+                      disable_client_validation=args.disable_client_validation)
     client.create(name=name)
 
     if args.wait:
@@ -269,7 +283,9 @@ def do_take(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = XoClient(base_url=url, keyfile=key_file)
+    client = XoClient(base_url=url,
+                      keyfile=key_file,
+                      disable_client_validation=args.disable_client_validation)
     client.take(name=name, space=space)
 
     if args.wait:
