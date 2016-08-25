@@ -113,8 +113,8 @@ setup(
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['sawtooth-core', 'colorlog', 'twisted', 'PyYAML', 'psutil',
-                      'numpy', 'networkx', 'daemonize'],
+    install_requires=['sawtooth-core', 'colorlog', 'twisted', 'PyYAML',
+                      'psutil', 'numpy', 'networkx', 'daemonize'],
     data_files=data_files,
     entry_points={
         'console_scripts': [
