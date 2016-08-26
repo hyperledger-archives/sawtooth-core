@@ -19,7 +19,7 @@ if [ "$VER" = "16.04" ] ; then
         python-twisted-core
 else
     apt-get install -y -q \
-        python-enum
+        python-enum34
 fi 
 
 apt-get install -y -q \
