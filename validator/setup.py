@@ -108,7 +108,7 @@ if os.path.exists("/etc/SuSE-release"):
 
 setup(
     name='sawtooth-validator',
-    version=version('0.7.0'),
+    version=version('0.7.1'),
     description='Validator service for Sawtooth Lake distributed ledger from ',
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',
