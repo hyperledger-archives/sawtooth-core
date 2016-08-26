@@ -110,7 +110,7 @@ setup(name='sawtooth-core',
       url='http://www.intel.com',
       packages=find_packages(),
       install_requires=['cbor>=0.1.23', 'colorlog', 'pybitcointools',
-                        'twisted', 'enum', 'requests'],
+                        'twisted', 'enum34', 'requests'],
       ext_modules=[enclavemod, ecdsamod],
       py_modules=['journal.consensus.poet.poet_enclave_simulator'
                   '.poet_enclave_simulator',

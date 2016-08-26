@@ -18,17 +18,10 @@ import random
 import string
 import hashlib
 
-from enum import Enum
-
 from sawtooth_battleship.battleship_exceptions import BoardLayoutException
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class ShipOrientation(Enum):
-    horizontal = 1
-    vertical = 2
 
 
 class BoardLayout(object):
@@ -72,7 +65,7 @@ class BoardLayout(object):
             col = position.column
             text = position.text
 
-            if orientation == ShipOrientation.horizontal:
+            if orientation == 'horizontal':
                 for i in xrange(0, len(text)):
                     if board[row][col + i] != '-':
                         raise BoardLayoutException(
@@ -82,7 +75,7 @@ class BoardLayout(object):
                                 row,
                                 board[row][col]))
                     board[row][col + i] = text[i]
-            elif orientation == ShipOrientation.vertical:
+            elif orientation == 'vertical':
                 for i in xrange(0, len(text)):
                     if board[row + i][col] != '-':
                         raise BoardLayoutException(
@@ -139,9 +132,9 @@ class BoardLayout(object):
                 attempts += 1
 
                 orientation = random.choice(
-                    [ShipOrientation.horizontal,
-                     ShipOrientation.vertical])
-                if orientation == ShipOrientation.horizontal:
+                    ['horizontal',
+                     'vertical'])
+                if orientation == 'horizontal':
                     row = random.randrange(0, size)
                     col = random.randrange(0, size - len(ship) + 1)
                 else:
@@ -171,7 +164,7 @@ class ShipPosition(object):
         text (str): Ship's textual representation (example: AAAAA, BBBB)
         row (int): First row on which the ship appears (starts at 0)
         column (int): First column on which the ship appears (starts at 0)
-        orientation (ShipOrientation): Whether placed horizontal or vertical
+        orientation (str): Whether placed horizontal or vertical
     """
     def __init__(self, text, row, column, orientation):
         self.text = text
