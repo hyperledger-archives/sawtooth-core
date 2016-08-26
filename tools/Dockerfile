@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y -q \
    libjson0-dev \
    python-all-dev \
    python-dev \
-   python-enum \
+   python-enum34 \
    python-setuptools \
    python-stdeb \
    python-twisted \
