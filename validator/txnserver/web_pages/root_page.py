@@ -26,6 +26,7 @@ from twisted.web.resource import NoResource
 from txnserver.web_pages.block_page import BlockPage
 from txnserver.web_pages.command_page import CommandPage
 from txnserver.web_pages.forward_page import ForwardPage
+from txnserver.web_pages.prevalidation_page import PrevalidationPage
 from txnserver.web_pages.statistics_page import StatisticsPage
 from txnserver.web_pages.store_page import StorePage
 from txnserver.web_pages.status_page import StatusPage
@@ -52,6 +53,7 @@ class RootPage(Resource):
         self.putChild('transaction', TransactionPage(validator))
 
         self.putChild('forward', ForwardPage(validator))
+        self.putChild('prevalidation', PrevalidationPage(validator))
         self.putChild('command', CommandPage(validator))
 
         validator.web_thread_pool.start()

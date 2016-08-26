@@ -23,6 +23,7 @@ import time
 from twisted.web import http
 
 from gossip import node, signed_object
+from gossip.common import pretty_print_dict
 from mktplace.transactions import account_update
 from mktplace.transactions import asset_type_update
 from mktplace.transactions import asset_update
@@ -93,7 +94,8 @@ class MarketPlaceClient(MarketPlaceCommunication):
                  keystring=None,
                  keyfile=None,
                  state=None,
-                 tokenstore=None):
+                 tokenstore=None,
+                 session=False):
         super(MarketPlaceClient, self).__init__(baseurl)
 
         self.CreatorID = creator
@@ -102,6 +104,9 @@ class MarketPlaceClient(MarketPlaceCommunication):
         self.CurrentState = state or MarketPlaceState(self.BaseURL)
 
         self.TokenStore = tokenstore
+
+        self.enable_session = session
+        logger.debug("self.enable_session: %s", self.enable_session)
 
         # set up the signing key
         if keystring:
@@ -139,9 +144,10 @@ class MarketPlaceClient(MarketPlaceCommunication):
         txn.sign_from_node(self.LocalNode)
         txnid = txn.Identifier
 
-        if not txn.is_valid(self.CurrentState.State):
-            logger.warn('transaction failed to apply')
-            return None
+        if not self.enable_session:
+            if not txn.is_valid(self.CurrentState.State):
+                logger.warn('transaction failed to apply')
+                return None
 
         msg = market_place.MarketPlaceTransactionMessage()
         msg.Transaction = txn
@@ -149,7 +155,12 @@ class MarketPlaceClient(MarketPlaceCommunication):
         msg.sign_from_node(self.LocalNode)
 
         try:
-            result = self.postmsg(msg.MessageType, msg.dump())
+            if self.enable_session:
+                result = self.postmsg(msg.MessageType,
+                                      msg.dump(),
+                                      '/prevalidation')
+            else:
+                result = self.postmsg(msg.MessageType, msg.dump())
 
         except MessageException:
             return None
@@ -166,7 +177,12 @@ class MarketPlaceClient(MarketPlaceCommunication):
         # id for future dependencies this could be a problem if the transaction
         # fails during application
         self.LastTransaction = txnid
-        txn.apply(self.CurrentState.State)
+        if self.enable_session:
+            storeinfo = self.getmsg('/prevalidation')
+            self.CurrentState.State = \
+                self.CurrentState.State.clone_store(storeinfo)
+        else:
+            txn.apply(self.CurrentState.State)
 
         return txnid
 
@@ -175,21 +191,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         Wrap a register transaction with a few additional checks to ensure that
         names are updated correctly.
         """
-
-        # check to see if this name already exists
-        if self.CurrentState.n2i(update.Name):
-            logger.warn('attempt to register object with duplicate name %s',
-                        update.Name)
-            return None
-
         txnid = self._sendtxn(update)
-
-        # the state *should* have been updated when we sent the transaction
-        # successfully so there should be an object there, just need to update
-        # the name map
-        if txnid:
-            fqname = self.CurrentState.i2n(txnid)
-            self.CurrentState.bind(fqname, txnid)
 
         return txnid
 
@@ -198,15 +200,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         Wrap an unregister transaction with a few additional checks to ensure
         that names are updated correctly.
         """
-
-        fqname = self.CurrentState.i2n(update.ObjectID)
         txnid = self._sendtxn(update)
-
-        # application of the unregister transaction should have removed the
-        # state for the object, this just gets rid of the name mapping
-        if txnid:
-            self.CurrentState.unbind(fqname)
-
         return txnid
 
     # -----------------------------------------------------------------
@@ -250,6 +244,22 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Description = description
 
         return self._sendtxn(update)
+
+    def create_session(self):
+        self.enable_session = True
+
+    def delete_session(self):
+        try:
+            if self.enable_session:
+                self.headrequest('/prevalidation')
+                self.enable_session = False
+
+        except MessageException:
+            return None
+
+        except:
+            logger.exception('message post failed for some unusual reason')
+            return None
 
     def waitforcommit(self, txnid=None, timetowait=5, iterations=12):
         """

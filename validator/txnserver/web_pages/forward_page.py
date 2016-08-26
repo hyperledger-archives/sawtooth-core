@@ -20,10 +20,6 @@ import traceback
 from twisted.web import http
 from twisted.web.error import Error
 
-from gossip.common import json2dict
-from gossip.common import cbor2dict
-from journal import global_store_manager
-
 from sawtooth.exceptions import InvalidTransactionError
 from txnserver.web_pages.base_page import BasePage
 
@@ -41,29 +37,8 @@ class ForwardPage(BasePage):
         """
         Forward a signed message through the gossip network.
         """
-        encoding = request.getHeader('Content-Type')
         data = request.content.getvalue()
-        try:
-            if encoding == 'application/json':
-                minfo = json2dict(data)
-
-            elif encoding == 'application/cbor':
-                minfo = cbor2dict(data)
-            else:
-                raise Error("", 'unknown message'
-                            ' encoding: {0}'.format(encoding))
-            typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
-            if typename not in self.Ledger.MessageHandlerMap:
-                raise Error("",
-                            'received request for unknown message'
-                            ' type, {0}'.format(typename))
-            msg = self.Ledger.MessageHandlerMap[typename][0](minfo)
-        except Error as e:
-            LOGGER.info('exception while decoding http request %s; %s',
-                        request.path, traceback.format_exc(20))
-            raise Error(http.BAD_REQUEST,
-                        'unable to decode incoming request: {0}'.format(e))
-
+        msg = self._get_message(request)
         if self.Validator.Config.get("LocalValidation", True):
             # determine if the message contains a valid transaction before
             # we send the message to the network
@@ -85,17 +60,7 @@ class ForwardPage(BasePage):
                     pending_block_txns = \
                         self.Ledger.PendingTransactionBlock.TransactionIDs
 
-                block_id = self.Ledger.MostRecentCommittedBlockID
-
-                real_store_map = \
-                    self.Ledger.GlobalStoreMap.get_block_store(block_id)
-                temp_store_map = \
-                    global_store_manager.BlockStore(real_store_map)
-                if not temp_store_map:
-                    LOGGER.info('no store map for block %s', block_id)
-                    raise Error(http.BAD_REQUEST,
-                                'unable to validate enclosed'
-                                ' transaction {0}'.format(data))
+                temp_store_map = self._get_store_map()
 
                 pending_txns = copy.copy(self.Ledger.PendingTransactions)
                 pending_txn_ids = [x for x in pending_txns.iterkeys()]

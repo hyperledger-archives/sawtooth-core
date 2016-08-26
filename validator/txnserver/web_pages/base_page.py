@@ -25,6 +25,9 @@ from twisted.web import server
 from twisted.web.error import Error
 from twisted.web.resource import Resource
 
+from journal import global_store_manager
+from gossip.common import cbor2dict
+from gossip.common import json2dict
 from gossip.common import dict2json
 from gossip.common import dict2cbor
 from gossip.common import pretty_print_dict
@@ -139,6 +142,42 @@ class BasePage(Resource):
 
     def render_post(self, request, components, msg):
         self.error_response(request, http.NOT_FOUND, "")
+
+    def _get_message(self, request):
+        encoding = request.getHeader('Content-Type')
+        data = request.content.getvalue()
+        try:
+            if encoding == 'application/json':
+                minfo = json2dict(data)
+
+            elif encoding == 'application/cbor':
+                minfo = cbor2dict(data)
+            else:
+                raise Error("", 'unknown message'
+                            ' encoding: {0}'.format(encoding))
+            typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
+            if typename not in self.Ledger.MessageHandlerMap:
+                raise Error("",
+                            'received request for unknown message'
+                            ' type, {0}'.format(typename))
+            return self.Ledger.MessageHandlerMap[typename][0](minfo)
+        except Error as e:
+            LOGGER.info('exception while decoding http request %s; %s',
+                        request.path, traceback.format_exc(20))
+            raise Error(http.BAD_REQUEST,
+                        'unable to decode incoming request: {0}'.format(e))
+
+    def _get_store_map(self):
+        block_id = self.Ledger.MostRecentCommittedBlockID
+        real_store_map = \
+            self.Ledger.GlobalStoreMap.get_block_store(block_id)
+        temp_store_map = \
+            global_store_manager.BlockStore(real_store_map)
+        if not temp_store_map:
+            LOGGER.info('no store map for block %s', block_id)
+            raise Error(http.BAD_REQUEST, 'no store map for block {0} ',
+                        block_id)
+        return temp_store_map
 
     def do_post(self, request):
         """

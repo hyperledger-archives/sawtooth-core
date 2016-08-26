@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from gossip.common import pretty_print_dict, dict2json
 from journal.transaction import SerializationError
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,9 @@ class Register(object):
         else:
             name = self.Name
 
+        logger.info('Market Register store: %s', dict2json(store.dump(True)))
+        logger.info('Market Register store._namemap: %s', store._namemap)
+
         if store.n2i(name):
             logger.debug(
                 'invalid name %s; name must be unique', self.Name)
@@ -148,6 +152,12 @@ class Register(object):
         return True
 
     def apply(self, store):
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+        store.bind(name, self.ObjectID)
+        logger.info('apply Market Register store._namemap: %s', store._namemap)
         pass
 
     def dump(self):
@@ -199,6 +209,11 @@ class Unregister(object):
         return True
 
     def apply(self, store):
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+        store.unbind(name)
         del store[self.ObjectID]
 
     def dump(self):

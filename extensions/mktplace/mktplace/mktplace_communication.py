@@ -22,6 +22,7 @@ import urllib2
 
 from gossip.common import json2dict, cbor2dict, dict2json, dict2cbor
 from gossip.common import pretty_print_dict
+from sawtooth.exceptions import InvalidTransactionError
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class MarketPlaceCommunication(object):
     def __init__(self, baseurl):
         self.BaseURL = baseurl.rstrip('/').encode('utf-8')
         self.ProxyHandler = urllib2.ProxyHandler({})
+        self._cookie = None
 
     def headrequest(self, path):
         """
@@ -57,6 +59,12 @@ class MarketPlaceCommunication(object):
             request = urllib2.Request(url)
             request.get_method = lambda: 'HEAD'
             opener = urllib2.build_opener(self.ProxyHandler)
+            if path == '/prevalidation':
+                if self._cookie:
+                    request.add_header('cookie', self._cookie)
+                    self._cookie = None
+                else:
+                    return "Session is not enable"
             response = opener.open(request, timeout=30)
 
         except urllib2.HTTPError as err:
@@ -87,6 +95,10 @@ class MarketPlaceCommunication(object):
         try:
             request = urllib2.Request(url, headers=self.GET_HEADER)
             opener = urllib2.build_opener(self.ProxyHandler)
+
+            if path == '/prevalidation':
+                if self._cookie:
+                    request.add_header('cookie', self._cookie)
             response = opener.open(request, timeout=10)
 
         except urllib2.HTTPError as err:
@@ -111,11 +123,14 @@ class MarketPlaceCommunication(object):
         if encoding == 'application/json':
             return json2dict(content)
         elif encoding == 'application/cbor':
-            return cbor2dict(content)
+            content_dict = cbor2dict(content)
+            print pretty_print_dict(content_dict)
+            return content_dict
         else:
+            logger.debug('get content<%s> from url <%s>', content, url)
             return content
 
-    def postmsg(self, msgtype, info):
+    def postmsg(self, msgtype, info, path=''):
         """
         Post a transaction message to the validator, parse the returning CBOR
         and return the corresponding dictionary.
@@ -125,7 +140,7 @@ class MarketPlaceCommunication(object):
 
         data = dict2cbor(info)
         datalen = len(data)
-        url = self.BaseURL + msgtype
+        url = self.BaseURL + path + msgtype
 
         logger.debug('post transaction to %s with DATALEN=%d, '
                      'base64(DATA)=<%s>', url, datalen, base64.b64encode(data))
@@ -135,10 +150,25 @@ class MarketPlaceCommunication(object):
                                       {'Content-Type': 'application/cbor',
                                        'Content-Length': datalen})
             opener = urllib2.build_opener(self.ProxyHandler)
-            response = opener.open(request, timeout=10)
+
+            if path == '/prevalidation':
+                if self._cookie:
+                    request.add_header('cookie', self._cookie)
+                response = opener.open(request, timeout=10)
+                if not self._cookie:
+                    self._cookie = response.headers.get('Set-Cookie')
+                    logger.debug('self._cookie %s', self._cookie)
+            else:
+                response = opener.open(request, timeout=10)
 
         except urllib2.HTTPError as err:
             logger.warn('operation failed with response: %s', err.code)
+            if err.code == 400:
+                err_content = err.read()
+                if err_content.find("InvalidTransactionError"):
+                    raise InvalidTransactionError("Error from server: {0}"
+                                                  .format(err_content))
+
             raise MessageException(
                 'operation failed with response: {0}'.format(err.code))
 
