@@ -115,7 +115,7 @@ and run the following command:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
+   $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/tutorial/txnvalidator.js
 
 This will startup txnvalidator and logging output will be printed to the
 terminal window.
@@ -151,7 +151,7 @@ Let's instead work with a config file specific to this tutorial.
 Most of the the edits are done already, but let's add the marketplace 
 transaction family. 
 
-Edit /project/sawtooth-docs/source/tutorial/txnvalidator.js
+Edit /project/sawtooth-core/docs/source/tutorial/txnvalidator.js
 and add "mktplace.transactions.market_place" to the list of transaction
 families:
 
@@ -171,7 +171,7 @@ To test the changes, startup txnvalidator:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v --config /project/sawtooth-docs/source/tutorial/txnvalidator.js
+   $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/tutorial/txnvalidator.js
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
