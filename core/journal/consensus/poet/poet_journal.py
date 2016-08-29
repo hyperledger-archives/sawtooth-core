@@ -64,12 +64,9 @@ class PoetJournal(journal_core.Journal):
         poet_transaction_block.register_message_handlers(self)
 
         # initialize stats specifically for the block chain journal
-        self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
         self.JournalStats.add_metric(stats.Value('LocalMeanTime', 0))
-        self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
         self.JournalStats.add_metric(stats.Value('AggregateLocalMean', '0'))
         self.JournalStats.add_metric(stats.Value('PopulationEstimate', '0'))
-        self.JournalStats.add_metric(stats.Counter('InvalidTxnCount'))
         self.JournalStats.add_metric(stats.Value('ExpectedExpirationTime',
                                                  '0'))
         self.JournalStats.add_metric(stats.Value('Duration', '0'))
@@ -151,8 +148,6 @@ class PoetJournal(journal_core.Journal):
 
         if genesis:
             nblock.AggregateLocalMean = nblock.WaitTimer.local_mean
-
-        self.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
 
         # must put a cap on the transactions in the block
         if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:
