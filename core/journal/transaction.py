@@ -13,9 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import hashlib
 import logging
+import re
 import time
 
+from gossip.common import dict2cbor
 from gossip import signed_object
 from journal.messages import transaction_message
 from sawtooth.exceptions import InvalidTransactionError
@@ -173,3 +176,152 @@ class Transaction(signed_object.SignedObject):
             result['Dependencies'].append(str(txnid))
 
         return result
+
+
+def _serialize(obj, update_type):
+    serialized = {}
+    serialized['UpdateType'] = update_type
+
+    for attr in dir(obj):
+        if (attr.startswith('_')
+                and not attr.startswith('__')
+                and not callable(getattr(obj, attr))):
+            # key is attr converted from _snake_case to CamelCase
+            key = ''.join(w.capitalize() for w in attr[1:].split('_'))
+            if getattr(obj, attr) is not None:
+                serialized[key] = getattr(obj, attr)
+
+    return serialized
+
+
+def _deserialize(minfo, class_):
+    parameters = {}
+    for key in minfo:
+        parameter_name = re.sub('(?!^)([A-Z]+)', r'_\1', key).lower()
+        parameters[parameter_name] = minfo[key]
+
+    logger.debug("update: %s.__init__(%s)",
+                 class_.__name__,
+                 ', '.join(parameters.keys()))
+    try:
+        return class_(**parameters)
+    except TypeError, te:
+        raise TypeError("{}: {}".format(
+            str(te), "{}.__init__({})".format(
+                class_.__name__, ', '.join(parameters.keys()))))
+
+
+class UpdatesTransaction(Transaction):
+    """A Transaction is a set of updates to be applied atomically
+    to a ledger.
+    """
+
+    def __init__(self, minfo=None):
+        """Constructor for the UpdatesTransaction class.
+
+        Args:
+            minfo: Dictionary of values for transaction fields.
+        """
+
+        if minfo is None:
+            minfo = {}
+
+        super(UpdatesTransaction, self).__init__(minfo)
+
+        logger.debug("minfo: %s", repr(minfo))
+
+        self._registry = UpdateRegistry()
+        self.register_updates(self._registry)
+
+        self._updates = []
+        if 'Updates' in minfo:
+            for update_info in minfo['Updates']:
+                self._updates.append(self._registry.deserialize(update_info))
+
+    def __str__(self):
+        return ",".join([u.update_type for u in self._updates]) + " Updates"
+
+    def register_updates(self, registry):
+        pass
+
+    def check_valid(self, store):
+        """Determines if the transaction is valid.
+
+        Args:
+            store (dict): Transaction store mapping.
+        """
+
+        super(UpdatesTransaction, self).check_valid(store)
+
+        logger.debug(repr(store))
+
+        logger.debug('checking %s with %d updates',
+                     str(self), len(self._updates))
+
+        for update in self._updates:
+            logger.debug('update %s', repr(self._updates))
+            update.check_valid(store, self)
+
+    def apply(self, store):
+        """Applies all the updates in the transaction to the transaction
+        store.
+
+        Args:
+            store (dict): Transaction store mapping.
+        """
+        logger.debug('applying %s with %d updates',
+                     str(self), len(self._updates))
+
+        for update in self._updates:
+            update.apply(store, self)
+
+    def dump(self):
+        """Returns a dict with attributes from the transaction object.
+
+        Returns:
+            dict: The updates from the transaction object.
+        """
+        result = super(UpdatesTransaction, self).dump()
+
+        result['Updates'] = []
+        for update in self._updates:
+            result['Updates'].append(self._registry.serialize(update))
+
+        return result
+
+
+class Update(object):
+    def __init__(self, update_type):
+        self._update_type = update_type
+
+    @property
+    def update_type(self):
+        return self._update_type
+
+    def create_id(self):
+        return hashlib.sha256(
+            dict2cbor(_serialize(self, self._update_type))).hexdigest()
+
+    def check_valid(self, store, txn):
+        pass
+
+    def apply(self, store, txn):
+        pass
+
+
+class UpdateRegistry(object):
+    def __init__(self):
+        self._type_to_class = {}
+        self._class_to_type = {}
+
+    def register(self, type_name, class_):
+        self._type_to_class[type_name] = class_
+        self._class_to_type[class_] = type_name
+
+    def serialize(self, obj):
+        update_type = self._class_to_type[obj.__class__]
+        return _serialize(obj, update_type)
+
+    def deserialize(self, minfo):
+        class_ = self._type_to_class[minfo['UpdateType']]
+        return _deserialize(minfo, class_)
