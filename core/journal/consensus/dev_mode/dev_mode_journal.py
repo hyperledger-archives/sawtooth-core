@@ -15,7 +15,6 @@
 
 import logging
 from time import time
-from gossip import stats
 from journal import journal_core
 from journal.consensus.dev_mode import dev_mode_transaction_block
 
@@ -52,9 +51,6 @@ class DevModeJournal(journal_core.Journal):
 
         # initialize the block handlers
         dev_mode_transaction_block.register_message_handlers(self)
-
-        # initialize stats specifically for the block chain journal
-        self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
 
     def build_transaction_block(self, force=False):
         """Builds a transaction block that is specific to this particular
