@@ -239,14 +239,9 @@ class UpdatesTransaction(Transaction):
                 self._updates.append(self._registry.deserialize(update_info))
 
     def __str__(self):
-        # FIXME
-        try:
-            oid = self.OriginatorID
-        except AssertionError:
-            oid = "unknown"
-        return "({0})".format(oid)
+        return ",".join([u.update_type for u in self._updates]) + " Updates"
 
-    def registery_updates(self):
+    def register_updates(self, registry):
         pass
 
     def check_valid(self, store):
