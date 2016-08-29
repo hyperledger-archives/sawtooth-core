@@ -1,0 +1,9 @@
+pep8
+coverage
+nose2
+cov-core
+pylint
+setuptools-lint
+demjson
+daemonize
+networkx
