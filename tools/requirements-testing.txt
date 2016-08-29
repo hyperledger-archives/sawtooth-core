@@ -6,3 +6,4 @@ pylint
 setuptools-lint
 demjson
 daemonize
+networkx

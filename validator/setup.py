@@ -114,7 +114,7 @@ setup(
     url='http://www.intel.com',
     packages=find_packages(),
     install_requires=['sawtooth-core', 'colorlog', 'twisted', 'PyYAML',
-                      'psutil', 'numpy', 'networkx'],
+                      'psutil', 'numpy'],
     data_files=data_files,
     entry_points={
         'console_scripts': [
