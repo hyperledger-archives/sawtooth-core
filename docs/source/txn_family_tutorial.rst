@@ -24,55 +24,54 @@ Prior to going through this tutorial, you should have a working vagrant
 environment running to which you can login.  Specific setup instructions
 are available in the :doc:`tutorial`.
 
-sawtooth-arcade Repository
-==========================
+Transaction Family Tutorial Sample Code
+=======================================
 
-In this tutorial, we use special branches defined in the sawtooth-arcade
-repository to allow you to step through the tutorial without manually
-entering any code.  At each step, you can review the code present at the
-time before proceeding to the next step.  The branches are named using
-the convention xo-tutorial-stepNN, where NN is a two-digit number.
+In this tutorial, we use example code defined in the **txn_family_tutorial**
+directory of the documentation to allow you to step through the tutorial without
+manually entering any code.  At each step, you can review the code for that step
+before proceeding to the next step.  The code examples are located in subfolders
+named using the convention *xo-tutorial-stepNN*, where NN is a two-digit number.
+You simply run a special script named *env.sh* before you run the code for each
+step. The script **env.sh** sets the PYTHONPATH environment variable to the
+correct value, so that the python  interpreter knows which code examples to run,
+when you  start the validator.
+
 
 A complete implementation, along with other example transaction families,
-is also available in master branch of sawtooth-arcade.
+is also available in master branch of sawtooth-core.
 
 The repository is located at:
 
-    https://github.com/hyperledger/sawtooth-arcade
+    https://github.com/hyperledger/sawtooth-core
+
+The example transaction families are located at:
+
+    https://github.com/hyperledger/sawtooth-core/tree/master/extensions/arcade
 
 Instructions for what to do with the repo are in the next section.
 
-Clone the Repository
-====================
+Change to the Correct Working Directory for Tutorial Start
+==========================================================
 
-From following the Sawtooth Lake Tutorial, you should already have several
-repositories cloned:
+From following the Sawtooth Lake Tutorial, you should already have cloned the
+following repository:
 
 .. code-block:: console
 
     project/
       sawtooth-core/
-      sawtooth-dev-tools/
-      sawtooth-docs/
-      sawtooth-mktplace/
-      sawtooth-validator/
 
-Now, clone sawtooth-arcade as well.  This can be done by opening up a terminal
-and running the following:
+You already have the transaction family tutorial code in your repository, in the
+directory ``/project/sawtooth-core/docs/source/txn_family_tutorial``. 
+
+Change your working directory to the **xo-tutorial-step00** subdirectory:
 
 .. code-block:: console
 
-    % cd $HOME/project
-    % git clone https://github.com/IntelLedger/sawtooth-arcade.git
+    % cd /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step00
 
-Then, checkout the xo-tutorial-step00 branch:
-
-.. code-block:: console
-
-    % cd $HOME/project/sawtooth-arcade
-    % git checkout xo-tutorial-step00
-
-There will only be a single file in the repository, README.md.
+There will only be one file in the ``xo-tutorial-step00`` directory: README.md 
 
 .. code-block:: console
 
@@ -128,20 +127,21 @@ You can also have more than one transaction family configured at once:
 In this case, the validator iterates over the list and registers one at a
 time.
 
-At this time, checkout the xo-tutorial-step01 branch:
+At this time, change your working directory to the **xo-tutorial-step01**
+directory, then run the **env.sh** script:
 
 .. code-block:: console
 
-    % cd $HOME/project/sawtooth-arcade
-    % git checkout xo-tutorial-step01
+    % cd /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step01
+    % source env.sh
 
-Three new files are added:
+Three new files have been added for this step:
 
 .. code-block:: console
-
-    sawtooth_arcade/txnvalidator.js
-    sawtooth_arcade/sawtooth_xo/__init__.py
-    sawtooth_arcade/sawtooth_xo/txn_family.py
+    
+    xo-tutorial-step01/sawtooth_xo/txnvalidator.js
+    xo-tutorial-step01/sawtooth_xo/__init__.py
+    xo-tutorial-step01/sawtooth_xo/txn_family.py
 
 Observe that in txnvalidator.js, sawtooth_xo is listed as the only transaction
 family.
@@ -165,13 +165,14 @@ as short and simple as possible: 'sawtooth_xo'.
 In sawtooth_xo/txn_family.py, we now have a register function which logs an
 error - it doesn't register anything quite yet.
 
-Inside the vagrant environment (login with "vagrant ssh"), start a txnvalidator
-as follows, and after a few seconds, kill it by pressing CTRL-C:
+Inside the vagrant environment, in the same terminal window you used to run the
+special script *env.sh* above, start a txnvalidator as follows, and after a few
+seconds, kill it by pressing CTRL-C:
 
 .. code-block:: console
 
-    $ cd /project/sawtooth-validator
-    $ ./bin/txnvalidator -v --config /project/sawtooth-arcade/txnvalidator.js
+    $ cd /project/sawtooth-core
+    $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
     ...
     [02:51:45 INFO    validator_cli] adding transaction family: sawtooth_xo
     [02:51:45 ERROR   txn_family] sawtooth_xo register_transaction_types not implemented
@@ -187,14 +188,15 @@ of sawtooth_xo.txn_family.register_transaction_types().
 Skeleton Implementation
 =======================
 
-Checkout the xo-tutorial-step02 branch:
+Now, change your working directory to the **xo-tutorial-step02** subdirectory,
+then run the **env.sh** script:
 
 .. code-block:: console
 
-    % cd $HOME/project/sawtooth-arcade
-    % git checkout xo-tutorial-step02
+    % cd /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step02
+    % source env.sh
 
-This updates sawtooth/txn_family.py such that it contains all the framework
+This updates sawtooth_xo/txn_family.py such that it contains all the framework
 of the transaction family, but several methods are not yet implemented.
 Let's look at this initial skeleton code.
 
@@ -303,22 +305,13 @@ The skeleton implementation is:
             LOGGER.error("XoTransaction __str__ not implemented")
             return "XoTransaction"
 
-        def is_valid(self, store):
-            try:
-                self.check_valid(store)
-            except XoException as e:
-                LOGGER.debug('invalid transaction (%s): %s', str(e), str(self))
-                return False
-
-            return True
-
         def check_valid(self, store):
-            if not super(XoTransaction, self).is_valid(store):
-                raise XoException("invalid transaction")
+
+            super(XoTransaction, self).check_valid(store)
 
             LOGGER.debug('checking %s', str(self))
 
-            raise XoException('XoTransaction.check_valid is not implemented')
+            raise InvalidTransactionError('XoTransaction.check_valid is not implemented')
 
         def apply(self, store):
             LOGGER.debug('apply %s', str(self))
@@ -331,9 +324,6 @@ The skeleton implementation is:
 
             return result
 
-Of these, only is_valid() is fully implemented.  It simply wraps check_valid().
-txnvalidator will use is_valid(), but we use check_valid() in client code later
-because we want to display an appropriate error message.
 
 CLI Client
 ==========
@@ -345,20 +335,21 @@ of the store (which in this case, will be game state).
 Describing the CLI client in detail is out-of-scope for this tutorial, but
 we will point out a few important pieces.
 
-Checkout the xo-tutorial-step03 branch:
+At this time, change your working directory to the xo-tutorial-step03 directory,
+then run the **env.sh** script:
 
 .. code-block:: console
 
-    % cd $HOME/project/sawtooth-arcade
-    % git checkout xo-tutorial-step03
+    % cd /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step03
+    % source env.sh
 
-Three files were added:
+Three new files have been added:
 
 .. code-block:: none
 
-    sawtooth-arcade/bin/xo
-    sawtooth-arcade/sawtooth-xo/xo_cli.py
-    sawtooth-arcade/sawtooth-xo/xo_client.py
+    xo-tutorial-step03/bin/xo
+    xo-tutorial-step03/sawtooth-xo/xo_cli.py
+    xo-tutorial-step03/sawtooth-xo/xo_client.py
 
 bin/xo is a small script which launches the CLI code contained in xo_cli.py.
 We will not dive deep into the implementation of the CLI itself; it is fairly
@@ -407,16 +398,24 @@ Let's submit a transaction and see the result.
 
 First, startup txnvaldiator inside vagrant (and leave it running):
 
+.. note:: Start the txnvalidator in the same terminal window in which you ran the **env.sh** script, 
+          or run the following commands from a new vagrant window (log in with "vagrant ssh"):
+
+          .. code-block:: console
+
+            $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step03/env.sh
+
 .. code-block:: console
 
-    $ cd /project/sawtooth-validator
-    $ ./bin/txnvalidator -v --config /project/sawtooth-arcade/txnvalidator.js
+    $ cd /project/sawtooth-core
+    $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
 Next, in a separate vagrant window, use the xo CLI to create a key for player1:
 
 .. code-block:: console
 
-    $ cd /project/sawtooth-arcade
+    % source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step03/env.sh
+    $ cd /project/sawtooth-core
     $ ./bin/xo init --username=player1
 
 Then, attempt to create a game:
@@ -445,12 +444,11 @@ Now we are ready to complete the rest of the implementation.
 Serialization and Deserialization
 =================================
 
-Checkout the xo-tutorial-step04 branch:
+At this time, change your working directory to the xo-tutorial-step04 directory:
 
 .. code-block:: console
 
-    % cd $HOME/project/sawtooth-arcade
-    % git checkout xo-tutorial-step04
+    % cd /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step04
 
 As we saw in the client section, we have two possible actions: CREATE and TAKE.
 CREATE requires a name, and TAKE requires a name and a space.  So we have three
@@ -531,48 +529,47 @@ The implementation of check_valid():
 .. code-block:: python
 
     def check_valid(self, store):
-        if not super(XoTransaction, self).is_valid(store):
-            raise XoException("invalid transaction")
+        super(XoTransaction, self).check_valid(store)
 
         LOGGER.debug('checking %s', str(self))
 
         if self._name is None or self._name == '':
-            raise XoException('name not set')
+            raise InvalidTransactionError('name not set')
 
         if self._action is None or self._action == '':
-            raise XoException('action not set')
+            raise InvalidTransactionError('action not set')
 
         if self._action == 'CREATE':
             if self._name in store:
-                raise XoException('game already exists')
+                raise InvalidTransactionError('game already exists')
         elif self._action == 'TAKE':
             if self._space is None:
-                raise XoException('TAKE requires space')
+                raise InvalidTransactionError('TAKE requires space')
 
             if self._space < 1 or self._space > 9:
-                raise XoException('invalid space')
+                raise InvalidTransactionError('invalid space')
 
             if self._name not in store:
-                raise XoException('no such game')
+                raise InvalidTransactionError('no such game')
 
             state = store[self._name]['State']
             if state in ['P1-WIN', 'P2-WIN', 'TIE']:
-                raise XoException('game complete')
+                raise InvalidTransactionError('game complete')
 
             if state == 'P1-NEXT' and 'Player1' in store[self._name]:
                 player1 = store[self._name]['Player1']
                 if player1 != self.OriginatorID:
-                    raise XoException('invalid player 1')
+                    raise InvalidTransactionError('invalid player 1')
 
             if state == 'P2-NEXT' and 'Player2' in store[self._name]:
                 player1 = store[self._name]['Player2']
                 if player1 != self.OriginatorID:
-                    raise XoException('invalid player 2')
+                    raise InvalidTransactionError('invalid player 2')
 
             if store[self._name]['Board'][self._space - 1] != '-':
-                raise XoException('space already taken')
+                raise InvalidTransactionError('space already taken')
         else:
-            raise XoException('invalid action')
+            raise InvalidTransactionError('invalid action')
 
 The implementation of apply():
 
@@ -639,13 +636,16 @@ It is now possible to play the game:
 
 .. code-block:: console
 
-    $ cd /project/sawtooth-validator
-    $ ./bin/txnvalidator -v --config /project/sawtooth-arcade/txnvalidator.js
+    $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step04/env.sh
+    $ cd /project/sawtooth-core
+    $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
-Then, create a game:
+Then, create a game in a separate vagrant window (log in with "vagrant ssh" from the tools directory):
 
 .. code-block:: console
 
+    $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step04/env.sh
+    $ cd /project/sawtooth-core
     $ ./bin/xo create -vvv game001 --wait
     [04:53:07 DEBUG   client] fetch state from http://localhost:8800/XoTransaction/*
     [04:53:07 DEBUG   client] get content from url <http://localhost:8800/store/XoTransaction/\*>
