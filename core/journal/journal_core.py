@@ -432,6 +432,8 @@ class Journal(gossip_core.Gossip):
                 logger.info('txnid %s - catching up',
                             txn.Identifier[:8])
                 del self.RequestedTransactions[txn.Identifier]
+                txn.InBlock = "Uncommitted"
+                self.TransactionStore[txn.Identifier] = txn
 
                 blockids = []
                 for blockid in self.PendingBlockIDs:
@@ -708,127 +710,131 @@ class Journal(gossip_core.Gossip):
 
         assert tblock.Identifier in self.PendingBlockIDs
 
-        # initialize the state of this block
-        self.BlockStore[tblock.Identifier] = tblock
+        with self._txn_lock:
+            # initialize the state of this block
+            self.BlockStore[tblock.Identifier] = tblock
 
-        # if this block is the genesis block then we can assume that
-        # it meets all criteria for dependent blocks
-        if tblock.PreviousBlockID != common.NullIdentifier:
-            # first test... do we have the previous block, if not then this
-            # block remains incomplete awaiting the arrival of the predecessor
-            pblock = self.BlockStore.get(tblock.PreviousBlockID)
-            if not pblock:
-                self.request_missing_block(tblock.PreviousBlockID)
+            # if this block is the genesis block then we can assume that
+            # it meets all criteria for dependent blocks
+            if tblock.PreviousBlockID != common.NullIdentifier:
+                # first test... do we have the previous block, if not then this
+                # block remains incomplete awaiting the arrival of the
+                # predecessor
+                pblock = self.BlockStore.get(tblock.PreviousBlockID)
+                if not pblock:
+                    self.request_missing_block(tblock.PreviousBlockID)
+                    return
+
+                # second test... is the previous block invalid, if so then this
+                # block will never be valid & can be completely removed from
+                # consideration, for now I'm not removing the block from the
+                # block store though we could substitute a check for the
+                # previous block in the invalid block list
+                if pblock.Status == transaction_block.Status.invalid:
+                    self.PendingBlockIDs.discard(tblock.Identifier)
+                    self.InvalidBlockIDs.add(tblock.Identifier)
+                    tblock.Status = transaction_block.Status.invalid
+                    self.BlockStore[tblock.Identifier] = tblock
+                    return
+
+                # third test... is the previous block complete, if not then
+                # this block cannot be complete and there is nothing else to do
+                # until the missing transactions come in, note that we are not
+                # requesting missing transactions at this point
+                if pblock.Status == transaction_block.Status.incomplete:
+                    return
+
+            # fourth test... check for missing transactions in this block, if
+            # any are missing, request them and then save this block for later
+            # processing
+            missing = tblock.missing_transactions(self)
+            if missing:
+                for txnid in missing:
+                    self.request_missing_txn(txnid)
+                    self.JournalStats.MissingTxnFromBlockCount.increment()
                 return
 
-            # second test... is the previous block invalid, if so then this
-            # block will never be valid & can be completely removed from
-            # consideration, for now I'm not removing the block from the
-            # block store though we could substitute a check for the previous
-            # block in the invalid block list
-            if pblock.Status == transaction_block.Status.invalid:
-                self.PendingBlockIDs.discard(tblock.Identifier)
-                self.InvalidBlockIDs.add(tblock.Identifier)
-                tblock.Status = transaction_block.Status.invalid
+            # at this point we know that the block is complete
+            tblock.Status = transaction_block.Status.complete
+            self.BlockStore[tblock.Identifier] = tblock
+
+            # fifth test... run the checks for a valid block, generally
+            # these are specific to the various transaction families or
+            # consensus mechanisms
+            try:
+                if (not tblock.is_valid(self)
+                        or not self.onBlockTest.fire(self, tblock)):
+                    logger.debug('blkid: %s - block test failed',
+                                 tblock.Identifier[:8])
+                    self.PendingBlockIDs.discard(tblock.Identifier)
+                    self.InvalidBlockIDs.add(tblock.Identifier)
+                    tblock.Status = transaction_block.Status.invalid
+                    self.BlockStore[tblock.Identifier] = tblock
+                    return
+            except NotAvailableException:
+                tblock.Status = transaction_block.Status.retry
                 self.BlockStore[tblock.Identifier] = tblock
+                logger.debug('blkid: %s - NotAvailableException - not able to '
+                             'verify, will retry later',
+                             tblock.Identifier[:8])
                 return
 
-            # third test... is the previous block complete, if not then
-            # this block cannot be complete and there is nothing else to do
-            # until the missing transactions come in, note that we are not
-            # requesting missing transactions at this point
-            if pblock.Status == transaction_block.Status.incomplete:
-                return
-
-        # fourth test... check for missing transactions in this block, if
-        # any are missing, request them and then save this block for later
-        # processing
-        missing = tblock.missing_transactions(self)
-        if missing:
-            for txnid in missing:
-                self.request_missing_txn(txnid)
-                self.JournalStats.MissingTxnFromBlockCount.increment()
-            return
-
-        # at this point we know that the block is complete
-        tblock.Status = transaction_block.Status.complete
-        self.BlockStore[tblock.Identifier] = tblock
-
-        # fifth test... run the checks for a valid block, generally these are
-        # specific to the various transaction families or consensus mechanisms
-        try:
-            if (not tblock.is_valid(self)
-                    or not self.onBlockTest.fire(self, tblock)):
-                logger.debug('blkid: %s - block test failed',
+            # sixth test... verify that every transaction in the now complete
+            # block is valid independently and build the new data store
+            newstore = self._testandapplyblock(tblock)
+            if newstore is None:
+                logger.debug('blkid: %s - transaction validity test failed',
                              tblock.Identifier[:8])
                 self.PendingBlockIDs.discard(tblock.Identifier)
                 self.InvalidBlockIDs.add(tblock.Identifier)
                 tblock.Status = transaction_block.Status.invalid
                 self.BlockStore[tblock.Identifier] = tblock
                 return
-        except NotAvailableException:
-            tblock.Status = transaction_block.Status.retry
-            self.BlockStore[tblock.Identifier] = tblock
-            logger.debug('blkid: %s - NotAvailableException - not able to '
-                         'verify, will retry later',
-                         tblock.Identifier[:8])
-            return
 
-        # sixth test... verify that every transaction in the now complete
-        # block is valid independently and build the new data store
-        newstore = self._testandapplyblock(tblock)
-        if newstore is None:
-            logger.debug('blkid: %s - transaction validity test failed',
-                         tblock.Identifier[:8])
+            # at this point we know that the block is valid
+            tblock.Status = transaction_block.Status.valid
+            tblock.CommitTime = time.time() - self.StartTime
+            tblock.update_block_weight(self)
+
+            if hasattr(tblock, 'AggregateLocalMean'):
+                self.JournalStats.AggregateLocalMean.Value = \
+                    tblock.AggregateLocalMean
+
+            # time to apply the transactions in the block to get a new state
+            self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
+            self.BlockStore[tblock.Identifier] = tblock
+
+            # remove the block from the pending block list
             self.PendingBlockIDs.discard(tblock.Identifier)
-            self.InvalidBlockIDs.add(tblock.Identifier)
-            tblock.Status = transaction_block.Status.invalid
-            self.BlockStore[tblock.Identifier] = tblock
-            return
 
-        # at this point we know that the block is valid
-        tblock.Status = transaction_block.Status.valid
-        tblock.CommitTime = time.time() - self.StartTime
-        tblock.update_block_weight(self)
+            # and now check to see if we should start to use this block as the
+            # one on which we build a new chain
 
-        if hasattr(tblock, 'AggregateLocalMean'):
-            self.JournalStats.AggregateLocalMean.Value = \
-                tblock.AggregateLocalMean
+            # handle the easy, common case here where the new block extends the
+            # current chain
+            if tblock.PreviousBlockID == self.MostRecentCommittedBlockID:
+                self.handle_advance(tblock)
+            else:
+                self.handle_fork(tblock)
 
-        # time to apply the transactions in the block to get a new state
-        self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
-        self.BlockStore[tblock.Identifier] = tblock
+            self._cleantransactionblocks()
 
-        # remove the block from the pending block list
-        self.PendingBlockIDs.discard(tblock.Identifier)
+            # check the other orphaned blocks to see if this
+            # block connects one to the chain, if a new block is connected to
+            # the chain then we need to go through the entire process again
+            # with the newly connected block
+            # Also checks if we have pending blocks that need to be retried. If
+            # so adds them to the list to be handled.
+            blockids = set()
+            for blockid in self.PendingBlockIDs:
+                if self.BlockStore[blockid].PreviousBlockID ==\
+                        tblock.Identifier:
+                    blockids.add(blockid)
 
-        # and now check to see if we should start to use this block as the one
-        # on which we build a new chain
+            for blockid in blockids:
+                self._handleblock(self.BlockStore[blockid])
 
-        # handle the easy, common case here where the new block extends the
-        # current chain
-        if tblock.PreviousBlockID == self.MostRecentCommittedBlockID:
-            self.handle_advance(tblock)
-        else:
-            self.handle_fork(tblock)
-
-        self._cleantransactionblocks()
-
-        # check the other orphaned blocks to see if this
-        # block connects one to the chain, if a new block is connected to
-        # the chain then we need to go through the entire process again with
-        # the newly connected block
-        # Also checks if we have pending blocks that need to be retried. If so
-        # adds them to the list to be handled.
-        blockids = set()
-        for blockid in self.PendingBlockIDs:
-            if self.BlockStore[blockid].PreviousBlockID == tblock.Identifier:
-                blockids.add(blockid)
-
-        for blockid in blockids:
-            self._handleblock(self.BlockStore[blockid])
-
-        self.retry_blocks()
+            self.retry_blocks()
 
     def retry_blocks(self):
         # check the orphaned blocks to see if any had a recoverable validation
@@ -1066,7 +1072,12 @@ class Journal(gossip_core.Gossip):
                 logger.info('txnid: %s - will never apply',
                             txnid[:8])
                 if txnid in self.TransactionStore:
-                    del self.TransactionStore[txnid]
+                    txn = self.TransactionStore[txnid]
+                    if txn.InBlock is not None:
+                        logger.error("InBlock Transaction Block %s", txnid)
+                    else:
+                        logger.error("Delete txn %s", txnid)
+                        del self.TransactionStore[txnid]
                 if txnid in self.PendingTransactions:
                     del self.PendingTransactions[txnid]
 
