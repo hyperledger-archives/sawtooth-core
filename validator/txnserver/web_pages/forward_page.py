@@ -79,10 +79,16 @@ class ForwardPage(BasePage):
                             'for txn id: %s type: %s',
                             mytxn.Identifier,
                             mytxn.TransactionTypeName)
+
+                pending_block_txns = None
+                if self.Ledger.PendingTransactionBlock is not None:
+                    pending_block_txns = \
+                        self.Ledger.PendingTransactionBlock.TransactionIDs
+
                 block_id = self.Ledger.MostRecentCommittedBlockID
 
-                real_store_map = self.Ledger.GlobalStoreMap.get_block_store(
-                    block_id)
+                real_store_map = \
+                    self.Ledger.GlobalStoreMap.get_block_store(block_id)
                 temp_store_map = \
                     global_store_manager.BlockStore(real_store_map)
                 if not temp_store_map:
@@ -90,6 +96,14 @@ class ForwardPage(BasePage):
                     raise Error(http.BAD_REQUEST,
                                 'unable to validate enclosed'
                                 ' transaction {0}'.format(data))
+
+                pending_txns = copy.copy(self.Ledger.PendingTransactions)
+                pending_txn_ids = [x for x in pending_txns.iterkeys()]
+
+                # clone a copy of the ledger's message queue so we can
+                # temporarily play forward all locally submitted yet
+                # uncommitted transactions
+                my_queue = copy.deepcopy(self.Ledger.MessageQueue)
 
                 transaction_type = mytxn.TransactionTypeName
                 if transaction_type not in temp_store_map.TransactionStores:
@@ -99,10 +113,17 @@ class ForwardPage(BasePage):
                                 'unable to validate enclosed'
                                 ' transaction {0}'.format(data))
 
-                # clone a copy of the ledger's message queue so we can
-                # temporarily play forward all locally submitted yet
-                # uncommitted transactions
-                my_queue = copy.deepcopy(self.Ledger.MessageQueue)
+                if pending_block_txns is not None:
+                    pending_txn_ids = pending_block_txns + pending_txn_ids
+
+                # apply any local pending transactions
+                for txn_id in pending_txn_ids:
+                    pend_txn = self.Ledger.TransactionStore[txn_id]
+                    my_store = temp_store_map.get_transaction_store(
+                        pend_txn.TransactionTypeName)
+                    if pend_txn and pend_txn.is_valid(my_store):
+                        my_pend_txn = copy.copy(pend_txn)
+                        my_pend_txn.apply(my_store)
 
                 # apply any enqueued messages
                 while len(my_queue) > 0:
@@ -116,15 +137,6 @@ class ForwardPage(BasePage):
                             if qmsg.Transaction.is_valid(my_store):
                                 myqtxn = copy.copy(qmsg.Transaction)
                                 myqtxn.apply(my_store)
-
-                # apply any local pending transactions
-                for txn_id in self.Ledger.PendingTransactions.iterkeys():
-                    pend_txn = self.Ledger.TransactionStore[txn_id]
-                    my_store = temp_store_map.get_transaction_store(
-                        pend_txn.TransactionTypeName)
-                    if pend_txn and pend_txn.is_valid(my_store):
-                        my_pend_txn = copy.copy(pend_txn)
-                        my_pend_txn.apply(my_store)
 
                 # determine validity of the POSTed transaction against our
                 # new temporary state
