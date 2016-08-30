@@ -90,85 +90,93 @@ class PoetJournal(journal_core.Journal):
         """
         logger.debug('attempt to build transaction block extending %s',
                      self.MostRecentCommittedBlockID[:8])
+        with self._txn_lock:
+            # Create a new block from all of our pending transactions
+            nblock = poet_transaction_block.PoetTransactionBlock()
+            nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
+                + 1 if self.MostRecentCommittedBlock else 0
+            nblock.PreviousBlockID = self.MostRecentCommittedBlockID
 
-        # Create a new block from all of our pending transactions
-        nblock = poet_transaction_block.PoetTransactionBlock()
-        nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
-            + 1 if self.MostRecentCommittedBlock else 0
-        nblock.PreviousBlockID = self.MostRecentCommittedBlockID
+            self.onPreBuildBlock.fire(self, nblock)
 
-        self.onPreBuildBlock.fire(self, nblock)
+            # Get the list of prepared transactions, if there aren't enough
+            # then just return
+            txnlist = self._preparetransactionlist(
+                self.MaximumTransactionsPerBlock)
+            transaction_time_waiting = time() - self.TransactionEnqueueTime\
+                if self.TransactionEnqueueTime is not None else 0
+            if len(txnlist) < self.MinimumTransactionsPerBlock and\
+                    not genesis and\
+                    transaction_time_waiting <\
+                    self.MaximumTransactionsWaitTime:
+                logger.debug('Not enough transactions(%d, %d required) to '
+                             'build block, no block constructed. Mandatory'
+                             'block creation in %f seconds',
+                             len(txnlist),
+                             self.MinimumTransactionsPerBlock,
+                             self.MaximumTransactionsWaitTime -
+                             transaction_time_waiting)
+                return None
+            else:
+                # we know that the transaction list is a subset of the
+                # pending transactions, if it is less then all of them
+                # then set the TransactionEnqueueTime we can track these
+                # transactions wait time.
+                remaining_transactions = len(self.PendingTransactions) - \
+                    len(txnlist)
+                self.TransactionEnqueueTime =\
+                    time() if remaining_transactions > 0 else None
 
-        # Get the list of prepared transactions, if there aren't enough
-        # then just return
-        txnlist = self._preparetransactionlist(
-            self.MaximumTransactionsPerBlock)
-        transaction_time_waiting = time() - self.TransactionEnqueueTime\
-            if self.TransactionEnqueueTime is not None else 0
-        if len(txnlist) < self.MinimumTransactionsPerBlock and\
-                not genesis and\
-                transaction_time_waiting < self.MaximumTransactionsWaitTime:
-            logger.debug('Not enough transactions(%d, %d required) to '
-                         'build block, no block constructed. Mandatory block '
-                         'creation in %f seconds',
-                         len(txnlist),
-                         self.MinimumTransactionsPerBlock,
-                         self.MaximumTransactionsWaitTime -
-                         transaction_time_waiting)
-            return None
-        else:
-            # we know that the transaction list is a subset of the
-            # pending transactions, if it is less then all of them
-            # then set the TransactionEnqueueTime we can track these
-            # transactions wait time.
-            remaining_transactions = len(self.PendingTransactions) - \
-                len(txnlist)
-            self.TransactionEnqueueTime =\
-                time() if remaining_transactions > 0 else None
+            logger.info('build transaction block to extend %s with %s '
+                        'transactions',
+                        self.MostRecentCommittedBlockID[:8], len(txnlist))
 
-        logger.info('build transaction block to extend %s with %s '
-                    'transactions',
-                    self.MostRecentCommittedBlockID[:8], len(txnlist))
+            # Create a new block from all of our pending transactions
+            nblock = poet_transaction_block.PoetTransactionBlock()
+            nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
+                + 1 if self.MostRecentCommittedBlock else 0
+            nblock.PreviousBlockID = self.MostRecentCommittedBlockID
+            nblock.TransactionIDs = txnlist
 
-        # Create a new block from all of our pending transactions
-        nblock = poet_transaction_block.PoetTransactionBlock()
-        nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
-            + 1 if self.MostRecentCommittedBlock else 0
-        nblock.PreviousBlockID = self.MostRecentCommittedBlockID
-        nblock.TransactionIDs = txnlist
+            nblock.create_wait_timer(
+                self.LocalNode.signing_address(),
+                self._build_certificate_list(nblock))
 
-        nblock.create_wait_timer(
-            self.LocalNode.signing_address(),
-            self._build_certificate_list(nblock))
+            self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
+            self.JournalStats.PopulationEstimate.Value = \
+                round(nblock.WaitTimer.local_mean /
+                      nblock.WaitTimer.target_wait_time, 2)
 
-        self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
-        self.JournalStats.PopulationEstimate.Value = \
-            round(nblock.WaitTimer.local_mean /
-                  nblock.WaitTimer.target_wait_time, 2)
+            if genesis:
+                nblock.AggregateLocalMean = nblock.WaitTimer.local_mean
 
-        if genesis:
-            nblock.AggregateLocalMean = nblock.WaitTimer.local_mean
+            self.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
 
-        # must put a cap on the transactions in the block
-        if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:
-            nblock.TransactionIDs = \
-                nblock.TransactionIDs[:self.MaximumTransactionsPerBlock]
+            # must put a cap on the transactions in the block
+            if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:
+                nblock.TransactionIDs = \
+                    nblock.TransactionIDs[:self.MaximumTransactionsPerBlock]
 
-        logger.debug('created new pending block with timer <%s> and '
-                     '%d transactions', nblock.WaitTimer,
-                     len(nblock.TransactionIDs))
+            logger.debug('created new pending block with timer <%s> and '
+                         '%d transactions', nblock.WaitTimer,
+                         len(nblock.TransactionIDs))
 
-        self.JournalStats.ExpectedExpirationTime.Value = \
-            round(nblock.WaitTimer.request_time +
-                  nblock.WaitTimer.duration, 2)
+            self.JournalStats.ExpectedExpirationTime.Value = \
+                round(nblock.WaitTimer.request_time +
+                      nblock.WaitTimer.duration, 2)
 
-        self.JournalStats.Duration.Value = \
-            round(nblock.WaitTimer.duration, 2)
+            self.JournalStats.Duration.Value = \
+                round(nblock.WaitTimer.duration, 2)
 
-        # fire the build block event handlers
-        self.onBuildBlock.fire(self, nblock)
+            for txnid in nblock.TransactionIDs:
+                txn = self.TransactionStore[txnid]
+                txn.InBlock = "Uncommitted"
+                self.TransactionStore[txnid] = txn
+            # fire the build block event handlers
+            self.onBuildBlock.fire(self, nblock)
 
-        return nblock
+            return nblock
+
 
     def claim_transaction_block(self, nblock):
         """Claims the block and transmits a message to the network
