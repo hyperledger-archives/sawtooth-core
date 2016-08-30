@@ -892,7 +892,8 @@ class Journal(gossip_core.Gossip):
             self.MostRecentCommittedBlockID = tblock.Identifier
             self.ChainStore['MostRecentBlockID'] = \
                 self.MostRecentCommittedBlockID
-
+            self.JournalStats.PreviousBlockID.Value = \
+                self.MostRecentCommittedBlockID
             # Update stats
             self.JournalStats.CommittedBlockCount.increment()
             self.JournalStats.CommittedTxnCount.increment(len(
@@ -1183,8 +1184,11 @@ class Journal(gossip_core.Gossip):
 
     def _initledgerstats(self):
         self.JournalStats = stats.Stats(self.LocalNode.Name, 'ledger')
+        self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
+        self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
         self.JournalStats.add_metric(stats.Counter('CommittedBlockCount'))
         self.JournalStats.add_metric(stats.Counter('CommittedTxnCount'))
+        self.JournalStats.add_metric(stats.Counter('InvalidTxnCount'))
         self.JournalStats.add_metric(stats.Counter('MissingTxnRequestCount'))
         self.JournalStats.add_metric(stats.Counter('MissingTxnFromBlockCount'))
         self.JournalStats.add_metric(stats.Counter('MissingTxnDepCount'))
