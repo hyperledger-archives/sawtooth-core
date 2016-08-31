@@ -359,7 +359,17 @@ class Journal(gossip_core.Gossip):
 
         logger.debug('initial block list: %s', self.InitialBlockList)
 
+        # Generate a unique list of initial blocks to process, sorted
+        # by BlockNum
+        initial_block_list = []
+        seen = set()
         for block in self.InitialBlockList:
+            if block.Identifier not in seen:
+                initial_block_list.append(block)
+                seen.add(block.Identifier)
+        initial_block_list.sort(key=lambda x: x.BlockNum)
+
+        for block in initial_block_list:
             logger.debug('initial block processing of block: %s', block)
             self.commit_transaction_block(block)
         self.InitialBlockList = None
