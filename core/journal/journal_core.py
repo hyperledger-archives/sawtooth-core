@@ -1069,16 +1069,15 @@ class Journal(gossip_core.Gossip):
             # had all dependencies met we know that they will never be valid
             for txnid in deltxns:
                 self.JournalStats.InvalidTxnCount.increment()
-                logger.info('txnid: %s - will never apply',
-                            txnid[:8])
                 if txnid in self.TransactionStore:
                     txn = self.TransactionStore[txnid]
-                    if txn.InBlock is not None:
-                        logger.error("InBlock Transaction Block %s", txnid)
-                    else:
-                        logger.error("Delete txn %s", txnid)
+                    if txn.InBlock is None:
+                        logger.debug("txnid: %s - deleting from transaction "
+                                     "store", txnid)
                         del self.TransactionStore[txnid]
                 if txnid in self.PendingTransactions:
+                    logger.debug("txnid: %s - deleting from pending "
+                                 "transactions", txnid)
                     del self.PendingTransactions[txnid]
 
             return addtxns
