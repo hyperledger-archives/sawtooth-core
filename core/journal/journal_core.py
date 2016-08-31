@@ -335,6 +335,7 @@ class Journal(gossip_core.Gossip):
         logger.info('process initial transactions and blocks')
 
         self.Initializing = False
+        self.InitialLoad = True
 
         if self.Restore:
             logger.info('restore ledger state from the backup data stores')
@@ -353,7 +354,10 @@ class Journal(gossip_core.Gossip):
             self.add_pending_transaction(txn, build_block=False)
         self.InitialTransactions = None
 
+        logger.debug('initial block list: %s', self.InitialBlockList)
+
         for block in self.InitialBlockList:
+            logger.debug('initial block processing of block: %s', block)
             self.commit_transaction_block(block)
         self.InitialBlockList = None
 
@@ -369,6 +373,8 @@ class Journal(gossip_core.Gossip):
             if self.MostRecentCommittedBlockID == common.NullIdentifier:
                 logger.critical('no ledger for a new network node')
                 return
+
+        self.InitialLoad = False
 
         logger.info('finished processing initial transactions and blocks')
 
@@ -606,7 +612,8 @@ class Journal(gossip_core.Gossip):
         self.PendingTransactionBlock = None
         try:
             self._commitblock(tblock)
-            self.PendingTransactionBlock = self.build_transaction_block()
+            if not self.InitialLoad:
+                self.PendingTransactionBlock = self.build_transaction_block()
         except Exception as e:
             logger.error("blkid: %s - Error advancing block chain: %s",
                          tblock.Identifier[:8], e)
