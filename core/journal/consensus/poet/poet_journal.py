@@ -177,7 +177,6 @@ class PoetJournal(journal_core.Journal):
 
             return nblock
 
-
     def claim_transaction_block(self, nblock):
         """Claims the block and transmits a message to the network
         that the local node won.
