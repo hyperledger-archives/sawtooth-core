@@ -50,6 +50,8 @@ class Journal(gossip_core.Gossip):
             seconds since the epoch.
         Initializing (bool): Whether or not the journal is in an
             initializing state.
+        InitialLoad (bool): Whether or not the journal is in an initial
+            loading state.
         InitialTransactions (list): A list of initial transactions to
             process.
         InitialBlockList (list): A list of initial blocks to process.
@@ -132,6 +134,7 @@ class Journal(gossip_core.Gossip):
 
         self.StartTime = time.time()
         self.Initializing = True
+        self.InitialLoad = False
 
         self.InitialTransactions = []
         self.InitialBlockList = []
