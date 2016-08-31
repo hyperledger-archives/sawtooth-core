@@ -1226,51 +1226,54 @@ class Journal(gossip_core.Gossip):
         return nodeid[:8]
 
 
-class ThreadSafeShelf(Shelf):
+class ThreadSafeShelf(object):
     def __init__(self, d, protocol=None, writeback=False):
         self._lock = RLock()
-        # super is not used because Shelf is an OldStyle class
-        Shelf.__init__(self, d, protocol, writeback)
+        self._data = {}
+        self._shelf = Shelf(d, protocol, writeback)
 
     def __setitem__(self, key, value):
         with self._lock:
-            Shelf.__setitem__(self, key, value)
+            self._data[key] = value
+            self._shelf[key] = value
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         with self._lock:
-            return Shelf.__getitem__(self, item)
+            if key in self._data:
+                return self._data[key]
+            return self._shelf[key]
 
     def __delitem__(self, key):
         with self._lock:
-            Shelf.__delitem__(self, key)
-
-    def __del__(self):
-        with self._lock:
-            Shelf.__del__(self)
+            if key in self._data:
+                del self._data[key]
+            del self._shelf[key]
 
     def __len__(self):
         with self._lock:
-            return Shelf.__len__(self)
+            return len(self._shelf)
 
-    def __contains__(self, item):
+    def __contains__(self, key):
         with self._lock:
-            return Shelf.__contains__(self, item)
+            return key in self._shelf
 
     def get(self, key, default=None):
         with self._lock:
-            return Shelf.get(self, key, default)
+            if key in self._data:
+                return self._data[key]
+            return self._shelf.get(key, default)
 
     def sync(self):
         with self._lock:
-            Shelf.sync(self)
+            self._shelf.sync()
 
     def close(self):
         with self._lock:
-            Shelf.close(self)
+            self._shelf.close()
 
     def keys(self):
         with self._lock:
-            return Shelf.keys(self)
+            return self._shelf.keys()
 
 
 class ShelfFromFilename(ThreadSafeShelf):
