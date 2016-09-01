@@ -141,6 +141,7 @@ class Journal(gossip_core.Gossip):
 
         self.GenesisLedger = kwargs.get('GenesisLedger', False)
         self.Restore = kwargs.get('Restore', False)
+        self.StoreCacheSize = kwargs.get('StoreCacheSize', 1000)
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
@@ -161,10 +162,12 @@ class Journal(gossip_core.Gossip):
         self.TransactionEnqueueTime = None
 
         dbprefix = shelvedir + "/" + str(self.LocalNode)
-        self.TransactionStore = threadsafeshelf_open(dbprefix + "_txn",
-                                                     shelveflag)
-        self.BlockStore = threadsafeshelf_open(dbprefix + "_cb", shelveflag)
-        self.ChainStore = threadsafeshelf_open(dbprefix + "_cs", shelveflag)
+        self.TransactionStore = ThreadSafeShelf(
+            dbprefix + "_txn", shelveflag, self.StoreCacheSize)
+        self.BlockStore = ThreadSafeShelf(
+            dbprefix + "_cb", shelveflag, self.StoreCacheSize)
+        self.ChainStore = ThreadSafeShelf(
+            dbprefix + "_cs", shelveflag, self.StoreCacheSize)
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
@@ -1257,15 +1260,19 @@ class Journal(gossip_core.Gossip):
 
 
 class ThreadSafeShelf(object):
-    def __init__(self, d, protocol=None, writeback=False):
+    def __init__(self, filename, flag, max_cache_size):
         self._lock = RLock()
-        self._data = {}
-        self._shelf = Shelf(d, protocol, writeback)
+        self._data = OrderedDict()
+        self._shelf = Shelf(anydbm.open(filename, flag))
+        self._max_cache_size = max_cache_size
 
     def __setitem__(self, key, value):
         with self._lock:
             self._data[key] = value
             self._shelf[key] = value
+
+            if len(self._data) > self._max_cache_size:
+                self._data.popitem(last=False)
 
     def __getitem__(self, key):
         with self._lock:
@@ -1304,15 +1311,3 @@ class ThreadSafeShelf(object):
     def keys(self):
         with self._lock:
             return self._shelf.keys()
-
-
-class ShelfFromFilename(ThreadSafeShelf):
-
-    def __init__(self, filename, flag='c', protocol=None, writeback=False):
-        ThreadSafeShelf.__init__(self,
-                                 anydbm.open(filename, flag),
-                                 protocol, writeback)
-
-
-def threadsafeshelf_open(filename, flag='c', protocol=None, writeback=False):
-    return ShelfFromFilename(filename, flag, protocol, writeback)
