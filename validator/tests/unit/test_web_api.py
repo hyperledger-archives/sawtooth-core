@@ -101,9 +101,9 @@ class TestWebApi(unittest.TestCase):
         root = BasePage(validator)
         request = self._create_get_request("/stat", {})
 
-        error = root.error_response(request, http.BAD_REQUEST,
-                                    'error processing http request {0}',
-                                    request.path)
+        error = root._error_response(request, http.BAD_REQUEST,
+                                     'error processing http request {0}',
+                                     request.path)
         self.assertEquals(error, "error processing http request /stat\n")
 
     def test_web_api_forward(self):

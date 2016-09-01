@@ -22,7 +22,6 @@ from twisted.internet import reactor
 from twisted.internet import threads
 from twisted.web import http
 from twisted.web import server
-from twisted.web.error import Error
 from twisted.web.resource import Resource
 
 from journal import global_store_manager
@@ -31,7 +30,6 @@ from gossip.common import json2dict
 from gossip.common import dict2json
 from gossip.common import dict2cbor
 from gossip.common import pretty_print_dict
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,19 +51,37 @@ class BasePage(Resource):
         else:
             self.page_name = page_name
 
-    def error_response(self, request, response, *msgargs):
+    def log(self, status, *msgargs):
+        msg = msgargs[0].format(*msgargs[1:])
+        if status >= 500:
+            LOGGER.error(msg)
+        elif status >= 400:
+            LOGGER.warn(msg)
+        elif status >= 300:
+            LOGGER.debug(msg)
+        return msg
+
+    def _error_response(self, request, status, *msgargs):
         """
         Generate a common error response for broken requests
         """
-        request.setResponseCode(response)
-
-        msg = msgargs[0].format(*msgargs[1:])
-        if response > 400:
-            LOGGER.warn(msg)
-        elif response > 300:
-            LOGGER.debug(msg)
+        request.setResponseCode(status)
+        msg = self.log(status, *msgargs)
 
         return "" if request.method == 'HEAD' else (msg + '\n')
+
+    def _encode_error_response(self, request, status, err):
+        """
+        Generate rest style error response message
+        """
+        request.setResponseCode(status)
+        return {
+            'status': status,
+            'errorType': err.__class__.__name__
+            if isinstance(err, Exception)
+            else Exception.__class__.__name__,
+            'error': str(err)
+        }
 
     def error_callback(self, failure, request):
         LOGGER.error("Error processing: %s %s %s",
@@ -76,7 +92,7 @@ class BasePage(Resource):
         return None
 
     def render_get(self, request, components, msg):
-        self.error_response(request, http.NOT_FOUND, "")
+        return self._encode_error_response(request, http.NOT_FOUND, "")
 
     def do_get(self, request):
         """
@@ -94,7 +110,7 @@ class BasePage(Resource):
             components.pop(0)
 
         if components[0] != self.page_name:
-            return self.error_response(
+            return self._error_response(
                 request,
                 http.NOT_FOUND,
                 "Invalid page name: {}", request.path)
@@ -108,64 +124,56 @@ class BasePage(Resource):
                 return ''
 
             cbor = (request.getHeader('Accept') == 'application/cbor')
-
             if cbor:
                 request.responseHeaders.addRawHeader(b"content-type",
                                                      b"application/cbor")
-                return dict2cbor(response)
-
-            request.responseHeaders.addRawHeader(b"content-type",
-                                                 b"application/json")
-            pretty = False
-            if 'p' in request.args:
-                pretty = request.args['p'] == ['1']
-
-            if pretty:
-                result = pretty_print_dict(response) + '\n'
+                result = dict2cbor(response)
             else:
-                result = dict2json(response)
+                request.responseHeaders.addRawHeader(b"content-type",
+                                                     b"application/json")
+                pretty = False
+                if 'p' in request.args:
+                    pretty = request.args['p'] == ['1']
+
+                if pretty:
+                    result = pretty_print_dict(response) + '\n'
+                else:
+                    result = dict2json(response)
 
             return result
-
-        except Error as e:
-            return self.error_response(
-                request, int(e.status),
-                'exception while processing http request {0}; {1}',
-                request.path, str(e))
-
-        except:
+        except Exception as e:
             LOGGER.warn('error processing http request %s; %s', request.path,
                         traceback.format_exc(20))
-            return self.error_response(request, http.BAD_REQUEST,
-                                       'error processing http request {0}',
-                                       request.path)
+            return self._encode_error_response(
+                request,
+                http.INTERNAL_SERVER_ERROR,
+                e)
 
     def render_post(self, request, components, msg):
-        self.error_response(request, http.NOT_FOUND, "")
+        self._error_response(request, http.NOT_FOUND, "")
 
     def _get_message(self, request):
         encoding = request.getHeader('Content-Type')
         data = request.content.getvalue()
-        try:
-            if encoding == 'application/json':
-                minfo = json2dict(data)
+        if encoding == 'application/json':
+            minfo = json2dict(data)
 
-            elif encoding == 'application/cbor':
-                minfo = cbor2dict(data)
-            else:
-                raise Error("", 'unknown message'
-                            ' encoding: {0}'.format(encoding))
-            typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
-            if typename not in self.Ledger.MessageHandlerMap:
-                raise Error("",
-                            'received request for unknown message'
-                            ' type, {0}'.format(typename))
-            return self.Ledger.MessageHandlerMap[typename][0](minfo)
-        except Error as e:
-            LOGGER.info('exception while decoding http request %s; %s',
-                        request.path, traceback.format_exc(20))
-            raise Error(http.BAD_REQUEST,
-                        'unable to decode incoming request: {0}'.format(e))
+        elif encoding == 'application/cbor':
+            minfo = cbor2dict(data)
+        else:
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                'unknown message'
+                ' encoding: {0}'.format(encoding))
+        typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
+        if typename not in self.Ledger.MessageHandlerMap:
+            return self._encode_error_response(
+                request,
+                http.NOT_FOUND,
+                'received request for unknown message'
+                ' type, {0}'.format(typename))
+        return self.Ledger.MessageHandlerMap[typename][0](minfo)
 
     def _get_store_map(self):
         block_id = self.Ledger.MostRecentCommittedBlockID
@@ -175,8 +183,7 @@ class BasePage(Resource):
             global_store_manager.BlockStore(real_store_map)
         if not temp_store_map:
             LOGGER.info('no store map for block %s', block_id)
-            raise Error(http.BAD_REQUEST, 'no store map for block {0} ',
-                        block_id)
+            raise KeyError('no store map for block {0} ', block_id)
         return temp_store_map
 
     def do_post(self, request):
@@ -197,24 +204,20 @@ class BasePage(Resource):
             encoding = request.getHeader('Content-Type')
             request.responseHeaders.addRawHeader("content-type", encoding)
             if encoding == 'application/json':
-                result = dict2json(response.dump())
+                result = dict2json(response)
             else:
-                result = dict2cbor(response.dump())
+                result = dict2cbor(response)
 
             return result
-
-        except Error as e:
-            return self.error_response(
-                request, int(e.status),
-                'exception while processing request {0}; {1}',
-                request.path, str(e))
-
-        except:
-            LOGGER.info('exception while processing http request %s; %s',
-                        request.path, traceback.format_exc(20))
-            return self.error_response(request, http.BAD_REQUEST,
-                                       'error processing http request {0}',
-                                       request.path)
+        except Exception as e:
+            LOGGER.warn('error processing http request %s; %s; %s',
+                        request.path,
+                        str(e),
+                        traceback.format_exc(20))
+            return self._encode_error_response(
+                request,
+                http.INTERNAL_SERVER_ERROR,
+                e)
 
     def final(self, message, request):
         request.write(message)
@@ -226,7 +229,7 @@ class BasePage(Resource):
     def render_GET(self, request):
         # pylint: disable=invalid-name
         if len(self.thread_pool.working) > self.max_workers:
-            return self.error_response(
+            return self._error_response(
                 request, http.SERVICE_UNAVAILABLE,
                 'Service is unavailable at this time, Please try again later')
         else:
@@ -239,7 +242,7 @@ class BasePage(Resource):
     def render_POST(self, request):
         # pylint: disable=invalid-name
         if len(self.thread_pool.working) > self.max_workers:
-            return self.error_response(
+            return self._error_response(
                 request, http.SERVICE_UNAVAILABLE,
                 'Service is unavailable at this time, Please try again later')
         else:
