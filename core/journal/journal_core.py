@@ -697,8 +697,8 @@ class Journal(gossip_core.Gossip):
             self._commitblockchain(tblock.Identifier, fork_id)
             self.PendingTransactionBlock = self.build_transaction_block()
         except Exception as e:
-            logger.error("blkid: %s - (fork) Error resolving fork: %s",
-                         tblock.Identifier[:8], e)
+            logger.exception("blkid: %s - (fork) error resolving fork",
+                             tblock.Identifier[:8])
             self.PendingTransactionBlock = pending
             raise
     #
