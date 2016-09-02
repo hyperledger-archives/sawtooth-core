@@ -219,14 +219,20 @@ class PoetJournal(journal_core.Journal):
         return list(certs)
 
     def _check_certificate(self, now):
-        if self.PendingTransactionBlock:
-            if self.PendingTransactionBlock.wait_timer_is_expired(now):
-                self.claim_transaction_block(self.PendingTransactionBlock)
-        else:
-            # No transaction block - check if we must make one due to time
-            # waited
-            transaction_time_waiting = time() - self.TransactionEnqueueTime \
-                if self.TransactionEnqueueTime is not None else 0
-            if transaction_time_waiting > self.MaximumTransactionsWaitTime:
-                logger.debug("Transaction wait timeout calling build block")
-                self.PendingTransactionBlock = self.build_transaction_block()
+        with self._txn_lock:
+            if self.PendingTransactionBlock:
+                if self.PendingTransactionBlock.wait_timer_is_expired(now):
+                    self.claim_transaction_block(self.PendingTransactionBlock)
+            else:
+                # No transaction block - check if we must make one due to time
+                # waited
+                if self.TransactionEnqueueTime is not None:
+                    transaction_time_waiting = \
+                        time() - self.TransactionEnqueueTime
+                else:
+                    transaction_time_waiting = 0
+                if transaction_time_waiting > self.MaximumTransactionsWaitTime:
+                    logger.debug("Transaction wait timeout "
+                                 "calling build block")
+                    self.PendingTransactionBlock = \
+                        self.build_transaction_block()
