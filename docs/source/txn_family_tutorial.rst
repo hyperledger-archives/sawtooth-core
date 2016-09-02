@@ -32,7 +32,7 @@ directory of the documentation to allow you to step through the tutorial without
 manually entering any code.  At each step, you can review the code for that step
 before proceeding to the next step.  The code examples are located in subfolders
 named using the convention *xo-tutorial-stepNN*, where NN is a two-digit number.
-You simply run a special script named *env.sh* before you run the code for each
+You simply source a special script named *env.sh* before you run the code for each
 step. The script **env.sh** sets the PYTHONPATH environment variable to the
 correct value, so that the python  interpreter knows which code examples to run,
 when you  start the validator.
@@ -128,7 +128,7 @@ In this case, the validator iterates over the list and registers one at a
 time.
 
 At this time, change your working directory to the **xo-tutorial-step01**
-directory, then run the **env.sh** script:
+directory, then source the **env.sh** script:
 
 .. code-block:: console
 
@@ -165,7 +165,7 @@ as short and simple as possible: 'sawtooth_xo'.
 In sawtooth_xo/txn_family.py, we now have a register function which logs an
 error - it doesn't register anything quite yet.
 
-Inside the vagrant environment, in the same terminal window you used to run the
+Inside the vagrant environment, in the same terminal window you used to source the
 special script *env.sh* above, start a txnvalidator as follows, and after a few
 seconds, kill it by pressing CTRL-C:
 
@@ -189,7 +189,7 @@ Skeleton Implementation
 =======================
 
 Now, change your working directory to the **xo-tutorial-step02** subdirectory,
-then run the **env.sh** script:
+then source the **env.sh** script:
 
 .. code-block:: console
 
@@ -335,8 +335,8 @@ of the store (which in this case, will be game state).
 Describing the CLI client in detail is out-of-scope for this tutorial, but
 we will point out a few important pieces.
 
-At this time, change your working directory to the xo-tutorial-step03 directory,
-then run the **env.sh** script:
+At this time, change your working directory to the **xo-tutorial-step03** directory,
+then source the **env.sh** script:
 
 .. code-block:: console
 
@@ -398,8 +398,9 @@ Let's submit a transaction and see the result.
 
 First, startup txnvaldiator inside vagrant (and leave it running):
 
-.. note:: Start the txnvalidator in the same terminal window in which you ran the **env.sh** script, 
-          or run the following commands from a new vagrant window (log in with "vagrant ssh"):
+.. note:: Start the txnvalidator in the same terminal window in which you 
+          sourced the **env.sh** script, or run the following command from a 
+          new vagrant window (log in with "vagrant ssh"):
 
           .. code-block:: console
 
@@ -444,7 +445,7 @@ Now we are ready to complete the rest of the implementation.
 Serialization and Deserialization
 =================================
 
-At this time, change your working directory to the xo-tutorial-step04 directory:
+At this time, change your working directory to the **xo-tutorial-step04** directory:
 
 .. code-block:: console
 
