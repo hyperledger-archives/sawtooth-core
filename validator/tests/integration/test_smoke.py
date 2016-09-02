@@ -143,10 +143,6 @@ class IntKeyLoadTest(object):
                     else:
                         txn_dep = None
                     txn_id = c.inc(k, 2, txn_dep)
-                    if txn_id is None:
-                        raise Exception(
-                            "Failed to inc key:{} value:{} by 2".format(
-                                k, self.localState[k]))
                     self.transactions.append(txn_id)
                     self.last_key_txn[k] = txn_id
                     cnt += 1
@@ -158,10 +154,6 @@ class IntKeyLoadTest(object):
                     self.localState[k] -= 1
                     txn_dep = self.last_key_txn[k]
                     txn_id = c.dec(k, 1, txn_dep)
-                    if txn_id is None:
-                        raise Exception(
-                            "Failed to dec key:{} value:{} by 1".format(
-                                k, self.localState[k]))
                     self.transactions.append(txn_id)
                     self.last_key_txn[k] = txn_id
                     cnt += 1
