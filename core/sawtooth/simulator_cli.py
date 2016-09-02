@@ -154,6 +154,9 @@ def parse_args(args):
                              'log_max_size is not set to a non-zero value '
                              'in the configuration file, this option is '
                              'ignored.')
+    parser.add_argument('-u', '--update-frequency',
+                        help='time in seconds between display of transaction '
+                             'rate updates.')
     parser.add_argument('-v', '--verbose',
                         action='count',
                         help='Enable more verbose output (can be specified '
@@ -204,7 +207,8 @@ def load_configuration(opts):
         os.path.join(os.path.expanduser('~'), '.sawtooth/logs'))
     config.set('Simulator', 'log_max_size', '0')
     config.set('Simulator', 'log_backup_count', '10')
-    config.set('Simulator', 'verbose', '1')
+    config.set('Simulator', 'verbose', '0')
+    config.set('Simulator', 'update_frequency', '60')
 
     # If there was a configuration file command-line option, then we
     # will read it to override any of the defaults
@@ -275,6 +279,8 @@ def load_configuration(opts):
         config.set('Simulator', 'log_max_size', str(opts.log_max_size))
     if opts.log_backup_count is not None:
         config.set('Simulator', 'log_backup_count', str(opts.log_backup_count))
+    if opts.update_frequency is not None:
+        config.set('Simulator', 'update_frequency', str(opts.update_frequency))
 
     return config
 
@@ -288,7 +294,7 @@ def main(name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
     LOGGER.info('Simulator configuration:')
     for section in config.sections():
         for name, value in config.items(section):
-            LOGGER.info('%s: %s = %s', section, name, value)
+            LOGGER.warn('%s: %s = %s', section, name, value)
 
     simulator = SawtoothWorkloadSimulator(config)
 
