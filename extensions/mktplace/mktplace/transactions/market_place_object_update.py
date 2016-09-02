@@ -157,8 +157,6 @@ class Register(object):
     def apply(self, store):
         name = self._get_absolute_name(store)
         store.bind(name, self.ObjectID)
-        logger.info('apply Market Register store._namemap: %s', store._namemap)
-        pass
 
     def dump(self):
         result = {'UpdateType': self.UpdateType}
