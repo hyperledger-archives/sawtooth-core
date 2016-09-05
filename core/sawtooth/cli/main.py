@@ -35,16 +35,12 @@ from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
 
+from sawtooth.cli.exceptions import CliException
 from sawtooth.cli.keygen import add_keygen_parser
 from sawtooth.cli.keygen import do_keygen
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class CliException(Exception):
-    def __init__(self, msg):
-        super(CliException, self).__init__(msg)
 
 
 class FakeJournal(object):
