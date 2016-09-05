@@ -24,20 +24,20 @@ import sys
 
 from colorlog import ColoredFormatter
 
-from gossip.common import json2dict, pretty_print_dict
+from gossip.common import json2dict
 
-from sawtooth.client import LedgerWebClient
 from sawtooth.client import SawtoothClient
 
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
-from sawtooth.exceptions import MessageException
 
 from sawtooth.cli.block import add_block_parser
 from sawtooth.cli.block import do_block
 from sawtooth.cli.exceptions import CliException
 from sawtooth.cli.keygen import add_keygen_parser
 from sawtooth.cli.keygen import do_keygen
+from sawtooth.cli.store import add_store_parser
+from sawtooth.cli.store import do_store
 from sawtooth.cli.transaction import add_transaction_parser
 from sawtooth.cli.transaction import do_transaction
 
@@ -142,40 +142,6 @@ examples:
         help='wait for this commit before exiting')
 
 
-def add_store_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('store')
-
-    grand_parsers = parser.add_subparsers(title='grandchildcommands',
-                                          dest='subcommand')
-    list_parser = grand_parsers.add_parser('list')
-    list_parser.add_argument(
-        '--url',
-        type=str,
-        help='the URL to the validator')
-
-    show_parser = grand_parsers.add_parser('show')
-    show_parser.add_argument(
-        'transactionTypeName',
-        type=str,
-        help='the name of the transaction type')
-    show_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='the key within the store')
-    show_parser.add_argument(
-        '--blockID',
-        type=str,
-        help='the id of the block')
-    show_parser.add_argument(
-        '--incremental',
-        action='store_true',
-        help='incremental')
-    show_parser.add_argument(
-        '--url',
-        type=str,
-        help='the URL to the validator')
-
-
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -266,52 +232,6 @@ def do_submit(args):
     if args.wait:
         if not client.wait_for_commit():
             raise CliException("transaction was not successfully committed")
-
-
-def _get_webclient(args):
-    if args.url is not None:
-        url = args.url
-    else:
-        url = 'http://localhost:8800'
-
-    return LedgerWebClient(url)
-
-
-def do_store(args):
-    subcommands = ['list', 'show']
-
-    if args.subcommand not in subcommands:
-        print 'Unknown sub-command, expecting one of {0}'.format(
-            subcommands)
-        return
-
-    web_client = _get_webclient(args)
-
-    try:
-        if args.subcommand == 'list':
-            transaction_type_name = web_client.get_store_by_name()
-            print pretty_print_dict(transaction_type_name)
-            return
-        elif args.subcommand == 'show':
-            if args.blockID is not None:
-                block_id = args.blockID
-            else:
-                block_id = ''
-
-            if args.key is not None:
-                key = args.key
-            else:
-                key = ''
-
-            store_info = web_client.get_store_by_name(args.transactionTypeName,
-                                                      key,
-                                                      block_id,
-                                                      args.incremental)
-            print pretty_print_dict(store_info)
-            return
-
-    except MessageException as e:
-        raise CliException(e)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
