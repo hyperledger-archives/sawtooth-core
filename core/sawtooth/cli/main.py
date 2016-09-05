@@ -38,9 +38,6 @@ from sawtooth.cli.transaction import add_transaction_parser
 from sawtooth.cli.transaction import do_transaction
 
 
-LOGGER = logging.getLogger(__name__)
-
-
 def create_console_handler(verbose_level):
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
