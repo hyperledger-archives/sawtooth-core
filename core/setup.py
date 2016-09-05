@@ -117,7 +117,7 @@ setup(name='sawtooth-core',
                   'gossip.ECDSA.ECDSARecoverModule'],
       entry_points={
           'console_scripts': [
-              'sawtooth = sawtooth.cli:main_wrapper'
+              'sawtooth = sawtooth.cli.main:main_wrapper'
           ]
       })
 
