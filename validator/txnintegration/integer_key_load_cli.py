@@ -21,6 +21,7 @@ from txnintegration.utils import generate_private_key
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.integer_key_client import IntegerKeyClient
+from txnintegration.integer_key_communication import MessageException
 from txnintegration.integer_key_state import IntegerKeyState
 
 import argparse
@@ -28,12 +29,13 @@ import sys
 
 
 class IntKeyLoadTest(object):
-    def __init__(self):
+    def __init__(self, timeout=None):
         print "start inkeyloadtest"
         self.localState = {}
         self.transactions = []
         self.clients = []
         self.state = None
+        self.Timeout = 240 if timeout is None else timeout
 
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
@@ -58,9 +60,10 @@ class IntKeyLoadTest(object):
         return len(self.transactions)
 
     def _wait_for_transaction_commits(self):
-        to = TimeOut(240)
+        to = TimeOut(self.Timeout)
         txnCnt = len(self.transactions)
-        with Progress("Waiting for transactions to commit") as p:
+        with Progress("Waiting for %s transactions to commit" % (txnCnt)) \
+                as p:
             while not to() and txnCnt > 0:
                 p.step()
                 time.sleep(1)
@@ -96,21 +99,29 @@ class IntKeyLoadTest(object):
     def setup(self, urls, numkeys):
         self.localState = {}
         self.transactions = []
+        self.last_key_txn = {}
         self.clients = []
         self.state = IntegerKeyState(urls[0])
 
         with Progress("Creating clients") as p:
             for u in urls:
-                key = generate_private_key()
-                self.clients.append(IntegerKeyClient(u, keystring=key))
+                try:
+                    key = generate_private_key()
+                    self.clients.append(IntegerKeyClient(u, keystring=key))
+                    p.step()
+                except MessageException:
+                    logger.warn("Unable to connect to Url: %s ", u)
+            if len(self.clients) == 0:
+                return
+
+        # add check for if a state already exists
+        with Progress("Checking for pre-existing state") as p:
+            self.state.fetch()
+            for k, v in self.state.State.iteritems():
+                self.localState[k] = v
                 p.step()
 
-        print "Checking for pre-existing state"
-        self.state.fetch()
         keys = self.state.State.keys()
-
-        for k, v in self.state.State.iteritems():
-            self.localState[k] = v
 
         with Progress("Populating initial key values") as p:
             txncount = 0
@@ -126,54 +137,78 @@ class IntKeyLoadTest(object):
                         raise Exception("Failed to set {} to {}".format(n, v))
                     self.transactions.append(txnid)
                     txncount += 1
+                    self.last_key_txn[n] = txnid
+                    p.step()
+            print
             self.txnrate(starttime, txncount, "submitted")
         self._wait_for_transaction_commits()
         self.txnrate(starttime, txncount, "committed")
 
     def run(self, numkeys, rounds=1, txintv=0):
+        if len(self.clients) == 0:
+            return
+
         self.state.fetch()
+        keys = self.state.State.keys()
 
         print "Running {0} rounds for {1} keys " \
               "with {2} second inter-transaction time" \
             .format(rounds, numkeys, txintv)
 
         for r in range(0, rounds):
-            for c in self.clients:
-                c.fetch_state()
-            print "Round {}".format(r)
-            # for k in keys:
+            with Progress("Updating clients state") as p:
+                for c in self.clients:
+                    c.fetch_state()
+                    p.step()
+            cnt = 0
             starttime = time.time()
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = self._get_client()
-                self.localState[k] += 2
-                txnid = c.inc(k, 2)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to inc key:{} value:{} by 2".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                time.sleep(txintv)
-            # for k in keys:
-            for k in range(1, numkeys + 1):
-                k = str(k)
-                c = self._get_client()
-                self.localState[k] -= 1
-                txnid = c.dec(k, 1)
-                if txnid is None:
-                    raise Exception(
-                        "Failed to dec key:{} value:{} by 1".format(
-                            k, self.localState[k]))
-                self.transactions.append(txnid)
-                time.sleep(txintv)
+            with Progress("Round {}".format(r)) as p:
+                for k in keys:
+                    k = str(k)
+                    c = self._get_client()
+                    self.localState[k] += 2
+                    if k in self.last_key_txn:
+                        txn_dep = self.last_key_txn[k]
+                    else:
+                        txn_dep = None
+                    txn_id = c.inc(k, 2, txn_dep)
+                    if txn_id is None:
+                        raise Exception(
+                            "Failed to inc key:{} value:{} by 2".format(
+                                k, self.localState[k]))
+                    self.transactions.append(txn_id)
+                    self.last_key_txn[k] = txn_id
+                    cnt += 1
+                    if cnt % 10 == 0:
+                        p.step()
+                    time.sleep(txintv)
+                for k in keys:
+                    k = str(k)
+                    c = self._get_client()
+                    self.localState[k] -= 1
+                    txn_dep = self.last_key_txn[k]
+                    txn_id = c.dec(k, 1, txn_dep)
+                    if txn_id is None:
+                        raise exception(
+                            "failed to dec key:{} value:{} by 1".format(
+                                k, self.localstate[k]))
+                    self.transactions.append(txn_id)
+                    self.last_key_txn[k] = txn_id
+                    cnt += 1
+                    if cnt % 10 == 0:
+                        p.step()
+                    time.sleep(txintv)
+
             txn_count = len(self.transactions)
             self.txnrate(starttime, txn_count, "submitted")
             self._wait_for_transaction_commits()
             self.txnrate(starttime, txn_count, "commited")
 
     def validate(self):
+        if len(self.clients) == 0:
+            logger.warn("Unable to connect to Validators, No Clients created")
+            return
         self.state.fetch()
-
         print "Validating IntegerKey State"
         for k, v in self.state.State.iteritems():
             if self.localState[k] != v:
