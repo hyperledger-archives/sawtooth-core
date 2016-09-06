@@ -21,14 +21,12 @@ import time
 import logging
 from twisted.web import http
 
+from txnintegration.integer_key_load_cli import IntKeyLoadTest
 from txnintegration.utils import is_convergent
 from txnintegration.utils import StaticNetworkConfig
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
-from txnintegration.integer_key_client import IntegerKeyClient
-from txnintegration.integer_key_state import IntegerKeyState
-from txnintegration.integer_key_communication import MessageException
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
 
@@ -36,151 +34,6 @@ logger = logging.getLogger(__name__)
 
 ENABLE_INTEGRATION_TESTS = True \
     if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1" else False
-
-
-class IntKeyLoadTest(object):
-    def __init__(self, timeout=None):
-        self.Timeout = 240 if timeout is None else timeout
-
-    def _get_client(self):
-        return self.clients[random.randint(0, len(self.clients) - 1)]
-
-    def _update_uncommitted_transactions(self):
-        remaining = []
-
-        # For each client, we want to verify that its corresponding validator
-        # has the transaction.  For a transaction to be considered committed,
-        # all validators must have it in its blockchain as a committed
-        # transaction.
-        for c in self.clients:
-            for t in self.transactions:
-                status = c.get_transaction_status(t)
-                # If the transaction has not been committed and we don't
-                # already have it in our list of uncommitted transactions
-                # then add it.
-                if (status != http.OK) and (t not in remaining):
-                    remaining.append(t)
-
-        self.transactions = remaining
-        return len(self.transactions)
-
-    def _wait_for_transaction_commits(self):
-        to = TimeOut(self.Timeout)
-        txn_cnt = len(self.transactions)
-        with Progress("Waiting for %s transactions to commit" % (txn_cnt)) \
-                as p:
-            while not to() and txn_cnt > 0:
-                p.step()
-                time.sleep(1)
-                txn_cnt = self._update_uncommitted_transactions()
-
-        if txn_cnt != 0:
-            if len(self.transactions) != 0:
-                print "Uncommitted transactions: ", self.transactions
-            raise Exception("{} transactions failed to commit in {}s".format(
-                txn_cnt, to.WaitTime))
-
-    def setup(self, urls, num_keys):
-        self.localState = {}
-        self.transactions = []
-        self.last_key_txn = {}
-        self.clients = []
-        self.state = IntegerKeyState(urls[0])
-
-        with Progress("Creating clients") as p:
-            for u in urls:
-                try:
-                    key = generate_private_key()
-                    self.clients.append(IntegerKeyClient(u, keystring=key))
-                    p.step()
-                except MessageException:
-                    logger.warn("Unable to connect to Url: %s ", u)
-            if len(self.clients) == 0:
-                return
-
-        # add check for if a state already exists
-        with Progress("Checking for pre-existing state") as p:
-            self.state.fetch()
-            for k, v in self.state.State.iteritems():
-                self.localState[k] = v
-                p.step()
-
-        with Progress("Creating initial key values") as p:
-            for n in range(1, num_keys + 1):
-                n = str(n)
-                c = self._get_client()
-                v = random.randint(5, 1000)
-                self.localState[n] = v
-                txn_id = c.set(n, v, txndep=None)
-                if txn_id is None:
-                    raise Exception("Failed to set {} to {}".format(n, v))
-                self.transactions.append(txn_id)
-                self.last_key_txn[n] = txn_id
-                p.step()
-
-        self._wait_for_transaction_commits()
-
-    def run(self, rounds=1):
-        if len(self.clients) == 0:
-            return
-
-        self.state.fetch()
-        keys = self.state.State.keys()
-
-        for r in range(1, rounds + 1):
-            with Progress("Updating clients state") as p:
-                for c in self.clients:
-                    c.fetch_state()
-                    p.step()
-
-            cnt = 0
-            with Progress("Round {}".format(r)) as p:
-                for k in keys:
-                    c = self._get_client()
-                    self.localState[k] += 2
-                    if k in self.last_key_txn:
-                        txn_dep = self.last_key_txn[k]
-                    else:
-                        txn_dep = None
-                    txn_id = c.inc(k, 2, txn_dep)
-                    if txn_id is None:
-                        raise Exception(
-                            "Failed to inc key:{} value:{} by 2".format(
-                                k, self.localState[k]))
-                    self.transactions.append(txn_id)
-                    self.last_key_txn[k] = txn_id
-                    cnt += 1
-                    if cnt % 10 == 0:
-                        p.step()
-
-                for k in keys:
-                    c = self._get_client()
-                    self.localState[k] -= 1
-                    txn_dep = self.last_key_txn[k]
-                    txn_id = c.dec(k, 1, txn_dep)
-                    if txn_id is None:
-                        raise Exception(
-                            "Failed to dec key:{} value:{} by 1".format(
-                                k, self.localState[k]))
-                    self.transactions.append(txn_id)
-                    self.last_key_txn[k] = txn_id
-                    cnt += 1
-                    if cnt % 10 == 0:
-                        p.step()
-
-            self._wait_for_transaction_commits()
-
-    def validate(self):
-        if len(self.clients) == 0:
-            logger.warn("Unable to connect to Validators, No Clients created")
-            return
-        self.state.fetch()
-        print "Validating IntegerKey State"
-        for k, v in self.state.State.iteritems():
-            if self.localState[k] != v:
-                print "key {} is {} expected to be {}".format(
-                    k, v, self.localState[k])
-            assert self.localState[k] == v
 
 
 class TestSmoke(unittest.TestCase):
