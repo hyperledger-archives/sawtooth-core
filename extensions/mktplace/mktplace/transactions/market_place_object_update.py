@@ -147,16 +147,8 @@ class Register(object):
 
         return True
 
-    def _get_absolute_name(self, store):
-        if not self.Name.startswith('//'):
-            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
-        else:
-            name = self.Name
-        return name
-
     def apply(self, store):
-        name = self._get_absolute_name(store)
-        store.bind(name, self.ObjectID)
+        pass
 
     def dump(self):
         result = {'UpdateType': self.UpdateType}
@@ -207,8 +199,6 @@ class Unregister(object):
         return True
 
     def apply(self, store):
-        name = self._get_absolute_name(store)
-        store.unbind(name)
         del store[self.ObjectID]
 
     def dump(self):
