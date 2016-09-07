@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +13,5 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth.cli.main import main_wrapper
 
-if __name__ == '__main__':
-    main_wrapper()
+__all__ = []
