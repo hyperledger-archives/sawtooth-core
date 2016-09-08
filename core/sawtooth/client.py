@@ -31,6 +31,7 @@ from gossip.common import cbor2dict, dict2cbor
 from gossip.common import pretty_print_dict
 from journal import global_store_manager, transaction
 from sawtooth.exceptions import ClientException, MessageException
+from sawtooth.exceptions import InvalidTransactionError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -149,8 +150,13 @@ class _Communication(object):
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)
-            raise MessageException(
-                'operation failed with response: {0}'.format(err.code))
+            err_content = err.read()
+            if err_content.find("InvalidTransactionError"):
+                raise InvalidTransactionError("Error from server: {0}"
+                                              .format(err_content))
+            else:
+                raise MessageException(
+                    'operation failed with response: {0}'.format(err.code))
 
         except urllib2.URLError as err:
             LOGGER.warn('operation failed: %s', err.reason)
@@ -288,7 +294,8 @@ class SawtoothClient(object):
                  transaction_type=None,
                  message_type=None,
                  keystring=None,
-                 keyfile=None):
+                 keyfile=None,
+                 disable_client_validation=False):
         self._transaction_type = transaction_type
         self._message_type = message_type
         self._base_url = base_url
@@ -322,6 +329,8 @@ class SawtoothClient(object):
             self._local_node = node.Node(identifier=identifier,
                                          signingkey=signing_key,
                                          name=name)
+
+        self._disable_client_validation = disable_client_validation
 
     @property
     def base_url(self):
@@ -435,7 +444,8 @@ class SawtoothClient(object):
         txn.sign_from_node(self._local_node)
         txnid = txn.Identifier
 
-        txn.check_valid(self._current_state.state)
+        if not self._disable_client_validation:
+            txn.check_valid(self._current_state.state)
 
         msg = txn_msg_type()
         msg.Transaction = txn
@@ -456,7 +466,10 @@ class SawtoothClient(object):
         # id for future dependencies this could be a problem if the transaction
         # fails during application
         self._last_transaction = txnid
-        txn.apply(self._current_state.state)
+
+        if not self._disable_client_validation:
+            txn.apply(self._current_state.state)
+
         return txnid
 
     def fetch_state(self):
