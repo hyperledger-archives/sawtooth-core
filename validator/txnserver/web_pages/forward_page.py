@@ -150,7 +150,7 @@ class ForwardPage(BasePage):
                                 'family validation check: %s; %s',
                                 request.path, mymsg.dump())
                     raise Error(http.BAD_REQUEST,
-                                "enclosed transaction failed transaction "
+                                "InvalidTransactionError: failed transaction "
                                 "family validation check: {}".format(str(e)))
                 except:
                     LOGGER.info('submitted transaction is '
