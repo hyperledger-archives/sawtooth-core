@@ -371,6 +371,9 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
         # legacy settings
         self['CurrencyHost'] = "localhost"
 
+        # security settings
+        self['CheckElevated'] = False
+
 
 class CurrencyEnvConfig(sawtooth.config.EnvConfig):
     def __init__(self):

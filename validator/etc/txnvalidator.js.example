@@ -60,5 +60,8 @@
     ## "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE",
 
     ## key file
-    "KeyFile" : "{key_dir}/{node}.wif"
+    "KeyFile" : "{key_dir}/{node}.wif",
+
+    ## disable checking for elevated privileges
+    "CheckElevated" : false
 }
