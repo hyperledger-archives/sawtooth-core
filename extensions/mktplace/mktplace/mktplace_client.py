@@ -23,7 +23,6 @@ import time
 from twisted.web import http
 
 from gossip import node, signed_object
-from gossip.common import pretty_print_dict
 from mktplace.transactions import account_update
 from mktplace.transactions import asset_type_update
 from mktplace.transactions import asset_update
@@ -255,11 +254,10 @@ class MarketPlaceClient(MarketPlaceCommunication):
                 self.enable_session = False
 
         except MessageException:
-            return None
+            pass
 
         except:
             logger.exception('message post failed for some unusual reason')
-            return None
 
     def waitforcommit(self, txnid=None, timetowait=5, iterations=12):
         """

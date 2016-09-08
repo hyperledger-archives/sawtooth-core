@@ -64,7 +64,7 @@ class MarketPlaceCommunication(object):
                     request.add_header('cookie', self._cookie)
                     self._cookie = None
                 else:
-                    return "Session is not enable"
+                    return "Session is not enabled"
             response = opener.open(request, timeout=30)
 
         except urllib2.HTTPError as err:
@@ -121,14 +121,15 @@ class MarketPlaceCommunication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            return json2dict(content)
+            value = json2dict(content)
         elif encoding == 'application/cbor':
-            content_dict = cbor2dict(content)
-            print pretty_print_dict(content_dict)
-            return content_dict
+            value = cbor2dict(content)
         else:
-            logger.debug('get content<%s> from url <%s>', content, url)
+            logger.debug('get content <%s> from url <%s>', content, url)
             return content
+
+        logger.debug(pretty_print_dict(value))
+        return value
 
     def postmsg(self, msgtype, info, path=''):
         """

@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
-from gossip.common import pretty_print_dict, dict2json
+from gossip.common import dict2json
 from journal.transaction import SerializationError
 
 logger = logging.getLogger(__name__)
@@ -118,8 +118,7 @@ class Register(object):
         else:
             name = self.Name
 
-        logger.info('Market Register store: %s', dict2json(store.dump(True)))
-        logger.info('Market Register store._namemap: %s', store._namemap)
+        logger.debug('Market Register store: %s', dict2json(store.dump(True)))
 
         if store.n2i(name):
             logger.debug(
@@ -157,8 +156,6 @@ class Register(object):
         else:
             name = self.Name
         store.bind(name, self.ObjectID)
-        logger.info('apply Market Register store._namemap: %s', store._namemap)
-        pass
 
     def dump(self):
         result = {'UpdateType': self.UpdateType}

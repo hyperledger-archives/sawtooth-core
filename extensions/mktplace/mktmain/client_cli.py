@@ -1314,9 +1314,9 @@ identifiers, ///$name
 
     def do_session(self, args):
         """
-        account -- register or unregister an account
-            account reg -- register a new account
-            account unr -- unregister an existing account
+        session -- create or delete a session
+            session create -- create a new pre-validation session
+            session delete -- delete the pre-validation session
         """
         pargs = shlex.split(self._expandargs(args))
 

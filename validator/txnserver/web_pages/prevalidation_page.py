@@ -30,6 +30,7 @@ from txnserver.web_pages.base_page import BasePage
 LOGGER = logging.getLogger(__name__)
 
 
+# pylint: disable=inherit-non-class
 class ITempTransactionTypeStore(Interface):
     count = Attribute("An int value")
     my_store = Attribute("A store value")
@@ -57,11 +58,12 @@ class PrevalidationPage(BasePage):
         session = request.getSession()
         if request.method == 'HEAD':
             if not session:
-                raise Error(http.BAD_REQUEST, "Session is none")
+                raise \
+                    Error(http.BAD_REQUEST, 'Session has not been started')
 
             session.expire()
-            LOGGER.info('Session: %s has been expired.', session.uid)
-            return 'Session: {} has been expired.'.format(session.uid)
+            LOGGER.info('Session: %s has ended.', session.uid)
+            return 'Session: {} has ended.'.format(session.uid)
 
         temp_store_session = ITempTransactionTypeStore(session)
         return temp_store_session.my_store.dump(True)
@@ -71,8 +73,9 @@ class PrevalidationPage(BasePage):
         Do server-side session prevalidation.
         """
         session = request.getSession()
-        if not Session:
-            raise Error(http.BAD_REQUEST, "Session is none")
+        if not session:
+            raise \
+                Error(http.BAD_REQUEST, 'Session has not been started')
 
         data = request.content.getvalue()
         msg = self._get_message(request)
@@ -98,8 +101,8 @@ class PrevalidationPage(BasePage):
                     LOGGER.info('transaction type %s not in global store map',
                                 transaction_type)
                     raise Error(http.BAD_REQUEST,
-                                'unable to validate enclosed'
-                                ' transaction {0}'.format(data))
+                                'unable to prevalidate enclosed '
+                                'transaction {0}'.format(data))
 
                 tstore = temp_store_map.get_transaction_store(transaction_type)
                 temp_store_session.my_store = tstore.clone_store()
@@ -113,16 +116,16 @@ class PrevalidationPage(BasePage):
                             'family validation check: %s; %s',
                             request.path, mymsg.dump())
                 raise Error(http.BAD_REQUEST,
-                            "InvalidTransactionError: failed transaction "
-                            "family validation check: {}".format(str(e)))
+                            'InvalidTransactionError: failed transaction '
+                            'family validation check: {}'.format(str(e)))
             except:
                 LOGGER.info('submitted transaction is '
                             'not valid %s; %s; %s',
                             request.path, mymsg.dump(),
                             traceback.format_exc(20))
                 raise Error(http.BAD_REQUEST,
-                            "enclosed transaction is not"
-                            " valid {}".format(data))
+                            'enclosed transaction is not '
+                            'valid {}'.format(data))
 
             LOGGER.info('transaction %s is valid',
                         msg.Transaction.Identifier)

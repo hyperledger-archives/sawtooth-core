@@ -29,7 +29,6 @@ from mktplace.transactions import sell_offer_update
 from gossip import node, signed_object
 from journal import transaction, transaction_block, global_store_manager
 from journal.messages import transaction_message
-from sawtooth.exceptions import InvalidTransactionError
 
 logger = logging.getLogger(__name__)
 
