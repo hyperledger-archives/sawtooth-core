@@ -552,7 +552,16 @@ class SawtoothClient(object):
             if status == TransactionStatus.committed:
                 return True
 
-            LOGGER.debug('waiting for transaction %s to commit', txnid)
+            try:
+                pretty_status = "{}:{}".format(
+                    TransactionStatus(status).name, status)
+            except ValueError:
+                pretty_status = str(status)
+
+            LOGGER.debug(
+                'waiting for transaction %s to commit (%s)',
+                txnid,
+                pretty_status)
             time.sleep(timetowait)
 
 
