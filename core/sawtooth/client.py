@@ -814,6 +814,8 @@ class LedgerWebClient(object):
         except urllib2.HTTPError as err:
             LOGGER.error('peer operation on url %s failed with response: %d',
                          url, err.code)
+            if err.code == 302:
+                return transaction.Status.pending
 
         except urllib2.URLError as err:
             LOGGER.error('peer operation on url %s failed: %s', url,
