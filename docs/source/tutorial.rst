@@ -115,7 +115,7 @@ and run the following command:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/tutorial/txnvalidator.js
+   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key
 
 This will startup txnvalidator and logging output will be printed to the
 terminal window.
@@ -140,38 +140,35 @@ and perform an exchange.
 We will setup a couple participants, Alice and Bob, who will exchange goods
 (in this case, cookies) for currency (US Dollars).
 
-Configure txnvalidator.js and Start txnvalidator
-------------------------------------------------
+Start txnvalidator
+------------------
 
 By default, the validator is not configured to support the MarketPlace
 transaction family or operate efficiently as a single node network. 
-The default validator config is in: sawtooth-validator/etc/. 
+The default validator config is in: sawtooth-core/validator/etc/. 
 
-Let's instead work with a config file specific to this tutorial. 
-Most of the the edits are done already, but let's add the marketplace 
-transaction family. 
-
-Edit /project/sawtooth-core/docs/source/tutorial/txnvalidator.js
-and add "mktplace.transactions.market_place" to the list of transaction
-families:
+Although you can create a configuration file specifically for the tutorial, 
+it is easier to specify the needed options on the command line when starting
+the validator.
 
 .. note::
-     Don't miss the comma at the end of the integer_key line, before your new
-     line for market_place!
+     A configuration file with the MarketPlace transaction family added to the
+     default configuration file would like like this:
 
-.. code-block:: none
+      .. code-block:: none
 
-    "TransactionFamilies" : [
-        "ledger.transaction.integer_key",
-        "mktplace.transactions.market_place"
-    ],
+          "TransactionFamilies" : [
+              "ledger.transaction.integer_key",
+              "mktplace.transactions.market_place"
+          ],
 
-To test the changes, startup txnvalidator:
+To test the txnvalidator with the MarketPlace transaction family loaded, run
+the following command:
 
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/tutorial/txnvalidator.js
+   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:

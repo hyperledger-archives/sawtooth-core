@@ -162,9 +162,8 @@ def parse_command_line(args):
                         help='Check for elevated privilege level',
                         default=False)
     parser.add_argument('-F', '--family',
-                        help='Specify transaction families to load. Multiple '
-                             ' -F options can be specified. This option '
-                             'overrides the config file.',
+                        help='Specify transaction families to load. Multiple'
+                             ' -F options can be specified.',
                         action='append')
 
     result = parser.parse_args(args)
@@ -233,7 +232,7 @@ def get_configuration(args, os_name=os.name, config_files_required=None):
             ('listen', 'Listen'),
             ('family', 'TransactionFamilies')
         ], options)
-  
+
     return get_validator_configuration(options.config, options_config, os_name,
                                        config_files_required)
 
