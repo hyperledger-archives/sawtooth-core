@@ -87,6 +87,12 @@ class _Communication(object):
 
         return response.code
 
+    def _print_error_information_from_server(self, err):
+        if err.code == 400:
+            err_content = err.read()
+            LOGGER.warn('Error from server, detail information: %s',
+                        err_content)
+
     def getmsg(self, path):
         """
         Send an HTTP get request to the validator. If the resulting content
@@ -104,6 +110,7 @@ class _Communication(object):
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)
+            self._print_error_information_from_server(err)
             raise MessageException(
                 'operation failed with response: {0}'.format(err.code))
 
@@ -150,6 +157,7 @@ class _Communication(object):
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)
+            self._print_error_information_from_server(err)
             err_content = err.read()
             if err_content.find("InvalidTransactionError"):
                 raise InvalidTransactionError("Error from server: {0}"
