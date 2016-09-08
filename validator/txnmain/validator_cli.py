@@ -161,6 +161,11 @@ def parse_command_line(args):
     parser.add_argument('--check-elevated',
                         help='Check for elevated privilege level',
                         default=False)
+    parser.add_argument('-F', '--family',
+                        help='Specify transaction families to load. Multiple '
+                             ' -F options can be specified. This option '
+                             'overrides the config file.',
+                        action='append')
 
     result = parser.parse_args(args)
 
@@ -225,9 +230,10 @@ def get_configuration(args, os_name=os.name, config_files_required=None):
             ('pidfile', 'PidFile'),
             ('daemon', 'Daemonize'),
             ('check_elevated', 'CheckElevated'),
-            ('listen', 'Listen')
+            ('listen', 'Listen'),
+            ('family', 'TransactionFamilies')
         ], options)
-
+  
     return get_validator_configuration(options.config, options_config, os_name,
                                        config_files_required)
 
