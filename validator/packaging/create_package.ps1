@@ -52,7 +52,6 @@ if ($lastexitcode -ne 0) { exit 1 }
 cd $build_dir\sawtooth-core\validator
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
-Git-Version
 python setup.py build
 if ($lastexitcode -ne 0) { exit 1 }
 iex $build_command

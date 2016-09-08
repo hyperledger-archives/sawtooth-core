@@ -62,7 +62,7 @@ class GlobalStoreManager(object):
         self._persistmap = anydbm.open(blockstorefile, dbmode)
 
         rootstore = BlockStore()
-        rootstore.commit_block(self.RootBlockID, )
+        rootstore.commit_block(self.RootBlockID)
         self._blockmap[self.RootBlockID] = rootstore
         self._persistmap[self.RootBlockID] = \
             dict2cbor(rootstore.dump_block(True))

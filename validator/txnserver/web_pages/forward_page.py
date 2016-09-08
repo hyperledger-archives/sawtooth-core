@@ -83,12 +83,13 @@ class ForwardPage(BasePage):
 
                 # apply any local pending transactions
                 for txn_id in pending_txn_ids:
-                    pend_txn = self.Ledger.TransactionStore[txn_id]
-                    my_store = temp_store_map.get_transaction_store(
-                        pend_txn.TransactionTypeName)
-                    if pend_txn and pend_txn.is_valid(my_store):
-                        my_pend_txn = copy.copy(pend_txn)
-                        my_pend_txn.apply(my_store)
+                    if txn_id in self.Ledger.TransactionStore:
+                        pend_txn = self.Ledger.TransactionStore[txn_id]
+                        my_store = temp_store_map.get_transaction_store(
+                            pend_txn.TransactionTypeName)
+                        if pend_txn and pend_txn.is_valid(my_store):
+                            my_pend_txn = copy.copy(pend_txn)
+                            my_pend_txn.apply(my_store)
 
                 # apply any enqueued messages
                 while len(my_queue) > 0:
@@ -114,7 +115,7 @@ class ForwardPage(BasePage):
                                 'family validation check: %s; %s',
                                 request.path, mymsg.dump())
                     raise Error(http.BAD_REQUEST,
-                                "enclosed transaction failed transaction "
+                                "InvalidTransactionError: failed transaction "
                                 "family validation check: {}".format(str(e)))
                 except:
                     LOGGER.info('submitted transaction is '

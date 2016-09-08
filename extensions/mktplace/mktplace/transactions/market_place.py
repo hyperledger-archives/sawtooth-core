@@ -207,8 +207,6 @@ def _prepare_genesis_transactions(journal):
     logger.info('Created participant asset type: %s', txn.Identifier)
     lasttxn = txn.Identifier
 
-    assettypeid = update.ObjectID
-
     # Create an asset type for random tokens
     txn = MarketPlaceTransaction()
     update = asset_type_update.Register(txn)

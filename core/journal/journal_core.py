@@ -50,6 +50,8 @@ class Journal(gossip_core.Gossip):
             seconds since the epoch.
         Initializing (bool): Whether or not the journal is in an
             initializing state.
+        InitialLoad (bool): Whether or not the journal is in an initial
+            loading state.
         InitialTransactions (list): A list of initial transactions to
             process.
         InitialBlockList (list): A list of initial blocks to process.
@@ -132,12 +134,14 @@ class Journal(gossip_core.Gossip):
 
         self.StartTime = time.time()
         self.Initializing = True
+        self.InitialLoad = False
 
         self.InitialTransactions = []
         self.InitialBlockList = []
 
         self.GenesisLedger = kwargs.get('GenesisLedger', False)
         self.Restore = kwargs.get('Restore', False)
+        self.StoreCacheSize = kwargs.get('StoreCacheSize', 1000)
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
@@ -158,10 +162,12 @@ class Journal(gossip_core.Gossip):
         self.TransactionEnqueueTime = None
 
         dbprefix = shelvedir + "/" + str(self.LocalNode)
-        self.TransactionStore = threadsafeshelf_open(dbprefix + "_txn",
-                                                     shelveflag)
-        self.BlockStore = threadsafeshelf_open(dbprefix + "_cb", shelveflag)
-        self.ChainStore = threadsafeshelf_open(dbprefix + "_cs", shelveflag)
+        self.TransactionStore = ThreadSafeShelf(
+            dbprefix + "_txn", shelveflag, self.StoreCacheSize)
+        self.BlockStore = ThreadSafeShelf(
+            dbprefix + "_cb", shelveflag, self.StoreCacheSize)
+        self.ChainStore = ThreadSafeShelf(
+            dbprefix + "_cs", shelveflag, self.StoreCacheSize)
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
@@ -335,6 +341,7 @@ class Journal(gossip_core.Gossip):
         logger.info('process initial transactions and blocks')
 
         self.Initializing = False
+        self.InitialLoad = True
 
         if self.Restore:
             logger.info('restore ledger state from the backup data stores')
@@ -353,7 +360,20 @@ class Journal(gossip_core.Gossip):
             self.add_pending_transaction(txn, build_block=False)
         self.InitialTransactions = None
 
+        logger.debug('initial block list: %s', self.InitialBlockList)
+
+        # Generate a unique list of initial blocks to process, sorted
+        # by BlockNum
+        initial_block_list = []
+        seen = set()
         for block in self.InitialBlockList:
+            if block.Identifier not in seen:
+                initial_block_list.append(block)
+                seen.add(block.Identifier)
+        initial_block_list.sort(key=lambda x: x.BlockNum)
+
+        for block in initial_block_list:
+            logger.debug('initial block processing of block: %s', block)
             self.commit_transaction_block(block)
         self.InitialBlockList = None
 
@@ -369,6 +389,8 @@ class Journal(gossip_core.Gossip):
             if self.MostRecentCommittedBlockID == common.NullIdentifier:
                 logger.critical('no ledger for a new network node')
                 return
+
+        self.InitialLoad = False
 
         logger.info('finished processing initial transactions and blocks')
 
@@ -413,6 +435,8 @@ class Journal(gossip_core.Gossip):
                 logger.info('txnid %s - catching up',
                             txn.Identifier[:8])
                 del self.RequestedTransactions[txn.Identifier]
+                txn.InBlock = "Uncommitted"
+                self.TransactionStore[txn.Identifier] = txn
 
                 blockids = []
                 for blockid in self.PendingBlockIDs:
@@ -606,7 +630,8 @@ class Journal(gossip_core.Gossip):
         self.PendingTransactionBlock = None
         try:
             self._commitblock(tblock)
-            self.PendingTransactionBlock = self.build_transaction_block()
+            if not self.InitialLoad:
+                self.PendingTransactionBlock = self.build_transaction_block()
         except Exception as e:
             logger.error("blkid: %s - Error advancing block chain: %s",
                          tblock.Identifier[:8], e)
@@ -672,8 +697,8 @@ class Journal(gossip_core.Gossip):
             self._commitblockchain(tblock.Identifier, fork_id)
             self.PendingTransactionBlock = self.build_transaction_block()
         except Exception as e:
-            logger.error("blkid: %s - (fork) Error resolving fork: %s",
-                         tblock.Identifier[:8], e)
+            logger.exception("blkid: %s - (fork) error resolving fork",
+                             tblock.Identifier[:8])
             self.PendingTransactionBlock = pending
             raise
     #
@@ -688,127 +713,131 @@ class Journal(gossip_core.Gossip):
 
         assert tblock.Identifier in self.PendingBlockIDs
 
-        # initialize the state of this block
-        self.BlockStore[tblock.Identifier] = tblock
+        with self._txn_lock:
+            # initialize the state of this block
+            self.BlockStore[tblock.Identifier] = tblock
 
-        # if this block is the genesis block then we can assume that
-        # it meets all criteria for dependent blocks
-        if tblock.PreviousBlockID != common.NullIdentifier:
-            # first test... do we have the previous block, if not then this
-            # block remains incomplete awaiting the arrival of the predecessor
-            pblock = self.BlockStore.get(tblock.PreviousBlockID)
-            if not pblock:
-                self.request_missing_block(tblock.PreviousBlockID)
+            # if this block is the genesis block then we can assume that
+            # it meets all criteria for dependent blocks
+            if tblock.PreviousBlockID != common.NullIdentifier:
+                # first test... do we have the previous block, if not then this
+                # block remains incomplete awaiting the arrival of the
+                # predecessor
+                pblock = self.BlockStore.get(tblock.PreviousBlockID)
+                if not pblock:
+                    self.request_missing_block(tblock.PreviousBlockID)
+                    return
+
+                # second test... is the previous block invalid, if so then this
+                # block will never be valid & can be completely removed from
+                # consideration, for now I'm not removing the block from the
+                # block store though we could substitute a check for the
+                # previous block in the invalid block list
+                if pblock.Status == transaction_block.Status.invalid:
+                    self.PendingBlockIDs.discard(tblock.Identifier)
+                    self.InvalidBlockIDs.add(tblock.Identifier)
+                    tblock.Status = transaction_block.Status.invalid
+                    self.BlockStore[tblock.Identifier] = tblock
+                    return
+
+                # third test... is the previous block complete, if not then
+                # this block cannot be complete and there is nothing else to do
+                # until the missing transactions come in, note that we are not
+                # requesting missing transactions at this point
+                if pblock.Status == transaction_block.Status.incomplete:
+                    return
+
+            # fourth test... check for missing transactions in this block, if
+            # any are missing, request them and then save this block for later
+            # processing
+            missing = tblock.missing_transactions(self)
+            if missing:
+                for txnid in missing:
+                    self.request_missing_txn(txnid)
+                    self.JournalStats.MissingTxnFromBlockCount.increment()
                 return
 
-            # second test... is the previous block invalid, if so then this
-            # block will never be valid & can be completely removed from
-            # consideration, for now I'm not removing the block from the
-            # block store though we could substitute a check for the previous
-            # block in the invalid block list
-            if pblock.Status == transaction_block.Status.invalid:
-                self.PendingBlockIDs.discard(tblock.Identifier)
-                self.InvalidBlockIDs.add(tblock.Identifier)
-                tblock.Status = transaction_block.Status.invalid
+            # at this point we know that the block is complete
+            tblock.Status = transaction_block.Status.complete
+            self.BlockStore[tblock.Identifier] = tblock
+
+            # fifth test... run the checks for a valid block, generally
+            # these are specific to the various transaction families or
+            # consensus mechanisms
+            try:
+                if (not tblock.is_valid(self)
+                        or not self.onBlockTest.fire(self, tblock)):
+                    logger.debug('blkid: %s - block test failed',
+                                 tblock.Identifier[:8])
+                    self.PendingBlockIDs.discard(tblock.Identifier)
+                    self.InvalidBlockIDs.add(tblock.Identifier)
+                    tblock.Status = transaction_block.Status.invalid
+                    self.BlockStore[tblock.Identifier] = tblock
+                    return
+            except NotAvailableException:
+                tblock.Status = transaction_block.Status.retry
                 self.BlockStore[tblock.Identifier] = tblock
+                logger.debug('blkid: %s - NotAvailableException - not able to '
+                             'verify, will retry later',
+                             tblock.Identifier[:8])
                 return
 
-            # third test... is the previous block complete, if not then
-            # this block cannot be complete and there is nothing else to do
-            # until the missing transactions come in, note that we are not
-            # requesting missing transactions at this point
-            if pblock.Status == transaction_block.Status.incomplete:
-                return
-
-        # fourth test... check for missing transactions in this block, if
-        # any are missing, request them and then save this block for later
-        # processing
-        missing = tblock.missing_transactions(self)
-        if missing:
-            for txnid in missing:
-                self.request_missing_txn(txnid)
-                self.JournalStats.MissingTxnFromBlockCount.increment()
-            return
-
-        # at this point we know that the block is complete
-        tblock.Status = transaction_block.Status.complete
-        self.BlockStore[tblock.Identifier] = tblock
-
-        # fifth test... run the checks for a valid block, generally these are
-        # specific to the various transaction families or consensus mechanisms
-        try:
-            if (not tblock.is_valid(self)
-                    or not self.onBlockTest.fire(self, tblock)):
-                logger.debug('blkid: %s - block test failed',
+            # sixth test... verify that every transaction in the now complete
+            # block is valid independently and build the new data store
+            newstore = self._testandapplyblock(tblock)
+            if newstore is None:
+                logger.debug('blkid: %s - transaction validity test failed',
                              tblock.Identifier[:8])
                 self.PendingBlockIDs.discard(tblock.Identifier)
                 self.InvalidBlockIDs.add(tblock.Identifier)
                 tblock.Status = transaction_block.Status.invalid
                 self.BlockStore[tblock.Identifier] = tblock
                 return
-        except NotAvailableException:
-            tblock.Status = transaction_block.Status.retry
-            self.BlockStore[tblock.Identifier] = tblock
-            logger.debug('blkid: %s - NotAvailableException - not able to '
-                         'verify, will retry later',
-                         tblock.Identifier[:8])
-            return
 
-        # sixth test... verify that every transaction in the now complete
-        # block is valid independently and build the new data store
-        newstore = self._testandapplyblock(tblock)
-        if newstore is None:
-            logger.debug('blkid: %s - transaction validity test failed',
-                         tblock.Identifier[:8])
+            # at this point we know that the block is valid
+            tblock.Status = transaction_block.Status.valid
+            tblock.CommitTime = time.time() - self.StartTime
+            tblock.update_block_weight(self)
+
+            if hasattr(tblock, 'AggregateLocalMean'):
+                self.JournalStats.AggregateLocalMean.Value = \
+                    tblock.AggregateLocalMean
+
+            # time to apply the transactions in the block to get a new state
+            self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
+            self.BlockStore[tblock.Identifier] = tblock
+
+            # remove the block from the pending block list
             self.PendingBlockIDs.discard(tblock.Identifier)
-            self.InvalidBlockIDs.add(tblock.Identifier)
-            tblock.Status = transaction_block.Status.invalid
-            self.BlockStore[tblock.Identifier] = tblock
-            return
 
-        # at this point we know that the block is valid
-        tblock.Status = transaction_block.Status.valid
-        tblock.CommitTime = time.time() - self.StartTime
-        tblock.update_block_weight(self)
+            # and now check to see if we should start to use this block as the
+            # one on which we build a new chain
 
-        if hasattr(tblock, 'AggregateLocalMean'):
-            self.JournalStats.AggregateLocalMean.Value = \
-                tblock.AggregateLocalMean
+            # handle the easy, common case here where the new block extends the
+            # current chain
+            if tblock.PreviousBlockID == self.MostRecentCommittedBlockID:
+                self.handle_advance(tblock)
+            else:
+                self.handle_fork(tblock)
 
-        # time to apply the transactions in the block to get a new state
-        self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
-        self.BlockStore[tblock.Identifier] = tblock
+            self._cleantransactionblocks()
 
-        # remove the block from the pending block list
-        self.PendingBlockIDs.discard(tblock.Identifier)
+            # check the other orphaned blocks to see if this
+            # block connects one to the chain, if a new block is connected to
+            # the chain then we need to go through the entire process again
+            # with the newly connected block
+            # Also checks if we have pending blocks that need to be retried. If
+            # so adds them to the list to be handled.
+            blockids = set()
+            for blockid in self.PendingBlockIDs:
+                if self.BlockStore[blockid].PreviousBlockID ==\
+                        tblock.Identifier:
+                    blockids.add(blockid)
 
-        # and now check to see if we should start to use this block as the one
-        # on which we build a new chain
+            for blockid in blockids:
+                self._handleblock(self.BlockStore[blockid])
 
-        # handle the easy, common case here where the new block extends the
-        # current chain
-        if tblock.PreviousBlockID == self.MostRecentCommittedBlockID:
-            self.handle_advance(tblock)
-        else:
-            self.handle_fork(tblock)
-
-        self._cleantransactionblocks()
-
-        # check the other orphaned blocks to see if this
-        # block connects one to the chain, if a new block is connected to
-        # the chain then we need to go through the entire process again with
-        # the newly connected block
-        # Also checks if we have pending blocks that need to be retried. If so
-        # adds them to the list to be handled.
-        blockids = set()
-        for blockid in self.PendingBlockIDs:
-            if self.BlockStore[blockid].PreviousBlockID == tblock.Identifier:
-                blockids.add(blockid)
-
-        for blockid in blockids:
-            self._handleblock(self.BlockStore[blockid])
-
-        self.retry_blocks()
+            self.retry_blocks()
 
     def retry_blocks(self):
         # check the orphaned blocks to see if any had a recoverable validation
@@ -1043,11 +1072,15 @@ class Journal(gossip_core.Gossip):
             # had all dependencies met we know that they will never be valid
             for txnid in deltxns:
                 self.JournalStats.InvalidTxnCount.increment()
-                logger.info('txnid: %s - will never apply',
-                            txnid[:8])
                 if txnid in self.TransactionStore:
-                    del self.TransactionStore[txnid]
+                    txn = self.TransactionStore[txnid]
+                    if txn.InBlock is None:
+                        logger.debug("txnid: %s - deleting from transaction "
+                                     "store", txnid)
+                        del self.TransactionStore[txnid]
                 if txnid in self.PendingTransactions:
+                    logger.debug("txnid: %s - deleting from pending "
+                                 "transactions", txnid)
                     del self.PendingTransactions[txnid]
 
             return addtxns
@@ -1226,60 +1259,43 @@ class Journal(gossip_core.Gossip):
         return nodeid[:8]
 
 
-class ThreadSafeShelf(Shelf):
-    def __init__(self, d, protocol=None, writeback=False):
+class ThreadSafeShelf(object):
+    def __init__(self, filename, flag, max_cache_size):
         self._lock = RLock()
-        # super is not used because Shelf is an OldStyle class
-        Shelf.__init__(self, d, protocol, writeback)
+        self._shelf = Shelf(anydbm.open(filename, flag))
 
     def __setitem__(self, key, value):
         with self._lock:
-            Shelf.__setitem__(self, key, value)
+            self._shelf[key] = value
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         with self._lock:
-            return Shelf.__getitem__(self, item)
+            return self._shelf[key]
 
     def __delitem__(self, key):
         with self._lock:
-            Shelf.__delitem__(self, key)
-
-    def __del__(self):
-        with self._lock:
-            Shelf.__del__(self)
+            del self._shelf[key]
 
     def __len__(self):
         with self._lock:
-            return Shelf.__len__(self)
+            return len(self._shelf)
 
-    def __contains__(self, item):
+    def __contains__(self, key):
         with self._lock:
-            return Shelf.__contains__(self, item)
+            return key in self._shelf
 
     def get(self, key, default=None):
         with self._lock:
-            return Shelf.get(self, key, default)
+            return self._shelf.get(key, default)
 
     def sync(self):
         with self._lock:
-            Shelf.sync(self)
+            self._shelf.sync()
 
     def close(self):
         with self._lock:
-            Shelf.close(self)
+            self._shelf.close()
 
     def keys(self):
         with self._lock:
-            return Shelf.keys(self)
-
-
-class ShelfFromFilename(ThreadSafeShelf):
-
-    def __init__(self, filename, flag='c', protocol=None, writeback=False):
-        ThreadSafeShelf.__init__(self,
-                                 anydbm.open(filename, flag),
-                                 protocol, writeback)
-
-
-def threadsafeshelf_open(filename, flag='c', protocol=None, writeback=False):
-    return ShelfFromFilename(filename, flag, protocol, writeback)
+            return self._shelf.keys()

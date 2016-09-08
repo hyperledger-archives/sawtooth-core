@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-from sawtooth.cli.main import main_wrapper
+from sawtooth_xo.txn_family import _register_transaction_types
 
-if __name__ == '__main__':
-    main_wrapper()
+__all__ = [
+    'txn_family'
+]
+
+
+def register_transaction_types(ledger):
+    _register_transaction_types(ledger)

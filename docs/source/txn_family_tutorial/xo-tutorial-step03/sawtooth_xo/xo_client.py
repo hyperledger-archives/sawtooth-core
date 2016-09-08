@@ -21,16 +21,14 @@ from sawtooth_xo.txn_family import XoTransaction
 class XoClient(SawtoothClient):
     def __init__(self,
                  base_url,
-                 keyfile,
-                 disable_client_validation=False):
+                 keyfile):
         super(XoClient, self).__init__(
             base_url=base_url,
             store_name='XoTransaction',
             name='XoClient',
             transaction_type=XoTransaction,
             message_type=XoTransaction.MessageType,
-            keyfile=keyfile,
-            disable_client_validation=disable_client_validation)
+            keyfile=keyfile)
 
     def create(self, name):
         """
