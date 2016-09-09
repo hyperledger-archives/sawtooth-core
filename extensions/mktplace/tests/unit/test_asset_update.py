@@ -17,7 +17,7 @@ import unittest
 
 from mktplace.transactions import participant_update
 from mktplace.transactions import asset_update
-from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
+from mktplace.transactions.market_place import MarketPlaceGlobalStore
 
 
 class TestAssetUpdate(unittest.TestCase):
@@ -28,9 +28,8 @@ class TestAssetUpdate(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because we have not "registered" any assets, the name
         # should not be a duplicate
@@ -76,9 +75,8 @@ class TestAssetUpdateName(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because we have not "registered" any asset2, the name
         # should not be a duplicate

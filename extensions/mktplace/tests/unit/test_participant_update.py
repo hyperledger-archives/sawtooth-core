@@ -16,13 +16,13 @@
 import unittest
 
 from mktplace.transactions import participant_update
-from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
+from mktplace.transactions.market_place import MarketPlaceGlobalStore
 
 
 class TestParticipantUpdate(unittest.TestCase):
     def test_duplicate_name(self):
         # Create a mock store
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
 
         # Because we have not "registered" any participants, the name
         # should not be a duplicate
@@ -52,7 +52,7 @@ class TestParticipantUpdate(unittest.TestCase):
 class TestParticipantUpdateName(unittest.TestCase):
     def test_duplicate_name(self):
         # Create a mock store
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
 
         # Because we have not "registered" any participants, the name
         # should not be a duplicate
@@ -70,9 +70,8 @@ class TestParticipantUpdateName(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because the participant name is in the store, trying to update the
         # name a valid name as it is a duplicate
