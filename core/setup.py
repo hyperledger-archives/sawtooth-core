@@ -81,19 +81,6 @@ else:
     include_dirs = []
     library_dirs = []
 
-enclavemod = Extension(
-    '_poet_enclave_simulator',
-    ['journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.i',
-     'journal/consensus/poet/poet_enclave_simulator/common.cpp',
-     'journal/consensus/poet/poet_enclave_simulator/wait_certificate.cpp',
-     'journal/consensus/poet/poet_enclave_simulator/wait_timer.cpp'],
-    swig_opts=['-c++'],
-    extra_compile_args=extra_compile_args,
-    include_dirs=include_dirs,
-    libraries=libraries,
-    library_dirs=library_dirs)
-
-
 ecdsamod = Extension('_ECDSARecoverModule',
                      ['gossip/ECDSA/ECDSARecoverModule.i',
                       'gossip/ECDSA/ECDSARecover.cc'],
@@ -111,10 +98,8 @@ setup(name='sawtooth-core',
       packages=find_packages(),
       install_requires=['cbor>=0.1.23', 'colorlog', 'pybitcointools',
                         'twisted', 'enum34', 'requests'],
-      ext_modules=[enclavemod, ecdsamod],
-      py_modules=['journal.consensus.poet.poet_enclave_simulator'
-                  '.poet_enclave_simulator',
-                  'gossip.ECDSA.ECDSARecoverModule'],
+      ext_modules=[ecdsamod],
+      py_modules=['gossip.ECDSA.ECDSARecoverModule'],
       entry_points={
           'console_scripts': [
               'sawtooth = sawtooth.cli.main:main_wrapper'
@@ -132,17 +117,6 @@ if "clean" in sys.argv and "--all" in sys.argv:
             "_ECDSARecoverModule.so",
             os.path.join("gossip", "ECDSA", "ECDSARecoverModule.py"),
             os.path.join("gossip", "ECDSA", "ECDSARecoverModule_wrap.cpp"),
-            "_poet_enclave_simulator.so",
-            os.path.join("journal",
-                         "consensus",
-                         "poet",
-                         "poet_enclave_simulator",
-                         "poet_enclave_simulator.py"),
-            os.path.join("journal",
-                         "consensus",
-                         "poet",
-                         "poet_enclave_simulator",
-                         "_poet_enclave_simulator_wrap.cpp"),
             "nose2-junit.xml"]:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))

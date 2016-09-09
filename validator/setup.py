@@ -19,7 +19,7 @@ import subprocess
 import sys
 
 # from distutils.core import setup, Extension, find_packages
-from setuptools import setup, find_packages
+from setuptools import setup, Extension, find_packages
 
 
 def bump_version(version):
@@ -63,6 +63,36 @@ def version(default):
     else:
         version = default + "-dev1"
     return version
+
+
+if os.name == 'nt':
+    extra_compile_args = ['/EHsc']
+    libraries = ['json-c', 'cryptopp-static']
+    include_dirs = ['deps/include', 'deps/include/cryptopp']
+    library_dirs = ['deps/lib']
+elif sys.platform == 'darwin':
+    os.environ["CC"] = "clang++"
+    extra_compile_args = ['-std=c++11']
+    libraries = ['json-c', 'cryptopp']
+    include_dirs = ['/usr/local/include']
+    library_dirs = ['/usr/local/lib']
+else:
+    extra_compile_args = ['-std=c++11']
+    libraries = ['json-c', 'cryptopp']
+    include_dirs = []
+    library_dirs = []
+
+enclavemod = Extension(
+    '_poet_enclave_simulator',
+    ['journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.i',
+     'journal/consensus/poet/poet_enclave_simulator/common.cpp',
+     'journal/consensus/poet/poet_enclave_simulator/wait_certificate.cpp',
+     'journal/consensus/poet/poet_enclave_simulator/wait_timer.cpp'],
+    swig_opts=['-c++'],
+    extra_compile_args=extra_compile_args,
+    include_dirs=include_dirs,
+    libraries=libraries,
+    library_dirs=library_dirs)
 
 
 if os.name == 'nt':
@@ -115,6 +145,9 @@ setup(
     packages=find_packages(),
     install_requires=['sawtooth-core', 'colorlog', 'twisted', 'PyYAML',
                       'psutil', 'numpy'],
+    ext_modules=[enclavemod],
+    py_modules=['journal.consensus.poet.poet_enclave_simulator'
+                '.poet_enclave_simulator'],
     data_files=data_files,
     entry_points={
         'console_scripts': [
@@ -130,7 +163,19 @@ if "clean" in sys.argv and "--all" in sys.argv:
         for fn in files:
             if fn.endswith(".pyc"):
                 os.remove(os.path.join(root, fn))
-    for filename in [".coverage"]:
+    for filename in [
+            ".coverage"
+            "_poet_enclave_simulator.so",
+            os.path.join("journal",
+                         "consensus",
+                         "poet",
+                         "poet_enclave_simulator",
+                         "poet_enclave_simulator.py"),
+            os.path.join("journal",
+                         "consensus",
+                         "poet",
+                         "poet_enclave_simulator",
+                         "_poet_enclave_simulator_wrap.cpp")]:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))
     shutil.rmtree(os.path.join(directory, "htmlcov"), ignore_errors=True)
