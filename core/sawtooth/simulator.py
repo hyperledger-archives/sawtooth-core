@@ -87,6 +87,8 @@ class SawtoothWorkloadSimulator(object):
         deferred = loop.start(60.0 / rate, now=False)
         deferred.addCallback(self._loop_cleanup)
 
+        self._update_frequency = config.getint('Simulator', 'update_frequency')
+
         # Set up the looping call for discovering validators.  The provided
         # rate is in minutes between checks, so convert to seconds.
         discover = config.getint('Simulator', 'discover')
@@ -96,29 +98,31 @@ class SawtoothWorkloadSimulator(object):
         loop.start(discover * 60, now=False)
 
     def run(self):
-        self._time_since_last_check = time.time()
-
         # pylint: disable=no-self-use
+        self._time_since_last_check = time.time()
         reactor.run()
 
     def _simulator_loop(self):
         with self._lock:
-            # Check the time.  If at least a minute has passed since we have
-            # last report transactions/minute, then let's do so
+            # Check the time.  If at least a update_frequency seconds
+            # has passed since we have last report transactions/minute,
+            # then let's do so
             now = time.time()
             delta = now - self._time_since_last_check
-            if delta >= 60:
+            if delta >= self._update_frequency:
                 # Take the samples and normalize to a minute.
-                sample = 60 * self._submitted_transactions_sample / delta
+                sample = 60 * \
+                    (self._submitted_transactions_sample / delta)
                 self._submitted_transaction_samples.append(sample)
-                LOGGER.info(
+                LOGGER.warn(
                     'Transaction submission rate for last sample period is '
                     '%.2f tpm',
                     sample)
 
-                sample = 60 * self._committed_transactions_sample / delta
+                sample = 60 * \
+                    (self._committed_transactions_sample / delta)
                 self._committed_transaction_samples.append(sample)
-                LOGGER.info(
+                LOGGER.warn(
                     'Transaction commit rate for last sample period is '
                     '%.2f tpm',
                     sample)
@@ -129,13 +133,13 @@ class SawtoothWorkloadSimulator(object):
                     self._submitted_transaction_samples.popleft()
                     self._committed_transaction_samples.popleft()
 
-                LOGGER.info(
+                LOGGER.warn(
                     'Transaction submission rate for last %d sample(s) '
                     'is %.2f tpm',
                     len(self._submitted_transaction_samples),
                     sum(self._submitted_transaction_samples) /
                     len(self._submitted_transaction_samples))
-                LOGGER.info(
+                LOGGER.warn(
                     'Transaction commit rate for last %d sample(s) '
                     'is %.2f tpm',
                     len(self._committed_transaction_samples),
@@ -170,7 +174,7 @@ class SawtoothWorkloadSimulator(object):
                 # There's no use continuing to spew the messages to the log for
                 # every time we detect it.
                 if not self._is_throttling:
-                    LOGGER.warning(
+                    LOGGER.info(
                         'Simulator is throttling work requests as the number '
                         'of outstanding work requests has reached its limit '
                         'of %d',
