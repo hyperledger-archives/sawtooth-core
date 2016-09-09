@@ -21,6 +21,7 @@ import os
 import sys
 import traceback
 import warnings
+import ctypes
 
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
@@ -149,7 +150,7 @@ def parse_command_line(args):
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
-                        help='increase output sent to stderr')
+                        help='Increase output sent to stderr')
     parser.add_argument('--run-dir', help='Name of the run directory')
     parser.add_argument('--pidfile', help='Name of the PID file')
     parser.add_argument('--listen',
@@ -157,6 +158,9 @@ def parse_command_line(args):
                              'will listen on.  Multiple --listen options can '
                              'be specified.',
                         action='append')
+    parser.add_argument('--check-elevated',
+                        help='Check for elevated privilege level',
+                        default=False)
 
     result = parser.parse_args(args)
 
@@ -181,6 +185,7 @@ def parse_command_line(args):
     remove_false_key(result, "genesis")
     remove_false_key(result, "restore")
     remove_false_key(result, "daemon")
+    remove_false_key(result, "check_elevated")
 
     return result
 
@@ -219,6 +224,7 @@ def get_configuration(args, os_name=os.name, config_files_required=None):
             ('verbose', 'Verbose'),
             ('pidfile', 'PidFile'),
             ('daemon', 'Daemonize'),
+            ('check_elevated', 'CheckElevated'),
             ('listen', 'Listen')
         ], options)
 
@@ -348,6 +354,27 @@ def main(args, windows_service=False):
         logger.debug("CONFIG: %s = %s", key, value)
 
     logger.info('validator started with arguments: %s', sys.argv)
+
+    check_elevated = cfg.get('CheckElevated')
+    if check_elevated is False:
+        logger.debug("check for elevated (root/admin) privileges "
+                     "is disabled")
+    else:
+        if os.name == "posix":
+            is_admin = os.getuid() == 0
+        elif os.name == "nt":
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        else:
+            warnings.warn("runnning with elevated (root/admin) privileges is "
+                          "not permitted; OS version is unrecognized - "
+                          "cannot verify privilege level: %s", os.name)
+            sys.exit(1)
+        logger.debug("running %s with elevated (root/admin) privileges: %s",
+                     os.name, is_admin)
+        if is_admin is True:
+            warnings.warn("running with elevated (root/admin) privileges "
+                          "is not permitted - stopping validator")
+            sys.exit(1)
 
     if not os.path.exists(cfg["DataDirectory"]):
         warnings.warn("Data directory does not exist: {}".format(
