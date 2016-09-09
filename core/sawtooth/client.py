@@ -53,6 +53,7 @@ class _Communication(object):
     def __init__(self, base_url):
         self._base_url = base_url.rstrip('/')
         self._proxy_handler = urllib2.ProxyHandler({})
+        self._cookie = None
 
     @property
     def base_url(self):
@@ -152,8 +153,15 @@ class _Communication(object):
             request = urllib2.Request(url, data,
                                       {'Content-Type': 'application/cbor',
                                        'Content-Length': datalen})
+
+            if self._cookie:
+                request.add_header('cookie', self._cookie)
+
             opener = urllib2.build_opener(self._proxy_handler)
             response = opener.open(request, timeout=10)
+
+            if not self._cookie:
+                self._cookie = response.headers.get('Set-Cookie')
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)

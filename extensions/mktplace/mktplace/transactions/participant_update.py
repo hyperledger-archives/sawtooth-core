@@ -106,6 +106,12 @@ class Register(market_place_object_update.Register):
         return True
 
     def apply(self, store):
+        if not self.Name.startswith('//'):
+            name = "//{0}".format(self.Name)
+        else:
+            name = self.Name
+        store.bind(name, self.ObjectID)
+
         pobj = ParticipantObject(self.ObjectID)
         pobj.Address = self.OriginatorID
         pobj.Description = self.Description

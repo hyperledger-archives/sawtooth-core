@@ -148,7 +148,11 @@ class Register(object):
         return True
 
     def apply(self, store):
-        pass
+        if not self.Name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        else:
+            name = self.Name
+        store.bind(name, self.ObjectID)
 
     def dump(self):
         result = {'UpdateType': self.UpdateType}
@@ -199,6 +203,7 @@ class Unregister(object):
         return True
 
     def apply(self, store):
+        store.unbind(store.i2n(self.ObjectID))
         del store[self.ObjectID]
 
     def dump(self):

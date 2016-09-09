@@ -1023,6 +1023,7 @@ identifiers, ///$name
                 if txnid:
                     self.MarketClient.CreatorID = txnid
                     self.MarketState.CreatorID = txnid
+                    logger.debug('self.MarketState.CreatorID: %s', txnid)
                     self.prompt = self.MarketState.i2n(txnid) + '> '
 
                     self.IdentityMap['_partid_'] = txnid
@@ -1311,10 +1312,46 @@ identifiers, ///$name
                 offer['ratio'], self.MarketState.i2n(iholding['asset']),
                 self.MarketState.i2n(oholding['asset']), name)
 
+    def do_session(self, args):
+        """
+        session -- create or delete a session
+            session create -- create a new pre-validation session
+            session delete -- delete the pre-validation session
+        """
+        pargs = shlex.split(self._expandargs(args))
+
+        subcommands = ['create', 'delete']
+        if len(pargs) == 0 or pargs[0] not in subcommands:
+            print 'Unknown sub-command, expecting one of {0}'.format(
+                subcommands)
+            return
+
+        try:
+            if pargs[0] == 'create':
+                self.MarketClient.create_session()
+            elif pargs[0] == 'delete':
+                self.MarketClient.delete_session()
+                print "Session deleted."
+                self.MarketState.CurrentBlockID = None
+                self.MarketState.fetch()
+                print "State Updated."
+            return
+
+        except SystemExit as se:
+            if se.code > 0:
+                print 'An error occurred processing {0}: {1}'.format(args,
+                                                                     str(se))
+            return
+
+        except Exception as e:
+            print 'An error occurred processing {0}: {1}'.format(args, str(e))
+            return
+
     def do_exit(self, args):
         """
         exit -- shutdown the simulator and exit the command loop
         """
+        self.MarketClient.delete_session()
         return True
 
     # pylint: disable=invalid-name
@@ -1324,6 +1361,7 @@ identifiers, ///$name
         """
         exit -- shutdown the simulator and exit the command loop
         """
+        self.MarketClient.delete_session()
         return True
 
 
@@ -1404,7 +1442,8 @@ def local_main(config):
                                                creator=creator,
                                                name=name,
                                                keystring=signingkey,
-                                               state=state)
+                                               state=state,
+                                               session=config['EnableSession'])
 
     controller = ClientController(client, echo=config["Echo"])
 
@@ -1464,6 +1503,11 @@ def parse_command_line(args):
                         default=0,
                         help='increase output sent to stderr')
 
+    parser.add_argument('--session',
+                        action='store_true',
+                        default=False,
+                        help='wait for this commit before exiting')
+
     return parser.parse_args(args)
 
 
@@ -1484,6 +1528,7 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
             ('mapvar', 'VariableMap'),
             ('echo', 'Echo'),
             ('verbose', 'Verbose'),
+            ('session', 'EnableSession'),
         ], options)
 
     cfg = get_mktplace_configuration(options.config, options_config, os_name,
