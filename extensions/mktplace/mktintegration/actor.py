@@ -32,7 +32,7 @@ class MktActor(object):
 
 
 
-    This expects all assets to be uniquely named (stronger restriction then the
+    This expects all assets to be uniquely named (stronger restriction than the
     mktplace transaction family)
     """
 

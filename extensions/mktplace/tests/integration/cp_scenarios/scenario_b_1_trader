@@ -2,5 +2,5 @@ echo Running: scenario_b_1_trader
 holdings --creator //BANK-trader
 holdings --creator //BANK-dealer
 exchangeoffer reg --input /paper --output /USD --ratio 1 99388 --name /offer-b --waitforcommit
-dump --name /offer-b
+dump --name /offer-b --type ExchangeOffer
 exit

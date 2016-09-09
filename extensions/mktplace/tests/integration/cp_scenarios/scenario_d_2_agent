@@ -1,5 +1,5 @@
 echo Running: scenario_d_2_agent
-exchange --src /USD --dst /paper --offers //BANK-trader/offer-d --count 100000 --waitforcommit
+exchange --src /USD --dst /paper --offers //BANK-trader/offer-d --count 100000 --type ExchangeOffer --waitforcommit
 holdings --creator //BANK-trader
 holdings --creator //BANK-agent
 exit

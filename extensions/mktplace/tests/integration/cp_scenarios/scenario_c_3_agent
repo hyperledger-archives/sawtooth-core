@@ -1,7 +1,7 @@
 echo Running: scenario_c_3_agent
 holding reg --waitforcommit --account /account --asset //mkt/asset/commercialpaper/note --count 1 --name /paper-scenario-c --description "ticker=GECP;par=100000;cost=99388;days=30;discount=0.0735;"
 holdings --creator //BANK-agent
-exchange --src /paper-scenario-c --dst /USD --offers //BANK-dealer/offer-c-dealer --count 1 --waitforcommit
+exchange --src /paper-scenario-c --dst /USD --offers //BANK-dealer/offer-c-dealer --count 1 --type ExchangeOffer --waitforcommit
 holdings --creator //BANK-dealer
 holdings --creator //BANK-agent
 exit
