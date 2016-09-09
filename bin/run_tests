@@ -2,16 +2,40 @@
 
 set -e
 
-for dir in core validator
-do
-    cd $dir
-    nose2 -v
-    cd ..
-done
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-for dir in extensions/mktplace extensions/arcade
-do
-    cd $dir
-    nose2 -v
-    cd ../..
-done
+PATH=$top_dir/bin:$PATH
+export PATH
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+export PYTHONPATH
+cd core
+nose2 -v
+cd ..
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+export PYTHONPATH
+cd validator
+nose2 -v
+cd ..
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
+export PYTHONPATH
+cd extensions/mktplace
+nose2 -v
+cd ../..
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
+export PYTHONPATH
+cd extensions/arcade
+nose2 -v
+cd ../..
