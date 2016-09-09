@@ -28,6 +28,14 @@ find_packages() {
     popd 1>/dev/null
 }
 
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
+export PYTHONPATH
 pep8 --config=.pep8
 
 pylint \
@@ -35,20 +43,41 @@ pylint \
     --reports=no \
     $(find_packages core/sawtooth)
 
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+export PYTHONPATH
+
 pylint \
     --rcfile=.pylintrc-core \
     --reports=no \
     $(find_packages core)
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+export PYTHONPATH
 
 pylint \
     --rcfile=.pylintrc-validator \
     --reports=no \
     $(find_packages validator)
 
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
+export PYTHONPATH
+
 pylint \
     --rcfile=.pylintrc-mktplace \
     --reports=no \
     $(find_packages extensions/mktplace)
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
+export PYTHONPATH
 
 pylint \
     --rcfile=.pylintrc-arcade \
