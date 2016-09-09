@@ -94,7 +94,7 @@ class Register(market_place_object_update.Register):
             return False
 
         name = "//{0}".format(self.Name)
-        if store.n2i(name):
+        if store.n2i(name, self.ObjectType.ObjectTypeName) is not None:
             logger.debug('invalid name %s; name must be unique', self.Name)
             return False
         return True
@@ -106,11 +106,6 @@ class Register(market_place_object_update.Register):
         return True
 
     def apply(self, store):
-        if not self.Name.startswith('//'):
-            name = "//{0}".format(self.Name)
-        else:
-            name = self.Name
-        store.bind(name, self.ObjectID)
 
         pobj = ParticipantObject(self.ObjectID)
         pobj.Address = self.OriginatorID
@@ -210,7 +205,7 @@ class UpdateName(market_place_object_update.UpdateName):
             return False
 
         name = "//{0}".format(self.Name)
-        if store.n2i(name):
+        if store.n2i(name, 'Participant'):
             logger.debug('invalid name %s; name must be unique', self.Name)
             return False
 

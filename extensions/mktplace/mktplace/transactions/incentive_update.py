@@ -77,7 +77,7 @@ class IncentiveUpdate(object):
         # require getting access to the token type, probably by name (ugghhh)
         if not IncentiveUpdate.ValidationTokenAssetID:
             IncentiveUpdate.ValidationTokenAssetID = store.n2i(
-                '//marketplace/asset/validation-token')
+                '//marketplace/asset/validation-token', 'Participant')
             assert IncentiveUpdate.ValidationTokenAssetID
 
         obj = holding_update.HoldingObject.get_valid_object(store,

@@ -50,7 +50,6 @@ class TestLiabilityUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[liability.ObjectID] = liability.dump()
-        store.bind(store.i2n(liability.ObjectID), liability.ObjectID)
 
         # Because the liability name is in the store, trying to register using
         # a relative name based upon creator and a fully-qualified name should
@@ -100,7 +99,6 @@ class TestLiabilityUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[liability.ObjectID] = liability.dump()
-        store.bind(store.i2n(liability.ObjectID), liability.ObjectID)
 
         # Because the liability name is in the store, trying to update the name
         # using a relative name based upon creator and a fully-qualified name

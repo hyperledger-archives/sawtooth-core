@@ -121,7 +121,7 @@ class PayFromHolding(Payment):
 
         if not PayFromHolding.ValidationTokenAssetID:
             PayFromHolding.ValidationTokenAssetID = store.n2i(
-                '//marketplace/asset/validation-token')
+                '//marketplace/asset/validation-token', 'Participant')
             assert PayFromHolding.ValidationTokenAssetID
 
         if obj['asset'] != PayFromHolding.ValidationTokenAssetID:

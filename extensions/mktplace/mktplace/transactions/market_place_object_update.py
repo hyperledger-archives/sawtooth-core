@@ -62,7 +62,19 @@ class MarketPlaceObject(object):
         self.ObjectID = objectid
 
     def dump(self):
-        result = {'object-type': self.ObjectTypeName}
+        result = {'object-type': self.ObjectTypeName,
+                  'object-id': self.ObjectID}
+        if hasattr(self, 'CreatorID') and hasattr(self, 'Name'):
+            if self.Name.startswith('//'):
+                if "/" in self.Name[2:]:
+                    path = "/".join(self.Name[2:].split('/')[1:])
+                    result['full-name'] = "{}/{}".format(self.CreatorID, path)
+                else:
+                    result['full-name'] = self.Name
+            else:
+                result['full-name'] = "{}{}".format(self.CreatorID, self.Name)
+        elif hasattr(self, 'Name') and not hasattr(self, 'CreatorID'):
+            result['full-name'] = "//{}".format(self.Name)
         return result
 
 
@@ -113,11 +125,11 @@ class Register(object):
             return False
 
         if not self.Name.startswith('//'):
-            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+            name = "{0}{1}".format(self.CreatorID, self.Name)
         else:
             name = self.Name
 
-        if store.n2i(name):
+        if store.n2i(name, self.ObjectType.ObjectTypeName):
             logger.debug(
                 'invalid name %s; name must be unique', self.Name)
             return False
@@ -148,11 +160,7 @@ class Register(object):
         return True
 
     def apply(self, store):
-        if not self.Name.startswith('//'):
-            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
-        else:
-            name = self.Name
-        store.bind(name, self.ObjectID)
+        pass
 
     def dump(self):
         result = {'UpdateType': self.UpdateType}
@@ -203,7 +211,6 @@ class Unregister(object):
         return True
 
     def apply(self, store):
-        store.unbind(store.i2n(self.ObjectID))
         del store[self.ObjectID]
 
     def dump(self):
@@ -361,7 +368,7 @@ class UpdateName(object):
         else:
             name = self.Name
 
-        if store.n2i(name):
+        if store.n2i(name, self.ObjectType.ObjectTypeName):
             logger.debug('invalid name %s; name must be unique', self.Name)
             return False
 
@@ -390,15 +397,12 @@ class UpdateName(object):
         return True
 
     def apply(self, store):
-        # must remove the existing name binding for this object
-        store.unbind(store.i2n(self.ObjectID))
+        # remove the existing name
 
         obj = store[self.ObjectID]
+        del store[self.ObjectID]
         obj['name'] = self.Name
         store[self.ObjectID] = obj
-
-        # and now add the new name binding
-        store.bind(store.i2n(self.ObjectID), self.ObjectID)
 
     def dump(self):
         assert self.ObjectID

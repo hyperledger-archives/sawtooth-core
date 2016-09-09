@@ -39,7 +39,6 @@ class TestParticipantUpdate(unittest.TestCase):
                 'name': 'participant',
             })
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because the participant name is in the store, the name should
         # not be a valid name as it is a duplicate

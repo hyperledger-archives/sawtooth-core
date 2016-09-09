@@ -58,7 +58,7 @@ def _build_block(ledger, block):
         if mktstore:
             holdingname = "//{0}/holding/validation-token".format(
                 ledger.LocalNode.Name)
-            holdingid = mktstore.n2i(holdingname)
+            holdingid = mktstore.n2i(holdingname, 'Participant')
             if holdingid:
                 logger.info('set validator holding id to %s', holdingid)
                 ValidatorHoldingID = holdingid
@@ -276,9 +276,6 @@ class MarketPlaceGlobalStore(object_store.ObjectStore):
     def __init__(self, prevstore=None, storeinfo=None, readonly=False):
         super(MarketPlaceGlobalStore, self).__init__(prevstore, storeinfo,
                                                      readonly)
-
-        self._namemapinitialized = False
-        self._namemap = {}
 
     def clone_store(self, storeinfo=None, readonly=False):
         """

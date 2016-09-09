@@ -50,7 +50,6 @@ class TestHoldingUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[holding.ObjectID] = holding.dump()
-        store.bind(store.i2n(holding.ObjectID), holding.ObjectID)
 
         # Because the holding name is in the store, trying to register using
         # a relative name based upon creator and a fully-qualified name should
@@ -100,7 +99,6 @@ class TestHoldingUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[holding.ObjectID] = holding.dump()
-        store.bind(store.i2n(holding.ObjectID), holding.ObjectID)
 
         # Because the holding name is in the store, trying to update the name
         # using a relative name based upon creator and a fully-qualified name

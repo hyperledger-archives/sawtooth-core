@@ -50,7 +50,6 @@ class TestSellOfferUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[sell_offer.ObjectID] = sell_offer.dump()
-        store.bind(store.i2n(sell_offer.ObjectID), sell_offer.ObjectID)
 
         # Because the sell offer name is in the store, trying to register
         # using a relative name based upon creator and a fully-qualified name
@@ -100,7 +99,6 @@ class TestSellOfferUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[sell_offer.ObjectID] = sell_offer.dump()
-        store.bind(store.i2n(sell_offer.ObjectID), sell_offer.ObjectID)
 
         # Because the sell offer name is in the store, trying to update the
         # name using a relative name based upon creator and a fully-qualified

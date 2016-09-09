@@ -72,17 +72,27 @@ class TestAllTransactions(unittest.TestCase):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertIsNotNone(state.n2i("//user"))
-        self.assertIsNotNone(state.n2i("//user/user/account"))
-        self.assertIsNotNone(state.n2i("//user/asset-type/currency"))
-        self.assertIsNotNone(state.n2i("//user/asset-type/good"))
-        self.assertIsNotNone(state.n2i("//user/asset/currency/USD"))
-        self.assertIsNotNone(state.n2i("//user/asset/good/paper"))
-        self.assertIsNotNone(state.n2i("//user/user/holding/currency/USD"))
-        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper"))
-        self.assertIsNotNone(state.n2i("//user/user/holding/token"))
-        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper"))
-        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper"))
+        self.assertIsNotNone(state.n2i("//user", 'Participant'))
+        self.assertIsNotNone(state.n2i("//user/user/account",
+                                       'Account'))
+        self.assertIsNotNone(state.n2i("//user/asset-type/currency",
+                                       'AssetType'))
+        self.assertIsNotNone(state.n2i("//user/asset-type/good",
+                                       'AssetType'))
+        self.assertIsNotNone(state.n2i("//user/asset/currency/USD",
+                                       'Asset'))
+        self.assertIsNotNone(state.n2i("//user/asset/good/paper",
+                                       'Asset'))
+        self.assertIsNotNone(state.n2i("//user/user/holding/currency/USD",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//user/user/holding/token",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper",
+                                       'Holding'))
 
     def test_transactions_exchange(self):
         client_cli.main(args=["--name", "user",
@@ -104,17 +114,27 @@ class TestAllTransactions(unittest.TestCase):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertIsNone(state.n2i("//user"))
-        self.assertIsNone(state.n2i("//user/user/account"))
-        self.assertIsNone(state.n2i("//user/asset-type/currency"))
-        self.assertIsNone(state.n2i("//user/asset-type/good"))
-        self.assertIsNone(state.n2i("//user/asset/currency/USD"))
-        self.assertIsNone(state.n2i("//user/asset/good/paper"))
-        self.assertIsNone(state.n2i("//user/user/holding/currency/USD"))
-        self.assertIsNone(state.n2i("//user/user/holding/good/paper"))
-        self.assertIsNone(state.n2i("//user/user/holding/token"))
-        self.assertIsNone(state.n2i("//user/user/holding/good/paper"))
-        self.assertIsNone(state.n2i("//user/user/holding/good/paper"))
+        self.assertIsNone(state.n2i("//user", 'Participant'))
+        self.assertIsNone(state.n2i("//user/user/account",
+                                    'Account'))
+        self.assertIsNone(state.n2i("//user/asset-type/currency",
+                                    'AssetType'))
+        self.assertIsNone(state.n2i("//user/asset-type/good",
+                                    'AssetType'))
+        self.assertIsNone(state.n2i("//user/asset/currency/USD",
+                                    'Asset'))
+        self.assertIsNone(state.n2i("//user/asset/good/paper",
+                                    'Asset'))
+        self.assertIsNone(state.n2i("//user/user/holding/currency/USD",
+                                    'Holding'))
+        self.assertIsNone(state.n2i("//user/user/holding/good/paper",
+                                    'Holding'))
+        self.assertIsNone(state.n2i("//user/user/holding/token",
+                                    'Holding'))
+        self.assertIsNone(state.n2i("//user/user/holding/good/paper",
+                                    'Holding'))
+        self.assertIsNone(state.n2i("//user/user/holding/good/paper",
+                                    'Holding'))
 
     def test_transactions_unr_dangling_ref(self):
         import sys

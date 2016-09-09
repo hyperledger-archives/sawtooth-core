@@ -50,7 +50,6 @@ class TestAssetUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[asset.ObjectID] = asset.dump()
-        store.bind(store.i2n(asset.ObjectID), asset.ObjectID)
 
         # Because the asset name is in the store, trying to register using
         # a relative name based upon creator and a fully-qualified name should
@@ -100,7 +99,6 @@ class TestAssetUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[asset.ObjectID] = asset.dump()
-        store.bind(store.i2n(asset.ObjectID), asset.ObjectID)
 
         # Because the asset name is in the store, trying to update the name
         # using a relative name based upon creator and a fully-qualified name

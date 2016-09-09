@@ -17,7 +17,7 @@ import unittest
 
 from mktplace.transactions import participant_update
 from mktplace.transactions import account_update
-from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
+from mktplace.transactions.market_place import MarketPlaceGlobalStore
 
 
 class TestAccountUpdate(unittest.TestCase):
@@ -50,7 +50,6 @@ class TestAccountUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[account.ObjectID] = account.dump()
-        store.bind(store.i2n(account.ObjectID), account.ObjectID)
 
         # Because the account name is in the store, trying to register using
         # a relative name based upon creator and a fully-qualified name should
@@ -100,7 +99,6 @@ class TestAccountUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[account.ObjectID] = account.dump()
-        store.bind(store.i2n(account.ObjectID), account.ObjectID)
 
         # Because the account name is in the store, trying to update the name
         # using a relative name based upon creator and a fully-qualified name

@@ -50,9 +50,6 @@ class TestExchangeOfferUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[exchange_offer.ObjectID] = exchange_offer.dump()
-        store.bind(
-            store.i2n(exchange_offer.ObjectID),
-            exchange_offer.ObjectID)
 
         # Because the account name is in the store, trying to register using
         # a relative name based upon creator and a fully-qualified name should
@@ -102,9 +99,6 @@ class TestExchangeOfferUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[exchange_offer.ObjectID] = exchange_offer.dump()
-        store.bind(
-            store.i2n(exchange_offer.ObjectID),
-            exchange_offer.ObjectID)
 
         # Because the exchange offer name is in the store, trying to update
         # the name using a relative name based upon creator and a fully-
