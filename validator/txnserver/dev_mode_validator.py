@@ -27,20 +27,6 @@ class DevModeValidator(validator.Validator):
     def __init__(self, config, windows_service=False):
         super(DevModeValidator, self).__init__(config, windows_service)
 
-    def initialize_ledger_specific_configuration(self):
-        """
-        Initialize any ledger type specific configuration options, expected to
-        be overridden
-        """
-
-        if 'MinTransactionsPerBlock' in self.Config:
-            dev_mode_journal.DevModeJournal.MinimumTransactionsPerBlock \
-                = int(self.Config['MinTransactionsPerBlock'])
-
-        if 'MaxTransactionsPerBlock' in self.Config:
-            dev_mode_journal.DevModeJournal.MaximumTransactionsPerBlock \
-                = int(self.Config['MaxTransactionsPerBlock'])
-
     def initialize_ledger_from_node(self, node):
         """
         Initialize the ledger object for the local node, expected to be
