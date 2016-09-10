@@ -79,6 +79,23 @@ class QuorumJournal(Journal):
         Args:
             nd (Node): The local node.
         """
+        # Handle class static variables
+        if 'MinTransactionsPerBlock' in kwargs:
+            QuorumJournal.MinimumTransactionsPerBlock = int(
+                kwargs['MinTransactionsPerBlock'])
+        if 'MaxTransactionsPerBlock' in kwargs:
+            QuorumJournal.MaximumTransactionsPerBlock = int(
+                kwargs['MaxTransactionsPerBlock'])
+        if 'VoteTimeInterval' in kwargs:
+            QuorumJournal.VoteTimeInterval = float(
+                kwargs['VoteTimeInterval'])
+        if 'BallotTimeInterval' in kwargs:
+            QuorumJournal.BallotTimeInterval = float(
+                kwargs['BallotTimeInterval'])
+        if 'VotingQuorumTargetSize' in kwargs:
+            QuorumJournal.VotingQuorumTargetSize = int(
+                kwargs['VotingQuorumTargetSize'])
+
         super(QuorumJournal, self).__init__(nd, **kwargs)
 
         self.QuorumMap = dict()
