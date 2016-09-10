@@ -44,6 +44,33 @@ class PoetJournal(journal_core.Journal):
         Args:
             node (Node): The local node.
         """
+        # Handle class static variables
+        if 'TargetWaitTime' in kwargs:
+            WaitTimer.target_wait_time = \
+                float(kwargs['TargetWaitTime'])
+
+        if 'InitialWaitTime' in kwargs:
+            WaitTimer.initial_wait_time = \
+                float(kwargs['InitialWaitTime'])
+
+        if 'CertificateSampleLength' in kwargs:
+            WaitTimer.certificate_sample_length = int(
+                kwargs['CertificateSampleLength'])
+            WaitTimer.fixed_duration_blocks = \
+                int(kwargs['CertificateSampleLength'])
+
+        if 'FixedDurationBlocks' in kwargs:
+            WaitTimer.fixed_duration_blocks = \
+                int(kwargs['FixedDurationBlocks'])
+
+        if 'MinTransactionsPerBlock' in kwargs:
+            PoetJournal.MinimumTransactionsPerBlock = int(
+                kwargs['MinTransactionsPerBlock'])
+
+        if 'MaxTransactionsPerBlock' in kwargs:
+            PoetJournal.MaximumTransactionsPerBlock = int(
+                kwargs['MaxTransactionsPerBlock'])
+
         super(PoetJournal, self).__init__(node, **kwargs)
 
         enclave_module = None
