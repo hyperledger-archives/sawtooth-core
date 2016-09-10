@@ -24,7 +24,7 @@ def register_message_handlers(journal):
     journal.register_message_handler(TransactionMessage,
                                      transaction_message_handler)
     journal.register_message_handler(TransactionRequestMessage,
-                                     _txnrequesthandler)
+                                     _txn_request_handler)
 
 
 class TransactionMessage(message.Message):
@@ -92,7 +92,7 @@ class TransactionRequestMessage(message.Message):
         return result
 
 
-def _txnrequesthandler(msg, journal):
+def _txn_request_handler(msg, journal):
     # a transaction might be in the committed transaction list only as a
     # placeholder, so we have to make sure that it is there and that it is not
     # None

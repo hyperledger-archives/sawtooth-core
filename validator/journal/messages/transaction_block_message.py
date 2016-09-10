@@ -29,8 +29,8 @@ def register_message_handlers(journal):
     """
     journal.register_message_handler(TransactionBlockMessage,
                                      transaction_block_message_handler)
-    journal.register_message_handler(BlockRequestMessage, _blkrequesthandler)
-    journal.register_message_handler(BlockRetryMessage, _blk_retry_handler)
+    journal.register_message_handler(BlockRequestMessage, _block_request_handler)
+    journal.register_message_handler(BlockRetryMessage, _block_retry_handler)
 
 
 class TransactionBlockMessage(message.Message):
@@ -148,7 +148,7 @@ class BlockRequestMessage(message.Message):
         return result
 
 
-def _blkrequesthandler(msg, journal):
+def _block_request_handler(msg, journal):
     blk = journal.BlockStore.get(msg.BlockID)
     if blk:
         reply = blk.build_message()
@@ -201,5 +201,5 @@ class BlockRetryMessage(message.Message):
         return result
 
 
-def _blk_retry_handler(msg, journal):
+def _block_retry_handler(msg, journal):
     journal.retry_blocks()
