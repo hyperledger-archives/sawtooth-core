@@ -23,6 +23,7 @@ import traceback
 import warnings
 import ctypes
 
+from journal.consensus.poet.wait_timer import set_wait_timer_globals
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
@@ -65,6 +66,7 @@ def local_main(config, windows_service=False, daemonized=False):
 
     try:
         if ledgertype == 'poet':
+            set_wait_timer_globals(config)
             validator = poet_validator.PoetValidator(
                 config,
                 windows_service=windows_service)
@@ -73,6 +75,7 @@ def local_main(config, windows_service=False, daemonized=False):
                 config,
                 windows_service=windows_service)
         elif ledgertype == 'dev_mode':
+            set_wait_timer_globals(config)
             validator = dev_mode_validator.DevModeValidator(
                 config,
                 windows_service=windows_service)
