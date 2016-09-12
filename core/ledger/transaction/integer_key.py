@@ -18,6 +18,8 @@ import logging
 from journal import transaction, global_store_manager
 from journal.messages import transaction_message
 
+from sawtooth.exceptions import InvalidTransactionError
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +83,7 @@ class Update(object):
     def __str__(self):
         return "({0} {1} {2})".format(self.Verb, self.Name, self.Value)
 
-    def is_valid(self, store):
+    def check_valid(self, store):
         """Determines if the update is valid.
 
         Args:
@@ -95,27 +97,47 @@ class Update(object):
         # in theory, the name should have been checked before the transaction
         # was submitted... not being too careful about this
         if not self.Name or self.Name == '':
-            return False
+            raise InvalidTransactionError('"{}" is not a valid key'
+                                          .format(self.Name))
 
         # in theory, the value should have been checked before the transaction
         # was submitted... not being too careful about this
         if not isinstance(self.Value, (int, long)):
-            return False
+            raise InvalidTransactionError('{} is not a valid value type'
+                                          .format(type(self.Value).__name__))
 
         # in theory, the value should have been checked before the transaction
         # was submitted... not being too careful about this
-        if self.Verb == 'set' and self.Name not in store and self.Value >= 0:
-            return True
+        if self.Verb == 'set':
+            if self.Name in store:
+                raise InvalidTransactionError('key "{}" already exists'
+                                              .format(self.Name))
+            if self.Value < 0:
+                raise InvalidTransactionError('Initial value must be >= 0')
 
-        if self.Verb == 'inc' and self.Name in store:
-            return True
+        elif self.Verb == 'inc':
+            if self.Name not in store:
+                raise InvalidTransactionError('key "{}" does not exist'
+                                              .format(self.Name))
 
-        # value after a decrement operation must remain above zero
-        if (self.Verb == 'dec' and self.Name in store
-                and store[self.Name] > self.Value):
-            return True
-
-        return False
+        elif self.Verb == 'dec':
+            if self.Name not in store:
+                raise InvalidTransactionError('key "{}" does not exist'
+                                              .format(self.Name))
+            if store[self.Name] < self.Value:
+                # value after a decrement operation must remain above zero
+                raise InvalidTransactionError(
+                    'key "{}" value must be > 0 after decrement: {} - {} = {}'
+                    .format(
+                        self.Name,
+                        store[self.Name],
+                        self.Value,
+                        store[self.Name] - self.Value))
+        else:
+            raise InvalidTransactionError('Verb "{}" is not understood '
+                                          '(i.e, it is not "set", "inc" or '
+                                          '"dec").'
+                                          .format(self.Name))
 
     def apply(self, store):
         """Applies the update to the asset in the transaction store.
@@ -183,21 +205,16 @@ class IntegerKeyTransaction(transaction.Transaction):
     def __str__(self):
         return " and ".join([str(u) for u in self.Updates])
 
-    def is_valid(self, store):
+    def check_valid(self, store):
         """Determines if the transaction is valid.
 
         Args:
             store (dict): Transaction store mapping.
         """
-        if not super(IntegerKeyTransaction, self).is_valid(store):
-            return False
+        super(IntegerKeyTransaction, self).check_valid(store)
 
         for update in self.Updates:
-            if not update.is_valid(store):
-                logger.debug('invalid transaction: %s', str(update))
-                return False
-
-        return True
+            update.check_valid(store)
 
     def apply(self, store):
         """Applies all the updates in the transaction to the transaction

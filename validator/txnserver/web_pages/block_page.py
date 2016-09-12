@@ -17,7 +17,6 @@
 
 import logging
 
-from twisted.web.error import Error
 from twisted.web import http
 
 from txnserver.web_pages.base_page import BasePage
@@ -57,7 +56,10 @@ class BlockPage(BasePage):
 
         block_id = components.pop(0)
         if block_id not in self.Ledger.BlockStore:
-            raise Error(http.BAD_REQUEST, 'unknown block {0}'.format(block_id))
+            return self._encode_error_response(
+                request,
+                http.NOT_FOUND,
+                KeyError('unknown block {0}'.format(block_id)))
 
         binfo = self.Ledger.BlockStore[block_id].dump()
         binfo['Identifier'] = block_id
@@ -67,7 +69,9 @@ class BlockPage(BasePage):
 
         field = components.pop(0)
         if field not in binfo:
-            raise Error(http.BAD_REQUEST,
-                        'unknown block field {0}'.format(field))
+            return self._encode_error_response(
+                request,
+                http.NOT_FOUND,
+                KeyError('unknown block field {0}'.format(field)))
 
         return binfo[field]

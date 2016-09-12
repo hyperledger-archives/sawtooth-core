@@ -46,16 +46,20 @@ class StorePage(BasePage):
 
         storemap = self.Ledger.GlobalStoreMap.get_block_store(block_id)
         if not storemap:
-            raise Error(http.BAD_REQUEST,
-                        'no store map for block <{0}>'.format(block_id))
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                'no store map for block <{0}>'.format(block_id))
 
         if len(components) == 0:
             return storemap.TransactionStores.keys()
 
         store_name = '/' + components.pop(0)
         if store_name not in storemap.TransactionStores:
-            raise Error(http.BAD_REQUEST,
-                        'no such store <{0}>'.format(store_name))
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                'no such store <{0}>'.format(store_name))
 
         store = storemap.get_transaction_store(store_name)
 
@@ -69,6 +73,9 @@ class StorePage(BasePage):
             return store.compose()
 
         if key not in store:
-            raise Error(http.BAD_REQUEST, 'no such key {0}'.format(key))
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                KeyError('no such key {0}'.format(key)))
 
         return store[key]

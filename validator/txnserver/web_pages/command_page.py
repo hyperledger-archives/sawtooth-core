@@ -46,8 +46,10 @@ class CommandPage(BasePage):
         except Error as e:
             LOGGER.info('exception while decoding http request %s; %s',
                         request.path, traceback.format_exc(20))
-            raise Error(http.BAD_REQUEST,
-                        'unable to decode incoming request {0}'.format(str(e)))
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                'unable to decode incoming request {0}'.format(str(e)))
 
         # process /command
         try:
@@ -74,8 +76,6 @@ class CommandPage(BasePage):
         except:
             LOGGER.info('exception while processing http request %s; %s',
                         request.path, traceback.format_exc(20))
-            raise Error(http.BAD_REQUEST,
-                        'error processing http request'
-                        ' {0}'.format(request.path))
+            raise
 
         return msg

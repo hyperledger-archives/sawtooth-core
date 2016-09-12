@@ -72,6 +72,9 @@ class StatisticsPage(BasePage):
 
         elif ('ledger' not in args) & ('node' not in args) \
                 & ('platform' not in args):
-            raise Error(http.NOT_FOUND, 'not valid source or arg')
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                'not valid source or arg')
 
         return result

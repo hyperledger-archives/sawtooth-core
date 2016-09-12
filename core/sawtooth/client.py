@@ -30,8 +30,9 @@ from gossip.common import json2dict, dict2json
 from gossip.common import cbor2dict, dict2cbor
 from gossip.common import pretty_print_dict
 from journal import global_store_manager, transaction
-from sawtooth.exceptions import ClientException, MessageException
+from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
+from sawtooth.exceptions import MessageException
 
 
 LOGGER = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class TransactionStatus(Enum):
     committed = 200
     pending = 302
     not_found = 404
+    internal_server_error = 500,
     server_busy = 503
 
 
@@ -159,21 +161,33 @@ class _Communication(object):
 
             opener = urllib2.build_opener(self._proxy_handler)
             response = opener.open(request, timeout=10)
-
             if not self._cookie:
                 self._cookie = response.headers.get('Set-Cookie')
-
         except urllib2.HTTPError as err:
-            LOGGER.warn('operation failed with response: %s', err.code)
-            self._print_error_information_from_server(err)
-            err_content = err.read()
-            if err_content.find("InvalidTransactionError"):
-                raise InvalidTransactionError("Error from server: {0}"
-                                              .format(err_content))
+            content = err.read()
+            if content is not None:
+                headers = err.info()
+                encoding = headers.get('Content-Type')
+
+                if encoding == 'application/json':
+                    value = json2dict(content)
+                elif encoding == 'application/cbor':
+                    value = cbor2dict(content)
+                else:
+                    LOGGER.warn('operation failed with response: %s', err.code)
+                    raise MessageException(
+                        'operation failed with response: {0}'.format(err.code))
+                LOGGER.warn('operation failed with response: %s %s',
+                            err.code, str(value))
+                if "errorType" in value:
+                    if value['errorType'] == "InvalidTransactionError":
+                        raise InvalidTransactionError(
+                            value['error'] if 'error' in value else value)
+                    else:
+                        raise MessageException(str(value))
             else:
                 raise MessageException(
                     'operation failed with response: {0}'.format(err.code))
-
         except urllib2.URLError as err:
             LOGGER.warn('operation failed: %s', err.reason)
             raise MessageException('operation failed: {0}'.format(err.reason))
@@ -327,6 +341,8 @@ class SawtoothClient(object):
         self._update_batch = None
         self.fetch_state()
 
+        self._disable_client_validation = disable_client_validation
+
         signing_key = None
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
@@ -345,8 +361,6 @@ class SawtoothClient(object):
             self._local_node = node.Node(identifier=identifier,
                                          signingkey=signing_key,
                                          name=name)
-
-        self._disable_client_validation = disable_client_validation
 
     @property
     def base_url(self):
@@ -471,7 +485,8 @@ class SawtoothClient(object):
         try:
             LOGGER.debug('Posting transaction: %s', txnid)
             result = self._communication.postmsg(msg.MessageType, msg.dump())
-        except MessageException:
+        except MessageException as e:
+            LOGGER.warn('Posting transaction failed: %s', str(e))
             return None
 
         # if there was no exception thrown then all transactions should return
@@ -482,10 +497,8 @@ class SawtoothClient(object):
         # id for future dependencies this could be a problem if the transaction
         # fails during application
         self._last_transaction = txnid
-
         if not self._disable_client_validation:
             txn.apply(self._current_state.state)
-
         return txnid
 
     def fetch_state(self):

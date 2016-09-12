@@ -15,7 +15,6 @@
 
 import logging
 
-from twisted.web.error import Error
 from twisted.web import http
 
 from txnserver.web_pages.base_page import BasePage
@@ -67,8 +66,10 @@ class TransactionPage(BasePage):
         txnid = components.pop(0)
 
         if txnid not in self.Ledger.TransactionStore:
-            raise Error(http.NOT_FOUND,
-                        'no such transaction {0}'.format(txnid))
+            return self._encode_error_response(
+                request,
+                http.NOT_FOUND,
+                LookupError('no such transaction {0}'.format(txnid)))
 
         txn = self.Ledger.TransactionStore[txnid]
 
@@ -77,8 +78,8 @@ class TransactionPage(BasePage):
             if txn.Status == transaction.Status.committed:
                 return None
             else:
-                raise Error(http.FOUND,
-                            'transaction not committed {0}'.format(txnid))
+                request.setResponseCode(http.FOUND)
+                return None
 
         tinfo = txn.dump()
         tinfo['Identifier'] = txnid
@@ -91,7 +92,9 @@ class TransactionPage(BasePage):
 
         field = components.pop(0)
         if field not in tinfo:
-            raise Error(http.BAD_REQUEST,
-                        'unknown transaction field {0}'.format(field))
+            return self._encode_error_response(
+                request,
+                http.BAD_REQUEST,
+                KeyError('unknown transaction field {0}'.format(field)))
 
         return tinfo[field]

@@ -18,7 +18,6 @@ import logging
 import traceback
 
 from twisted.web import http
-from twisted.web.error import Error
 
 from sawtooth.exceptions import InvalidTransactionError
 from txnserver.web_pages.base_page import BasePage
@@ -60,8 +59,13 @@ class ForwardPage(BasePage):
                     pending_block_txns = \
                         self.Ledger.PendingTransactionBlock.TransactionIDs
 
-                temp_store_map = self._get_store_map()
-
+                try:
+                    temp_store_map = self._get_store_map()
+                except KeyError as e:
+                    return self._encode_error_response(
+                        request,
+                        http.NOT_FOUND,
+                        e)
                 pending_txns = copy.copy(self.Ledger.PendingTransactions)
                 pending_txn_ids = [x for x in pending_txns.iterkeys()]
 
@@ -74,9 +78,11 @@ class ForwardPage(BasePage):
                 if transaction_type not in temp_store_map.TransactionStores:
                     LOGGER.info('transaction type %s not in global store map',
                                 transaction_type)
-                    raise Error(http.BAD_REQUEST,
-                                'unable to validate enclosed'
-                                ' transaction {0}'.format(data))
+                    return self._encode_error_response(
+                        request,
+                        http.BAD_REQUEST,
+                        'unable to validate enclosed'
+                        ' transaction {0}'.format(data))
 
                 if pending_block_txns is not None:
                     pending_txn_ids = pending_block_txns + pending_txn_ids
@@ -109,22 +115,22 @@ class ForwardPage(BasePage):
                 my_store = temp_store_map.get_transaction_store(
                     mytxn.TransactionTypeName)
                 try:
+                    LOGGER.info(mytxn)
                     mytxn.check_valid(my_store)
                 except InvalidTransactionError as e:
                     LOGGER.info('submitted transaction fails transaction '
                                 'family validation check: %s; %s',
                                 request.path, mymsg.dump())
-                    raise Error(http.BAD_REQUEST,
-                                "InvalidTransactionError: failed transaction "
-                                "family validation check: {}".format(str(e)))
+                    return self._encode_error_response(
+                        request,
+                        http.BAD_REQUEST,
+                        e)
                 except:
                     LOGGER.info('submitted transaction is '
                                 'not valid %s; %s; %s',
                                 request.path, mymsg.dump(),
                                 traceback.format_exc(20))
-                    raise Error(http.BAD_REQUEST,
-                                "enclosed transaction is not"
-                                " valid {}".format(data))
+                    raise
 
                 LOGGER.info('transaction %s is valid',
                             msg.Transaction.Identifier)
@@ -133,4 +139,4 @@ class ForwardPage(BasePage):
         # and send back the results
 
         self.Ledger.handle_message(msg)
-        return msg
+        return msg.dump()

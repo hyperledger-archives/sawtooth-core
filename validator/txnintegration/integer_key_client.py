@@ -27,7 +27,8 @@ class IntegerKeyClient(SawtoothClient):
                  name='IntegerKeyClient',
                  keystring=None,
                  keyfile=None,
-                 state=None):
+                 state=None,
+                 disable_client_validation=False):
         super(IntegerKeyClient, self).__init__(
             base_url=baseurl,
             name=name,
@@ -35,7 +36,8 @@ class IntegerKeyClient(SawtoothClient):
             transaction_type=integer_key.IntegerKeyTransaction,
             message_type=integer_key.IntegerKeyTransaction.MessageType,
             keystring=keystring,
-            keyfile=keyfile)
+            keyfile=keyfile,
+            disable_client_validation=disable_client_validation)
 
         # Compatibility shim until the integration and smoke tests get
         # refactored.
