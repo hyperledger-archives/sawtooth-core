@@ -21,11 +21,11 @@ from journal.consensus.poet import poet_journal, wait_certificate
 logger = logging.getLogger(__name__)
 
 
-class LotteryValidator(validator.Validator):
-    EndpointDomain = '/LotteryValidator'
+class PoetValidator(validator.Validator):
+    EndpointDomain = '/PoetValidator'
 
     def __init__(self, config, windows_service=False):
-        super(LotteryValidator, self).__init__(config, windows_service)
+        super(PoetValidator, self).__init__(config, windows_service)
 
     def initialize_ledger_specific_configuration(self):
         """

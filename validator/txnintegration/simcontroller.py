@@ -32,7 +32,7 @@ def set_default_topology(topology,
                          q_mag=None
                          ):
     cfg = None
-    if ledger_type in ['dev_mode', 'lottery']:
+    if ledger_type in ['dev_mode', 'poet']:
         cfg = gen_dfl_cfg_poet()
     elif ledger_type in ['quorum']:
         q = q_mag
@@ -56,7 +56,7 @@ def set_default_topology(topology,
 
 
 class SimController(object):
-    def __init__(self, n_mag, ledger_type='lottery'):
+    def __init__(self, n_mag, ledger_type='poet'):
         self.n_mag = n_mag
         self.node_controller = None
         self.edge_controller = None

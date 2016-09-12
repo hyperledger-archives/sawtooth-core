@@ -51,7 +51,7 @@ def local_main(config, windows_service=False, daemonized=False):
     # epoll and we need that to happen after the forking done with
     # Daemonize().  This is a side-effect of importing twisted.
     from twisted.internet import reactor
-    from txnserver import lottery_validator
+    from txnserver import poet_validator
     from txnserver import quorum_validator
     from txnserver import dev_mode_validator
     from txnserver import web_api
@@ -59,13 +59,13 @@ def local_main(config, windows_service=False, daemonized=False):
 
     logger.warn('validator pid is %s', os.getpid())
 
-    ledgertype = config.get('LedgerType', 'lottery')
+    ledgertype = config.get('LedgerType', 'poet')
 
     validator = None
 
     try:
-        if ledgertype == 'lottery':
-            validator = lottery_validator.LotteryValidator(
+        if ledgertype == 'poet':
+            validator = poet_validator.PoetValidator(
                 config,
                 windows_service=windows_service)
         elif ledgertype == 'quorum':
