@@ -76,7 +76,7 @@ Block IDs are always ordered from the newest committed block ID to the oldest.
         "Identifier": "85ec88be3fdd404b",
         "PreviousBlockID": "b7351fa8d5a49dcf",
         "Signature": "GyZOrdAA2212HYyKGvKlHBnkPAqOKY1XeQoIbsI6/4wDhY26FdffXLOgUpDMhpQhSKKwtGQBQL0uzpwcypKqbjQ=",
-        "TransactionBlockType": "/Lottery/PoetTransactionBlock",
+        "TransactionBlockType": "/Poet/PoetTransactionBlock",
         "TransactionIDs": [
           "0102098777664ea4",
           "3c5f74a72486eedf",

@@ -13,5 +13,5 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = ['config', 'log_setup', 'lottery_validator', 'web_api', 'validator',
+__all__ = ['config', 'log_setup', 'poet_validator', 'web_api', 'validator',
            'quorum_validator']

@@ -257,10 +257,10 @@ class TestSmoke(unittest.TestCase):
                 print "No Validator data and logs to preserve"
 
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load_lottery(self):
+    def test_intkey_load_poet(self):
         cfg = defaultValidatorConfig.copy()
-        cfg['LedgerType'] = 'lottery'
-        self._run_int_load(cfg, 5, "TestSmokeResultsLottery")
+        cfg['LedgerType'] = 'poet'
+        self._run_int_load(cfg, 5, "TestSmokeResultsPoet")
 
     @unittest.skip("LedgerType quorum is broken.")
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")

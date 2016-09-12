@@ -74,7 +74,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         PoetTransactionBlock.WaitCertificate (wait_certificateWaitCertificate):
             The wait certificate for the block.
     """
-    TransactionBlockTypeName = '/Lottery/PoetTransactionBlock'
+    TransactionBlockTypeName = '/Poet/PoetTransactionBlock'
     MessageType = PoetTransactionBlockMessage
 
     def __init__(self, minfo=None):
