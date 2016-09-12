@@ -61,7 +61,7 @@ def interactive_client(url=None, name=None, keyfile=None):
     state = MarketPlaceState(url)
     state.fetch()
 
-    creator = state.n2i('/player/{0}'.format(name))
+    creator = state.n2i('/player/{0}'.format(name), 'Participant')
     client = MarketPlaceClient(url,
                                creator=creator,
                                name=name,
@@ -191,7 +191,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
         names are updated correctly.
         """
         txnid = self._sendtxn(update)
-
         return txnid
 
     def _unregister(self, update):
@@ -211,8 +210,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :param id objectid: the identifier for the object to update
         :param str name: the new name of the object
         """
-        oldname = self.CurrentState.i2n(objectid)
-
         update = module.UpdateName()
 
         update.ObjectID = objectid
@@ -220,10 +217,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Name = name
 
         txnid = self._sendtxn(update)
-
-        if txnid:
-            self.CurrentState.unbind(oldname)
-            self.CurrentState.bind(self.CurrentState.i2n(objectid), objectid)
 
         return txnid
 

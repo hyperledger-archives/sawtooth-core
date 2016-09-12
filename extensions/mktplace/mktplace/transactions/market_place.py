@@ -27,7 +27,8 @@ from mktplace.transactions import participant_update
 from mktplace.transactions import payment
 from mktplace.transactions import sell_offer_update
 from gossip import node, signed_object
-from journal import transaction, transaction_block, global_store_manager
+from journal import transaction, transaction_block
+from journal import object_store
 from journal.messages import transaction_message
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def _build_block(ledger, block):
         if mktstore:
             holdingname = "//{0}/holding/validation-token".format(
                 ledger.LocalNode.Name)
-            holdingid = mktstore.n2i(holdingname)
+            holdingid = mktstore.n2i(holdingname, 'Participant')
             if holdingid:
                 logger.info('set validator holding id to %s', holdingid)
                 ValidatorHoldingID = holdingid
@@ -271,13 +272,10 @@ def _prepare_genesis_transactions(journal):
     logger.info('Created validation token asset: %s', txn.Identifier)
 
 
-class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
+class MarketPlaceGlobalStore(object_store.ObjectStore):
     def __init__(self, prevstore=None, storeinfo=None, readonly=False):
         super(MarketPlaceGlobalStore, self).__init__(prevstore, storeinfo,
                                                      readonly)
-
-        self._namemapinitialized = False
-        self._namemap = {}
 
     def clone_store(self, storeinfo=None, readonly=False):
         """
@@ -287,38 +285,6 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
         :rtype: KeyValueStore
         """
         return MarketPlaceGlobalStore(self, storeinfo, readonly)
-
-    def _initnamemap(self):
-        """
-        Initialize the name map
-
-        NOTE: This is an expensive operation for a large ledger since it
-        processes every object in the ledger.
-        """
-        for objid, objinfo in self.iteritems():
-            name = self.i2n(objid, objinfo)
-            if not name.startswith('///'):
-                self._namemap[name] = objid
-
-        self._namemapinitialized = True
-
-    def bind(self, fqname, objectid):
-        """
-        Associate the objectid with the namemap
-        """
-        if not self._namemapinitialized:
-            self._initnamemap()
-
-        self._namemap[fqname] = objectid
-
-    def unbind(self, fqname):
-        """
-        Remove fqname from the namemap
-        """
-        if not self._namemapinitialized:
-            self._initnamemap()
-
-        del self._namemap[fqname]
 
     def i2n(self, objectid, objinfo=None):
         """
@@ -345,19 +311,38 @@ class MarketPlaceGlobalStore(global_store_manager.KeyValueStore):
 
         return '{0}{1}'.format(self.i2n(creatorid), name)
 
-    def n2i(self, name):
+    def n2i(self, name, obj_type):
         """
         Find an object by name
+
+        Args:
+            obj_type: The object-type, Asset, Participant...
         """
 
         if name.startswith('///'):
             id = name.replace('///', '', 1)
             return id if id in self else None
+        if name.startswith('//'):
+            def unpack_indeterminate(creator, *path):
+                return creator, path
 
-        if not self._namemapinitialized:
-            self._initnamemap()
-
-        return self._namemap.get(name)
+            creator, path = unpack_indeterminate(*name[2:].split('/'))
+            try:
+                creator_id = self.lookup("Participant:full-name",
+                                         "//" + creator)['object-id']
+            except KeyError:
+                return None
+            if path:
+                name = '{}/{}'.format(creator_id, "/".join(path))
+            else:
+                name = "//" + creator
+        ident = None
+        index = obj_type + ":full-name"
+        try:
+            ident = self.lookup(index, name)['object-id']
+        except KeyError:
+            pass
+        return ident
 
 
 class MarketPlaceTransactionMessage(transaction_message.TransactionMessage):

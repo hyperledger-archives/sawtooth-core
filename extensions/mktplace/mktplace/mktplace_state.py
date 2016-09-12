@@ -100,27 +100,9 @@ class MarketPlaceState(MarketPlaceCommunication):
 
         self.CreatorID = creator
         if not self.CreatorID and creator_name:
-            self.CreatorID = self.State.n2i('//' + creator_name)
+            self.CreatorID = self.State.n2i('//' + creator_name, 'Participant')
 
-    def bind(self, name, objectid):
-        """
-        Add a binding between a fully qualified name and an objectid
-
-        :param str name: fully qualified object name
-        :param id objectid: object identifier
-        """
-
-        return self.State.bind(name, objectid)
-
-    def unbind(self, name):
-        """
-        Drop the binding of a name to an identifier
-
-        :param str name: object name
-        """
-        return self.State.unbind(name)
-
-    def n2i(self, name):
+    def n2i(self, name, obj_type):
         """
         Convert a name into an identifier. The name can take one of these
         forms:
@@ -137,12 +119,21 @@ class MarketPlaceState(MarketPlaceCommunication):
             return self.CreatorID
 
         if not name.startswith('//'):
-            cname = self.i2n(self.CreatorID)
+            cname = self.CreatorID
             if not cname:
                 return None
             name = '{0}{1}'.format(cname, name)
+        else:
+            def unpack_indeterminate(creator, *path):
+                return creator, path
+            creator, path = unpack_indeterminate(*name[2:].split('/'))
+            creator_id = self.State.n2i("//" + creator, 'Participant')
+            if path:
+                name = '{}/{}'.format(creator_id, "/".join(path))
+            else:
+                name = "//" + creator
 
-        return self.State.n2i(name)
+        return self.State.n2i(name, obj_type)
 
     def i2n(self, objectid):
         """

@@ -96,47 +96,60 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//marketplace/asset/token"))
-        self.assertIsNotNone(state.n2i("//mkt"))
-        self.assertIsNotNone(state.n2i("//mkt/market/account"))
-        self.assertIsNotNone(state.n2i("//mkt/asset-type/currency"))
-        self.assertIsNotNone(state.n2i("//mkt/asset-type/commercialpaper"))
-        self.assertIsNotNone(state.n2i("//mkt/asset/currency/USD"))
-        self.assertIsNotNone(state.n2i("//mkt/asset/commercialpaper/note"))
-        self.assertIsNotNone(state.n2i("//mkt/market/holding/currency/USD"))
-        self.assertIsNotNone(state.n2i("//mkt/market/holding/token"))
-        self.assertIsNotNone(state.n2i("//BANK-trader"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/holding/token"))
-        self.assertIsNotNone(state.n2i("//BANK-agent"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/holding/token"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/holding/token"))
+        self.assertIsNotNone(state.n2i("//marketplace/asset/token",
+                                       'Asset'))
+        self.assertIsNotNone(state.n2i("//mkt", 'Participant'))
+        self.assertIsNotNone(state.n2i("//mkt/market/account", 'Account'))
+        self.assertIsNotNone(state.n2i("//mkt/asset-type/currency",
+                                       'AssetType'))
+        self.assertIsNotNone(state.n2i("//mkt/asset-type/commercialpaper",
+                                       'AssetType'))
+        self.assertIsNotNone(state.n2i("//mkt/asset/currency/USD", 'Asset'))
+        self.assertIsNotNone(state.n2i("//mkt/asset/commercialpaper/note",
+                                       'Asset'))
+        self.assertIsNotNone(state.n2i("//mkt/market/holding/currency/USD",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//mkt/market/holding/token",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-trader", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/USD", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/paper", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/holding/token",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-agent", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-agent/USD", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-agent/paper", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-agent/holding/token",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-dealer", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/USD",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/paper",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/holding/token",
+                                       'Holding'))
 
     def test_scenario_a(self):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-agent"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/paper"))
-        self.assertEquals(state.State[state.n2i("//BANK-trader/USD")]["count"],
-                          1000000)
-        self.assertEquals(state.State[state.n2i("//BANK-agent/USD")]["count"],
-                          1000000)
+        self.assertIsNotNone(state.n2i("//BANK-trader", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/USD", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/paper", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-agent", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-agent/USD", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-agent/paper", 'Holding'))
+        self.assertEquals(state.State[state.n2i("//BANK-trader/USD",
+                                                'Holding')]["count"], 1000000)
+        self.assertEquals(state.State[state.n2i("//BANK-agent/USD",
+                                                'Holding')]["count"], 1000000)
         self.assertEquals(
-            state.State[state.n2i("//BANK-trader/paper")]["count"], 10)
+            state.State[state.n2i("//BANK-trader/paper",
+                                  'Holding')]["count"], 10)
         self.assertEquals(
-            state.State[state.n2i("//BANK-agent/paper")]["count"], 10)
+            state.State[state.n2i("//BANK-agent/paper",
+                                  'Holding')]["count"], 10)
 
         client_cli.main(
             args=["--name", "BANK-trader",
@@ -149,7 +162,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertIsNotNone(state.n2i("//BANK-trader/offer-a"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/offer-a",
+                                       'ExchangeOffer'))
 
         client_cli.main(args=["--name", "BANK-agent",
                               "--script",
@@ -161,36 +175,46 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertEquals(state.State[state.n2i("//BANK-trader/USD")]["count"],
-                          900612)
-        self.assertEquals(state.State[state.n2i("//BANK-agent/USD")]["count"],
-                          1099388)
+        self.assertEquals(state.State[state.n2i("//BANK-trader/USD",
+                                                'Holding')]["count"], 900612)
+        self.assertEquals(state.State[state.n2i("//BANK-agent/USD",
+                                                'Holding')]["count"], 1099388)
         self.assertEquals(
-            state.State[state.n2i("//BANK-trader/paper")]["count"], 11)
+            state.State[state.n2i("//BANK-trader/paper",
+                                  'Holding')]["count"], 11)
         self.assertEquals(
-            state.State[state.n2i("//BANK-agent/paper")]["count"], 9)
+            state.State[state.n2i("//BANK-agent/paper",
+                                  "Holding")]["count"], 9)
 
     def test_scenario_b(self):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/paper"))
+        self.assertIsNotNone(state.n2i("//BANK-trader", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/paper", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer", "Participant"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/paper", "Holding"))
 
-        self.assertIn("count", state.State[state.n2i("//BANK-trader/USD")])
-        self.assertIn("count", state.State[state.n2i("//BANK-trader/paper")])
-        self.assertIn("count", state.State[state.n2i("//BANK-dealer/USD")])
-        self.assertIn("count", state.State[state.n2i("//BANK-dealer/paper")])
+        self.assertIn("count", state.State[state.n2i("//BANK-trader/USD",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-trader/paper",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-dealer/USD",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-dealer/paper",
+                                                     "Holding")])
 
-        trader_usd = state.State[state.n2i("//BANK-trader/USD")]["count"]
-        trader_paper = state.State[state.n2i("//BANK-trader/paper")]["count"]
-        dealer_usd = state.State[state.n2i("//BANK-dealer/USD")]["count"]
-        dealer_paper = state.State[state.n2i("//BANK-dealer/paper")]["count"]
+        trader_usd = state.State[state.n2i("//BANK-trader/USD",
+                                           'Holding')]["count"]
+        trader_paper = state.State[state.n2i("//BANK-trader/paper",
+                                             "Holding")]["count"]
+        dealer_usd = state.State[state.n2i("//BANK-dealer/USD",
+                                           "Holding")]["count"]
+        dealer_paper = state.State[state.n2i("//BANK-dealer/paper",
+                                             "Holding")]["count"]
 
         client_cli.main(
             args=["--name", "BANK-trader",
@@ -204,7 +228,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader/offer-b"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/offer-b",
+                                       'ExchangeOffer'))
 
         client_cli.main(
             args=["--name", "BANK-dealer",
@@ -217,15 +242,18 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertEquals(state.State[state.n2i("//BANK-trader/USD")]["count"],
+        self.assertEquals(state.State[state.n2i("//BANK-trader/USD",
+                                                "Holding")]["count"],
                           trader_usd - 99388)
-        self.assertEquals(state.State[state.n2i("//BANK-dealer/USD")]["count"],
+        self.assertEquals(state.State[state.n2i("//BANK-dealer/USD",
+                                                "Holding")]["count"],
                           dealer_usd + 99388)
         self.assertEquals(
-            state.State[state.n2i("//BANK-trader/paper")]["count"],
+            state.State[state.n2i("//BANK-trader/paper", "Holding")]["count"],
             trader_paper + 1)
         self.assertEquals(
-            state.State[state.n2i("//BANK-dealer/paper")]["count"],
+            state.State[state.n2i("//BANK-dealer/paper",
+                                  "Holding")]["count"],
             dealer_paper - 1)
 
     def test_scenario_c(self):
@@ -233,25 +261,33 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-agent"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/paper"))
+        self.assertIsNotNone(state.n2i("//BANK-trader", "Participant"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/paper", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer", "Participant"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/paper", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-agent", "Participant"))
+        self.assertIsNotNone(state.n2i("//BANK-agent/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-agent/paper", "Holding"))
 
-        self.assertIn("count", state.State[state.n2i("//BANK-trader/USD")])
-        self.assertIn("count", state.State[state.n2i("//BANK-trader/paper")])
-        self.assertIn("count", state.State[state.n2i("//BANK-dealer/USD")])
-        self.assertIn("count", state.State[state.n2i("//BANK-agent/USD")])
+        self.assertIn("count", state.State[state.n2i("//BANK-trader/USD",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-trader/paper",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-dealer/USD",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-agent/USD",
+                                                     "Holding")])
 
-        trader_usd = state.State[state.n2i("//BANK-trader/USD")]["count"]
-        trader_paper = state.State[state.n2i("//BANK-trader/paper")]["count"]
-        dealer_usd = state.State[state.n2i("//BANK-dealer/USD")]["count"]
-        agent_usd = state.State[state.n2i("//BANK-agent/USD")]["count"]
+        trader_usd = state.State[state.n2i("//BANK-trader/USD",
+                                           "Holding")]["count"]
+        trader_paper = state.State[state.n2i("//BANK-trader/paper",
+                                             "Holding")]["count"]
+        dealer_usd = state.State[state.n2i("//BANK-dealer/USD",
+                                           "Holding")]["count"]
+        agent_usd = state.State[state.n2i("//BANK-agent/USD",
+                                          "Holding")]["count"]
 
         client_cli.main(
             args=["--name", "BANK-trader",
@@ -265,7 +301,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader/offer-c-trader"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/offer-c-trader",
+                                       'ExchangeOffer'))
 
         client_cli.main(
             args=["--name", "BANK-dealer",
@@ -279,11 +316,13 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-dealer/paper-scenario-c"))
-        self.assertIsNotNone(state.n2i("//BANK-dealer/offer-c-dealer"))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/paper-scenario-c",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-dealer/offer-c-dealer",
+                                       'ExchangeOffer'))
         self.assertEquals(
-            state.State[state.n2i("//BANK-dealer/paper-scenario-c")]["count"],
-            0)
+            state.State[state.n2i("//BANK-dealer/paper-scenario-c",
+                                  'Holding')]["count"], 0)
 
         client_cli.main(args=["--name", "BANK-agent",
                               "--script",
@@ -296,19 +335,23 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-agent/paper-scenario-c"))
-        self.assertEquals(state.State[state.n2i("//BANK-trader/USD")]["count"],
+        self.assertIsNotNone(
+            state.n2i("//BANK-agent/paper-scenario-c", 'Holding'))
+        self.assertEquals(state.State[state.n2i("//BANK-trader/USD",
+                                                'Holding')]["count"],
                           trader_usd)
-        self.assertEquals(state.State[state.n2i("//BANK-dealer/USD")]["count"],
-                          dealer_usd - 99388)
-        self.assertEquals(state.State[state.n2i("//BANK-agent/USD")]["count"],
+        self.assertEquals(
+            state.State[state.n2i("//BANK-dealer/USD",
+                                  "Holding")]["count"], dealer_usd - 99388)
+        self.assertEquals(state.State[state.n2i("//BANK-agent/USD",
+                                                "Holding")]["count"],
                           agent_usd + 99388)
         self.assertEquals(
-            state.State[state.n2i("//BANK-dealer/paper-scenario-c")]["count"],
-            1)
+            state.State[state.n2i("//BANK-dealer/paper-scenario-c",
+                                  "Holding")]["count"], 1)
         self.assertEquals(
-            state.State[state.n2i("//BANK-agent/paper-scenario-c")]["count"],
-            0)
+            state.State[state.n2i("//BANK-agent/paper-scenario-c",
+                                  "Holding")]["count"], 0)
 
         client_cli.main(
             args=["--name", "BANK-dealer",
@@ -322,44 +365,56 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-agent/paper-scenario-c"))
-        self.assertEquals(state.State[state.n2i("//BANK-trader/USD")]["count"],
-                          trader_usd - 99388)
-        self.assertEquals(state.State[state.n2i("//BANK-dealer/USD")]["count"],
-                          dealer_usd)
-        self.assertEquals(state.State[state.n2i("//BANK-agent/USD")]["count"],
-                          agent_usd + 99388)
+        self.assertIsNotNone(state.n2i("//BANK-agent/paper-scenario-c",
+                                       'Holding'))
         self.assertEquals(
-            state.State[state.n2i("//BANK-trader/paper")]["count"],
+            state.State[state.n2i("//BANK-trader/USD",
+                                  "Holding")]["count"], trader_usd - 99388)
+        self.assertEquals(state.State[state.n2i("//BANK-dealer/USD",
+                                                "Holding")]["count"],
+                          dealer_usd)
+        self.assertEquals(
+            state.State[state.n2i("//BANK-agent/USD", "Holding")]["count"],
+            agent_usd + 99388)
+        self.assertEquals(
+            state.State[state.n2i("//BANK-trader/paper", "Holding")]["count"],
             trader_paper + 1)
         self.assertEquals(
-            state.State[state.n2i("//BANK-dealer/paper-scenario-c")]["count"],
-            0)
+            state.State[state.n2i("//BANK-dealer/paper-scenario-c",
+                                  "Holding")]["count"], 0)
         self.assertEquals(
-            state.State[state.n2i("//BANK-agent/paper-scenario-c")]["count"],
-            0)
+            state.State[state.n2i("//BANK-agent/paper-scenario-c",
+                                  "Holding")]["count"], 0)
 
     def test_scenario_d(self):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-trader/paper"))
-        self.assertIsNotNone(state.n2i("//BANK-agent"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/USD"))
-        self.assertIsNotNone(state.n2i("//BANK-agent/paper"))
+        self.assertIsNotNone(state.n2i("//BANK-trader", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/USD", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-trader/paper", 'Holding'))
+        self.assertIsNotNone(state.n2i("//BANK-agent", 'Participant'))
+        self.assertIsNotNone(state.n2i("//BANK-agent/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//BANK-agent/paper", 'Holding'))
 
-        self.assertIn("count", state.State[state.n2i("//BANK-trader/USD")])
-        self.assertIn("count", state.State[state.n2i("//BANK-trader/paper")])
-        self.assertIn("count", state.State[state.n2i("//BANK-agent/USD")])
-        self.assertIn("count", state.State[state.n2i("//BANK-agent/paper")])
+        self.assertIn("count", state.State[state.n2i("//BANK-trader/USD",
+                                                     'Holding')])
+        self.assertIn("count", state.State[state.n2i("//BANK-trader/paper",
+                                                     "Holding")])
+        self.assertIn("count", state.State[state.n2i("//BANK-agent/USD",
+                                                     'Holding')])
+        self.assertIn("count", state.State[state.n2i("//BANK-agent/paper",
+                                                     "Holding")])
 
-        trader_usd = state.State[state.n2i("//BANK-trader/USD")]["count"]
-        trader_paper = state.State[state.n2i("//BANK-trader/paper")]["count"]
-        agent_usd = state.State[state.n2i("//BANK-agent/USD")]["count"]
-        agent_paper = state.State[state.n2i("//BANK-agent/paper")]["count"]
+        trader_usd = state.State[state.n2i("//BANK-trader/USD",
+                                           'Holding')]["count"]
+        trader_paper = state.State[state.n2i("//BANK-trader/paper",
+                                             'Holding')]["count"]
+        agent_usd = state.State[state.n2i("//BANK-agent/USD",
+                                          'Holding')]["count"]
+        agent_paper = state.State[state.n2i("//BANK-agent/paper",
+                                            'Holding')]["count"]
 
         client_cli.main(
             args=["--name", "BANK-trader",
@@ -373,7 +428,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
 
-        self.assertIsNotNone(state.n2i("//BANK-trader/offer-d"))
+        self.assertIsNotNone(state.n2i("//BANK-trader/offer-d",
+                                       'ExchangeOffer'))
 
         client_cli.main(args=["--name", "BANK-agent",
                               "--script",
@@ -384,15 +440,17 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertEquals(state.State[state.n2i("//BANK-trader/USD")]["count"],
+        self.assertEquals(state.State[state.n2i("//BANK-trader/USD",
+                                                'Holding')]["count"],
                           trader_usd + 100000)
-        self.assertEquals(state.State[state.n2i("//BANK-agent/USD")]["count"],
+        self.assertEquals(state.State[state.n2i("//BANK-agent/USD",
+                                                'Holding')]["count"],
                           agent_usd - 100000)
         self.assertEquals(
-            state.State[state.n2i("//BANK-trader/paper")]["count"],
+            state.State[state.n2i("//BANK-trader/paper", 'Holding')]["count"],
             trader_paper - 1)
         self.assertEquals(
-            state.State[state.n2i("//BANK-agent/paper")]["count"],
+            state.State[state.n2i("//BANK-agent/paper", "Holding")]["count"],
             agent_paper + 1)
 
     @classmethod

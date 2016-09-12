@@ -32,7 +32,7 @@ class MktActor(object):
 
 
 
-    This expects all assets to be uniquely named (stronger restriction then the
+    This expects all assets to be uniquely named (stronger restriction than the
     mktplace transaction family)
     """
 
@@ -56,7 +56,7 @@ class MktActor(object):
         if not self.Key:
             self.Key = generate_private_key()
 
-        self.creator = self.state.n2i('//{0}'.format(name))
+        self.creator = self.state.n2i('//{0}'.format(name), 'Participant')
         if self.creator:
             addr = get_address_from_private_key_wif(self.Key)
             partxn = self.state.State[self.creator]
@@ -84,18 +84,19 @@ class MktActor(object):
         # LOAD objects from state
         for no in self.state.list(creator=self.creator, fields="*"):
             n = no['name']
+            obj_type = no['object-type']
             if n.startswith(self.get_qualified_name("/assets/")):
-                o = self.get_state_object(n)
+                o = self.get_state_object(n, obj_type)
                 if self.creator != o["creator"]:
                     raise Exception("Transaction namespace violation.")
                 self.assets[n] = no
             elif n.startswith(self.get_qualified_name("/assets")):
-                o = self.get_state_object(n)
+                o = self.get_state_object(n, obj_type)
                 if self.creator != o["creator"]:
                     raise Exception("Transaction namespace violation.")
                 self.assetType = no
             elif n.startswith(self.get_qualified_name("/account/")):
-                o = self.get_state_object(n)
+                o = self.get_state_object(n, obj_type)
                 if self.creator != o["creator"]:
                     raise Exception("Transaction namespace violation.")
                 self.holdings[n] = self.state.NameMap[n]
@@ -105,8 +106,8 @@ class MktActor(object):
     def update(self):
         self.state.fetch()
 
-    def get_state_object(self, name):  # Fully qualified name to object
-        id = self.state.n2i(name)
+    def get_state_object(self, name, obj_type):
+        id = self.state.n2i(name, obj_type)
         if id:
             return self.state.State[id]
         elif name in self.state.State:
@@ -141,14 +142,16 @@ class MktActor(object):
         self.transactions.append(txnid)
 
     def _register_account(self):
-        self.account = self.state.n2i('//{0}/account'.format(self.Name))
+        self.account = self.state.n2i('//{0}/account'.format(self.Name),
+                                      'Account')
         if not self.account:
             self.account = self.client.register_account("/account")
             self._verify_transaction_id(self.account)
         return self.account
 
     def _register_asset_type(self):
-        self.assetType = self.state.n2i('//{0}/assets'.format(self.Name))
+        self.assetType = self.state.n2i('//{0}/assets'.format(self.Name),
+                                        'AssetType')
         if not self.assetType:
             self.assetType = self.client.register_assettype(name="/assets",
                                                             restricted=True)
@@ -170,8 +173,8 @@ class MktActor(object):
 
     def register_holding(self, asset_name, count=0):
 
-        asset = self.get_state_object(asset_name)
-        assetId = self.state.n2i(asset_name)
+        asset = self.get_state_object(asset_name, 'Asset')
+        assetId = asset['object-id']
 
         name = "/account{}".format(asset["name"])
         fqn = self.get_qualified_name(name)
@@ -234,8 +237,10 @@ class MktActor(object):
 
     def exchange(self, offerId, amount=1):
         offer = self.state.State[offerId]
-        offerInputAsset = self.get_state_object(offer["input"])["asset"]
-        offerOutputAsset = self.get_state_object(offer["output"])["asset"]
+        offerInputAsset = self.get_state_object(offer["input"],
+                                                'Holding')["asset"]
+        offerOutputAsset = self.get_state_object(offer["output"],
+                                                 'Holding')["asset"]
 
         payingHolding = self.get_holding_id(offerInputAsset)
         receivingHolding = self.get_holding_id(offerOutputAsset)

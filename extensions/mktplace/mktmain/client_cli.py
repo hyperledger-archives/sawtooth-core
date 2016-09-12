@@ -254,12 +254,13 @@ identifiers, ///$name
         try:
             parser = argparse.ArgumentParser(prog='dump')
             parser.add_argument('--name', help='name of the object')
+            parser.add_argument('--type', help='the object type')
             parser.add_argument('--fields',
                                 help='Space separated list of fields to dump',
                                 nargs='+')
             options = parser.parse_args(pargs)
 
-            objectid = self.MarketState.n2i(options.name)
+            objectid = self.MarketState.n2i(options.name, options.type)
             if objectid and objectid in self.MarketState.State:
                 if options.fields:
                     for fld in options.fields:
@@ -304,7 +305,7 @@ identifiers, ///$name
                                     default=1)
                 options = parser.parse_args(pargs[1:])
 
-                holdingid = self.MarketState.n2i(options.name)
+                holdingid = self.MarketState.n2i(options.name, 'Holding')
                 self.MarketClient.TokenStore = \
                     mktplace_token_store.HoldingStore(
                         self.MarketClient.CreatorID, options.count, holdingid)
@@ -327,8 +328,8 @@ identifiers, ///$name
             state fetch -- retrieve the current version of the ledger state
             state value -- get the value associated with a field in state
             state query -- find object that match specific criteria
-            state byname -- find the identifier for an object using its fully
-            qualified name
+            state byname -- find the identifier for an object using its
+            name and type
         """
         pargs = shlex.split(self._expandargs(args))
 
@@ -369,8 +370,9 @@ identifiers, ///$name
                     fields = '*'
                 else:
                     fields = options.fields
-                creatorid = self.MarketState.n2i(
-                    options.creator) if options.creator else None
+                creatorid = self.MarketState.n2i(options.creator,
+                                                 'Participant') \
+                    if options.creator else None
                 result = self.MarketState.list(options.type, creatorid,
                                                options.name, fields)
                 if result:
@@ -383,12 +385,15 @@ identifiers, ///$name
                 parser.add_argument('--name',
                                     help='Fully qualified name for an object',
                                     required=True)
+                parser.add_argument('--type',
+                                    help='The type of object',
+                                    required=True)
                 parser.add_argument(
                     '--symbol',
                     help='Symbol to associate with the newly created id')
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, options.type)
                 if objectid:
                     if options.symbol:
                         self.IdentityMap[options.symbol] = objectid
@@ -435,18 +440,21 @@ identifiers, ///$name
                                      'include in the transaction',
                                 nargs='+',
                                 default=[])
+            parser.add_argument('--type',
+                                help='The offer type, ExchangeOffer or '
+                                     'SellOffer')
             parser.add_argument('--waitforcommit',
                                 help='Wait for transaction to commit before '
                                      'returning',
                                 action='store_true')
             options = parser.parse_args(pargs)
 
-            srcid = self.MarketState.n2i(options.src)
-            dstid = self.MarketState.n2i(options.dst)
+            srcid = self.MarketState.n2i(options.src, 'Holding')
+            dstid = self.MarketState.n2i(options.dst, 'Holding')
 
             offerids = []
             for offer in options.offers:
-                offerids.append(self.MarketState.n2i(offer))
+                offerids.append(self.MarketState.n2i(offer, options.type))
 
             txnid = self.MarketClient.exchange(srcid, dstid,
                                                int(options.count), offerids)
@@ -509,7 +517,7 @@ identifiers, ///$name
                                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'Account')
                 txnid = self.MarketClient.unregister_account(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -597,7 +605,7 @@ identifiers, ///$name
                     help='Symbol to associate with the newly created id')
                 options = parser.parse_args(pargs[1:])
 
-                typeid = self.MarketState.n2i(options.type)
+                typeid = self.MarketState.n2i(options.type, 'AssetType')
                 kwargs = {}
                 if options.name:
                     kwargs['name'] = options.name
@@ -618,7 +626,7 @@ identifiers, ///$name
                                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'Asset')
                 txnid = self.MarketClient.unregister_asset(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -698,7 +706,7 @@ identifiers, ///$name
                                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'AssetType')
                 txnid = self.MarketClient.unregister_assettype(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -776,8 +784,8 @@ identifiers, ///$name
                                          'created id')
                 options = parser.parse_args(pargs[1:])
 
-                inputid = self.MarketState.n2i(options.input)
-                outputid = self.MarketState.n2i(options.output)
+                inputid = self.MarketState.n2i(options.input, 'Holding')
+                outputid = self.MarketState.n2i(options.output, 'Holding')
 
                 kwargs = {}
                 if options.name:
@@ -804,7 +812,7 @@ identifiers, ///$name
                                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'ExchangeOffer')
                 txnid = self.MarketClient.unregister_exchangeoffer(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -866,8 +874,8 @@ identifiers, ///$name
                                          'created id')
                 options = parser.parse_args(pargs[1:])
 
-                accountid = self.MarketState.n2i(options.account)
-                assetid = self.MarketState.n2i(options.asset)
+                accountid = self.MarketState.n2i(options.account, 'Account')
+                assetid = self.MarketState.n2i(options.asset, 'Asset')
 
                 txnid = self.MarketClient.register_holding(
                     accountid, assetid, int(options.count), options.name,
@@ -882,7 +890,7 @@ identifiers, ///$name
                                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'Holding')
                 txnid = self.MarketClient.unregister_holding(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -948,9 +956,10 @@ identifiers, ///$name
                                          'created id')
                 options = parser.parse_args(pargs[1:])
 
-                accountid = self.MarketState.n2i(options.account)
-                typeid = self.MarketState.n2i(options.type)
-                guarantorid = self.MarketState.n2i(options.guarantor)
+                accountid = self.MarketState.n2i(options.account, 'Account')
+                typeid = self.MarketState.n2i(options.type, 'AssetType')
+                guarantorid = self.MarketState.n2i(options.guarantor,
+                                                   'Participant')
 
                 txnid = self.MarketClient.register_liability(
                     accountid, typeid, guarantorid, int(options.count),
@@ -966,7 +975,7 @@ identifiers, ///$name
                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'Liability')
                 txnid = self.MarketClient.unregister_liability(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -1040,7 +1049,7 @@ identifiers, ///$name
                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'Participant')
                 txnid = self.MarketClient.unregister_participant(objectid)
 
                 if txnid:
@@ -1118,8 +1127,8 @@ identifiers, ///$name
                                          'newly created id')
                 options = parser.parse_args(pargs[1:])
 
-                inputid = self.MarketState.n2i(options.input)
-                outputid = self.MarketState.n2i(options.output)
+                inputid = self.MarketState.n2i(options.input, 'Holding')
+                outputid = self.MarketState.n2i(options.output, 'Holding')
 
                 kwargs = {}
                 if options.name:
@@ -1146,7 +1155,7 @@ identifiers, ///$name
                                     required=True)
                 options = parser.parse_args(pargs[1:])
 
-                objectid = self.MarketState.n2i(options.name)
+                objectid = self.MarketState.n2i(options.name, 'SellOffer')
                 txnid = self.MarketClient.unregister_selloffer(objectid)
 
             self._finish(txnid, options.waitforcommit)
@@ -1188,12 +1197,13 @@ identifiers, ///$name
             filters = [mktplace_state.Filters.holdings()]
 
             if options.creator:
-                creator = self.MarketState.n2i(options.creator)
+                creator = self.MarketState.n2i(options.creator, 'Participant')
                 filters.append(mktplace_state.Filters.matchvalue('creator',
                                                                  creator))
 
             if options.assets:
-                assetids = [self.MarketState.n2i(n) for n in options.assets]
+                assetids = [self.MarketState.n2i(n, 'Asset')
+                            for n in options.assets]
                 filters.append(mktplace_state.Filters.references('asset',
                                                                  assetids))
 
@@ -1242,12 +1252,12 @@ identifiers, ///$name
             filters = [mktplace_state.Filters.offers()]
 
             if options.creator:
-                creator = self.MarketState.n2i(options.creator)
+                creator = self.MarketState.n2i(options.creator, 'Participant')
                 filters.append(mktplace_state.Filters.matchvalue('creator',
                                                                  creator))
 
             if options.iasset:
-                assetid = self.MarketState.n2i(options.iasset)
+                assetid = self.MarketState.n2i(options.iasset, 'Asset')
                 bytype = mktplace_state.Filters.matchtype('Holding')
                 byasset = mktplace_state.Filters.matchvalue('asset', assetid)
                 holdingids = self.MarketState.lambdafilter(bytype, byasset)
@@ -1256,7 +1266,7 @@ identifiers, ///$name
                                                                  holdingids))
 
             if options.oasset:
-                assetid = self.MarketState.n2i(options.oasset)
+                assetid = self.MarketState.n2i(options.oasset, 'Asset')
                 bytype = mktplace_state.Filters.matchtype('Holding')
                 byasset = mktplace_state.Filters.matchvalue('asset', assetid)
                 holdingids = self.MarketState.lambdafilter(bytype, byasset)
@@ -1405,7 +1415,7 @@ def local_main(config):
     creator = None
     if 'ParticipantId' in config:
         id = config['ParticipantId']
-        creator = state.n2i(id)
+        creator = state.n2i(id, 'Participant')
 
         if creator in state.State:
             ptxn = state.State[creator]
@@ -1430,7 +1440,7 @@ def local_main(config):
             name = config['ParticipantName']
         except:
             pass
-        creator = state.n2i('//' + name)
+        creator = state.n2i('//' + name, 'Participant')
 
     if creator:
         if not verify_key(state.State[creator], signingkey):

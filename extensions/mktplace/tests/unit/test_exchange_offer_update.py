@@ -17,7 +17,7 @@ import unittest
 
 from mktplace.transactions import participant_update
 from mktplace.transactions import exchange_offer_update
-from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
+from mktplace.transactions.market_place import MarketPlaceGlobalStore
 
 
 class TestExchangeOfferUpdate(unittest.TestCase):
@@ -28,9 +28,8 @@ class TestExchangeOfferUpdate(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because we have not "registered" any accounts, the name
         # should not be a duplicate
@@ -50,9 +49,6 @@ class TestExchangeOfferUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[exchange_offer.ObjectID] = exchange_offer.dump()
-        store.bind(
-            store.i2n(exchange_offer.ObjectID),
-            exchange_offer.ObjectID)
 
         # Because the account name is in the store, trying to register using
         # a relative name based upon creator and a fully-qualified name should
@@ -79,9 +75,8 @@ class TestExchangeOfferUpdateName(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because we have not "registered" any exchange offers, the name
         # should not be a duplicate
@@ -102,9 +97,6 @@ class TestExchangeOfferUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[exchange_offer.ObjectID] = exchange_offer.dump()
-        store.bind(
-            store.i2n(exchange_offer.ObjectID),
-            exchange_offer.ObjectID)
 
         # Because the exchange offer name is in the store, trying to update
         # the name using a relative name based upon creator and a fully-

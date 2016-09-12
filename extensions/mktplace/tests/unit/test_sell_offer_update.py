@@ -17,7 +17,7 @@ import unittest
 
 from mktplace.transactions import participant_update
 from mktplace.transactions import sell_offer_update
-from unit.mock_market_place_global_store import MockMarketPlaceGlobalStore
+from mktplace.transactions.market_place import MarketPlaceGlobalStore
 
 
 class TestSellOfferUpdate(unittest.TestCase):
@@ -28,9 +28,8 @@ class TestSellOfferUpdate(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because we have not "registered" any sell offers, the name
         # should not be a duplicate
@@ -50,7 +49,6 @@ class TestSellOfferUpdate(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[sell_offer.ObjectID] = sell_offer.dump()
-        store.bind(store.i2n(sell_offer.ObjectID), sell_offer.ObjectID)
 
         # Because the sell offer name is in the store, trying to register
         # using a relative name based upon creator and a fully-qualified name
@@ -77,9 +75,8 @@ class TestSellOfferUpdateName(unittest.TestCase):
             minfo={
                 'name': 'participant',
             })
-        store = MockMarketPlaceGlobalStore()
+        store = MarketPlaceGlobalStore()
         store[participant.ObjectID] = participant.dump()
-        store.bind(store.i2n(participant.ObjectID), participant.ObjectID)
 
         # Because we have not "registered" any sell offers, the name
         # should not be a duplicate
@@ -100,7 +97,6 @@ class TestSellOfferUpdateName(unittest.TestCase):
                 'creator': participant.ObjectID
             })
         store[sell_offer.ObjectID] = sell_offer.dump()
-        store.bind(store.i2n(sell_offer.ObjectID), sell_offer.ObjectID)
 
         # Because the sell offer name is in the store, trying to update the
         # name using a relative name based upon creator and a fully-qualified
