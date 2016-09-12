@@ -64,17 +64,23 @@ disable=no-member,
     missing-docstring,
     bare-except,
     unused-argument,
+    superfluous-parens,
     duplicate-code,
     bad-continuation,
     too-many-instance-attributes,
     too-many-return-statements,
     too-many-statements,
     attribute-defined-outside-init,
+    unused-variable,
+    protected-access,
     too-few-public-methods,
     redefined-outer-name,
     redefined-builtin,
     broad-except,
     no-self-use,
+    global-variable-not-assigned,
+    global-statement,
+    too-many-lines,
     too-many-branches,
     too-many-arguments,
     redefined-variable-type,
@@ -84,6 +90,7 @@ disable=no-member,
     too-many-locals,
     wrong-import-order,
     locally-disabled,
+    consider-iterating-dictionary,
     too-many-nested-blocks
 
 [REPORTS]
@@ -250,7 +257,7 @@ name-group=
 include-naming-hint=no
 
 # Regular expression matching correct function names
-function-rgx=[a-z_][a-z0-9_]{2,40}$
+function-rgx=[a-z_][a-z0-9_]{1,40}$
 
 # Naming hint for function names
 function-name-hint=[a-z_][a-z0-9_]{2,30}$
@@ -274,13 +281,13 @@ attr-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
 attr-name-hint=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression matching correct argument names
-argument-rgx=[A-Za-z_][A-Za-z0-9_]{2,30}$
+argument-rgx=[A-Za-z_][A-Za-z0-9_]{0,30}$
 
 # Naming hint for argument names
 argument-name-hint=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression matching correct class attribute names
-class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{0,30}|(__.*__))$
 
 # Naming hint for class attribute names
 class-attribute-name-hint=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
