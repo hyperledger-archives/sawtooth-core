@@ -1551,6 +1551,8 @@ def get_configuration(args, os_name=os.name, config_files_required=True):
 
     return cfg
 
+globalClog = None
+
 
 def log_configuration(cfg):
     if 'LogConfigFile' in cfg and len(cfg['LogConfigFile']) > 0:
@@ -1580,11 +1582,14 @@ def log_configuration(cfg):
             sys.exit(1)
 
     else:
-        clog = logging.StreamHandler()
-        clog.setFormatter(logging.Formatter(
-            '[%(asctime)s %(name)s %(levelname)s] %(message)s', "%H:%M:%S"))
-        clog.setLevel(logging.WARN)
-        logging.getLogger().addHandler(clog)
+        global globalClog
+        if not globalClog:
+            globalClog = logging.StreamHandler()
+            globalClog.setFormatter(logging.Formatter(
+                '[%(asctime)s %(name)s %(levelname)s] %(message)s',
+                "%H:%M:%S"))
+            globalClog.setLevel(logging.WARN)
+            logging.getLogger().addHandler(globalClog)
 
 
 def read_key_file(keyfile):
