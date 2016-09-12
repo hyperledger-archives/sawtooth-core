@@ -80,12 +80,6 @@ class QuorumJournal(Journal):
             nd (Node): The local node.
         """
         # Handle class static variables
-        if 'MinTransactionsPerBlock' in kwargs:
-            QuorumJournal.MinimumTransactionsPerBlock = int(
-                kwargs['MinTransactionsPerBlock'])
-        if 'MaxTransactionsPerBlock' in kwargs:
-            QuorumJournal.MaximumTransactionsPerBlock = int(
-                kwargs['MaxTransactionsPerBlock'])
         if 'VoteTimeInterval' in kwargs:
             QuorumJournal.VoteTimeInterval = float(
                 kwargs['VoteTimeInterval'])

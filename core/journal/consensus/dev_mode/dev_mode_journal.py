@@ -34,15 +34,6 @@ class DevModeJournal(journal_core.Journal):
         Args:
             node (Node): The local node.
         """
-        # handle class static variables
-        if 'MinTransactionsPerBlock' in kwargs:
-            DevModeJournal.MinimumTransactionsPerBlock \
-                = int(kwargs['MinTransactionsPerBlock'])
-
-        if 'MaxTransactionsPerBlock' in kwargs:
-            DevModeJournal.MaximumTransactionsPerBlock \
-                = int(kwargs['MaxTransactionsPerBlock'])
-
         super(DevModeJournal, self).__init__(node, **kwargs)
 
         # the one who can publish blocks is always the genesis ledger

@@ -63,14 +63,6 @@ class PoetJournal(journal_core.Journal):
             WaitTimer.fixed_duration_blocks = \
                 int(kwargs['FixedDurationBlocks'])
 
-        if 'MinTransactionsPerBlock' in kwargs:
-            PoetJournal.MinimumTransactionsPerBlock = int(
-                kwargs['MinTransactionsPerBlock'])
-
-        if 'MaxTransactionsPerBlock' in kwargs:
-            PoetJournal.MaximumTransactionsPerBlock = int(
-                kwargs['MaxTransactionsPerBlock'])
-
         super(PoetJournal, self).__init__(node, **kwargs)
 
         enclave_module = None
