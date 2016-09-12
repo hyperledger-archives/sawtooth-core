@@ -74,7 +74,7 @@ class QuorumJournal(Journal):
         # average fudge factor added to the time interval
         self.BallotTimeFudgeFactor = 0.1
 
-        # minimum votes required for a transaction to proceed to the next ballot
+        # minimum votes required for a txn to proceed to the next ballot
         self.VoteThreshholds = [0.0, 0.5, 0.7, 0.9]
 
         # target size for local quorum set, note this should be a function of

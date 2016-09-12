@@ -121,7 +121,8 @@ class Journal(gossip_core.Gossip):
         self.MaximumBlocksToKeep = 50
 
         # Minimum number of transactions per block
-        self.MinimumTransactionsPerBlock = kwargs.get('MinTransactionsPerBlock', 1)
+        self.MinimumTransactionsPerBlock = kwargs\
+            .get('MinTransactionsPerBlock', 1)
 
         # Amount of time(in sec) transactions can wait to meet the
         # MinimumTransactionsPerBlock before a block gets built with
@@ -131,7 +132,8 @@ class Journal(gossip_core.Gossip):
         self.MaximumTransactionsWaitTime = 60
 
         # Maximum number of transactions per block
-        self.MaximumTransactionsPerBlock = kwargs.get('MaxTransactionsPerBlock', 1000)
+        self.MaximumTransactionsPerBlock = kwargs.\
+            get('MaxTransactionsPerBlock', 1000)
 
         # Time between sending requests for a missing transaction block
         self.MissingRequestInterval = 30.0
