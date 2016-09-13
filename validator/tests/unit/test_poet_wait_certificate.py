@@ -25,7 +25,7 @@ from journal.consensus.poet.poet_enclave_simulator \
 
 
 class TestPoetWaitCertificate(unittest.TestCase):
-    """ These are tests for the poet waitCertificate class
+    """ These are tests for the WaitCertificate class.
     This class mostly provides wrappers for the underlying
     enclave WaitCertificate, so we are just exercising all the
     functions not doing any in depth testing of class.

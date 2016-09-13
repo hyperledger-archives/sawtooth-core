@@ -60,7 +60,7 @@ class PoetJournal(journal_core.Journal):
 
         self.onHeartbeatTimer += self._check_certificate
 
-        # initialize the poet handlers
+        # initialize handlers
         poet_transaction_block.register_message_handlers(self)
 
         # initialize stats specifically for the block chain journal
