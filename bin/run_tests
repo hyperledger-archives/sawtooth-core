@@ -20,7 +20,8 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
 cd validator
-nose2 -v
+nose2 -v unit
+nose2 -v integration
 cd ..
 
 PYTHONPATH=$top_dir/core
@@ -30,7 +31,8 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
 export PYTHONPATH
 cd extensions/mktplace
-nose2 -v
+nose2 -v unit
+nose2 -v integration
 cd ../..
 
 PYTHONPATH=$top_dir/core
