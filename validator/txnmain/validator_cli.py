@@ -27,8 +27,8 @@ from journal.consensus.poet.wait_timer import set_wait_timer_globals
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
+from sawtooth.validator_config import get_validator_configuration
 from txnserver import log_setup
-from txnserver.config import get_validator_configuration
 
 logger = logging.getLogger(__name__)
 

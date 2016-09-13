@@ -23,7 +23,7 @@ import os
 from twisted.internet import reactor
 from twisted.web.server import Site
 
-from txnserver.config import parse_listen_directives
+from sawtooth.validator_config import parse_listen_directives
 
 from txnserver.web_pages.root_page import RootPage
 

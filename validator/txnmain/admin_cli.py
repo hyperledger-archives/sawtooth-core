@@ -46,8 +46,8 @@ from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
 from sawtooth.client import LedgerWebClient
 from sawtooth.exceptions import MessageException
+from sawtooth.validator_config import get_validator_configuration
 from txnserver import log_setup
-from txnserver.config import get_validator_configuration
 
 logger = logging.getLogger(__name__)
 

@@ -26,10 +26,10 @@ from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
 from txnintegration.utils import read_key_file
-from txnserver.config import parse_listen_directives
 from gossip.messages import shutdown_message
 from sawtooth.client import LedgerWebClient
 from sawtooth.exceptions import MessageException
+from sawtooth.validator_config import parse_listen_directives
 
 
 class ValidatorManager(object):

@@ -24,8 +24,8 @@ from twisted.internet import reactor
 from twisted.python.threadpool import ThreadPool
 
 from sawtooth.exceptions import MessageException
+from sawtooth.validator_config import parse_listen_directives
 from txnserver.endpoint_registry_client import EndpointRegistryClient
-from txnserver.config import parse_listen_directives
 from gossip import node, signed_object, token_bucket
 from gossip.messages import connect_message, shutdown_message
 from gossip.topology import random_walk, barabasi_albert
