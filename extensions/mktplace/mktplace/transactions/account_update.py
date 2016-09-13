@@ -84,7 +84,6 @@ class Register(market_place_object_update.Register):
 
     def apply(self, store):
         super(Register, self).apply(store)
-
         pobj = self.ObjectType(self.ObjectID)
 
         pobj.CreatorID = self.CreatorID

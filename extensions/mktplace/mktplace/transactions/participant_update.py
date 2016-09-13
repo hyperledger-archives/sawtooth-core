@@ -106,7 +106,6 @@ class Register(market_place_object_update.Register):
         return True
 
     def apply(self, store):
-
         pobj = ParticipantObject(self.ObjectID)
         pobj.Address = self.OriginatorID
         pobj.Description = self.Description

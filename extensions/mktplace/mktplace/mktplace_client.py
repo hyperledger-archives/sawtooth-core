@@ -185,22 +185,6 @@ class MarketPlaceClient(MarketPlaceCommunication):
 
         return txnid
 
-    def _register(self, update):
-        """
-        Wrap a register transaction with a few additional checks to ensure that
-        names are updated correctly.
-        """
-        txnid = self._sendtxn(update)
-        return txnid
-
-    def _unregister(self, update):
-        """
-        Wrap an unregister transaction with a few additional checks to ensure
-        that names are updated correctly.
-        """
-        txnid = self._sendtxn(update)
-        return txnid
-
     # -----------------------------------------------------------------
     def _update_name(self, module, objectid, name):
         """
@@ -342,7 +326,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Restricted = restricted
         update.Divisible = divisible
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_asset(self, objectid):
         """
@@ -358,7 +342,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_asset_name(self, objectid, name):
         return self._update_name(asset_update, objectid, name)
@@ -384,7 +368,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Description = description
         update.Restricted = restricted
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_assettype(self, objectid):
         """
@@ -400,7 +384,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_assettype_name(self, objectid, name):
         return self._update_name(asset_type_update, objectid, name)
@@ -454,7 +438,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         if 'execution' in kwargs:
             update.Execution = kwargs['execution']
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_exchangeoffer(self, objectid):
         """
@@ -470,7 +454,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_exchangeoffer_name(self, objectid, name):
         return self._update_name(exchange_offer_update, objectid, name)
@@ -502,7 +486,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Name = name
         update.Description = description
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_holding(self, objectid):
         """
@@ -518,7 +502,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_holding_name(self, objectid, name):
         return self._update_name(holding_update, objectid, name)
@@ -558,7 +542,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Name = name
         update.Description = description
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_liability(self, objectid):
         """
@@ -574,7 +558,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_liability_name(self, objectid, name):
         return self._update_name(liability_update, objectid, name)
@@ -599,7 +583,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Name = name
         update.Description = description
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_participant(self, objectid):
         """
@@ -615,7 +599,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_participant_name(self, objectid, name):
         return self._update_name(participant_update, objectid, name)
@@ -669,7 +653,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         if 'execution' in kwargs:
             update.Execution = kwargs['execution']
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_selloffer(self, objectid):
         """
@@ -685,7 +669,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_selloffer_name(self, objectid, name):
         return self._update_name(sell_offer_update, objectid, name)
@@ -711,7 +695,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.Name = name
         update.Description = description
 
-        return self._register(update)
+        return self._sendtxn(update)
 
     def unregister_account(self, objectid):
         """
@@ -727,7 +711,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
         update.CreatorID = self.CreatorID
         update.ObjectID = objectid
 
-        return self._unregister(update)
+        return self._sendtxn(update)
 
     def update_account_name(self, objectid, name):
         return self._update_name(account_update, objectid, name)

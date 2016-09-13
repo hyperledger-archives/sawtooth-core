@@ -133,7 +133,10 @@ class MarketPlaceState(MarketPlaceCommunication):
             else:
                 name = "//" + creator
 
-        return self.State.n2i(name, obj_type)
+        identifier = self.State.n2i(name, obj_type)
+        if not identifier:
+            logger.info('could not find identifier by name: %s', name)
+        return identifier
 
     def i2n(self, objectid):
         """
