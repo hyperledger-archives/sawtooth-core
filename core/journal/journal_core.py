@@ -98,28 +98,6 @@ class Journal(gossip_core.Gossip):
             various persistence stores.
     """
 
-    # For storage management, minimum blocks to keep cached
-    MaximumBlocksToKeep = 50
-
-    # Minimum number of transactions per block
-    MinimumTransactionsPerBlock = 1
-
-    # Amount of time(in sec) transactions can wait to meet the
-    # MinimumTransactionsPerBlock before a block gets built with
-    # less then the MinimumTransactionsPerBlock count.
-    # This is a safety measure to allow the validator network to function
-    # with low transaction volume, such as network start up.
-    MaximumTransactionsWaitTime = 60
-
-    # Maximum number of transactions per block
-    MaximumTransactionsPerBlock = 1000
-
-    # Time between sending requests for a missing transaction block
-    MissingRequestInterval = 30.0
-
-    # Time between sending requests for a missing transaction block
-    BlockRetryInterval = 10.0
-
     def __init__(self, node, **kwargs):
         """Constructor for the Journal class.
 
@@ -138,6 +116,30 @@ class Journal(gossip_core.Gossip):
 
         self.InitialTransactions = []
         self.InitialBlockList = []
+
+        # For storage management, minimum blocks to keep cached
+        self.MaximumBlocksToKeep = 50
+
+        # Minimum number of transactions per block
+        self.MinimumTransactionsPerBlock = kwargs\
+            .get('MinTransactionsPerBlock', 1)
+
+        # Amount of time(in sec) transactions can wait to meet the
+        # MinimumTransactionsPerBlock before a block gets built with
+        # less then the MinimumTransactionsPerBlock count.
+        # This is a safety measure to allow the validator network to function
+        # with low transaction volume, such as network start up.
+        self.MaximumTransactionsWaitTime = 60
+
+        # Maximum number of transactions per block
+        self.MaximumTransactionsPerBlock = kwargs.\
+            get('MaxTransactionsPerBlock', 1000)
+
+        # Time between sending requests for a missing transaction block
+        self.MissingRequestInterval = 30.0
+
+        # Time between sending requests for a missing transaction block
+        self.BlockRetryInterval = 10.0
 
         self.GenesisLedger = kwargs.get('GenesisLedger', False)
         self.Restore = kwargs.get('Restore', False)

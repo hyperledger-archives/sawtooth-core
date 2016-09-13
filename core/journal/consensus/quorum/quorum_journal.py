@@ -54,25 +54,6 @@ class QuorumJournal(Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking calls
             to make when the heartbeat timer fires.
     """
-    # minimum time between votes
-    VoteTimeInterval = 30.0
-
-    # average fudge factor added to the vote interval
-    VoteTimeFudgeFactor = 1.0
-
-    # minimum time between ballots on a vote
-    BallotTimeInterval = 5.0
-
-    # average fudge factor added to the time interval
-    BallotTimeFudgeFactor = 0.1
-
-    # minimum votes required for a transaction to proceed to the next ballot
-    VoteThreshholds = [0.0, 0.5, 0.7, 0.9]
-
-    # target size for local quorum set, note this should be a function of
-    # network size
-    VotingQuorumTargetSize = 13
-
     def __init__(self, nd, **kwargs):
         """Constructor for the QuorumJournal class.
 
@@ -80,6 +61,25 @@ class QuorumJournal(Journal):
             nd (Node): The local node.
         """
         super(QuorumJournal, self).__init__(nd, **kwargs)
+
+        # minimum time between votes
+        self.VoteTimeInterval = kwargs.get('VoteTimeInterval', 30.0)
+
+        # average fudge factor added to the vote interval
+        self.VoteTimeFudgeFactor = 1.0
+
+        # minimum time between ballots on a vote
+        self.BallotTimeInterval = kwargs.get('BallotTimeInterval', 5.0)
+
+        # average fudge factor added to the time interval
+        self.BallotTimeFudgeFactor = 0.1
+
+        # minimum votes required for a txn to proceed to the next ballot
+        self.VoteThreshholds = [0.0, 0.5, 0.7, 0.9]
+
+        # target size for local quorum set, note this should be a function of
+        # network size
+        self.VotingQuorumTargetSize = kwargs.get('VotingQuorumTargetSize', 13)
 
         self.QuorumMap = dict()
         self.VotingQuorum = dict()
@@ -102,10 +102,9 @@ class QuorumJournal(Journal):
             logger.fatal("node must be in its own quorum")
             self.shutdown()
             return
-        if len(q) < config.get("VotingQuorumTargetSize"):
+        if len(q) < self.VotingQuorumTargetSize:
             logger.fatal('insufficient quorum configuration; need %s but " \
-                         "specified %s', len(q),
-                         config.get('VotingQuorumTargetSize', None))
+                         "specified %s', len(q), self.VotingQuorumTargetSize)
             self.shutdown()
             return
         self.QuorumMap = {}

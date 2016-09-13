@@ -195,3 +195,17 @@ class WaitTimer(object):
             return False
 
         return self.enclave_wait_timer.is_expired()
+
+
+def set_wait_timer_globals(config):
+    if 'TargetWaitTime' in config:
+        WaitTimer.target_wait_time = float(config['TargetWaitTime'])
+    if 'InitialWaitTime' in config:
+        WaitTimer.initial_wait_time = float(config['InitialWaitTime'])
+    if 'CertificateSampleLength' in config:
+        WaitTimer.certificate_sample_length = int(
+            config['CertificateSampleLength'])
+        WaitTimer.fixed_duration_blocks = \
+            int(config['CertificateSampleLength'])
+    if 'FixedDurationBlocks' in config:
+        WaitTimer.fixed_duration_blocks = int(config['FixedDurationBlocks'])

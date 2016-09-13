@@ -16,7 +16,7 @@
 import logging
 
 from txnserver import validator
-from journal.consensus.poet import poet_journal, wait_certificate
+from journal.consensus.poet import poet_journal
 
 logger = logging.getLogger(__name__)
 
@@ -26,39 +26,6 @@ class PoetValidator(validator.Validator):
 
     def __init__(self, config, windows_service=False):
         super(PoetValidator, self).__init__(config, windows_service)
-
-    def initialize_ledger_specific_configuration(self):
-        """
-        Initialize any ledger type specific configuration options, expected to
-        be overridden
-        """
-
-        # Handle all of the configuration variables
-        if 'TargetWaitTime' in self.Config:
-            wait_certificate.WaitTimer.target_wait_time = \
-                float(self.Config['TargetWaitTime'])
-
-        if 'InitialWaitTime' in self.Config:
-            wait_certificate.WaitTimer.initial_wait_time = \
-                float(self.Config['InitialWaitTime'])
-
-        if 'CertificateSampleLength' in self.Config:
-            wait_certificate.WaitTimer.certificate_sample_length = int(
-                self.Config['CertificateSampleLength'])
-            wait_certificate.WaitTimer.fixed_duration_blocks = \
-                int(self.Config['CertificateSampleLength'])
-
-        if 'FixedDurationBlocks' in self.Config:
-            wait_certificate.WaitTimer.fixed_duration_blocks = \
-                int(self.Config['FixedDurationBlocks'])
-
-        if 'MinTransactionsPerBlock' in self.Config:
-            poet_journal.PoetJournal.MinimumTransactionsPerBlock = int(
-                self.Config['MinTransactionsPerBlock'])
-
-        if 'MaxTransactionsPerBlock' in self.Config:
-            poet_journal.PoetJournal.MaximumTransactionsPerBlock = int(
-                self.Config['MaxTransactionsPerBlock'])
 
     def initialize_ledger_from_node(self, node):
         """

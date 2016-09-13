@@ -30,27 +30,6 @@ class QuorumValidator(validator.Validator):
         super(QuorumValidator, self).__init__(config, windows_service)
         self.Ledger.initialize_quorum_map(config)
 
-    def initialize_ledger_specific_configuration(self):
-        """
-        Initialize any ledger type specific configuration options, expected to
-        be overridden
-        """
-        if 'MinTransactionsPerBlock' in self.Config:
-            quorum_journal.QuorumJournal.MinimumTransactionsPerBlock = int(
-                self.Config['MinTransactionsPerBlock'])
-        if 'MaxTransactionsPerBlock' in self.Config:
-            quorum_journal.QuorumJournal.MaximumTransactionsPerBlock = int(
-                self.Config['MaxTransactionsPerBlock'])
-        if 'VoteTimeInterval' in self.Config:
-            quorum_journal.QuorumJournal.VoteTimeInterval = float(
-                self.Config['VoteTimeInterval'])
-        if 'BallotTimeInterval' in self.Config:
-            quorum_journal.QuorumJournal.BallotTimeInterval = float(
-                self.Config['BallotTimeInterval'])
-        if 'VotingQuorumTargetSize' in self.Config:
-            quorum_journal.QuorumJournal.VotingQuorumTargetSize = int(
-                self.Config['VotingQuorumTargetSize'])
-
     def start(self):
         if self.GenesisLedger:
             self.start_ledger()

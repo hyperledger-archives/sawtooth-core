@@ -105,7 +105,6 @@ class Validator(object):
 
         # ---------- Initialize the configuration ----------
         self.initialize_common_configuration()
-        self.initialize_ledger_specific_configuration()
 
         # ---------- Initialize the NodeMap ----------
         self.initialize_node_map()
@@ -177,13 +176,6 @@ class Validator(object):
 
         if 'UseFixedDelay' in self.Config:
             node.Node.UseFixedDelay = self.Config['UseFixedDelay']
-
-    def initialize_ledger_specific_configuration(self):
-        """
-        Initialize any ledger type specific configuration options, expected to
-        be overridden
-        """
-        pass
 
     def initialize_node_map(self):
         self.NodeMap = {}
