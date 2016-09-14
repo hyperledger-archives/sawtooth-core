@@ -11,12 +11,12 @@ _poet_enclave_simulator.pyd
 _poet_enclave_simulator.so
 deps/
 
-journal/consensus/poet/poet_enclave_simulator/build
-journal/consensus/poet/poet_enclave_simulator/_*
-journal/consensus/poet/poet_enclave_simulator/*.so
-journal/consensus/poet/poet_enclave_simulator/*.pyd
-journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.py
-journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator_wrap.cpp
+journal/consensus/poet*/poet_enclave_simulator/build
+journal/consensus/poet*/poet_enclave_simulator/_*
+journal/consensus/poet*/poet_enclave_simulator/*.so
+journal/consensus/poet*/poet_enclave_simulator/*.pyd
+journal/consensus/poet*/poet_enclave_simulator/poet_enclave_simulator.py
+journal/consensus/poet*/poet_enclave_simulator/poet_enclave_simulator_wrap.cpp
 
 gossip/ECDSA/build
 gossip/ECDSA/*.so
