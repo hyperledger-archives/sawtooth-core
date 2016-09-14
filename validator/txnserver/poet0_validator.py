@@ -16,7 +16,7 @@
 import logging
 
 from txnserver import validator
-from journal.consensus.poet import poet_journal
+from journal.consensus.poet0 import poet_journal
 
 logger = logging.getLogger(__name__)
 
