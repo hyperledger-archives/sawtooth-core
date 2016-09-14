@@ -13,7 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+
 import logging
+import copy
 
 from journal import global_store_manager
 
@@ -31,15 +33,18 @@ class UniqueConstraintError(Exception):
 
 class ObjectStore(global_store_manager.KeyValueStore):
     def __init__(self, prevstore=None, storeinfo=None, readonly=False,
-                 indexes=None):
+                 indexes=None, clone_indexes=None):
         super(ObjectStore, self).__init__(
             prevstore, storeinfo, readonly)
 
-        self._indexes = {}
-        if indexes is not None:
-            for key in indexes:
-                self._parse_and_check_index(key)
-                self._indexes[key] = {}
+        if clone_indexes is not None:
+            self._indexes = copy.deepcopy(clone_indexes)
+        else:
+            self._indexes = {}
+            if indexes is not None:
+                for key in indexes:
+                    self._parse_and_check_index(key)
+                    self._indexes[key] = {}
 
     def _build_index(self, index):
         self._indexes[index] = {}
@@ -76,7 +81,8 @@ class ObjectStore(global_store_manager.KeyValueStore):
             ObjectStore: A new checkpoint that extends the current
                 store.
         """
-        return ObjectStore(self, storeinfo, readonly)
+        return ObjectStore(self, storeinfo, readonly,
+                           clone_indexes=self._indexes)
 
     def lookup(self, index, key):
         """
