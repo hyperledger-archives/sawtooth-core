@@ -13,12 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import csv
+import json
+import sys
+import yaml
 
 from gossip.common import pretty_print_dict
-
 from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import MessageException
-
 from sawtooth.cli.exceptions import CliException
 
 
@@ -47,6 +49,11 @@ def add_block_parser(subparsers, parent_parser):
         '-a', '--all',
         action='store_true',
         help='list all of committed block IDs')
+    list_parser.add_argument(
+        '--format',
+        action='store',
+        default='default',
+        help='the format of the output. Options: csv, json or yaml.')
 
     epilog = '''
     details:
@@ -88,9 +95,52 @@ def do_block(args):
                 blockids = web_client.get_block_list()
             else:
                 blockids = web_client.get_block_list(count=args.blockcount)
-            for block_id in blockids:
-                print block_id
-            return
+
+            if args.format == 'default':
+                print '{:6} {:20} {:4} {:10} {:10} {:50}'.format(
+                    'NUM', 'BLOCK', 'TXNS', 'DURATION', 'LOCALMEAN',
+                    'VALIDATOR')
+
+                for block_id in blockids:
+                    block_num, blockid, txns, duration, local_mean,\
+                        validator_dest = get_block_info(web_client, block_id)
+                    print '{:6} {:20} {:4} {:10} {:10} {:50}'.format(
+                        block_num, blockid, txns, duration, local_mean,
+                        validator_dest)
+
+            elif args.format == 'csv':
+                try:
+                    writer = csv.writer(sys.stdout)
+                    writer.writerow(
+                        (
+                            'NUM', 'BLOCK', 'TXNS', 'DURATION',
+                            'LOCALMEAN', 'VALIDATOR'))
+                    for block_id in blockids:
+                        writer.writerow(
+                            (get_block_info(web_client, block_id)))
+                except csv.Error:
+                    raise CliException('Error writing CSV.')
+
+            elif args.format == 'json' or args.format == 'yaml':
+                json_dict = []
+                for block_id in blockids:
+                    block_num, blockid, txns, duration, local_mean,\
+                        validator_dest = get_block_info(web_client, block_id)
+                    json_block = {
+                        'NUM': block_num, 'BLOCK': blockid,
+                        'TXNS': txns, 'DURATION': duration,
+                        'LOCALMEAN': local_mean, 'VALIDATOR': validator_dest}
+                    json_dict.append(json_block)
+
+                if args.format == 'json':
+                    print json.dumps(json_dict)
+                else:
+                    print yaml.dump(json_dict, default_flow_style=False)
+
+            else:
+                raise CliException(
+                    "unknown format option: {}".format(args.format))
+
         elif args.subcommand == 'show':
             block_info = \
                 web_client.get_block(
@@ -101,3 +151,16 @@ def do_block(args):
 
     except MessageException as e:
         raise CliException(e)
+
+
+def get_block_info(web_client, block_id):
+    block_info = web_client.get_block(block_id)
+    serialized_cert = json.loads(
+        block_info["WaitCertificate"]["SerializedCert"])
+    block_num = str(block_info["BlockNum"])
+    txns = str(len(block_info["TransactionIDs"]))
+    duration = str(serialized_cert["Duration"])
+    local_mean = str(serialized_cert["LocalMean"])
+    validator_dest = str(serialized_cert["ValidatorAddress"])
+
+    return block_num, str(block_id), txns, duration, local_mean, validator_dest
