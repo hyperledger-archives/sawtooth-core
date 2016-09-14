@@ -17,11 +17,11 @@ import time
 import unittest
 
 from utils import generate_certs, generate_txn_ids, random_name
-from journal.consensus.poet.wait_timer import WaitTimer
-from journal.consensus.poet.wait_certificate import WaitCertificate
+from journal.consensus.poet0.wait_timer import WaitTimer
+from journal.consensus.poet0.wait_certificate import WaitCertificate
 
-from journal.consensus.poet.poet_enclave_simulator \
-    import poet_enclave_simulator as poet
+from journal.consensus.poet0.poet_enclave_simulator \
+    import poet_enclave_simulator as pe_sim
 
 
 class TestPoetWaitCertificate(unittest.TestCase):
@@ -33,11 +33,11 @@ class TestPoetWaitCertificate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         args = {}
-        poet.initialize(**args)
+        pe_sim.initialize(**args)
         cls.default_target_wait_time = WaitTimer.target_wait_time
         WaitTimer.target_wait_time = 1  # change default
-        WaitTimer.poet_enclave = poet
-        WaitCertificate.poet_enclave = poet
+        WaitTimer.poet_enclave = pe_sim
+        WaitCertificate.poet_enclave = pe_sim
 
     @classmethod
     def tearDownClass(cls):
@@ -116,7 +116,7 @@ class TestPoetWaitCertificate(unittest.TestCase):
         ewt.local_mean = lm
 
         pc = wait_cert.previous_certificate_id
-        ewt.previous_certificate_id = random_name(poet.IDENTIFIER_LENGTH)
+        ewt.previous_certificate_id = random_name(pe_sim.IDENTIFIER_LENGTH)
         ewt.serialized_cert = ewt.serialize()
         r = wait_cert.is_valid_wait_certificate(oid, certs, txn_ids)
         self.assertFalse(r)
@@ -206,7 +206,7 @@ class TestPoetWaitCertificate(unittest.TestCase):
         wait_cert.local_mean = lm
 
         pc = wait_cert.previous_certificate_id
-        wait_cert.previous_certificate_id = random_name(poet.IDENTIFIER_LENGTH)
+        wait_cert.previous_certificate_id = random_name(pe_sim.IDENTIFIER_LENGTH)
         r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
         wait_cert.previous_certificate_id = pc
