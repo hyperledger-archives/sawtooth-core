@@ -123,7 +123,7 @@ that wait timers have been fairly generated is not possible. This
 version of PoET is intended for experimental purposes and should not
 be used as the consensus mechanism in any 'production' environment.
 
-The PoET implementation is located in journal.consensus.poet in
+The PoET implementation is located in journal.consensus.poet0 in
 sawtooth-core.
 
 Quorum Voting

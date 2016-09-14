@@ -21,7 +21,7 @@ import traceback
 import unittest
 
 from sawtooth.client import LedgerWebClient
-from txnintegration.netconfig import gen_dfl_cfg_poet
+from txnintegration.netconfig import gen_dfl_cfg_poet0
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.simcontroller import NopEdgeController
 from txnintegration.simcontroller import SimController
@@ -84,7 +84,7 @@ class TestPartitionRecovery(unittest.TestCase):
         print
         try:
             print 'phase 0: build vulnerably connected 5-net:'
-            net_cfg = NetworkConfig(gen_dfl_cfg_poet(), n)
+            net_cfg = NetworkConfig(gen_dfl_cfg_poet0(), n)
             net_cfg.set_nodes(vulnerable_mat)
             net_cfg.set_peers(vulnerable_mat)
             net_cfg.set_blacklist()
