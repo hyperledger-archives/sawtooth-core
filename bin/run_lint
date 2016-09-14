@@ -18,8 +18,8 @@ find_packages() {
         for file in $(find $dir -name \*.py)
         do
             [ $file = "gossip/ECDSA/ECDSARecoverModule.py" ] && continue
-            [ $file = "journal/consensus/poet/Enclave/EnclaveModule.py" ] && continue
-            [ $file = "journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.py" ] && continue
+            [ $file = "journal/consensus/poet0/Enclave/EnclaveModule.py" ] && continue
+            [ $file = "journal/consensus/poet0/poet_enclave_simulator/poet_enclave_simulator.py" ] && continue
 
             echo "$topdir/$file"
         done
