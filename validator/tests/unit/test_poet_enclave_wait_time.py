@@ -113,9 +113,11 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
                 None,
                 wait_timer.signature)
         with self.assertRaises(TypeError) as context:
-            wait_timer2 = pe_sim.deserialize_wait_timer([], wait_timer.signature)
+            wait_timer2 = pe_sim.deserialize_wait_timer([],
+                                                        wait_timer.signature)
         with self.assertRaises(TypeError) as context:
-            wait_timer2 = pe_sim.deserialize_wait_timer(8, wait_timer.signature)
+            wait_timer2 = pe_sim.deserialize_wait_timer(8,
+                                                        wait_timer.signature)
         with self.assertRaises(ValueError) as context:
             wait_timer2 = pe_sim.deserialize_wait_timer(
                 random_name(len(serialized_wait_timer)),
@@ -144,7 +146,8 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
                 random_name(len(wait_timer.signature)))
 
         with self.assertRaises(TypeError) as context:
-            wait_timer2 = pe_sim.deserialize_wait_timer(8, wait_timer.signature)
+            wait_timer2 = pe_sim.deserialize_wait_timer(8,
+                                                        wait_timer.signature)
 
     def test_serialize_2(self):
 

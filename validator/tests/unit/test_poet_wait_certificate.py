@@ -206,7 +206,8 @@ class TestPoetWaitCertificate(unittest.TestCase):
         wait_cert.local_mean = lm
 
         pc = wait_cert.previous_certificate_id
-        wait_cert.previous_certificate_id = random_name(pe_sim.IDENTIFIER_LENGTH)
+        wait_cert.previous_certificate_id = random_name(
+            pe_sim.IDENTIFIER_LENGTH)
         r = wait_cert.is_valid_wait_certificate(addr, certs, txn_ids)
         self.assertTrue(r)
         wait_cert.previous_certificate_id = pc
