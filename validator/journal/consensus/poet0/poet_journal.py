@@ -21,9 +21,9 @@ from time import time
 
 from gossip import common, stats
 from journal import journal_core
-from journal.consensus.poet import poet_transaction_block
-from journal.consensus.poet.wait_timer import WaitTimer
-from journal.consensus.poet.wait_certificate import WaitCertificate
+from journal.consensus.poet0 import poet_transaction_block
+from journal.consensus.poet0.wait_timer import WaitTimer
+from journal.consensus.poet0.wait_certificate import WaitCertificate
 
 logger = logging.getLogger(__name__)
 

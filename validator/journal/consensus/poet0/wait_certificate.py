@@ -19,7 +19,7 @@ from requests import ConnectionError
 from requests import Timeout
 
 from sawtooth.exceptions import NotAvailableException
-from journal.consensus.poet.wait_timer import WaitTimer
+from journal.consensus.poet0.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
 
