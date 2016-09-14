@@ -60,12 +60,12 @@ def local_main(config, windows_service=False, daemonized=False):
 
     logger.warn('validator pid is %s', os.getpid())
 
-    ledgertype = config.get('LedgerType', 'poet')
+    ledgertype = config.get('LedgerType', 'poet0')
 
     validator = None
 
     try:
-        if ledgertype == 'poet':
+        if ledgertype == 'poet0':
             set_wait_timer_globals(config)
             validator = poet_validator.PoetValidator(
                 config,

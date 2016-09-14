@@ -84,10 +84,10 @@ else:
 
 enclavemod = Extension(
     '_poet_enclave_simulator',
-    ['journal/consensus/poet/poet_enclave_simulator/poet_enclave_simulator.i',
-     'journal/consensus/poet/poet_enclave_simulator/common.cpp',
-     'journal/consensus/poet/poet_enclave_simulator/wait_certificate.cpp',
-     'journal/consensus/poet/poet_enclave_simulator/wait_timer.cpp'],
+    ['journal/consensus/poet0/poet_enclave_simulator/poet_enclave_simulator.i',
+     'journal/consensus/poet0/poet_enclave_simulator/common.cpp',
+     'journal/consensus/poet0/poet_enclave_simulator/wait_certificate.cpp',
+     'journal/consensus/poet0/poet_enclave_simulator/wait_timer.cpp'],
     swig_opts=['-c++'],
     extra_compile_args=extra_compile_args,
     include_dirs=include_dirs,
@@ -146,7 +146,7 @@ setup(
     install_requires=['sawtooth-core', 'colorlog', 'twisted', 'PyYAML',
                       'psutil', 'numpy'],
     ext_modules=[enclavemod],
-    py_modules=['journal.consensus.poet.poet_enclave_simulator'
+    py_modules=['journal.consensus.poet0.poet_enclave_simulator'
                 '.poet_enclave_simulator'],
     data_files=data_files,
     entry_points={
@@ -168,12 +168,12 @@ if "clean" in sys.argv and "--all" in sys.argv:
             "_poet_enclave_simulator.so",
             os.path.join("journal",
                          "consensus",
-                         "poet",
+                         "poet0",
                          "poet_enclave_simulator",
                          "poet_enclave_simulator.py"),
             os.path.join("journal",
                          "consensus",
-                         "poet",
+                         "poet0",
                          "poet_enclave_simulator",
                          "_poet_enclave_simulator_wrap.cpp")]:
         if os.path.exists(os.path.join(directory, filename)):

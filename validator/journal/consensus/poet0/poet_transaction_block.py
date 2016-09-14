@@ -46,7 +46,7 @@ class PoetTransactionBlockMessage(
             the message.
     """
     MessageType = \
-        "/journal.consensus.poet.PoetTransactionBlock/TransactionBlock"
+        "/journal.consensus.poet0.PoetTransactionBlock/TransactionBlock"
 
     def __init__(self, minfo=None):
         if minfo is None:

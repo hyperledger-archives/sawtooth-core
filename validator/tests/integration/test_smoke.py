@@ -112,7 +112,7 @@ class TestSmoke(unittest.TestCase):
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_intkey_load_poet(self):
         cfg = defaultValidatorConfig.copy()
-        cfg['LedgerType'] = 'poet'
+        cfg['LedgerType'] = 'poet0'
         self._run_int_load(cfg, 5, "TestSmokeResultsPoet")
 
     @unittest.skip("LedgerType quorum is broken.")

@@ -14,7 +14,7 @@
     "LedgerURL" : ["http://localhost:8800/"],
 
     ## pick the ledger type
-    "LedgerType" : "poet",
+    "LedgerType" : "poet0",
     "GenesisLedger" : true,
 
     ## configuration of the ledger wait time certificate 

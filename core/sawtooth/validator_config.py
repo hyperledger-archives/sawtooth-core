@@ -345,7 +345,7 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
         self['InitialWaitTime'] = 5.0
 
         # ledger type (PoET default)
-        self['LedgerType'] = 'poet'
+        self['LedgerType'] = 'poet0'
 
         # quorum specific configuration
         self['VotingQuorumTargetSize'] = None
