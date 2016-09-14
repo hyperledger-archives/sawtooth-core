@@ -19,15 +19,14 @@ from threading import RLock
 
 from journal import transaction_block
 from journal.messages import transaction_block_message
-from journal.consensus.poet.wait_certificate import WaitCertificate, WaitTimer
+from journal.consensus.poet0.wait_certificate import WaitCertificate, WaitTimer
 from gossip.common import NullIdentifier
 
 logger = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
-    """Registers poet transaction block message handlers with
-    the journal.
+    """Registers transaction block message handlers with the journal.
 
     Args:
         journal (PoetJournal): The journal on which to register the
@@ -40,15 +39,14 @@ def register_message_handlers(journal):
 
 class PoetTransactionBlockMessage(
         transaction_block_message.TransactionBlockMessage):
-    """Poet transaction block messages represent the message format
-    for exchanging information about poet transaction blocks.
+    """Represents the message format for exchanging information about blocks.
 
     Attributes:
         PoetTransactionBlockMessage.MessageType (str): The class name of
             the message.
     """
     MessageType = \
-        "/journal.consensus.poet.PoetTransactionBlock/TransactionBlock"
+        "/journal.consensus.poet0.PoetTransactionBlock/TransactionBlock"
 
     def __init__(self, minfo=None):
         if minfo is None:
@@ -60,19 +58,17 @@ class PoetTransactionBlockMessage(
 
 
 class PoetTransactionBlock(transaction_block.TransactionBlock):
-    """A poet transaction block is a set of poet transactions to
-    be applied to a ledger.
+    """A set of transactions to be applied to a ledger, and proof of wait data.
 
     Attributes:
         PoetTransactionBlock.TransactionBlockTypeName (str): The name of the
             transaction block type.
-        PoetTransactionBlock.MessageType (type): The poet transaction block
-            message class.
-        PoetTransactionBlock.WaitTimer \
-            (journal.consensus.poet.wait_timer.WaitTimer): The wait timer
+        PoetTransactionBlock.MessageType (type): The message class.
+        PoetTransactionBlock.WaitTimer (wait_timer.WaitTimer): The wait timer
             for the block.
-        PoetTransactionBlock.WaitCertificate (wait_certificateWaitCertificate):
-            The wait certificate for the block.
+        PoetTransactionBlock.WaitCertificate
+            (wait_certificate.WaitCertificate): The wait certificate for the
+            block.
     """
     TransactionBlockTypeName = '/Poet/PoetTransactionBlock'
     MessageType = PoetTransactionBlockMessage
@@ -168,7 +164,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         """Verifies that the block received is valid.
 
         This includes checks for valid signature and a valid
-        waitcertificate.
+        WaitCertificate.
 
         Args:
             journal (PoetJorunal): Journal for pulling context.
@@ -199,8 +195,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 certlist)
 
     def create_wait_certificate(self):
-        """Create a wait certificate for the journal based on the
-        wait timer.
+        """Create a wait certificate for the journal based on the wait timer.
         """
         with self._lock:
             hasher = hashlib.sha256()
@@ -224,12 +219,10 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             return self.WaitTimer.is_expired(now)
 
     def dump(self):
-        """Returns a dict with information about the poet transaction
-        block.
+        """Returns a dict with information about the block.
 
         Returns:
-            dict: A dict containing information about the poet
-                transaction block.
+            dict: A dict containing information about the block.
         """
         with self._lock:
             result = super(PoetTransactionBlock, self).dump()

@@ -18,7 +18,7 @@ from txnintegration.matrices import NodeController
 from txnintegration.matrices import EdgeController
 from txnintegration.matrices import NopEdgeController
 from txnintegration.netconfig import NetworkConfig
-from txnintegration.netconfig import gen_dfl_cfg_poet
+from txnintegration.netconfig import gen_dfl_cfg_poet0
 from txnintegration.netconfig import gen_dfl_cfg_quorum
 from txnintegration.validator_collection_controller import \
     ValidatorCollectionController
@@ -32,8 +32,8 @@ def set_default_topology(topology,
                          q_mag=None
                          ):
     cfg = None
-    if ledger_type in ['dev_mode', 'poet']:
-        cfg = gen_dfl_cfg_poet()
+    if ledger_type in ['dev_mode', 'poet0']:
+        cfg = gen_dfl_cfg_poet0()
     elif ledger_type in ['quorum']:
         q = q_mag
         if q is None:
@@ -56,7 +56,7 @@ def set_default_topology(topology,
 
 
 class SimController(object):
-    def __init__(self, n_mag, ledger_type='poet'):
+    def __init__(self, n_mag, ledger_type='poet0'):
         self.n_mag = n_mag
         self.node_controller = None
         self.edge_controller = None

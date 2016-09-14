@@ -23,7 +23,7 @@ import traceback
 import warnings
 import ctypes
 
-from journal.consensus.poet.wait_timer import set_wait_timer_globals
+from journal.consensus.poet0.wait_timer import set_wait_timer_globals
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
@@ -52,7 +52,7 @@ def local_main(config, windows_service=False, daemonized=False):
     # epoll and we need that to happen after the forking done with
     # Daemonize().  This is a side-effect of importing twisted.
     from twisted.internet import reactor
-    from txnserver import poet_validator
+    from txnserver import poet0_validator
     from txnserver import quorum_validator
     from txnserver import dev_mode_validator
     from txnserver import web_api
@@ -60,14 +60,14 @@ def local_main(config, windows_service=False, daemonized=False):
 
     logger.warn('validator pid is %s', os.getpid())
 
-    ledgertype = config.get('LedgerType', 'poet')
+    ledgertype = config.get('LedgerType', 'poet0')
 
     validator = None
 
     try:
-        if ledgertype == 'poet':
+        if ledgertype == 'poet0':
             set_wait_timer_globals(config)
-            validator = poet_validator.PoetValidator(
+            validator = poet0_validator.PoetValidator(
                 config,
                 windows_service=windows_service)
         elif ledgertype == 'quorum':

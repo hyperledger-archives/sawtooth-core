@@ -21,9 +21,9 @@ from time import time
 
 from gossip import common, stats
 from journal import journal_core
-from journal.consensus.poet import poet_transaction_block
-from journal.consensus.poet.wait_timer import WaitTimer
-from journal.consensus.poet.wait_certificate import WaitCertificate
+from journal.consensus.poet0 import poet_transaction_block
+from journal.consensus.poet0.wait_timer import WaitTimer
+from journal.consensus.poet0.wait_certificate import WaitCertificate
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class PoetJournal(journal_core.Journal):
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
         else:
-            enclave_module = 'journal.consensus.poet.poet_enclave_simulator' \
+            enclave_module = 'journal.consensus.poet0.poet_enclave_simulator' \
                              '.poet_enclave_simulator'
 
         poet_enclave = importlib.import_module(enclave_module)
@@ -60,7 +60,7 @@ class PoetJournal(journal_core.Journal):
 
         self.onHeartbeatTimer += self._check_certificate
 
-        # initialize the poet handlers
+        # initialize handlers
         poet_transaction_block.register_message_handlers(self)
 
         # initialize stats specifically for the block chain journal

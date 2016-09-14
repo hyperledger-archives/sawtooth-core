@@ -19,17 +19,17 @@ import time
 
 from utils import generate_certs, random_name
 
-from journal.consensus.poet.wait_timer import WaitTimer
-from journal.consensus.poet.poet_enclave_simulator \
-    import poet_enclave_simulator as poet
+from journal.consensus.poet0.wait_timer import WaitTimer
+from journal.consensus.poet0.poet_enclave_simulator \
+    import poet_enclave_simulator as pe_sim
 
 
 class TestPoetWaitTimer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         args = {}
-        poet.initialize(**args)
-        WaitTimer.poet_enclave = poet
+        pe_sim.initialize(**args)
+        WaitTimer.poet_enclave = pe_sim
 
     def test_create_wait_timer(self):
         certs = []

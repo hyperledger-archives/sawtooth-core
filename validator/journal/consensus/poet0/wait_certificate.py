@@ -19,7 +19,7 @@ from requests import ConnectionError
 from requests import Timeout
 
 from sawtooth.exceptions import NotAvailableException
-from journal.consensus.poet.wait_timer import WaitTimer
+from journal.consensus.poet0.wait_timer import WaitTimer
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class WaitCertificate(object):
             certificate.
         WaitCertificate.duration (float): The duration of the wait timer.
         WaitCertificate.signature (str): The signature of the certificate.
-        journal.consensus.poet.wait_certificate.WaitCertificate.identifier\
+        wait_certificate.WaitCertificate.identifier\
             (str): The identifier of this certificate.
         serialized_cert (str): A serialized version of the certificate.
     """
@@ -114,7 +114,7 @@ class WaitCertificate(object):
         """Initialize the wait certificate.
 
         Args:
-            cert (poet_enclave.WaitCertificate): The poet enclave
+            cert (poet_enclave.WaitCertificate): The poet_enclave
                 generated wait certificate.
         """
         self.previous_certificate_id = cert.previous_certificate_id

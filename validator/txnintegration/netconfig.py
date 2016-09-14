@@ -21,7 +21,7 @@ from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
 
 
-def gen_dfl_cfg_poet():
+def gen_dfl_cfg_poet0():
     ret = OrderedDict()
     ret['CertificateSampleLength'] = 5
     return ret

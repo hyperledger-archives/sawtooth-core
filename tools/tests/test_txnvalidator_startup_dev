@@ -22,7 +22,7 @@ python setup.py clean --all || exit 1
 python setup.py build || exit 1
 cd /project/sawtooth/gossip/ECDSA || exit 1
 make || exit 1
-cd /project/sawtooth/journal/consensus/poet/Enclave|| exit 1
+cd /project/sawtooth/journal/consensus/poet0/Enclave|| exit 1
 make || exit 1
 
 cd /project/sawtooth-validator || exit 1
