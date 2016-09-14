@@ -15,9 +15,9 @@
 
 import logging
 
-from journal.consensus.poet0.poets_client.poets_client import PoetsClient
-from journal.consensus.poet0.poets_client.wait_timer import WaitTimer
-from journal.consensus.poet0.poets_client.wait_certificate \
+from journal.consensus.poet1.poets_client.poets_client import PoetsClient
+from journal.consensus.poet1.poets_client.wait_timer import WaitTimer
+from journal.consensus.poet1.poets_client.wait_certificate \
     import WaitCertificate
 
 logger = logging.getLogger(__name__)

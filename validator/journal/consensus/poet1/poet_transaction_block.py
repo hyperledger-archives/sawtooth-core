@@ -19,7 +19,7 @@ from threading import RLock
 
 from journal import transaction_block
 from journal.messages import transaction_block_message
-from journal.consensus.poet0.wait_certificate import WaitCertificate, WaitTimer
+from journal.consensus.poet1.wait_certificate import WaitCertificate, WaitTimer
 from gossip.common import NullIdentifier
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class PoetTransactionBlockMessage(
             the message.
     """
     MessageType = \
-        "/journal.consensus.poet0.PoetTransactionBlock/TransactionBlock"
+        "/journal.consensus.poet1.PoetTransactionBlock/TransactionBlock"
 
     def __init__(self, minfo=None):
         if minfo is None:

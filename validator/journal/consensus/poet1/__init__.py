@@ -13,10 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import journal.consensus.poet0.poet_journal
-import journal.consensus.poet0.poet_transaction_block
-import journal.consensus.poet0.wait_certificate
-import journal.consensus.poet0.wait_timer
+import journal.consensus.poet1.poet_journal
+import journal.consensus.poet1.poet_transaction_block
+import journal.consensus.poet1.wait_certificate
+import journal.consensus.poet1.wait_timer
 
 __all__ = ['poet_journal', 'poet_transaction_block', 'wait_certificate',
            'wait_timer']

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from journal.consensus.poet0.poets_client import poets_enclave, wait_timer, \
+from journal.consensus.poet1.poets_client import poets_enclave, wait_timer, \
     wait_certificate
 
 
