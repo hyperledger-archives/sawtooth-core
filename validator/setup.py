@@ -147,7 +147,7 @@ setup(
                       'psutil', 'numpy'],
     ext_modules=[poet0_enclave_mod],
     py_modules=['journal.consensus.poet0.poet_enclave_simulator'
-                '.poet_enclave_simulator'],
+                '.poet0_enclave_simulator'],
     data_files=data_files,
     entry_points={
         'console_scripts': [
@@ -170,7 +170,7 @@ if "clean" in sys.argv and "--all" in sys.argv:
                          "consensus",
                          "poet0",
                          "poet_enclave_simulator",
-                         "poet_enclave_simulator.py"),
+                         "poet0_enclave_simulator.py"),
             os.path.join("journal",
                          "consensus",
                          "poet0",

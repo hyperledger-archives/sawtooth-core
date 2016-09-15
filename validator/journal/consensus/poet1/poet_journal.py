@@ -51,7 +51,7 @@ class PoetJournal(journal_core.Journal):
             enclave_module = kwargs['PoetEnclaveImplementation']
         else:
             enclave_module = 'journal.consensus.poet1.poet_enclave_simulator' \
-                             '.poet_enclave_simulator'
+                             '.poet1_enclave_simulator'
 
         poet_enclave = importlib.import_module(enclave_module)
         poet_enclave.initialize(**kwargs)
