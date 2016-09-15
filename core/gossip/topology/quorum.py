@@ -18,7 +18,7 @@ import logging
 from twisted.internet import reactor
 
 from gossip.messages.connect_message import send_connection_request
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import MessageException
 
 
@@ -69,10 +69,10 @@ def _get_quorum(gossiper, callback):
     logger.debug('trying to increase working quorum by %d from candidates %s',
                  count, [str(x.Name) for x in candidates])
     for nd in candidates:
-        lwc = LedgerWebClient('http://{0}:{1}'.format(nd.NetHost,
-                                                      nd.HttpPort))
+        client = SawtoothClient('http://{0}:{1}'.format(nd.NetHost,
+                                                        nd.HttpPort))
         try:
-            status = lwc.get_status(verbose=False, timeout=2)
+            status = client.get_status(timeout=2)
         except MessageException as e:
             logger.debug(e.message)
             continue

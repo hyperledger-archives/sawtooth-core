@@ -16,7 +16,7 @@
 
 from gossip.common import pretty_print_dict
 
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 
 from sawtooth.exceptions import MessageException
 
@@ -70,28 +70,20 @@ def do_store(args):
     else:
         url = 'http://localhost:8800'
 
-    web_client = LedgerWebClient(url)
+    web_client = SawtoothClient(url)
 
     try:
         if args.subcommand == 'list':
-            transaction_type_name = web_client.get_store_by_name()
+            transaction_type_name = web_client.get_store_list()
             print pretty_print_dict(transaction_type_name)
             return
         elif args.subcommand == 'show':
-            if args.blockID is not None:
-                block_id = args.blockID
-            else:
-                block_id = ''
-
-            if args.key is not None:
-                key = args.key
-            else:
-                key = ''
-
-            store_info = web_client.get_store_by_name(args.transactionTypeName,
-                                                      key,
-                                                      block_id,
-                                                      args.incremental)
+            store_info = \
+                web_client.get_store_by_name(
+                    txn_type_or_name=args.transactionTypeName,
+                    key=args.key,
+                    block_id=args.blockID,
+                    delta=args.incremental)
             print pretty_print_dict(store_info)
             return
 

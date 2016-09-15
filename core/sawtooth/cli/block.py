@@ -16,7 +16,7 @@
 
 from gossip.common import pretty_print_dict
 
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import MessageException
 
 from sawtooth.cli.exceptions import CliException
@@ -80,22 +80,22 @@ def do_block(args):
     else:
         url = 'http://localhost:8800'
 
-    web_client = LedgerWebClient(url)
+    web_client = SawtoothClient(url)
 
     try:
         if args.subcommand == 'list':
             if args.all:
                 blockids = web_client.get_block_list()
             else:
-                blockids = web_client.get_block_list(args.blockcount)
+                blockids = web_client.get_block_list(count=args.blockcount)
             for block_id in blockids:
                 print block_id
             return
         elif args.subcommand == 'show':
-            if args.key is not None:
-                block_info = web_client.get_block(args.blockID, args.key)
-            else:
-                block_info = web_client.get_block(args.blockID)
+            block_info = \
+                web_client.get_block(
+                    block_id=args.blockID,
+                    field=args.key)
             print pretty_print_dict(block_info)
             return
 

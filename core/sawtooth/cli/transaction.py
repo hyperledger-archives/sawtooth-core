@@ -18,7 +18,7 @@ from gossip.common import pretty_print_dict
 
 from journal import transaction
 
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 
 from sawtooth.exceptions import MessageException
 
@@ -98,23 +98,24 @@ def do_transaction(args):
     else:
         url = 'http://localhost:8800'
 
-    web_client = LedgerWebClient(url)
+    web_client = SawtoothClient(url)
 
     try:
         if args.subcommand == 'list':
             if args.all:
                 tsctids = web_client.get_transaction_list()
             else:
-                tsctids = web_client.get_transaction_list(args.blockcount)
+                tsctids = \
+                    web_client.get_transaction_list(
+                        block_count=args.blockcount)
             for txn_id in tsctids:
                 print txn_id
             return
         elif args.subcommand == 'show':
-            if args.key is not None:
-                tsct_info = web_client.get_transaction(args.transactionID,
-                                                       args.key)
-            else:
-                tsct_info = web_client.get_transaction(args.transactionID)
+            tsct_info = \
+                web_client.get_transaction(
+                    transaction_id=args.transactionID,
+                    field=args.key)
             print pretty_print_dict(tsct_info)
             return
         elif args.subcommand == 'status':

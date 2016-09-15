@@ -15,21 +15,22 @@
 
 import logging
 import time
-import sys
 import urllib
 import urllib2
 import urlparse
-from collections import OrderedDict
 try:  # weird windows behavior
     from enum import IntEnum as Enum
 except ImportError:
     from enum import Enum
 
-from gossip import node, signed_object
-from gossip.common import json2dict, dict2json
-from gossip.common import cbor2dict, dict2cbor
+from gossip import node
+from gossip import signed_object
+from gossip.common import json2dict
+from gossip.common import cbor2dict
+from gossip.common import dict2cbor
 from gossip.common import pretty_print_dict
-from journal import global_store_manager, transaction
+from journal import global_store_manager
+from journal import transaction
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
@@ -65,7 +66,8 @@ class _Communication(object):
         """
         Send an HTTP head request to the validator. Return the result code.
         """
-        url = "{0}/{1}".format(self._base_url, path.strip('/'))
+
+        url = urlparse.urljoin(self._base_url, path)
 
         LOGGER.debug('get content from url <%s>', url)
 
@@ -96,20 +98,20 @@ class _Communication(object):
             LOGGER.warn('Error from server, detail information: %s',
                         err_content)
 
-    def getmsg(self, path):
+    def getmsg(self, path, timeout=10):
         """
         Send an HTTP get request to the validator. If the resulting content
         is in JSON form, parse it & return the corresponding dictionary.
         """
 
-        url = "{0}/{1}".format(self._base_url, path.strip('/'))
+        url = urlparse.urljoin(self._base_url, path)
 
         LOGGER.debug('get content from url <%s>', url)
 
         try:
             request = urllib2.Request(url)
             opener = urllib2.build_opener(self._proxy_handler)
-            response = opener.open(request, timeout=10)
+            response = opener.open(request, timeout=timeout)
 
         except urllib2.HTTPError as err:
             LOGGER.warn('operation failed with response: %s', err.code)
@@ -146,7 +148,7 @@ class _Communication(object):
 
         data = dict2cbor(info)
         datalen = len(data)
-        url = self._base_url + msgtype
+        url = urlparse.urljoin(self._base_url, msgtype)
 
         LOGGER.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
                      datalen, data)
@@ -217,17 +219,15 @@ class _Communication(object):
 
 class _ClientState(object):
     def __init__(self,
-                 communication,
-                 store_name,
+                 client,
                  state_type=global_store_manager.KeyValueStore):
-        self._communication = communication
+        self._client = client
         self._state_type = state_type
         self._state = None
         self._current_state = None
-        if self._communication is None:
+        if self._client is None:
             self._state = self._state_type()
             self._current_state = self._state.clone_store()
-        self._store_name = store_name
         self._current_block_id = None
 
     @property
@@ -239,15 +239,10 @@ class _ClientState(object):
         Retrieve the current state from the validator. Rebuild
         the name, type, and id maps for the resulting objects.
         """
-
-        if self._communication is None:
-            return
-
-        LOGGER.debug('fetch state from %s/%s/*',
-                     self._communication.base_url, self._store_name)
+        LOGGER.debug('fetch state from %s', self._client.base_url)
 
         # get the last ten block ids
-        block_ids = self._communication.getmsg('/block?blockcount=10')
+        block_ids = self._client.get_block_list(10)
         block_id = block_ids[0]
 
         # if the latest block is the one we have.
@@ -261,15 +256,12 @@ class _ClientState(object):
             for fetch_id in reversed(fetch_list):
                 LOGGER.debug('only fetch delta of state for block %s',
                              fetch_id)
-                delta = self._communication.getmsg(
-                    '/store/{0}/*?delta=1&blockid={1}'
-                    .format(self._store_name, fetch_id))
+                delta = self._client.get_store_delta_for_block(fetch_id)
                 self._state = self._state.clone_store(delta)
         else:
             # no common block re-fetch full state.
             LOGGER.debug('full fetch of state for block %s', block_id)
-            state = self._communication.getmsg(
-                "/store/{0}/*?blockid={1}".format(self._store_name, block_id))
+            state = self._client.get_store_objects_through_block(block_id)
             self._state = self._state_type(prevstore=None,
                                            storeinfo={'Store': state,
                                                       'DeletedKeys': []})
@@ -319,29 +311,41 @@ class UpdateBatch(object):
 class SawtoothClient(object):
     def __init__(self,
                  base_url,
-                 store_name,
+                 store_name=None,
                  name='SawtoothClient',
                  transaction_type=None,
                  message_type=None,
                  keystring=None,
                  keyfile=None,
                  disable_client_validation=False):
-        self._transaction_type = transaction_type
-        self._message_type = message_type
         self._base_url = base_url
+        self._message_type = message_type
+        self._transaction_type = transaction_type
+
+        # An explicit store name takes precedence over a store name
+        # implied by the transaction type.
+        self._store_name = None
+        if store_name is not None:
+            self._store_name = store_name.strip('/')
+        elif transaction_type is not None:
+            self._store_name = transaction_type.TransactionTypeName.strip('/')
+
         self._communication = _Communication(base_url)
         self._last_transaction = None
         self._local_node = None
-        state_communication = self._communication if base_url else None
-        self._current_state = _ClientState(
-            communication=state_communication,
-            store_name=store_name,
-            state_type=transaction_type.TransactionStoreType
-            if transaction_type else global_store_manager.KeyValueStore)
         self._update_batch = None
-        self.fetch_state()
-
         self._disable_client_validation = disable_client_validation
+
+        # We only keep current state if we have a store name
+        self._current_state = None
+        if self._store_name is not None:
+            self._current_state = \
+                _ClientState(
+                    client=self,
+                    state_type=transaction_type.TransactionStoreType
+                    if transaction_type
+                    else global_store_manager.KeyValueStore)
+            self.fetch_state()
 
         signing_key = None
         if keystring:
@@ -368,11 +372,83 @@ class SawtoothClient(object):
 
     @property
     def state(self):
+        if self._current_state is None:
+            raise \
+                ClientException('Client must be configured with a store name '
+                                'to access its current state')
+
         return self._current_state.state
 
     @property
     def last_transaction_id(self):
         return self._last_transaction
+
+    @staticmethod
+    def _construct_store_path(txn_type_or_name=None,
+                              key=None,
+                              block_id=None,
+                              delta=False):
+        path = 'store'
+
+        # If we are provided a transaction class or object, we will infer
+        # the store name from it.  Otherwise, we will assume we have a store
+        # name.
+        if txn_type_or_name is not None:
+            if isinstance(txn_type_or_name, transaction.Transaction):
+                path += '/' + txn_type_or_name.TransactionTypeName.strip('/')
+            else:
+                path += '/' + txn_type_or_name.strip('/')
+
+        if key is not None:
+            path += '/' + key.strip('/')
+
+        query = {}
+
+        if block_id is not None:
+            query['blockid'] = block_id
+        if delta:
+            query['delta'] = '1'
+        if len(query) >= 0:
+            path += '?' + urllib.urlencode(query)
+
+        return path
+
+    @staticmethod
+    def _construct_list_path(list_type, count=None):
+        path = list_type
+
+        if count is not None:
+            path += '?' + urllib.urlencode({'blockcount': int(count)})
+
+        return path
+
+    @staticmethod
+    def _construct_block_list_path(count=0):
+        return SawtoothClient._construct_list_path('block', count)
+
+    @staticmethod
+    def _construct_transaction_list_path(count=0):
+        return SawtoothClient._construct_list_path('transaction', count)
+
+    @staticmethod
+    def _construct_item_path(item_type, item_id, field=None):
+        path = '{0}/{1}'.format(item_type, item_id)
+        if field is not None:
+            path += '/' + field
+
+        return path
+
+    @staticmethod
+    def _construct_block_path(block_id, field=None):
+        return SawtoothClient._construct_item_path('block', block_id, field)
+
+    @staticmethod
+    def _construct_transaction_path(transaction_id, field=None):
+        return \
+            SawtoothClient._construct_item_path(
+                'transaction',
+                transaction_id,
+                field)
 
     def start_batch(self):
         """
@@ -508,6 +584,11 @@ class SawtoothClient(object):
         Returns:
             Nothing
         """
+        if self._current_state is None:
+            raise \
+                ClientException('Client must be configured with a store name '
+                                'to access its current state')
+
         self._current_state.fetch()
 
     def get_state(self):
@@ -519,7 +600,248 @@ class SawtoothClient(object):
         Returns:
             The most-recently-cached state for the client.
         """
-        return self._current_state.state
+        return self.state
+
+    def get_status(self, timeout=30):
+        """
+        Get the status for a validator
+
+        Args:
+            timeout: Number of seconds to wait for response before determining
+                reqeuest has timed out
+
+        Returns: A dictionary of status items
+        """
+        return self._communication.getmsg('status', timeout)
+
+    def get_store_list(self):
+        """
+        Get the list of stores on the validator.
+
+        Returns: A list of store names
+        """
+        return self._communication.getmsg('store')
+
+    def get_store_by_name(self,
+                          txn_type_or_name,
+                          key=None,
+                          block_id=None,
+                          delta=False):
+        """
+        Generic store retrieval method of any named store.  This allows
+        complete flexibility in specifying the parameters to the HTTP
+        request.
+
+        This function is used when the client has not been configured, on
+        construction, to use a specific store or you wish to access a
+        different store than the object was initially configured to use.
+
+        This function should only be used when you need absolute control
+        over the HTTP request being made to the store.  Otherwise, the
+        store convenience methods should be used instead.
+
+        Args:
+            txn_type_or_name: A transaction class or object (i.e., derived
+                from transaction.Transaction) that can be used to infer the
+                store name or a string with the store name.
+            key: (optional) The object to retrieve from the store.  If None,
+                will returns keys instead of objects.
+            block_id: (optional) The block ID to use as ending or starting
+                point of retrieval.
+            delta: (optional) A flag to indicate of only a delta should be
+                returned.  If key is None, this is ignored.
+
+        Returns:
+            Either a list of keys, a dictionary of name/value pairs that
+            represent one or more objects, or a delta representation of the
+            store.
+
+        Notes:
+            Reference the Sawtooth Lake Web API documentation for the
+            behavior for the key/block_id/delta combinations.
+        """
+        return \
+            self._communication.getmsg(
+                self._construct_store_path(
+                    txn_type_or_name=txn_type_or_name,
+                    key=key,
+                    block_id=block_id,
+                    delta=delta))
+
+    def get_store(self, key=None, block_id=None, delta=False):
+        """
+        Generic store retrieval method.  This allows complete flexibility
+        in specifying the parameters to the HTTP request.
+
+        This function should only be used when you need absolute control
+        over the HTTP request being made to the store.  Otherwise, the
+        store convenience methods should be used instead.
+
+        Args:
+            key: (optional) The object to retrieve from the store.  If None,
+                will returns keys instead of objects.
+            block_id: (optional) The block ID to use as ending or starting
+                point of retrieval.
+            delta: (optional) A flag to indicate of only a delta should be
+                returned.  If key is None, this is ignored.
+
+        Returns:
+            Either a list of keys, a dictionary of name/value pairs that
+            represent one or more objects, or a delta representation of the
+            store.
+
+        Notes:
+            Reference the Sawtooth Lake Web API documentation for the
+            behavior for the key/block_id/delta combinations.
+
+        Raises ClientException if the client object was not created with a
+        store name or transaction type.
+        """
+        if self._store_name is None:
+            raise \
+                ClientException(
+                    'The client must be configured with a store name or '
+                    'transaction type')
+
+        return \
+            self.get_store_by_name(
+                txn_type_or_name=self._store_name,
+                key=key,
+                block_id=block_id,
+                delta=delta)
+
+    def get_store_keys(self):
+        """
+        Retrieve the list of keys (object IDs) from the store.
+
+        Returns: A list of keys for the store
+
+        Raises ClientException if the client object was not created with a
+        store name or transaction type.
+        """
+        return self.get_store()
+
+    def get_all_store_objects(self):
+        """
+        Retrieve all of the objects for a particular store
+
+        Returns: A dictionary mapping object keys to objects (dictionaries
+            of key/value pairs).
+
+        Raises ClientException if the client object was not created with a
+        store name or transaction type.
+        """
+        return self.get_store(key='*')
+
+    def get_store_object_for_key(self, key):
+        """
+        Retrieves the object from the store corresponding to the key
+
+        Args:
+            key: The object to retrieve from the store
+
+        Returns:
+            A dictionary of name/value pairs that represent the object
+            associated with the key provided.
+
+        Raises ClientException if the client object was not created with a
+        store name or transaction type.
+        """
+        return self.get_store(key=key)
+
+    def get_store_delta_for_block(self, block_id):
+        """
+        Retrieves the store for just the block provided.
+
+        Args:
+            block_id: The ID of the block for which store should be returned.
+
+        Returns:
+             A dictionary that represents the store.
+
+        Raises ClientException if the client object was not created with a
+        store name or transaction type.
+        """
+        return self.get_store(key='*', block_id=block_id, delta=True)
+
+    def get_store_objects_through_block(self, block_id):
+        """
+        Retrieve all of the objects for a particular store up through the
+        block requested.
+
+        Args:
+            block_id: The ID of the last block to look for objects.
+
+        Returns: A dictionary mapping object keys to objects (dictionaries
+            of key/value pairs).
+
+        Raises ClientException if the client object was not created with a
+        store name or transaction type.
+        """
+        return self.get_store(key='*', block_id=block_id)
+
+    def get_block_list(self, count=None):
+        """
+        Retrieve the list of block IDs, ordered from newest to oldest.
+
+        Args:
+            count: (optional) If not None, specifies the maximum number of
+                blocks to return.
+
+        Returns: A list of block IDs.
+        """
+        return \
+            self._communication.getmsg(self._construct_block_list_path(count))
+
+    def get_block(self, block_id, field=None):
+        """
+        Retrieve information about a specific block, returning all information
+        or, if provided, a specific field from the block.
+
+        Args:
+            block_id: The ID of the block to retrieve
+            field: (optional) If not None, specifies the name of the field to
+                retrieve from the block.
+
+        Returns:
+            A dictionary of block data, if field is None
+            The value for the field, if field is not None
+        """
+        return \
+            self._communication.getmsg(
+                self._construct_block_path(block_id, field))
+
+    def get_transaction_list(self, block_count=None):
+        """
+        Retrieve the list of transaction IDs, ordered from newest to oldest.
+
+        Args:
+            block_count: (optional) If not None, specifies the maximum number
+                of blocks to return transaction IDs for.
+
+        Returns: A list of transaction IDs.
+        """
+        return \
+            self._communication.getmsg(
+                self._construct_transaction_list_path(block_count))
+
+    def get_transaction(self, transaction_id, field=None):
+        """
+        Retrieve information about a specific transaction, returning all
+        information or, if provided, a specific field from the transaction.
+
+        Args:
+            transaction_id: The ID of the transaction to retrieve
+            field: (optional) If not None, specifies the name of the field to
+                retrieve from the transaction.
+
+        Returns:
+            A dictionary of transaction data, if field is None
+            The value for the field, if field is not None
+        """
+        return \
+            self._communication.getmsg(
+                self._construct_transaction_path(transaction_id, field))
 
     def get_transaction_status(self, transaction_id):
         """
@@ -533,7 +855,20 @@ class SawtoothClient(object):
         """
         return \
             self._communication.headrequest(
-                '/transaction/{0}'.format(transaction_id))
+                self._construct_transaction_path(transaction_id))
+
+    def forward_message(self, msg):
+        """
+        Post a gossip message to the ledger with the intent of having the
+        receiving validator forward it to all of its peers.
+
+        Args:
+            msg: The message to send.
+
+        Returns: The parsed response, which is typically the encoding of
+            the original message.
+        """
+        return self._communication.postmsg('forward', msg.dump())
 
     def wait_for_commit(self, txnid=None, timetowait=5, iterations=12):
         """
@@ -584,402 +919,3 @@ class SawtoothClient(object):
                 txnid,
                 pretty_status)
             time.sleep(timetowait)
-
-
-class LedgerWebClient(object):
-    GET_HEADER = {"Accept": "application/cbor"}
-
-    def __init__(self, url):
-        self.ledger_url = url
-        self.proxy_handler = urllib2.ProxyHandler({})
-
-    def status_url(self):
-        """
-        status_url -- create a url to access a validator's status
-        :return: URL for accessing status
-        """
-        url = self.ledger_url + '/status'
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-        url = url.rstrip('/')
-        return url
-
-    def store_url(self, txntype, key='', blockid='', delta=False):
-        """
-        store_url -- create a url to access a value store from the ledger
-
-        Args:
-            txntype -- type of transaction (or actual transaction), subclass of
-                Transaction.Transaction
-            key -- index into the transaction store
-            blockid - get the state of the store following the validation of
-                blockid
-        """
-        return self.store_url_by_name(txntype.TransactionTypeName,
-                                      key, blockid, delta)
-
-    def store_url_by_name(self,
-                          txntypename='',
-                          key='',
-                          blockid='',
-                          delta=False):
-        if txntypename == '':
-            url = self.ledger_url + '/store'
-            return url
-
-        url = self.ledger_url + '/store' + txntypename
-        if key:
-            url += '/' + key
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-        url = url.rstrip('/')
-
-        if blockid or delta:
-            params = dict()
-            if blockid:
-                params['blockid'] = blockid
-            if delta:
-                params['delta'] = '1'
-            url += '?' + urllib.urlencode(params)
-
-        return url
-
-    def block_url(self, blockid, field=''):
-        """
-        block_url -- create a url to access a block from the ledger
-
-        :param id blockid: identifier for the block to retrieve
-        :param str field: optional, name of a field to retrieve for the block
-        :return: URL for accessing block
-        """
-
-        url = self.ledger_url + '/block/' + blockid
-        if field:
-            url += '/' + field
-
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-        url = url.rstrip('/')
-
-        return url
-
-    def block_list_url(self, count=0):
-        """
-        block_list_url -- create a url to access a list of block ids
-
-        :param int count: optional, maximum number of blocks to return, 0
-            implies all
-        :return: URL for accessing block list
-        """
-        url = self.ledger_url + '/block'
-
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-        url = url.rstrip('/')
-
-        if count:
-            url += "?blockcount={0}".format(int(count))
-
-        return url
-
-    def transaction_url(self, txnid, field=''):
-        """
-        transaction_url -- create a url to access a transaction from the ledger
-
-        :param id txnid: identifier for the transaction to retrieve
-        :param str field: optional, name of a field to retrieve for the
-            transaction
-        :return: URL for accessing transaction
-        """
-
-        url = self.ledger_url + '/transaction/' + txnid
-        if field:
-            url += '/' + field
-
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-        url = url.rstrip('/')
-
-        return url
-
-    def transaction_list_url(self, count=0):
-        """
-        transaction_list_url -- create a url to access a list of block ids
-
-        :param int count: optional, maximum number of blocks of transactionss
-            to return, 0 implies all
-        :return: URL for accessing transaction list
-        """
-        url = self.ledger_url + '/transaction'
-
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-        url = url.rstrip('/')
-
-        if count:
-            url += "?blockcount={0}".format(int(count))
-
-        return url
-
-    def message_forward_url(self):
-        """
-        message_forward_url -- create the url for sending a message to a
-        validator, the message will be sent on to the gossip network
-        """
-        url = self.ledger_url + '/forward'
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-
-        return url
-
-    def message_initiate_url(self):
-        """
-        message_initiate_url -- create the url for sending an unsigned message
-        to a validator that will sign and forward the message
-        """
-        url = self.ledger_url + "/initiate"
-        url = urlparse.urljoin(url,
-                               urlparse.urlparse(url).path.replace('//', '/'))
-
-        return url
-
-    def get_status(self, verbose=True, timeout=30):
-        """
-        get status of validator
-        :return: dictionary of status items
-        """
-        return self._geturl(self.status_url(), verbose=verbose,
-                            timeout=timeout)
-
-    def get_store(self, txntype, key='', blockid='', delta=False):
-        """
-        Send a request to the ledger web server transaction store and return
-        the parsed response, return the value of the specified key within the
-        transaction store or a list of valid keys
-
-        Args:
-            txntype -- type of the transaction store to contact
-            key -- a specific identifier to retrieve
-        """
-        return self._geturl(self.store_url(txntype, key, blockid, delta))
-
-    def get_store_by_name(self,
-                          txntypename='',
-                          key='',
-                          blockid='',
-                          delta=False):
-        return self._geturl(self.store_url_by_name(txntypename, key,
-                                                   blockid, delta))
-
-    def get_block(self, blockid, field=None):
-        """
-        Send a request to the ledger web server to retrieve data about a
-        specific block and return the parsed response,
-
-        :param id blockid: identifier for the block to retrieve
-        :param str field: optional, name of a field to retrieve for the block
-        :return: dictionary of block data
-        """
-        return self._geturl(self.block_url(blockid, field))
-
-    def get_block_list(self, count=0):
-        """
-        Send a request to the ledger web server to retrieve data about a
-        specific block and return the parsed response,
-
-        :param int count: optional, maximum number of blocks to return, 0
-            implies all
-        :return: list of block ids
-        """
-        return self._geturl(self.block_list_url(count))
-
-    def get_transaction(self, txnid, field=None):
-        """
-        Send a request to the ledger web server to retrieve data about a
-        specific transaction and return the parsed response
-
-        :param id txnid: identifier for the transaction to retrieve
-        :param str field: optional, name of a field to retrieve for the
-            transaction
-        :return: dictionary of transaction data
-        """
-        return self._geturl(self.transaction_url(txnid, field))
-
-    def get_transaction_status(self, txnid, timeout=30):
-        """
-        Send a HEAD request to the ledger web server to retrieve the status
-        of a specific transaction id.
-
-        :param id txnid: identifier for the transaction to retrieve
-        :return: One of the values of :class:`journal.Transaction.status`
-
-        """
-        url = self.transaction_url(txnid)
-
-        LOGGER.debug('HEAD content from url <%s>', url)
-
-        try:
-            request = urllib2.Request(url)
-            request.get_method = lambda: 'HEAD'
-            opener = urllib2.build_opener(self.proxy_handler)
-            response = opener.open(request, timeout=timeout)
-            code = response.getcode()
-            response.close()
-            if code == 200:
-                return transaction.Status.committed
-            elif code == 302:
-                return transaction.Status.pending
-            else:
-                return transaction.Status.unknown
-
-        except urllib2.HTTPError as err:
-            LOGGER.error('peer operation on url %s failed with response: %d',
-                         url, err.code)
-            if err.code == 302:
-                return transaction.Status.pending
-
-        except urllib2.URLError as err:
-            LOGGER.error('peer operation on url %s failed: %s', url,
-                         err.reason)
-
-        return transaction.Status.unknown
-
-    def get_transaction_list(self, count=0):
-        """
-        Send a request to the ledger web server to retrieve a list of
-        committed transactions
-
-        :param int count: optional, maximum number of blocks of transactions to
-            return, 0 implies all
-        :return: list of transaction ids
-        """
-        return self._geturl(self.transaction_list_url(count))
-
-    def initiate_message(self, msg):
-        """
-        Post a gossip message to the ledger and return the parsed response,
-        generally the response is simply an encoding of the message
-
-        Args:
-            msg -- the message to send
-        """
-        return self._posturl(self.message_initiate_url(), msg.dump())
-
-    def post_message(self, msg):
-        """
-        Post a gossip message to the ledger and return the parsed response,
-        generally the response is simply an encoding of the message
-
-        Args:
-            msg -- the message to send
-        """
-        return self._posturl(self.message_forward_url(), msg.dump())
-
-    def _geturl(self, url, verbose=True, timeout=30):
-        """
-        Send an HTTP get request to the validator. If the resulting content is
-        in JSON or CBOR form, parse it & return the corresponding dictionary.
-        """
-
-        if verbose:
-            LOGGER.debug('get content from url <%s>', url)
-
-        try:
-            request = urllib2.Request(url, headers=self.GET_HEADER)
-            opener = urllib2.build_opener(self.proxy_handler)
-            response = opener.open(request, timeout=timeout)
-
-        except urllib2.HTTPError as err:
-            if verbose:
-                LOGGER.error('peer operation on url %s failed '
-                             'with response: %d', url, err.code)
-            raise MessageException('operation failed '
-                                   'with response: {0}'.format(err.code))
-
-        except urllib2.URLError as err:
-            if verbose:
-                LOGGER.error('peer operation on url %s failed: %s',
-                             url, err.reason)
-            raise MessageException('operation failed: {0}'.format(err.reason))
-
-        except:
-            if verbose:
-                LOGGER.error('no response from peer server for url %s; %s',
-                             url, sys.exc_info()[0])
-            raise MessageException('no response from server')
-
-        content = response.read()
-        headers = response.info()
-        response.close()
-
-        encoding = headers.get('Content-Type')
-
-        if encoding == 'application/json':
-            return json2dict(content)
-        elif encoding == 'application/cbor':
-            return cbor2dict(content)
-        else:
-            return content
-
-    def _posturl(self, url, info, encoding='application/cbor'):
-        """
-        Post a transaction message to the validator, parse the returning CBOR
-        and return the corresponding dictionary.
-        """
-
-        if encoding == 'application/json':
-            data = dict2json(info)
-        elif encoding == 'application/cbor':
-            data = dict2cbor(info)
-        else:
-            LOGGER.error('unknown request encoding %s', encoding)
-            return None
-
-        datalen = len(data)
-
-        LOGGER.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
-                     datalen, data)
-
-        try:
-            request = urllib2.Request(url, data,
-                                      {'Content-Type': 'application/cbor',
-                                       'Content-Length': datalen})
-            opener = urllib2.build_opener(self.proxy_handler)
-            response = opener.open(request, timeout=10)
-
-        except urllib2.HTTPError as err:
-            LOGGER.error('peer operation on url %s failed with response: %d',
-                         url, err.code)
-            raise MessageException(
-                'operation failed with response: {0}'.format(err.code))
-
-        except urllib2.URLError as err:
-            LOGGER.error('peer operation on url %s failed: %s', url,
-                         err.reason)
-            raise MessageException('operation failed: {0}'.format(err.reason))
-
-        except NameError as err:
-            LOGGER.error('name error %s', err)
-            raise MessageException('operation failed: {0}'.format(url))
-
-        except:
-            LOGGER.error('no response from peer server for url %s; %s', url,
-                         sys.exc_info()[0])
-            raise MessageException('no response from server')
-
-        content = response.read()
-        headers = response.info()
-        response.close()
-
-        encoding = headers.get('Content-Type')
-
-        if encoding == 'application/json':
-            value = json2dict(content)
-        elif encoding == 'application/cbor':
-            value = cbor2dict(content)
-        else:
-            LOGGER.info('server responds with message %s of unknown type %s',
-                        content, encoding)
-            value = OrderedDict()
-
-        return value

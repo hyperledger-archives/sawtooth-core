@@ -27,7 +27,7 @@ from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
 from txnintegration.utils import read_key_file
 from gossip.messages import shutdown_message
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import parse_listen_directives
 
@@ -201,10 +201,10 @@ class ValidatorManager(object):
     def is_started(self, url=None):
         if not url:
             url = self.url
-        lwc = LedgerWebClient(url)
+        client = SawtoothClient(url)
         sta = None
         try:
-            sta = lwc.get_status(verbose=False, timeout=2)
+            sta = client.get_status(timeout=2)
         except MessageException as e:
             print e.message
             return False
@@ -238,14 +238,14 @@ class ValidatorManager(object):
             self._outerr.close()
 
     def post_shutdown(self):
-        lwc = LedgerWebClient(self.url)
+        client = SawtoothClient(self.url)
 
         msg = shutdown_message.ShutdownMessage({})
         msg.SenderID = self._admin_node.Address
         msg.sign_from_node(self._admin_node)
 
         try:
-            lwc.post_message(msg)
+            client.forward_message(msg)
         except MessageException as me:
             print me
 
