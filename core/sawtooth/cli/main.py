@@ -30,6 +30,8 @@ from sawtooth.cli.block import do_block
 from sawtooth.cli.exceptions import CliException
 from sawtooth.cli.keygen import add_keygen_parser
 from sawtooth.cli.keygen import do_keygen
+from sawtooth.cli.docker import add_docker_parser
+from sawtooth.cli.docker import do_docker
 from sawtooth.cli.store import add_store_parser
 from sawtooth.cli.store import do_store
 from sawtooth.cli.submit import add_submit_parser
@@ -91,6 +93,7 @@ def create_parser(prog_name):
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
     add_keygen_parser(subparsers, parent_parser)
+    add_docker_parser(subparsers, parent_parser)
     add_submit_parser(subparsers, parent_parser)
     add_block_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
@@ -112,6 +115,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
 
     if args.command == 'keygen':
         do_keygen(args)
+    elif args.command == 'docker':
+        do_docker(args)
     elif args.command == 'submit':
         do_submit(args)
     elif args.command == 'block':
