@@ -20,6 +20,7 @@ find_packages() {
             [ $file = "gossip/ECDSA/ECDSARecoverModule.py" ] && continue
             [ $file = "journal/consensus/poet0/Enclave/EnclaveModule.py" ] && continue
             [ $file = "journal/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
+            [ $file = "journal/consensus/poet1/poet_enclave_simulator/poet1_enclave_simulator.py" ] && continue
 
             echo "$topdir/$file"
         done
