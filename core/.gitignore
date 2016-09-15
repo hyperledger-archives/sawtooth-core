@@ -7,8 +7,6 @@ htmlcov
 nose2-junit.xml
 _ECDSARecoverModule.pyd
 _ECDSARecoverModule.so
-_poet_enclave_simulator.pyd
-_poet_enclave_simulator.so
 deps/
 
 gossip/ECDSA/build
