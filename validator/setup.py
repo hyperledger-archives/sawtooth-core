@@ -82,8 +82,8 @@ else:
     include_dirs = []
     library_dirs = []
 
-enclavemod = Extension(
-    '_poet_enclave_simulator',
+poet0_enclave_mod = Extension(
+    '_poet0_enclave_simulator',
     ['journal/consensus/poet0/poet_enclave_simulator/poet_enclave_simulator.i',
      'journal/consensus/poet0/poet_enclave_simulator/common.cpp',
      'journal/consensus/poet0/poet_enclave_simulator/wait_certificate.cpp',
@@ -145,7 +145,7 @@ setup(
     packages=find_packages(),
     install_requires=['sawtooth-core', 'colorlog', 'twisted', 'PyYAML',
                       'psutil', 'numpy'],
-    ext_modules=[enclavemod],
+    ext_modules=[poet0_enclave_mod],
     py_modules=['journal.consensus.poet0.poet_enclave_simulator'
                 '.poet_enclave_simulator'],
     data_files=data_files,
@@ -165,7 +165,7 @@ if "clean" in sys.argv and "--all" in sys.argv:
                 os.remove(os.path.join(root, fn))
     for filename in [
             ".coverage"
-            "_poet_enclave_simulator.so",
+            "_poet0_enclave_simulator.so",
             os.path.join("journal",
                          "consensus",
                          "poet0",
@@ -175,7 +175,7 @@ if "clean" in sys.argv and "--all" in sys.argv:
                          "consensus",
                          "poet0",
                          "poet_enclave_simulator",
-                         "_poet_enclave_simulator_wrap.cpp")]:
+                         "poet_enclave_simulator_wrap.cpp")]:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))
     shutil.rmtree(os.path.join(directory, "htmlcov"), ignore_errors=True)

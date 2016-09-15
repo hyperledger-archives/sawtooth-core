@@ -1,4 +1,4 @@
-%module poet_enclave_simulator
+%module poet0_enclave_simulator
 
 %include <std_string.i>
 %include <exception.i>
