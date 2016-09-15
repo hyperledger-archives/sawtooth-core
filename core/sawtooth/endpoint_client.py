@@ -53,7 +53,6 @@ class EndpointClient(SawtoothClient):
         # endpoint in the endpoint registry return a list of those that match
         # the domain
         self.fetch_state()
-        print self.state
         return [endpoint for _, endpoint in self.state.iteritems()
                 if endpoint.get('Domain', '/').startswith(domain)]
 

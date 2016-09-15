@@ -339,12 +339,12 @@ class SawtoothClient(object):
         # We only keep current state if we have a store name
         self._current_state = None
         if self._store_name is not None:
+            state_type = global_store_manager.KeyValueStore
+            if transaction_type is not None:
+                state_type = transaction_type.TransactionStoreType
+
             self._current_state = \
-                _ClientState(
-                    client=self,
-                    state_type=transaction_type.TransactionStoreType
-                    if transaction_type
-                    else global_store_manager.KeyValueStore)
+                _ClientState(client=self, state_type=state_type)
             self.fetch_state()
 
         signing_key = None
