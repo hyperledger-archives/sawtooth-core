@@ -16,7 +16,7 @@ import hashlib
 import random
 import string
 from journal.consensus.poet0.poet_enclave_simulator \
-    import poet_enclave_simulator as pe_sim
+    import poet0_enclave_simulator as pe_sim
 
 
 class AttrDict(dict):

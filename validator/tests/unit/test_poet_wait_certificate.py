@@ -21,7 +21,7 @@ from journal.consensus.poet0.wait_timer import WaitTimer
 from journal.consensus.poet0.wait_certificate import WaitCertificate
 
 from journal.consensus.poet0.poet_enclave_simulator \
-    import poet_enclave_simulator as pe_sim
+    import poet0_enclave_simulator as pe_sim
 
 
 class TestPoetWaitCertificate(unittest.TestCase):
