@@ -53,7 +53,7 @@ class EndpointClient(SawtoothClient):
         # endpoint in the endpoint registry return a list of those that match
         # the domain
         self.fetch_state()
-        return [endpoint for _, endpoint in self.get_state().iteritems()
+        return [endpoint for _, endpoint in self.state.iteritems()
                 if endpoint.get('Domain', '/').startswith(domain)]
 
     def get_validator_url_list(self, domain='/'):

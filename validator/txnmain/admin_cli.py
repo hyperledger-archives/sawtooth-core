@@ -44,7 +44,7 @@ from ledger.transaction.endpoint_registry import SpecialPingMessage
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration
 from txnserver import log_setup
@@ -66,25 +66,25 @@ class ClientController(cmd.Cmd):
     def __init__(self, baseurl, keystring=None):
         cmd.Cmd.__init__(self)
         self.prompt = 'client> '
-        self.CurrentState = {}
-        self.LedgerWebClient = LedgerWebClient(baseurl)
+        self._current_state = {}
+        self._client = SawtoothClient(baseurl)
 
         signingkey = generate_signing_key(
             wifstr=keystring) if keystring else generate_signing_key()
         identifier = generate_identifier(signingkey)
-        self.LocalNode = Node(identifier=identifier,
-                              signingkey=signingkey,
-                              name="txnclient")
+        self._local_node = Node(identifier=identifier,
+                                signingkey=signingkey,
+                                name="txnclient")
 
     def postcmd(self, flag, line):
         return flag
 
     def sign_and_post(self, msg):
-        msg.SenderID = self.LocalNode.Identifier
-        msg.sign_from_node(self.LocalNode)
+        msg.SenderID = self._local_node.Identifier
+        msg.sign_from_node(self._local_node)
 
         try:
-            result = self.LedgerWebClient.post_message(msg)
+            result = self._client.forward_message(msg)
             if result:
                 pretty_print_dict(result)
 
@@ -140,11 +140,11 @@ class ClientController(cmd.Cmd):
 
                 identifier = generate_identifier(signingkey)
 
-                self.LocalNode = Node(address=addr,
-                                      identifier=identifier,
-                                      signingkey=signingkey,
-                                      name=name)
-                print "local id set to {0}".format(self.LocalNode)
+                self._local_node = Node(address=addr,
+                                        identifier=identifier,
+                                        signingkey=signingkey,
+                                        name=name)
+                print "local id set to {0}".format(self._local_node)
                 return
 
             else:
@@ -176,13 +176,13 @@ class ClientController(cmd.Cmd):
                                     default='endpoint')
                 options = parser.parse_args(pargs[1:])
 
-                self.CurrentState = self.LedgerWebClient.get_store(
-                    TransactionTypes.get(options.store),
-                    key='*')
-
+                self._current_state = \
+                    self._client.get_store_by_name(
+                        txn_type_or_name=TransactionTypes.get(options.store),
+                        key='*')
             elif pargs[0] == 'keys':
                 try:
-                    print self.CurrentState.keys()
+                    print self._current_state.keys()
                 except:
                     print '[]'
 
@@ -191,7 +191,7 @@ class ClientController(cmd.Cmd):
                 parser.add_argument('--path', required=True)
                 options = parser.parse_args(pargs[1:])
                 pathargs = options.path.split('.')
-                value = self.CurrentState
+                value = self._current_state
                 while pathargs:
                     value = value.get(pathargs.pop(0))
 
@@ -223,7 +223,7 @@ class ClientController(cmd.Cmd):
             update.Value = long(match.group('value'))
             txn.Updates.append(update)
 
-        txn.sign_from_node(self.LocalNode)
+        txn.sign_from_node(self._local_node)
 
         msg = integer_key.IntegerKeyTransactionMessage()
         msg.Transaction = txn
@@ -323,7 +323,7 @@ class ClientController(cmd.Cmd):
         parser = argparse.ArgumentParser()
         parser.add_argument(
             '--address',
-            default=self.LocalNode.Identifier)
+            default=self._local_node.Identifier)
         parser.add_argument('--count', default=2, type=int)
         options = parser.parse_args(args.split())
 

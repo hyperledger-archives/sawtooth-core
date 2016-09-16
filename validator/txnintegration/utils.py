@@ -30,13 +30,13 @@ from colorlog import ColoredFormatter
 import yaml
 
 from txnintegration.exceptions import ExitError
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 
 
 def get_blocklists(urls):
     ret = None
     try:
-        ret = [(LedgerWebClient(url=u)).get_block_list() for u in urls]
+        ret = [(SawtoothClient(base_url=u)).get_block_list() for u in urls]
     except Exception as e:
         print e.message
         raise
@@ -83,7 +83,7 @@ def is_convergent(urls, tolerance=2, standard=5):
 def get_statuslist(urls):
     ret = None
     try:
-        ret = [(LedgerWebClient(url=u)).get_status() for u in urls]
+        ret = [(SawtoothClient(base_url=u)).get_status() for u in urls]
     except Exception as e:
         print e
         raise

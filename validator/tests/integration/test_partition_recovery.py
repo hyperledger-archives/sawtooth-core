@@ -20,7 +20,7 @@ import time
 import traceback
 import unittest
 
-from sawtooth.client import LedgerWebClient
+from sawtooth.client import SawtoothClient
 from txnintegration.netconfig import gen_dfl_cfg_poet0
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.simcontroller import NopEdgeController
@@ -43,7 +43,7 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 class TestPartitionRecovery(unittest.TestCase):
 
     def _get_blocklists(self, urls):
-        ret = [(LedgerWebClient(url=u)).get_block_list() for u in urls]
+        ret = [(SawtoothClient(base_url=u)).get_block_list() for u in urls]
         for (i, arr) in enumerate(ret):
             arr.reverse()
             ret[i] = [hsh[:4] for hsh in arr]
