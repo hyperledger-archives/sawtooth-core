@@ -1,1 +1,1 @@
-recursive-include gossip *.py
+recursive-include sawtooth  *.py
