@@ -31,9 +31,6 @@ sys.path.insert(0, os.path.join(
             'validator'))
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'core', 'build', build_str))
-sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
             'core'))
 
 from txnmain.validator_cli import main_wrapper
