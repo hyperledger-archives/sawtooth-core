@@ -5,17 +5,4 @@ build
 .coverage
 htmlcov
 nose2-junit.xml
-_ECDSARecoverModule.pyd
-_ECDSARecoverModule.so
 deps/
-
-gossip/ECDSA/build
-gossip/ECDSA/*.so
-gossip/ECDSA/*.pyd
-gossip/ECDSA/_*
-gossip/ECDSA/ECDSARecoverModule.py
-gossip/ECDSA/ECDSARecoverModule.pyc
-gossip/ECDSA/ECDSARecoverModule_wrap.cpp
-gossip/ECDSA/ECDSAPubKeyRecovery.*
-
-node_modules

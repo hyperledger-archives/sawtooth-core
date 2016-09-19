@@ -18,7 +18,7 @@ import shutil
 import subprocess
 import sys
 
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, find_packages
 
 
 def bump_version(version):
@@ -64,42 +64,14 @@ def version(default):
     return version
 
 
-if os.name == 'nt':
-    extra_compile_args = ['/EHsc']
-    libraries = ['json-c', 'cryptopp-static']
-    include_dirs = ['deps/include', 'deps/include/cryptopp']
-    library_dirs = ['deps/lib']
-elif sys.platform == 'darwin':
-    os.environ["CC"] = "clang++"
-    extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'cryptopp']
-    include_dirs = ['/usr/local/include']
-    library_dirs = ['/usr/local/lib']
-else:
-    extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'cryptopp']
-    include_dirs = []
-    library_dirs = []
-
-ecdsamod = Extension('_ECDSARecoverModule',
-                     ['gossip/ECDSA/ECDSARecoverModule.i',
-                      'gossip/ECDSA/ECDSARecover.cc'],
-                     swig_opts=['-c++'],
-                     extra_compile_args=extra_compile_args,
-                     include_dirs=include_dirs,
-                     libraries=libraries,
-                     library_dirs=library_dirs)
-
 setup(name='sawtooth-core',
       version=version('0.7.1'),
       description='Intel Labs Distributed ledger testbed',
       author='Mic Bowman, Intel Labs',
       url='http://www.intel.com',
       packages=find_packages(),
-      install_requires=['cbor>=0.1.23', 'colorlog', 'pybitcointools',
-                        'twisted', 'enum34', 'requests'],
-      ext_modules=[ecdsamod],
-      py_modules=['gossip.ECDSA.ECDSARecoverModule'],
+      install_requires=['colorlog', 'pybitcointools',
+                        'twisted', 'enum34'],
       entry_points={
           'console_scripts': [
               'sawtooth = sawtooth.cli.main:main_wrapper'
@@ -112,12 +84,7 @@ if "clean" in sys.argv and "--all" in sys.argv:
         for fn in files:
             if fn.endswith(".pyc"):
                 os.remove(os.path.join(root, fn))
-    for filename in [
-            ".coverage",
-            "_ECDSARecoverModule.so",
-            os.path.join("gossip", "ECDSA", "ECDSARecoverModule.py"),
-            os.path.join("gossip", "ECDSA", "ECDSARecoverModule_wrap.cpp"),
-            "nose2-junit.xml"]:
+    for filename in ['.coverage']:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))
     shutil.rmtree(os.path.join(directory, "build"), ignore_errors=True)
