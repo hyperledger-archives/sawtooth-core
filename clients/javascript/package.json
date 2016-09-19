@@ -4,7 +4,8 @@
   "description": "Sawtooth Validator Client",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --recursive spec"
+    "test": "mocha --recursive spec",
+    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --recursive spec"
   },
   "author": "",
   "license": "ISC",

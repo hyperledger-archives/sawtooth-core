@@ -22,6 +22,7 @@
 
 var assert = require('assert');
 var http = require('http');
+var querystring = require('querystring');
 var _ = require('underscore');
 var cbor = require('cbor');
 var sha256 = require('sha256');
@@ -146,7 +147,7 @@ function _patherize(s) {
     return s[0] == '/' ? s : ('/' + s);
 }
 
-function _getStoreApi(validatorHost, validatorPort, storeName, key) {
+function _getStoreApi(validatorHost, validatorPort, storeName, key, opts) {
     assert(validatorHost, "'validatorHost' must be provided.");
     assert(validatorPort, "'validatorPort' must be provided.");
     var path = '/store';
@@ -162,6 +163,19 @@ function _getStoreApi(validatorHost, validatorPort, storeName, key) {
             path += _patherize(key);
         }
     }
+
+    if(opts.blockId || opts.delta) {
+        var params = {};
+        if (opts.blockId)  {
+            params.blockid = opts.blockId;
+        }
+        if (opts.delta) {
+            params.delta = 1;
+        }
+
+        path += '?' + querystring.stringify(params);
+    }
+
     var getArgs = {
         hostname: validatorHost,
         port: validatorPort,
@@ -194,8 +208,9 @@ function ValidatorClient(validatorHost, validatorPort) {
  * Returns the list of stores on this validator.
  * @returns {Promise} a Promise for the list of store names
  */
-ValidatorClient.prototype.getStores = function() {
-    return _getStoreApi(this.validatorHost, this.validatorPort);
+ValidatorClient.prototype.getStores = function(opts) {
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+    return _getStoreApi(this.validatorHost, this.validatorPort, null, null, opts);
 };
 
 /**
@@ -203,8 +218,9 @@ ValidatorClient.prototype.getStores = function() {
  * @param {storeName}
  * @return {Promise} a Promise for the list of keys in the store
  */
-ValidatorClient.prototype.getStore = function(storeName) {
-    return _getStoreApi(this.validatorHost, this.validatorPort, storeName);
+ValidatorClient.prototype.getStore = function(storeName, opts) {
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+    return _getStoreApi(this.validatorHost, this.validatorPort, storeName, null, opts);
 };
 
 /**
@@ -212,42 +228,114 @@ ValidatorClient.prototype.getStore = function(storeName) {
  * @param {storeName}
  * @return {Promise} a Promise for the list of objects in the store
  */
-ValidatorClient.prototype.getStoreObjects = function(storeName) {
-    return _getStoreApi(this.validatorHost, this.validatorPort, storeName, "*");
+ValidatorClient.prototype.getStoreObjects = function(storeName, opts) {
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+    return _getStoreApi(this.validatorHost, this.validatorPort, storeName, "*", opts);
 };
 
 /**
  * Returns the object by key, from the store with the given name.
  * @param {string} storeName
  * @param {string} key
- * @return {Promise} a Proimse for the object, if one is found, or null
+ * @return {Promise} a Promise for the object, if one is found, or null
  */
-ValidatorClient.prototype.getStoreObject = function(storeName, key) {
+ValidatorClient.prototype.getStoreObject = function(storeName, key, opts) {
     assert(key != "*",
             "Key should not be '*'.  Use getStoreObjects to retrieve all objects in the store");
-    return _getStoreApi(this.validatorHost, this.validatorPort, storeName, key);
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+    return _getStoreApi(this.validatorHost, this.validatorPort, storeName, key, opts);
 };
 
+/**
+ * Submits a transaction, returning a promise containing the transaction transaction id.
+ */
 ValidatorClient.prototype.sendTransaction = function(txnFamily, txn) {
     return _sendTransaction(this.validatorHost, this.validatorPort, txnFamily, txn);
 };
 
-module.exports = {
-    sendTransaction: _sendTransaction,
-    getStores: function(validatorHost, validatorPort) {
-        return _getStoreApi(validatorHost, validatorPort);
-    },
-    getStore: function(validatorHost, validatorPort, storeName) {
-        return _getStoreApi(validatorHost, validatorPort, storeName);
-    },
-    getStoreObjects: function(validatorHost, validatorPort, storeName) {
-        return _getStoreApi(validatorHost, validatorPort, storeName, "*");
-    },
-    getStoreObject: function(validatorHost, validatorPort, storeName, key) {
-        assert(key != "*",
-                "Key should not be '*'.  Use getStoreObjects to retrieve all objects in the store");
-        return _getStoreApi(validatorHost, validatorPort, storeName, key);
-    },
 
+ValidatorClient.prototype._jsonGet = function(uri) {
+    return _get({
+        hostname: this.validatorHost,
+        port: this.validatorPort,
+        path: uri,
+        headers: {
+            'Accept': 'application/json',
+        },
+    })
+    .then(_unwrapResponseBody);
+};
+
+/**
+ * Returns the list of block ids.  If the options `count` is provided, it
+ * limits the number of block ids returned.  Blocks are return in order of most
+ * recent to oldest.
+ * @param {object} options
+ * @return {Promise} a Promise for the list of block ids.
+ */
+ValidatorClient.prototype.getBlockList = function(opts) {
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+
+    var uri = '/block';
+    if (!_.isUndefined(opts.count)) {
+        uri += ('?blockcount=' + opts.count);
+    }
+
+    return this._jsonGet(uri);
+};
+
+/**
+ * Returns an object describing the block with the given id.  Optionally,
+ * a single field may be requested by passing in `{field: '<fieldName>'}`.
+ * @param {string} blockId
+ * @param {object} [opts]
+ * @return {Promise} a promise for the block info.
+ */
+ValidatorClient.prototype.getBlock = function(blockId, opts) {
+    assert(blockId, "blockId should not be null or empty.");
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+
+    var uri = '/block/' + blockId;
+    if(!_.isUndefined(opts.field)) {
+        uri += ("/" + opts.field);
+    }
+
+    return this._jsonGet(uri);
+};
+
+/**
+ * Returns a list of transaction ids that have been applied.
+ *
+ * @param {object} [opts]
+ * @return {Promise} a promise for the list of transaction ids.
+ */
+ValidatorClient.prototype.getTransactions = function(opts) {
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+
+    var uri = '/transaction';
+   if (!_.isUndefined(opts.count)) {
+        uri += ('?blockcount=' + opts.count);
+    }
+
+    return this._jsonGet(uri);
+};
+
+ValidatorClient.prototype.getTransaction = function(txnId, opts) {
+    assert(txnId, "txnId should not be null or empty.");
+    opts = _.isUndefined(opts) || _.isNull(opts) ? {} : opts;
+
+    var uri = '/transaction/' + txnId;
+    if(!_.isUndefined(opts.field)) {
+        uri += ("/" + opts.field);
+    }
+
+    return this._jsonGet(uri);
+};
+
+ValidatorClient.prototype.getStatus = function() {
+    return this._jsonGet('/status');
+};
+
+module.exports = {
     ValidatorClient: ValidatorClient,
 };
