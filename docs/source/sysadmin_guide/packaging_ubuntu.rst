@@ -9,11 +9,7 @@ Prerequisites
 To create packages for Ubuntu, you need the following:
 
 * Ubuntu 14.04 LTS with Internet access
-* git Repositories
-
-  * sawtooth-core
-  * sawtooth-validator
-  * sawtooth-mktplace
+* git Repository: sawtooth-core
 
 The remainder of these instructions assume a vanilla Ubuntu 14.04 installation
 as a starting point.  An easy method to obtain such a machine is by creating
@@ -72,6 +68,7 @@ Create the python-cbor deb package:
 
 .. code-block:: console
 
+  vagrant@ubuntu $ mkdir $HOME/projects
   vagrant@ubuntu $ cd $HOME/projects
   vagrant@ubuntu $ wget https://pypi.python.org/packages/source/c/cbor/cbor-0.1.24.tar.gz
   vagrant@ubuntu $ tar xvfz cbor-0.1.24.tar.gz
@@ -110,18 +107,16 @@ Create the python-pybitcointools deb package:
 Create SawtoothLake Python Packages
 ===================================
 
-Clone Repositories
-------------------
+Clone Repository
+----------------
 
-Clone or copy the repositories into the VM environment:
+Clone or copy the repository into the VM environment:
 
 .. code-block:: console
 
    vagrant@ubuntu $ mkdir -p $HOME/projects
    vagrant@ubuntu $ cd $HOME/projects
-   vagrant@ubuntu $ git clone git@github.com:IntelLedger/sawtooth-validator.git
-   vagrant@ubuntu $ git clone git@github.com:IntelLedger/sawtooth-core.git
-   vagrant@ubuntu $ git clone git@github.com:IntelLedger/sawtooth-mktplace.git
+   vagrant@ubuntu $ git clone https://github.com/IntelLedger/sawtooth-core.git
 
 .. note::
 
@@ -131,34 +126,17 @@ Clone or copy the repositories into the VM environment:
 At this time, if you are using a branch other than master for any of the
 repositories, check out the appropriate branch.
 
-Create Packages
----------------
+Create Package
+--------------
 
 Create package from sawtooth repository:
 
 .. code-block:: console
 
-  vagrant@ubuntu $ cd $HOME/projects/sawtooth-core
+  vagrant@ubuntu $ cd $HOME/projects/sawtooth-core/core
   vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
   vagrant@ubuntu $ cp deb_dist/python-sawtooth-core*.deb $HOME/packages/
 
-Create package from mktplace repository:
-
-.. code-block:: console
-
-  vagrant@ubuntu $ cd $HOME/projects/sawtooth-mktplace
-  vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
-  vagrant@ubuntu $ cp deb_dist/python-sawtooth-mktplace*.deb $HOME/packages/
-
-Create package from sawtooth-validator repository:
-
-.. code-block:: console
-
-  vagrant@ubuntu $ cd $HOME/projects/sawtooth-validator
-  vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
-  vagrant@ubuntu $ cp deb_dist/python-sawtooth-validator*.deb $HOME/packages/
-
-Create tar File of Packages
 ===========================
 
 To make it trivial to deliver the Ubuntu deb files, create a tar file:
