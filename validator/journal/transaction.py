@@ -108,8 +108,22 @@ class Transaction(signed_object.SignedObject):
 
         self._data = None
 
+        self._age = 0
+
     def __str__(self):
         return self.TransactionTypeName
+
+    @property
+    def age(self):
+        """Returns age, which is defined as the amount of time spent on the
+        pending queue in terms of prepared blocks."""
+
+        return self._age
+
+    def increment_age(self):
+        """Increments age by one."""
+
+        self._age = self._age + 1
 
     def is_valid(self, store):
         """Determines if the transaction is valid.

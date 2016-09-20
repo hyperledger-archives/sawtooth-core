@@ -140,7 +140,7 @@ class Journal(gossip_core.Gossip):
 
         # Time between sending requests for a missing transaction block
         self.BlockRetryInterval = 10.0
-
+        self.MaxTxnAge = kwargs.get("MaxTxnAge", 3)
         self.GenesisLedger = kwargs.get('GenesisLedger', False)
         self.Restore = kwargs.get('Restore', False)
         self.StoreCacheSize = kwargs.get('StoreCacheSize', 1000)
@@ -754,6 +754,8 @@ class Journal(gossip_core.Gossip):
             # processing
             missing = tblock.missing_transactions(self)
             if missing:
+                logger.info("blkid: %s - missing transactions: %s",
+                            tblock.Identifier, repr(missing))
                 for txnid in missing:
                     self.request_missing_txn(txnid)
                     self.JournalStats.MissingTxnFromBlockCount.increment()
@@ -1154,14 +1156,23 @@ class Journal(gossip_core.Gossip):
                 # cannot be met
                 ready = False
 
-                logger.info('txnid: %s - missing, calling request_missing_txn',
-                            dependencyID[:8])
+                logger.info('txnid: %s - missing %s, '
+                            'calling request_missing_txn',
+                            txn.Identifier[:8], dependencyID[:8])
                 self.request_missing_txn(dependencyID)
                 self.JournalStats.MissingTxnDepCount.increment()
 
             # if all of the dependencies have not been met then there isn't any
             # point in continuing on so bail out
             if not ready:
+                txn.increment_age()
+                self.TransactionStore[txn.Identifier] = txn
+                logger.info('txnid: %s - not ready (age %s)',
+                            txn.Identifier[:8], txn.age)
+                if txn.age > self.MaxTxnAge:
+                    logger.warn('txnid: %s - too old, dropping - %s',
+                                txn.Identifier[:8], str(txn))
+                    deltxns.append(txn.Identifier)
                 return False
 
             # after all that work... we know the dependencies are met, so
