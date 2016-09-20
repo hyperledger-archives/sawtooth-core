@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export CURRENCYHOME=/project/sawtooth-core/validator/
+[ -d /home/vagrant/sawtooth ] && export CURRENCYHOME=/home/vagrant/sawtooth || export CURRENCYHOME=/project/sawtooth-core/validator
 
 PYTHONPATH=/project/sawtooth-core/core
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/validator
