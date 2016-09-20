@@ -18,6 +18,8 @@
 
 var I = require('immutable');
 var cbor = require('cbor');
+var sha256 = require('sha256');
+var binstring = require('binstring');
 
 function Ratio(n) {
     this.n = n;
@@ -68,7 +70,7 @@ var _toOrdered = function(k, v) {
     return I.Iterable.isIndexed(v) ? v.toList() : v.toOrderedMap().sortBy(_byKey);
 };
 
-var _createSignableObj = function(obj, opts) { 
+var _createSignableObj = function(obj, opts) {
     opts = opts || {};
     return I.fromJS(_cloneData(obj), _toOrdered)
             .map(_convertRatios(I.List(opts.ratios || [])));
@@ -84,6 +86,14 @@ var _toCBOR = function(signableObj) {
         return cbor.encode(signableObj.sortBy(_byKey).toJSON());
 };
 
+// Generate a hash string usable as an Object Id
+var _generateHash = function(jsObj) {
+    var signable = _createSignableObj(jsObj);
+    var cbor = _toCBOR(signable);
+    var sha = sha256(cbor, {asBytes: true});
+    return binstring(sha, {out: 'hex'}).toString();
+};
+
 module.exports = {
     createSignableObj: _createSignableObj,
     toJS: _toJS,
@@ -92,4 +102,5 @@ module.exports = {
     },
     toCBOR: _toCBOR,
     Ratio: Ratio,
+    generateHash: _generateHash
 };
