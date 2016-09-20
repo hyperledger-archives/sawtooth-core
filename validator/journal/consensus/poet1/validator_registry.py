@@ -78,11 +78,10 @@ class Update(object):
     KnownVerbs = ['reg']
 
     @staticmethod
-    def register_validator(regtxn, validator_name, validator_id, signup_info):
+    def register_validator(validator_name, validator_id, signup_info):
         """Creates a new Update object to register a validator.
 
         Args:
-            regtxn: Transaction registering the validator
             validator_name: Human readable name of the validator
             validator_id: Bitcoin-style address of the validators public key
             signup_info: Serialized dict of SignupData with keys...
@@ -96,22 +95,20 @@ class Update(object):
         minfo['validator_name'] = validator_name
         minfo['validator_id'] = validator_id
         minfo['signup_info'] = signup_info
-        update = Update(regtxn, minfo)
+        update = Update(minfo)
         update.verb = 'reg'
         return update
 
-    def __init__(self, txn=None, minfo=None):
+    def __init__(self, minfo=None):
         """Constructor for Update class.
 
         Args:
-            txn: The transaction
-            minfo (dict): Dictionary of values for update fields...
+            minfo (dict): Update values extracted from a message
                 {'verb', 'validator_name', 'validator_id', 'signup_info'}
         """
 
         if minfo is None:
             minfo = {}
-        self.transaction = txn
         self.verb = minfo.get('verb', 'reg')
         self.validator_name = minfo.get('validator_name', '')
         self.validator_id = minfo.get('validator_id', NullIdentifier)
@@ -138,29 +135,28 @@ class Update(object):
 
         return True
 
-    def check_valid(self, store):
+    def check_valid(self, store, txn):
         """Determines if the update is valid.
             Check policy on each element of validator_name, validator_id,
-            registration_txn_id, and signup_info
+            and signup_info
 
         Args:
-            store (dict): Transaction store mapping.
+            store (Store): Transaction store.
+            txn (Transaction): Transaction encompassing this update.
         """
         LOGGER.debug('check update %s from %s', str(self), self.validator_id)
 
-        assert self.transaction
-        # Nothing to check on transaction id (comes directly from the object)
         # Check name
         if not self.is_valid_name():
             raise InvalidTransactionError(
                 'Illegal validator name {}'.format(self.validator_name[:64]))
 
-        # Check validator ID.  Only self registrations
-        if self.validator_id != self.transaction.OriginatorID:
+        # Check registering validator matches transaction signer.
+        if self.validator_id != txn.OriginatorID:
             raise InvalidTransactionError(
                 'Signature mismatch on validator registration with validator'
                 ' {} signed by {}'.format(self.validator_id,
-                                          self.transaction.OriginatorID))
+                                          txn.OriginatorID))
 
         # Nothing to check for anti_sybil_id
         # Apply will invalidate any previous entries for this anti_sybil_id
@@ -172,11 +168,12 @@ class Update(object):
                 'Invalid Signup Info: {}'.format(self.signup_info))
         return True
 
-    def apply(self, store):
+    def apply(self, store, txn):
         """Applies the update to the validator entry in the store.
 
         Args:
-            store (dict): Transaction store mapping.
+            store (Store): Transaction store.
+            txn (Transaction): Transaction encompassing this update.
         """
         LOGGER.debug('apply %s', str(self))
 
@@ -184,13 +181,12 @@ class Update(object):
         for validator, registration in store.iteritems():
             if registration['anti_sybil_id'] == self.signup_info.anti_sybil_id:
                 if registration['revoked'] is not None:
-                    registration['revoked'] = self.transaction.Identifier
+                    registration['revoked'] = txn.Identifier
 
         if self.verb == 'reg':
             store[self.validator_id] = {
                 'validator_name': self.validator_name,
                 'validator_id': self.validator_id,
-                'registration_txn_id': self.transaction.Identifier,
                 'poet_pubkey': self.signup_info.poet_pubkey,
                 'anti_sybil_id': self.signup_info.anti_sybil_id,
                 'proof_data': self.signup_info.proof_data,
@@ -206,7 +202,6 @@ class Update(object):
             dict: A dictionary containing attributes from the update
                 object.
         """
-        assert self.transaction
 
         result = {
             'verb': self.verb,
@@ -251,8 +246,8 @@ class ValidatorRegistryTransaction(transaction.Transaction):
                 registering the validator.
         """
         regtxn = ValidatorRegistryTransaction()
-        regtxn.Update = Update.register_validator(regtxn, validator_id,
-                                                  validator_name, signup_info)
+        regtxn.Update = Update.register_validator(validator_id, validator_name,
+                                                  signup_info)
 
         return regtxn
 
@@ -264,7 +259,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
         self.Update = None
 
         if 'Update' in minfo:
-            self.Update = Update(txn=self, minfo=minfo['Update'])
+            self.Update = Update(minfo=minfo['Update'])
 
     def __str__(self):
         return str(self.Update)
@@ -280,7 +275,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
         """
         super(ValidatorRegistryTransaction, self).check_valid(store)
         assert self.Update
-        self.Update.check_valid(store)
+        self.Update.check_valid(store, self)
         return True
 
     def apply(self, store):
@@ -290,7 +285,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
         Args:
             store (dict): Transaction store mapping.
         """
-        self.Update.apply(store)
+        self.Update.apply(store, self)
 
     def dump(self):
         """Returns a dict with attributes from the transaction object.
