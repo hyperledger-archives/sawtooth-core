@@ -14,7 +14,8 @@ the project.
 
 * Bugs or Issues (issues or defects found when working with Sawtooth Lake)
 * Core Features & Enhancements (expanded capabilities or optimization)
-* Arcade Features (games that demonstrate Sawtooth Lake such as Go and Checkers)
+* Arcade Features (games that demonstrate Sawtooth Lake such as Go 
+  and Checkers)
 * New or Enhanced Documentation (improve existing documentation or create new)
 * Testing Events and Results (functional, performance or scalability)
 
@@ -28,21 +29,22 @@ the particular JIRA issue.
 Commit Process
 ==============
 
-Distributed Ledger is Apache 2.0 licensed and accepts contributions via GitHub
+Distributed Ledger is Apache 2.0 licensed and accepts contributions via `GitHub <https://github.com/hyperledger/>`_
 pull requests. When contributing code please do the following:
 
 * Fork the repository and make your changes in a feature branch.
-* Please include unit and integration test changes.
+* Please include unit and integration tests for any new features and updates 
+  to existing tests.
 * Please ensure the unit and integration tests run successfully. Both are run
-  with `nose2`, but integration tests are only run if the environment variable
-  ENABLE_INTEGRATION_TESTS is set.
+  with `./bin/run_tests`, but integration tests are only run if the environment
+  variable ENABLE_INTEGRATION_TESTS is set.
 * Please ensure that lint passes by running './bin/run_lint'.  The command
   should produce no output if there are no lint errors.
 
 **Pull Request Guidelines**
 
 Pull requests can contain a single commit or multiple commits.  The most
-important part is that a single commit maps to a single fix or enhancement.
+important part is that **a single commit maps to a single fix or enhancement**.
 
 Here are a few scenarios:
 
@@ -62,5 +64,5 @@ Update Branch button provided by GitHub on the pull request page.
 **Signed-off-by**
 
 Commits must include Signed-off-by in the commit message (git commit -s).
-This indicates that you agree the commit satisifies the DCO:
-http://developercertificate.org/.
+This indicates that you agree the commit satisifies the 
+`Developer Certificate of Origin (DCO) <http://developercertificate.org/>`_.

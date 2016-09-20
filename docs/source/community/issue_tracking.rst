@@ -4,6 +4,21 @@ Issue Tracking
 
 .. _jira:
 
+Reporting Issues
+================
+
+This is a great way to contribute. Before reporting an issue, please review current
+open issues to see if there are any matches. If there is a match, comment with a +1, or "Also seeing this issue".
+If any environment details differ, please add those with your comment to the matching issue.
+
+When reporting an issue, details are key. Include the following:
+- OS version
+- Distributed Ledger version
+- Environment details (virtual, physical, etc.)
+- Steps to reproduce
+- Actual results
+- Expected results
+
 JIRA
 ====
 
