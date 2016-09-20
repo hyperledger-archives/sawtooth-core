@@ -76,9 +76,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         transaction = ValidatorRegistryTransaction.register_validator(
             name, validator_id, signup_info)
         transaction.sign_object(key2)
-        try:
+        with self.assertRaises(InvalidTransactionError):
             transaction.check_valid(store)
             transaction.apply(store)
-            self.fail("Bad: Verified an invalid transaction")
-        except InvalidTransactionError:
-            pass
+            self.fail("Failure: Verified an invalid transaction")
