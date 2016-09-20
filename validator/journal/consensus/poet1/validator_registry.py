@@ -22,7 +22,7 @@ from journal.consensus.poet1.signup_info import SignupInfo
 from gossip.common import NullIdentifier
 from sawtooth.exceptions import InvalidTransactionError
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_transaction_types(ledger):
@@ -132,7 +132,7 @@ class Update(object):
             return True
 
         if len(self.validator_name) >= 64:
-            logger.debug('invalid name %s; must be less than 64 bytes',
+            LOGGER.debug('invalid name %s; must be less than 64 bytes',
                          self.validator_name)
             return False
 
@@ -146,7 +146,7 @@ class Update(object):
         Args:
             store (dict): Transaction store mapping.
         """
-        logger.debug('check update %s from %s', str(self), self.validator_id)
+        LOGGER.debug('check update %s from %s', str(self), self.validator_id)
 
         assert self.transaction
         # Nothing to check on transaction id (comes directly from the object)
@@ -178,7 +178,7 @@ class Update(object):
         Args:
             store (dict): Transaction store mapping.
         """
-        logger.debug('apply %s', str(self))
+        LOGGER.debug('apply %s', str(self))
 
         # invalidate any previous entries
         for validator, registration in store.iteritems():
@@ -197,7 +197,7 @@ class Update(object):
                 'revoked': None,
             }
         else:
-            logger.info('unknown verb %s', self.verb)
+            LOGGER.info('unknown verb %s', self.verb)
 
     def dump(self):
         """Returns a dict with attributes from the update object.
