@@ -28,6 +28,8 @@ from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.cli.block import add_block_parser
 from sawtooth.cli.block import do_block
 from sawtooth.cli.exceptions import CliException
+from sawtooth.cli.genesis import add_genesis_parser
+from sawtooth.cli.genesis import do_genesis
 from sawtooth.cli.keygen import add_keygen_parser
 from sawtooth.cli.keygen import do_keygen
 from sawtooth.cli.docker import add_docker_parser
@@ -98,6 +100,7 @@ def create_parser(prog_name):
     add_block_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
     add_store_parser(subparsers, parent_parser)
+    add_genesis_parser(subparsers, parent_parser)
 
     return parser
 
@@ -125,6 +128,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_transaction(args)
     elif args.command == 'store':
         do_store(args)
+    elif args.command == 'genesis':
+        do_genesis(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
