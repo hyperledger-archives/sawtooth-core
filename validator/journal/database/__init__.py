@@ -13,10 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import journal.database.database
-import journal.database.shelf_database
-import journal.database.lmdb_database
-
 __all__ = [
     'database',
     'shelf_database',
