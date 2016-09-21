@@ -13,15 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import anydbm
 import logging
-from shelve import Shelf
 from threading import RLock
 import time
 from collections import OrderedDict
 
 from gossip import common, event_handler, gossip_core, stats
 from journal import transaction, transaction_block
+from journal import journal_store
 from journal.global_store_manager import GlobalStoreManager
 from journal.messages import journal_debug
 from journal.messages import journal_transfer
@@ -74,11 +73,11 @@ class Journal(gossip_core.Gossip):
             to call when processing a block test.
         PendingTransactions (dict): A dict of pending, unprocessed
             transactions.
-        TransactionStore (ThreadSafeShelf): A dict-like object representing
+        TransactionStore (JournalStore): A dict-like object representing
             the persisted copy of the transaction store.
-        BlockStore (ThreadSafeShelf): A dict-like object representing the
+        BlockStore (JournalStore): A dict-like object representing the
             persisted copy of the block store.
-        ChainStore (ThreadSafeShelf): A dict-like object representing the
+        ChainStore (JournalStore): A dict-like object representing the
             persisted copy of the chain store.
         RequestedTransactions (dict): A dict of transactions which are
             not in the local cache, the details of which have been
@@ -143,7 +142,6 @@ class Journal(gossip_core.Gossip):
         self.MaxTxnAge = kwargs.get("MaxTxnAge", 3)
         self.GenesisLedger = kwargs.get('GenesisLedger', False)
         self.Restore = kwargs.get('Restore', False)
-        self.StoreCacheSize = kwargs.get('StoreCacheSize', 1000)
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
@@ -156,20 +154,42 @@ class Journal(gossip_core.Gossip):
 
         # this flag indicates whether we should create a completely new
         # database file or reuse an existing file
-        shelveflag = 'c' if self.Restore else 'n'
-        shelvedir = kwargs.get('DataDirectory', 'db')
+        dbflag = 'c' if self.Restore else 'n'
+        dbdir = kwargs.get('DataDirectory', 'db')
+        store_type = kwargs.get('StoreType', 'shelf')
 
         self._txn_lock = RLock()
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
-        dbprefix = shelvedir + "/" + str(self.LocalNode)
-        self.TransactionStore = ThreadSafeShelf(
-            dbprefix + "_txn", shelveflag, self.StoreCacheSize)
-        self.BlockStore = ThreadSafeShelf(
-            dbprefix + "_cb", shelveflag, self.StoreCacheSize)
-        self.ChainStore = ThreadSafeShelf(
-            dbprefix + "_cs", shelveflag, self.StoreCacheSize)
+        dbprefix = dbdir + "/" + str(self.LocalNode)
+
+        if store_type == 'shelf':
+            from journal.database import shelf_database
+
+            self.TransactionStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_txn" + ".shelf",
+                                             dbflag))
+            self.BlockStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_block" + ".shelf",
+                                             dbflag))
+            self.ChainStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_chain" + ".shelf",
+                                             dbflag))
+        elif store_type == 'lmdb':
+            from journal.database import lmdb_database
+
+            self.TransactionStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_txn" + ".lmdb",
+                                           dbflag))
+            self.BlockStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_block" + ".lmdb",
+                                           dbflag))
+            self.ChainStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_chain" + ".lmdb",
+                                           dbflag))
+        else:
+            raise KeyError("%s is not a supported StoreType", store_type)
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
@@ -184,7 +204,8 @@ class Journal(gossip_core.Gossip):
         self.InvalidBlockIDs = set()
 
         # Set up the global store and transaction handlers
-        self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_gs", shelveflag)
+        self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_state" + ".dbm",
+                                                 dbflag)
 
         # initialize the ledger stats data structures
         self._initledgerstats()
@@ -1270,45 +1291,3 @@ class Journal(gossip_core.Gossip):
             return str(store[nodeid]['Name'])
 
         return nodeid[:8]
-
-
-class ThreadSafeShelf(object):
-    def __init__(self, filename, flag, max_cache_size):
-        self._lock = RLock()
-        self._shelf = Shelf(anydbm.open(filename, flag))
-
-    def __setitem__(self, key, value):
-        with self._lock:
-            self._shelf[key] = value
-
-    def __getitem__(self, key):
-        with self._lock:
-            return self._shelf[key]
-
-    def __delitem__(self, key):
-        with self._lock:
-            del self._shelf[key]
-
-    def __len__(self):
-        with self._lock:
-            return len(self._shelf)
-
-    def __contains__(self, key):
-        with self._lock:
-            return key in self._shelf
-
-    def get(self, key, default=None):
-        with self._lock:
-            return self._shelf.get(key, default)
-
-    def sync(self):
-        with self._lock:
-            self._shelf.sync()
-
-    def close(self):
-        with self._lock:
-            self._shelf.close()
-
-    def keys(self):
-        with self._lock:
-            return self._shelf.keys()

@@ -51,6 +51,10 @@
         "ledger.transaction.integer_key"
     ],
 
+    ## configuration of the backing store
+    ## choices include: shelf, lmdb
+    "StoreType" : "shelf",
+
     ## do not restart 
     "Restore" : false,
 
