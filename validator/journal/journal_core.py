@@ -26,8 +26,6 @@ from journal.messages import journal_debug
 from journal.messages import journal_transfer
 from journal.messages import transaction_block_message
 from journal.messages import transaction_message
-from journal.database import shelf_database
-from journal.database import lmdb_database
 
 from sawtooth.exceptions import NotAvailableException
 
@@ -167,6 +165,8 @@ class Journal(gossip_core.Gossip):
         dbprefix = dbdir + "/" + str(self.LocalNode)
 
         if store_type == 'shelf':
+            from journal.database import shelf_database
+
             self.TransactionStore = journal_store.JournalStore(
                 shelf_database.ShelfDatabase(dbprefix + "_txn" + ".shelf",
                                              dbflag))
@@ -177,6 +177,8 @@ class Journal(gossip_core.Gossip):
                 shelf_database.ShelfDatabase(dbprefix + "_chain" + ".shelf",
                                              dbflag))
         elif store_type == 'lmdb':
+            from journal.database import lmdb_database
+
             self.TransactionStore = journal_store.JournalStore(
                 lmdb_database.LMDBDatabase(dbprefix + "_txn" + ".lmdb",
                                            dbflag))
