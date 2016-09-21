@@ -14,7 +14,7 @@ Please refer to the article on [Issue Tracking](http://intelledger.github.io/com
 # Contributing Code
 
 Distributed Ledger is Apache 2.0 licensed and accepts contributions via 
-`GitHub <https://github.com/hyperledger/>`_ pull requests.
+[GitHub](https://github.com/hyperledger/) pull requests.
 
 Please refer to the article on 
 [Contributing](http://intelledger.github.io/community/contributing.html)
