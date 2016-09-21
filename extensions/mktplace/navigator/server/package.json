@@ -1,0 +1,50 @@
+{
+  "name": "digital_marketplace_backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon --ignore spec/ server.js",
+    "start:in-vm": "nodemon --legacy-watch --ignore spec/ server.js",
+    "test": "node spec/support/run_tests.js",
+    "build:doc": "jsdoc -c jsdoc_config.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ascii-json": "^0.2.0",
+    "async": "^1.5.1",
+    "bcrypt-nodejs": "0.0.3",
+    "bigi": "1.4.1",
+    "bitcoinjs-lib": "2.2.0",
+    "bluebird": "^2.10.2",
+    "body-parser": "^1.14.1",
+    "bs58check": "1.0.8",
+    "cbor": "^1.0.1",
+    "compression": "^1.6.0",
+    "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.0",
+    "cors": "2.7.1",
+    "express": "^4.13.3",
+    "fraction.js": "3.2.5",
+    "fs": "0.0.2",
+    "immutable": "3.7.6",
+    "js-schema": "1.0.1",
+    "morgan": "^1.6.1",
+    "nodemon": "^1.8.1",
+    "punycode": "^1.3.2",
+    "rethinkdb": "2.3.1",
+    "sawtooth-client": "../../../../clients/javascript",
+    "secure-random": "^1.1.1",
+    "socket.io": "1.4.5",
+    "underscore": "^1.8.3",
+    "winston": "^1.1.1"
+  },
+  "devDependencies": {
+    "jasmine": "2.4.1",
+    "jsdoc": "3.4.0",
+    "minimist": "1.2.0",
+    "nodemon": "1.8.1",
+    "python-shell": "^0.2.0"
+  }
+}
