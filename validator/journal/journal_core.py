@@ -27,6 +27,7 @@ from journal.messages import journal_transfer
 from journal.messages import transaction_block_message
 from journal.messages import transaction_message
 from journal.database import shelf_database
+from journal.database import lmdb_database
 
 from sawtooth.exceptions import NotAvailableException
 
@@ -157,18 +158,36 @@ class Journal(gossip_core.Gossip):
         # database file or reuse an existing file
         dbflag = 'c' if self.Restore else 'n'
         dbdir = kwargs.get('DataDirectory', 'db')
+        store_type = kwargs.get('StoreType', 'shelf')
 
         self._txn_lock = RLock()
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
         dbprefix = dbdir + "/" + str(self.LocalNode)
-        self.TransactionStore = journal_store.JournalStore(
-            shelf_database.ShelfDatabase(dbprefix + "_txn", dbflag))
-        self.BlockStore = journal_store.JournalStore(
-            shelf_database.ShelfDatabase(dbprefix + "_cb", dbflag))
-        self.ChainStore = journal_store.JournalStore(
-            shelf_database.ShelfDatabase(dbprefix + "_cs", dbflag))
+
+        if store_type == 'shelf':
+            self.TransactionStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_txn" + ".shelf",
+                                             dbflag))
+            self.BlockStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_block" + ".shelf",
+                                             dbflag))
+            self.ChainStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_chain" + ".shelf",
+                                             dbflag))
+        elif store_type == 'lmdb':
+            self.TransactionStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_txn" + ".lmdb",
+                                           dbflag))
+            self.BlockStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_block" + ".lmdb",
+                                           dbflag))
+            self.ChainStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_chain" + ".lmdb",
+                                           dbflag))
+        else:
+            raise KeyError("%s is not a supported StoreType", store_type)
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
@@ -183,7 +202,8 @@ class Journal(gossip_core.Gossip):
         self.InvalidBlockIDs = set()
 
         # Set up the global store and transaction handlers
-        self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_gs", dbflag)
+        self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_state" + ".dbm",
+                                                 dbflag)
 
         # initialize the ledger stats data structures
         self._initledgerstats()
