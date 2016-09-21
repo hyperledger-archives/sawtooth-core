@@ -24,7 +24,7 @@ var assert = chai.assert;
 
 var cbor = require('cbor');
 
-var {Ratio, createSignableObj, toJS, toCBOR} = require('../lib/signed_object');
+var {Ratio, createSignableObj, toJS, toCBOR, generateHash} = require('../lib/signed_object');
 var {OrderedMap} = require('immutable');
 
 describe('signed_object', () => {
@@ -63,7 +63,7 @@ describe('signed_object', () => {
 
         it('should remove any ratios', () => {
             var jsObj = toJS(OrderedMap({x: new Ratio(2), y: 4}));
-            
+
             assert.deepEqual({x: 2, y: 4}, jsObj);
         });
     });
@@ -72,6 +72,18 @@ describe('signed_object', () => {
         it('should return the cbor from the immutable object', () => {
             let cborObj = toCBOR(OrderedMap({y: 1, x: 2}));
             assert.deepEqual(cbor.encode({x: 2, y: 1}), cborObj);
+        });
+    });
+
+    describe('#generateHash', () => {
+
+        it('should generate a 64 character hex-string from an update', () => {
+            assert.match(generateHash({a: 1, z: 'foobar'}), /^[a-f0-9]{64}$/);
+        });
+
+        it('should generate the same hash for the same update', () => {
+            var update = {x: 1, y: 2, a: 'hello', b: 'goodbye'};
+            assert.equal(generateHash(update), generateHash(update));
         });
     });
 
