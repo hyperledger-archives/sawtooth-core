@@ -15,20 +15,13 @@
 
 import logging
 from twisted.internet import reactor
-
 from txnserver import validator
-from journal.consensus.quorum import quorum_journal
 from gossip.topology import quorum as quorum_topology
 
 logger = logging.getLogger(__name__)
 
 
 class QuorumValidator(validator.Validator):
-    EndpointDomain = '/QuorumValidator'
-
-    def __init__(self, config, windows_service=False):
-        super(QuorumValidator, self).__init__(config, windows_service)
-        self.Ledger.initialize_quorum_map(config)
 
     def start(self):
         if self.GenesisLedger:
@@ -40,13 +33,6 @@ class QuorumValidator(validator.Validator):
             reactor.callLater(2.0, self.initialize_ledger_topology, nop)
             return
         self.initialize_ledger_connection()
-
-    def initialize_ledger_from_node(self, node):
-        """
-        Initialize the ledger object for the local node, expected to be
-        overridden
-        """
-        self.Ledger = quorum_journal.QuorumJournal(node, **self.Config)
 
     def initialize_ledger_connection(self):
         """
