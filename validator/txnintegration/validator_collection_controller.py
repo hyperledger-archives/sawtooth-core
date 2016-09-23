@@ -137,7 +137,7 @@ class ValidatorCollectionController(NodeController):
         v = self._validators[idx][0]
         assert isinstance(v, ValidatorManager)
         self._validators[idx][0] = None
-        v.shutdown()
+        v.shutdown(True)
 
     def commit(self, reg_seconds=240, **kwargs):
         if reg_seconds > 0:

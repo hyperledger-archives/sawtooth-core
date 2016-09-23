@@ -135,5 +135,6 @@ class TestPartitionRecovery(unittest.TestCase):
             print 'Exception encountered: %s' % (e.message)
             traceback.print_exc()
             sit_rep(top.urls())
+            raise
         finally:
             top.shutdown(archive_name="TestPartitionRecoveryResults")
