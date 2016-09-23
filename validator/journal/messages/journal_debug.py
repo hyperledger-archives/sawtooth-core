@@ -29,10 +29,12 @@ def register_message_handlers(journal):
         journal (journal_core.Journal): The journal to register the message
             handlers against.
     """
-    journal.register_message_handler(DumpJournalBlocksMessage,
-                                     _dumpjournalblockshandler)
-    journal.register_message_handler(DumpJournalValueMessage,
-                                     _dumpjournalvaluehandler)
+    journal.dispatcher.register_message_handler(
+        DumpJournalBlocksMessage,
+        _dumpjournalblockshandler)
+    journal.dispatcher.register_message_handler(
+        DumpJournalValueMessage,
+        _dumpjournalvaluehandler)
 
 
 def _dumpjournalblockshandler(msg, journal):

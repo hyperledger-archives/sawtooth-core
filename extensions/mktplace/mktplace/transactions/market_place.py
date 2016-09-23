@@ -38,7 +38,7 @@ BaseValidationReward = 100
 
 
 def register_transaction_types(journal):
-    journal.register_message_handler(
+    journal.dispatcher.register_message_handler(
         MarketPlaceTransactionMessage,
         transaction_message.transaction_message_handler)
     journal.add_transaction_store(MarketPlaceTransaction)
@@ -57,7 +57,7 @@ def _build_block(ledger, block):
             MarketPlaceTransaction.TransactionTypeName)
         if mktstore:
             holdingname = "//{0}/holding/validation-token".format(
-                ledger.LocalNode.Name)
+                ledger.gossip.LocalNode.Name)
             holdingid = mktstore.n2i(holdingname, 'Participant')
             if holdingid:
                 logger.info('set validator holding id to %s', holdingid)
@@ -83,7 +83,7 @@ def _build_block(ledger, block):
         itxn.Update = incentive_update.IncentiveUpdate()
         itxn.Update.HoldingID = ValidatorHoldingID
         itxn.Update.Count = count
-        itxn.sign_from_node(ledger.LocalNode)
+        itxn.sign_from_node(ledger.gossip.LocalNode)
 
         logger.debug('add incentive transaction %s to block', itxn.Identifier)
         ledger.TransactionStore[itxn.Identifier] = itxn
@@ -114,8 +114,7 @@ def _claim_block(ledger, block):
         itxn.Status = transaction.Status.pending
         msg = MarketPlaceTransactionMessage()
         msg.Transaction = itxn
-        msg.SenderID = ledger.LocalNode.Identifier
-        msg.sign_from_node(ledger.LocalNode)
+        ledger.sign_and_send_message(msg)
 
         logger.info(
             'sending the incentive transaction %s for holding %s for block %s',

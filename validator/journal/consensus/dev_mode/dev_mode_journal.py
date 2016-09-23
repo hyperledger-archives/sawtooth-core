@@ -28,13 +28,13 @@ class DevModeJournal(journal_core.Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking
             calls to make when the heartbeat timer fires.
     """
-    def __init__(self, node, **kwargs):
+    def __init__(self, gossip, **kwargs):
         """Constructor for the DevModeJournal class.
 
         Args:
             node (Node): The local node.
         """
-        super(DevModeJournal, self).__init__(node, **kwargs)
+        super(DevModeJournal, self).__init__(gossip, **kwargs)
 
         # the one who can publish blocks is always the genesis ledger
         self.block_publisher = self.GenesisLedger
@@ -47,7 +47,7 @@ class DevModeJournal(journal_core.Journal):
             self.block_wait_time = 1
 
         self.next_block_time = time()
-        self.onHeartbeatTimer += self._check_claim_block
+        self.dispatcher.on_heartbeat += self._check_claim_block
 
         # initialize the block handlers
         dev_mode_transaction_block.register_message_handlers(self)
@@ -106,15 +106,17 @@ class DevModeJournal(journal_core.Journal):
         """
         # Get the list of prepared transactions, if there aren't enough
         # then just return
+        self.PendingTransactionBlock = None
+
         txn_list = self._preparetransactionlist(
             self.MaximumTransactionsPerBlock)
         nblock.TransactionIDs = txn_list
 
         logger.info('node %s validates block with %d transactions',
-                    self.LocalNode.Name, len(nblock.TransactionIDs))
+                    self.gossip.LocalNode.Name, len(nblock.TransactionIDs))
 
         # Claim the block
-        nblock.sign_from_node(self.LocalNode)
+        nblock.sign_from_node(self.gossip.LocalNode)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
@@ -123,11 +125,7 @@ class DevModeJournal(journal_core.Journal):
         # And send out the message that we won
         msg = dev_mode_transaction_block.DevModeTransactionBlockMessage()
         msg.TransactionBlock = nblock
-        msg.SenderID = self.LocalNode.Identifier
-        msg.sign_from_node(self.LocalNode)
-
-        self.PendingTransactionBlock = None
-        self.handle_message(msg)
+        self.sign_and_send_message(msg)
 
     def _check_claim_block(self, now):
         if not self.block_publisher:

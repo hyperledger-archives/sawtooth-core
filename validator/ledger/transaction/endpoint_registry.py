@@ -26,20 +26,20 @@ from gossip import message, node
 logger = logging.getLogger(__name__)
 
 
-def register_transaction_types(ledger):
+def register_transaction_types(journal):
     """Registers the endpoint registry asset types on the ledger.
 
     Args:
         ledger (journal.journal_core.Journal): The ledger to register
             the transaction type against.
     """
-    ledger.register_message_handler(
+    journal.gossip.register_message_handler(
         SpecialPingMessage,
         _specpinghandler)
-    ledger.register_message_handler(
+    journal.dispatcher.register_message_handler(
         EndpointRegistryTransactionMessage,
         transaction_message.transaction_message_handler)
-    ledger.add_transaction_store(EndpointRegistryTransaction)
+    journal.add_transaction_store(EndpointRegistryTransaction)
 
 
 def send_to_closest_nodes(ledger, msg, addr, count=1, initialize=True):

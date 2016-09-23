@@ -22,6 +22,7 @@ from twisted.web.http_headers import Headers
 
 from gossip import common
 import gossip.signed_object as sign_obj
+from gossip.gossip_core import Gossip
 from gossip.node import Node
 from gossip.messages import shutdown_message
 
@@ -93,10 +94,11 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_error_response(self):
         # Test error_response
         local_node = self._create_node(8809)
+        gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
 
-        ledger = Journal(local_node, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
         validator = TestValidator(ledger)
         root = BasePage(validator)
         request = self._create_get_request("/stat", {})
@@ -109,15 +111,16 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_forward(self):
         # Test _msgforward
         local_node = self._create_node(8807)
+        gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
-        ledger = Journal(local_node, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
         # Create peers for the message to be forwarded to
         node1 = self._create_node(8881)
         node2 = self._create_node(8882)
         node1.is_peer = True
         node2.is_peer = True
-        ledger.add_node(node1)
-        ledger.add_node(node2)
+        gossip.add_node(node1)
+        gossip.add_node(node2)
         validator = TestValidator(ledger)
         forward_page = ForwardPage(validator)
         # Create message to use and the data to forward
@@ -134,8 +137,9 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_store(self):
         # Test _handlestorerequest
         local_node = self._create_node(8800)
+        gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
-        ledger = Journal(local_node, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
         validator = TestValidator(ledger)
         store_page = StorePage(validator)
         request = self._create_get_request("/store", {})
@@ -189,9 +193,10 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_block(self):
         # Test _handleblkrequest
         local_node = self._create_node(8801)
+        gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
-        ledger = Journal(local_node, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
         validator = TestValidator(ledger)
         block_page = BlockPage(validator)
 
@@ -235,9 +240,10 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_transaction(self):
         # Test _handletxnrequest
         local_node = self._create_node(8802)
+        gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
-        ledger = Journal(local_node, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
         validator = TestValidator(ledger)
         transaction_page = TransactionPage(validator)
 
@@ -286,9 +292,10 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_stats(self):
         # Test _handlestatrequest
         local_node = self._create_node(8803)
+        gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
-        ledger = Journal(local_node, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
         validator = TestValidator(ledger)
         statistics_page = StatisticsPage(validator)
         request = self._create_get_request("/stat", {})
@@ -299,10 +306,10 @@ class TestWebApi(unittest.TestCase):
             self.assertIsNotNone(statistics_page)
 
         dic = {}
-        dic["ledger"] = ledger.StatDomains["ledger"].get_stats()
-        dic["ledgerconfig"] = ledger.StatDomains["ledgerconfig"].get_stats()
-        dic["message"] = ledger.StatDomains["message"].get_stats()
-        dic["packet"] = ledger.StatDomains["packet"].get_stats()
+        dic["ledger"] = gossip.StatDomains["ledger"].get_stats()
+        dic["ledgerconfig"] = gossip.StatDomains["ledgerconfig"].get_stats()
+        dic["message"] = gossip.StatDomains["message"].get_stats()
+        dic["packet"] = gossip.StatDomains["packet"].get_stats()
         # GET /statistics/ledger
         request = self._create_get_request("/statistics/ledger", {})
         self.assertEquals(yaml.load(statistics_page.do_get(request)), dic)
@@ -310,7 +317,7 @@ class TestWebApi(unittest.TestCase):
         request = self._create_get_request("/statistics/node", {})
         self.assertEquals(yaml.load(statistics_page.do_get(request)), {})
         node = self._create_node(8804)
-        ledger.add_node(node)
+        gossip.add_node(node)
         dic2 = {}
         dic2[node.Name] = node.Stats.get_stats()
         dic2[node.Name]["IsPeer"] = node.is_peer

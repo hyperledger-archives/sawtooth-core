@@ -60,5 +60,5 @@ class QuorumValidator(validator.Validator):
 
     def quorum_initialization(self, callback):
         logger.info("ledger connections using Quorum topology")
-        quorum_topology.start_topology_update(self.Ledger,
+        quorum_topology.start_topology_update(self.gossip,
                                               callback)

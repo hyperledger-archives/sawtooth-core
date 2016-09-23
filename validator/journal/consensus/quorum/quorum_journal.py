@@ -54,13 +54,13 @@ class QuorumJournal(Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking calls
             to make when the heartbeat timer fires.
     """
-    def __init__(self, nd, **kwargs):
+    def __init__(self, gossip, **kwargs):
         """Constructor for the QuorumJournal class.
 
         Args:
             nd (Node): The local node.
         """
-        super(QuorumJournal, self).__init__(nd, **kwargs)
+        super(QuorumJournal, self).__init__(gossip, **kwargs)
 
         # minimum time between votes
         self.VoteTimeInterval = kwargs.get('VoteTimeInterval', 30.0)
@@ -84,21 +84,22 @@ class QuorumJournal(Journal):
         self.QuorumMap = dict()
         self.VotingQuorum = dict()
         # we are always a member of our own quorum
-        self.VotingQuorum[self.LocalNode.Identifier] = self.LocalNode
+        self.VotingQuorum[self.gossip.LocalNode.Identifier] = \
+            self.gossip.LocalNode
 
         self.CurrentQuorumVote = None
         self.NextVoteTime = self._nextvotetime()
         self.NextBallotTime = 0
 
-        self.onHeartbeatTimer += self._triggervote
+        self.dispatcher.on_heartbeat += self._triggervote
 
-        quorum_debug.register_message_handlers(self)
         quorum_ballot.register_message_handlers(self)
+        quorum_debug.register_message_handlers(self)
         quorum_transaction_block.register_message_handlers(self)
 
     def initialize_quorum_map(self, config):
         q = config.get('Quorum', [])
-        if self.LocalNode.Name not in q:
+        if self.gossip.LocalNode.Name not in q:
             logger.fatal("node must be in its own quorum")
             self.shutdown()
             return
@@ -141,7 +142,7 @@ class QuorumJournal(Journal):
         if force:
             block = quorum_transaction_block.QuorumTransactionBlock()
             block.BlockNumber = 0
-            block.sign_from_node(self.LocalNode)
+            block.sign_from_node(self.gossip.LocalNode)
             return block
 
         return None
@@ -171,7 +172,7 @@ class QuorumJournal(Journal):
             nd (Node): The node to add to the quorum set.
         """
         logger.info('attempt to add quorum voting node %s to %s', str(nd),
-                    str(self.LocalNode))
+                    str(self.gossip.LocalNode))
 
         if nd.Identifier in self.VotingQuorum:
             logger.info('attempt to add duplicate node to quorum')
@@ -299,7 +300,7 @@ class QuorumJournal(Journal):
         nblock.BlockNumber = blocknum
         nblock.PreviousBlockID = self.MostRecentCommittedBlockID
         nblock.TransactionIDs = txnlist[:]
-        nblock.sign_from_node(self.LocalNode)
+        nblock.sign_from_node(self.gossip.LocalNode)
 
         logger.info('commit: %s', nblock.dump())
 

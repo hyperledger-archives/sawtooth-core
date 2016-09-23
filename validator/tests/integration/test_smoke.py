@@ -24,9 +24,6 @@ from twisted.web import http
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
 from txnintegration.utils import is_convergent
 from txnintegration.utils import StaticNetworkConfig
-from txnintegration.utils import generate_private_key
-from txnintegration.utils import Progress
-from txnintegration.utils import TimeOut
 from txnintegration.validator_network_manager import ValidatorNetworkManager, \
     defaultValidatorConfig
 

@@ -23,9 +23,10 @@ import cProfile
 from twisted.internet import reactor
 from twisted.python.threadpool import ThreadPool
 
+from sawtooth.endpoint_client import EndpointClient
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import parse_listen_directives
-from sawtooth.endpoint_client import EndpointClient
+
 from gossip import node, signed_object, token_bucket
 from gossip.messages import connect_message, shutdown_message
 from gossip.topology import random_walk, barabasi_albert
@@ -108,7 +109,7 @@ class Validator(object):
     ]
 
     def __init__(self,
-                 node_obj,
+                 gossip_obj,
                  ledger_obj,
                  config,
                  windows_service=False,
@@ -127,6 +128,8 @@ class Validator(object):
         self.status = 'stopped'
         self.Config = config
 
+        self.gossip = gossip_obj
+        node_obj = gossip_obj.LocalNode
         self._gossip_host = node_obj.NetHost
         self._gossip_port = node_obj.NetAddress
 
@@ -186,13 +189,15 @@ class Validator(object):
 
         # send the transaction to remove this node from the endpoint
         # registry (or send it to the web server)
-        self.unregister_endpoint(self.Ledger.LocalNode)
+        if self.gossip is not None:
+            self.unregister_endpoint(self.gossip.LocalNode)
 
         # Need to wait long enough for all the shutdown packets to be sent out
         reactor.callLater(1.0, self.handle_ledger_shutdown)
 
     def handle_ledger_shutdown(self):
-        self.Ledger.shutdown()
+        self.journal.shutdown()
+        self.gossip.shutdown()
 
         # Need to wait long enough for all the shutdown packets to be sent out
         # if a shutdown packet was the reason for the shutdown
@@ -242,12 +247,12 @@ class Validator(object):
         for txnfamily in self.DefaultTransactionFamilies:
             txnfamily.register_transaction_types(self.Ledger)
 
-        self.Ledger.onNodeDisconnect += self.handle_node_disconnect_event
+        self.gossip.onNodeDisconnect += self.handle_node_disconnect_event
 
         logger.info("starting ledger %s with id %s at network address %s",
-                    self.Ledger.LocalNode,
-                    self.Ledger.LocalNode.Identifier[:8],
-                    self.Ledger.LocalNode.NetAddress)
+                    self.gossip.LocalNode,
+                    self.gossip.LocalNode.Identifier[:8],
+                    self.gossip.LocalNode.NetAddress)
 
     def add_transaction_family(self, txnfamily):
         txnfamily.register_transaction_types(self.Ledger)
@@ -262,7 +267,7 @@ class Validator(object):
 
     def start(self):
         # add blacklist before we attempt any peering
-        self.Ledger.blacklist = self.Config.get('Blacklist', [])
+        self.gossip.blacklist = self.Config.get('Blacklist', [])
         # if this is the genesis ledger then there isn't anything left to do
         if self.GenesisLedger:
             self.start_ledger()
@@ -288,11 +293,11 @@ class Validator(object):
         # new topology probes. for the moment, just use the initial
         # connectivity as a lower threshhold
         minpeercount = self.Config.get("InitialConnectivity", 1)
-        peerlist = self.Ledger.peer_list()
+        peerlist = self.gossip.peer_list()
         if len(peerlist) <= minpeercount:
             def disconnect_callback():
                 logger.info('topology update finished, %s peers connected',
-                            len(self.Ledger.peer_list()))
+                            len(self.gossip.peer_list()))
 
             logger.info('connectivity has dropped below mimimal levels, '
                         'kick off topology update')
@@ -350,7 +355,7 @@ class Validator(object):
         peerset = set(self.Config.get('Peers', []))
         nodeset = set(self.NodeMap.keys())
         if len(peerset) < minpeercount and len(nodeset) > 0:
-            nodeset.discard(self.Ledger.LocalNode.Name)
+            nodeset.discard(self.gossip.LocalNode.Name)
             nodeset = nodeset.difference(peerset)
             peerset = peerset.union(random.sample(list(nodeset), min(
                 minpeercount - len(peerset), len(nodeset))))
@@ -359,7 +364,7 @@ class Validator(object):
 
     def _connect_to_peers(self):
         min_peer_count = self.Config.get("InitialConnectivity", 1)
-        current_peer_count = len(self.Ledger.peer_list())
+        current_peer_count = len(self.gossip.peer_list())
 
         logger.debug("peer count is %d of %d",
                      current_peer_count, min_peer_count)
@@ -374,8 +379,8 @@ class Validator(object):
                 if peer:
                     logger.info('add peer %s with identifier %s', peername,
                                 peer.Identifier)
-                    connect_message.send_connection_request(self.Ledger, peer)
-                    self.Ledger.add_node(peer)
+                    connect_message.send_connection_request(self.gossip, peer)
+                    self.gossip.add_node(peer)
                 else:
                     logger.info('requested connection to unknown peer %s',
                                 peername)
@@ -438,11 +443,11 @@ class Validator(object):
 
     def barabasi_initialization(self, callback):
         logger.info("ledger connections using BarabasiAlbert topology")
-        barabasi_albert.start_topology_update(self.Ledger, callback)
+        barabasi_albert.start_topology_update(self.gossip, callback)
 
     def random_walk_initialization(self, callback):
         logger.info("ledger connections using RandomWalk topology")
-        random_walk.start_topology_update(self.Ledger, callback)
+        random_walk.start_topology_update(self.gossip, callback)
 
     def start_journal_transfer(self):
         self.status = 'transferring ledger'
@@ -454,7 +459,7 @@ class Validator(object):
         logger.info('ledger initialization complete')
         self.Ledger.initialization_complete()
         self.status = 'started'
-        self.register_endpoint(self.Ledger.LocalNode)
+        self.register_endpoint(self.gossip.LocalNode)
 
     def register_endpoint(self, node):
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
@@ -468,7 +473,7 @@ class Validator(object):
 
         logger.info('register endpoint %s with name %s', node.Identifier[:8],
                     node.Name)
-        self.Ledger.handle_message(msg)
+        self.gossip.handle_message(msg)
 
     def unregister_endpoint(self, node):
         txn = endpoint_registry.EndpointRegistryTransaction \
@@ -483,7 +488,7 @@ class Validator(object):
         msg.sign_from_node(node)
         logger.info('unregister endpoint %s with name %s', node.Identifier[:8],
                     node.Name)
-        self.Ledger.handle_message(msg)
+        self.gossip.handle_message(msg)
 
     def get_endpoint_nodes(self, url):
         client = EndpointClient(url)

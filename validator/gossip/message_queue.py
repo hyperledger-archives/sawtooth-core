@@ -49,4 +49,3 @@ class MessageQueue(object):
             self._condition.notify()
         finally:
             self._condition.release()
-

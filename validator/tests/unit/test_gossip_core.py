@@ -161,11 +161,11 @@ class TestGossipCoreDatagram(unittest.TestCase):
         core = self._setup(9051)
         core.stopProtocol()
 
-    def test_gossip_datagram_recieved(self):
+    def test_gossip_datagram_received(self):
         # Test that datagramReceived behaves as expected
-        core = self._setup(9000)
-        peer = self._create_node(9001)
-        peer2 = self._create_node(9002)
+        core = self._setup(9500)
+        peer = self._create_node(9501)
+        peer2 = self._create_node(9502)
         core.add_node(peer)
         core.add_node(peer2)
         msg = self._create_msg()
@@ -363,7 +363,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         # Test _dispatch will not loop if not processing messages
         core = self._setup(8883)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
-        core.OutgoingMessageQueue.appendleft(msg)
+        core.IncomingMessageQueue.appendleft(msg)
         # Should not run if ProcessIncomingMessages is False
         # Otherwise it will loop
         core.ProcessIncomingMessages = False
@@ -400,7 +400,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core = self._setup(8888)
         core.shutdown()
         self.assertFalse(core.ProcessIncomingMessages)
-        self.assertFalse(len(core.OutgoingMessageQueue) == 0)
+        self.assertFalse(len(core.IncomingMessageQueue) == 0)
 
     def test_gossip_register_message_handlers(self):
         # Test that a message handler and type can be added and removed

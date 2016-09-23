@@ -27,10 +27,13 @@ def register_message_handlers(journal):
         journal (journal_core.Journal): The journal to register the message
             handlers against.
     """
-    journal.register_message_handler(TransactionBlockMessage,
-                                     transaction_block_message_handler)
-    journal.register_message_handler(BlockRequestMessage, _block_request_handler)
-    journal.register_message_handler(BlockRetryMessage, _block_retry_handler)
+    journal.dispatcher.register_message_handler(
+        TransactionBlockMessage,
+        transaction_block_message_handler)
+    journal.dispatcher.register_message_handler(BlockRequestMessage,
+                                                _block_request_handler)
+    journal.dispatcher.register_message_handler(BlockRetryMessage,
+                                                _block_retry_handler)
 
 
 class TransactionBlockMessage(message.Message):

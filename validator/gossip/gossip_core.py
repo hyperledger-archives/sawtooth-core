@@ -24,8 +24,6 @@ import time
 from twisted.internet import reactor, task
 from twisted.internet.protocol import DatagramProtocol
 
-
-
 from gossip import event_handler
 from gossip import message
 from gossip import stats
@@ -77,7 +75,7 @@ class Gossip(object, DatagramProtocol):
             to call when a node becomes disconnected.
         onHeartbeatTimer (EventHandler): An EventHandler for functions
             to call when the heartbeat timer fires.
-        IncommingMessageQueue (OutgoingMessageQueue): The queue of incoming messages.
+        IncomingMessageQueue (MessageQueue): The queue of incoming messages.
         ProcessIncomingMessages (bool): Whether or not to process incoming
             messages.
         Listener (Reactor.listenUDP): The UDP listener.
@@ -122,11 +120,10 @@ class Gossip(object, DatagramProtocol):
         self._init_gossip_stats()
 
         connect_message.register_message_handlers(self)
-
         gossip_debug.register_message_handlers(self)
+        random_walk_message.register_message_handlers(self)
         shutdown_message.register_message_handlers(self)
         topology_message.register_message_handlers(self)
-        random_walk_message.register_message_handlers(self)
 
         # setup connectivity events
         self.onNodeDisconnect = event_handler.EventHandler('onNodeDisconnect')
@@ -136,11 +133,10 @@ class Gossip(object, DatagramProtocol):
         self.onHeartbeatTimer += self._timer_transmit
         self.onHeartbeatTimer += self._timer_cleanup
         self.onHeartbeatTimer += self._keep_alive
-
         self._HeartbeatTimer = task.LoopingCall(self._heartbeat)
         self._HeartbeatTimer.start(0.05)
 
-        self.OutgoingMessageQueue = MessageQueue()
+        self.IncomingMessageQueue = MessageQueue()
 
         try:
             self.ProcessIncomingMessages = True
@@ -347,7 +343,6 @@ class Gossip(object, DatagramProtocol):
 
         logger.warn('received message %s from an unknown peer %s', msg,
                     packet.SenderID[:8])
-
 
     def _heartbeat(self):
         """Invoke functions that are connected to the heartbeat timer.
@@ -583,17 +578,20 @@ class Gossip(object, DatagramProtocol):
 
     def _dispatcher(self):
         while self.ProcessIncomingMessages:
-            msg = self.OutgoingMessageQueue.pop()
+            msg = self.IncomingMessageQueue.pop()
             try:
                 if msg and msg.MessageType in self.MessageHandlerMap:
+                    logger.warning("_dispatcher %s: %s",
+                                   msg,
+                                   self.MessageHandlerMap[msg.MessageType])
                     self.MessageHandlerMap[msg.MessageType][1](msg, self)
 
             # handle the attribute error specifically so that the
             # message type can be used in the next exception
-            except:
+            except Exception as e:
                 logger.exception(
-                    'unexpected error handling message of type %s',
-                    msg.MessageType)
+                    'unexpected error handling message of type %s: %s',
+                    msg.MessageType, e)
 
     def shutdown(self):
         """Handle any shutdown processing.
@@ -610,7 +608,7 @@ class Gossip(object, DatagramProtocol):
         # to leave the socket open long enough to send the disconnect messages
         # that we just queued up
         self.ProcessIncomingMessages = False
-        self.OutgoingMessageQueue.appendleft(None)
+        self.IncomingMessageQueue.appendleft(None)
 
     def register_message_handler(self, msg, handler):
         """Register a function to handle incoming messages for the
@@ -621,6 +619,7 @@ class Gossip(object, DatagramProtocol):
             handler (function): Function to be called when messages of
                 that type arrive.
         """
+        logger.warning("%s: %s", msg.MessageType, str(handler))
         self.MessageHandlerMap[msg.MessageType] = (msg, handler)
 
     def clear_message_handler(self, msg):
@@ -764,7 +763,7 @@ class Gossip(object, DatagramProtocol):
 
         self.MessageHandledMap[msg.Identifier] = \
             time.time() + self.ExpireMessageTime
-        self.OutgoingMessageQueue.appendleft(msg)
+        self.IncomingMessageQueue.appendleft(msg)
 
         # and now forward it on to the peers if it is marked for forwarding
         if msg.IsForward and msg.TimeToLive > 0:

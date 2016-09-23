@@ -18,9 +18,14 @@ from threading import RLock
 import time
 from collections import OrderedDict
 
-from gossip import common, event_handler, gossip_core, stats
-from journal import transaction, transaction_block
+from gossip import common
+from gossip import event_handler
+from gossip.message_dispatcher import MessageDispatcher
+from gossip import stats
+
 from journal import journal_store
+from journal import transaction
+from journal import transaction_block
 from journal.global_store_manager import GlobalStoreManager
 from journal.messages import journal_debug
 from journal.messages import journal_transfer
@@ -32,7 +37,7 @@ from sawtooth.exceptions import NotAvailableException
 logger = logging.getLogger(__name__)
 
 
-class Journal(gossip_core.Gossip):
+class Journal(object):
     """The base journal class.
 
     Attributes:
@@ -97,7 +102,7 @@ class Journal(gossip_core.Gossip):
             various persistence stores.
     """
 
-    def __init__(self, node, **kwargs):
+    def __init__(self, gossip, **kwargs):
         """Constructor for the Journal class.
 
         Args:
@@ -107,7 +112,8 @@ class Journal(gossip_core.Gossip):
             Restore (bool): Whether or not to restore block data.
             DataDirectory (str):
         """
-        super(Journal, self).__init__(node, **kwargs)
+        self.gossip = gossip
+        self.dispatcher = MessageDispatcher(self, gossip)
 
         self.StartTime = time.time()
         self.Initializing = True
@@ -162,7 +168,7 @@ class Journal(gossip_core.Gossip):
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
-        dbprefix = dbdir + "/" + str(self.LocalNode)
+        dbprefix = dbdir + "/" + str(self.gossip.LocalNode)
 
         if store_type == 'shelf':
             from journal.database import shelf_database
@@ -195,7 +201,8 @@ class Journal(gossip_core.Gossip):
         self.RequestedBlocks = {}
 
         self.next_block_retry = time.time() + self.BlockRetryInterval
-        self.onHeartbeatTimer += self._trigger_retry_blocks
+
+        self.dispatcher.on_heartbeat += self._trigger_retry_blocks
 
         self.MostRecentCommittedBlockID = common.NullIdentifier
         self.PendingTransactionBlock = None
@@ -206,15 +213,14 @@ class Journal(gossip_core.Gossip):
         # Set up the global store and transaction handlers
         self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_state" + ".dbm",
                                                  dbflag)
-
         # initialize the ledger stats data structures
         self._initledgerstats()
 
         # connect the message handlers
+        journal_debug.register_message_handlers(self)
         transaction_message.register_message_handlers(self)
         transaction_block_message.register_message_handlers(self)
         journal_transfer.register_message_handlers(self)
-        journal_debug.register_message_handlers(self)
 
     @property
     def CommittedBlockCount(self):
@@ -276,6 +282,14 @@ class Journal(gossip_core.Gossip):
         tname = family.TransactionTypeName
         tstore = family.TransactionStoreType()
         self.GlobalStoreMap.add_transaction_store(tname, tstore)
+
+    def sign_and_send_message(self, msg):
+        msg.SenderID = self.gossip.LocalNode.Identifier
+        msg.sign_from_node(self.gossip.LocalNode)
+        self.gossip.handle_message(msg)
+
+    def forward_message(self, msg, exceptions=None, initialize=True):
+        self.gossip.forward_message(msg, exceptions, initialize)
 
     @property
     def GlobalStore(self):
@@ -404,7 +418,7 @@ class Journal(gossip_core.Gossip):
         # block
         if self.GenesisLedger:
             logger.warn('node %s claims the genesis block',
-                        self.LocalNode.Name)
+                        self.gossip.LocalNode.Name)
             self.onGenesisBlock.fire(self)
             self.claim_transaction_block(self.build_transaction_block(True))
             self.GenesisLedger = False
@@ -614,7 +628,7 @@ class Journal(gossip_core.Gossip):
         # we need to reuse the request or we'll process multiple copies
         if not request:
             logger.info('txnid: %s - new request from same node(%s)',
-                        txnid[:8], self.LocalNode.Name)
+                        txnid[:8], self.gossip.LocalNode.Name)
             request = transaction_message.TransactionRequestMessage(
                 {'TransactionID': txnid})
             self.forward_message(request, exceptions=exceptions)
@@ -888,9 +902,7 @@ class Journal(gossip_core.Gossip):
         if time.time() > self.next_block_retry:
             self.next_block_retry = time.time() + self.BlockRetryInterval
             msg = transaction_block_message.BlockRetryMessage()
-            msg.SenderID = self.LocalNode.Identifier
-            msg.sign_from_node(self.LocalNode)
-            self.handle_message(msg)
+            self.sign_and_send_message(msg)
 
     def _commitblockchain(self, blockid, forkid):
         """
@@ -1250,7 +1262,7 @@ class Journal(gossip_core.Gossip):
                     self.GlobalStoreMap.flatten_block_store(blockid)
 
     def _initledgerstats(self):
-        self.JournalStats = stats.Stats(self.LocalNode.Name, 'ledger')
+        self.JournalStats = stats.Stats(self.gossip.LocalNode.Name, 'ledger')
         self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
         self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
         self.JournalStats.add_metric(stats.Counter('CommittedBlockCount'))
@@ -1265,9 +1277,9 @@ class Journal(gossip_core.Gossip):
             'PendingTxnCount',
             lambda: self.PendingTxnCount))
 
-        self.StatDomains['ledger'] = self.JournalStats
+        self.gossip.StatDomains['ledger'] = self.JournalStats
 
-        self.JournalConfigStats = stats.Stats(self.LocalNode.Name,
+        self.JournalConfigStats = stats.Stats(self.gossip.LocalNode.Name,
                                               'ledgerconfig')
         self.JournalConfigStats.add_metric(
             stats.Sample('MinimumTransactionsPerBlock',
@@ -1276,14 +1288,14 @@ class Journal(gossip_core.Gossip):
             stats.Sample('MaximumTransactionsPerBlock',
                          lambda: self.MaximumTransactionsPerBlock))
 
-        self.StatDomains['ledgerconfig'] = self.JournalConfigStats
+        self.gossip.StatDomains['ledgerconfig'] = self.JournalConfigStats
 
     def _id2name(self, nodeid):
-        if nodeid in self.NodeMap:
-            return str(self.NodeMap[nodeid])
+        if nodeid in self.gossip.NodeMap:
+            return str(self.gossip.NodeMap[nodeid])
 
-        if nodeid == self.LocalNode.Identifier:
-            return str(self.LocalNode)
+        if nodeid == self.gossip.LocalNode.Identifier:
+            return str(self.gossip.LocalNode)
 
         store = self.GlobalStore.TransactionStores[
             '/EndpointRegistryTransaction']
