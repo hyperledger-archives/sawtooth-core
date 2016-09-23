@@ -118,7 +118,7 @@ class Journal(object):
             DataDirectory (str):
         """
         self.gossip = gossip
-        self.dispatcher = MessageDispatcher(self, gossip)
+        self.dispatcher = MessageDispatcher(self, gossip.dispatcher)
 
         self.StartTime = time.time()
         self.Initializing = True

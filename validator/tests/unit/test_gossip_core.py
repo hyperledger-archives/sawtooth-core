@@ -246,7 +246,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         # test HeartBeat handler does not throw any errors
         core = self._setup(9052)
         try:
-            core._heartbeat()
+            core.dispatcher._heartbeat()
         except:
             self.fail("Heartbeat Timer error")
 
@@ -407,20 +407,23 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core = self._setup(8840)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
         # Remove ShutdownMessage handler
-        core.clear_message_handler(msg)
-        self.assertNotIn("/gossip.messages.ShutdownMessage/ShutdownMessage",
-                         core.MessageHandlerMap)
+        core.dispatcher.clear_message_handler(msg)
+        self.assertFalse(
+            core.dispatcher.has_message_handler(
+                "/gossip.messages.ShutdownMessage/ShutdownMessage"))
         # Add ShutdownMessage handler
-        core.register_message_handler(msg, shutdown_message.shutdown_handler)
-        self.assertIn("/gossip.messages.ShutdownMessage/ShutdownMessage",
-                      core.MessageHandlerMap)
+        core.dispatcher.register_message_handler(
+            msg, shutdown_message.shutdown_handler)
+        self.assertTrue(
+            core.dispatcher.has_message_handler(
+                "/gossip.messages.ShutdownMessage/ShutdownMessage"))
 
     def test_gossip_get_message_handler(self):
         # Get message handler from MessageHandlerMap
         # Will throw error if not in HandlerMap
         core = self._setup(8841)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
-        handler = core.get_message_handler(msg)
+        handler = core.dispatcher.get_message_handler(msg)
         self.assertEquals(handler,
                           shutdown_message.shutdown_handler)
 
@@ -429,8 +432,8 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core = self._setup(8842)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
         info = msg.dump()
-        m = core.unpack_message('/gossip.messages.ShutdownMessage'
-                                + '/ShutdownMessage', info)
+        m = core.dispatcher.unpack_message(
+            '/gossip.messages.ShutdownMessage/ShutdownMessage', info)
         self.assertEquals(msg.Identifier, m.Identifier)
 
     def test_gossip_add_and_drop_node(self):

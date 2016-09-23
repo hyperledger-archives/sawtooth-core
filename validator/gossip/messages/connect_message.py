@@ -52,15 +52,21 @@ def register_message_handlers(gossiper):
     Args:
         gossiper (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(ConnectSynMessage,
-                                      connect_syn_handler)
-    gossiper.register_message_handler(ConnectAckMessage,
-                                      connect_ack_handler)
-    gossiper.register_message_handler(ConnectSynAckMessage,
-                                      connect_syn_ack_handler)
-    gossiper.register_message_handler(DisconnectRequestMessage,
-                                      disconnect_request_handler)
-    gossiper.register_message_handler(KeepAliveMessage, keep_alive_handler)
+    gossiper.dispatcher.register_message_handler(
+        ConnectSynMessage,
+        connect_syn_handler)
+    gossiper.dispatcher.register_message_handler(
+        ConnectAckMessage,
+        connect_ack_handler)
+    gossiper.dispatcher.register_message_handler(
+        ConnectSynAckMessage,
+        connect_syn_ack_handler)
+    gossiper.dispatcher.register_message_handler(
+        DisconnectRequestMessage,
+        disconnect_request_handler)
+    gossiper.dispatcher.register_message_handler(
+        KeepAliveMessage,
+        keep_alive_handler)
 
 
 class ConnectSynMessage(message.Message):

@@ -26,6 +26,7 @@ from twisted.internet.protocol import DatagramProtocol
 
 from gossip import event_handler
 from gossip import message
+from gossip.message_dispatcher import MessageDispatcher
 from gossip import stats
 from gossip.messages import connect_message
 from gossip.messages import gossip_debug
@@ -54,7 +55,7 @@ class Gossip(object, DatagramProtocol):
         MaximumPacketSize (int): The maximum size of a packet.
         CleanupInterval (float): The number of seconds between cleanups.
         KeepAliveInterval (float): The number of seconds between keep
-            alives.
+            alive messages.
         MinimumRetries (int): The minimum number of retries on message
             retransmission.
         RetryInterval (float): The time between retries, in seconds.
@@ -65,16 +66,12 @@ class Gossip(object, DatagramProtocol):
             acknowledgement.
         MessageHandledMap (dict): A map of handled messages where keys are
             message identifiers and values are message expiration times.
-        MessageHandlerMap (dict): A map of message types to handler
-            functions.
         SequenceNumber (int): The next sequence number to be used for
             messages from the local node.
         NextCleanup (float): The time of the next cleanup event.
-        NextKeepAlive (float): The time of the next keepalive event.
+        NextKeepAlive (float): The time of the next keep alive event.
         onNodeDisconnect (EventHandler): An EventHandler for functions
             to call when a node becomes disconnected.
-        onHeartbeatTimer (EventHandler): An EventHandler for functions
-            to call when the heartbeat timer fires.
         IncomingMessageQueue (MessageQueue): The queue of incoming messages.
         ProcessIncomingMessages (bool): Whether or not to process incoming
             messages.
@@ -96,7 +93,6 @@ class Gossip(object, DatagramProtocol):
                 transmission.
             RetryInterval (float): The time between retries, in seconds.
         """
-
         super(Gossip, self).__init__()
 
         self.blacklist = []
@@ -112,13 +108,14 @@ class Gossip(object, DatagramProtocol):
 
         self.PendingAckMap = {}
         self.MessageHandledMap = {}
-        self.MessageHandlerMap = {}
 
         self.SequenceNumber = 0
         self.NextCleanup = time.time() + self.CleanupInterval
         self.NextKeepAlive = time.time() + self.KeepAliveInterval
 
         self._init_gossip_stats()
+
+        self.dispatcher = MessageDispatcher(self)
 
         connect_message.register_message_handlers(self)
         gossip_debug.register_message_handlers(self)
@@ -130,22 +127,17 @@ class Gossip(object, DatagramProtocol):
         self.onNodeDisconnect = event_handler.EventHandler('onNodeDisconnect')
 
         # setup the timer events
-        self.onHeartbeatTimer = event_handler.EventHandler('onHeartbeatTimer')
-        self.onHeartbeatTimer += self._timer_transmit
-        self.onHeartbeatTimer += self._timer_cleanup
-        self.onHeartbeatTimer += self._keep_alive
-        self._HeartbeatTimer = task.LoopingCall(self._heartbeat)
-        self._HeartbeatTimer.start(0.05)
+        self.dispatcher.on_heartbeat += self._timer_transmit
+        self.dispatcher.on_heartbeat += self._timer_cleanup
+        self.dispatcher.on_heartbeat += self._keep_alive
 
         self.IncomingMessageQueue = MessageQueue()
-
         try:
             self.ProcessIncomingMessages = True
             self.Listener = reactor.listenUDP(self.LocalNode.NetPort,
                                               self)
             reactor.callInThread(self._dispatcher)
-
-        except:
+        except Exception as e:
             logger.critical(
                 "failed to connect local socket, server shutting down",
                 exc_info=True)
@@ -293,18 +285,19 @@ class Gossip(object, DatagramProtocol):
         typename = minfo['__TYPE__']
         self.MessageStats.MessageType.increment(typename)
 
-        if typename not in self.MessageHandlerMap:
+        if not self.dispatcher.has_message_handler(typename):
             logger.info('no handler found for message type %s from %s',
                         minfo['__TYPE__'], srcpeer or packet.SenderID[:8])
             return
 
         try:
-            msg = self.unpack_message(typename, minfo)
+            msg = self.dispatcher.unpack_message(typename, minfo)
             msg.TimeToLive = packet.TimeToLive - 1
             msg.SenderID = packet.SenderID
         except:
             logger.exception(
-                'unable to deserialize message of type %s from %s', typename,
+                'unable to deserialize message of type %s from %s',
+                typename,
                 packet.SenderID[:8])
             return
 
@@ -344,15 +337,6 @@ class Gossip(object, DatagramProtocol):
 
         logger.warn('received message %s from an unknown peer %s', msg,
                     packet.SenderID[:8])
-
-    def _heartbeat(self):
-        """Invoke functions that are connected to the heartbeat timer.
-        """
-        try:
-            now = time.time()
-            self.onHeartbeatTimer.fire(now)
-        except:
-            logger.exception('unhandled error occured during timer processing')
 
     def _do_write(self, msg, peer):
         """Put a message on the wire.
@@ -580,19 +564,7 @@ class Gossip(object, DatagramProtocol):
     def _dispatcher(self):
         while self.ProcessIncomingMessages:
             msg = self.IncomingMessageQueue.pop()
-            try:
-                if msg and msg.MessageType in self.MessageHandlerMap:
-                    logger.warning("_dispatcher %s: %s",
-                                   msg,
-                                   self.MessageHandlerMap[msg.MessageType])
-                    self.MessageHandlerMap[msg.MessageType][1](msg, self)
-
-            # handle the attribute error specifically so that the
-            # message type can be used in the next exception
-            except Exception as e:
-                logger.exception(
-                    'unexpected error handling message of type %s: %s',
-                    msg.MessageType, e)
+            self.dispatcher.dispatch(msg)
 
     def shutdown(self):
         """Handle any shutdown processing.
@@ -610,58 +582,6 @@ class Gossip(object, DatagramProtocol):
         # that we just queued up
         self.ProcessIncomingMessages = False
         self.IncomingMessageQueue.appendleft(None)
-
-    def register_message_handler(self, msg, handler):
-        """Register a function to handle incoming messages for the
-        specified message type.
-
-        Args:
-            msg (type): A type object derived from MessageType.
-            handler (function): Function to be called when messages of
-                that type arrive.
-        """
-        logger.warning("%s: %s", msg.MessageType, str(handler))
-        self.MessageHandlerMap[msg.MessageType] = (msg, handler)
-
-    def clear_message_handler(self, msg):
-        """Remove any handlers associated with incoming messages for the
-        specified message type.
-
-        Args:
-            msg (type): A type object derived from MessageType.
-        """
-        try:
-            del self.MessageHandlerMap[msg.MessageType]
-        except:
-            pass
-
-    def get_message_handler(self, msg):
-        """Returns the function registered to handle incoming messages
-        for the specified message type.
-
-        Args:
-            msg (type): A type object derived from MessageType.
-            handler (function): Function to be called when messages of
-                that type arrive.
-
-        Returns:
-            function: The registered handler function for this message
-                type.
-        """
-        return self.MessageHandlerMap[msg.MessageType][1]
-
-    def unpack_message(self, mtype, minfo):
-        """Unpack a dictionary into a message object using the
-        registered handlers.
-
-        Args:
-            mtype (str): Name of the message type.
-            minfo (dict): Dictionary with message data.
-
-        Returns:
-            The result of the handler called with minfo.
-        """
-        return self.MessageHandlerMap[mtype][0](minfo)
 
     def add_node(self, peer):
         """Adds an endpoint to the list of peers known to this node.

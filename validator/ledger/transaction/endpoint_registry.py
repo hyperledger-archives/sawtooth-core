@@ -33,7 +33,7 @@ def register_transaction_types(journal):
         ledger (journal.journal_core.Journal): The ledger to register
             the transaction type against.
     """
-    journal.gossip.register_message_handler(
+    journal.gossip.dispatcher.register_message_handler(
         SpecialPingMessage,
         _specpinghandler)
     journal.dispatcher.register_message_handler(

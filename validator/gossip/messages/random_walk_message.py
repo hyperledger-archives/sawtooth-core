@@ -53,7 +53,8 @@ def register_message_handlers(gossiper):
     Args:
         gossiper (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(RandomWalkMessage, random_walk_handler)
+    gossiper.dispatcher.register_message_handler(RandomWalkMessage,
+                                                 random_walk_handler)
 
 
 class RandomWalkMessage(message.Message):

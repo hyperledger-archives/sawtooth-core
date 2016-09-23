@@ -237,8 +237,8 @@ class JournalTransfer(object):
         # reply message so we need to decode it here... this is mostly to make
         # sure we have the handle to the gossiper for decoding
         btype = msg.TransactionBlockMessage['__TYPE__']
-        bmessage = self.gossip.unpack_message(btype,
-                                              msg.TransactionBlockMessage)
+        bmessage = self.gossip.dispatcher.unpack_message(
+            btype, msg.TransactionBlockMessage)
 
         self.BlockMap[
             bmessage.TransactionBlock.Identifier] = bmessage.TransactionBlock
@@ -267,7 +267,8 @@ class JournalTransfer(object):
         # message so we need to decode it here... this is mostly to make sure
         # we have the handle to the gossiper for decoding
         ttype = msg.TransactionMessage['__TYPE__']
-        tmessage = self.gossip.unpack_message(ttype, msg.TransactionMessage)
+        tmessage = self.gossip.dispatcher.unpack_message(
+            ttype, msg.TransactionMessage)
 
         self.TransactionMap[
             tmessage.Transaction.Identifier] = tmessage.Transaction

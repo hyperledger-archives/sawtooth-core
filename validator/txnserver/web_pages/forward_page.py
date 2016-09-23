@@ -102,8 +102,8 @@ class ForwardPage(BasePage):
                 while len(my_queue) > 0:
                     qmsg = my_queue.pop()
                     if qmsg and \
-                            qmsg.MessageType in \
-                            self.Ledger.gossip.MessageHandlerMap:
+                            self.Ledger.gossip.dispatcher.\
+                            has_message_handler(qmsg.MessageType):
                         if (hasattr(qmsg, 'Transaction') and
                                 qmsg.Transaction is not None):
                             my_store = temp_store_map.get_transaction_store(

@@ -74,10 +74,10 @@ def register_message_handlers(gossiper):
     Args:
         gossiper (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(TopologyRequestMessage,
-                                      topology_request_handler)
-    gossiper.register_message_handler(TopologyReplyMessage,
-                                      topology_reply_handler)
+    gossiper.dispatcher.register_message_handler(TopologyRequestMessage,
+                                                 topology_request_handler)
+    gossiper.dispatcher.register_message_handler(TopologyReplyMessage,
+                                                 topology_reply_handler)
 
 
 class TopologyRequestMessage(message.Message):
