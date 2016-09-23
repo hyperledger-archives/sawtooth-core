@@ -32,8 +32,73 @@ from gossip.topology import random_walk, barabasi_albert
 from journal.protocol import journal_transfer
 from ledger.transaction import endpoint_registry
 
-
 logger = logging.getLogger(__name__)
+
+
+def parse_networking_info(config):
+    '''
+    Provides a DRY location for parsing a validator's intended network
+    interface specifications from that validator's configuration
+    Args:
+        config: (dict) - fully resolved configuration dictionary (c.f.
+            sawtooth.Config)
+    Returns:
+        (nd, http_port): an ordered pair, where:
+            nd:         (gossip.Node)
+            http_port:  (int) or (None)
+
+    '''
+    # Parse the listen directives from the configuration so
+    # we know what to bind gossip protocol to
+    listen_directives = parse_listen_directives(config)
+
+    # If the gossip listen address is 0.0.0.0, then there must be
+    # an Endpoint.Host entry as we don't know what to put in the
+    # endpoint registry otherwise.
+    if listen_directives['gossip'].host == '0.0.0.0' and \
+            ('Endpoint' not in config or
+             'Port' not in config['Endpoint']):
+        raise Exception(
+            'gossip listen address is 0.0.0.0, but endpoint host '
+            'missing from configuration')
+
+    gossip_host = listen_directives['gossip'].host
+    gossip_port = listen_directives['gossip'].port
+
+    # The endpoint host/port and HTTP port come from the listen data, but
+    # can be overridden by the configuration.
+    endpoint_host = gossip_host
+    endpoint_port = gossip_port
+    endpoint_http_port = None
+    if 'http' in listen_directives:
+        endpoint_http_port = listen_directives['http'].port
+
+    # See if we need to override the endpoint data
+    endpoint_cfg = config.get('Endpoint', None)
+    if endpoint_cfg is not None:
+        if 'Host' in endpoint_cfg:
+            endpoint_host = endpoint_cfg['Host']
+        if 'Port' in endpoint_cfg:
+            endpoint_port = int(endpoint_cfg['Port'])
+        if 'HttpPort' in endpoint_cfg:
+            endpoint_http_port = int(endpoint_cfg['HttpPort'])
+
+    # Finally, if the endpoint host is 'localhost', we need to convert it
+    # because to another host, obviously 'localhost' won't mean "us"
+    if endpoint_host == 'localhost':
+        endpoint_host = socket.gethostbyname(endpoint_host)
+    name = config['NodeName']
+    addr = (socket.gethostbyname(gossip_host), gossip_port)
+    endpoint_addr = (endpoint_host, endpoint_port)
+    signingkey = signed_object.generate_signing_key(
+        wifstr=config.get('SigningKey'))
+    identifier = signed_object.generate_identifier(signingkey)
+    nd = node.Node(address=addr,
+                   identifier=identifier,
+                   signingkey=signingkey,
+                   name=name,
+                   endpoint_address=endpoint_addr)
+    return (nd, endpoint_http_port)
 
 
 class Validator(object):
@@ -42,49 +107,24 @@ class Validator(object):
         endpoint_registry
     ]
 
-    def __init__(self, config, windows_service):
+    def __init__(self,
+                 node_obj,
+                 ledger_obj,
+                 config,
+                 windows_service=False,
+                 http_port=None,
+                 ):
         self.status = 'stopped'
         self.Config = config
 
-        # Parse the listen directives from the configuration so
-        # we know what to bind gossip protocol to
-        listen_directives = parse_listen_directives(self.Config)
+        self._gossip_host = node_obj.NetHost
+        self._gossip_port = node_obj.NetAddress
 
-        # If the gossip listen address is 0.0.0.0, then there must be
-        # an Endpoint.Host entry as we don't know what to put in the
-        # endpoint registry otherwise.
-        if listen_directives['gossip'].host == '0.0.0.0' and \
-                ('Endpoint' not in self.Config or
-                 'Port' not in self.Config['Endpoint']):
-            raise Exception(
-                'gossip listen address is 0.0.0.0, but endpoint host '
-                'missing from configuration')
+        self._endpoint_host = node_obj.endpoint_host
+        self._endpoint_port = node_obj.endpoint_port
+        self._endpoint_http_port = http_port
 
-        self._gossip_host = listen_directives['gossip'].host
-        self._gossip_port = listen_directives['gossip'].port
-
-        # The endpoint host/port and HTTP port come from the listen data, but
-        # can be overridden by the configuration.
-        self._endpoint_host = self._gossip_host
-        self._endpoint_port = self._gossip_port
-        self._endpoint_http_port = None
-        if 'http' in listen_directives:
-            self._endpoint_http_port = listen_directives['http'].port
-
-        # See if we need to override the endpoint data
-        endpoint_cfg = self.Config.get('Endpoint', None)
-        if endpoint_cfg is not None:
-            if 'Host' in endpoint_cfg:
-                self._endpoint_host = endpoint_cfg['Host']
-            if 'Port' in endpoint_cfg:
-                self._endpoint_port = int(endpoint_cfg['Port'])
-            if 'HttpPort' in endpoint_cfg:
-                self._endpoint_http_port = int(endpoint_cfg['HttpPort'])
-
-        # Finally, if the endpoint host is 'localhost', we need to convert it
-        # because to another host, obviously 'localhost' won't mean "us"
-        if self._endpoint_host == 'localhost':
-            self._endpoint_host = socket.gethostbyname(self._endpoint_host)
+        self.Ledger = ledger_obj
 
         self.profile = self.Config.get('Profile', False)
 
@@ -187,21 +227,6 @@ class Validator(object):
             self.NodeMap[nodedata["NodeName"]] = nd
 
     def initialize_ledger_object(self):
-        # Create the local ledger instance
-        name = self.Config['NodeName']
-        addr = \
-            (socket.gethostbyname(self._gossip_host), self._gossip_port)
-        endpoint_addr = (self._endpoint_host, self._endpoint_port)
-        signingkey = signed_object.generate_signing_key(
-            wifstr=self.Config.get('SigningKey'))
-        identifier = signed_object.generate_identifier(signingkey)
-        nd = node.Node(address=addr,
-                       identifier=identifier,
-                       signingkey=signingkey,
-                       name=name,
-                       endpoint_address=endpoint_addr)
-
-        self.initialize_ledger_from_node(nd)
         assert self.Ledger
 
         for txnfamily in self.DefaultTransactionFamilies:
@@ -213,13 +238,6 @@ class Validator(object):
                     self.Ledger.LocalNode,
                     self.Ledger.LocalNode.Identifier[:8],
                     self.Ledger.LocalNode.NetAddress)
-
-    def initialize_ledger_from_node(self, node):
-        """
-        Initialize the ledger object for the local node, expected to be
-        overridden
-        """
-        self.Ledger = None
 
     def add_transaction_family(self, txnfamily):
         txnfamily.register_transaction_types(self.Ledger)

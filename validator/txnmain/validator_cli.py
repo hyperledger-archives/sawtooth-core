@@ -52,9 +52,9 @@ def local_main(config, windows_service=False, daemonized=False):
     # epoll and we need that to happen after the forking done with
     # Daemonize().  This is a side-effect of importing twisted.
     from twisted.internet import reactor
-    from txnserver import poet0_validator
+    from txnserver.validator import parse_networking_info
+    from txnserver.validator import Validator
     from txnserver import quorum_validator
-    from txnserver import dev_mode_validator
     from txnserver import web_api
     from gossip.gossip_core import GossipException
 
@@ -65,23 +65,46 @@ def local_main(config, windows_service=False, daemonized=False):
     validator = None
 
     try:
+        (nd, http_port) = parse_networking_info(config)
+        # to construct a validator, we pass it a consensus specific ledger
+        validator = None
+        ledger = None
+        ep_domain = None
         if ledgertype == 'poet0':
+            from journal.consensus.poet0 import poet_journal
             set_wait_timer_globals(config)
-            validator = poet0_validator.PoetValidator(
-                config,
-                windows_service=windows_service)
+            ledger = poet_journal.PoetJournal(nd, **config)
+            ep_domain = '/PoetValidator'
         elif ledgertype == 'quorum':
+            from journal.consensus.quorum import quorum_journal
+            ledger = quorum_journal.QuorumJournal(nd, **config)
+            ledger.initialize_quorum_map(config)
+            # quorum validator is still sub-classed for now...
             validator = quorum_validator.QuorumValidator(
+                nd,
+                ledger,
                 config,
-                windows_service=windows_service)
+                windows_service=windows_service,
+                http_port=http_port)
+            validator.EndpointDomain = '/QuorumValidator'
         elif ledgertype == 'dev_mode':
+            from journal.consensus.dev_mode import dev_mode_journal
             set_wait_timer_globals(config)
-            validator = dev_mode_validator.DevModeValidator(
-                config,
-                windows_service=windows_service)
+            ledger = dev_mode_journal.DevModeJournal(nd, **config)
+            ep_domain = '/DevModeValidator'
         else:
             warnings.warn('Unknown ledger type %s' % ledgertype)
             sys.exit(1)
+        if validator is None:
+            # null-check until we get rid of QuorumValidator subclass
+            validator = Validator(
+                nd,
+                ledger,
+                config,
+                windows_service=windows_service,
+                http_port=http_port,
+            )
+            validator.EndpointDomain = ep_domain
     except GossipException as e:
         print >> sys.stderr, str(e)
         sys.exit(1)
