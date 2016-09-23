@@ -44,6 +44,9 @@ class JournalStore(object):
     def __setitem__(self, key, value):
         return self.set(key, value)
 
+    def __delitem__(self, key):
+        self._database.delete(key)
+
     def __len__(self):
         return len(self._database)
 

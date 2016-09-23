@@ -30,6 +30,9 @@ class Database(object):
     def __setitem__(self, key, value):
         return self.set(key, value)
 
+    def __delitem__(self, key):
+        self.delete(key)
+
     def __len__(self):
         raise NotImplementedError()
 
