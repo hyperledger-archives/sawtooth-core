@@ -103,7 +103,8 @@ point to a valid URL for an existing http validator in the network.
 
 It is also important to set the "NodeName" value to a unique value based
 on your naming convention. The node's key, which must be generated using
-txnkeygen, must be named {node name}.wif and placed in the keys directory.
+the command *sawtooth keygen*, must be named {node name}.wif and placed 
+in the keys directory.
 
 Several other settings are important for correct functionality of the
 new validator node. The configuration file must contain the list of

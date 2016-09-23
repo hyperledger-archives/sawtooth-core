@@ -31,7 +31,7 @@ To use mktclient, you need the following:
     * The sawtooth distribution installed on one or more machines.
     * The URL and port for a validator in the validator network.
     * A valid key used for signing transactions (this can be generated
-      using txnkeygen).
+      using the command *sawtooth keygen*).
 
 Launching the MarketPlace Client
 ================================
@@ -334,7 +334,7 @@ To register a new participant named bob and then create an account, named
 .. code-block:: console
 
     $ cd {home}
-    $ ./bin/txnkeygen --keydir keys bob
+    $ ./bin/sawtooth keygen --key-dir keys bob
     $ cd {market}
     $ ./bin/mktclient --name bob
     //UNKNWONN> participant reg --name bob --description "My Name Is Bob" --waitforcommit --symbol BOB_ID
