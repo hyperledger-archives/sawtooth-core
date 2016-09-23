@@ -82,11 +82,11 @@ def local_main(config, windows_service=False, daemonized=False):
             # quorum validator is still sub-classed for now...
             validator = quorum_validator.QuorumValidator(
                 nd,
+                '/QuorumValidator',
                 ledger,
                 config,
                 windows_service=windows_service,
                 http_port=http_port)
-            validator.EndpointDomain = '/QuorumValidator'
         elif ledgertype == 'dev_mode':
             from journal.consensus.dev_mode import dev_mode_journal
             set_wait_timer_globals(config)
@@ -99,12 +99,12 @@ def local_main(config, windows_service=False, daemonized=False):
             # null-check until we get rid of QuorumValidator subclass
             validator = Validator(
                 nd,
+                ep_domain,
                 ledger,
                 config,
                 windows_service=windows_service,
                 http_port=http_port,
             )
-            validator.EndpointDomain = ep_domain
     except GossipException as e:
         print >> sys.stderr, str(e)
         sys.exit(1)
