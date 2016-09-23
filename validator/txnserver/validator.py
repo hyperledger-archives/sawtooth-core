@@ -109,11 +109,23 @@ class Validator(object):
 
     def __init__(self,
                  node_obj,
+                 endpoint_domain,
                  ledger_obj,
                  config,
                  windows_service=False,
                  http_port=None,
                  ):
+        '''
+        Creates a validator.  As a current side-effect, does some
+        initialization on it's ledger_obj argumenet
+        Args:
+            node_obj: (gossip.Node)
+            endpoint_domain: (str)
+            ledger_obj: (journal.Journal)
+            config: (dict)
+            windows_service: (bool)
+            http_port: (int)
+        '''
         self.status = 'stopped'
         self.Config = config
 
@@ -124,6 +136,7 @@ class Validator(object):
         self._endpoint_port = node_obj.endpoint_port
         self._endpoint_http_port = http_port
 
+        self.EndpointDomain = endpoint_domain
         self.Ledger = ledger_obj
 
         self.profile = self.Config.get('Profile', False)
