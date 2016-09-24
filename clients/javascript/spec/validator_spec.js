@@ -506,7 +506,7 @@ describe('validator', () => {
                     Identifier: "353c1562c1b2ce25",
                     PreviousBlockID: "0000000000000000",
                     Signature: "G64l3yMwGVk2/JlHux2zchN5ClR19cTYo8e0Ey49qt1e2avJDxCNmLHYdfHBEdwrlcqC0ZN6wfwAT1+Cft+aUkY=",
-                    TransactionBlockType: "/Lottery/PoetTransactionBlock",
+                    TransactionBlockType: "/Poet/PoetTransactionBlock",
                     TransactionIDs: [ ],
                     WaitCertificate: {
                         SerializedCert: "For The Sake of brevity, this is omitted",
@@ -524,7 +524,7 @@ describe('validator', () => {
                         Identifier: "353c1562c1b2ce25",
                         PreviousBlockID: "0000000000000000",
                         Signature: "G64l3yMwGVk2/JlHux2zchN5ClR19cTYo8e0Ey49qt1e2avJDxCNmLHYdfHBEdwrlcqC0ZN6wfwAT1+Cft+aUkY=",
-                        TransactionBlockType: "/Lottery/PoetTransactionBlock",
+                        TransactionBlockType: "/Poet/PoetTransactionBlock",
                         TransactionIDs: [ ],
                         WaitCertificate: {
                             SerializedCert: "For The Sake of brevity, this is omitted",
@@ -538,7 +538,7 @@ describe('validator', () => {
             });
 
             it('should retrieve just a specified field, when specified', (done) => {
-                _respondWith(fixture, 200, "/Lottery/PoetTransactionBlock");
+                _respondWith(fixture, 200, "/Poet/PoetTransactionBlock");
 
                 let promise = fixture.validator.getBlock('353c1562c1b2ce25', {
                     field: 'TransactionBlockType'
@@ -547,7 +547,7 @@ describe('validator', () => {
                 _assertGet(fixture, '/block/353c1562c1b2ce25/TransactionBlockType');
 
                 promise.then((fieldValue) => {
-                    assert.equal(fieldValue, '/Lottery/PoetTransactionBlock');
+                    assert.equal(fieldValue, '/Poet/PoetTransactionBlock');
                 })
                 .then(done)
                 .catch(done);
