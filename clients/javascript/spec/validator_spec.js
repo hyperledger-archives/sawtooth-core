@@ -759,7 +759,6 @@ describe('validator', () => {
                 _respondWith(fixture, 200, {
                     AllPeers: [ ],
                     Blacklist: [ ],
-                    Domain: "/LotteryValidator",
                     Host: "0.0.0.0",
                     HttpPort: null,
                     Name: "base000",
@@ -777,7 +776,6 @@ describe('validator', () => {
                     assert.deepEqual(statusInfo, {
                         AllPeers: [ ],
                         Blacklist: [ ],
-                        Domain: "/LotteryValidator",
                         Host: "0.0.0.0",
                         HttpPort: null,
                         Name: "base000",

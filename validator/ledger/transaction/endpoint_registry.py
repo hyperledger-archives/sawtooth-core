@@ -150,7 +150,6 @@ class Update(object):
         endpoint_registry.Update.KnownVerbs (list): A list of possible update
             actions.
         Verb (str): The action of this update, defaults to 'reg'.
-        Domain (str): The domain of the endpoint.
         Name (str): The name of the endpoint.
         NodeIdentifier (str): The identifier of the endpoint.
         NetHost (str): The hostname or IP address of the endpoint.
@@ -159,14 +158,14 @@ class Update(object):
     KnownVerbs = ['reg', 'unr']
 
     @staticmethod
-    def register_node(txn, nde, domain='/', httpport=None):
+    def register_node(txn, nde, httpport=None):
         """Creates a new Update object based on the attributes of a
         node.
 
         Args:
+            txn (EndpointRegistryTransaction)
             nde (Node): The node to create an endpoint registry update
                 object based on.
-            domain (str): The domain of the endpoint.
 
         Returns:
             endpoint_registry.Update: An update object for registering the
@@ -175,7 +174,6 @@ class Update(object):
         update = Update(txn)
 
         update.Verb = 'reg'
-        update.Domain = domain
         update.Name = nde.Name
         # Take the host/port form the endpoint host/port (i.e., the externally-
         # visible host/port) if it is present.  If not, take them from the
@@ -207,7 +205,6 @@ class Update(object):
         self.Transaction = txn
         self.Verb = minfo.get('Verb', 'reg')
 
-        self.Domain = minfo.get('Domain', '/')
         self.Name = minfo.get('Name', '')
         self.NetHost = minfo.get('NetHost', '0.0.0.0')
         self.NetPort = minfo.get('NetPort', 0)
@@ -215,8 +212,8 @@ class Update(object):
         self.NodeIdentifier = minfo.get('NodeIdentifier', NullIdentifier)
 
     def __str__(self):
-        return "({0} {1} {2} {3} {4}:{5} {4}:{6})".format(
-            self.Verb, self.NodeIdentifier, self.Name, self.Domain,
+        return "({0} {1} {2} {3}:{4} {3}:{5})".format(
+            self.Verb, self.NodeIdentifier, self.Name,
             self.NetHost, self.NetPort, self.HttpPort)
 
     def is_valid(self, store):
@@ -252,7 +249,6 @@ class Update(object):
         if self.Verb == 'reg':
             store[self.NodeIdentifier] = {
                 'Name': self.Name,
-                'Domain': self.Domain,
                 'Host': self.NetHost,
                 'Port': self.NetPort,
                 'HttpPort': self.HttpPort,
@@ -274,7 +270,6 @@ class Update(object):
 
         result = {
             'Verb': self.Verb,
-            'Domain': self.Domain,
             'Name': self.Name,
             'NetHost': self.NetHost,
             'NetPort': self.NetPort,
@@ -338,21 +333,20 @@ class EndpointRegistryTransaction(transaction.Transaction):
     MessageType = EndpointRegistryTransactionMessage
 
     @staticmethod
-    def register_node(nde, domain='/', httpport=None):
+    def register_node(nde, httpport=None):
         """Creates a new EndpointRegistryTransaction object based on
         the attributes of a node.
 
         Args:
             nde (Node): The node to create an endpoint registry update
                 object based on.
-            domain (str): The domain of the endpoint.
 
         Returns:
             endpoint_registry.Update: A transaction containing an update for
                 registering the node's details.
         """
         regtxn = EndpointRegistryTransaction()
-        regtxn.Update = Update.register_node(regtxn, nde, domain, httpport)
+        regtxn.Update = Update.register_node(regtxn, nde, httpport)
 
         return regtxn
 

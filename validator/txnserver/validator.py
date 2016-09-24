@@ -109,7 +109,6 @@ class Validator(object):
 
     def __init__(self,
                  node_obj,
-                 endpoint_domain,
                  ledger_obj,
                  config,
                  windows_service=False,
@@ -120,7 +119,6 @@ class Validator(object):
         initialization on it's ledger_obj argumenet
         Args:
             node_obj: (gossip.Node)
-            endpoint_domain: (str)
             ledger_obj: (journal.Journal)
             config: (dict)
             windows_service: (bool)
@@ -136,7 +134,6 @@ class Validator(object):
         self._endpoint_port = node_obj.endpoint_port
         self._endpoint_http_port = http_port
 
-        self.EndpointDomain = endpoint_domain
         self.Ledger = ledger_obj
 
         self.profile = self.Config.get('Profile', False)
@@ -189,7 +186,7 @@ class Validator(object):
 
         # send the transaction to remove this node from the endpoint
         # registry (or send it to the web server)
-        self.unregister_endpoint(self.Ledger.LocalNode, self.EndpointDomain)
+        self.unregister_endpoint(self.Ledger.LocalNode)
 
         # Need to wait long enough for all the shutdown packets to be sent out
         reactor.callLater(1.0, self.handle_ledger_shutdown)
@@ -457,11 +454,11 @@ class Validator(object):
         logger.info('ledger initialization complete')
         self.Ledger.initialization_complete()
         self.status = 'started'
-        self.register_endpoint(self.Ledger.LocalNode, self.EndpointDomain)
+        self.register_endpoint(self.Ledger.LocalNode)
 
-    def register_endpoint(self, node, domain='/'):
+    def register_endpoint(self, node):
         txn = endpoint_registry.EndpointRegistryTransaction.register_node(
-            node, domain, httpport=self._endpoint_http_port)
+            node, httpport=self._endpoint_http_port)
         txn.sign_from_node(node)
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
@@ -473,7 +470,7 @@ class Validator(object):
                     node.Name)
         self.Ledger.handle_message(msg)
 
-    def unregister_endpoint(self, node, domain='/'):
+    def unregister_endpoint(self, node):
         txn = endpoint_registry.EndpointRegistryTransaction \
             .unregister_node(node)
         txn.sign_from_node(node)
@@ -492,7 +489,7 @@ class Validator(object):
         client = EndpointClient(url)
 
         nodes = []
-        for epinfo in client.get_endpoint_list(domain=self.EndpointDomain):
+        for epinfo in client.get_endpoint_list():
             nodes.append(self._endpoint_info_to_node(epinfo))
         return nodes
 

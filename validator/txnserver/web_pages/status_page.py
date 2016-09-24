@@ -28,7 +28,6 @@ class StatusPage(BasePage):
     def render_get(self, request, components, msg):
         result = {}
         result['Status'] = self.Validator.status
-        result['Domain'] = self.Validator.EndpointDomain
         result['Name'] = self.Ledger.LocalNode.Name
         result['HttpPort'] = self.Validator.Config.get('HttpPort', None)
         result['Host'] = self.Ledger.LocalNode.NetHost

@@ -69,12 +69,10 @@ def local_main(config, windows_service=False, daemonized=False):
         # to construct a validator, we pass it a consensus specific ledger
         validator = None
         ledger = None
-        ep_domain = None
         if ledgertype == 'poet0':
             from journal.consensus.poet0 import poet_journal
             set_wait_timer_globals(config)
             ledger = poet_journal.PoetJournal(nd, **config)
-            ep_domain = '/PoetValidator'
         elif ledgertype == 'quorum':
             from journal.consensus.quorum import quorum_journal
             ledger = quorum_journal.QuorumJournal(nd, **config)
@@ -82,7 +80,6 @@ def local_main(config, windows_service=False, daemonized=False):
             # quorum validator is still sub-classed for now...
             validator = quorum_validator.QuorumValidator(
                 nd,
-                '/QuorumValidator',
                 ledger,
                 config,
                 windows_service=windows_service,
@@ -91,7 +88,6 @@ def local_main(config, windows_service=False, daemonized=False):
             from journal.consensus.dev_mode import dev_mode_journal
             set_wait_timer_globals(config)
             ledger = dev_mode_journal.DevModeJournal(nd, **config)
-            ep_domain = '/DevModeValidator'
         else:
             warnings.warn('Unknown ledger type %s' % ledgertype)
             sys.exit(1)
@@ -99,7 +95,6 @@ def local_main(config, windows_service=False, daemonized=False):
             # null-check until we get rid of QuorumValidator subclass
             validator = Validator(
                 nd,
-                ep_domain,
                 ledger,
                 config,
                 windows_service=windows_service,

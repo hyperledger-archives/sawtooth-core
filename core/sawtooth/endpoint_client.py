@@ -36,35 +36,30 @@ class EndpointClient(SawtoothClient):
             transaction_type=EndpointRegistryTransaction,
             message_type=EndpointRegistryTransaction.MessageType)
 
-    def get_endpoint_list(self, domain='/'):
+    def get_endpoint_list(self):
         """
         Retrieves the endpoint list from the validator.
 
         Args:
-            domain: The domain used to filter endpoints (i.e., a string to
-            match at the beginning of the endpoint's domain)
+            N/A
 
         Returns:
             A list of endpoints.  Each endpoint is an OrderedDict of values
             from EndpointRegistryTransaction.
         """
 
-        # Have the endpoint registry state refresh itself and then for each
-        # endpoint in the endpoint registry return a list of those that match
-        # the domain
+        # Refresh the endpoint registry, then return the values as a list
         self.fetch_state()
-        return [endpoint for _, endpoint in self.state.iteritems()
-                if endpoint.get('Domain', '/').startswith(domain)]
+        return [endpoint for _, endpoint in self.state.iteritems()]
 
-    def get_validator_url_list(self, domain='/'):
+    def get_validator_url_list(self):
         """
         A convenience function that is a specialization of endpoint_list that
         extracts the 'Host' and 'HttpPort' values for each endpoint and
         concatenates them to make a list of validator URLs.
 
         Args:
-            domain: The domain used to filter validators (i.e., a string to
-            match at the beginning of the endpoint's domain)
+            N/A
 
         Returns:
             A list of validator URLS, for example
@@ -74,5 +69,5 @@ class EndpointClient(SawtoothClient):
         # Rely upon base endpoint list fetch and simply create a new list
         # of validator URLs (i.e., the concatenation of host and HTTP port)
         return ['http://{0}:{1}'.format(e['Host'], e['HttpPort']) for e
-                in self.get_endpoint_list(domain)
+                in self.get_endpoint_list()
                 if 'HttpPort' in e and e['HttpPort'] != 0]
