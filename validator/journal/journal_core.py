@@ -312,6 +312,15 @@ class Journal(object):
         """
         return self.BlockStore.get(self.MostRecentCommittedBlockID)
 
+    @property
+    def CommittedBlockIDCount(self):
+        """Returns the count of blocks in the block store.
+
+        Returns:
+            int: count of blocks in the block store.
+        """
+        return len(self.BlockStore)
+
     def committed_block_ids(self, count=0):
         """Returns the list of block identifiers starting from the
         most recently committed block.

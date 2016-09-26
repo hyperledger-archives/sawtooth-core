@@ -34,9 +34,21 @@ class BlockPage(BasePage):
             blockid -- return the contents of the specified block
             blockid and fieldname -- return the specific field within the block
 
-        The request may specify additional parameters:
-            blockcount -- the total number of blocks to return (newest to
-                oldest)
+        The request may specify additional parameters when path is empty:
+            blockcount -- indicates the total number of blocks to return
+                (newest to oldest)
+            info -- when info equals one, returns block contents and newest
+                block id for range of blocks.  When info is in effect, uses
+                optional startid, blockcount, and short parameters as follows:
+                startid -- starts with specified block id;
+                    if startid is not specified, starts with newest block
+                blockcount -- indicates number of blocks to return;
+                    if blockcount equals zero, returns all blocks
+                    if blockcount is not specified, returns one block
+                short -- if short equals one or is not specified, then info
+                    includes BlockNum and PreviousBlockID
+                    if short is not equal to one, then all block content
+                    is included
 
         Blocks are returned newest to oldest.
         """
@@ -45,6 +57,11 @@ class BlockPage(BasePage):
             components.pop(0)
 
         if len(components) == 0:
+            if 'info' in msg:
+                if int(msg.get('info').pop(0)) is 1:
+                    binfo = self.render_info(request, components, msg)
+                    return binfo
+
             count = 0
             if 'blockcount' in msg:
                 count = int(msg.get('blockcount').pop(0))
@@ -73,3 +90,50 @@ class BlockPage(BasePage):
                 KeyError('unknown block field {0}'.format(field)))
 
         return binfo[field]
+
+    def render_info(self, request, components, msg):
+        GENESIS_PREVIOUS_BLOCK_ID = "0000000000000000"
+
+        if 'startid' in msg:
+            block_id = msg.get('startid').pop(0)
+            if block_id not in self.Ledger.BlockStore:
+                return self._encode_error_response(
+                    request,
+                    http.NOT_FOUND,
+                    KeyError('unknown block {0}'.format(block_id)))
+        else:
+            block_ids = self.Ledger.committed_block_ids(1)
+            if len(block_ids) is 0:
+                return self._encode_error_response(
+                    request,
+                    http.NOT_FOUND,
+                    KeyError('no committed blocks available'))
+            block_id = block_ids[0]
+
+        count = 1
+        if 'blockcount' in msg:
+            count = int(msg.get('blockcount').pop(0))
+        if count is 0:
+            count = self.Ledger.CommittedBlockIDCount
+
+        short = 1
+        if 'short' in msg:
+            short = 1 if int(msg.get('short').pop(0)) is 1 else 0
+
+        info = {}
+        # identify the head (newest) block
+        info["head"] = block_id
+        info["blocks"] = {}
+        for _ in range(0, count):
+            binfo = self.Ledger.BlockStore[block_id].dump()
+            if short is 1:
+                info["blocks"][block_id] = \
+                    {"PreviousBlockID": binfo["PreviousBlockID"],
+                     "BlockNum": binfo["BlockNum"]}
+            else:
+                info["blocks"][block_id] = binfo
+            block_id = binfo["PreviousBlockID"]
+            if block_id == GENESIS_PREVIOUS_BLOCK_ID:
+                break
+
+        return info
