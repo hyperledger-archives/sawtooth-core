@@ -19,6 +19,7 @@ import tempfile
 
 
 import gossip.signed_object as SigObj
+from gossip.gossip_core import Gossip
 from gossip.node import Node
 
 from journal.transaction import Transaction
@@ -186,9 +187,11 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         ident = SigObj.generate_identifier(signingkey)
         node = Node(identifier=ident, signingkey=signingkey,
                     address=("localhost", 10000))
+        gossip = Gossip(node)
+
         # Takes a journal, create a temporary directory to use with the journal
         path = tempfile.mkdtemp()
-        journal = Journal(node, DataDirectory=path)
+        journal = Journal(gossip, DataDirectory=path)
         # Need to sign TransactionBlock, use sign_from_node form signed object
         transBlock.sign_from_node(node)
         self.assertTrue(transBlock.is_valid(journal))
@@ -201,9 +204,10 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         ident = SigObj.generate_identifier(signingkey)
         node = Node(identifier=ident, signingkey=signingkey,
                     address=("localhost", 10001))
+        gossip = Gossip(node)
         # Takes a journal, create a temporary directory to use with the journal
         path = tempfile.mkdtemp()
-        journal = Journal(node, DataDirectory=path)
+        journal = Journal(gossip, DataDirectory=path)
         # Need to sign TransactionBlock, use sign_from_node form signed object
         try:
             transBlock.is_valid(journal)
@@ -218,9 +222,10 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         ident = SigObj.generate_identifier(signingkey)
         node = Node(identifier=ident, signingkey=signingkey,
                     address=("localhost", 10002))
+        gossip = Gossip(node)
         path = tempfile.mkdtemp()
         # Takes a journal, create a temporary directory to use with the journal
-        journal = Journal(node, DataDirectory=path)
+        journal = Journal(gossip, DataDirectory=path)
         transBlock.sign_from_node(node)
         missing = transBlock.missing_transactions(journal)
         # No missing transactions
@@ -249,9 +254,11 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         ident = SigObj.generate_identifier(signingkey)
         node = Node(identifier=ident, signingkey=signingkey,
                     address=("localhost", 10003))
+        gossip = Gossip(node)
+
         # Takes a journal, create a temporary directory to use with the journal
         path = tempfile.mkdtemp()
-        journal = Journal(node, DataDirectory=path)
+        journal = Journal(gossip, DataDirectory=path)
         transBlock.sign_from_node(node)
         transBlock.update_block_weight(journal)
         # No transactions

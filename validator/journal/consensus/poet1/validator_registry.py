@@ -25,17 +25,17 @@ from sawtooth.exceptions import InvalidTransactionError
 LOGGER = logging.getLogger(__name__)
 
 
-def register_transaction_types(ledger):
+def register_transaction_types(journal):
     """Registers the validator registry transaction types on the ledger.
 
     Args:
         ledger (journal.journal_core.Journal): The ledger to register
             the transaction type against.
     """
-    ledger.register_message_handler(
+    journal.dispatcher.register_message_handler(
         ValidatorRegistryTransactionMessage,
         transaction_message.transaction_message_handler)
-    ledger.add_transaction_store(ValidatorRegistryTransaction)
+    journal.add_transaction_store(ValidatorRegistryTransaction)
 
 
 class ValidatorRegistryTransactionMessage(

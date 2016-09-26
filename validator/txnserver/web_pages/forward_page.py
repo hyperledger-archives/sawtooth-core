@@ -72,7 +72,8 @@ class ForwardPage(BasePage):
                 # clone a copy of the ledger's message queue so we can
                 # temporarily play forward all locally submitted yet
                 # uncommitted transactions
-                my_queue = copy.deepcopy(self.Ledger.MessageQueue)
+                my_queue = copy.deepcopy(
+                    self.Ledger.gossip.IncomingMessageQueue)
 
                 transaction_type = mytxn.TransactionTypeName
                 if transaction_type not in temp_store_map.TransactionStores:
@@ -101,7 +102,8 @@ class ForwardPage(BasePage):
                 while len(my_queue) > 0:
                     qmsg = my_queue.pop()
                     if qmsg and \
-                            qmsg.MessageType in self.Ledger.MessageHandlerMap:
+                            qmsg.MessageType in \
+                            self.Ledger.gossip.MessageHandlerMap:
                         if (hasattr(qmsg, 'Transaction') and
                                 qmsg.Transaction is not None):
                             my_store = temp_store_map.get_transaction_store(
@@ -138,5 +140,5 @@ class ForwardPage(BasePage):
         # and finally execute the associated method
         # and send back the results
 
-        self.Ledger.handle_message(msg)
+        self.Ledger.gossip.handle_message(msg)
         return msg.dump()

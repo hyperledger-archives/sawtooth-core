@@ -38,15 +38,14 @@ class PoetJournal(journal_core.Journal):
         MaximumBlocksToKeep (int): The maximum number of blocks to
             keep.
     """
-    def __init__(self, node, **kwargs):
+    def __init__(self, gossip, **kwargs):
         """Constructor for the PoetJournal class.
 
         Args:
             node (Node): The local node.
         """
-        super(PoetJournal, self).__init__(node, **kwargs)
+        super(PoetJournal, self).__init__(gossip, **kwargs)
 
-        enclave_module = None
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
         else:
@@ -58,9 +57,7 @@ class PoetJournal(journal_core.Journal):
         WaitCertificate.poet_enclave = poet_enclave
         WaitTimer.poet_enclave = poet_enclave
 
-        self.onHeartbeatTimer += self._check_certificate
-
-        # initialize handlers
+        # initialize the poet handlers
         poet_transaction_block.register_message_handlers(self)
 
         # initialize stats specifically for the block chain journal
@@ -74,6 +71,8 @@ class PoetJournal(journal_core.Journal):
         # propagate the maximum blocks to keep
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
                                        WaitTimer.certificate_sample_length)
+
+        self.dispatcher.on_heartbeat += self._check_certificate
 
     def build_transaction_block(self, genesis=False):
         """Builds a transaction block that is specific to this particular
@@ -139,7 +138,7 @@ class PoetJournal(journal_core.Journal):
             nblock.TransactionIDs = txnlist
 
             nblock.create_wait_timer(
-                self.LocalNode.signing_address(),
+                self.gossip.LocalNode.signing_address(),
                 self._build_certificate_list(nblock))
 
             self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
@@ -185,11 +184,11 @@ class PoetJournal(journal_core.Journal):
             nblock (PoetTransactionBlock): The block to claim.
         """
         logger.info('node %s validates block with %d transactions',
-                    self.LocalNode.Name, len(nblock.TransactionIDs))
+                    self.gossip.LocalNode.Name, len(nblock.TransactionIDs))
 
         # Claim the block
         nblock.create_wait_certificate()
-        nblock.sign_from_node(self.LocalNode)
+        nblock.sign_from_node(self.gossip.LocalNode)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
@@ -198,11 +197,9 @@ class PoetJournal(journal_core.Journal):
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
         msg.TransactionBlock = nblock
-        msg.SenderID = self.LocalNode.Identifier
-        msg.sign_from_node(self.LocalNode)
+        self.sign_and_send_message(msg)
 
         self.PendingTransactionBlock = None
-        self.handle_message(msg)
 
     def _build_certificate_list(self, block):
         # for the moment we just dump all of these into one list,

@@ -23,11 +23,11 @@ from sawtooth.exceptions import InvalidTransactionError
 LOGGER = logging.getLogger(__name__)
 
 
-def _register_transaction_types(ledger):
-    ledger.register_message_handler(
+def _register_transaction_types(journal):
+    journal.dispatcher.register_message_handler(
         XoTransactionMessage,
         transaction_message.transaction_message_handler)
-    ledger.add_transaction_store(XoTransaction)
+    journal.add_transaction_store(XoTransaction)
 
 
 class XoTransactionMessage(transaction_message.TransactionMessage):

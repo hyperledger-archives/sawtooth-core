@@ -28,7 +28,8 @@ def register_message_handlers(journal):
         journal (QuorumJournal): The journal to register the handlers
             against.
     """
-    journal.register_message_handler(DumpQuorumMessage, _dumpquorumhandler)
+    journal.dispatcher.register_message_handler(
+        DumpQuorumMessage, _dumpquorumhandler)
 
 
 def _dumpquorumhandler(msg, journal):

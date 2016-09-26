@@ -24,13 +24,18 @@ def register_message_handlers(journal):
     """
     Register the message handlers that every journal should support.
     """
-    journal.register_message_handler(BlockListRequestMessage,
-                                     _blocklistrequesthandler)
-    journal.register_message_handler(UncommittedListRequestMessage,
-                                     _uncommittedlistrequesthandler)
-    journal.register_message_handler(BlockRequestMessage, _blockrequesthandler)
-    journal.register_message_handler(TransactionRequestMessage,
-                                     _txnrequesthandler)
+    journal.dispatcher.register_message_handler(
+        BlockListRequestMessage,
+        _blocklistrequesthandler)
+    journal.dispatcher.register_message_handler(
+        UncommittedListRequestMessage,
+        _uncommittedlistrequesthandler)
+    journal.dispatcher.register_message_handler(
+        BlockRequestMessage,
+        _blockrequesthandler)
+    journal.dispatcher.register_message_handler(
+        TransactionRequestMessage,
+        _txnrequesthandler)
 
 
 class BlockListRequestMessage(message.Message):
@@ -53,23 +58,24 @@ class BlockListRequestMessage(message.Message):
 
 
 def _blocklistrequesthandler(msg, journal):
-    source = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+    gossip = journal.gossip
+    source = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
     logger.debug(
         'processing incoming blocklist request for journal transfer from %s',
         source)
 
-    if msg.OriginatorID == journal.LocalNode.Identifier:
+    if msg.OriginatorID == gossip.LocalNode.Identifier:
         logger.info('node %s received its own request, ignore',
-                    journal.LocalNode.Identifier[:8])
+                    gossip.LocalNode.Identifier[:8])
         return
 
     if journal.Initializing:
-        src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received blocklist transfer request from %s prior to completing '
             'initialization',
             src)
-        journal.send_message(TransferFailedMessage(), msg.OriginatorID)
+        gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
     reply = BlockListReplyMessage()
@@ -85,7 +91,7 @@ def _blocklistrequesthandler(msg, journal):
 
     logger.debug('sending %d committed blocks to %s for request %s',
                  len(reply.BlockIDs), source, msg.Identifier[:8])
-    journal.send_message(reply, msg.OriginatorID)
+    gossip.send_message(reply, msg.OriginatorID)
 
 
 class BlockListReplyMessage(message.Message):
@@ -141,19 +147,20 @@ class UncommittedListRequestMessage(message.Message):
 
 
 def _uncommittedlistrequesthandler(msg, journal):
-    source = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+    gossip = journal.gossip
+    source = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
     logger.debug(
         'processing incoming uncommitted list request for journal transfer '
         'from %s',
         source)
 
-    if msg.OriginatorID == journal.LocalNode.Identifier:
+    if msg.OriginatorID == gossip.LocalNode.Identifier:
         logger.info('node %s received its own request, ignore',
-                    journal.LocalNode.Identifier[:8])
+                    gossip.LocalNode.Identifier[:8])
         return
 
     if journal.Initializing:
-        src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received uncommitted list transfer request from %s prior to '
             'completing initialization',
@@ -172,7 +179,7 @@ def _uncommittedlistrequesthandler(msg, journal):
 
     logger.debug('sending %d uncommitted txns to %s for request %s',
                  len(reply.TransactionIDs), source, msg.Identifier[:8])
-    journal.send_message(reply, msg.OriginatorID)
+    gossip.send_message(reply, msg.OriginatorID)
 
 
 class UncommittedListReplyMessage(message.Message):
@@ -225,14 +232,14 @@ class BlockRequestMessage(message.Message):
 
 def _blockrequesthandler(msg, journal):
     logger.debug('processing incoming block request for journal transfer')
-
+    gossip = journal.gossip
     if journal.Initializing:
-        src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received block transfer request from %s prior to completing '
             'initialization',
             src)
-        journal.send_message(TransferFailedMessage(), msg.OriginatorID)
+        gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
     reply = BlockReplyMessage()
@@ -243,10 +250,10 @@ def _blockrequesthandler(msg, journal):
         reply.TransactionBlockMessage = bmsg.dump()
     else:
         logger.warn('request for unknown block, %s', msg.BlockID[:8])
-        journal.send_message(TransferFailedMessage(), msg.OriginatorID)
+        gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
-    journal.send_message(reply, msg.OriginatorID)
+    gossip.send_message(reply, msg.OriginatorID)
 
 
 class BlockReplyMessage(message.Message):
@@ -299,14 +306,14 @@ class TransactionRequestMessage(message.Message):
 def _txnrequesthandler(msg, journal):
     logger.debug(
         'processing incoming transaction request for journal transfer')
-
+    gossip = journal.gossip
     if journal.Initializing:
-        src = journal.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received transaction transfer request from %s prior to '
             'completing initialization',
             src)
-        journal.send_message(TransferFailedMessage(), msg.OriginatorID)
+        gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
     reply = TransactionReplyMessage()
@@ -318,10 +325,10 @@ def _txnrequesthandler(msg, journal):
     else:
         logger.warn('request for unknown transaction, %s',
                     msg.TransactionID[:8])
-        journal.send_message(TransferFailedMessage(), msg.OriginatorID)
+        gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
-    journal.send_message(reply, msg.OriginatorID)
+    gossip.send_message(reply, msg.OriginatorID)
 
 
 class TransactionReplyMessage(message.Message):

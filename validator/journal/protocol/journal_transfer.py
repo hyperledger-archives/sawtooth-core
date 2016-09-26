@@ -81,16 +81,17 @@ class JournalTransfer(object):
                 the journal transfer has completed.
         """
         self.Journal = journal
+        self.gossip = journal.gossip
         self.Callback = callback
 
     def initiate_journal_transfer(self):
         """Initiates journal transfer to peers.
         """
-        if len(self.Journal.peer_list()) == 0:
+        if len(self.gossip.peer_list()) == 0:
             reactor.callLater(10, self.initiate_journal_transfer)
             return
 
-        self.Peer = random.choice(self.Journal.peer_list())
+        self.Peer = random.choice(self.gossip.peer_list())
         logger.info('initiate journal transfer from %s', self.Peer)
 
         self.BlockMap = OrderedDict()
@@ -101,30 +102,36 @@ class JournalTransfer(object):
         self.ProcessingUncommitted = False
         self.UncommittedTransactions = []
 
-        self.Journal.register_message_handler(BlockListReplyMessage,
-                                              self._blocklistreplyhandler)
-        self.Journal.register_message_handler(BlockReplyMessage,
-                                              self._blockreplyhandler)
-        self.Journal.register_message_handler(UncommittedListReplyMessage,
-                                              self._txnlistreplyhandler)
-        self.Journal.register_message_handler(TransactionReplyMessage,
-                                              self._txnreplyhandler)
-        self.Journal.register_message_handler(TransferFailedMessage,
-                                              self._failedhandler)
+        self.Journal.dispatcher.register_message_handler(
+            BlockListReplyMessage,
+            self._blocklistreplyhandler)
+        self.Journal.dispatcher.register_message_handler(
+            BlockReplyMessage,
+            self._blockreplyhandler)
+        self.Journal.dispatcher.register_message_handler(
+            UncommittedListReplyMessage,
+            self._txnlistreplyhandler)
+        self.Journal.dispatcher.register_message_handler(
+            TransactionReplyMessage,
+            self._txnreplyhandler)
+        self.Journal.dispatcher.register_message_handler(
+            TransferFailedMessage,
+            self._failedhandler)
 
         request = BlockListRequestMessage()
         request.BlockListIndex = 0
-        self.Journal.send_message(request, self.Peer.Identifier)
+        self.gossip.send_message(request, self.Peer.Identifier)
 
     def _failedhandler(self, msg, journal):
         logger.warn('journal transfer failed')
 
         # clear all of the message handlers
-        self.Journal.clear_message_handler(BlockListReplyMessage)
-        self.Journal.clear_message_handler(BlockReplyMessage)
-        self.Journal.clear_message_handler(UncommittedListReplyMessage)
-        self.Journal.clear_message_handler(TransactionReplyMessage)
-        self.Journal.clear_message_handler(TransferFailedMessage)
+        self.Journal.dispatcher.clear_message_handler(BlockListReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(BlockReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(
+            UncommittedListReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(TransactionReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(TransferFailedMessage)
 
         self.RetryID = reactor.callLater(10, self.initiate_journal_transfer)
 
@@ -138,7 +145,7 @@ class JournalTransfer(object):
             if blockid not in self.Journal.BlockStore:
                 request = BlockRequestMessage()
                 request.BlockID = blockid
-                self.Journal.send_message(request, self.Peer.Identifier)
+                self.gossip.send_message(request, self.Peer.Identifier)
                 return True
 
             # copy the block information
@@ -163,7 +170,7 @@ class JournalTransfer(object):
             if txnid not in self.Journal.TransactionStore:
                 request = TransactionRequestMessage()
                 request.TransactionID = txnid
-                self.Journal.send_message(request, self.Peer.Identifier)
+                self.gossip.send_message(request, self.Peer.Identifier)
                 return True
 
             self.TransactionMap[txnid] = self.Journal.TransactionStore[txnid]
@@ -184,7 +191,7 @@ class JournalTransfer(object):
         if len(msg.BlockIDs) > 0:
             request = BlockListRequestMessage()
             request.BlockListIndex = msg.BlockListIndex + len(msg.BlockIDs)
-            self.Journal.send_message(request, self.Peer.Identifier)
+            self.gossip.send_message(request, self.Peer.Identifier)
             return
 
         # no more block list messages, now start grabbing blocks
@@ -194,7 +201,7 @@ class JournalTransfer(object):
         # kick off retrieval of the uncommitted transactions
         request2 = UncommittedListRequestMessage()
         request2.TransactionListIndex = 0
-        self.Journal.send_message(request2, self.Peer.Identifier)
+        self.gossip.send_message(request2, self.Peer.Identifier)
 
     def _txnlistreplyhandler(self, msg, journal):
         logger.debug(
@@ -211,7 +218,7 @@ class JournalTransfer(object):
             request = UncommittedListRequestMessage()
             request.TransactionListIndex = msg.TransactionListIndex + len(
                 msg.TransactionIDs)
-            self.Journal.send_message(request, self.Peer.Identifier)
+            self.gossip.send_message(request, self.Peer.Identifier)
             return
 
         # if there are no more transactions, then get the next block
@@ -230,8 +237,8 @@ class JournalTransfer(object):
         # reply message so we need to decode it here... this is mostly to make
         # sure we have the handle to the gossiper for decoding
         btype = msg.TransactionBlockMessage['__TYPE__']
-        bmessage = self.Journal.unpack_message(btype,
-                                               msg.TransactionBlockMessage)
+        bmessage = self.gossip.unpack_message(btype,
+                                              msg.TransactionBlockMessage)
 
         self.BlockMap[
             bmessage.TransactionBlock.Identifier] = bmessage.TransactionBlock
@@ -260,7 +267,7 @@ class JournalTransfer(object):
         # message so we need to decode it here... this is mostly to make sure
         # we have the handle to the gossiper for decoding
         ttype = msg.TransactionMessage['__TYPE__']
-        tmessage = self.Journal.unpack_message(ttype, msg.TransactionMessage)
+        tmessage = self.gossip.unpack_message(ttype, msg.TransactionMessage)
 
         self.TransactionMap[
             tmessage.Transaction.Identifier] = tmessage.Transaction
@@ -326,11 +333,12 @@ class JournalTransfer(object):
             self.Journal.MostRecentCommittedBlockID[:8])
 
         # clear all of the message handlers
-        self.Journal.clear_message_handler(BlockListReplyMessage)
-        self.Journal.clear_message_handler(BlockReplyMessage)
-        self.Journal.clear_message_handler(UncommittedListReplyMessage)
-        self.Journal.clear_message_handler(TransactionReplyMessage)
-        self.Journal.clear_message_handler(TransferFailedMessage)
+        self.Journal.dispatcher.clear_message_handler(BlockListReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(BlockReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(
+            UncommittedListReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(TransactionReplyMessage)
+        self.Journal.dispatcher.clear_message_handler(TransferFailedMessage)
 
         # self.RetryID.cancel()
         self.Callback()

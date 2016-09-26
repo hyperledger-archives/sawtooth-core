@@ -20,10 +20,6 @@ import errno
 import logging
 import socket
 import time
-import copy
-
-from collections import deque
-from threading import Condition
 
 from twisted.internet import reactor, task
 from twisted.internet.protocol import DatagramProtocol
@@ -36,6 +32,7 @@ from gossip.messages import gossip_debug
 from gossip.messages import random_walk_message
 from gossip.messages import shutdown_message
 from gossip.messages import topology_message
+from gossip.message_queue import MessageQueue
 
 logger = logging.getLogger(__name__)
 
@@ -46,39 +43,6 @@ class GossipException(Exception):
 
     def __init__(self, msg):
         super(GossipException, self).__init__(msg)
-
-
-class MessageQueue(object):
-    """The message queue used internally by Gossip."""
-
-    def __init__(self):
-        self._queue = deque()
-        self._condition = Condition()
-
-    def pop(self):
-        self._condition.acquire()
-        try:
-            while len(self._queue) < 1:
-                self._condition.wait()
-            return self._queue.pop()
-        finally:
-            self._condition.release()
-
-    def __len__(self):
-        return len(self._queue)
-
-    def __deepcopy__(self, memo):
-        newmq = MessageQueue()
-        newmq._queue = copy.deepcopy(self._queue, memo)
-        return newmq
-
-    def appendleft(self, msg):
-        self._condition.acquire()
-        try:
-            self._queue.appendleft(msg)
-            self._condition.notify()
-        finally:
-            self._condition.release()
 
 
 class Gossip(object, DatagramProtocol):
@@ -111,7 +75,7 @@ class Gossip(object, DatagramProtocol):
             to call when a node becomes disconnected.
         onHeartbeatTimer (EventHandler): An EventHandler for functions
             to call when the heartbeat timer fires.
-        MessageQueue (MessageQueue): The queue of incoming messages.
+        IncomingMessageQueue (MessageQueue): The queue of incoming messages.
         ProcessIncomingMessages (bool): Whether or not to process incoming
             messages.
         Listener (Reactor.listenUDP): The UDP listener.
@@ -153,28 +117,26 @@ class Gossip(object, DatagramProtocol):
         self.NextCleanup = time.time() + self.CleanupInterval
         self.NextKeepAlive = time.time() + self.KeepAliveInterval
 
-        self._initgossipstats()
+        self._init_gossip_stats()
 
         connect_message.register_message_handlers(self)
-
         gossip_debug.register_message_handlers(self)
+        random_walk_message.register_message_handlers(self)
         shutdown_message.register_message_handlers(self)
         topology_message.register_message_handlers(self)
-        random_walk_message.register_message_handlers(self)
 
         # setup connectivity events
         self.onNodeDisconnect = event_handler.EventHandler('onNodeDisconnect')
 
         # setup the timer events
         self.onHeartbeatTimer = event_handler.EventHandler('onHeartbeatTimer')
-        self.onHeartbeatTimer += self._timertransmit
-        self.onHeartbeatTimer += self._timercleanup
-        self.onHeartbeatTimer += self._keepalive
-
+        self.onHeartbeatTimer += self._timer_transmit
+        self.onHeartbeatTimer += self._timer_cleanup
+        self.onHeartbeatTimer += self._keep_alive
         self._HeartbeatTimer = task.LoopingCall(self._heartbeat)
         self._HeartbeatTimer.start(0.05)
 
-        self.MessageQueue = MessageQueue()
+        self.IncomingMessageQueue = MessageQueue()
 
         try:
             self.ProcessIncomingMessages = True
@@ -190,7 +152,7 @@ class Gossip(object, DatagramProtocol):
                 "Failed to connect local "
                 "socket, server shutting down")
 
-    def _initgossipstats(self):
+    def _init_gossip_stats(self):
         self.PacketStats = stats.Stats(self.LocalNode.Name, 'packet')
         self.PacketStats.add_metric(stats.Average('BytesSent'))
         self.PacketStats.add_metric(stats.Average('BytesReceived'))
@@ -306,7 +268,7 @@ class Gossip(object, DatagramProtocol):
         # with an ack
         if packet.IsAcknowledgement:
             if srcpeer:
-                self._handleack(packet)
+                self._handle_ack(packet)
             return
 
         # first thing to do with the message is to send an ACK, all
@@ -315,7 +277,7 @@ class Gossip(object, DatagramProtocol):
         # that the peer exists
         if packet.IsReliable:
             if srcpeer:
-                self._sendack(packet, srcpeer)
+                self._send_ack(packet, srcpeer)
 
         # now unpack the rest of the message
         try:
@@ -382,10 +344,6 @@ class Gossip(object, DatagramProtocol):
         logger.warn('received message %s from an unknown peer %s', msg,
                     packet.SenderID[:8])
 
-    # --------------------------------- ###
-    # Utility functions                 ###
-    # --------------------------------- ###
-
     def _heartbeat(self):
         """Invoke functions that are connected to the heartbeat timer.
         """
@@ -395,7 +353,7 @@ class Gossip(object, DatagramProtocol):
         except:
             logger.exception('unhandled error occured during timer processing')
 
-    def _dowrite(self, msg, peer):
+    def _do_write(self, msg, peer):
         """Put a message on the wire.
 
         Args:
@@ -438,7 +396,7 @@ class Gossip(object, DatagramProtocol):
         self.PacketStats.BytesSent.add_value(sentbytes)
         return True
 
-    def _sendmsg(self, msg, destids):
+    def _send_msg(self, msg, destids):
         """Handle a request to send a message.
 
         Rather than send immediately we'll queue it up in the destination
@@ -462,7 +420,7 @@ class Gossip(object, DatagramProtocol):
 
             dstnode.enqueue_message(msg, now)
 
-    def _sendack(self, packet, peer):
+    def _send_ack(self, packet, peer):
         """Send an acknowledgement for a reliable packet.
 
         Args:
@@ -472,11 +430,11 @@ class Gossip(object, DatagramProtocol):
 
         logger.debug("sending ack for %s to %s", packet, peer)
 
-        self._dowrite(packet.create_ack(self.LocalNode.Identifier).pack(),
-                      peer)
+        self._do_write(packet.create_ack(self.LocalNode.Identifier).pack(),
+                       peer)
         self.PacketStats.MessagesAcked.increment()
 
-    def _handleack(self, incomingpkt):
+    def _handle_ack(self, incomingpkt):
         """Handle an incoming acknowledgement.
 
         Args:
@@ -515,7 +473,7 @@ class Gossip(object, DatagramProtocol):
         self.PacketStats.AcksReceived.increment()
         del self.PendingAckMap[incomingpkt.SequenceNumber]
 
-    def _timertransmit(self, now):
+    def _timer_transmit(self, now):
         """A periodic handler that iterates through the nodes and sends
         any packets that are queued for delivery.
 
@@ -544,11 +502,11 @@ class Gossip(object, DatagramProtocol):
                         if packet.IsReliable:
                             self.PendingAckMap[packet.SequenceNumber] = packet
 
-                        self._dowrite(packet.pack(), dstnode)
+                        self._do_write(packet.pack(), dstnode)
 
             dstnodes = newnodes
 
-    def _timercleanup(self, now):
+    def _timer_cleanup(self, now):
         """A periodic handler that performs a variety of cleanup operations
         including checks for dropped packets.
 
@@ -598,7 +556,7 @@ class Gossip(object, DatagramProtocol):
         for msgid in deleteq:
             del self.MessageHandledMap[msgid]
 
-    def _keepalive(self, now):
+    def _keep_alive(self, now):
         """A periodic handler that sends a keep alive message to all peers.
 
         Args:
@@ -620,21 +578,20 @@ class Gossip(object, DatagramProtocol):
 
     def _dispatcher(self):
         while self.ProcessIncomingMessages:
-            msg = self.MessageQueue.pop()
+            msg = self.IncomingMessageQueue.pop()
             try:
                 if msg and msg.MessageType in self.MessageHandlerMap:
+                    logger.warning("_dispatcher %s: %s",
+                                   msg,
+                                   self.MessageHandlerMap[msg.MessageType])
                     self.MessageHandlerMap[msg.MessageType][1](msg, self)
 
             # handle the attribute error specifically so that the
             # message type can be used in the next exception
-            except:
+            except Exception as e:
                 logger.exception(
-                    'unexpected error handling message of type %s',
-                    msg.MessageType)
-
-    # --------------------------------- ###
-    # Locally defined interface methods ###
-    # --------------------------------- ###
+                    'unexpected error handling message of type %s: %s',
+                    msg.MessageType, e)
 
     def shutdown(self):
         """Handle any shutdown processing.
@@ -651,7 +608,7 @@ class Gossip(object, DatagramProtocol):
         # to leave the socket open long enough to send the disconnect messages
         # that we just queued up
         self.ProcessIncomingMessages = False
-        self.MessageQueue.appendleft(None)
+        self.IncomingMessageQueue.appendleft(None)
 
     def register_message_handler(self, msg, handler):
         """Register a function to handle incoming messages for the
@@ -662,6 +619,7 @@ class Gossip(object, DatagramProtocol):
             handler (function): Function to be called when messages of
                 that type arrive.
         """
+        logger.warning("%s: %s", msg.MessageType, str(handler))
         self.MessageHandlerMap[msg.MessageType] = (msg, handler)
 
     def clear_message_handler(self, msg):
@@ -766,7 +724,7 @@ class Gossip(object, DatagramProtocol):
         if initialize:
             msg.sign_from_node(self.LocalNode)
 
-        self._sendmsg(msg, nodeids)
+        self._send_msg(msg, nodeids)
 
     def send_message(self, msg, nodeid, initialize=True):
         """Send an encoded message through the peers to the entire
@@ -803,10 +761,10 @@ class Gossip(object, DatagramProtocol):
         logger.debug('calling handler for message %s from %s of type %s',
                      msg.Identifier[:8], msg.SenderID[:8], msg.MessageType)
 
-        self.MessageHandledMap[msg.Identifier] = time.time(
-        ) + self.ExpireMessageTime
-        self.MessageQueue.appendleft(msg)
+        self.MessageHandledMap[msg.Identifier] = \
+            time.time() + self.ExpireMessageTime
+        self.IncomingMessageQueue.appendleft(msg)
 
         # and now forward it on to the peers if it is marked for forwarding
         if msg.IsForward and msg.TimeToLive > 0:
-            self._sendmsg(msg, self.peer_id_list(exceptions=[msg.SenderID]))
+            self._send_msg(msg, self.peer_id_list(exceptions=[msg.SenderID]))

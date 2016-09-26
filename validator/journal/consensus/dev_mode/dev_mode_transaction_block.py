@@ -29,7 +29,7 @@ def register_message_handlers(journal):
         journal (DevModeJournal): The journal on which to register the
             message handlers.
     """
-    journal.register_message_handler(
+    journal.dispatcher.register_message_handler(
         DevModeTransactionBlockMessage,
         transaction_block_message.transaction_block_message_handler)
 

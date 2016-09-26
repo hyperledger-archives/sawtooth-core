@@ -28,12 +28,12 @@ VALID_HANDS = ('ROCK', 'PAPER', 'SCISSORS')
 STATES = ('OPEN', 'COMPLETE')
 
 
-def _register_transaction_types(ledger):
-    ledger.register_message_handler(
+def _register_transaction_types(journal):
+    journal.dispatcher.register_message_handler(
         RPSTransactionMessage,
         transaction_message.transaction_message_handler,
     )
-    ledger.add_transaction_store(RPSTransaction)
+    journal.add_transaction_store(RPSTransaction)
 
 
 class RPSTransactionMessage(transaction_message.TransactionMessage):

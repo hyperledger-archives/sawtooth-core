@@ -26,17 +26,17 @@ from sawtooth_battleship.battleship_board import hash_space
 LOGGER = logging.getLogger(__name__)
 
 
-def _register_transaction_types(ledger):
+def _register_transaction_types(journal):
     """Registers the Battleship transaction types on the ledger.
 
     Args:
         ledger (journal.journal_core.Journal): The ledger to register
             the transaction type against.
     """
-    ledger.register_message_handler(
+    journal.dispatcher.register_message_handler(
         BattleshipTransactionMessage,
         transaction_message.transaction_message_handler)
-    ledger.add_transaction_store(BattleshipTransaction)
+    journal.add_transaction_store(BattleshipTransaction)
 
 
 class BattleshipTransactionMessage(transaction_message.TransactionMessage):

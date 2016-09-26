@@ -15,11 +15,13 @@
 
 import journal.global_store_manager
 import journal.journal_core
+import journal.journal_store
 import journal.transaction
 import journal.transaction_block
 
 __all__ = [
     'global_store_manager',
     'journal_core',
+    'journal_store',
     'transaction',
     'transaction_block']

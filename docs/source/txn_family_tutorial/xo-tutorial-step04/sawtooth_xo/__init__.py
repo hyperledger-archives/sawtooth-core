@@ -20,5 +20,5 @@ __all__ = [
 ]
 
 
-def register_transaction_types(ledger):
-    _register_transaction_types(ledger)
+def register_transaction_types(journal):
+    _register_transaction_types(journal)

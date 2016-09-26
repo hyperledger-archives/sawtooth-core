@@ -120,7 +120,7 @@ def do_genesis(args):
     # calling initialization_complete will create the genesis block
     ledger.initialization_complete()
     # simulate receiving the genesis block msg from reactor to force commit
-    msg = ledger.MessageQueue.pop()
+    msg = ledger.gossip.MessageQueue.pop()
     (_, msg_handler) = ledger.MessageHandlerMap[msg.MessageType]
     msg_handler(msg, ledger)
 

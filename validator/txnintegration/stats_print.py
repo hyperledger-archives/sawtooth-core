@@ -107,21 +107,23 @@ class StatsPrintManager(object):
         self.cp.cpprint("", True)
 
     def check_mode(self):
-        char_buffer = self.cp.scrn.getch()
-        if char_buffer == ord('g'):
-            self.view_mode = "general"
-        elif char_buffer == ord('p'):
-            self.view_mode = "platform"
-        elif char_buffer == ord('c'):
-            self.view_mode = "consensus"
-        elif char_buffer == ord('n'):
-            self.view_mode = "network"
-        elif char_buffer == ord('t'):
-            self.view_mode = "transaction"
-        elif char_buffer == ord('k'):
-            self.view_mode = "packet"
+        if self.cp.scrn:
+            char_buffer = self.cp.scrn.getch()
+            if char_buffer == ord('g'):
+                self.view_mode = "general"
+            elif char_buffer == ord('p'):
+                self.view_mode = "platform"
+            elif char_buffer == ord('c'):
+                self.view_mode = "consensus"
+            elif char_buffer == ord('n'):
+                self.view_mode = "network"
+            elif char_buffer == ord('t'):
+                self.view_mode = "transaction"
+            elif char_buffer == ord('k'):
+                self.view_mode = "packet"
 
-        return self.view_mode
+            return self.view_mode
+        return None
 
     def print_summary(self):
         validator_formatter = \

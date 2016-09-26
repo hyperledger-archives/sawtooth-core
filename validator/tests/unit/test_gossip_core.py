@@ -85,8 +85,8 @@ class TestGossipCore(unittest.TestCase):
         pak.add_message(msg, newNode, newNode, 0)
 
         # Following methods should update PacketStats
-        core._dowrite(pak.pack(), newNode)
-        core._sendack(pak, newNode)
+        core._do_write(pak.pack(), newNode)
+        core._send_ack(pak, newNode)
         data = pak.pack()
 
         # Following method should update MessageStats
@@ -161,11 +161,11 @@ class TestGossipCoreDatagram(unittest.TestCase):
         core = self._setup(9051)
         core.stopProtocol()
 
-    def test_gossip_datagram_recieved(self):
+    def test_gossip_datagram_received(self):
         # Test that datagramReceived behaves as expected
-        core = self._setup(9000)
-        peer = self._create_node(9001)
-        peer2 = self._create_node(9002)
+        core = self._setup(9500)
+        peer = self._create_node(9501)
+        peer2 = self._create_node(9502)
         core.add_node(peer)
         core.add_node(peer2)
         msg = self._create_msg()
@@ -261,14 +261,14 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         data = "test the pack"
         pak.Data = data
         # Test correct sending of bytes
-        status = core._dowrite(pak.pack(), newNode)
+        status = core._do_write(pak.pack(), newNode)
         self.assertTrue(status)
         stats = core.PacketStats.get_stats(["BytesSent"])
         self.assertNotEquals(stats["BytesSent"], [0, 0])
         # Test failure of message that is too big
         # This will print out an error
         core.MaximumPacketSize = 0
-        status = core._dowrite(pak.pack(), newNode)
+        status = core._do_write(pak.pack(), newNode)
         self.assertFalse(status)
 
     def test_gossip_sendmsg(self):
@@ -277,12 +277,12 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         # Send message to unknown node, will not add to queue
         newNode = self._create_node(8807)
         msg = self._create_msg()
-        core._sendmsg(msg, [newNode.Identifier])
+        core._send_msg(msg, [newNode.Identifier])
         self.assertEquals(str(newNode.MessageQ), "[]")
 
         # Make node known, should add to the queue
         core.add_node(newNode)
-        core._sendmsg(msg, [newNode.Identifier])
+        core._send_msg(msg, [newNode.Identifier])
         self.assertNotEquals(str(newNode.MessageQ), "[]")
 
     def test_gossip_ack_good(self):
@@ -292,14 +292,14 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         newNode = self._create_node(8809)
         core.add_node(newNode)
         newNode.is_peer = True
-        core._sendack(pak, newNode)
+        core._send_ack(pak, newNode)
 
         # Add pak to PendingAckMap
         msg = self._create_msg()
         pak.add_message(msg, newNode, newNode, 0)
         core.PendingAckMap[pak.SequenceNumber] = pak
         ack = pak.create_ack(newNode.Identifier)
-        core._handleack(ack)
+        core._handle_ack(ack)
         stats = core.PacketStats.get_stats(["AcksReceived"])
         self.assertEquals(stats["AcksReceived"], 1)
 
@@ -310,7 +310,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         newNode = self._create_node(8811)
         core.add_node(newNode)
         # Ignore acks from unexpected packets not in PendingAckMap
-        core._handleack(pak)
+        core._handle_ack(pak)
         stats = core.PacketStats.get_stats(["AcksReceived"])
         self.assertEquals(stats["AcksReceived"], 0)
 
@@ -323,7 +323,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.PendingAckMap[pak.SequenceNumber] = pak
         ack = pak.create_ack(newNode.Identifier)
         pak.DestinationID = badNode.Identifier
-        core._handleack(pak)
+        core._handle_ack(pak)
         stats = core.PacketStats.get_stats(["AcksReceived"])
         self.assertEquals(stats["AcksReceived"], 0)
 
@@ -350,20 +350,20 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         now = time.time()
         # Adds messages to PendingAckMap
         self.assertEqual(core.PendingAckMap, {})
-        core._timertransmit(now)
+        core._timer_transmit(now)
         self.assertNotEqual(core.PendingAckMap, {})
         self.assertEquals(len(core.PendingAckMap), 3)
         # Test _timercleanup
         now = time.time() + 10000
         # Clean up "dropped" packets
-        core._timercleanup(now)
+        core._timer_cleanup(now)
         self.assertEqual(core.PendingAckMap, {})
 
     def test_gossip_dispatcher(self):
         # Test _dispatch will not loop if not processing messages
         core = self._setup(8883)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
-        core.MessageQueue.appendleft(msg)
+        core.IncomingMessageQueue.appendleft(msg)
         # Should not run if ProcessIncomingMessages is False
         # Otherwise it will loop
         core.ProcessIncomingMessages = False
@@ -380,7 +380,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.add_node(node2)
         before = str(core.NodeMap)
         now = time.time() + 100
-        core._keepalive(now)
+        core._keep_alive(now)
         after = str(core.NodeMap)
         self.assertEquals(before, after)
 
@@ -389,7 +389,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         node3.MissedTicks = 110
         core.add_node(node3)
         now = now + 100
-        core._keepalive(now)
+        core._keep_alive(now)
         after2 = str(core.NodeMap)
         self.assertEquals(before, after2)
 
@@ -400,7 +400,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core = self._setup(8888)
         core.shutdown()
         self.assertFalse(core.ProcessIncomingMessages)
-        self.assertFalse(len(core.MessageQueue) == 0)
+        self.assertFalse(len(core.IncomingMessageQueue) == 0)
 
     def test_gossip_register_message_handlers(self):
         # Test that a message handler and type can be added and removed

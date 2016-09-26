@@ -28,16 +28,16 @@ class StatusPage(BasePage):
     def render_get(self, request, components, msg):
         result = {}
         result['Status'] = self.Validator.status
-        result['Name'] = self.Ledger.LocalNode.Name
+        result['Name'] = self.Ledger.gossip.LocalNode.Name
         result['HttpPort'] = self.Validator.Config.get('HttpPort', None)
-        result['Host'] = self.Ledger.LocalNode.NetHost
-        result['NodeIdentifier'] = self.Ledger.LocalNode.Identifier
-        result['Port'] = self.Ledger.LocalNode.NetPort
-        result['Blacklist'] = [x for x in self.Ledger.blacklist]
+        result['Host'] = self.Ledger.gossip.LocalNode.NetHost
+        result['NodeIdentifier'] = self.Ledger.gossip.LocalNode.Identifier
+        result['Port'] = self.Ledger.gossip.LocalNode.NetPort
+        result['Blacklist'] = [x for x in self.Ledger.gossip.blacklist]
         result['Peers'] = [
-            x.Name for x in self.Ledger.peer_list(allflag=False)
+            x.Name for x in self.Ledger.gossip.peer_list(allflag=False)
         ]
         result['AllPeers'] = [
-            x.Name for x in self.Ledger.peer_list(allflag=True)
+            x.Name for x in self.Ledger.gossip.peer_list(allflag=True)
         ]
         return result

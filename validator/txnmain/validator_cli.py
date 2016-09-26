@@ -23,6 +23,7 @@ import traceback
 import warnings
 import ctypes
 
+from gossip.gossip_core import Gossip
 from journal.consensus.poet0.wait_timer import set_wait_timer_globals
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
@@ -62,24 +63,23 @@ def local_main(config, windows_service=False, daemonized=False):
 
     ledgertype = config.get('LedgerType', 'poet0')
 
-    validator = None
-
     try:
-        (nd, http_port) = parse_networking_info(config)
+        (node, http_port) = parse_networking_info(config)
         # to construct a validator, we pass it a consensus specific ledger
         validator = None
         ledger = None
+        gossip = Gossip(node, **config)
         if ledgertype == 'poet0':
             from journal.consensus.poet0 import poet_journal
             set_wait_timer_globals(config)
-            ledger = poet_journal.PoetJournal(nd, **config)
+            ledger = poet_journal.PoetJournal(gossip, **config)
         elif ledgertype == 'quorum':
             from journal.consensus.quorum import quorum_journal
-            ledger = quorum_journal.QuorumJournal(nd, **config)
+            ledger = quorum_journal.QuorumJournal(gossip, **config)
             ledger.initialize_quorum_map(config)
             # quorum validator is still sub-classed for now...
             validator = quorum_validator.QuorumValidator(
-                nd,
+                gossip,
                 ledger,
                 config,
                 windows_service=windows_service,
@@ -87,14 +87,14 @@ def local_main(config, windows_service=False, daemonized=False):
         elif ledgertype == 'dev_mode':
             from journal.consensus.dev_mode import dev_mode_journal
             set_wait_timer_globals(config)
-            ledger = dev_mode_journal.DevModeJournal(nd, **config)
+            ledger = dev_mode_journal.DevModeJournal(gossip, **config)
         else:
             warnings.warn('Unknown ledger type %s' % ledgertype)
             sys.exit(1)
         if validator is None:
             # null-check until we get rid of QuorumValidator subclass
             validator = Validator(
-                nd,
+                gossip,
                 ledger,
                 config,
                 windows_service=windows_service,
