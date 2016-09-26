@@ -196,7 +196,7 @@ class Validator(object):
         reactor.callLater(1.0, self.handle_ledger_shutdown)
 
     def handle_ledger_shutdown(self):
-        self.journal.shutdown()
+        self.Ledger.shutdown()
         self.gossip.shutdown()
 
         # Need to wait long enough for all the shutdown packets to be sent out
