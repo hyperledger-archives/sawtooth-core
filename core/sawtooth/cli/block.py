@@ -43,12 +43,8 @@ def add_block_parser(subparsers, parent_parser):
     list_parser.add_argument(
         '--blockcount',
         type=int,
-        default=10,
-        help='list the maximum number of committed block IDs. Default: 10')
-    list_parser.add_argument(
-        '-a', '--all',
-        action='store_true',
-        help='list all of committed block IDs')
+        default=None,
+        help='the maximum number of committed block IDs to list. Default: all')
     list_parser.add_argument(
         '--format',
         action='store',
@@ -91,7 +87,7 @@ def do_block(args):
 
     try:
         if args.subcommand == 'list':
-            if args.all:
+            if args.blockcount is None:
                 blockids = web_client.get_block_list()
             else:
                 blockids = web_client.get_block_list(count=args.blockcount)
