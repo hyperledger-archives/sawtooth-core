@@ -199,8 +199,8 @@ it:
 
   PS C:\Users\username> Start-Service SawtoothValidator-Service
 
-Configure Validator
-===================
+Configuring the Validator
+=========================
 
 By default, the validator will start up as a 'base' validator.
 It will not reach out to other validator nodes, and it will initialize
@@ -246,6 +246,25 @@ called {node name}.addr.
 .. code-block:: none
 
   "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE"
+
+
+Security 
+--------
+
+You can instruct the validator to check whether or not the validator is being
+run under a user with elevated privileges (root in Linux, or administrator in
+Windows). If elevated privileges are being used, the validator stops with a
+warning.
+
+To run the privilege level check, change the "CheckElevated" setting to "true"
+in the configuration file:
+
+.. code-block:: none
+
+  "CheckElevated" : true
+
+This setting applies only to Linux and Windows operating systems.
+
 
 Uninstallation
 ==============
