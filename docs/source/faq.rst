@@ -9,17 +9,17 @@ Validators
 How do I change the validator configuration?
 --------------------------------------------
 
-The default configuration file is at
-`sawtooth-validator/etc/txnvalidator.js`. We recommend you copy that
-file to a new file in the same directory and make changes to the new file.
-When starting the txnvalidator, use the `--config` argument to reference
-the configuration file, In this example, we have copied the
-`txnvalidator.js` file to `single-node.js` and modified it:
+An example configuration file is at  `sawtooth-core/validator/etc/txnvalidator.js.example`. 
+Copy that file to a new file in
+the same directory and make changes to the new file. When starting the
+txnvalidator, use the `--config` argument to reference the configuration file,
+In this example, we have copied the `txnvalidator.js.example` file to `single-
+node.js` and modified it:
 
 .. code-block:: console
 
-    $ cd /project/sawtooth-validator
-    $ ./bin/txnvalidator -v --config ../etc/single-node.js
+    $ cd /project/sawtooth-core
+    $ ./bin/txnvalidator -v --config validator/etc/single-node.js
 
 Multiple config files can be overlaid, and all of the settings in the
 config file can be overridden on the command line, but that's beyond the
@@ -28,7 +28,7 @@ scope of this answer.
 What configuration changes should I make to run a single validator?
 -------------------------------------------------------------------
 
-Copy the `sawtooth-validator/etc/txnvalidator.js` to `single-node.js` and
+Copy the file `sawtooth-core/validator/etc/txnvalidator.js.example` to `single-node.js` and
 make the following changes:
 
 
