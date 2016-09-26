@@ -26,11 +26,8 @@ class QuorumValidator(validator.Validator):
     def start(self):
         if self.GenesisLedger:
             self.start_ledger()
-
-            def nop():
-                pass
-
-            reactor.callLater(2.0, self.initialize_ledger_topology, nop)
+            reactor.callLater(2.0, self.initialize_ledger_topology,
+                              lambda: None)
             return
         self.initialize_ledger_connection()
 
