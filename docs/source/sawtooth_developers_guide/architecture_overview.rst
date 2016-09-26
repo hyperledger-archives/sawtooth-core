@@ -33,19 +33,39 @@ of the distributed ledger, including:
 * 'built-in' transaction families - Endpoint Registry and Integer Key
   Registry
 
-**sawtooth-mktplace** - This repository contains the MarketPlace
-Transaction Family. This demonstrates how to inherit and extend base
-sawtooth-core object types to implement a custom transaction family.
-sawtooth-mktplace also includes a command line interface called
-*mktclient* for interacting with validators running the MarketPlace
-Transaction Family.
+Additionally, **sawtooth-core** also contains code that was previously located in separate repositories:
 
-**sawtooth-validator** - This repository contains the implementation
-of a server, known as the validator. The validator acts as a node on
-the gossip network, as defined by sawtooth-core. Validators exchange
-and act upon messages, as defined by the core classes and via
-additional plug-in transaction families like the MarketPlace
-Transaction Family.
+**validator** - The implementation of a server, known as the validator. The
+validator acts as a node on the gossip network, as defined by sawtooth-core.
+Validators exchange and act upon messages, as defined by the core classes and
+via additional plug-in transaction families like the MarketPlace Transaction
+Family.
+
+**mktplace** - This repository contains the MarketPlace Transaction Family.
+This demonstrates how to inherit and extend base sawtooth-core object types to
+implement a custom transaction family. sawtooth-mktplace also includes a
+command line interface called *mktclient* for interacting with validators
+running the MarketPlace Transaction Family.
+
+    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
+    * Tools including a Vagrant environment for easily launching a network of
+      validators
+    * Source files for this documentation
+
+
+One repository contains all of the the code needed:
+
+sawtooth-core
+    Contains fundamental classes used throughout the Sawtooth Lake project, as well as:
+
+    * The implementation of the validator process which runs on each node
+    * The implementation of a transaction family for buying, selling and
+      trading digital assets, and a client program for interacting with a node
+      to execute market transactions
+    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
+    * Tools including a Vagrant environment for easily launching a network of
+      validators
+    * Source files for this documentation
 
 Core Architecture
 =================
@@ -71,11 +91,11 @@ classes already present in the Communication and Journal layers.
    :scale: 50 %
    :align: center
 
-In addition to some in-built system ledgers (Endpoint Registry, and
-Integer Key Registry), implementing new classes in the ledger layer
-allows for the creation of new transaction families. The MarketPlace
-Transaction Family, located in the sawtooth-mktplace repository, is a
-good example of how the ledger layer can be extended.
+In addition to some in-built system ledgers (Endpoint Registry, and Integer
+Key Registry), implementing new classes in the ledger layer allows for the
+creation of new transaction families. The MarketPlace Transaction Family,
+located in the extensions directory of sawtooth-core, is a good example of how
+the ledger layer can be extended.
 
 Journals
 --------
@@ -238,8 +258,8 @@ implement __init__, __str__, is_valid, apply, and dump
 
 Refer to ledger.transaction.integer_key in sawtooth-core for a
 simple example, or to mktplace.transactions.market_place in
-sawtooth-mktplace for a more substantial example.
+sawtooth-core/extensions/mktplace for a more substantial example.
 
 Transaction Families are loaded into the validator in sawtooth-validator
 via the "TransactionFamilies" config value (see
-sawtooth-validator/etc/txnvalidator.js).
+sawtooth-core/validator/etc/txnvalidator.js).
