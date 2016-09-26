@@ -195,9 +195,10 @@ generate a key for each of them:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnkeygen --keydir validator/keys mkt
-   $ ./bin/txnkeygen --keydir validator/keys alice
-   $ ./bin/txnkeygen --keydir validator/keys bob
+   $ ./bin/sawtooth keygen --key-dir validator/keys mkt
+   $ ./bin/sawtooth keygen --key-dir validator/keys alice
+   $ ./bin/sawtooth keygen --key-dir validator/keys bob
+
 
 .. _mktplace-object-names-label:
 
