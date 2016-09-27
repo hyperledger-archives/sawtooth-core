@@ -54,22 +54,38 @@ class QuorumJournal(Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking calls
             to make when the heartbeat timer fires.
     """
-    def __init__(self, gossip, **kwargs):
+    def __init__(self, gossip, minimum_transactions_per_block=None,
+                 max_transactions_per_block=None, max_txn_age=None,
+                 genesis_ledger=None, restore=None, data_directory=None,
+                 store_type=None, vote_time_interval=None,
+                 ballot_time_interval=None, voting_quorum_target_size=None):
         """Constructor for the QuorumJournal class.
 
         Args:
             nd (Node): The local node.
         """
-        super(QuorumJournal, self).__init__(gossip, **kwargs)
+
+        super(QuorumJournal, self).__init__(gossip,
+                                            minimum_transactions_per_block,
+                                            max_transactions_per_block,
+                                            max_txn_age, genesis_ledger,
+                                            restore, data_directory,
+                                            store_type)
 
         # minimum time between votes
-        self.VoteTimeInterval = kwargs.get('VoteTimeInterval', 30.0)
+        if vote_time_interval is not None:
+            self.VoteTimeInterval = vote_time_interval
+        else:
+            self.VoteTimeInterval = 30.0
 
         # average fudge factor added to the vote interval
         self.VoteTimeFudgeFactor = 1.0
 
         # minimum time between ballots on a vote
-        self.BallotTimeInterval = kwargs.get('BallotTimeInterval', 5.0)
+        if ballot_time_interval is not None:
+            self.BallotTimeInterval = ballot_time_interval
+        else:
+            self.BallotTimeInterval = 5.0
 
         # average fudge factor added to the time interval
         self.BallotTimeFudgeFactor = 0.1
@@ -79,7 +95,10 @@ class QuorumJournal(Journal):
 
         # target size for local quorum set, note this should be a function of
         # network size
-        self.VotingQuorumTargetSize = kwargs.get('VotingQuorumTargetSize', 13)
+        if voting_quorum_target_size is not None:
+            self.VotingQuorumTargetSize = voting_quorum_target_size
+        else:
+            self.VotingQuorumTargetSize = 13
 
         self.QuorumMap = dict()
         self.VotingQuorum = dict()
@@ -97,8 +116,8 @@ class QuorumJournal(Journal):
         quorum_debug.register_message_handlers(self)
         quorum_transaction_block.register_message_handlers(self)
 
-    def initialize_quorum_map(self, config):
-        q = config.get('Quorum', [])
+    def initialize_quorum_map(self, quorum, nodes):
+        q = quorum
         if self.gossip.LocalNode.Name not in q:
             logger.fatal("node must be in its own quorum")
             self.shutdown()
@@ -109,7 +128,7 @@ class QuorumJournal(Journal):
             self.shutdown()
             return
         self.QuorumMap = {}
-        for nd_dict in config.get("Nodes", []):
+        for nd_dict in nodes:
             if nd_dict["NodeName"] in q:
                 addr = (socket.gethostbyname(nd_dict["Host"]), nd_dict["Port"])
                 nd = node.Node(address=addr,
