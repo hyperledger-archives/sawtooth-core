@@ -1037,6 +1037,8 @@ identifiers, ///$name
                     self.MarketClient.CreatorID = txnid
                     self.MarketState.CreatorID = txnid
                     logger.debug('self.MarketState.CreatorID: %s', txnid)
+                    self.MarketClient.waitforcommit(txnid)
+                    self.MarketState.fetch()
                     self.prompt = self.MarketState.i2n(txnid) + '> '
 
                     self.IdentityMap['_partid_'] = txnid
