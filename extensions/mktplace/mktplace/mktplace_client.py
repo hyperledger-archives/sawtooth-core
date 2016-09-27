@@ -15,24 +15,17 @@
 """
 Helper functions for creating and submitting marketplace transactions
 """
-
+import hashlib
 import logging
 import os
 import time
 
+import pybitcointools
+
 from twisted.web import http
 
 from gossip import node, signed_object
-from mktplace.transactions import account_update
-from mktplace.transactions import asset_type_update
-from mktplace.transactions import asset_update
-from mktplace.transactions import exchange_offer_update
-from mktplace.transactions import exchange_update
-from mktplace.transactions import holding_update
-from mktplace.transactions import liability_update
-from mktplace.transactions import market_place
-from mktplace.transactions import participant_update
-from mktplace.transactions import sell_offer_update
+from gossip.common import dict2cbor
 from mktplace.mktplace_communication import MarketPlaceCommunication
 from mktplace.mktplace_communication import MessageException
 from mktplace.mktplace_state import MarketPlaceState
@@ -285,18 +278,16 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: exchange transaction id
         :rtype: id
         """
-        if offerids is None:
-            offerids = []
-        update = exchange_update.Exchange()
+        update = {
+            'UpdateType': 'Exchange',
+            'InitialLiabilityId': payer,
+            'FinalLiabilityId': payee, 'OfferIdList': offerids or [],
+            'InitialCount': count
+        }
 
-        # Check current state for the correctness of the arguments
-
-        update.InitialLiabilityID = payer
-        update.FinalLiabilityID = payee
-        update.InitialCount = count
-        update.OfferIDList = offerids
-
-        return self._sendtxn(update)
+        return self._sendtxn(update, dependencies=[
+            payer, payee
+        ] + offerids)
 
     def register_asset(self,
                        assettype,
@@ -316,17 +307,17 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: asset id
         :rtype: id
         """
-        update = asset_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.AssetTypeID = assettype
-        update.Name = name
-        update.Description = description
-        update.Consumable = consumable
-        update.Restricted = restricted
-        update.Divisible = divisible
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterAsset',
+            'AssetTypeId': assettype,
+            'Name': name,
+            'Description': description,
+            'CreatorId': self.CreatorID,
+            'Consumable': consumable,
+            'Restricted': restricted,
+            'Divisible': divisible
+        }
+        return self._sendtxn(update, dependencies=[self.CreatorID, assettype])
 
     def unregister_asset(self, objectid):
         """
@@ -337,18 +328,30 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = asset_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterAsset',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_asset_name(self, objectid, name):
-        return self._update_name(asset_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateAssetName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def update_asset_description(self, objectid, description):
-        return self._update_description(asset_update, objectid, description)
+        update = {
+            'UpdateType': 'UpdateAssetDescription',
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def register_assettype(self, name='', description='', restricted=True):
         """
@@ -361,14 +364,14 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: asset type id
         :rtype: id
         """
-        update = asset_type_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.Name = name
-        update.Description = description
-        update.Restricted = restricted
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterAssetType',
+            'Name': name,
+            'Description': description,
+            'Restricted': restricted,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update, dependencies=[self.CreatorID])
 
     def unregister_assettype(self, objectid):
         """
@@ -379,19 +382,30 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = asset_type_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterAssetType',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_assettype_name(self, objectid, name):
-        return self._update_name(asset_type_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateAssetTypeName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def update_assettype_description(self, objectid, description):
-        return self._update_description(
-            asset_type_update, objectid, description)
+        update = {
+            'UpdateType': 'UpdateAssetTypeDescription',
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def register_exchangeoffer(self, iliability, oliability, ratio, **kwargs):
         """
@@ -415,30 +429,20 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: exchange offer id
         :rtype: id
         """
-
-        update = exchange_offer_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.InputID = iliability
-        update.OutputID = oliability
-        update.Ratio = float(ratio)
-
-        if 'name' in kwargs:
-            update.Name = kwargs['name']
-
-        if 'description' in kwargs:
-            update.Description = kwargs['description']
-
-        if 'minimum' in kwargs:
-            update.Minimum = int(kwargs['minimum'])
-
-        if 'maximum' in kwargs:
-            update.Maximum = int(kwargs['maximum'])
-
-        if 'execution' in kwargs:
-            update.Execution = kwargs['execution']
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterExchangeOffer',
+            'CreatorId': self.CreatorID,
+            'InputId': iliability,
+            'OutputId': oliability,
+            'Ratio': float(ratio),
+            'Minimum': kwargs.get('minimum', 1),
+            'Maximum': kwargs.get('maximum', 20000000000),
+            'Name': kwargs.get('name', ''),
+            'Description': kwargs.get('description', ''),
+            'Execution': kwargs.get('execution', 'Any')
+        }
+        return self._sendtxn(update, dependencies=[
+            iliability, oliability, self.CreatorID])
 
     def unregister_exchangeoffer(self, objectid):
         """
@@ -449,19 +453,27 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = exchange_offer_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterExchangeOffer',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_exchangeoffer_name(self, objectid, name):
-        return self._update_name(exchange_offer_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateExchangeOfferName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def update_exchangeoffer_description(self, objectid, description):
-        return self._update_description(
-            exchange_offer_update, objectid, description)
+        update = {}
+        update['ObjectId'] = objectid
+        update['Description'] = description
+        return self._sendtxn(update)
 
     def register_holding(self, account, asset, count, name='', description=''):
         """
@@ -477,16 +489,18 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: holding id
         :rtype: id
         """
-        update = holding_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.AccountID = account
-        update.AssetID = asset
-        update.Count = count
-        update.Name = name
-        update.Description = description
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterHolding',
+            'AccountId': account,
+            'AssetId': asset,
+            'Count': count,
+            'CreatorId': self.CreatorID,
+            'Name': name,
+            'Description': description
+        }
+        return self._sendtxn(update, dependencies=[
+            self.CreatorID, account, asset
+        ])
 
     def unregister_holding(self, objectid):
         """
@@ -497,18 +511,30 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = holding_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterHolding',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_holding_name(self, objectid, name):
-        return self._update_name(holding_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateHoldingName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        self._sendtxn(update)
 
     def update_holding_description(self, objectid, description):
-        return self._update_description(holding_update, objectid, description)
+        update = {
+            'UpdateType': 'UpdateHoldingDescription',
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def register_liability(self,
                            account,
@@ -532,17 +558,19 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: liability id
         :rtype: id
         """
-        update = liability_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.AccountID = account
-        update.AssetTypeID = assettype
-        update.GuarantorID = guarantor if guarantor else self.CreatorID
-        update.Count = count
-        update.Name = name
-        update.Description = description
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterLiability',
+            'AccountId': account,
+            'AssetTypeId': assettype,
+            'GuarantorId': guarantor,
+            'CreatorId': self.CreatorID,
+            'Count': count,
+            'Name': name,
+            'Description': description
+        }
+        return self._sendtxn(update, dependencies=[
+            self.CreatorID, assettype
+        ])
 
     def unregister_liability(self, objectid):
         """
@@ -553,19 +581,30 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = liability_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterLiability',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_liability_name(self, objectid, name):
-        return self._update_name(liability_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateLiabilityName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def update_liability_description(self, objectid, description):
-        return self._update_description(
-            liability_update, objectid, description)
+        update = {
+            'UpdateType': 'UpdateLiabilityDescription',
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def register_participant(self, name='', description=''):
         """
@@ -578,11 +617,11 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: participant id
         :rtype: id
         """
-        update = participant_update.Register()
-
-        update.Name = name
-        update.Description = description
-
+        update = {
+            'UpdateType': 'RegisterParticipant',
+            'Name': name,
+            'Description': description
+        }
         return self._sendtxn(update)
 
     def unregister_participant(self, objectid):
@@ -594,19 +633,30 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = participant_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterParticipant',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_participant_name(self, objectid, name):
-        return self._update_name(participant_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateParticipantName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def update_participant_description(self, objectid, description):
-        return self._update_description(
-            participant_update, objectid, description)
+        update = {
+            'UpdateType': 'UpdateParticipantDescription',
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def register_selloffer(self, iliability, oholding, ratio, **kwargs):
         """
@@ -630,30 +680,21 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: exchange offer id
         :rtype: id
         """
-
-        update = sell_offer_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.InputID = iliability
-        update.OutputID = oholding
-        update.Ratio = float(ratio)
-
-        if 'name' in kwargs:
-            update.Name = kwargs['name']
-
-        if 'description' in kwargs:
-            update.Description = kwargs['description']
-
-        if 'minimum' in kwargs:
-            update.Minimum = int(kwargs['minimum'])
-
-        if 'maximum' in kwargs:
-            update.Maximum = int(kwargs['maximum'])
-
-        if 'execution' in kwargs:
-            update.Execution = kwargs['execution']
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterSellOffer',
+            'CreatorId': self.CreatorID,
+            'InputId': iliability,
+            'OutputId': oholding,
+            'Ratio': float(ratio),
+            'Name': kwargs.get('name', ''),
+            'Description': kwargs.get('description', ''),
+            'Minimum': kwargs.get('minimum', 0),
+            'Maximum': kwargs.get('maximum', 2000000000000000),
+            'Execution': kwargs.get('execution', 'Any')
+        }
+        return self._sendtxn(update, dependencies=[
+            self.CreatorID, iliability, oholding
+        ])
 
     def unregister_selloffer(self, objectid):
         """
@@ -664,19 +705,31 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = sell_offer_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterSellOffer',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_selloffer_name(self, objectid, name):
-        return self._update_name(sell_offer_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateSellOfferName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+
+        return self._sendtxn(update)
 
     def update_selloffer_description(self, objectid, description):
-        return self._update_description(
-            sell_offer_update, objectid, description)
+        update = {
+            'UpdateType': "UpdateSellOfferDescription",
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def register_account(self, name='', description=''):
         """
@@ -689,13 +742,13 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: account id
         :rtype: id
         """
-        update = account_update.Register()
-
-        update.CreatorID = self.CreatorID
-        update.Name = name
-        update.Description = description
-
-        return self._sendtxn(update)
+        update = {
+            'UpdateType': 'RegisterAccount',
+            'Name': name,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update, dependencies=[self.CreatorID])
 
     def unregister_account(self, objectid):
         """
@@ -706,15 +759,27 @@ class MarketPlaceClient(MarketPlaceCommunication):
         :return: unregister transaction identifier
         :rtype: id
         """
-        update = account_update.Unregister()
-
-        update.CreatorID = self.CreatorID
-        update.ObjectID = objectid
-
+        update = {
+            'UpdateType': 'UnregisterAccount',
+            'ObjectId': objectid,
+            'CreatorId': self.CreatorID
+        }
         return self._sendtxn(update)
 
     def update_account_name(self, objectid, name):
-        return self._update_name(account_update, objectid, name)
+        update = {
+            'UpdateType': 'UpdateAccountName',
+            'ObjectId': objectid,
+            'Name': name,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
 
     def update_account_description(self, objectid, description):
-        return self._update_description(account_update, objectid, description)
+        update = {
+            'UpdateType': 'UpdateAccountDescription',
+            'ObjectId': objectid,
+            'Description': description,
+            'CreatorId': self.CreatorID
+        }
+        return self._sendtxn(update)
