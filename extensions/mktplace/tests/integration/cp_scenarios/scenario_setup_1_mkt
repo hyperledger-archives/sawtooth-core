@@ -3,8 +3,10 @@ participant reg --name mkt --description "mkt Participant"
 account reg --name /market/account
 assettype reg --name /asset-type/currency --description "Currency asset type"
 assettype reg --name /asset-type/commercialpaper --description "Commercial Paper asset type" --no-restricted
+waitforcommit
 asset reg --name /asset/currency/USD --type /asset-type/currency
 asset reg --name /asset/commercialpaper/note --type /asset-type/commercialpaper --no-restricted
+waitforcommit
 holding reg --name /market/holding/currency/USD --count 200000000 --account /market/account --asset /asset/currency/USD
 holding reg --name /market/holding/token --count 1 --account /market/account --asset //marketplace/asset/token
 waitforcommit
