@@ -98,7 +98,7 @@ class TestWebApi(unittest.TestCase):
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
 
-        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
         validator = TestValidator(ledger)
         root = BasePage(validator)
         request = self._create_get_request("/stat", {})
@@ -113,7 +113,7 @@ class TestWebApi(unittest.TestCase):
         local_node = self._create_node(8807)
         gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
-        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
         # Create peers for the message to be forwarded to
         node1 = self._create_node(8881)
         node2 = self._create_node(8882)
@@ -139,7 +139,7 @@ class TestWebApi(unittest.TestCase):
         local_node = self._create_node(8800)
         gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
-        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
         validator = TestValidator(ledger)
         store_page = StorePage(validator)
         request = self._create_get_request("/store", {})
@@ -196,7 +196,7 @@ class TestWebApi(unittest.TestCase):
         gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
-        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
         validator = TestValidator(ledger)
         block_page = BlockPage(validator)
 
@@ -243,7 +243,7 @@ class TestWebApi(unittest.TestCase):
         gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
-        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
         validator = TestValidator(ledger)
         transaction_page = TransactionPage(validator)
 
@@ -295,7 +295,7 @@ class TestWebApi(unittest.TestCase):
         gossip = Gossip(local_node)
         path = tempfile.mkdtemp()
         # Setup ledger and RootPage
-        ledger = Journal(gossip, DataDirectory=path, GenesisLedger=True)
+        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
         validator = TestValidator(ledger)
         statistics_page = StatisticsPage(validator)
         request = self._create_get_request("/stat", {})

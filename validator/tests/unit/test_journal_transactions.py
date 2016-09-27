@@ -191,7 +191,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
 
         # Takes a journal, create a temporary directory to use with the journal
         path = tempfile.mkdtemp()
-        journal = Journal(gossip, DataDirectory=path)
+        journal = Journal(gossip, data_directory=path)
         # Need to sign TransactionBlock, use sign_from_node form signed object
         transBlock.sign_from_node(node)
         self.assertTrue(transBlock.is_valid(journal))
@@ -207,7 +207,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         gossip = Gossip(node)
         # Takes a journal, create a temporary directory to use with the journal
         path = tempfile.mkdtemp()
-        journal = Journal(gossip, DataDirectory=path)
+        journal = Journal(gossip, data_directory=path)
         # Need to sign TransactionBlock, use sign_from_node form signed object
         try:
             transBlock.is_valid(journal)
@@ -225,7 +225,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         gossip = Gossip(node)
         path = tempfile.mkdtemp()
         # Takes a journal, create a temporary directory to use with the journal
-        journal = Journal(gossip, DataDirectory=path)
+        journal = Journal(gossip, data_directory=path)
         transBlock.sign_from_node(node)
         missing = transBlock.missing_transactions(journal)
         # No missing transactions
@@ -258,7 +258,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
 
         # Takes a journal, create a temporary directory to use with the journal
         path = tempfile.mkdtemp()
-        journal = Journal(gossip, DataDirectory=path)
+        journal = Journal(gossip, data_directory=path)
         transBlock.sign_from_node(node)
         transBlock.update_block_weight(journal)
         # No transactions
