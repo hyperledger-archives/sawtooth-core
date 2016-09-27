@@ -16,11 +16,14 @@
 import logging
 import sys
 
+from journal import transaction
+from sawtooth.exceptions import InvalidTransactionError
+
 from mktplace.transactions import liability_update
 from mktplace.transactions import market_place_object_update
 from mktplace.transactions import participant_update
 from mktplace.transactions import sell_offer_update
-from gossip.common import dict2json
+
 
 logger = logging.getLogger(__name__)
 
@@ -113,144 +116,168 @@ class ExchangeOfferObject(market_place_object_update.MarketPlaceObject):
         return result
 
 
-class Register(market_place_object_update.Register):
-    UpdateType = '/mktplace.transactions.ExchangeOfferUpdate/Register'
+class Register(transaction.Update):
+    UpdateType = 'RegisterExchangeOffer'
     ObjectType = ExchangeOfferObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Register, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 creator_id=None,
+                 input_id=None,
+                 output_id=None,
+                 ratio=1.0,
+                 description=None,
+                 name=None,
+                 minimum=1,
+                 maximum=None,
+                 execution=None):
+        super(Register, self).__init__(update_type)
 
-        self.CreatorID = minfo.get('CreatorID', '**UNKNOWN**')
-        self.InputID = minfo.get('InputID', '**UNKNOWN**')
-        self.OutputID = minfo.get('OutputID', '**UNKNOWN**')
-        self.Ratio = float(minfo.get('Ratio', 1.0))
-        self.Description = minfo.get('Description', '')
-        self.Name = minfo.get('Name', '')
-        self.Minimum = int(minfo.get('Minimum', 0))
-        self.Maximum = int(minfo.get('Maximum', sys.maxint))
-        self.Execution = minfo.get('Execution', 'Any')
+        self._creator_id = creator_id or '**UNKNOWN**'
+        self._input_id = input_id or '**UNKNOWN**'
+        self._output_id = output_id or '**UNKNOWN**'
+        self._ratio = ratio
+        self._description = description or ''
+        self._name = name or ''
+        self._minimum = minimum
+        self._maximum = maximum or sys.maxint
+        self._execution = execution or 'Any'
 
     @property
     def References(self):
-        return [self.CreatorID, self.InputID, self.OutputID]
+        return [self._creator_id, self._input_id, self._output_id]
 
-    def is_valid(self, store):
-        if not super(Register, self).is_valid(store):
-            logger.debug('something weird happened; %s',
-                         dict2json(self.dump()))
-            return False
+    def check_valid(self, store, txn):
+        if txn.Identifier in store:
+            raise InvalidTransactionError(
+                "ObjectId already in store")
 
-        if not self.is_permitted(store):
-            logger.debug('failed permission check on offer %s', self.ObjectID)
-            return False
+        if not market_place_object_update.global_is_valid_name(
+                store, self._name, self.ObjectType, self._creator_id):
+            raise InvalidTransactionError(
+                "Name isn't valid")
 
-        if not liability_update.LiabilityObject.is_valid_object(store,
-                                                                self.InputID):
+        if not market_place_object_update.global_is_permitted(
+                store,
+                txn,
+                self._creator_id,
+                self.CreatorType):
+            logger.debug('failed permission check on offer %s',
+                         txn.Identifier)
+            raise InvalidTransactionError(
+                "Creator address not the same as txn.OriginatorID")
+
+        if not liability_update.LiabilityObject.is_valid_object(
+                store, self._input_id):
             logger.debug('input liability %s is not valid in offer %s ',
-                         self.InputID, self.ObjectID)
-            return False
+                         self._input_id, txn.Identifier)
+            raise InvalidTransactionError(
+                "InputId, {}, is not a liability".format(str(self._input_id)))
 
-        obj = liability_update.LiabilityObject.get_valid_object(store,
-                                                                self.InputID)
+        obj = liability_update.LiabilityObject.get_valid_object(
+            store, self._input_id)
         if not self.CreatorType.is_valid_creator(store, obj.get('creator'),
-                                                 self.OriginatorID):
+                                                 txn.OriginatorID):
             logger.info('%s does not have permission to modify liability %s',
-                        self.OriginatorID, self.InputID)
-            return False
+                        txn.OriginatorID, self._input_id)
+            raise InvalidTransactionError(
+                "txn.OriginatorID is not liability creator")
 
-        if not liability_update.LiabilityObject.is_valid_object(store,
-                                                                self.OutputID):
+        if not liability_update.LiabilityObject.is_valid_object(
+                store, self._output_id):
             logger.debug('output liability %s is not valid in offer %s ',
-                         self.OutputID, self.ObjectID)
-            return False
+                         self._output_id, txn.Identifier)
+            raise InvalidTransactionError(
+                "OutputID is not a valid liability")
 
-        obj = liability_update.LiabilityObject.get_valid_object(store,
-                                                                self.OutputID)
+        obj = liability_update.LiabilityObject.get_valid_object(
+            store, self._output_id)
         if not self.CreatorType.is_valid_creator(store, obj.get('creator'),
-                                                 self.OriginatorID):
+                                                 txn.OriginatorID):
             logger.info('%s does not have permission to modify liability %s',
-                        self.OriginatorID, self.OutputID)
-            return False
+                        txn.OriginatorID, self._output_id)
+            raise InvalidTransactionError(
+                "Output Liability creator is not the same as "
+                "txn.OriginatorID")
 
-        if self.Ratio <= 0:
-            logger.debug('invalid ratio %s in offer %s', self.Ratio,
-                         self.ObjectID)
-            return False
+        if self._ratio <= 0:
+            logger.debug('invalid ratio %s in offer %s', self._ratio,
+                         txn.Identifier)
+            raise InvalidTransactionError(
+                "Ratio is less than or equal to 0")
 
-        if self.Minimum < 0 or self.Maximum < 0 or self.Maximum < self.Minimum:
+        if self._minimum < 0 or self._maximum < 0 or \
+                self._maximum < self._minimum:
             logger.debug('inconsistent range %s < %s in offer %s',
-                         self.Minimum, self.Maximum, self.ObjectID)
-            return False
+                         self._minimum, self._maximum, txn.Identifier)
+            raise InvalidTransactionError(
+                "Minimum and Maximum are inconsistent")
 
-        if self.Execution not in ExchangeOfferObject.ExecutionStyle:
+        if self._execution not in ExchangeOfferObject.ExecutionStyle:
             logger.debug('invalid execution style %s in offer %s',
-                         self.Execution, self.ObjectID)
-            return False
+                         self._execution, txn.Identifier)
+            raise InvalidTransactionError(
+                "Execution not a valid ExecutionStyle")
 
-        return True
+    def apply(self, store, txn):
+        pobj = self.ObjectType(txn.Identifier)
 
-    def apply(self, store):
-        super(Register, self).apply(store)
-        pobj = self.ObjectType(self.ObjectID)
+        pobj.CreatorID = self._creator_id
+        pobj.InputID = self._input_id
+        pobj.OutputID = self._output_id
+        pobj.Ratio = float(self._ratio)
+        pobj.Description = self._description
+        pobj.Name = self._name
+        pobj.Minimum = self._minimum
+        pobj.Maximum = self._maximum
+        pobj.Execution = self._execution
 
-        pobj.CreatorID = self.CreatorID
-        pobj.InputID = self.InputID
-        pobj.OutputID = self.OutputID
-        pobj.Ratio = float(self.Ratio)
-        pobj.Description = self.Description
-        pobj.Name = self.Name
-        pobj.Minimum = self.Minimum
-        pobj.Maximum = self.Maximum
-        pobj.Execution = self.Execution
-
-        store[self.ObjectID] = pobj.dump()
-
-    def dump(self):
-        result = super(Register, self).dump()
-
-        result['CreatorID'] = self.CreatorID
-        result['InputID'] = self.InputID
-        result['OutputID'] = self.OutputID
-        result['Ratio'] = float(self.Ratio)
-        result['Description'] = self.Description
-        result['Name'] = self.Name
-        result['Minimum'] = int(self.Minimum)
-        result['Maximum'] = int(self.Maximum)
-        result['Execution'] = self.Execution
-
-        return result
+        store[txn.Identifier] = pobj.dump()
 
 
-class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/mktplace.transactions.ExchangeOfferUpdate/Unregister'
+class Unregister(transaction.Update):
+    UpdateType = 'UnregisterExchangeOffer'
     ObjectType = ExchangeOfferObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Unregister, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 object_id,
+                 creator_id):
+        super(Unregister, self).__init__(update_type)
+        self._object_id = object_id
+        self._creator_id = creator_id
 
-    def is_valid(self, store):
-        if not super(Unregister, self).is_valid(store):
-            return False
+    @property
+    def References(self):
+        return []
 
-        if not self.is_permitted(store):
-            return False
+    def check_valid(self, store, txn):
+        assert txn.OriginatorID
+        assert self._object_id
+        assert self._creator_id
 
-        return True
+        if not self.ObjectType.is_valid_object(store, self._object_id):
+            raise InvalidTransactionError(
+                "ObjectId does not reference an ExchangeOffer")
+
+        if not self.CreatorType.is_valid_creator(store, self._creator_id,
+                                                 txn.OriginatorID):
+            raise InvalidTransactionError(
+                "CreatorId address is not the same as txn.OriginatorID")
+
+    def apply(self, store, txn):
+        del store[self._object_id]
 
 
 class UpdateDescription(market_place_object_update.UpdateDescription):
-    UpdateType = '/mktplace.transactions.ExchangeOfferUpdate/UpdateDescription'
+    UpdateType = 'UpdateExchangeOfferDescription'
     ObjectType = ExchangeOfferObject
     CreatorType = participant_update.ParticipantObject
 
 
 class UpdateName(market_place_object_update.UpdateName):
-    UpdateType = '/mktplace.transactions.ExchangeOfferUpdate/UpdateName'
+    UpdateType = 'UpdateExchangeOfferName'
     ObjectType = ExchangeOfferObject
     CreatorType = participant_update.ParticipantObject

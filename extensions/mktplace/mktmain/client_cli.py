@@ -417,7 +417,7 @@ identifiers, ///$name
         exchange -- execute an marketplace exchange transaction
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         try:
             parser = argparse.ArgumentParser(prog='exchange')
             parser.add_argument('--src',
@@ -479,7 +479,7 @@ identifiers, ///$name
             account unr -- unregister an existing account
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         subcommands = ['reg', 'unr']
         if len(pargs) == 0 or pargs[0] not in subcommands:
             print 'Unknown sub-command, expecting one of {0}'.format(
@@ -540,7 +540,7 @@ identifiers, ///$name
             asset unr -- unregister the asset
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         subcommands = ['reg', 'unr']
         if len(pargs) == 0 or pargs[0] not in subcommands:
             print 'Unknown sub-command, expecting one of {0}'.format(
@@ -607,13 +607,16 @@ identifiers, ///$name
 
                 typeid = self.MarketState.n2i(options.type, 'AssetType')
                 kwargs = {}
-                if options.name:
+                if options.name is not None:
                     kwargs['name'] = options.name
-                if options.description:
+                if options.description is not None:
                     kwargs['description'] = options.description
-                kwargs['restricted'] = options.restricted
-                kwargs['consumable'] = options.consumable
-                kwargs['divisible'] = options.divisible
+                if options.restricted is not None:
+                    kwargs['restricted'] = options.restricted
+                if options.consumable is not None:
+                    kwargs['consumable'] = options.consumable
+                if options.divisible is not None:
+                    kwargs['divisible'] = options.divisible
 
                 txnid = self.MarketClient.register_asset(typeid, **kwargs)
                 if txnid and options.symbol:
@@ -649,7 +652,7 @@ identifiers, ///$name
             assettype unr -- unregister the asset type
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         subcommands = ['reg', 'unr']
         if len(pargs) == 0 or pargs[0] not in subcommands:
             print 'Unknown sub-command, expecting one of {0}'.format(
@@ -689,11 +692,12 @@ identifiers, ///$name
                 options = parser.parse_args(pargs[1:])
 
                 kwargs = {}
-                if options.name:
+                if options.name is not None:
                     kwargs['name'] = options.name
-                if options.description:
+                if options.description is not None:
                     kwargs['description'] = options.description
-                kwargs['restricted'] = options.restricted
+                if options.restricted is not None:
+                    kwargs['restricted'] = options.restricted
 
                 txnid = self.MarketClient.register_assettype(**kwargs)
                 if txnid and options.symbol:
@@ -729,7 +733,7 @@ identifiers, ///$name
             exchangeoffer unr -- unregister an existing exchange offer
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         subcommands = ['reg', 'unr']
         if len(pargs) == 0 or pargs[0] not in subcommands:
             print 'Unknown sub-command, expecting one of {0}'.format(
@@ -788,15 +792,15 @@ identifiers, ///$name
                 outputid = self.MarketState.n2i(options.output, 'Holding')
 
                 kwargs = {}
-                if options.name:
+                if options.name is not None:
                     kwargs['name'] = options.name
-                if options.description:
+                if options.description is not None:
                     kwargs['description'] = options.description
-                if options.minimum:
+                if options.minimum is not None:
                     kwargs['minimum'] = int(options.minimum)
-                if options.maximum:
+                if options.maximum is not None:
                     kwargs['maximum'] = int(options.maximum)
-                if options.modifier:
+                if options.modifier is not None:
                     kwargs['execution'] = options.modifier
 
                 ratio = float(options.ratio[1]) / float(options.ratio[0])
@@ -835,7 +839,7 @@ identifiers, ///$name
             holding unr -- unregister an existing holding
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         subcommands = ['reg', 'unr']
         if len(pargs) == 0 or pargs[0] not in subcommands:
             print 'Unknown sub-command, expecting one of {0}'.format(
@@ -913,7 +917,7 @@ identifiers, ///$name
             liability unr -- unregister an existing liability
         """
         pargs = shlex.split(self._expandargs(args))
-
+        self.MarketState.fetch()
         subcommands = ['reg', 'unr']
         if len(pargs) == 0 or pargs[0] not in subcommands:
             print 'Unknown sub-command, expecting one of {0}'.format(
@@ -1033,6 +1037,8 @@ identifiers, ///$name
                     self.MarketClient.CreatorID = txnid
                     self.MarketState.CreatorID = txnid
                     logger.debug('self.MarketState.CreatorID: %s', txnid)
+                    self.MarketClient.waitforcommit(txnid)
+                    self.MarketState.fetch()
                     self.prompt = self.MarketState.i2n(txnid) + '> '
 
                     self.IdentityMap['_partid_'] = txnid
@@ -1126,20 +1132,20 @@ identifiers, ///$name
                                     help='Symbol to associate with the '
                                          'newly created id')
                 options = parser.parse_args(pargs[1:])
-
+                self.MarketState.fetch()
                 inputid = self.MarketState.n2i(options.input, 'Holding')
                 outputid = self.MarketState.n2i(options.output, 'Holding')
 
                 kwargs = {}
-                if options.name:
+                if options.name is not None:
                     kwargs['name'] = options.name
-                if options.description:
+                if options.description is not None:
                     kwargs['description'] = options.description
-                if options.minimum:
+                if options.minimum is not None:
                     kwargs['minimum'] = int(options.minimum)
-                if options.maximum:
+                if options.maximum is not None:
                     kwargs['maximum'] = int(options.maximum)
-                if options.modifier:
+                if options.modifier is not None:
                     kwargs['execution'] = options.modifier
 
                 ratio = float(options.ratio[1]) / float(options.ratio[0])

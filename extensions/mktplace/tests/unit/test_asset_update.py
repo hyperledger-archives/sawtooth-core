@@ -18,6 +18,8 @@ import unittest
 from mktplace.transactions import participant_update
 from mktplace.transactions import asset_update
 from mktplace.transactions.market_place import MarketPlaceGlobalStore
+from mktplace.transactions.market_place_object_update import \
+    global_is_valid_name
 
 
 class TestAssetUpdate(unittest.TestCase):
@@ -34,11 +36,14 @@ class TestAssetUpdate(unittest.TestCase):
         # Because we have not "registered" any assets, the name
         # should not be a duplicate
         update = asset_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/asset'
-            })
-        self.assertTrue(update.is_valid_name(store))
+            update_type=asset_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/asset'
+        )
+        self.assertTrue(global_is_valid_name(
+            store, '/asset',
+            asset_update.Register.ObjectType,
+            participant.ObjectID))
 
         # Add an asset to the store with the creator being the participant
         # we inserted initially
@@ -54,17 +59,24 @@ class TestAssetUpdate(unittest.TestCase):
         # a relative name based upon creator and a fully-qualified name should
         # not be a valid name as it is a duplicate
         update = asset_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/asset'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=asset_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/asset'
+        )
+        self.assertFalse(global_is_valid_name(
+            store, '/asset',
+            asset_update.Register.ObjectType,
+            participant.ObjectID))
+
         update = asset_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/asset'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=asset_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='//participant/asset'
+        )
+        self.assertFalse(global_is_valid_name(
+            store, '//participant/asset',
+            asset_update.Register.ObjectType,
+            participant.ObjectID))
 
 
 class TestAssetUpdateName(unittest.TestCase):
@@ -81,11 +93,11 @@ class TestAssetUpdateName(unittest.TestCase):
         # Because we have not "registered" any asset2, the name
         # should not be a duplicate
         update = asset_update.UpdateName(
-            minfo={
-                'ObjectID': '0000000000000001',
-                'CreatorID': participant.ObjectID,
-                'Name': '/asset'
-            })
+            update_type=asset_update.UpdateName.UpdateType,
+            object_id='0000000000000001',
+            creator_id=participant.ObjectID,
+            name='/asset'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         # Add an asset to the store with the creator being the participant
@@ -102,16 +114,16 @@ class TestAssetUpdateName(unittest.TestCase):
         # using a relative name based upon creator and a fully-qualified name
         # should not be a valid name as it is a duplicate
         update = asset_update.UpdateName(
-            minfo={
-                'ObjectID': asset.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '/asset'
-            })
+            update_type=asset_update.UpdateName.UpdateType,
+            object_id=asset.ObjectID,
+            creator_id=participant.ObjectID,
+            name='/asset'
+        )
         self.assertFalse(update.is_valid_name(store))
         update = asset_update.UpdateName(
-            minfo={
-                'ObjectID': asset.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/asset'
-            })
+            update_type=asset_update.UpdateName.UpdateType,
+            object_id=asset.ObjectID,
+            creator_id=participant.ObjectID,
+            name='//participant/asset'
+        )
         self.assertFalse(update.is_valid_name(store))

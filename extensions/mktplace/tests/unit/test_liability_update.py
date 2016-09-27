@@ -18,6 +18,8 @@ import unittest
 from mktplace.transactions import participant_update
 from mktplace.transactions import liability_update
 from mktplace.transactions.market_place import MarketPlaceGlobalStore
+from mktplace.transactions.market_place_object_update import \
+    global_is_valid_name
 
 
 class TestLiabilityUpdate(unittest.TestCase):
@@ -34,11 +36,14 @@ class TestLiabilityUpdate(unittest.TestCase):
         # Because we have not "registered" any liabilities, the name
         # should not be a duplicate
         update = liability_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/liability'
-            })
-        self.assertTrue(update.is_valid_name(store))
+            update_type=liability_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/liability'
+        )
+        self.assertTrue(global_is_valid_name(
+            store, '/liability',
+            liability_update.Register.ObjectType,
+            participant.ObjectID))
 
         # Add a liability to the store with the creator being the participant
         # we inserted initially
@@ -54,17 +59,24 @@ class TestLiabilityUpdate(unittest.TestCase):
         # a relative name based upon creator and a fully-qualified name should
         # not be a valid name as it is a duplicate
         update = liability_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/liability'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=liability_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/liability'
+        )
+        self.assertFalse(global_is_valid_name(
+            store, '/liability',
+            liability_update.Register.ObjectType,
+            participant.ObjectID))
+
         update = liability_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/liability'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=liability_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='//participant/liability'
+        )
+        self.assertFalse(global_is_valid_name(
+            store, '//participant/liability',
+            liability_update.Register.ObjectType,
+            participant.ObjectID))
 
 
 class TestLiabilityUpdateName(unittest.TestCase):
@@ -81,11 +93,11 @@ class TestLiabilityUpdateName(unittest.TestCase):
         # Because we have not "registered" any liabilities, the name
         # should not be a duplicate
         update = liability_update.UpdateName(
-            minfo={
-                'ObjectID': '0000000000000001',
-                'CreatorID': participant.ObjectID,
-                'Name': '/liability'
-            })
+            update_type=liability_update.UpdateName.UpdateType,
+            object_id='0000000000000001',
+            creator_id=participant.ObjectID,
+            name='/liability'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         # Add a liability to the store with the creator being the participant
@@ -102,16 +114,16 @@ class TestLiabilityUpdateName(unittest.TestCase):
         # using a relative name based upon creator and a fully-qualified name
         # should not be a valid name as it is a duplicate
         update = liability_update.UpdateName(
-            minfo={
-                'ObjectID': liability.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '/liability'
-            })
+            update_type=liability_update.UpdateName.UpdateType,
+            object_id=liability.ObjectID,
+            creator_id=participant.ObjectID,
+            name='/liability'
+        )
         self.assertFalse(update.is_valid_name(store))
         update = liability_update.UpdateName(
-            minfo={
-                'ObjectID': liability.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/liability'
-            })
+            update_type=liability_update.UpdateName.UpdateType,
+            object_id=liability.ObjectID,
+            creator_id=participant.ObjectID,
+            name='//participant/liability'
+        )
         self.assertFalse(update.is_valid_name(store))

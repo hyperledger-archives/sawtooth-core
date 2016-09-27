@@ -58,7 +58,7 @@ def _build_block(ledger, block):
         if mktstore:
             holdingname = "//{0}/holding/validation-token".format(
                 ledger.gossip.LocalNode.Name)
-            holdingid = mktstore.n2i(holdingname, 'Participant')
+            holdingid = mktstore.n2i(holdingname, 'Holding')
             if holdingid:
                 logger.info('set validator holding id to %s', holdingid)
                 ValidatorHoldingID = holdingid
@@ -79,10 +79,14 @@ def _build_block(ledger, block):
     # local store but dont send it out, use the local store as
     # a temporary holding place
     if ValidatorHoldingID:
-        itxn = MarketPlaceTransaction()
-        itxn.Update = incentive_update.IncentiveUpdate()
-        itxn.Update.HoldingID = ValidatorHoldingID
-        itxn.Update.Count = count
+
+        itxn = MarketPlaceTransaction(minfo={
+            'Updates': [{
+                'UpdateType': incentive_update.IncentiveUpdate.UpdateType,
+                'HoldingId': ValidatorHoldingID,
+                'Count': count,
+            }]
+        })
         itxn.sign_from_node(ledger.gossip.LocalNode)
 
         logger.debug('add incentive transaction %s to block', itxn.Identifier)
@@ -103,7 +107,8 @@ def _claim_block(ledger, block):
             # grab all of the incentive transactions, in theory one
             # should be sufficient though i suppose more could be added
             # to redirect funds to multiple locations...
-            if txn.Update.UpdateType == \
+            update = txn.get_first_update()
+            if update.UpdateType == \
                     incentive_update.IncentiveUpdate.UpdateType:
                 itxns.append(txn)
 
@@ -118,7 +123,8 @@ def _claim_block(ledger, block):
 
         logger.info(
             'sending the incentive transaction %s for holding %s for block %s',
-            itxn.Identifier, itxn.Update.HoldingID, block.Identifier)
+            itxn.Identifier, itxn.get_first_update().HoldingID,
+            block.Identifier)
         ledger.handle_message(msg)
 
 
@@ -136,7 +142,8 @@ def _block_test(ledger, block):
             # grab all of the incentive transactions, in theory one
             # should be sufficient though i suppose more could be added
             # to redirect funds to multiple locations...
-            if txn.Update.UpdateType == \
+            update = txn.get_first_update()
+            if update.UpdateType == \
                     incentive_update.IncentiveUpdate.UpdateType:
                 itxns.append(txn)
 
@@ -173,33 +180,33 @@ def _prepare_genesis_transactions(journal):
     signnode = node.Node(identifier=identifier, signingkey=signingkey)
 
     # Create a participant for the global market
-    txn = MarketPlaceTransaction()
-    update = participant_update.Register(txn)
-    update.Name = 'marketplace'
-    update.Description = 'The ROOT participant for the marketplace'
-
-    txn.Update = update
-
+    txn = MarketPlaceTransaction(minfo={
+        'Updates': [
+            {
+                'UpdateType': participant_update.Register.UpdateType,
+                'Name': 'marketplace',
+                'Description': 'The ROOT participant for the marketplace',
+            }
+        ]
+    })
     txn.sign_from_node(signnode)
     journal.add_pending_transaction(txn)
     logger.info('Created market participant: %s', txn.Identifier)
     lasttxn = txn.Identifier
-
-    mktid = update.ObjectID
+    mktid = txn.Identifier
 
     # Create an asset type for participants
-    txn = MarketPlaceTransaction()
-    update = asset_type_update.Register(txn)
-
-    update.CreatorID = mktid
-
-    # anyone can create participant assets for themselves
-    update.Restricted = False
-
-    update.Name = '/asset-type/participant'
-    update.Description = 'Canonical type for participant assets'
-
-    txn.Update = update
+    txn = MarketPlaceTransaction(minfo={
+        'Updates': [
+            {
+                'UpdateType': asset_type_update.Register.UpdateType,
+                'CreatorId': mktid,
+                'Restricted': False,
+                'Name': '/asset-type/participant',
+                'Description': 'Canonical type for participant assets'
+            }
+        ]
+    })
     txn.Dependencies = [lasttxn]
     txn.sign_from_node(signnode)
 
@@ -208,43 +215,41 @@ def _prepare_genesis_transactions(journal):
     lasttxn = txn.Identifier
 
     # Create an asset type for random tokens
-    txn = MarketPlaceTransaction()
-    update = asset_type_update.Register(txn)
-
-    update.CreatorID = mktid
-    update.Restricted = True  # there is only one asset based on the token type
-    update.Name = '/asset-type/token'
-    update.Description = 'Canonical type for meaningless tokens that are ' \
-                         'very useful for bootstrapping'
-
-    txn.Update = update
+    txn = MarketPlaceTransaction(minfo={
+        'Updates': [
+            {
+                'UpdateType': asset_type_update.Register.UpdateType,
+                'CreatorId': mktid,
+                'Restricted': True,
+                'Name': '/asset-type/token',
+                'Description': 'Canonical type for meaningless tokens that '
+                               'are useful for bootstrapping'
+            }
+        ]
+    })
     txn.Dependencies = [lasttxn]
     txn.sign_from_node(signnode)
 
     journal.add_pending_transaction(txn)
     logger.info('Created token asset type: %s', txn.Identifier)
     lasttxn = txn.Identifier
-
-    assettypeid = update.ObjectID
+    assettypeid = txn.Identifier
 
     # Create an asset for the tokens
-    txn = MarketPlaceTransaction()
-    update = asset_update.Register(txn)
-
-    update.CreatorID = mktid
-    update.AssetTypeID = assettypeid
-
-    # anyone can create holdings with token instances
-    update.Restricted = False
-
-    # and these are infinitely replaceable
-    update.Consumable = False
-
-    update.Divisible = False
-    update.Name = '/asset/token'
-    update.Description = 'Canonical asset for tokens'
-
-    txn.Update = update
+    txn = MarketPlaceTransaction(minfo={
+        'Updates': [
+            {
+                'UpdateType': asset_update.Register.UpdateType,
+                'CreatorId': mktid,
+                'AssetTypeId': assettypeid,
+                'Restricted': False,
+                'Consumable': False,
+                'Divisible': False,
+                'Name': '/asset/token',
+                'Description': 'Canonical asset for tokens'
+            }
+        ]
+    })
     txn.Dependencies = [lasttxn]
     txn.sign_from_node(signnode)
 
@@ -252,18 +257,19 @@ def _prepare_genesis_transactions(journal):
     logger.info('Created token asset: %s', txn.Identifier)
 
     # Create an asset for the validation tokens
-    txn = MarketPlaceTransaction()
-    update = asset_update.Register(txn)
+    txn = MarketPlaceTransaction(minfo={
+        'Updates': [{
+            'UpdateType': asset_update.Register.UpdateType,
+            'CreatorId': mktid,
+            'AssetTypeId': assettypeid,
+            'Restricted': True,
+            'Consumable': True,
+            'Divisible': False,
+            'Name': '/asset/validation-token',
+            'Description': 'Canonical asset for validation tokens'
+        }]}
+    )
 
-    update.CreatorID = mktid
-    update.AssetTypeID = assettypeid
-    update.Restricted = True  # these assets are only created by the market
-    update.Consumable = True
-    update.Divisible = False
-    update.Name = '/asset/validation-token'
-    update.Description = 'Canonical asset for validation tokens'
-
-    txn.Update = update
     txn.Dependencies = [lasttxn]
     txn.sign_from_node(signnode)
 
@@ -350,13 +356,13 @@ class MarketPlaceTransactionMessage(transaction_message.TransactionMessage):
     def __init__(self, minfo=None):
         if minfo is None:
             minfo = {}
-        super(MarketPlaceTransactionMessage, self).__init__(minfo)
+        super(MarketPlaceTransactionMessage, self).__init__(minfo=minfo)
 
         tinfo = minfo.get('Transaction', {})
         self.Transaction = MarketPlaceTransaction(tinfo)
 
 
-class MarketPlaceTransaction(transaction.Transaction):
+class MarketPlaceTransaction(transaction.UpdatesTransaction):
     """
     A Transaction is a set of updates to be applied atomically to a journal. It
     has a unique identifier and a signature to validate the source.
@@ -433,19 +439,8 @@ class MarketPlaceTransaction(transaction.Transaction):
     def __init__(self, minfo=None):
         if minfo is None:
             minfo = {}
-        super(MarketPlaceTransaction, self).__init__(minfo)
 
-        self.Update = None
         self.Payment = None
-
-        if 'Update' in minfo:
-            uinfo = minfo['Update']
-            updatetype = uinfo.get('UpdateType')
-            if not updatetype or updatetype not in self.UpdateRegistry:
-                logger.warn(
-                    'transaction contains an invalid update type, skipping')
-            else:
-                self.Update = self.UpdateRegistry[updatetype](self, uinfo)
 
         if 'Payment' in minfo:
             pinfo = minfo['Payment']
@@ -455,27 +450,16 @@ class MarketPlaceTransaction(transaction.Transaction):
                     'transaction contains invalid payment type, skipping')
             else:
                 self.Payment = self.PaymentRegistry[ptype](self, pinfo)
+        super(MarketPlaceTransaction, self).__init__(minfo=minfo)
 
-    def __str__(self):
-        return str(self.Update)
-
-    def is_valid(self, store):
-        if not super(MarketPlaceTransaction, self).is_valid(store):
-            return False
-
-        # this verifies that each update is correct independently
-        # we also need to add a check that verifies that the overall
-        # transaction is correct
-        if not self.Update.is_valid(store):
-            logger.debug('invalid transaction: %s', str(self.Update))
-            return False
+    def check_valid(self, store):
 
         # check the payment
         if self.Payment and not self.Payment.is_valid(store):
             logger.debug('invalid payment: %s', str(self.Payment))
             return False
 
-        return True
+        return super(MarketPlaceTransaction, self).check_valid(store)
 
     def add_to_pending(self):
         """
@@ -483,31 +467,31 @@ class MarketPlaceTransaction(transaction.Transaction):
         transactions. In general incentive transactions should not be
         including in the pending transaction list.
         """
-        if self.Update.UpdateType != \
+        if self.get_first_update().UpdateType != \
                 incentive_update.IncentiveUpdate.UpdateType:
             return True
 
         return False
 
-    def apply(self, store):
-        """
-        apply -- apply the transaction to the store
-        """
-        self.Update.apply(store)
+    def get_updates(self):
+        return self._updates
 
-        if self.Payment:
-            self.Payment.apply(store)
+    def get_first_update(self):
+        if len(self._updates) == 0:
+            return None
+        return self._updates[0]
+
+    def register_updates(self, registry):
+        for update_type, update in self.UpdateRegistry.iteritems():
+            registry.register(update_type, update)
 
     def dump(self):
         result = super(MarketPlaceTransaction, self).dump()
-
-        result['Update'] = self.Update.dump()
         if self.Payment:
             result['Payment'] = self.Payment.dump()
-
-        assert 'Dependencies' in result
-        for refid in self.Update.References:
-            if str(refid) not in result['Dependencies']:
-                result['Dependencies'].append(str(refid))
-
+        dependencies = result.get('Dependencies', [])
+        for refid in self.get_first_update().References:
+            if refid not in dependencies:
+                dependencies.append(refid)
+        result['Dependencies'] = dependencies
         return result

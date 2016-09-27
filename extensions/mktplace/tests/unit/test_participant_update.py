@@ -27,9 +27,9 @@ class TestParticipantUpdate(unittest.TestCase):
         # Because we have not "registered" any participants, the name
         # should not be a duplicate
         update = participant_update.Register(
-            minfo={
-                'Name': 'participant'
-            })
+            update_type=participant_update.Register.UpdateType,
+            name='participant'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         #  Put a participant in the store
@@ -43,9 +43,9 @@ class TestParticipantUpdate(unittest.TestCase):
         # Because the participant name is in the store, the name should
         # not be a valid name as it is a duplicate
         update = participant_update.Register(
-            minfo={
-                'Name': 'participant'
-            })
+            update_type=participant_update.Register.UpdateType,
+            name='participant'
+        )
         self.assertFalse(update.is_valid_name(store))
 
 
@@ -57,11 +57,11 @@ class TestParticipantUpdateName(unittest.TestCase):
         # Because we have not "registered" any participants, the name
         # should not be a duplicate
         update = participant_update.UpdateName(
-            minfo={
-                'ObjectID': '0000000000000000',
-                'CreatorID': '0000000000000000',
-                'Name': 'participant'
-            })
+            update_type=participant_update.UpdateName.UpdateType,
+            object_id='0000000000000000',
+            creator_id='0000000000000000',
+            name='participant'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         # Put a participant in the store
@@ -76,9 +76,9 @@ class TestParticipantUpdateName(unittest.TestCase):
         # Because the participant name is in the store, trying to update the
         # name a valid name as it is a duplicate
         update = participant_update.UpdateName(
-            minfo={
-                'ObjectID': participant.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': 'participant'
-            })
+            update_type=participant_update.UpdateName.UpdateType,
+            object_id=participant.ObjectID,
+            creator_id=participant.ObjectID,
+            name='participant'
+        )
         self.assertFalse(update.is_valid_name(store))

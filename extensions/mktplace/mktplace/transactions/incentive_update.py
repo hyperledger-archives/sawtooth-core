@@ -15,60 +15,45 @@
 
 import logging
 
+from sawtooth.exceptions import InvalidTransactionError
 from mktplace.transactions import holding_update, participant_update
 from journal import transaction
 
 logger = logging.getLogger(__name__)
 
 
-class IncentiveUpdate(object):
-    UpdateType = '/mktplace.transactions.IncentiveUpdate/IncentiveUpdate'
+class IncentiveUpdate(transaction.Update):
+    UpdateType = 'IncentiveUpdate'
     CreatorType = participant_update.ParticipantObject
     ValidationTokenAssetID = None
 
-    def __init__(self, transaction=None, minfo=None):
-
-        if minfo is None:
-            minfo = {}
-        self.Transaction = transaction
-
-        self.HoldingID = None
-        self.Count = 0
-
-        if minfo:
-            self._unpack(minfo)
-
-    def _unpack(self, minfo):
-        try:
-            self.HoldingID = minfo['HoldingID']
-            self.Count = int(minfo['Count'])
-
-        except KeyError as ke:
-            logger.warn('missing incentive field %s', ke)
-            raise transaction.SerializationError(
-                self.PaymentType,
-                'missing required incentive field {0}'.format(ke))
-
-    @property
-    def OriginatorID(self):
-        assert self.Transaction
-        return self.Transaction.OriginatorID
-
-    @property
-    def ObjectID(self):
-        assert self.Transaction
-        return self.Transaction.Identifier
+    def __init__(self,
+                 update_type,
+                 holding_id,
+                 count,
+                 account_id,
+                 asset_type_id,
+                 guarantor_id,
+                 creator_id):
+        super(IncentiveUpdate, self).__init__(update_type)
+        self._holding_id = holding_id
+        self._count = count
+        self._account_id = account_id
+        self._asset_type_id = asset_type_id
+        self._guarantor_id = guarantor_id
+        self._creator_id = creator_id
 
     @property
     def References(self):
-        return [self.CreatorID, self.AccountID, self.AssetTypeID,
-                self.GuarantorID]
+        return [self._creator_id, self._account_id, self._asset_type_id,
+                self._guarantor_id]
 
-    def is_valid(self, store):
+    def check_valid(self, store, txn):
         # make sure the holding is really a holding
         if not holding_update.HoldingObject.is_valid_object(store,
-                                                            self.HoldingID):
-            return False
+                                                            self._holding_id):
+            raise InvalidTransactionError(
+                "HoldingId does not reference a holding")
 
         # We don't need to check for any permissions since we are adding
         # tokens to a holding
@@ -77,29 +62,21 @@ class IncentiveUpdate(object):
         # require getting access to the token type, probably by name (ugghhh)
         if not IncentiveUpdate.ValidationTokenAssetID:
             IncentiveUpdate.ValidationTokenAssetID = store.n2i(
-                '//marketplace/asset/validation-token', 'Participant')
+                '//marketplace/asset/validation-token', 'Asset')
             assert IncentiveUpdate.ValidationTokenAssetID
 
         obj = holding_update.HoldingObject.get_valid_object(store,
-                                                            self.HoldingID)
+                                                            self._holding_id)
         if obj.get('asset') != IncentiveUpdate.ValidationTokenAssetID:
             logger.info('holding %s does not contain validation tokens',
-                        self.HoldingID)
-            return False
+                        self._holding_id)
+            raise InvalidTransactionError(
+                "Holding {} does not contain validation "
+                "tokens".format(self._holding_id))
 
-        return True
-
-    def apply(self, store):
+    def apply(self, store, txn):
         obj = holding_update.HoldingObject.get_valid_object(store,
-                                                            self.HoldingID)
-        obj['count'] = int(obj['count']) + int(self.Count)
+                                                            self._holding_id)
+        obj['count'] = int(obj['count']) + int(self._count)
 
-        store[self.HoldingID] = obj
-
-    def dump(self):
-        result = {
-            'UpdateType': self.UpdateType,
-            'HoldingID': self.HoldingID,
-            'Count': int(self.Count)
-        }
-        return result
+        store[self._holding_id] = obj
