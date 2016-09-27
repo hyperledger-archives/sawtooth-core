@@ -64,6 +64,36 @@ def interactive_client(url=None, name=None, keyfile=None):
     return client
 
 
+def sign_message_with_transaction(transaction, key):
+    """
+    Signs a transaction message or transaction
+    :param transaction dict:
+    :param key str: A signing key
+    returns message, txnid tuple: The first 16 characters
+    of a sha256 hexdigest.
+    """
+    transaction['Nonce'] = time.time()
+    sig = pybitcointools.ecdsa_sign(
+        dict2cbor(transaction),
+        key
+    )
+    transaction['Signature'] = sig
+
+    txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
+    message = {
+        'Transaction': transaction,
+        '__TYPE__': "/mktplace.transactions.MarketPlace/Transaction",
+        '__NONCE__': time.time(),
+    }
+    cbor_serialized_mess = dict2cbor(message)
+    signature = pybitcointools.ecdsa_sign(
+        cbor_serialized_mess,
+        key
+    )
+    message['__SIGNATURE__'] = signature
+    return message, txnid
+
+
 class MarketPlaceClient(MarketPlaceCommunication):
     """
     The MarketPlaceClient class wraps transaction generation and
@@ -116,43 +146,36 @@ class MarketPlaceClient(MarketPlaceCommunication):
                                    signingkey=signingkey,
                                    name=name)
 
-    def _sendtxn(self, update):
+    def _sendtxn(self, update, dependencies=None):
         """
-        Build a transaction for the update, wrap it in a message with all
-        of the appropriate signatures and post it to the validator
+        Sends the transaction to the validator, if enable_session is True,
+        the txns are sent to the prevalidation page first to be validated
+        :param update dict: The txn family specific data model items needed
+        :return txnid str: The first 16 characters of a sha256 hexdigest.
         """
+        transaction = {'TransactionType': "/MarketPlaceTransaction"}
+        transaction['Updates'] = [update]
+        if dependencies is None:
+            transaction['Dependencies'] = []
+        else:
+            transaction['Dependencies'] = list(dependencies)
 
-        txn = market_place.MarketPlaceTransaction()
-        txn.Update = update
-
-        # add payment if we have a token repository
-        if self.TokenStore:
-            txn.Payment = self.TokenStore.get_tokens(1)
-
-        txn.Update.Transaction = txn
-        if txn.Payment:
-            txn.Payment.Transaction = txn
-
-        txn.sign_from_node(self.LocalNode)
-        txnid = txn.Identifier
-
-        if not self.enable_session:
-            if not txn.is_valid(self.CurrentState.State):
-                logger.warn('transaction failed to apply')
-                return None
-
-        msg = market_place.MarketPlaceTransactionMessage()
-        msg.Transaction = txn
-        msg.SenderID = self.LocalNode.Identifier
-        msg.sign_from_node(self.LocalNode)
-
+        msg, txnid = sign_message_with_transaction(
+            transaction,
+            self.LocalNode.SigningKey
+        )
         try:
             if self.enable_session:
-                result = self.postmsg(msg.MessageType,
-                                      msg.dump(),
-                                      '/prevalidation')
+                result = self.postmsg(
+                    "/mktplace.transactions.MarketPlace/Transaction",
+                    msg,
+                    '/prevalidation'
+                )
             else:
-                result = self.postmsg(msg.MessageType, msg.dump())
+                result = self.postmsg(
+                    "/mktplace.transactions.MarketPlace/Transaction",
+                    msg
+                )
 
         except MessageException:
             return None
