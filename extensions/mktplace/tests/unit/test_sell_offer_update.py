@@ -18,6 +18,7 @@ import unittest
 from mktplace.transactions import participant_update
 from mktplace.transactions import sell_offer_update
 from mktplace.transactions.market_place import MarketPlaceGlobalStore
+from mktplace.transactions import market_place_object_update
 
 
 class TestSellOfferUpdate(unittest.TestCase):
@@ -34,11 +35,15 @@ class TestSellOfferUpdate(unittest.TestCase):
         # Because we have not "registered" any sell offers, the name
         # should not be a duplicate
         update = sell_offer_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/selloffer'
-            })
-        self.assertTrue(update.is_valid_name(store))
+            input_id='**FAKE**',
+            output_id='**FAKE**',
+            update_type=sell_offer_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/selloffer'
+        )
+        self.assertTrue(market_place_object_update.global_is_valid_name(
+            store, '/selloffer', sell_offer_update.Register.ObjectType,
+            participant.ObjectID))
 
         # Add a sell offer to the store with the creator being the participant
         # we inserted initially
@@ -54,17 +59,26 @@ class TestSellOfferUpdate(unittest.TestCase):
         # using a relative name based upon creator and a fully-qualified name
         # should not be a valid name as it is a duplicate
         update = sell_offer_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/selloffer'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            input_id='**FAKE**',
+            output_id='**FAKE**',
+            update_type=sell_offer_update.Register,
+            creator_id=participant.ObjectID,
+            name='/selloffer'
+        )
+        self.assertFalse(market_place_object_update.global_is_valid_name(
+            store, '/selloffer', sell_offer_update.Register.ObjectType,
+            participant.ObjectID))
         update = sell_offer_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/selloffer'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=sell_offer_update.Register.UpdateType,
+            input_id='**FAKE**',
+            output_id='**FAKE**',
+            creator_id=participant.ObjectID,
+            name='//participant/selloffer'
+        )
+        self.assertFalse(market_place_object_update.global_is_valid_name(
+            store, '//participant/selloffer',
+            sell_offer_update.Register.ObjectType,
+            participant.ObjectID))
 
 
 class TestSellOfferUpdateName(unittest.TestCase):
@@ -81,11 +95,11 @@ class TestSellOfferUpdateName(unittest.TestCase):
         # Because we have not "registered" any sell offers, the name
         # should not be a duplicate
         update = sell_offer_update.UpdateName(
-            minfo={
-                'ObjectID': '0000000000000001',
-                'CreatorID': participant.ObjectID,
-                'Name': '/selloffer'
-            })
+            update_type=sell_offer_update.UpdateName.UpdateType,
+            object_id='0000000000000001',
+            creator_id=participant.ObjectID,
+            name='/selloffer'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         # Add a sell offer to the store with the creator being the participant
@@ -102,16 +116,16 @@ class TestSellOfferUpdateName(unittest.TestCase):
         # name using a relative name based upon creator and a fully-qualified
         # name should not be a valid name as it is a duplicate
         update = sell_offer_update.UpdateName(
-            minfo={
-                'ObjectID': sell_offer.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '/selloffer'
-            })
+            update_type=sell_offer_update.UpdateName.UpdateType,
+            object_id=sell_offer.ObjectID,
+            creator_id=participant.ObjectID,
+            name='/selloffer'
+        )
         self.assertFalse(update.is_valid_name(store))
         update = sell_offer_update.UpdateName(
-            minfo={
-                'ObjectID': sell_offer.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/selloffer'
-            })
+            update_type=sell_offer_update.UpdateName.UpdateType,
+            object_id=sell_offer.ObjectID,
+            creator_id=participant.ObjectID,
+            name='//participant/selloffer'
+        )
         self.assertFalse(update.is_valid_name(store))

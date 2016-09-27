@@ -18,6 +18,7 @@ import unittest
 from mktplace.transactions import participant_update
 from mktplace.transactions import holding_update
 from mktplace.transactions.market_place import MarketPlaceGlobalStore
+from mktplace.transactions import market_place_object_update
 
 
 class TestHoldingUpdate(unittest.TestCase):
@@ -34,11 +35,16 @@ class TestHoldingUpdate(unittest.TestCase):
         # Because we have not "registered" any holdings, the name
         # should not be a duplicate
         update = holding_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/holding'
-            })
-        self.assertTrue(update.is_valid_name(store))
+            update_type=holding_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/holding'
+        )
+        self.assertTrue(market_place_object_update.global_is_valid_name(
+            store,
+            name='/holding',
+            object_type=update.ObjectType,
+            creator_id=participant.ObjectID,
+        ))
 
         # Add a holding to the store with the creator being the participant
         # we inserted initially
@@ -54,17 +60,27 @@ class TestHoldingUpdate(unittest.TestCase):
         # a relative name based upon creator and a fully-qualified name should
         # not be a valid name as it is a duplicate
         update = holding_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/holding'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=holding_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/holding'
+        )
+        self.assertFalse(market_place_object_update.global_is_valid_name(
+            store,
+            name='/holding',
+            object_type=update.ObjectType,
+            creator_id=participant.ObjectID
+        ))
         update = holding_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/holding'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=holding_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='//participant/holding'
+        )
+        self.assertFalse(market_place_object_update.global_is_valid_name(
+            store,
+            name='//participant/holding',
+            object_type=update.ObjectType,
+            creator_id=participant.ObjectID
+        ))
 
 
 class TestHoldingUpdateName(unittest.TestCase):
@@ -81,11 +97,11 @@ class TestHoldingUpdateName(unittest.TestCase):
         # Because we have not "registered" any holdings, the name
         # should not be a duplicate
         update = holding_update.UpdateName(
-            minfo={
-                'ObjectID': '0000000000000001',
-                'CreatorID': participant.ObjectID,
-                'Name': '/holding'
-            })
+            update_type=holding_update.UpdateName.UpdateType,
+            object_id='0000000000000001',
+            creator_id=participant.ObjectID,
+            name='/holding'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         # Add a holding to the store with the creator being the participant
@@ -102,16 +118,16 @@ class TestHoldingUpdateName(unittest.TestCase):
         # using a relative name based upon creator and a fully-qualified name
         # should not be a valid name as it is a duplicate
         update = holding_update.UpdateName(
-            minfo={
-                'ObjectID': holding.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '/holding'
-            })
+            update_type=holding_update.UpdateName.UpdateType,
+            object_id=holding.ObjectID,
+            creator_id=participant.ObjectID,
+            name='/holding'
+        )
         self.assertFalse(update.is_valid_name(store))
         update = holding_update.UpdateName(
-            minfo={
-                'ObjectID': holding.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/holding'
-            })
+            update_type=holding_update.UpdateName.UpdateType,
+            object_id=holding.ObjectID,
+            creator_id=participant.ObjectID,
+            name='//participant/holding'
+        )
         self.assertFalse(update.is_valid_name(store))

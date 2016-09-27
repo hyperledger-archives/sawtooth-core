@@ -18,6 +18,8 @@ import unittest
 from mktplace.transactions import participant_update
 from mktplace.transactions import account_update
 from mktplace.transactions.market_place import MarketPlaceGlobalStore
+from mktplace.transactions.market_place_object_update import \
+    global_is_valid_name
 
 
 class TestAccountUpdate(unittest.TestCase):
@@ -34,11 +36,14 @@ class TestAccountUpdate(unittest.TestCase):
         # Because we have not "registered" any accounts, the name
         # should not be a duplicate
         update = account_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/account'
-            })
-        self.assertTrue(update.is_valid_name(store))
+            update_type=account_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/account'
+        )
+        self.assertTrue(global_is_valid_name(
+            store, '/account',
+            account_update.Register.ObjectType,
+            participant.ObjectID))
 
         # Add an account to the store with the creator being the participant
         # we inserted initially
@@ -54,17 +59,22 @@ class TestAccountUpdate(unittest.TestCase):
         # a relative name based upon creator and a fully-qualified name should
         # not be a valid name as it is a duplicate
         update = account_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '/account'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=account_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='/account'
+        )
+        self.assertFalse(global_is_valid_name(
+            store, '/account', account_update.Register.ObjectType,
+            participant.ObjectID))
         update = account_update.Register(
-            minfo={
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/account'
-            })
-        self.assertFalse(update.is_valid_name(store))
+            update_type=account_update.Register.UpdateType,
+            creator_id=participant.ObjectID,
+            name='//participant/account'
+        )
+        self.assertFalse(global_is_valid_name(
+            store, '//participant/account',
+            account_update.Register.ObjectType,
+            participant.ObjectID))
 
 
 class TestAccountUpdateName(unittest.TestCase):
@@ -81,11 +91,11 @@ class TestAccountUpdateName(unittest.TestCase):
         # Because we have not "registered" any accounts, the name
         # should not be a duplicate
         update = account_update.UpdateName(
-            minfo={
-                'ObjectID': '0000000000000001',
-                'CreatorID': participant.ObjectID,
-                'Name': '/account'
-            })
+            update_type=account_update.UpdateName.UpdateType,
+            object_id='0000000000000001',
+            creator_id=participant.ObjectID,
+            name='/account'
+        )
         self.assertTrue(update.is_valid_name(store))
 
         # Add an account to the store with the creator being the participant
@@ -102,16 +112,16 @@ class TestAccountUpdateName(unittest.TestCase):
         # using a relative name based upon creator and a fully-qualified name
         # should not be a valid name as it is a duplicate
         update = account_update.UpdateName(
-            minfo={
-                'ObjectID': account.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '/account'
-            })
+            update_type=account_update.UpdateName.UpdateType,
+            object_id=account.ObjectID,
+            creator_id=participant.ObjectID,
+            name='/account'
+        )
         self.assertFalse(update.is_valid_name(store))
         update = account_update.UpdateName(
-            minfo={
-                'ObjectID': account.ObjectID,
-                'CreatorID': participant.ObjectID,
-                'Name': '//participant/account'
-            })
+            update_type=account_update.UpdateName.UpdateType,
+            object_id=account.ObjectID,
+            creator_id=participant.ObjectID,
+            name='//participant/account'
+        )
         self.assertFalse(update.is_valid_name(store))
