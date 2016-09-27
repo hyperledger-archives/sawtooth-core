@@ -15,6 +15,8 @@
 
 import logging
 
+from sawtooth.exceptions import InvalidTransactionError
+from journal import transaction
 from mktplace.transactions import market_place_object_update
 
 logger = logging.getLogger(__name__)
@@ -57,18 +59,15 @@ class ParticipantObject(market_place_object_update.MarketPlaceObject):
         return result
 
 
-class Register(market_place_object_update.Register):
-    UpdateType = '/mktplace.transactions.ParticipantUpdate/Register'
+class Register(transaction.Update):
+    UpdateType = 'RegisterParticipant'
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Register, self).__init__(transaction, minfo)
-
-        self.Description = minfo.get('Description', '')
-        self.Name = minfo.get('Name', '')
+    def __init__(self, update_type, name, description=None):
+        super(Register, self).__init__(update_type)
+        self._description = description or ''
+        self._name = name
 
     @property
     def References(self):
@@ -81,107 +80,82 @@ class Register(market_place_object_update.Register):
         object.
         """
 
-        if self.Name == '':
+        if self._name == '':
             return True
 
-        if self.Name.find('/') >= 0:
-            logger.debug('invalid name %s; must not contain /', self.Name)
+        if self._name.find('/') >= 0:
+            logger.debug('invalid name %s; must not contain /', self._name)
             return False
 
-        if len(self.Name) >= 64:
+        if len(self._name) >= 64:
             logger.debug('invalid name %s; must be less than 64 bytes',
-                         self.Name)
+                         self._name)
             return False
 
-        name = "//{0}".format(self.Name)
+        name = "//{0}".format(self._name)
         if store.n2i(name, self.ObjectType.ObjectTypeName) is not None:
-            logger.debug('invalid name %s; name must be unique', self.Name)
+            logger.debug('invalid name %s; name must be unique', self._name)
             return False
         return True
 
-    def is_valid(self, store):
-        if not super(Register, self).is_valid(store):
-            return False
+    def check_valid(self, store, txn):
+        if not self.is_valid_name(store):
+            raise InvalidTransactionError(
+                "Name, {}, is not valid".format(self._name))
 
-        return True
+    def apply(self, store, txn):
+        pobj = ParticipantObject(txn.Identifier)
+        pobj.Address = txn.OriginatorID
+        pobj.Description = self._description
+        pobj.Name = self._name
 
-    def apply(self, store):
-        pobj = ParticipantObject(self.ObjectID)
-        pobj.Address = self.OriginatorID
-        pobj.Description = self.Description
-        pobj.Name = self.Name
-
-        store[self.ObjectID] = pobj.dump()
-
-    def dump(self):
-        result = super(Register, self).dump()
-
-        result['Description'] = self.Description
-        result['Name'] = self.Name
-
-        return result
+        store[txn.Identifier] = pobj.dump()
 
 
-class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/mktplace.transactions.ParticipantUpdate/Unregister'
+class Unregister(transaction.Update):
+    UpdateType = 'UnregisterParticipant'
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Unregister, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 creator_id,
+                 object_id):
+        super(Unregister, self).__init__(update_type)
+        self._creator_id = creator_id
+        self._object_id = object_id
 
-    def is_valid(self, store):
-        if self.CreatorID != self.ObjectID:
+    @property
+    def References(self):
+        return []
+
+    def check_valid(self, store, txn):
+        if self._creator_id != self._object_id:
             logger.info(
                 'creator and object are the same for participant '
                 'unregistration')
             return False
 
-        if not super(Unregister, self).is_valid(store):
-            return False
+        if not market_place_object_update.global_is_permitted(
+                store, txn, self._creator_id, self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator Address not the same as txn.OriginatorID")
 
-        if not self.is_permitted(store):
-            return False
-
-        return True
+    def apply(self, store, txn):
+        del store[self._object_id]
 
 
 class UpdateDescription(market_place_object_update.UpdateDescription):
-    UpdateType = '/mktplace.transactions.ParticipantUpdate/UpdateDescription'
+    UpdateType = 'UpdateParticipantDescription'
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
-
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(UpdateDescription, self).__init__(transaction, minfo)
-
-    def is_valid(self, store):
-        if self.CreatorID != self.ObjectID:
-            logger.info('creator and object are the same for participant '
-                        'unregistration')
-            return False
-
-        if not super(UpdateDescription, self).IsValid(store):
-            return False
-
-        return True
 
 
 class UpdateName(market_place_object_update.UpdateName):
-    UpdateType = '/mktplace.transactions.ParticipantUpdate/UpdateName'
+    UpdateType = 'UpdateParticipantName'
     ObjectType = ParticipantObject
     CreatorType = ParticipantObject
 
-    # -----------------------------------------------------------------
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(UpdateName, self).__init__(transaction, minfo)
-
-    # -----------------------------------------------------------------
     def is_valid_name(self, store):
         """
         Ensure that the name property meets syntactic requirements. Objects
@@ -191,41 +165,21 @@ class UpdateName(market_place_object_update.UpdateName):
         object.
         """
 
-        if self.Name == '':
+        if self._name == '':
             return True
 
-        if self.Name.find('/') >= 0:
-            logger.debug('invalid name %s; must not contain /', self.Name)
+        if self._name.find('/') >= 0:
+            logger.debug('invalid name %s; must not contain /', self._name)
             return False
 
-        if len(self.Name) >= 64:
+        if len(self._name) >= 64:
             logger.debug('invalid name %s; must be less than 64 bytes',
-                         self.Name)
+                         self._name)
             return False
 
-        name = "//{0}".format(self.Name)
+        name = "//{0}".format(self._name)
         if store.n2i(name, 'Participant'):
-            logger.debug('invalid name %s; name must be unique', self.Name)
-            return False
-
-        return True
-
-    def is_valid(self, store):
-        logger.debug('market update: %s', str(self))
-
-        assert self.OriginatorID
-        assert self.ObjectID
-        assert self.CreatorID
-
-        if self.CreatorID != self.ObjectID:
-            logger.info('creator and object are the same for participant '
-                        'unregistration')
-            return False
-
-        if not self.ObjectType.is_valid_object(store, self.ObjectID):
-            return False
-
-        if not self.is_valid_name(store):
+            logger.debug('invalid name %s; name must be unique', self._name)
             return False
 
         return True

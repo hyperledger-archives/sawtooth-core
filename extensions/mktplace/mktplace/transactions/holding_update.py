@@ -15,6 +15,8 @@
 
 import logging
 
+from journal import transaction
+from sawtooth.exceptions import InvalidTransactionError
 from mktplace.transactions import account_update
 from mktplace.transactions import asset_update
 from mktplace.transactions import market_place_object_update
@@ -75,122 +77,142 @@ class HoldingObject(market_place_object_update.MarketPlaceObject):
         return result
 
 
-class Register(market_place_object_update.Register):
-    UpdateType = '/mktplace.transactions.HoldingUpdate/Register'
+class Register(transaction.Update):
+    UpdateType = 'RegisterHolding'
     ObjectType = HoldingObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Register, self).__init__(transaction, minfo)
-
-        self.CreatorID = minfo.get('CreatorID', '**UNKNOWN**')
-        self.AccountID = minfo.get('AccountID', '**UNKNOWN**')
-        self.AssetID = minfo.get('AssetID', '**UNKNOWN**')
-        self.Count = int(minfo.get('Count', 0))
-        self.Description = minfo.get('Description', '')
-        self.Name = minfo.get('Name', '')
+    def __init__(self,
+                 update_type,
+                 creator_id=None,
+                 account_id=None,
+                 asset_id=None,
+                 count=0,
+                 description=None,
+                 name=None):
+        super(Register, self).__init__(update_type)
+        self._creator_id = creator_id or '**UNKNOWN**'
+        self._account_id = account_id or '**UNKNOWN**'
+        self._asset_id = asset_id or '**UNKNOWN**'
+        self._count = count
+        self._description = description or ''
+        self._name = name or ''
 
     @property
     def References(self):
-        return [self.CreatorID, self.AccountID, self.AssetID]
+        return [self._creator_id, self._account_id, self._asset_id]
 
-    def is_valid(self, store):
-        if not super(Register, self).is_valid(store):
-            return False
+    def check_valid(self, store, txn):
+        if txn.Identifier in store:
+            raise InvalidTransactionError(
+                "ObjectId alread in store")
 
-        if not self.is_permitted(store):
-            return False
+        if not market_place_object_update.global_is_valid_name(
+                store, self._name, self.ObjectType, self._creator_id):
+            raise InvalidTransactionError(
+                "Name isn't valid")
+
+        if not market_place_object_update.global_is_permitted(
+                store,
+                txn,
+                self._creator_id,
+                self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator Address not the same as txn.OriginatorID")
 
         if not account_update.AccountObject.is_valid_object(store,
-                                                            self.AccountID):
-            return False
+                                                            self._account_id):
+            raise InvalidTransactionError(
+                "AccountID does not reference an Account")
 
-        if self.Count < 0:
-            return False
+        if self._count < 0:
+            raise InvalidTransactionError(
+                "Count is less than 0")
 
         # make sure we have a valid asset
-        asset = asset_update.AssetObject.load_from_store(store, self.AssetID)
+        asset = asset_update.AssetObject.load_from_store(store, self._asset_id)
         if not asset:
-            logger.debug('invalid asset %s in holding', self.AssetID)
-            return False
+            logger.debug('invalid asset %s in holding', self._asset_id)
+            raise InvalidTransactionError(
+                "AssetId does not reference an Asset")
 
         # if the asset is restricted, then only the creator of the asset can
         # create holdings with a count greater than 0
         if asset.Restricted:
-            if self.CreatorID != asset.CreatorID and 0 < self.Count:
+            if self._creator_id != asset.CreatorID and 0 < self._count:
                 logger.debug(
                     'instances of a restricted asset %s can only be created '
                     'by the owner',
-                    self.AssetID)
-                return False
+                    self._asset_id)
+                raise InvalidTransactionError(
+                    "Instances of a restricted asset {} can only be created "
+                    "by the owner".format(self._asset_id))
 
         # if the asset is not consumable then counts dont matter, the only
         # valid counts are 0 or 1
         if not asset.Consumable:
-            if 1 < self.Count:
+            if 1 < self._count:
                 logger.debug(
                     'non consumable assets of type %s are retricted to '
                     'a single instance',
-                    self.AssetID)
-                return False
+                    self._asset_id)
+                raise InvalidTransactionError(
+                    "Non consumable assets are restricted to a single "
+                    "instance")
 
-        return True
+    def apply(self, store, txn):
+        pobj = self.ObjectType(txn.Identifier)
 
-    def apply(self, store):
-        super(Register, self).apply(store)
-        pobj = self.ObjectType(self.ObjectID)
+        pobj.CreatorID = self._creator_id
+        pobj.AccountID = self._account_id
+        pobj.AssetID = self._asset_id
+        pobj.Count = self._count
+        pobj.Description = self._description
+        pobj.Name = self._name
 
-        pobj.CreatorID = self.CreatorID
-        pobj.AccountID = self.AccountID
-        pobj.AssetID = self.AssetID
-        pobj.Count = self.Count
-        pobj.Description = self.Description
-        pobj.Name = self.Name
-
-        store[self.ObjectID] = pobj.dump()
-
-    def dump(self):
-        result = super(Register, self).dump()
-
-        result['CreatorID'] = self.CreatorID
-        result['AccountID'] = self.AccountID
-        result['AssetID'] = self.AssetID
-        result['Count'] = int(self.Count)
-        result['Description'] = self.Description
-        result['Name'] = self.Name
-
-        return result
+        store[txn.Identifier] = pobj.dump()
 
 
-class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/mktplace.transactions.HoldingUpdate/Unregister'
+class Unregister(transaction.Update):
+    UpdateType = 'UnregisterHolding'
     ObjectType = HoldingObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Unregister, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 object_id,
+                 creator_id):
+        super(Unregister, self).__init__(update_type)
+        self._object_id = object_id
+        self._creator_id = creator_id
 
-    def is_valid(self, store):
-        if not super(Unregister, self).is_valid(store):
+    @property
+    def References(self):
+        return []
+
+    def check_valid(self, store, txn):
+        if not self.ObjectType.is_valid_object(store, self._object_id):
             return False
 
-        if not self.is_permitted(store):
-            return False
+        if not market_place_object_update.global_is_permitted(
+                store,
+                txn,
+                self._creator_id,
+                self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator Address is not the same as txn.OriginatorID")
 
-        return True
+    def apply(self, store, txn):
+        del store[self._object_id]
 
 
 class UpdateDescription(market_place_object_update.UpdateDescription):
-    UpdateType = '/mktplace.transactions.HoldingUpdate/UpdateDescription'
+    UpdateType = 'UpdateHoldingDescription'
     ObjectType = HoldingObject
     CreatorType = participant_update.ParticipantObject
 
 
 class UpdateName(market_place_object_update.UpdateName):
-    UpdateType = '/mktplace.transactions.HoldingUpdate/UpdateName'
+    UpdateType = 'UpdateHoldingName'
     ObjectType = HoldingObject
     CreatorType = participant_update.ParticipantObject
