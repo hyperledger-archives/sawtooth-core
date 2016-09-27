@@ -196,46 +196,7 @@ class MarketPlaceClient(MarketPlaceCommunication):
             storeinfo = self.getmsg('/prevalidation')
             self.CurrentState.State = \
                 self.CurrentState.State.clone_store(storeinfo)
-        else:
-            txn.apply(self.CurrentState.State)
-
         return txnid
-
-    # -----------------------------------------------------------------
-    def _update_name(self, module, objectid, name):
-        """
-        Update the name of an object by invoking the type-specific update
-        transaction
-        :param module module: the module where the transaction resides
-        :param id objectid: the identifier for the object to update
-        :param str name: the new name of the object
-        """
-        update = module.UpdateName()
-
-        update.ObjectID = objectid
-        update.CreatorID = self.CreatorID
-        update.Name = name
-
-        txnid = self._sendtxn(update)
-
-        return txnid
-
-    # -----------------------------------------------------------------
-    def _update_description(self, module, objectid, description):
-        """
-        Update the description of an object by invoking the type-specific
-        update transaction
-        :param module module: the module where the transaction resides
-        :param id objectid: the identifier for the object to update
-        :param str description: the new description of the object
-        """
-        update = module.UpdateDescription()
-
-        update.ObjectID = objectid
-        update.CreatorID = self.CreatorID
-        update.Description = description
-
-        return self._sendtxn(update)
 
     def create_session(self):
         self.enable_session = True
