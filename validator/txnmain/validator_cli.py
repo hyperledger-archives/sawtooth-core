@@ -104,7 +104,8 @@ def local_main(config, windows_service=False, daemonized=False):
         print >> sys.stderr, str(e)
         sys.exit(1)
 
-    web_api.initialize_web_server(config, validator)
+    listen_info = config.get("Listen", None)
+    web_api.initialize_web_server(listen_info, validator)
 
     # go through the list of transaction families that should be initialized in
     # this validator. the endpoint registry is always included

@@ -215,7 +215,7 @@ def _parse_listen_directive(value):
         protocol=protocol)
 
 
-def parse_listen_directives(config):
+def parse_listen_directives(listen_info):
     """
     From the configuration object, parses the list of entries for "Listen"
     and returns a dictionary of mapping from protocol to address/hostname
@@ -231,8 +231,8 @@ def parse_listen_directives(config):
     listen_mapping = {}
 
     # First try to parse the "Listen" entries if one exists
-    if 'Listen' in config:
-        for value in config['Listen']:
+    if listen_info is not None:
+        for value in listen_info:
             directive = _parse_listen_directive(value)
 
             # No duplicates for protocols allowed

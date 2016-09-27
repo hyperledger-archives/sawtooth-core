@@ -78,7 +78,7 @@ class ValidatorManager(object):
 
     def launch(self, launch=True, genesis=False, daemon=False, delay=False,
                node=None):
-        listen_directives = parse_listen_directives(self.config)
+        listen_directives = parse_listen_directives(self.config["Listen"])
         http_host = listen_directives['http'].host
         if "Endpoint" in self.config:
             http_host = self.config["Endpoint"]["Host"]

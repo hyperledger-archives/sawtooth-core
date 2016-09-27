@@ -44,10 +44,10 @@ class ApiSite(Site):
         return Site.getResourceFor(self, request)
 
 
-def initialize_web_server(config, validator):
+def initialize_web_server(listen_info, validator):
     # Parse the listen directives from the configuration so
     # we know what to bind HTTP protocol to
-    listen_directives = parse_listen_directives(config)
+    listen_directives = parse_listen_directives(listen_info)
 
     if 'http' in listen_directives:
         static_dir = os.path.join(

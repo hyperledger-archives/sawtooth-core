@@ -56,7 +56,8 @@ def add_genesis_parser(subparsers, parent_parser):
 def node_from_config(config):
     name = config['NodeName']
     signing_key = generate_signing_key(wifstr=read_key_file(config['KeyFile']))
-    (gossip_host, gossip_port) = parse_listen_directives(config)['gossip']
+    listen_info = config.get("Listen")
+    (gossip_host, gossip_port) = parse_listen_directives(listen_info)['gossip']
     # stubbing endpoint address for now
     endpoint_addr = (None, None)
     nd = node.Node(address=(socket.gethostbyname(gossip_host), gossip_port),
