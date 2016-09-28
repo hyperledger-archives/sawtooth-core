@@ -9,11 +9,7 @@ Prerequisites
 To create packages for SLES, you need the following:
 
 * SLES 12 64-bit with Internet access
-* git Repositories
-
-  * sawtooth-core
-  * sawtooth-validator
-  * sawtooth-mktplace
+* git Repository: sawtooth-core
 
 The remainder of these instructions assume a vanilla SLES 12 installation
 as a starting point.
@@ -102,9 +98,7 @@ Clone or copy the repositories into the SLES environment:
 
    root@sles # mkdir -p $HOME/projects
    root@sles # cd $HOME/projects
-   root@sles # git clone git@github.com:IntelLedger/sawtooth-validator.git
    root@sles # git clone git@github.com:IntelLedger/sawtooth-core.git
-   root@sles # git clone git@github.com:IntelLedger/sawtooth-mktplace.git
 
 .. note::
 
@@ -124,22 +118,7 @@ Create package from sawtooth repository:
   root@sles # cd $HOME/projects/sawtooth-core
   root@sles # python setup.py bdist_rpm
   root@sles # cp dist/sawtooth-core*x86_64.rpm $HOME/packages
-
-Create package from mktplace repository:
-
-.. code-block:: console
-
-  root@sles # cd $HOME/projects/sawtooth-mktplace
-  root@sles # python setup.py bdist_rpm
-  root@sles # cp dist/sawtooth-mktplace*noarch.rpm $HOME/packages
-
-Create package from sawtooth-validator repository:
-
-.. code-block:: console
-
-  root@sles # cd $HOME/projects/sawtooth-validator
-  root@sles # python setup.py bdist_rpm
-  root@sles # cp dist/sawtooth-validator*noarch.rpm $HOME/packages
+  
 
 Create tar File of Packages
 ===========================

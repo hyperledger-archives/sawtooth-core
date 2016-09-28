@@ -340,10 +340,7 @@ Build Sawtooth Lake Package
 
   PS C:\build> cd sawtooth-core
   PS C:\build\sawtooth-core> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
-  PS C:\build\sawtooth-core> cd ..\sawtooth-mktplace
-  PS C:\build\sawtooth-mktplace> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
-  PS C:\build\sawtooth-mktplace> cd ..\sawtooth-validator
-  PS C:\build\sawtooth-validator> python setup.py install --home='C:\Program Files (x86)\Intel\sawtooth-validator'
+
 
 * Copy cryptopp.dll into the Ledger libs directory
 
@@ -355,7 +352,7 @@ Build Sawtooth Lake Package
 
 .. code:: console
 
-  PS C:\build> cp c:\build\sawtooth-validator\windows\sawtooth-validator.nsi "C:\Program Files (x86)\Intel\"
+  PS C:\build> cp c:\build\sawtooth-core\validator\packaging\sawtooth-validator.nsi "C:\Program Files (x86)\Intel\"
 
 * Run NSIS to create the installer package
 

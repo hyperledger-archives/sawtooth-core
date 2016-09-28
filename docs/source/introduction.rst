@@ -166,24 +166,17 @@ distributed ledger.
 Repositories
 ============
 
-Here are the repositories:
+One repository contains all of the the code needed:
 
 sawtooth-core
-    Contains fundamental classes used throughout the Sawtooth Lake project
+    Contains fundamental classes used throughout the Sawtooth Lake project, as well as:
 
-sawtooth-validator
-    Contains the implementation of the validator process which runs on each
-    node
-
-sawtooth-mktplace
-    Contains the implementation of a transaction family for buying, selling and
-    trading digital assets, and a client program for interacting with a node
-    to execute market transactions.
-
-sawtooth-dev-tools
-    Contains a Vagrant environment for easily launching a network of validators
-
-sawtooth-docs
-    Contains the source files for this documentation
-
+    * The implementation of the validator process which runs on each node
+    * The implementation of a transaction family for buying, selling and
+      trading digital assets, and a client program for interacting with a node
+      to execute market transactions
+    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
+    * Tools including a Vagrant environment for easily launching a network of
+      validators
+    * Source files for this documentation
 
