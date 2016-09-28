@@ -15,6 +15,8 @@
 
 import logging
 
+from functools import partial
+
 from sawtooth.exceptions import InvalidTransactionError
 
 from journal.transaction import Update
@@ -192,10 +194,10 @@ class _OfferInformation(object):
 
     def triggers(self, count, payer):
         if self.Execution == 'ExecuteOnce':
-            return [lambda store: self.drop_offer(store)]
+            return [self.drop_offer]
 
         elif self.Execution == 'ExecuteOncePerParticipant':
-            return [lambda store: self.record_participant(store, payer)]
+            return [partial(self.record_participant, payer=payer)]
 
         return []
 

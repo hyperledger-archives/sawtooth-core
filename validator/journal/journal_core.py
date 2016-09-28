@@ -208,6 +208,26 @@ class Journal(object):
             self.ChainStore = journal_store.JournalStore(
                 shelf_database.ShelfDatabase(dbprefix + "_chain" + ".shelf",
                                              dbflag))
+        elif store_type == 'cached-shelf':
+            from journal.database import shelf_database
+            from journal.database.database import CachedDatabase
+
+            txn_database = shelf_database.ShelfDatabase(
+                dbprefix + "_txn" + ".shelf",
+                dbflag)
+            block_database = shelf_database.ShelfDatabase(
+                dbprefix + "_block" + ".shelf",
+                dbflag)
+            chain_database = shelf_database.ShelfDatabase(
+                dbprefix + "_chain" + ".shelf",
+                dbflag)
+            self.TransactionStore = journal_store.JournalStore(
+                CachedDatabase(txn_database))
+            self.BlockStore = journal_store.JournalStore(
+                CachedDatabase(block_database))
+            self.ChainStore = journal_store.JournalStore(
+                CachedDatabase(chain_database))
+
         elif store_type == 'lmdb':
             from journal.database import lmdb_database
 
@@ -220,6 +240,23 @@ class Journal(object):
             self.ChainStore = journal_store.JournalStore(
                 lmdb_database.LMDBDatabase(dbprefix + "_chain" + ".lmdb",
                                            dbflag))
+        elif store_type == 'cached-lmdb':
+            from journal.database import lmdb_database
+            from journal.database.database import CachedDatabase
+            txn_database = lmdb_database.LMDBDatabase(
+                dbprefix + "_txn" + ".lmdb", dbflag)
+            block_database = lmdb_database.LMDBDatabase(
+                dbprefix + "_block" + ".lmdb",
+                dbflag)
+            chain_database = lmdb_database.LMDBDatabase(
+                dbprefix + "_chain" + ".lmdb",
+                dbflag)
+            self.TransactionStore = journal_store.JournalStore(
+                CachedDatabase(txn_database))
+            self.BlockStore = journal_store.JournalStore(
+                CachedDatabase(block_database))
+            self.ChainStore = journal_store.JournalStore(
+                CachedDatabase(chain_database))
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
 
