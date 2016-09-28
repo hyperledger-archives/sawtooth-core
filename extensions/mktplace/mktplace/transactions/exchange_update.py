@@ -15,6 +15,9 @@
 
 import logging
 
+from sawtooth.exceptions import InvalidTransactionError
+
+from journal.transaction import Update
 from mktplace.transactions import asset_type_update
 from mktplace.transactions import asset_update
 from mktplace.transactions import exchange_offer_update
@@ -23,6 +26,7 @@ from mktplace.transactions import liability_update
 from mktplace.transactions import market_place_object_update
 from mktplace.transactions import participant_update
 from mktplace.transactions import sell_offer_update
+
 
 logger = logging.getLogger(__name__)
 
@@ -269,41 +273,29 @@ class _Adjustment(object):
             trigger(store)
 
 
-class Exchange(object):
-    UpdateType = '/mktplace.transactions.ExchangeUpdate/Exchange'
+class Exchange(Update):
+    UpdateType = 'Exchange'
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
+    def __init__(self,
+                 update_type,
+                 initial_liability_id,
+                 final_liability_id,
+                 offer_id_list,
+                 initial_count):
 
-        if minfo is None:
-            minfo = {}
-        self.Transaction = transaction
-        self.InitialLiabilityID = minfo.get('InitialLiabilityID',
-                                            '**UNKNOWN**')
-        self.FinalLiabilityID = minfo.get('FinalLiabilityID', '**UNKNOWN**')
-        self.OfferIDList = minfo.get('OfferIDList', [])
-        self.InitialCount = minfo.get('InitialCount', 0)
+        super(Exchange, self).__init__(update_type)
 
-        self._AdjustmentList = None
-
-    def __str__(self):
-        return "({0}, {1}, {2})".format(self.UpdateType, self.OriginatorID,
-                                        self.ObjectID)
+        self._initial_liability_id = initial_liability_id
+        self._final_liability_id = final_liability_id
+        self._offer_id_list = offer_id_list
+        self._initial_count = initial_count
+        self._adjustment_list = None
 
     @property
     def References(self):
-        return [self.InitialLiabilityID, self.FinalLiabilityID] \
-            + self.OfferIDList
-
-    @property
-    def OriginatorID(self):
-        assert self.Transaction
-        return self.Transaction.OriginatorID
-
-    @property
-    def ObjectID(self):
-        assert self.Transaction
-        return self.Transaction.Identifier
+        return [self._initial_liability_id, self._final_liability_id] \
+            + self._offer_id_list
 
     def build_adjustment_list(self, store):
         """
@@ -311,12 +303,14 @@ class Exchange(object):
         result of this update
         """
 
-        self._AdjustmentList = None
+        self._adjustment_list = None
 
         # Create the initial source of assets
-        payer = _LiabilityInformation.load_from_store(store,
-                                                      self.InitialLiabilityID)
-        count = int(self.InitialCount)
+        payer = _LiabilityInformation.load_from_store(
+            store,
+            self._initial_liability_id
+        )
+        count = int(self._initial_count)
         if count <= 0:
             logger.debug('count of objects transferred goes to 0')
             return False
@@ -327,7 +321,7 @@ class Exchange(object):
             return False
 
         adjustments = []
-        for offerid in self.OfferIDList:
+        for offerid in self._offer_id_list:
 
             offer = _OfferInformation.load_from_store(store, offerid)
             if not offer.test_offer(count, payer):
@@ -353,79 +347,74 @@ class Exchange(object):
 
         # Create the final destination for all of the transfers
         payee = _LiabilityInformation.load_from_store(store,
-                                                      self.FinalLiabilityID)
+                                                      self._final_liability_id)
         adjustments.append(_Adjustment(payer, payee, count, []))
 
-        self._AdjustmentList = adjustments
+        self._adjustment_list = adjustments
         return True
 
-    def is_valid(self, store):
+    def check_valid(self, store, txn):
         logger.debug('market update: %s', str(self))
 
         # check to make sure that the originator has permission to decrement
         # the InitialLiability
         if not liability_update.LiabilityObject.is_valid_object(
-                store, self.InitialLiabilityID):
-            return False
+                store, self._initial_liability_id):
+            raise InvalidTransactionError(
+                "Initial Liability does not reference a liability")
 
         # verify that the originator of the transaction is the owner of the
         # source liability
-        payer = _LiabilityInformation.load_from_store(store,
-                                                      self.InitialLiabilityID)
+        payer = _LiabilityInformation.load_from_store(
+            store,
+            self._initial_liability_id
+        )
         if not self.CreatorType.is_valid_creator(store, payer.CreatorID,
-                                                 self.OriginatorID):
+                                                 txn.OriginatorID):
             logger.warn(
                 '%s does not have permission to transfer assets from '
                 'liability %s',
-                payer.CreatorID, self.InitialLiabilityID)
-            return False
+                payer.CreatorID, self._initial_liability_id)
+            raise InvalidTransactionError("Payer is not a valid Creator "
+                                          "or does not have access to "
+                                          "liability")
 
         # check to make sure that the originator has permission to increment
         # the FinalLiability
         if not liability_update.LiabilityObject.is_valid_object(
-                store, self.FinalLiabilityID):
-            return False
+                store, self._final_liability_id):
+            raise InvalidTransactionError(
+                "Final liability does not reference a liability")
 
         # ensure that all of the offers are valid
         offermap = set()
-        for offerid in self.OfferIDList:
+        for offerid in self._offer_id_list:
             # make sure the offerid references a valid offer, note that a
             # selloffer is really just a subclass of exchangeoffer so a
             # selloffer is a valid exchange offer
             if not exchange_offer_update.ExchangeOfferObject.is_valid_object(
                     store, offerid):
-                return False
-
+                raise InvalidTransactionError(
+                    "Offerid {} is not an ExchangeOffer".format(str(offerid)))
             # ensure that there are no duplicates in the list, duplicates can
             # cause of tests for validity to fail
             if offerid in offermap:
                 logger.info('duplicate offers not allowed in an exchange; %s',
                             offerid)
-                return False
+                raise InvalidTransactionError("Duplicate offers not allowed")
             offermap.add(offerid)
 
         # and finally build the adjustment lists to make sure that all of the
         # adjustments are valid
         if not self.build_adjustment_list(store):
             logger.warn('failed to build the adjustment list')
-            return False
+            raise InvalidTransactionError(
+                "Failed to build the adjustment list")
 
-        return True
+    def apply(self, store, txn):
 
-    def apply(self, store):
-
-        if not self._AdjustmentList:
+        if not self._adjustment_list:
             self.build_adjustment_list(store)
 
-        for adjustment in self._AdjustmentList:
+        for adjustment in self._adjustment_list:
             adjustment.apply(store)
-
-    def dump(self):
-        result = {
-            'UpdateType': self.UpdateType,
-            'InitialLiabilityID': self.InitialLiabilityID,
-            'FinalLiabilityID': self.FinalLiabilityID,
-            'OfferIDList': self.OfferIDList,
-            'InitialCount': int(self.InitialCount)
-        }
-        return result

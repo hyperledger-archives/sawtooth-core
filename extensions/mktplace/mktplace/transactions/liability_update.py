@@ -15,6 +15,10 @@
 
 import logging
 
+from journal import transaction
+
+from sawtooth.exceptions import InvalidTransactionError
+
 from mktplace.transactions import account_update
 from mktplace.transactions import asset_type_update
 from mktplace.transactions import holding_update
@@ -92,107 +96,129 @@ class LiabilityObject(market_place_object_update.MarketPlaceObject):
         return result
 
 
-class Register(market_place_object_update.Register):
-    UpdateType = '/mktplace.transactions.LiabilityUpdate/Register'
+class Register(transaction.Update):
+    UpdateType = 'RegisterLiability'
     ObjectType = LiabilityObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Register, self).__init__(transaction, minfo)
-
-        self.CreatorID = minfo.get('CreatorID', '**UNKNOWN**')
-        self.AccountID = minfo.get('AccountID', '**UNKNOWN**')
-        self.AssetTypeID = minfo.get('AssetTypeID', '**UNKNOWN**')
-        self.GuarantorID = minfo.get('GuarantorID', '**UNKNOWN**')
-        self.Count = int(minfo.get('Count', 0))
-        self.Description = minfo.get('Description', '')
-        self.Name = minfo.get('Name', '')
+    def __init__(self,
+                 update_type,
+                 creator_id=None,
+                 account_id=None,
+                 asset_type_id=None,
+                 guarantor_id=None,
+                 count=0,
+                 description=None,
+                 name=None):
+        super(Register, self).__init__(update_type)
+        self._creator_id = creator_id or '**UNKNOWN**'
+        self._account_id = account_id or '**UNKNOWN**'
+        self._asset_type_id = asset_type_id or '**UNKNOWN**'
+        self._guarantor_id = guarantor_id or '**UNKNOWN**'
+        self._count = int(count)
+        self._description = description or ''
+        self._name = name or ''
 
     @property
     def References(self):
-        return [self.CreatorID, self.AssetTypeID]
+        return [self._creator_id, self._asset_type_id]
 
-    def is_valid(self, store):
-        if not super(Register, self).is_valid(store):
-            return False
+    def check_valid(self, store, txn):
+        if txn.Identifier in store:
+            raise InvalidTransactionError(
+                "ObjectId already in store")
 
-        if not self.is_permitted(store):
-            return False
+        if not market_place_object_update.global_is_valid_name(
+                store, self._name, self.ObjectType, self._creator_id):
+            raise InvalidTransactionError(
+                "Name is not valid")
+
+        if not market_place_object_update.global_is_permitted(
+                store,
+                txn,
+                self._creator_id,
+                self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator Address not the same as txn.OriginatorID")
 
         if not account_update.AccountObject.is_valid_object(store,
-                                                            self.AccountID):
-            return False
+                                                            self._account_id):
+            raise InvalidTransactionError(
+                "AccountId does not reference an Account")
 
         if not asset_type_update.AssetTypeObject.is_valid_object(
-                store, self.AssetTypeID):
-            return False
+                store, self._asset_type_id):
+            raise InvalidTransactionError(
+                "AssetTypeid not a valid AssetType")
 
         if not participant_update.ParticipantObject.is_valid_object(
-                store, self.GuarantorID):
-            return False
+                store, self._guarantor_id):
+            raise InvalidTransactionError(
+                "GuarantorID not a valid Participant")
 
-        if self.Count < 0:
-            return False
+        if self._count < 0:
+            raise InvalidTransactionError(
+                "Count < 0")
 
         return True
 
-    def apply(self, store):
-        super(Register, self).apply(store)
-        pobj = self.ObjectType(self.ObjectID)
+    def apply(self, store, txn):
+        pobj = self.ObjectType(txn.Identifier)
 
-        pobj.CreatorID = self.CreatorID
-        pobj.AccountID = self.AccountID
-        pobj.AssetTypeID = self.AssetTypeID
-        pobj.GuarantorID = self.GuarantorID
-        pobj.Count = self.Count
-        pobj.Description = self.Description
-        pobj.Name = self.Name
+        pobj.CreatorID = self._creator_id
+        pobj.AccountID = self._account_id
+        pobj.AssetTypeID = self._asset_type_id
+        pobj.GuarantorID = self._guarantor_id
+        pobj.Count = self._count
+        pobj.Description = self._description
+        pobj.Name = self._name
 
-        store[self.ObjectID] = pobj.dump()
-
-    def dump(self):
-        result = super(Register, self).dump()
-
-        result['CreatorID'] = self.CreatorID
-        result['AccountID'] = self.AccountID
-        result['AssetTypeID'] = self.AssetTypeID
-        result['GuarantorID'] = self.GuarantorID
-        result['Count'] = int(self.Count)
-        result['Description'] = self.Description
-        result['Name'] = self.Name
-
-        return result
+        store[txn.Identifier] = pobj.dump()
 
 
-class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/mktplace.transactions.LiabilityUpdate/Unregister'
+class Unregister(transaction.Update):
+    UpdateType = 'UnregisterLiability'
     ObjectType = LiabilityObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Unregister, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 object_id,
+                 creator_id):
+        super(Unregister, self).__init__(update_type)
+        self._object_id = object_id
+        self._creator_id = creator_id
 
-    def is_valid(self, store):
-        if not super(Unregister, self).is_valid(store):
-            return False
+    @property
+    def References(self):
+        return []
 
-        if not self.is_permitted(store):
-            return False
+    def check_valid(self, store, txn):
+        assert txn.OriginatorID
 
-        return True
+        if not market_place_object_update.global_is_permitted(
+                store,
+                txn,
+                self._creator_id,
+                self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator Address not the same as txn.OriginatorID")
+
+        if not self.ObjectType.is_valid_object(store, self._object_id):
+            raise InvalidTransactionError(
+                "ObjectID does not reference a Liability")
+
+    def apply(self, store, txn):
+        del store[self._object_id]
 
 
 class UpdateDescription(market_place_object_update.UpdateDescription):
-    UpdateType = '/mktplace.transactions.LiabilityUpdate/UpdateDescription'
+    UpdateType = 'UpdateLiabilityDescription'
     ObjectType = LiabilityObject
     CreatorType = participant_update.ParticipantObject
 
 
 class UpdateName(market_place_object_update.UpdateName):
-    UpdateType = '/mktplace.transactions.LiabilityUpdate/UpdateName'
+    UpdateType = 'UpdateLiabilityName'
     ObjectType = LiabilityObject
     CreatorType = participant_update.ParticipantObject

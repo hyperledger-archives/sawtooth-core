@@ -271,8 +271,6 @@ class Journal(object):
         self.BlockStore.close()
         self.ChainStore.close()
 
-        super(Journal, self).shutdown()
-
     def add_transaction_store(self, family):
         """Add a transaction type-specific store to the global store.
 

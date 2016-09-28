@@ -17,8 +17,8 @@ the script is executed as follows:
 
     $ cd /project/sawtooth-validator
     $ ./bin/launcher
-    No config file specified, loading  /project/sawtooth-validator/etc/txnvalidator.js
-    Overriding the following keys from validator configuration file: /project/sawtooth-validator/etc/txnvalidator.js
+    No config file specified, loading  /project/sawtooth-core/validator/etc/txnvalidator.js
+    Overriding the following keys from validator configuration file: /project/sawtooth-core/validator/etc/txnvalidator.js
             NodeName
             Host
             HttpPort
@@ -60,7 +60,7 @@ the script is executed as follows:
 Without any command-line options, the script launches a single txnvalidator
 instance.  As can be seen from the output above, the launcher reports the
 configuration file used, usually
-/project/sawtooth-validator/etc/txnvalidator.js, as well as any configuration
+/project/sawtooth-core/validator/etc/txnvalidator.js, as well as any configuration
 settings that it has overridden.
 
 After the script launches the txnvalidator instance(s), it presents an

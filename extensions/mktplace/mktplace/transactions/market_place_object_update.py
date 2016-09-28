@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import logging
-from journal.transaction import SerializationError
-
+from journal import transaction
+from sawtooth.exceptions import InvalidTransactionError
 logger = logging.getLogger(__name__)
 
 
@@ -78,269 +78,100 @@ class MarketPlaceObject(object):
         return result
 
 
-class Register(object):
-    UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/Register'
+def global_is_valid_name(store, name, object_type, creator_id):
+    """
+    Ensure that the name property meets syntactic requirements.
+    """
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        self.Transaction = transaction
-
-    def __str__(self):
-        return "({0}, {1}, {2})".format(self.UpdateType, self.OriginatorID,
-                                        self.ObjectID)
-
-    @property
-    def references(self):
-        return []
-
-    @property
-    def OriginatorID(self):
-        assert self.Transaction
-        return self.Transaction.OriginatorID
-
-    @property
-    def ObjectID(self):
-        assert self.Transaction
-        return self.Transaction.Identifier
-
-    def is_valid_name(self, store):
-        """
-        Ensure that the name property meets syntactic requirements. Objects
-        can override this method for object specific syntax. This method
-        simply requires that a name begins with a '/', has a total length
-        less than 64 characters, and is not the same as an already-existing
-        object.
-        """
-
-        if self.Name == '':
-            return True
-        if not self.Name.startswith('/'):
-            logger.debug('invalid name %s; must start with /', self.Name)
-            return False
-
-        if len(self.Name) >= 64:
-            logger.debug(
-                'invalid name %s; must be less than 64 bytes', self.Name)
-            return False
-
-        if not self.Name.startswith('//'):
-            name = "{0}{1}".format(self.CreatorID, self.Name)
-        else:
-            name = self.Name
-
-        if store.n2i(name, self.ObjectType.ObjectTypeName):
-            logger.debug(
-                'invalid name %s; name must be unique', self.Name)
-            return False
-
+    if name == '':
         return True
+    if not name.startswith('/'):
+        logger.debug('invalid name %s; must start with /', name)
+        return False
 
-    def is_valid(self, store):
-        logger.debug('market update: %s', str(self))
+    if len(name) >= 64:
+        logger.debug(
+            'invalid name %s; must be less than 64 bytes', name)
+        return False
 
-        if self.ObjectID in store:
-            logger.info('duplicate registration for object %s', self.ObjectID)
-            return False
+    if not name.startswith('//'):
+        name = "{0}{1}".format(creator_id, name)
+    else:
+        name = name
 
-        if not self.is_valid_name(store):
-            return False
-
-        return True
-
-    def is_permitted(self, store):
-        """
-        Global permission check, for now only verifies that the creator id
-        corresponds to the originator of the transaction.
-        """
-        if not self.CreatorType.is_valid_creator(store, self.CreatorID,
-                                                 self.OriginatorID):
-            return False
-
-        return True
-
-    def apply(self, store):
-        pass
-
-    def dump(self):
-        result = {'UpdateType': self.UpdateType}
-        return result
+    if store.n2i(name, object_type.ObjectTypeName):
+        logger.debug(
+            'invalid name %s; name must be unique', name)
+        return False
+    return True
 
 
-class Unregister(object):
-    UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/Unregister'
+def global_is_permitted(store, txn, creator_id, creator_type):
+    """
+    Global permission check, for now only verifies that the creator id
+    corresponds to the originator of the transaction.
+    """
+    if not creator_type.is_valid_creator(store, creator_id,
+                                         txn.OriginatorID):
+        return False
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        self.Transaction = transaction
+    return True
 
-        self.ObjectID = minfo.get('ObjectID')
-        self.CreatorID = minfo.get('CreatorID')
 
-    def __str__(self):
-        return "({0}, {1}, {2})".format(self.UpdateType, self.OriginatorID,
-                                        self.ObjectID)
+class UpdateDescription(transaction.Update):
+
+    def __init__(self, update_type, creator_id, description, object_id):
+        super(UpdateDescription, self).__init__(update_type)
+        self._object_id = object_id
+        self._creator_id = creator_id
+        self._description = description
 
     @property
     def References(self):
-        return []
+        return [self.ObjectID, self._creator_id]
 
-    @property
-    def OriginatorID(self):
-        assert self.Transaction
-        return self.Transaction.OriginatorID
-
-    def is_valid(self, store):
+    def check_valid(self, store, txn):
         logger.debug('market update: %s', str(self))
 
-        assert self.OriginatorID
-        assert self.ObjectID
-        assert self.CreatorID
+        assert txn.OriginatorID
+        assert txn.Identifier
+        assert self._creator_id
 
-        if not self.ObjectType.is_valid_object(store, self.ObjectID):
-            return False
+        if not self.ObjectType.IsValidObject(store, txn.Identifier):
+            raise InvalidTransactionError(
+                "ObjectId does not reference a valid object")
 
-        return True
+        if not self.CreatorType.IsValidCreator(store, self._creator_id,
+                                               txn.OriginatorID):
+            raise InvalidTransactionError(
+                "Creator Address not the same as txn.OriginatorId")
 
-    def is_permitted(self, store):
-        if not self.CreatorType.is_valid_creator(store, self.CreatorID,
-                                                 self.OriginatorID):
-            return False
-
-        return True
-
-    def apply(self, store):
-        del store[self.ObjectID]
-
-    def dump(self):
-        assert self.ObjectID
-        assert self.CreatorID
-        result = {
-            'UpdateType': self.UpdateType,
-            'ObjectID': self.ObjectID,
-            'CreatorID': self.CreatorID
-        }
-        return result
-
-
-class UpdateDescription(object):
-    UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate' \
-                 '/UpdateDescription'
-
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        self.Transaction = transaction
-
-        self.ObjectID = None
-        self.CreatorID = None
-        self.Description = ''
-
-        if minfo:
-            self._unpack(minfo)
-
-    def _unpack(self, minfo):
-        try:
-            self.ObjectID = minfo['ObjectID']
-            self.CreatorID = minfo['CreatorID']
-            self.Description = minfo['Description']
-
-        except KeyError as ke:
-            logger.warn('missing required field for %s transaction; %s',
-                        self.UpdateType, ke)
-            raise SerializationError(
-                self.UpdateType, 'missing required field {0}'.format(ke))
-
-    def __str__(self):
-        return "({0}, {1}, {2})".format(
-            self.UpdateType, self.OriginatorID, self.ObjectID)
-
-    @property
-    def References(self):
-        return [self.ObjectID, self.CreatorID]
-
-    @property
-    def OriginatorID(self):
-        assert self.Transaction
-        return self.Transaction.OriginatorID
-
-    def is_valid(self, store):
-        logger.debug('market update: %s', str(self))
-
-        assert self.OriginatorID
-        assert self.ObjectID
-        assert self.CreatorID
-
-        if not self.ObjectType.IsValidObject(store, self.ObjectID):
-            return False
-
-        if not self.CreatorType.IsValidCreator(store, self.CreatorID,
-                                               self.OriginatorID):
-            return False
-
-        if len(self.Description) > 255:
+        if len(self._description) > 255:
             logger.debug('description must be less than 255 bytes')
-            return False
+            raise InvalidTransactionError(
+                "Description is longer than 255 characters")
 
-        return True
-
-    def apply(self, store):
-        obj = store[self.ObjectID]
-        obj['description'] = self.Description
-        store[self.ObjectID] = obj
-
-    def dump(self):
-        assert self.ObjectID
-        assert self.CreatorID
-        result = {
-            'UpdateType': self.UpdateType,
-            'ObjectID': self.ObjectID,
-            'CreatorID': self.CreatorID,
-            'Description': self.Description
-        }
-        return result
+    def apply(self, store, txn):
+        obj = store[txn.Identifier]
+        obj['description'] = self._description
+        store[txn.Identifier] = obj
 
 
-class UpdateName(object):
-    UpdateType = '/mktplace.transactions.MarketPlaceObjectUpdate/UpdateName'
+class UpdateName(transaction.Update):
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        self.Transaction = transaction
-
-        self.ObjectID = None
-        self.CreatorID = None
-        self.Name = ''
-
-        if minfo:
-            self._unpack(minfo)
-
-    def _unpack(self, minfo):
-        try:
-            self.ObjectID = minfo['ObjectID']
-            self.CreatorID = minfo['CreatorID']
-            self.Name = minfo['Name']
-
-        except KeyError as ke:
-            logger.warn('missing required field for %s transaction; %s',
-                        self.UpdateType, ke)
-            raise SerializationError(
-                self.UpdateType, 'missing required field {0}'.format(ke))
-
-    def __str__(self):
-        return "({0}, {1}, {2})".format(
-            self.UpdateType, self.OriginatorID, self.ObjectID)
+    def __init__(self,
+                 update_type,
+                 object_id,
+                 creator_id,
+                 name):
+        super(UpdateName, self).__init__(update_type)
+        self._object_id = object_id
+        self._creator_id = creator_id
+        self._name = name
 
     @property
     def References(self):
-        return [self.ObjectID, self.CreatorID]
-
-    @property
-    def OriginatorID(self):
-        assert self.Transaction
-        return self.Transaction.OriginatorID
+        return [self._object_id, self._creator_id]
 
     def is_valid_name(self, store):
         """
@@ -351,66 +182,59 @@ class UpdateName(object):
         object.
         """
 
-        if self.Name == '':
+        if self._name == '':
             return True
 
-        if not self.Name.startswith('/'):
-            logger.debug('invalid name %s; must start with /', self.Name)
+        if not self._name.startswith('/'):
+            logger.debug('invalid name %s; must start with /', self._name)
             return False
 
-        if len(self.Name) >= 64:
+        if len(self._name) >= 64:
             logger.debug('invalid name %s; must be less than 64 bytes',
-                         self.Name)
+                         self._name)
             return False
 
-        if not self.Name.startswith('//'):
-            name = "{0}{1}".format(store.i2n(self.CreatorID), self.Name)
+        if not self._name.startswith('//'):
+            name = "{0}{1}".format(store.i2n(self._creator_id), self._name)
         else:
-            name = self.Name
+            name = self._name
 
         if store.n2i(name, self.ObjectType.ObjectTypeName):
-            logger.debug('invalid name %s; name must be unique', self.Name)
+            logger.debug('invalid name %s; name must be unique', self._name)
             return False
 
         return True
 
-    def is_valid(self, store):
+    def check_valid(self, store, txn):
         logger.debug('market update: %s', str(self))
 
-        assert self.OriginatorID
-        assert self.ObjectID
-        assert self.CreatorID
+        assert txn.OriginatorID
+        assert self._object_id
+        assert self._creator_id
 
-        if not self.ObjectType.is_valid_object(store, self.ObjectID):
-            return False
+        if not self.ObjectType.is_valid_object(store, self._object_id):
+            raise InvalidTransactionError(
+                "ObjectId does not reference a valid object")
 
         if not self.is_valid_name(store):
-            return False
+            raise InvalidTransactionError(
+                "Name isn't valid")
 
-        return True
+        if not self.is_permitted(store, txn):
+            raise InvalidTransactionError(
+                "Creator address not the same as txn.OriginatorID")
 
-    def is_permitted(self, store):
+    def is_permitted(self, store, txn):
         if not self.CreatorType.is_valid_creator(
-                store, self.CreatorID, self.OriginatorID):
+                store, self._creator_id, txn.OriginatorID):
             return False
 
         return True
 
-    def apply(self, store):
+    def apply(self, store, txn):
         # remove the existing name
 
-        obj = store[self.ObjectID]
-        del store[self.ObjectID]
-        obj['name'] = self.Name
-        store[self.ObjectID] = obj
-
-    def dump(self):
-        assert self.ObjectID
-        assert self.CreatorID
-        result = {
-            'UpdateType': self.UpdateType,
-            'ObjectID': self.ObjectID,
-            'CreatorID': self.CreatorID,
-            'Name': self.Name
-        }
-        return result
+        obj = store[self._object_id]
+        del store[self._object_id]
+        obj['name'] = self._name
+        store[self._object_id] = obj

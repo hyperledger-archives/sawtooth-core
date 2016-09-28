@@ -17,6 +17,8 @@ import logging
 
 from mktplace.transactions import market_place_object_update
 from mktplace.transactions import participant_update
+from journal.transaction import Update
+from sawtooth.exceptions import InvalidTransactionError
 
 logger = logging.getLogger(__name__)
 
@@ -57,83 +59,95 @@ class AssetTypeObject(market_place_object_update.MarketPlaceObject):
         return result
 
 
-class Register(market_place_object_update.Register):
-    UpdateType = '/mktplace.transactions.AssetTypeUpdate/Register'
+class Register(Update):
+    UpdateType = 'RegisterAssetType'
     ObjectType = AssetTypeObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Register, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 creator_id=None,
+                 restricted=True,
+                 description=None,
+                 name=None):
+        super(Register, self).__init__(update_type)
 
-        self.CreatorID = minfo.get('CreatorID', '**UNKNOWN**')
-        self.Restricted = bool(minfo.get('Restricted', True))
-        self.Description = minfo.get('Description', '')
-        self.Name = minfo.get('Name', '')
+        self._creator_id = creator_id or '**UNKNOWN**'
+        self._restricted = restricted
+        self._description = description or ''
+        self._name = name or ''
 
     @property
     def References(self):
-        return [self.CreatorID]
+        return [self._creator_id]
 
-    def is_valid(self, store):
-        if not super(Register, self).is_valid(store):
-            return False
+    def check_valid(self, store, txn):
+        if txn.Identifier in store:
+            raise InvalidTransactionError(
+                "ObjectId is already used")
 
-        if not self.is_permitted(store):
-            return False
+        if not market_place_object_update.global_is_valid_name(
+                store, self._name, self.ObjectType,
+                self._creator_id):
+            raise InvalidTransactionError(
+                "Name isn't valid")
 
-        return True
+        if not market_place_object_update.global_is_permitted(
+                store, txn, self._creator_id, self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator Address not the same as txn.OriginatorId")
 
-    def apply(self, store):
-        super(Register, self).apply(store)
-        pobj = self.ObjectType(self.ObjectID)
+    def apply(self, store, txn):
+        pobj = self.ObjectType(txn.Identifier)
 
-        pobj.CreatorID = self.CreatorID
-        pobj.Restricted = self.Restricted
-        pobj.Description = self.Description
-        pobj.Name = self.Name
+        pobj.CreatorID = self._creator_id
+        pobj.Restricted = self._restricted
+        pobj.Description = self._description
+        pobj.Name = self._name
 
-        store[self.ObjectID] = pobj.dump()
-
-    def dump(self):
-        result = super(Register, self).dump()
-
-        result['CreatorID'] = self.CreatorID
-        result['Restricted'] = self.Restricted
-        result['Description'] = self.Description
-        result['Name'] = self.Name
-
-        return result
+        store[txn.Identifier] = pobj.dump()
 
 
-class Unregister(market_place_object_update.Unregister):
-    UpdateType = '/mktplace.transactions.AssetTypeUpdate/Unregister'
+class Unregister(Update):
+    UpdateType = 'UnregisterAssetType'
     ObjectType = AssetTypeObject
     CreatorType = participant_update.ParticipantObject
 
-    def __init__(self, transaction=None, minfo=None):
-        if minfo is None:
-            minfo = {}
-        super(Unregister, self).__init__(transaction, minfo)
+    def __init__(self,
+                 update_type,
+                 object_id=None,
+                 creator_id=None):
+        super(Unregister, self).__init__(update_type)
+        self._object_id = object_id
+        self._creator_id = creator_id
 
-    def is_valid(self, store):
-        if not super(Unregister, self).is_valid(store):
-            return False
+    @property
+    def References(self):
+        return []
 
-        if not self.is_permitted(store):
-            return False
+    def check_valid(self, store, txn):
+        assert txn.OriginatorID
 
-        return True
+        if not self.ObjectType.is_valid_object(store, self._object_id):
+            raise InvalidTransactionError(
+                "ObjectId is not an AssetType")
+
+        if not market_place_object_update.global_is_permitted(
+                store, txn, self._creator_id, self.CreatorType):
+            raise InvalidTransactionError(
+                "Creator address is not the same as txn.OriginatorID")
+
+    def apply(self, store, txn):
+        del store[self._object_id]
 
 
 class UpdateDescription(market_place_object_update.UpdateDescription):
-    UpdateType = '/mktplace.transactions.AssetTypeUpdate/UpdateDescription'
+    UpdateType = 'UpdateAssetTypeDescription'
     ObjectType = AssetTypeObject
     CreatorType = participant_update.ParticipantObject
 
 
 class UpdateName(market_place_object_update.UpdateName):
-    UpdateType = '/mktplace.transactions.AssetTypeUpdate/UpdateName'
+    UpdateType = 'UpdateAssetTypeName'
     ObjectType = AssetTypeObject
     CreatorType = participant_update.ParticipantObject

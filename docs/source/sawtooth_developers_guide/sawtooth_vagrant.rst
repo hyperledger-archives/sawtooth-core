@@ -9,23 +9,23 @@ Vagrant is a tool which installs and configures virtual development
 environments. It allows development teams to easily specify and share
 consistent virtual machine configurations.
 
-The sawtooth-dev-tools repository contains a Vagrant configuration which
-is specifically tailored to Sawtooth development.  A new developer with
-installed copies of Vagrant and VirtualBox can clone the sawtooth-dev-tools
-repository and have a functional VM which can run validators within a few
-minutes.
+The dev tools directory (path ''sawtooth-core/tools'') of the sawtooth-core
+repository contains a Vagrant configuration which is specifically tailored to
+Sawtooth development.  A new developer with installed copies of Vagrant and
+VirtualBox can clone the sawtooth-core repository and have a functional VM
+which can run validators within a few minutes.
 
-A quick introduction to using sawtooth-dev-tools is available as a
+A quick introduction to using dev tools is available as a
 quickstart in this Developer's Guide.
 
 Layout of the sawtooth-dev-tools git Repository
 ------------------------------------------------
 
-The sawtooth-dev-tools repository is structured as follows:
+The dev tools directory is structured as follows:
 
 .. code-block:: console
 
-  sawtooth-dev-tools/
+ tools/
     bootstrap.d/
     guest-files/
     plugins/
@@ -80,7 +80,7 @@ A convenient feature of Vagrant is the easy sharing of directories between
 the host machine and the guest virtual machine. By default the Vagrant
 configuration directory is mounted under /vagrant in the virtual machine.
 
-In the sawtooth-dev-tools configuration a /project mount point is also
+In the dev tools configuration a /project mount point is also
 defined which provides access to the Sawtooth repositories.
 
 Configuration Options

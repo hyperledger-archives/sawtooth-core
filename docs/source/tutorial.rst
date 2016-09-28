@@ -168,7 +168,7 @@ the following command:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place
+   $ ./bin/txnvalidator -v --genesis -F mktplace.transactions.market_place
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
@@ -235,7 +235,7 @@ Start mktclient as The Marketplace participant:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/mktclient --name mkt
+   $ ./bin/mktclient --name mkt --keyfile validator/keys/mkt.wif
 
 Now execute commands as The Marketplace participant (mkt) using the
 mktclient shell you just opened.  As you perform these commands, you will
@@ -324,7 +324,7 @@ First, let's register Bob.  Startup mktclient using the name of Bob's key file
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/mktclient --name bob
+   $ ./bin/mktclient --name bob --keyfile validator/keys/bob.wif
 
 Register Bob as a participant and create his account:
 
@@ -363,7 +363,7 @@ Alice's key file (alice):
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/mktclient --name alice
+   $ ./bin/mktclient --name alice --keyfile validator/keys/alice.wif 
 
 Alice's initalization is the same as Bob's:
 
@@ -392,7 +392,7 @@ Start mktclient with Bob's key:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/mktclient --name bob
+   $ ./bin/mktclient --name bob --keyfile validator/keys/bob.wif
 
 Let's create a new holding representing Bob's batch of cookies and initialize
 it with 24 cookies.  Then create an exchange offer:
@@ -440,7 +440,7 @@ exchange offer.
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/mktclient --name alice
+   $ ./bin/mktclient --name alice --keyfile validator/keys/alice.wif
 
 Execute an exchange (accepting Bob's offer):
 

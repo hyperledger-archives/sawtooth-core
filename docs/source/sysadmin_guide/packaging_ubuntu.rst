@@ -137,6 +137,8 @@ Create package from sawtooth repository:
   vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
   vagrant@ubuntu $ cp deb_dist/python-sawtooth-core*.deb $HOME/packages/
 
+
+Create tar File of Packages
 ===========================
 
 To make it trivial to deliver the Ubuntu deb files, create a tar file:
