@@ -23,46 +23,36 @@ domain-specific needs.
 Repository Structure
 ====================
 
-**sawtooth-core** - This repository contains the core functionaliy
-of the distributed ledger, including:
-
-* the gossip networking layer
-* basic transaction, block, and message objects
-* the base journal implementation
-* the PoET and quorum voting journal consensus mechanisms
-* 'built-in' transaction families - Endpoint Registry and Integer Key
-  Registry
-
-Additionally, **sawtooth-core** also contains code that was previously located in separate repositories:
-
-**validator** - The implementation of a server, known as the validator. The
-validator acts as a node on the gossip network, as defined by sawtooth-core.
-Validators exchange and act upon messages, as defined by the core classes and
-via additional plug-in transaction families like the MarketPlace Transaction
-Family.
-
-**mktplace** - This repository contains the MarketPlace Transaction Family.
-This demonstrates how to inherit and extend base sawtooth-core object types to
-implement a custom transaction family. sawtooth-mktplace also includes a
-command line interface called *mktclient* for interacting with validators
-running the MarketPlace Transaction Family.
-
-    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
-    * Tools including a Vagrant environment for easily launching a network of
-      validators
-    * Source files for this documentation
-
-
 One repository contains all of the the code needed:
 
 sawtooth-core
     Contains fundamental classes used throughout the Sawtooth Lake project, as well as:
 
-    * The implementation of the validator process which runs on each node
-    * The implementation of a transaction family for buying, selling and
-      trading digital assets, and a client program for interacting with a node
-      to execute market transactions
-    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
+    * The gossip networking layer
+    * Basic transaction, block, and message objects
+    * The base journal implementation
+    * The PoET and quorum voting journal consensus mechanisms
+    * Built-in transaction families - Endpoint Registry and Integer Key
+      Registry
+    * The implementation of a server, known as the validator
+
+      - acts as a node on the gossip network
+      - validators exchange and act upon messages, as defined by the core 
+        classes and via additional plug-in transaction families like the 
+        MarketPlace Transaction Family
+
+    * The MarketPlace Transaction Family, located in the extensions
+      directory. 
+
+      - demonstrates how to inherit and extend base sawtooth-core
+        object types to implement a custom transaction family
+      - includes a command line interface called *mktclient* for
+        interacting with validators running the MarketPlace Transaction
+        Family
+      - useful for buying, selling and trading digital assets
+
+    * Example code, in the form of games, which demonstrate key concepts of
+      Sawtooth Lake
     * Tools including a Vagrant environment for easily launching a network of
       validators
     * Source files for this documentation
