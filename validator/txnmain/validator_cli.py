@@ -88,17 +88,16 @@ def local_main(config, windows_service=False, daemonized=False):
 
         if ledgertype == 'poet0':
             from journal.consensus.poet0 import poet_journal
-            set_wait_timer_globals(target_wait_time, initial_wait_time,
+            set_wait_timer_globals(target_wait_time,
+                                   initial_wait_time,
                                    certificate_sample_length,
                                    fixed_duration_blocks)
             # Continue to pass config to PoetJournal for possible other enclave
             # implmentations - poet_enclave.initialize
-            ledger = poet_journal.PoetJournal(gossip, config,
-                                              min_txn_per_block,
-                                              max_txn_per_block,
-                                              max_txn_age, genesis_ledger,
-                                              restore, data_directory,
-                                              store_type)
+            ledger = poet_journal.PoetJournal(
+                gossip, config, min_txn_per_block, max_txn_per_block,
+                max_txn_age, genesis_ledger, restore, data_directory,
+                store_type)
         elif ledgertype == 'quorum':
             quorum = config.get("Quorum")
             nodes = config.get("Nodes")
@@ -106,15 +105,11 @@ def local_main(config, windows_service=False, daemonized=False):
             ballot_time_interval = config.get("BallotTimeInterval")
             voting_quorum_target_size = config.get("VotingQuorumTargetSize")
             from journal.consensus.quorum import quorum_journal
-            ledger = quorum_journal.QuorumJournal(gossip,
-                                                  min_txn_per_block,
-                                                  max_txn_per_block,
-                                                  max_txn_age, genesis_ledger,
-                                                  restore, data_directory,
-                                                  store_type,
-                                                  vote_time_interval,
-                                                  ballot_time_interval,
-                                                  voting_quorum_target_size)
+            ledger = quorum_journal.QuorumJournal(
+                gossip, min_txn_per_block, max_txn_per_block, max_txn_age,
+                genesis_ledger, restore, data_directory, store_type,
+                vote_time_interval, ballot_time_interval,
+                voting_quorum_target_size)
             ledger.initialize_quorum_map(quorum, nodes)
             # quorum validator is still sub-classed for now...
             validator = quorum_validator.QuorumValidator(
@@ -126,17 +121,14 @@ def local_main(config, windows_service=False, daemonized=False):
         elif ledgertype == 'dev_mode':
             block_wait_time = config.get("BlockWaitTime")
             from journal.consensus.dev_mode import dev_mode_journal
-            set_wait_timer_globals(target_wait_time, initial_wait_time,
+            set_wait_timer_globals(target_wait_time,
+                                   initial_wait_time,
                                    certificate_sample_length,
                                    fixed_duration_blocks)
-            ledger = dev_mode_journal.DevModeJournal(gossip,
-                                                     min_txn_per_block,
-                                                     max_txn_per_block,
-                                                     max_txn_age,
-                                                     genesis_ledger,
-                                                     restore, data_directory,
-                                                     store_type,
-                                                     block_wait_time)
+            ledger = dev_mode_journal.DevModeJournal(
+                gossip, min_txn_per_block, max_txn_per_block, max_txn_age,
+                genesis_ledger, restore, data_directory, store_type,
+                block_wait_time)
         else:
             warnings.warn('Unknown ledger type %s' % ledgertype)
             sys.exit(1)

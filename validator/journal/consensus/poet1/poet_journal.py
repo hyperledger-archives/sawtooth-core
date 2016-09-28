@@ -38,13 +38,23 @@ class PoetJournal(journal_core.Journal):
         MaximumBlocksToKeep (int): The maximum number of blocks to
             keep.
     """
-    def __init__(self, gossip, **kwargs):
+    def __init__(self, gossip, kwargs, minimum_transactions_per_block=None,
+                 max_transactions_per_block=None, max_txn_age=None,
+                 genesis_ledger=None, restore=None, data_directory=None,
+                 store_type=None):
         """Constructor for the PoetJournal class.
 
         Args:
             node (Node): The local node.
         """
-        super(PoetJournal, self).__init__(gossip, **kwargs)
+        super(PoetJournal, self).__init__(gossip,
+                                          minimum_transactions_per_block,
+                                          max_transactions_per_block,
+                                          max_txn_age,
+                                          genesis_ledger,
+                                          restore,
+                                          data_directory,
+                                          store_type)
 
         enclave_module = None
         if 'PoetEnclaveImplementation' in kwargs:

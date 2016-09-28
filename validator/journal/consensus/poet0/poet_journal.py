@@ -51,8 +51,10 @@ class PoetJournal(journal_core.Journal):
         super(PoetJournal, self).__init__(gossip,
                                           minimum_transactions_per_block,
                                           max_transactions_per_block,
-                                          max_txn_age, genesis_ledger,
-                                          restore, data_directory,
+                                          max_txn_age,
+                                          genesis_ledger,
+                                          restore,
+                                          data_directory,
                                           store_type)
 
         if 'PoetEnclaveImplementation' in kwargs:

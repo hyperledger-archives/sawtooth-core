@@ -197,7 +197,8 @@ class WaitTimer(object):
         return self.enclave_wait_timer.is_expired()
 
 
-def set_wait_timer_globals(target_wait_time=None, initial_wait_time=None,
+def set_wait_timer_globals(target_wait_time=None,
+                           initial_wait_time=None,
                            certificate_sample_length=None,
                            fixed_duration_blocks=None):
     if target_wait_time is not None:

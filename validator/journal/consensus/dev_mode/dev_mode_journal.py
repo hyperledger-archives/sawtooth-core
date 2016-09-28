@@ -41,8 +41,10 @@ class DevModeJournal(journal_core.Journal):
         super(DevModeJournal, self).__init__(gossip,
                                              minimum_transactions_per_block,
                                              max_transactions_per_block,
-                                             max_txn_age, genesis_ledger,
-                                             restore, data_directory,
+                                             max_txn_age,
+                                             genesis_ledger,
+                                             restore,
+                                             data_directory,
                                              store_type)
 
         # the one who can publish blocks is always the genesis ledger
