@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
 import argparse
 import importlib
 import json
@@ -24,7 +25,6 @@ import warnings
 import ctypes
 
 from gossip.gossip_core import Gossip
-from journal.consensus.poet0.wait_timer import set_wait_timer_globals
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
@@ -77,6 +77,7 @@ def local_main(config, windows_service=False, daemonized=False):
         initial_wait_time = config.get("InitialWaitTime")
         certificate_sample_length = config.get('CertificateSampleLength')
         fixed_duration_blocks = config.get("FixedDurationBlocks")
+        minimum_wait_time = config.get("MinimumWaitTime")
         # Journal parameters
         min_txn_per_block = config.get("MinimumTransactionsPerBlock")
         max_txn_per_block = config.get("MaxTransactionsPerBlock")
@@ -88,10 +89,27 @@ def local_main(config, windows_service=False, daemonized=False):
 
         if ledgertype == 'poet0':
             from journal.consensus.poet0 import poet_journal
+            from journal.consensus.poet0.wait_timer \
+                import set_wait_timer_globals
             set_wait_timer_globals(target_wait_time,
                                    initial_wait_time,
                                    certificate_sample_length,
                                    fixed_duration_blocks)
+            # Continue to pass config to PoetJournal for possible other enclave
+            # implmentations - poet_enclave.initialize
+            ledger = poet_journal.PoetJournal(
+                gossip, config, min_txn_per_block, max_txn_per_block,
+                max_txn_age, genesis_ledger, restore, data_directory,
+                store_type)
+        elif ledgertype == 'poet1':
+            from journal.consensus.poet1 import poet_journal
+            from journal.consensus.poet1.wait_timer \
+                import set_wait_timer_globals
+            set_wait_timer_globals(target_wait_time,
+                                   initial_wait_time,
+                                   certificate_sample_length,
+                                   fixed_duration_blocks,
+                                   minimum_wait_time)
             # Continue to pass config to PoetJournal for possible other enclave
             # implmentations - poet_enclave.initialize
             ledger = poet_journal.PoetJournal(
@@ -121,10 +139,6 @@ def local_main(config, windows_service=False, daemonized=False):
         elif ledgertype == 'dev_mode':
             block_wait_time = config.get("BlockWaitTime")
             from journal.consensus.dev_mode import dev_mode_journal
-            set_wait_timer_globals(target_wait_time,
-                                   initial_wait_time,
-                                   certificate_sample_length,
-                                   fixed_duration_blocks)
             ledger = dev_mode_journal.DevModeJournal(
                 gossip, min_txn_per_block, max_txn_per_block, max_txn_age,
                 genesis_ledger, restore, data_directory, store_type,

@@ -46,7 +46,7 @@ class GossipException(Exception):
 
 
 class Gossip(object, DatagramProtocol):
-    """Defines the protocol for gossip communcation between nodes.
+    """Defines the protocol for gossip communication between nodes.
 
     Attributes:
         ExpireMessageTime (int): Time in seconds to hold message to test

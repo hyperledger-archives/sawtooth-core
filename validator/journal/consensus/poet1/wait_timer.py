@@ -14,8 +14,11 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import time
 
-logger = logging.getLogger(__name__)
+from gossip.common import NullIdentifier
+
+LOGGER = logging.getLogger(__name__)
 
 
 class WaitTimer(object):
@@ -24,25 +27,24 @@ class WaitTimer(object):
 
     Attributes:
         WaitTimer.minimum_wait_time (float): The minimum wait time in seconds.
-        target_wait_time (float): The target wait time in seconds.
-        initial_wait_time (float): The initial wait time in seconds.
-        certificate_sample_length (int): The number of certificates to
-            sample for the population estimate.
-        fixed_duration_blocks (int): If fewer than FixedDurationBlocks
-            exist, then base the local mean on a ratio based on
-            InitialWaitTime, rather than the history.
+        WaitTimer.target_wait_time (float): The target wait time in seconds.
+        WaitTimer.initial_wait_time (float): The initial wait time in seconds.
+        WaitTimer.certificate_sample_length (int): The number of certificates
+            to sample for the population estimate.
+        WaitTimer.fixed_duration_blocks (int): If fewer than
+            WaitTimer.fixed_duration_blocks exist, then base the local mean
+            on a ratio based on InitialWaitTime, rather than the history.
         WaitTimer.poet_enclave (module): The PoetEnclave module to use for
             executing enclave functions.
-        WaitTimer.previous_certificate_id (str): The id of the previous
-            certificate.
-        WaitTimer.local_mean (float): The local mean wait time based on the
-            history of certs.
-        WaitTimer.request_time (float): The request time.
-        WaitTimer.duration (float): The duration of the wait timer.
-        WaitTimer.signature (str): The signature of the timer.
-        serialized_timer (str): A serialized version of the timer.
+        previous_certificate_id (str): The id of the previous certificate.
+        local_mean (float): The local mean wait time based on the history of
+            certs.
+        request_time (float): The request time.
+        duration (float): The duration of the wait timer.
+        signature (str): The signature of the timer.
 
     """
+    minimum_wait_time = 1.0
     target_wait_time = 30.0
     initial_wait_time = 3000.0
     certificate_sample_length = 50
@@ -51,57 +53,7 @@ class WaitTimer(object):
     poet_enclave = None
 
     @classmethod
-    def create_wait_timer(cls, validator_address, certs):
-        """Creates a wait timer in the enclave and then constructs
-        a WaitTimer object.
-
-        Args:
-            certs (list): A historical list of certificates.
-
-        Returns:
-            journal.consensus.poet.wait_timer.WaitTimer: A new wait timer.
-        """
-
-        if not isinstance(certs, list):
-            raise TypeError
-
-        previous_certificate_id = certs[-1].identifier if certs \
-            else cls.poet_enclave.NULL_IDENTIFIER
-        local_mean = cls.compute_local_mean(certs)
-        timer = cls.poet_enclave.create_wait_timer(
-            validator_address,
-            previous_certificate_id,
-            local_mean)
-
-        wt = cls(timer)
-        logger.info('wait timer created; %s', wt)
-
-        return wt
-
-    @classmethod
-    def compute_local_mean(cls, certs):
-        """Computes the local mean wait time based on the certificate
-        history.
-
-        Args:
-            certs (list): A historical list of certificates.
-
-        Returns:
-            float: The local mean wait time.
-        """
-        if not isinstance(certs, list):
-            raise TypeError
-
-        count = len(certs)
-        if count < cls.fixed_duration_blocks:
-            ratio = 1.0 * count / cls.fixed_duration_blocks
-            return cls.target_wait_time * \
-                (1 - ratio * ratio) + cls.initial_wait_time * ratio * ratio
-
-        return cls.target_wait_time * cls.population_estimate(certs)
-
-    @classmethod
-    def population_estimate(cls, certificates):
+    def _population_estimate(cls, certificates):
         """Estimates the size of the validator population by computing
         the average wait time and the average local mean used by
         the winning validator.
@@ -125,62 +77,103 @@ class WaitTimer(object):
             certificates (list): Previously committed certificates,
                 ordered newest to oldest
         """
-        if not isinstance(certificates, list):
-            raise TypeError
-
-        if(len(certificates) < cls.certificate_sample_length):
-            raise ValueError
+        assert isinstance(certificates, list)
+        assert len(certificates) >= cls.certificate_sample_length
 
         sum_means = 0
         sum_waits = 0
-        for cert in certificates[:cls.certificate_sample_length]:
-            sum_waits += cert.duration - cls.poet_enclave.MINIMUM_WAIT_TIME
-            sum_means += cert.local_mean
+        for certificate in certificates[:cls.certificate_sample_length]:
+            sum_waits += \
+                certificate.duration - cls.poet_enclave.MINIMUM_WAIT_TIME
+            sum_means += certificate.local_mean
 
         avg_wait = sum_waits / len(certificates)
         avg_mean = sum_means / len(certificates)
 
         return avg_mean / avg_wait
 
-    def __init__(self, timer):
-        """Constructor for the WaitTimer class.
+    @classmethod
+    def create_wait_timer(cls, certificates):
+        """Creates a wait timer in the enclave and then constructs
+        a WaitTimer object.
 
         Args:
-            timer (poet_enclave.WaitTimer): an enclave timer object
+            certificates (list): A historical list of certificates.
 
-            timer.previous_certificate_id (str): The id of the previous
-                certificate.
-            timer.local_mean (float): The local mean wait time based on the
-                history of certs.
-            timer.request_time (float): The request time.
-            timer.duration (float): The duration of the wait timer.
-            timer.signature (str): The signature of the timer.
-            timer.serialized_timer (str): A serialized version of the timer.
+        Returns:
+            journal.consensus.poet.wait_timer.WaitTimer: A new wait timer.
         """
-        self.previous_certificate_id = timer.previous_certificate_id
-        self.local_mean = timer.local_mean
-        self.request_time = timer.request_time
-        self.duration = timer.duration
-        self.signature = timer.signature
-        self.serialized_timer = timer.serialize()
-        self._enclave_wait_timer = \
-            self.poet_enclave.deserialize_wait_timer(
-                self.serialized_timer,
-                self.signature)
+
+        assert isinstance(certificates, list)
+
+        previous_certificate_id = \
+            certificates[-1].identifier if certificates else NullIdentifier
+        local_mean = cls.compute_local_mean(certificates)
+
+        # Create an enclave timer object and then use it to create a
+        # WaitTimer object
+        enclave_timer = \
+            cls.poet_enclave.create_wait_timer(
+                previous_certificate_id,
+                local_mean)
+        timer = cls(enclave_timer)
+
+        LOGGER.info('wait timer created; %s', timer)
+
+        return timer
+
+    @classmethod
+    def compute_local_mean(cls, certificates):
+        """Computes the local mean wait time based on the certificate
+        history.
+
+        Args:
+            certificates (list): A historical list of certificates.
+
+        Returns:
+            float: The local mean wait time.
+        """
+        assert isinstance(certificates, list)
+
+        count = len(certificates)
+        if count < cls.fixed_duration_blocks:
+            ratio = 1.0 * count / cls.fixed_duration_blocks
+            local_mean = \
+                (cls.target_wait_time * (1 - ratio * ratio)) + \
+                (cls.initial_wait_time * ratio * ratio)
+        else:
+            local_mean = \
+                cls.target_wait_time * cls._population_estimate(certificates)
+
+        return local_mean
 
     @property
     def enclave_wait_timer(self):
-        """Converts the serialized timer into an object.
+        return \
+            self.poet_enclave.deserialize_wait_timer(
+                self._serialized_timer,
+                self.signature)
 
-        Returns:
-            poet_enclave.WaitTimer: The deserialized enclave timer
-                object.
-        """
-        return self._enclave_wait_timer
+    def __init__(self, enclave_timer):
+        self.previous_certificate_id =\
+            str(enclave_timer.previous_certificate_id)
+        self.local_mean = float(enclave_timer.local_mean)
+        self.request_time = float(enclave_timer.request_time)
+        self.duration = float(enclave_timer.duration)
+        self.signature = str(enclave_timer.signature)
+
+        # We cannot hold the timer because it cannot be pickled for storage
+        # in the transaction block array
+        self._serialized_timer = str(enclave_timer.serialize())
+
+        self._expires = time.time() + self.duration + 0.1
 
     def __str__(self):
-        return "TIMER, {0:0.2f}, {1:0.2f}, {2}".format(
-            self.local_mean, self.duration, self.previous_certificate_id)
+        return \
+            'TIMER, {0:0.2f}, {1:0.2f}, {2}'.format(
+                self.local_mean,
+                self.duration,
+                self.previous_certificate_id)
 
     def is_expired(self, now):
         """Determines whether the timer has expired.
@@ -191,16 +184,17 @@ class WaitTimer(object):
         Returns:
             bool: True if the timer has expired, false otherwise.
         """
-        if now < (self.request_time + self.duration):
+        if now < self._expires:
             return False
 
-        return self.enclave_wait_timer.is_expired()
+        return self.poet_enclave.verify_wait_timer(self.enclave_wait_timer)
 
 
 def set_wait_timer_globals(target_wait_time=None,
                            initial_wait_time=None,
                            certificate_sample_length=None,
-                           fixed_duration_blocks=None):
+                           fixed_duration_blocks=None,
+                           minimum_wait_time=None):
     if target_wait_time is not None:
         WaitTimer.target_wait_time = float(target_wait_time)
     if initial_wait_time is not None:
@@ -210,3 +204,5 @@ def set_wait_timer_globals(target_wait_time=None,
         WaitTimer.fixed_duration_blocks = int(certificate_sample_length)
     if fixed_duration_blocks is not None:
         WaitTimer.fixed_duration_blocks = int(fixed_duration_blocks)
+    if minimum_wait_time is not None:
+        WaitTimer.minimum_wait_time = float(minimum_wait_time)

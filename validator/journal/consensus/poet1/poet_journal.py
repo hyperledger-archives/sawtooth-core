@@ -22,10 +22,11 @@ from time import time
 from gossip import common, stats
 from journal import journal_core
 from journal.consensus.poet1 import poet_transaction_block
+from journal.consensus.poet1.signup_info import SignupInfo
 from journal.consensus.poet1.wait_timer import WaitTimer
 from journal.consensus.poet1.wait_certificate import WaitCertificate
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class PoetJournal(journal_core.Journal):
@@ -61,12 +62,13 @@ class PoetJournal(journal_core.Journal):
             enclave_module = kwargs['PoetEnclaveImplementation']
         else:
             enclave_module = 'journal.consensus.poet1.poet_enclave_simulator' \
-                             '.poet1_enclave_simulator'
+                             '.poet_enclave_simulator'
 
         poet_enclave = importlib.import_module(enclave_module)
         poet_enclave.initialize(**kwargs)
         WaitCertificate.poet_enclave = poet_enclave
         WaitTimer.poet_enclave = poet_enclave
+        SignupInfo.poet_enclave = poet_enclave
 
         self.dispatcher.on_heartbeat += self._check_certificate
 
@@ -85,6 +87,10 @@ class PoetJournal(journal_core.Journal):
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
                                        WaitTimer.certificate_sample_length)
 
+        # Check to see if there is any pre-existing sealed signup data stored
+        # in the local store
+        sealed_signup_data = self.LocalStore.get('sealed_signup_data')
+
     def build_transaction_block(self, genesis=False):
         """Builds a transaction block that is specific to this particular
         consensus mechanism, in this case we build a block that contains a
@@ -98,9 +104,12 @@ class PoetJournal(journal_core.Journal):
             PoetTransactionBlock: The constructed block with the wait
                 certificate.
         """
-        logger.debug('attempt to build transaction block extending %s',
+        LOGGER.debug('attempt to build transaction block extending %s',
                      self.MostRecentCommittedBlockID[:8])
         with self._txn_lock:
+            # If we haven't signed up, we need to do that first.
+            SignupInfo.create_signup_info(self.LocalNode.Identifier)
+
             # Create a new block from all of our pending transactions
             nblock = poet_transaction_block.PoetTransactionBlock()
             nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
@@ -119,7 +128,7 @@ class PoetJournal(journal_core.Journal):
                     not genesis and\
                     transaction_time_waiting <\
                     self.MaximumTransactionsWaitTime:
-                logger.debug('Not enough transactions(%d, %d required) to '
+                LOGGER.debug('Not enough transactions(%d, %d required) to '
                              'build block, no block constructed. Mandatory'
                              'block creation in %f seconds',
                              len(txnlist),
@@ -137,7 +146,7 @@ class PoetJournal(journal_core.Journal):
                 self.TransactionEnqueueTime =\
                     time() if remaining_transactions > 0 else None
 
-            logger.info('build transaction block to extend %s with %s '
+            LOGGER.info('build transaction block to extend %s with %s '
                         'transactions',
                         self.MostRecentCommittedBlockID[:8], len(txnlist))
 
@@ -167,7 +176,7 @@ class PoetJournal(journal_core.Journal):
                 nblock.TransactionIDs = \
                     nblock.TransactionIDs[:self.MaximumTransactionsPerBlock]
 
-            logger.debug('created new pending block with timer <%s> and '
+            LOGGER.debug('created new pending block with timer <%s> and '
                          '%d transactions', nblock.WaitTimer,
                          len(nblock.TransactionIDs))
 
@@ -242,7 +251,7 @@ class PoetJournal(journal_core.Journal):
                 else:
                     transaction_time_waiting = 0
                 if transaction_time_waiting > self.MaximumTransactionsWaitTime:
-                    logger.debug("Transaction wait timeout "
+                    LOGGER.debug("Transaction wait timeout "
                                  "calling build block")
                     self.PendingTransactionBlock = \
                         self.build_transaction_block()
