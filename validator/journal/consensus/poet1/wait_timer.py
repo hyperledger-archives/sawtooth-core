@@ -197,15 +197,16 @@ class WaitTimer(object):
         return self.enclave_wait_timer.is_expired()
 
 
-def set_wait_timer_globals(config):
-    if 'TargetWaitTime' in config:
-        WaitTimer.target_wait_time = float(config['TargetWaitTime'])
-    if 'InitialWaitTime' in config:
-        WaitTimer.initial_wait_time = float(config['InitialWaitTime'])
-    if 'CertificateSampleLength' in config:
-        WaitTimer.certificate_sample_length = int(
-            config['CertificateSampleLength'])
-        WaitTimer.fixed_duration_blocks = \
-            int(config['CertificateSampleLength'])
-    if 'FixedDurationBlocks' in config:
-        WaitTimer.fixed_duration_blocks = int(config['FixedDurationBlocks'])
+def set_wait_timer_globals(target_wait_time=None,
+                           initial_wait_time=None,
+                           certificate_sample_length=None,
+                           fixed_duration_blocks=None):
+    if target_wait_time is not None:
+        WaitTimer.target_wait_time = float(target_wait_time)
+    if initial_wait_time is not None:
+        WaitTimer.initial_wait_time = float(initial_wait_time)
+    if certificate_sample_length is not None:
+        WaitTimer.certificate_sample_length = int(certificate_sample_length)
+        WaitTimer.fixed_duration_blocks = int(certificate_sample_length)
+    if fixed_duration_blocks is not None:
+        WaitTimer.fixed_duration_blocks = int(fixed_duration_blocks)

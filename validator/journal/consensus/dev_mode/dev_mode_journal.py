@@ -28,19 +28,30 @@ class DevModeJournal(journal_core.Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking
             calls to make when the heartbeat timer fires.
     """
-    def __init__(self, gossip, **kwargs):
+    def __init__(self, gossip, minimum_transactions_per_block=None,
+                 max_transactions_per_block=None, max_txn_age=None,
+                 genesis_ledger=None, restore=None, data_directory=None,
+                 store_type=None, block_wait_time=None):
         """Constructor for the DevModeJournal class.
 
         Args:
             node (Node): The local node.
         """
-        super(DevModeJournal, self).__init__(gossip, **kwargs)
+
+        super(DevModeJournal, self).__init__(gossip,
+                                             minimum_transactions_per_block,
+                                             max_transactions_per_block,
+                                             max_txn_age,
+                                             genesis_ledger,
+                                             restore,
+                                             data_directory,
+                                             store_type)
 
         # the one who can publish blocks is always the genesis ledger
         self.block_publisher = self.GenesisLedger
         self.block_wait_time = 1
-        if 'BlockWaitTime' in kwargs:
-            self.block_wait_time = kwargs["BlockWaitTime"]
+        if block_wait_time is not None:
+            self.block_wait_time = int(block_wait_time)
 
         # default invalid block wait times to 1 second setting to
         if not isinstance(self.block_wait_time, (int, long)):

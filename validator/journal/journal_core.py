@@ -102,7 +102,10 @@ class Journal(object):
             various persistence stores.
     """
 
-    def __init__(self, gossip, **kwargs):
+    def __init__(self, gossip, minimum_transactions_per_block=None,
+                 max_transactions_per_block=None, max_txn_age=None,
+                 genesis_ledger=None, restore=None, data_directory=None,
+                 store_type=None):
         """Constructor for the Journal class.
 
         Args:
@@ -126,8 +129,10 @@ class Journal(object):
         self.MaximumBlocksToKeep = 50
 
         # Minimum number of transactions per block
-        self.MinimumTransactionsPerBlock = kwargs\
-            .get('MinTransactionsPerBlock', 1)
+        if minimum_transactions_per_block is not None:
+            self.MinimumTransactionsPerBlock = minimum_transactions_per_block
+        else:
+            self.MinimumTransactionsPerBlock = 1
 
         # Amount of time(in sec) transactions can wait to meet the
         # MinimumTransactionsPerBlock before a block gets built with
@@ -137,17 +142,31 @@ class Journal(object):
         self.MaximumTransactionsWaitTime = 60
 
         # Maximum number of transactions per block
-        self.MaximumTransactionsPerBlock = kwargs.\
-            get('MaxTransactionsPerBlock', 1000)
+        if max_transactions_per_block is not None:
+            self.MaximumTransactionsPerBlock = max_transactions_per_block
+        else:
+            self.MaximumTransactionsPerBlock = 1000
 
         # Time between sending requests for a missing transaction block
         self.MissingRequestInterval = 30.0
 
         # Time between sending requests for a missing transaction block
         self.BlockRetryInterval = 10.0
-        self.MaxTxnAge = kwargs.get("MaxTxnAge", 3)
-        self.GenesisLedger = kwargs.get('GenesisLedger', False)
-        self.Restore = kwargs.get('Restore', False)
+
+        if max_txn_age is not None:
+            self.MaxTxnAge = max_txn_age
+        else:
+            self.MaxTxnAge = 3
+
+        if genesis_ledger is not None:
+            self.GenesisLedger = genesis_ledger
+        else:
+            self.GenesisLedger = False
+
+        if restore is None:
+            self.Restore = restore
+        else:
+            self.Restore = False
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
@@ -161,8 +180,15 @@ class Journal(object):
         # this flag indicates whether we should create a completely new
         # database file or reuse an existing file
         dbflag = 'c' if self.Restore else 'n'
-        dbdir = kwargs.get('DataDirectory', 'db')
-        store_type = kwargs.get('StoreType', 'shelf')
+        if data_directory is not None:
+            dbdir = data_directory
+        else:
+            dbdir = 'db'
+
+        if store_type is not None:
+            store_type = store_type
+        else:
+            store_type = 'shelf'
 
         self._txn_lock = RLock()
         self.PendingTransactions = OrderedDict()

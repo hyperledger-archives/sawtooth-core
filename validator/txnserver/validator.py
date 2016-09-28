@@ -51,7 +51,8 @@ def parse_networking_info(config):
     '''
     # Parse the listen directives from the configuration so
     # we know what to bind gossip protocol to
-    listen_directives = parse_listen_directives(config)
+    listen_info = config.get("Listen")
+    listen_directives = parse_listen_directives(listen_info)
 
     # If the gossip listen address is 0.0.0.0, then there must be
     # an Endpoint.Host entry as we don't know what to put in the

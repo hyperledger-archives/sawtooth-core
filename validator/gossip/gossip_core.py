@@ -87,7 +87,7 @@ class Gossip(object, DatagramProtocol):
     CleanupInterval = 1.00
     KeepAliveInterval = 10.0
 
-    def __init__(self, node, **kwargs):
+    def __init__(self, node, minimum_retries=None, retry_interval=None):
         """Constructor for the Gossip class.
 
         Args:
@@ -101,10 +101,11 @@ class Gossip(object, DatagramProtocol):
 
         self.blacklist = []
 
-        if 'MinimumRetries' in kwargs:
-            self.MinimumRetries = kwargs['MinimumRetries']
-        if 'RetryInterval' in kwargs:
-            self.RetryInterval = kwargs['RetryInterval']
+        if minimum_retries is not None:
+            self.MinimumRetries = minimum_retries
+
+        if retry_interval is not None:
+            self.RetryInterval = retry_interval
 
         self.LocalNode = node
         self.NodeMap = {}
