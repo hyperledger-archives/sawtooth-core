@@ -290,7 +290,7 @@ class Exchange(Update):
         self._final_liability_id = final_liability_id
         self._offer_id_list = offer_id_list
         self._initial_count = initial_count
-        self._adjustment_list = None
+        self.adjustment_list = None
 
     @property
     def References(self):
@@ -303,7 +303,7 @@ class Exchange(Update):
         result of this update
         """
 
-        self._adjustment_list = None
+        self.adjustment_list = None
 
         # Create the initial source of assets
         payer = _LiabilityInformation.load_from_store(
@@ -350,7 +350,7 @@ class Exchange(Update):
                                                       self._final_liability_id)
         adjustments.append(_Adjustment(payer, payee, count, []))
 
-        self._adjustment_list = adjustments
+        self.adjustment_list = adjustments
         return True
 
     def check_valid(self, store, txn):
@@ -413,8 +413,8 @@ class Exchange(Update):
 
     def apply(self, store, txn):
 
-        if not self._adjustment_list:
+        if not self.adjustment_list:
             self.build_adjustment_list(store)
 
-        for adjustment in self._adjustment_list:
+        for adjustment in self.adjustment_list:
             adjustment.apply(store)
