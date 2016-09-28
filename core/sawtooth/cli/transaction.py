@@ -13,6 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import csv
+import json
+import sys
+import yaml
 
 from gossip.common import pretty_print_dict
 
@@ -69,6 +73,11 @@ def add_transaction_parser(subparsers, parent_parser):
         '--url',
         type=str,
         help='the URL to the validator')
+    list_parser.add_argument(
+        '--format',
+        action='store',
+        default='default',
+        help='the format of the output. Options: csv, json or yaml.')
 
     epilog = '''
     details:
@@ -108,9 +117,52 @@ def do_transaction(args):
                 tsctids = \
                     web_client.get_transaction_list(
                         block_count=args.blockcount)
-            for txn_id in tsctids:
-                print txn_id
-            return
+
+            if args.format == 'default':
+                print '{:20} {:20} {:6} {:30} {:12} {:18} {:40}'.format(
+                    'TRANS', 'BLOCK', 'STATUS', 'TXNTYPE', 'NODENAME',
+                    'HOST', 'DOMAIN')
+
+                for txn_id in tsctids:
+                    trans_id, in_block, tran_status, txn_type, node_name,\
+                        host, domain = get_trans_info(web_client, txn_id)
+                    print '{:20} {:20} {:6} {:30} {:12} {:18} {:40}'.format(
+                        trans_id, in_block, tran_status, txn_type, node_name,
+                        host, domain)
+                return
+
+            elif args.format == 'csv':
+                try:
+                    writer = csv.writer(sys.stdout)
+                    writer.writerow((
+                        'TRANS', 'BLOCK', 'STATUS', 'TXNTYPE', 'NODENAME',
+                        'HOST', 'DOMAIN'))
+                    for txn_id in tsctids:
+                        writer.writerow(
+                            (get_trans_info(web_client, txn_id)))
+                except csv.Error as e:
+                    raise CliException(e)
+
+            elif args.format == 'json' or args.format == 'yaml':
+                json_dict = []
+                for txn_id in tsctids:
+                    trans_id, in_block, tran_status, txn_type, node_name,\
+                        host, domain = get_trans_info(web_client, txn_id)
+                    json_block = {
+                        'TRANS': trans_id, 'BLOCK': in_block,
+                        'STATUS': tran_status, 'TXNTYPE': txn_type,
+                        'NODENAME': node_name, 'HOST': host, 'DOMAIN': domain}
+                    json_dict.append(json_block)
+
+                if args.format == 'json':
+                    print json.dumps(json_dict)
+                else:
+                    print yaml.dump(json_dict, default_flow_style=False)
+
+            else:
+                raise CliException(
+                    "unknown format option: {}".format(args.format))
+
         elif args.subcommand == 'show':
             tsct_info = \
                 web_client.get_transaction(
@@ -135,3 +187,17 @@ def do_transaction(args):
 
     except MessageException as e:
         raise CliException(e)
+
+
+def get_trans_info(web_client, txn_id):
+    trans_info = web_client.get_transaction(txn_id)
+    update = trans_info["Update"]
+    trans_id = trans_info["Identifier"]
+    in_block = trans_info["InBlock"]
+    tran_status = trans_info["Status"]
+    txn_type = trans_info["TransactionType"]
+    node_name = update["Name"]
+    host = update["NetHost"]
+    domain = update["Domain"]
+
+    return trans_id, in_block, tran_status, txn_type, node_name, host, domain
