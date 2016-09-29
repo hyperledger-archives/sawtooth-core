@@ -25,8 +25,8 @@ class SignupInfo(object):
     """Encapsulates authorization data for network enrollment policies
 
     Attributes:
-        poet_pubkey (str): Public key corresponding to private key used by
-            PoET to sign wait certificates.
+        poet_public_key (str): Encoded PoET public key corresponding to
+            private key used by PoET to sign wait certificates.
         anti_sybil_id (str): A token, such as an EPID pseudonym, to restrict
             the number of identities an entity can assume in the network.
         proof_data (array): signed fields proving validity of signup info
@@ -36,18 +36,18 @@ class SignupInfo(object):
     poet_enclave = None
 
     @classmethod
-    def create_signup_info(cls, originator_id):
+    def create_signup_info(cls, originator_public_key):
         """
         Creates signup information a PoET 1 validator uses to join the
         validator network.
 
         Args:
-            originator_id: The originator's ID (i.e., address)
+            originator_public_key: The originator's public key
 
         Returns:
             SignupInfo object
         """
-        return cls.poet_enclave.create_signup_info(originator_id)
+        return cls.poet_enclave.create_signup_info(originator_public_key)
 
     @classmethod
     def verify_signup_info(cls, serialized_signup_info):
@@ -63,6 +63,25 @@ class SignupInfo(object):
             True if the signup info is valid, False otherwise.
         """
         return cls.poet_enclave.verify_signup_info(serialized_signup_info)
+
+    @classmethod
+    def unseal_signup_data(cls, sealed_signup_data):
+        """
+        Takes sealed data from a previous call to create_signup_info and
+        re-establishes the PoET 1 enclave state.
+
+        Args:
+            sealed_signup_data: The sealed signup data that was previously
+                returned as part of the signup info returned from
+                create_signup_info.
+
+        Returns:
+            The encoded PoET public key corresponding to private key used by
+            PoET to sign wait certificates.
+        """
+        return \
+            cls.poet_enclave.unseal_signup_data(
+                sealed_signup_data=sealed_signup_data)
 
     @classmethod
     def signup_info_from_serialized(cls, serialized):

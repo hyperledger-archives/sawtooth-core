@@ -13,8 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = [
-    'poet_enclave_simulator',
-    'signup_info.py',
-    'wait_certificate.py',
-    'wait_timer.py']
+__all__ = ['poet_enclave_simulator']

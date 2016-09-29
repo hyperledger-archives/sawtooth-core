@@ -298,9 +298,11 @@ class Node(object):
         """
         return Node(address=self.NetAddress, identifier=self.Identifier)
 
+    def public_key(self):
+        return pybitcointools.privtopub(self.SigningKey)
+
     def signing_address(self):
-        return pybitcointools.pubtoaddr(
-            pybitcointools.privtopub(self.SigningKey))
+        return pybitcointools.pubtoaddr(self.public_key())
 
 
 class RoundTripEstimator(object):

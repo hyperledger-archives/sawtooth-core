@@ -19,7 +19,8 @@ import importlib
 
 from time import time
 
-from gossip import common, stats
+from gossip import common
+from gossip import stats
 from journal import journal_core
 from journal.consensus.poet1 import poet_transaction_block
 from journal.consensus.poet1.signup_info import SignupInfo
@@ -39,6 +40,7 @@ class PoetJournal(journal_core.Journal):
         MaximumBlocksToKeep (int): The maximum number of blocks to
             keep.
     """
+
     def __init__(self, gossip, kwargs, minimum_transactions_per_block=None,
                  max_transactions_per_block=None, max_txn_age=None,
                  genesis_ledger=None, restore=None, data_directory=None,
@@ -57,7 +59,6 @@ class PoetJournal(journal_core.Journal):
                                           data_directory,
                                           store_type)
 
-        enclave_module = None
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
         else:
@@ -70,9 +71,7 @@ class PoetJournal(journal_core.Journal):
         WaitTimer.poet_enclave = poet_enclave
         SignupInfo.poet_enclave = poet_enclave
 
-        self.dispatcher.on_heartbeat += self._check_certificate
-
-        # initialize handlers
+        # initialize the poet handlers
         poet_transaction_block.register_message_handlers(self)
 
         # initialize stats specifically for the block chain journal
@@ -91,6 +90,11 @@ class PoetJournal(journal_core.Journal):
         # in the local store
         sealed_signup_data = self.LocalStore.get('sealed_signup_data')
 
+        # If we haven't signed up, we need to do that first.
+        SignupInfo.create_signup_info(self.gossip.LocalNode.public_key())
+
+        self.dispatcher.on_heartbeat += self._check_certificate
+
     def build_transaction_block(self, genesis=False):
         """Builds a transaction block that is specific to this particular
         consensus mechanism, in this case we build a block that contains a
@@ -107,9 +111,6 @@ class PoetJournal(journal_core.Journal):
         LOGGER.debug('attempt to build transaction block extending %s',
                      self.MostRecentCommittedBlockID[:8])
         with self._txn_lock:
-            # If we haven't signed up, we need to do that first.
-            SignupInfo.create_signup_info(self.LocalNode.Identifier)
-
             # Create a new block from all of our pending transactions
             nblock = poet_transaction_block.PoetTransactionBlock()
             nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
@@ -203,7 +204,7 @@ class PoetJournal(journal_core.Journal):
         Args:
             nblock (PoetTransactionBlock): The block to claim.
         """
-        logger.info('node %s validates block with %d transactions',
+        LOGGER.info('node %s validates block with %d transactions',
                     self.gossip.LocalNode.Name, len(nblock.TransactionIDs))
 
         # Claim the block
@@ -217,11 +218,9 @@ class PoetJournal(journal_core.Journal):
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
         msg.TransactionBlock = nblock
-        msg.SenderID = self.gossip.LocalNode.Identifier
-        msg.sign_from_node(self.gossip.LocalNode)
+        self.sign_and_send_message(msg)
 
         self.PendingTransactionBlock = None
-        self.handle_message(msg)
 
     def _build_certificate_list(self, block):
         # for the moment we just dump all of these into one list,

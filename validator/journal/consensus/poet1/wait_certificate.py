@@ -148,13 +148,14 @@ class WaitCertificate(object):
                 self.identifier,
                 self.previous_certificate_id)
 
-    def is_valid(self, certificates, poet_public_key):
+    def is_valid(self, certificates, encoded_poet_public_key):
         """Determines whether the wait certificate is valid.
 
         Args:
             certificates (list): A list of historical certs.
-            poet_public_key (str): The PoET public key that corresponds to the
-                private key used to sign the certificate.
+            encoded_poet_public_key (str): The PoET public key that
+                corresponds to the private key used to sign the certificate.
+                This is provided with a validator's signup information.
 
         Returns:
             True if the wait certificate is valid, False otherwise.
@@ -193,7 +194,7 @@ class WaitCertificate(object):
             return \
                 self.poet_enclave.verify_wait_certificate(
                     certificate=enclave_certificate,
-                    poet_public_key=poet_public_key)
+                    encoded_poet_public_key=encoded_poet_public_key)
         except Timeout:
             raise NotAvailableException
         except ConnectionError:

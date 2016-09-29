@@ -179,13 +179,13 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 logger.info('not a valid block, no wait certificate')
                 return False
 
-            # TODO - get PoET public key for originator.
-            poet_public_key = None
+            # TO DO - get PoET public key for originator.
+            encoded_poet_public_key = None
 
             return \
                 self.WaitCertificate.is_valid(
                     journal._build_certificate_list(self),
-                    poet_public_key)
+                    encoded_poet_public_key)
 
     def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list

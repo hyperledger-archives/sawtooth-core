@@ -13,53 +13,23 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import time
 import struct
 import math
 import logging
-
-from datetime import datetime
 
 import pybitcointools
 
 from gossip.common import json2dict
 from gossip.common import dict2json
-from journal.consensus.poet1.poet_enclave_simulator.signup_info \
+from journal.consensus.poet1.poet_enclave_simulator.enclave_signup_info \
     import EnclaveSignupInfo
-from journal.consensus.poet1.poet_enclave_simulator.wait_timer \
+from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_timer \
     import EnclaveWaitTimer
-from journal.consensus.poet1.poet_enclave_simulator.wait_certificate \
+from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_certificate \
     import EnclaveWaitCertificate
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class _MonotonicCounter(object):
-    def __init__(self, id=None):
-        self._id = id
-        # If there is no ID provided, we are going to manufacture one
-        # by getting the current UTC time, converting it to ISO format,
-        # and then using the first 16 hex digits of the SHA 256 hash.
-        if self._id is None:
-            self._id = \
-                pybitcointools.sha256(datetime.utcnow().isoformat())[:16]
-
-        # We are going to initialize the counter's value to the GM time
-        # in seconds since epoch
-        self._current_value = int(time.mktime(time.gmtime()))
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def current_value(self):
-        return self._current_value
-
-    def increment_counter(self):
-        self._current_value += 1
-        return self._current_value
 
 
 MINIMUM_WAIT_TIME = 1.0
@@ -67,68 +37,70 @@ MINIMUM_WAIT_TIME = 1.0
 
 class _PoetEnclaveSimulator(object):
 
-    # The WIF-encoded SGX enclave private seal key.  From it, we will create
+    # The WIF-encoded enclave private seal key.  From it, we will create
     # private and public keys we can use for sealing and unsealing signup
     # info.
     __SEAL_PRIVATE_KEY_WIF = \
         '5KYsbooGBg51Gohakgq45enpXvCXmEBed1JivFfUZskmjLegHBG'
 
-    _sgx_seal_private_key = \
+    _seal_private_key = \
         pybitcointools.decode_privkey(__SEAL_PRIVATE_KEY_WIF, 'wif')
-    _sgx_seal_public_key = pybitcointools.privtopub(_sgx_seal_private_key)
+    _seal_public_key = pybitcointools.privtopub(_seal_private_key)
 
     # Minimum duration for PoET 1 simulator is 30 seconds
     __MINIMUM_DURATTION = 30.0
 
-    # The PoET keys and monotonic counter ID will remain unset until
-    # signup info is either created or unsealed
+    # The PoET keys will remain unset until signup info is either created or
+    # unsealed
     _poet_public_key = None
     _poet_private_key = None
-    _monotonic_counter = None
     _active_wait_timer = None
-    _current_counter_value = None
 
     @classmethod
-    def create_signup_info(cls, originator_id):
+    def create_signup_info(cls, originator_public_key):
         # First we need to create a public/private key pair for the PoET
         # enclave to use.
         cls._poet_private_key = pybitcointools.random_key()
         cls._poet_public_key = pybitcointools.privtopub(cls._poet_private_key)
-        cls._monotonic_counter = _MonotonicCounter()
         cls._active_wait_timer = None
 
-        # We are going to fake out the using of SGX to seal the signup info.
+        # We are going to fake out the sealing the signup data.
         signup_data = {
-            'ppk':
+            'poet_public_key':
                 pybitcointools.encode_pubkey(cls._poet_public_key, 'hex'),
-            'psk':
-                pybitcointools.encode_privkey(cls._poet_private_key, 'hex'),
-            'mcid': cls._monotonic_counter.id
+            'poet_private_key':
+                pybitcointools.encode_privkey(cls._poet_private_key, 'hex')
         }
         sealed_signup_data = \
             pybitcointools.base64.b32encode(dict2json(signup_data))
 
-        # Create a fake SGX enclave report
+        # Create a fake report
         report_data = {
-            'oid_hash': pybitcointools.sha256(originator_id),
-            'ppk': pybitcointools.encode_pubkey(cls._poet_public_key, 'hex')
+            'originator_public_key_hash':
+                pybitcointools.sha256(
+                    pybitcointools.encode_pubkey(
+                        originator_public_key,
+                        'hex')),
+            'poet_public_key':
+                pybitcointools.encode_pubkey(cls._poet_public_key, 'hex')
         }
         report = {
             'report_data': pybitcointools.sha256(dict2json(report_data))
         }
         report = pybitcointools.base64.b32encode(dict2json(report))
 
-        # Our "proof" data is going to be the faked SGX enclave report and
-        # a fake SGX PSE (platform services enclave) manifest
+        # Fake our "proof" data.
         proof_data = {
-            'report': report,
-            'manifest': 'These are not the droids you are looking for'
+            'attestation_evidence_payload':
+                pybitcointools.sha256(report),
+            'attestation_verification_report':
+                pybitcointools.sha256('Shave and a haircut...Two bits!')
         }
 
         return \
             EnclaveSignupInfo(
                 anti_sybil_id='Sally Field',
-                poet_public_key=signup_data['ppk'],
+                poet_public_key=signup_data['poet_public_key'],
                 proof_data=proof_data,
                 sealed_signup_data=sealed_signup_data)
 
@@ -154,14 +126,16 @@ class _PoetEnclaveSimulator(object):
             json2dict(pybitcointools.base64.b32decode(sealed_signup_data))
 
         cls._poet_public_key = \
-            pybitcointools.decode_pubkey(signup_data.get('ppk'), 'hex')
+            pybitcointools.decode_pubkey(
+                signup_data.get('poet_public_key'),
+                'hex')
         cls._poet_private_key = \
-            pybitcointools.decode_privkey(signup_data.get('psk'), 'hex')
-        cls._monotonic_counter_id = \
-            _MonotonicCounter(id=signup_data.get('mcid'))
+            pybitcointools.decode_privkey(
+                signup_data.get('poet_public_key'),
+                'hex')
         cls._active_wait_timer = None
 
-        return pybitcointools.encode_pubkey(cls._poet_public_key, 'hex')
+        return signup_data.get('poet_public_key')
 
     @classmethod
     def verify_signup_info(cls, serialized_signup_info):
@@ -171,13 +145,6 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def create_wait_timer(cls, previous_certificate_id, local_mean):
-        # Increment the monotonic counter and store its value in the enclave.
-        # Since we don't really implement the monotonic counter the way the
-        # SGX enclave does, this is really superflous.
-        # assert cls._monotonic_counter
-        cls._current_counter_value = \
-            cls._monotonic_counter.increment_counter()
-
         # Create some value from the cert ID.  We are just going to use
         # the seal key to sign the cert ID.  We will then use the low-order
         # 64 bits to change that to a number [0, 1]
@@ -185,7 +152,7 @@ class _PoetEnclaveSimulator(object):
             pybitcointools.base64.b64decode(
                 pybitcointools.ecdsa_sign(
                     previous_certificate_id,
-                    cls._sgx_seal_private_key))
+                    cls._seal_private_key))
 
         tagd = float(struct.unpack('L', tag[-8:])[0]) / (2**64 - 1)
 
@@ -217,7 +184,7 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def create_wait_certificate(cls, timer, block_digest):
-        # TODO - implement PoET 1 create certificate logic
+        # TO DO - implement PoET 1 create certificate logic
 
         # First create a new enclave wait certificate using the data provided
         # and then sign the certificate with the PoET private key
@@ -240,8 +207,11 @@ class _PoetEnclaveSimulator(object):
                 signature=signature)
 
     @classmethod
-    def verify_wait_certificate(cls, certificate, poet_public_key):
-        # TODO - implement PoET 1 create certificate logic
+    def verify_wait_certificate(cls, certificate, encoded_poet_public_key):
+        # poet_public_key = \
+        #     pybitcointools.decode_pubkey(encoded_poet_public_key, 'hex')
+        #
+        # TO DO - implement PoET 1 create certificate logic
         # return \
         #     pybitcointools.ecdsa_verify(
         #         certificate.serialize(),
@@ -255,8 +225,8 @@ def initialize(**kwargs):
     pass
 
 
-def create_signup_info(originator_id):
-    return _PoetEnclaveSimulator.create_signup_info(originator_id)
+def create_signup_info(originator_public_key):
+    return _PoetEnclaveSimulator.create_signup_info(originator_public_key)
 
 
 def unseal_signup_data(sealed_signup_data):
@@ -299,8 +269,8 @@ def deserialize_wait_certificate(serialized_certificate, signature):
             signature=signature)
 
 
-def verify_wait_certificate(certificate, poet_public_key):
+def verify_wait_certificate(certificate, encoded_poet_public_key):
     return \
         _PoetEnclaveSimulator.verify_wait_certificate(
             certificate=certificate,
-            poet_public_key=poet_public_key)
+            encoded_poet_public_key=encoded_poet_public_key)
