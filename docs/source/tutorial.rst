@@ -103,7 +103,7 @@ build, run the following inside vagrant:
 
 .. code-block:: console
 
-  $ cd /project/sawtooth-core/core
+  $ cd /project/sawtooth-core/validator
   $ python setup.py build
 
 Running txnvalidator
