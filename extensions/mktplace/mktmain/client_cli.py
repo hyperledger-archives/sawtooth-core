@@ -442,7 +442,8 @@ identifiers, ///$name
                                 default=[])
             parser.add_argument('--type',
                                 help='The offer type, ExchangeOffer or '
-                                     'SellOffer')
+                                     'SellOffer',
+                                required=True)
             parser.add_argument('--waitforcommit',
                                 help='Wait for transaction to commit before '
                                      'returning',
