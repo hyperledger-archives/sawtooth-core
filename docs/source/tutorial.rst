@@ -115,7 +115,7 @@ and run the following command:
 .. code-block:: console
 
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key
+   $ ./bin/txnvalidator -v --genesis -F ledger.transaction.integer_key
 
 This will startup txnvalidator and logging output will be printed to the
 terminal window.
