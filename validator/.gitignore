@@ -40,3 +40,5 @@ gossip/ECDSA/ECDSARecoverModule.py
 gossip/ECDSA/ECDSARecoverModule.pyc
 gossip/ECDSA/ECDSARecoverModule_wrap.cpp
 gossip/ECDSA/ECDSAPubKeyRecovery.*
+
+deps
