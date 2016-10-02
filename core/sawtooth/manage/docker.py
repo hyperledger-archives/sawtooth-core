@@ -82,12 +82,19 @@ class DockerNodeController(NodeController):
         args.extend(['--url', 'http://{}3:8800'.format(subnet)])
         return args
 
+    def _join_args(self, args):
+        formatted_args = []
+        for arg in args:
+            if ' ' in arg:
+                formatted_args.append("'" + arg + "'")
+            else:
+                formatted_args.append(arg)
+        return ' '.join(formatted_args)
+
     def start(self, node_name, http_port, gossip_port, genesis=False):
         args = self._construct_start_args(node_name, http_port, gossip_port,
                                           genesis)
-        LOGGER.debug('starting %s: %s', node_name,
-                     ' '.join([str(x) for x in args]))
-
+        LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
         try:
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
