@@ -197,9 +197,30 @@ def do_cluster_stop(args):
     else:
         node_names = vnm.get_node_names()
 
+    nodes = state["Nodes"]
     for node_name in node_names:
         print "Stopping: {}".format(node_name)
         node_command_generator.stop(node_name)
+        # Update status of Nodes
+        if node_name in nodes:
+            nodes[node_name]["Status"] = "Stopped"
+        else:
+            nodes[node_name] = {"Status": "Unknown"}
+
+    if len(args.node_names) == 0 and len(node_names) == 0:
+        for node_name in nodes:
+            nodes[node_name]["Status"] = "Unknown"
+
+    # If none of the nodes are running set overall State to Stopped
+    state["State"] = "Stopped"
+    for node in nodes:
+        if nodes[node]["Status"] == "Running":
+            state["State"] = "Running"
+
+    # Update state of nodes
+    state["Nodes"] = nodes
+    with open(file_name, 'w') as state_file:
+        yaml.dump(state, state_file, default_flow_style=False)
 
     vnm.update()
 
