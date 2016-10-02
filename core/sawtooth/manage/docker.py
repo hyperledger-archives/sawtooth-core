@@ -16,6 +16,7 @@
 import logging
 import os
 import subprocess
+import yaml
 
 from sawtooth.cli.exceptions import CliException
 
@@ -46,7 +47,16 @@ class DockerNodeController(NodeController):
 
     def _construct_start_args(self, node_name, http_port, gossip_port,
                               genesis):
-        ip_addr = '10.200.200.11'
+        # Check for running the network sawtooth and get the subnet
+        subnet_arg = ['docker', 'network', 'inspect', 'sawtooth']
+        try:
+            output = yaml.load(subprocess.check_output(subnet_arg))
+            subnet = output[0]['IPAM']['Config'][0]['Subnet'][:-4]
+        except subprocess.CalledProcessError as e:
+            raise CliException(str(e))
+
+        num = str(int(node_name[10:]) + 3)
+        ip_addr = subnet + num
         local_project_dir = '/project'
 
         args = ['docker', 'run', '-t', '-d', '--network', 'sawtooth']
@@ -69,7 +79,7 @@ class DockerNodeController(NodeController):
                      '{}:{}/UDP gossip'.format(ip_addr, gossip_port)])
         args.extend(['--listen',
                      '{}:{}/TCP http'.format(ip_addr, http_port)])
-
+        args.extend(['--url', 'http://{}3:8800'.format(subnet)])
         return args
 
     def start(self, node_name, http_port, gossip_port, genesis=False):
