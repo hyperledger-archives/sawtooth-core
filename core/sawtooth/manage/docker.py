@@ -62,7 +62,8 @@ class DockerNodeController(NodeController):
 
         args.append('/project/sawtooth-core/bin/txnvalidator')
         args.extend(['--node', node_name])
-        args.append('--genesis')
+        if genesis:
+            args.append('--genesis')
         args.append('-vv')
         args.extend(['--listen',
                      '{}:{}/UDP gossip'.format(ip_addr, gossip_port)])
