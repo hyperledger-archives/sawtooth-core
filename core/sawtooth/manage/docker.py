@@ -16,6 +16,7 @@
 import logging
 import os
 import subprocess
+import ipaddr
 import yaml
 
 from sawtooth.cli.exceptions import CliException
@@ -51,12 +52,18 @@ class DockerNodeController(NodeController):
         subnet_arg = ['docker', 'network', 'inspect', 'sawtooth']
         try:
             output = yaml.load(subprocess.check_output(subnet_arg))
-            subnet = output[0]['IPAM']['Config'][0]['Subnet'][:-4]
+            subnet = unicode(output[0]['IPAM']['Config'][0]['Subnet'])
+            subnet_list = list(ipaddr.IPv4Network(subnet))
+            LOGGER.debug(subnet_list)
         except subprocess.CalledProcessError as e:
             raise CliException(str(e))
 
-        num = str(int(node_name[10:]) + 3)
-        ip_addr = subnet + num
+        num = int(node_name[len('validator-'):]) + 3
+
+        if num < len(subnet_list) - 1:
+            ip_addr = str(subnet_list[num])
+        else:
+            raise CliException("Out of Usable IP Addresses")
         local_project_dir = '/project'
 
         args = ['docker', 'run', '-t', '-d', '--network', 'sawtooth']
@@ -79,7 +86,8 @@ class DockerNodeController(NodeController):
                      '{}:{}/UDP gossip'.format(ip_addr, gossip_port)])
         args.extend(['--listen',
                      '{}:{}/TCP http'.format(ip_addr, http_port)])
-        args.extend(['--url', 'http://{}3:8800'.format(subnet)])
+        # Set Genesis Url
+        args.extend(['--url', 'http://{}:8800'.format(str(subnet_list[3]))])
         return args
 
     def _join_args(self, args):

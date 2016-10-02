@@ -153,7 +153,7 @@ setup(
     packages=find_packages(),
     install_requires=['sawtooth-core', 'cbor>=0.1.23', 'colorlog', 'twisted',
                       'PyYAML', 'psutil', 'numpy', 'requests',
-                      'pybitcointools'],
+                      'pybitcointools', 'ipaddr'],
     ext_modules=[poet0_enclave_mod, ecdsamod],
     py_modules=[
         'journal.consensus.poet0.poet_enclave_simulator'

@@ -65,7 +65,7 @@ def add_cluster_start_parser(subparsers, parent_parser):
         '-m', '--manage',
         help='style of validator management',
         choices=['daemon', 'docker'],
-        default='daemon')
+        default='docker')
 
 
 def add_cluster_stop_parser(subparsers, parent_parser):
@@ -97,25 +97,28 @@ def do_cluster_start(args):
                      "state.yaml")
 
     # Check for existing state.yaml and get state. If not create state dict.
-    try:
+    if os.path.isfile(file_name):
         with open(file_name, 'r') as state_file:
             state = yaml.load(state_file)
-    except IOError:
+    else:
         state = dict()
-        state["State"] = "Stopped"
+        state["DesiredState"] = "Stopped"
 
     # Check State for Running validators, if stopped clear out nodes.
-    if state["State"] == "Stopped":
+    if state["DesiredState"] == "Stopped":
         state["Nodes"] = {}
 
-    if "Manage" not in state:
-        state['Manage'] = args.manage if args.manage is not None else 'docker'
+    if "Manage" not in state or state["DesiredState"] == "Stopped":
+        if args.manage == "docker" or args.manage is None:
+            state["Manage"] = "docker"
+        elif args.manage == "daemon":
+            state["Manage"] = "daemon"
     elif args.manage is not None and state['Manage'] != args.manage\
-            and state["State"] == "Running":
+            and state["DesiredState"] == "Running":
         raise CliException('Cannot use two different Manage types.'
                            ' Already running {}'.format(state["Manage"]))
 
-    state["State"] = "Running"
+    state["DesiredState"] = "Running"
 
     if state["Manage"] == 'docker':
         node_controller = DockerNodeController()
@@ -146,12 +149,14 @@ def do_cluster_start(args):
 
         # genesis is true for the first node
         genesis = (i == 0)
+        gossip_port = 5500 + i
+        http_port = 8800 + i
 
         print "Starting: {}".format(node_name)
         node_command_generator.start(
             node_name,
-            http_port=8800,
-            gossip_port=5500,
+            http_port=gossip_port,
+            gossip_port=http_port,
             genesis=genesis)
 
         state["Nodes"][node_name] = {"Status": "Running", "Index": i}
@@ -172,11 +177,11 @@ def do_cluster_stop(args):
         os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
                      "state.yaml")
     # Get current state of Nodes
-    try:
+    if os.path.isfile(file_name):
         with open(file_name, 'r') as state_file:
             state = yaml.load(state_file)
-    except IOError as e:
-        raise CliException(str(e))
+    else:
+        raise CliException("Missing state file")
 
     if state['Manage'] is None or state['Manage'] == 'docker':
         node_controller = DockerNodeController()
@@ -212,10 +217,10 @@ def do_cluster_stop(args):
             nodes[node_name]["Status"] = "Unknown"
 
     # If none of the nodes are running set overall State to Stopped
-    state["State"] = "Stopped"
+    state["DesiredState"] = "Stopped"
     for node in nodes:
         if nodes[node]["Status"] == "Running":
-            state["State"] = "Running"
+            state["DesiredState"] = "Running"
 
     # Update state of nodes
     state["Nodes"] = nodes
@@ -231,8 +236,11 @@ def do_cluster_status(args):
         os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
                      "state.yaml")
     # Get current expected state
-    with open(file_name, 'r') as state_file:
-        state = yaml.load(state_file)
+    if os.path.isfile(file_name):
+        with open(file_name, 'r') as state_file:
+            state = yaml.load(state_file)
+    else:
+        raise CliException("Missing state file")
 
     if state['Manage'] is None or state['Manage'] == 'docker':
         node_controller = DockerNodeController()
@@ -253,5 +261,21 @@ def do_cluster_status(args):
     else:
         node_names = vnm.get_node_names()
 
-    for node_name in node_names:
-        print "{} {}".format(node_name, vnm.status(node_name))
+    # Check expected status of nodes vs what is returned from vnm
+    print "NodeName Expected Current"
+    nodes = state["Nodes"]
+    for node_name in nodes:
+        if node_name not in node_names and \
+                (nodes[node_name]["Status"] == "Running" or
+                    nodes[node_name]["Status"] == "No Response"):
+            print "{} {} {}".format(
+                node_name, nodes[node_name]["Status"], "Not Running")
+        else:
+            status = vnm.status(node_name)
+            if status == "UNKNOWN" and \
+                    nodes[node_name]["Status"] == "Stopped":
+                print "{} {} {}".format(node_name, nodes[node_name]["Status"],
+                                        status)
+            else:
+                print "{} {} {}".format(node_name, nodes[node_name]["Status"],
+                                        status)
