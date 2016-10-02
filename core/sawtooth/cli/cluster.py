@@ -78,14 +78,9 @@ def add_cluster_stop_parser(subparsers, parent_parser):
     parser.add_argument(
         'node_names',
         metavar='NODE_NAME',
-        help='report status of specific node(s)',
+        help='stop specific node(s)',
         nargs='*')
 
-    parser.add_argument(
-        '-m', '--manage',
-        help='style of validator management',
-        choices=['daemon', 'docker'],
-        default='daemon')
 
 
 def do_cluster(args):
