@@ -51,12 +51,6 @@ def add_cluster_status_parser(subparsers, parent_parser):
         help='report status of specific node(s)',
         nargs='*')
 
-    parser.add_argument(
-        '-m', '--manage',
-        help='style of validator management',
-        choices=['daemon', 'docker'],
-        default='daemon')
-
 
 def add_cluster_start_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('start', parents=[parent_parser])
@@ -212,12 +206,20 @@ def do_cluster_stop(args):
 
 def do_cluster_status(args):
     # pylint: disable=redefined-variable-type
-    if args.manage is None or args.manage == 'docker':
+    file_name = \
+        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
+                     "state.yaml")
+    # Get current expected state
+    with open(file_name, 'r') as state_file:
+        state = yaml.load(state_file)
+
+    if state['Manage'] is None or state['Manage'] == 'docker':
         node_controller = DockerNodeController()
-    elif args.manage == 'daemon':
+    elif state['Manage'] == 'daemon':
         node_controller = DaemonNodeController()
     else:
-        raise CliException('invalid management type: {}'.format(args.manage))
+        raise CliException('invalid management'
+                           ' type: {}'.format(state['Manage']))
 
     node_command_generator = SimpleNodeCommandGenerator()
 
