@@ -14,6 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import os
+import yaml
 
 from sawtooth.exceptions import ManagementError
 
@@ -97,12 +99,39 @@ def do_cluster(args):
 
 def do_cluster_start(args):
     # pylint: disable=redefined-variable-type
-    if args.manage is None or args.manage == 'docker':
+    file_name = \
+        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
+                     "state.yaml")
+
+    # Check for existing state.yaml and get state. If not create state dict.
+    try:
+        with open(file_name, 'r') as state_file:
+            state = yaml.load(state_file)
+    except IOError:
+        state = dict()
+        state["State"] = "Stopped"
+
+    # Check State for Running validators, if stopped clear out nodes.
+    if state["State"] == "Stopped":
+        state["Nodes"] = {}
+
+    if "Manage" not in state:
+        state['Manage'] = args.manage if args.manage is not None else 'docker'
+    elif args.manage is not None and state['Manage'] != args.manage\
+            and state["State"] == "Running":
+        raise CliException('Cannot use two different Manage types.'
+                           ' Already running {}'.format(state["Manage"]))
+
+    state["State"] = "Running"
+
+    if state["Manage"] == 'docker':
         node_controller = DockerNodeController()
-    elif args.manage == 'daemon':
+
+    elif state["Manage"] == 'daemon':
         node_controller = DaemonNodeController()
     else:
-        raise CliException('invalid management type: {}'.format(args.manage))
+        raise CliException('invalid management type:'
+                           ' {}'.format(state["Manage"]))
 
     node_command_generator = SimpleNodeCommandGenerator()
 
@@ -125,15 +154,18 @@ def do_cluster_start(args):
         # genesis is true for the first node
         genesis = (i == 0)
 
-        gossip_port = 5500 + i
-        http_port = 8800 + i
-
         print "Starting: {}".format(node_name)
         node_command_generator.start(
             node_name,
-            http_port=http_port,
-            gossip_port=gossip_port,
+            http_port=8800,
+            gossip_port=5500,
             genesis=genesis)
+
+        state["Nodes"][node_name] = {"Status": "Running", "Index": i}
+
+    # Write file to default directory with current state Nodes
+    with open(file_name, 'w') as state_file:
+        yaml.dump(state, state_file, default_flow_style=False)
 
     try:
         vnm.update()
