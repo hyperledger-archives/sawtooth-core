@@ -84,7 +84,6 @@ def add_cluster_stop_parser(subparsers, parent_parser):
         nargs='*')
 
 
-
 def do_cluster(args):
     if args.cluster_command == 'start':
         do_cluster_start(args)
@@ -175,12 +174,23 @@ def do_cluster_start(args):
 
 def do_cluster_stop(args):
     # pylint: disable=redefined-variable-type
-    if args.manage is None or args.manage == 'docker':
+    file_name = \
+        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
+                     "state.yaml")
+    # Get current state of Nodes
+    try:
+        with open(file_name, 'r') as state_file:
+            state = yaml.load(state_file)
+    except IOError as e:
+        raise CliException(str(e))
+
+    if state['Manage'] is None or state['Manage'] == 'docker':
         node_controller = DockerNodeController()
-    elif args.manage == 'daemon':
+    elif state['Manage'] == 'daemon':
         node_controller = DaemonNodeController()
     else:
-        raise CliException('invalid management type: {}'.format(args.manage))
+        raise CliException('invalid management'
+                           ' type: {}'.format(state['Manage']))
 
     node_command_generator = SimpleNodeCommandGenerator()
 
