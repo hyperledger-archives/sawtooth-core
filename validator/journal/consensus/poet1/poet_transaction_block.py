@@ -19,7 +19,8 @@ from threading import RLock
 
 from journal import transaction_block
 from journal.messages import transaction_block_message
-from journal.consensus.poet1.wait_certificate import WaitCertificate, WaitTimer
+from journal.consensus.poet1.wait_certificate import WaitCertificate
+from journal.consensus.poet1.wait_certificate import WaitTimer
 from gossip.common import NullIdentifier
 
 logger = logging.getLogger(__name__)
@@ -90,11 +91,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
         if 'WaitCertificate' in minfo:
             wc = minfo.get('WaitCertificate')
-            serialized = wc.get('SerializedCert')
+            serialized_certificate = wc.get('SerializedCertificate')
             signature = wc.get('Signature')
             self.WaitCertificate = \
-                WaitCertificate.deserialize_wait_certificate(
-                    serialized, signature)
+                WaitCertificate.wait_certificate_from_serialized(
+                    serialized_certificate,
+                    signature)
 
         self.AggregateLocalMean = 0.0
 
@@ -177,10 +179,13 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 logger.info('not a valid block, no wait certificate')
                 return False
 
-            return self.WaitCertificate.is_valid_wait_certificate(
-                self.OriginatorID,
-                journal._build_certificate_list(self),
-                self.TransactionIDs)
+            # TO DO - get PoET public key for originator.
+            encoded_poet_public_key = None
+
+            return \
+                self.WaitCertificate.is_valid(
+                    journal._build_certificate_list(self),
+                    encoded_poet_public_key)
 
     def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list
@@ -190,9 +195,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             certlist (list): A list of wait certificates.
         """
         with self._lock:
-            self.WaitTimer = WaitTimer.create_wait_timer(
-                validator_address,
-                certlist)
+            self.WaitTimer = WaitTimer.create_wait_timer(certlist)
 
     def create_wait_certificate(self):
         """Create a wait certificate for the journal based on the wait timer.

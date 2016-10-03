@@ -84,6 +84,8 @@ class Journal(object):
             persisted copy of the block store.
         ChainStore (JournalStore): A dict-like object representing the
             persisted copy of the chain store.
+        LocalStore (JournalStore): A dict-like object representing the
+            persisted local state of the journal.
         RequestedTransactions (dict): A dict of transactions which are
             not in the local cache, the details of which have been
             requested from peers.
@@ -208,6 +210,9 @@ class Journal(object):
             self.ChainStore = journal_store.JournalStore(
                 shelf_database.ShelfDatabase(dbprefix + "_chain" + ".shelf",
                                              dbflag))
+            self.LocalStore = journal_store.JournalStore(
+                shelf_database.ShelfDatabase(dbprefix + "_local" + ".shelf",
+                                             dbflag))
         elif store_type == 'cached-shelf':
             from journal.database import shelf_database
             from journal.database.database import CachedDatabase
@@ -221,13 +226,17 @@ class Journal(object):
             chain_database = shelf_database.ShelfDatabase(
                 dbprefix + "_chain" + ".shelf",
                 dbflag)
+            local_database = shelf_database.ShelfDatabase(
+                dbprefix + "_local" + ".shelf",
+                dbflag)
             self.TransactionStore = journal_store.JournalStore(
                 CachedDatabase(txn_database))
             self.BlockStore = journal_store.JournalStore(
                 CachedDatabase(block_database))
             self.ChainStore = journal_store.JournalStore(
                 CachedDatabase(chain_database))
-
+            self.LocalStore = journal_store.JournalStore(
+                CachedDatabase(local_database))
         elif store_type == 'lmdb':
             from journal.database import lmdb_database
 
@@ -240,6 +249,9 @@ class Journal(object):
             self.ChainStore = journal_store.JournalStore(
                 lmdb_database.LMDBDatabase(dbprefix + "_chain" + ".lmdb",
                                            dbflag))
+            self.LocalStore = journal_store.JournalStore(
+                lmdb_database.LMDBDatabase(dbprefix + "_local" + ".lmdb",
+                                           dbflag))
         elif store_type == 'cached-lmdb':
             from journal.database import lmdb_database
             from journal.database.database import CachedDatabase
@@ -251,12 +263,17 @@ class Journal(object):
             chain_database = lmdb_database.LMDBDatabase(
                 dbprefix + "_chain" + ".lmdb",
                 dbflag)
+            local_database = lmdb_database.LMDBDatabase(
+                dbprefix + "_local" + ".lmdb",
+                dbflag)
             self.TransactionStore = journal_store.JournalStore(
                 CachedDatabase(txn_database))
             self.BlockStore = journal_store.JournalStore(
                 CachedDatabase(block_database))
             self.ChainStore = journal_store.JournalStore(
                 CachedDatabase(chain_database))
+            self.LocalStore = journal_store.JournalStore(
+                CachedDatabase(local_database))
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
 

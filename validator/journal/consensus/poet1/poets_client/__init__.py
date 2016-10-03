@@ -13,9 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from journal.consensus.poet1.poets_client import poets_enclave, wait_timer, \
-    wait_certificate
-
+from journal.consensus.poet1.poets_client import poets_enclave
+from journal.consensus.poet1.poets_client import wait_timer
+from journal.consensus.poet1.poets_client import wait_certificate
 
 __all__ = ['poets_enclave', 'wait_timer', 'wait_certificate']
 

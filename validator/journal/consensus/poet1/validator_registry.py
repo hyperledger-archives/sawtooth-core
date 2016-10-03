@@ -69,11 +69,11 @@ class Update(object):
         verb (str): The action of this update, defaults to 'reg'.
         validator_name (str): The name of the endpoint.
         validator_id (str): The identifier of the endpoint.
-        poet_pubkey: Public key used by this poet to sign wait certificates
+        poet_public_key: Public key used by this poet to sign wait certificates
         anti_sybil_id: A token, such as an EPID pseudonym, to restrict the
             number of identities an entity can assume in the network.
         signup_info: Serialized authorization data for network enrollment
-            Contains required elements poet_pubkey and anti_sybil_token
+            Contains required elements poet_public_key and anti_sybil_id
     """
     KnownVerbs = ['reg']
 
@@ -85,7 +85,7 @@ class Update(object):
             validator_name: Human readable name of the validator
             validator_id: Bitcoin-style address of the validators public key
             signup_info: Serialized dict of SignupData with keys...
-                anti_sybil_token, poet_pubkey, proof_data
+                anti_sybil_id, poet_public_key, proof_data
 
         Returns:
             validator_registry.Update: An update object for registering the
@@ -112,10 +112,8 @@ class Update(object):
         self.verb = minfo.get('verb', 'reg')
         self.validator_name = minfo.get('validator_name', '')
         self.validator_id = minfo.get('validator_id', NullIdentifier)
-        signup_info = SignupInfo.deserialize(minfo.get('signup_info'))
-        self.signup_info = SignupInfo(signup_info.get('anti_sybil_id', ''),
-                                      signup_info.get('poet_pubkey', ''),
-                                      signup_info.get('proof_data', ''))
+        self.signup_info = \
+            SignupInfo.signup_info_from_serialized(minfo.get('signup_info'))
 
     def __str__(self):
         return str(self.dump())
@@ -187,7 +185,7 @@ class Update(object):
             store[self.validator_id] = {
                 'validator_name': self.validator_name,
                 'validator_id': self.validator_id,
-                'poet_pubkey': self.signup_info.poet_pubkey,
+                'poet_public_key': self.signup_info.poet_public_key,
                 'anti_sybil_id': self.signup_info.anti_sybil_id,
                 'proof_data': self.signup_info.proof_data,
                 'revoked': None,

@@ -22,15 +22,21 @@ from journal.global_store_manager import KeyValueStore
 from journal.consensus.poet1.validator_registry \
     import ValidatorRegistryTransaction
 from sawtooth.exceptions import InvalidTransactionError
+from journal.consensus.poet1.signup_info import SignupInfo
 
 
 class TestValidatorRegistryTransaction(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from journal.consensus.poet1.poet_enclave_simulator \
+            import poet_enclave_simulator
+        SignupInfo.poet_enclave = poet_enclave_simulator
 
     def test_register_validator_valid(self):
         key = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
-        signup_info = dict2json({'poet_pubkey': 'fake_key',
+        signup_info = dict2json({'poet_public_key': 'fake_key',
                                  'anti_sybil_id': 'some_token',
                                  'proof_data': 'proof'})
         store = KeyValueStore()
@@ -47,7 +53,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         key = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
-        signup_info = dict2json({'poet_pubkey': 'fake_key',
+        signup_info = dict2json({'poet_public_key': 'fake_key',
                                  'anti_sybil_id': 'some_token',
                                  'proof_data': 'proof'})
         store = KeyValueStore()
@@ -69,7 +75,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         key2 = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
-        signup_info = dict2json({'poet_pubkey': 'fake_key',
+        signup_info = dict2json({'poet_public_key': 'fake_key',
                                  'anti_sybil_id': 'some_token',
                                  'proof_data': 'proof'})
         store = KeyValueStore()
