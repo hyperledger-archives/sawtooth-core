@@ -39,7 +39,6 @@ class TestIntegration(unittest.TestCase):
         try:
             print "Launching validator network."
             vnm_config = defaultValidatorConfig.copy()
-            vnm_config['LogLevel'] = 'DEBUG'
 
             vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
                                           cfg=vnm_config)
@@ -50,9 +49,37 @@ class TestIntegration(unittest.TestCase):
             test = IntKeyLoadTest()
             test.setup(vnm.urls(), 10)
             test.run(1)
-            vnm.expand_network(firstwavevalidators, 1)
-            test.run(1)
             test.run_with_missing_dep(1)
+            test.validate()
+            vnm.shutdown()
+        except Exception as e:
+            print "Exception encountered in test case."
+            traceback.print_exc()
+            if vnm:
+                vnm.shutdown()
+            vnm.create_result_archive("TestIntegrationResults.tar.gz")
+            print "Validator data and logs preserved in: " \
+                  "TestIntegrationResults.tar.gz"
+            raise e
+
+    @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS,
+                         "limit of missing dependencies test")
+    def test_missing_dependencies(self):
+        vnm = None
+        try:
+            print "Launching validator network."
+            vnm_config = defaultValidatorConfig.copy()
+
+            vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
+                                          cfg=vnm_config)
+
+            firstwavevalidators = vnm.launch_network(5)
+
+            print "Testing limit of missing dependencies."
+            test = IntKeyLoadTest()
+            test.setup(vnm.urls(), 10)
+            test.run(1)
+            test.run_with_limit_txn_dependencies(1)
             test.validate()
             vnm.shutdown()
         except Exception as e:

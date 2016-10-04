@@ -16,6 +16,8 @@
 import logging
 import random
 import time
+import json
+import urllib2
 from twisted.web import http
 
 from txnintegration.utils import generate_private_key
@@ -24,6 +26,7 @@ from txnintegration.utils import TimeOut
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.integer_key_communication import MessageException
 from txnintegration.integer_key_state import IntegerKeyState
+
 
 import argparse
 import sys
@@ -39,6 +42,11 @@ class IntKeyLoadTest(object):
         self.clients = []
         self.state = None
         self.Timeout = 240 if timeout is None else timeout
+        self.fake_txn_id = '123456789ABCDEFGHJKLMNPQRSTUV' \
+                           'WXYZabcdefghijkmnopqrstuvwxyz'
+        self.committedBlckIds = []
+        self.pendingTxnCount = 0
+        self.pendingTxns = []
 
     def _get_client(self):
         return self.clients[random.randint(0, len(self.clients) - 1)]
@@ -98,6 +106,23 @@ class IntKeyLoadTest(object):
         else:
             print "No transactions with missing dependencies " \
                   "were committed in {0}s".format(to.WaitTime)
+
+    def _wait_for_limit_pending_transactions(self):
+        result = self.is_registered('http://localhost:9000/statistics/ledger')
+        json_data = json.loads(result)
+        self.committedBlckCount = json_data['ledger']['CommittedBlockCount']
+        print ("committedBlckCount: ", self.committedBlckCount)
+        self.pendingTxnCount = json_data['ledger']['PendingTxnCount']
+        print ("PendingTxnCount: ", self.pendingTxnCount)
+
+        if (self.committedBlckCount > 3 & self.pendingTxnCount != 0):
+            raise Exception("{} blocks were committed "
+                            "with {} invalid transactions."
+                            .format(self.committedBlckCount,
+                                    self.pendingTxnCount))
+        else:
+            print "All pending transactions after " \
+                  "3 blocks have been dropped"
 
     def setup(self, urls, numkeys):
         self.localState = {}
@@ -232,6 +257,87 @@ class IntKeyLoadTest(object):
             print "{0} transaction in {1} seconds averaging {2} t/s " \
                   "{3}" .format(numtxns, totaltime, avgrate, purpose)
 
+    def generate_txn_id(self):
+        string_id = ''
+        for i in range(0, 16):
+            string_id = string_id + random.choice(self.fake_txn_id)
+        return string_id
+
+    def is_registered(self, url=None):
+        response = urllib2.urlopen(url).read()
+        return response
+
+    def run_with_limit_txn_dependencies(self, numkeys, rounds=1, txintv=0):
+        if len(self.clients) == 0:
+            return
+
+        self.state.fetch()
+        keys = self.state.State.keys()
+
+        print "Running {0} rounds for {1} keys " \
+              "with {2} second inter-transaction time" \
+              "with limit on missing dep transactions" \
+            .format(rounds, numkeys, txintv)
+
+        for r in range(1, rounds + 1):
+            with Progress("Updating clients state") as p:
+                for c in self.clients:
+                    c.fetch_state()
+                    p.step()
+
+                print "Round {}".format(r)
+                for k in range(1, numkeys + 1):
+                    k = str(k)
+                    c = self._get_client()
+
+                    print ("Sending invalid txnx: ")
+                    cnt = 0
+                    starttime = time.time()
+                    for inf in range(0, 3):
+                        missingid = self.generate_txn_id()
+                        dependingtid = c.inc(k, 1, txndep=missingid)
+                        self.pendingTxns.append(dependingtid)
+                        cnt += 1
+                    print("pendingTxns: ", self.pendingTxns)
+                    self.txnrate(starttime, cnt,
+                                 " invalid transactions NOT submitted")
+
+                    result = self.is_registered(
+                        'http://localhost:9000/statistics/ledger')
+                    json_data = json.loads(result)
+                    self.pendingTxnCount = \
+                        json_data['ledger']['PendingTxnCount']
+                    print ("PendingTxnCount: ", self.pendingTxnCount)
+
+                    for loop_ind in range(0, 4):
+                        print ("Sending valid txn:")
+                        cnt = 0
+                        starttime = time.time()
+                        for ind in range(0, 5):
+                            self.localState[k] += 2
+                            txn_dep = self.last_key_txn.get(k, None)
+                            txn_id = c.inc(k, 2, txn_dep)
+                            if txn_id is None:
+                                raise Exception(
+                                    "Failed to inc key:{} value:{}"
+                                    " by 2".format(
+                                        k, self.localState[k]))
+                            self.transactions.append(txn_id)
+                            self.last_key_txn[k] = txn_id
+                            cnt += 1
+                            if cnt % 10 == 0:
+                                p.step()
+                            time.sleep(txintv)
+                        txn_count = len(self.transactions)
+                        self.txnrate(starttime, txn_count,
+                                     " valid transactions submitted")
+
+                        self._wait_for_transaction_commits()
+                        self._wait_for_limit_pending_transactions()
+
+                    print "checking pending txn limit"
+                    self._wait_for_limit_pending_transactions()
+
     def run_with_missing_dep(self, numkeys, rounds=1):
         self.state.fetch()
 
@@ -239,17 +345,21 @@ class IntKeyLoadTest(object):
               "with missing transactions" \
             .format(rounds, numkeys)
 
+        starttime = time.time()
         for r in range(1, rounds + 1):
             for c in self.clients:
-                c.CurrentState.fetch()
+                c.fetch_state()
             print "Round {}".format(r)
             for k in range(1, numkeys + 1):
                 k = str(k)
                 c = c = self._get_client()
-                missingid = c.inc(k, 1, txndep=None, postmsg=False)
-                dependingtid = c.inc(k, 1, txndep=missingid)
-                self.transactions.append(dependingtid)
 
+                for ind in range(0, 5):
+                    missingid = self.generate_txn_id()
+                    dependingtid = c.inc(k, 1, txndep=missingid)
+                    self.transactions.append(dependingtid)
+            txn_count = len(self.transactions)
+            self.txnrate(starttime, txn_count, " dep txn submitted")
             self._wait_for_no_transaction_commits()
 
 
