@@ -160,7 +160,7 @@ Getting Sawtooth Lake
 
 The Sawtooth Lake platform is distributed in source code form with
 an Apache license. You can get the code `here
-<https://github.com/intelledger>`_ and start building your own
+<https://github.com/hyperledger/sawtooth-core>`_ and start building your own
 distributed ledger.
 
 Repositories
