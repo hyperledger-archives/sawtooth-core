@@ -31,9 +31,33 @@ class BattleshipClient(SawtoothClient):
             base_url=base_url,
             store_name='BattleshipTransaction',
             name='BattleshipClient',
-            transaction_type=BattleshipTransaction,
-            message_type=BattleshipTransaction.MessageType,
+            txntype_name=BattleshipTransaction,
+            msgtype_name=BattleshipTransaction.MessageType,
             keyfile=keyfile)
+
+    def sendbattleshiptxn(self, update):
+        """The client needs to have the same
+            defaults as the Transaction subclass
+            before it is signed inside sendtxn
+        """
+        if 'Name' not in update:
+            update['Name'] = None
+        if 'Action' not in update:
+            update['Action'] = None
+        if 'Ships' not in update:
+            update['Ships'] = None
+        if update['Action'] == 'JOIN':
+            if 'Board' not in update:
+                update['Board'] = None
+        if update['Action'] == 'FIRE':
+            if 'Column' not in update:
+                update['Column'] = None
+            if 'Row' not in update:
+                update['Row'] = None
+
+        return self.sendtxn(BattleshipTransaction.TransactionTypeName,
+                            BattleshipTransaction.MessageType.MessageType,
+                            update)
 
     def create(self, name, ships):
         """
@@ -44,10 +68,7 @@ class BattleshipClient(SawtoothClient):
             'Ships': ships
         }
 
-        return self.sendtxn(
-            BattleshipTransaction,
-            BattleshipTransaction.MessageType,
-            update)
+        return self.sendbattleshiptxn(update)
 
     def join(self, name, board):
         """
@@ -58,10 +79,7 @@ class BattleshipClient(SawtoothClient):
             'Board': board
         }
 
-        return self.sendtxn(
-            BattleshipTransaction,
-            BattleshipTransaction.MessageType,
-            update)
+        return self.sendbattleshiptxn(update)
 
     def fire(self, name, column, row, reveal_space, reveal_nonce):
         """
@@ -79,7 +97,4 @@ class BattleshipClient(SawtoothClient):
         if reveal_nonce is not None:
             update['RevealNonce'] = reveal_nonce
 
-        return self.sendtxn(
-            BattleshipTransaction,
-            BattleshipTransaction.MessageType,
-            update)
+        return self.sendbattleshiptxn(update)

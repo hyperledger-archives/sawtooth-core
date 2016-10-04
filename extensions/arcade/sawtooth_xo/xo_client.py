@@ -27,10 +27,30 @@ class XoClient(SawtoothClient):
             base_url=base_url,
             store_name='XoTransaction',
             name='XoClient',
-            transaction_type=XoTransaction,
-            message_type=XoTransaction.MessageType,
+            txntype_name=XoTransaction.TransactionTypeName,
+            msgtype_name=XoTransaction.MessageType.MessageType,
             keyfile=keyfile,
             disable_client_validation=disable_client_validation)
+
+    def sendXoTxn(self, update):
+        """
+        This sets up the same defaults as the Transaction so when
+        signing happens in sendtxn, the same payload is signed.
+        Args:
+            update: dict The data associated with the Xo data model
+        Returns:
+            txnid: str The txnid associated with the transaction
+
+        """
+        if 'Name' not in update:
+            update['Name'] = None
+        if 'Action' not in update:
+            update['Action'] = None
+        if 'Space' in update and update['Space'] is None:
+            del update['Space']
+        return self.sendtxn(XoTransaction.TransactionTypeName,
+                            XoTransaction.MessageType.MessageType,
+                            update)
 
     def create(self, name):
         """
@@ -40,7 +60,7 @@ class XoClient(SawtoothClient):
             'Name': name
         }
 
-        return self.sendtxn(XoTransaction, XoTransaction.MessageType, update)
+        return self.sendXoTxn(update)
 
     def take(self, name, space):
         """
@@ -50,5 +70,4 @@ class XoClient(SawtoothClient):
             'Name': name,
             'Space': space,
         }
-
-        return self.sendtxn(XoTransaction, XoTransaction.MessageType, update)
+        return self.sendXoTxn(update)
