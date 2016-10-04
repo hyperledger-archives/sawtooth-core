@@ -15,6 +15,8 @@
 
 import logging
 
+from functools import partial
+
 from mktplace.transactions import asset_type_update
 from mktplace.transactions import asset_update
 from mktplace.transactions import exchange_offer_update
@@ -188,10 +190,10 @@ class _OfferInformation(object):
 
     def triggers(self, count, payer):
         if self.Execution == 'ExecuteOnce':
-            return [lambda store: self.drop_offer(store)]
+            return [self.drop_offer]
 
         elif self.Execution == 'ExecuteOncePerParticipant':
-            return [lambda store: self.record_participant(store, payer)]
+            return [partial(self.record_participant, payer=payer)]
 
         return []
 
