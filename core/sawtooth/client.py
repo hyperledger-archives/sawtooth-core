@@ -328,63 +328,6 @@ class _Communication(object):
         return value
 
 
-class _ClientState(object):
-    def __init__(self,
-                 client,
-                 state_type=global_store_manager.KeyValueStore):
-        self._client = client
-        self._state_type = state_type
-        self._state = None
-        self._current_state = None
-        if self._client is None:
-            self._state = self._state_type()
-            self._current_state = self._state.clone_store()
-        self._current_block_id = None
-
-    @property
-    def state(self):
-        return self._current_state
-
-    def fetch(self):
-        """
-        Retrieve the current state from the validator. Rebuild
-        the name, type, and id maps for the resulting objects.
-        """
-        LOGGER.debug('fetch state from %s', self._client.base_url)
-
-        # get the last ten block ids
-        block_ids = self._client.get_block_list(10)
-        block_id = block_ids[0]
-
-        # if the latest block is the one we have.
-        if block_id == self._current_block_id:
-            return
-
-        # look for the last common block.
-        if self._current_block_id in block_ids:
-            fetch_list = block_ids[:block_ids.index(self._current_block_id)]
-            # request the updates for all the new blocks we don't have
-            for fetch_id in reversed(fetch_list):
-                LOGGER.debug('only fetch delta of state for block %s',
-                             fetch_id)
-                delta = self._client.get_store_delta_for_block(fetch_id)
-                self._state = self._state.clone_store(delta)
-        else:
-            # no common block re-fetch full state.
-            LOGGER.debug('full fetch of state for block %s', block_id)
-            state = self._client.get_store_objects_through_block(block_id)
-            self._state = self._state_type(prevstore=None,
-                                           storeinfo={'Store': state,
-                                                      'DeletedKeys': []})
-
-        # State is actually a clone of the block state, this is a free
-        # operation because of the copy on write implementation of the global
-        # store. This way clients can update the state speculatively
-        # without corrupting the synchronized storage
-        self._current_state = self._state.clone_store()
-        self._current_block_id = block_id
-
-
 class UpdateBatch(object):
     """
         Helper object to allow group updates submission using
@@ -648,37 +591,9 @@ class SawtoothClient(object):
         assert result
 
         # if the message was successfully posted, then save the transaction
-        # id for future dependencies this could be a problem if the transaction
-        # fails during application
+        # id for future dependencies
         self._last_transaction = txnid
-        if not self._disable_client_validation:
-            txn.apply(self._current_state.state)
         return txnid
-
-    def fetch_state(self):
-        """
-        Refresh the state for the client.
-
-        Returns:
-            Nothing
-        """
-        if self._current_state is None:
-            raise \
-                ClientException('Client must be configured with a store name '
-                                'to access its current state')
-
-        self._current_state.fetch()
-
-    def get_state(self):
-        """
-        Return the most-recently-cached state for the client.  Note that this
-        data may be stale and so it might be desirable to call fetch_state
-        first.
-
-        Returns:
-            The most-recently-cached state for the client.
-        """
-        return self.state
 
     def get_status(self, timeout=30):
         """

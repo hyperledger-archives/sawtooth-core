@@ -71,7 +71,7 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = RPSClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     print "GAMES:"
     for k, v in state.iteritems():
@@ -110,7 +110,7 @@ def do_show(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = RPSClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     if name not in state:
         raise RPSException('no such game: {}'.format(name))
@@ -204,7 +204,7 @@ def do_play(args, config):
 
     client = RPSClient(base_url=url, keyfile=key_file)
     client.shoot(name=name, hand=hand)
-    state = client.get_state()
+    state = client.get_all_store_objects()
     comp = state[name].get('Computer')
     if comp:
         username = config.get('DEFAULT', 'username')

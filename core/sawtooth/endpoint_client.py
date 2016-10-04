@@ -48,9 +48,8 @@ class EndpointClient(SawtoothClient):
             from EndpointRegistryTransaction.
         """
 
-        # Refresh the endpoint registry, then return the values as a list
-        self.fetch_state()
-        return [endpoint for _, endpoint in self.state.iteritems()]
+        return [endpoint for endpoint in
+                self.get_all_store_objects().itervalues()]
 
     def get_validator_url_list(self):
         """

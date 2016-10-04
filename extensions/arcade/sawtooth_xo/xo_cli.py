@@ -222,7 +222,7 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     fmt = "%-15s %-15.15s %-15.15s %-9s %s"
     print fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE')
@@ -247,7 +247,7 @@ def do_show(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     if name not in state:
         raise XoException('no such game: {}'.format(name))

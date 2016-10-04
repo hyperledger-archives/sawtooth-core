@@ -269,7 +269,7 @@ def do_fire(args, config):
             "no such game in local database: {}".format(name))
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     if name not in state:
         raise BattleshipException(
@@ -308,7 +308,7 @@ def do_join(args, config):
     data = load_data(config)
 
     client_for_state = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client_for_state.get_state()
+    state = client_for_state.get_all_store_objects()
     if name not in state:
         raise BattleshipException(
             "No such game: {}".format(name)
@@ -355,7 +355,7 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     fmt = "%-15s %-15.15s %-15.15s %s"
     print fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'STATE')
@@ -381,7 +381,7 @@ def do_show(args, config):
     data = load_data(config)
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     if name not in state:
         raise BattleshipException('no such game: {}'.format(name))
