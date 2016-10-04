@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
+from collections import OrderedDict
+import hashlib
+import json
 import logging
 import time
 import urllib
@@ -23,13 +25,9 @@ try:  # weird windows behavior
 except ImportError:
     from enum import Enum
 
+import cbor
 import pybitcointools
 
-from sawtooth.client_utils import json2dict
-from sawtooth.client_utils import cbor2dict
-from sawtooth.client_utils import dict2cbor
-from sawtooth.client_utils import pretty_print_dict
-from sawtooth.client_utils import sign_message_with_transaction
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
@@ -45,6 +43,120 @@ class TransactionStatus(Enum):
     not_found = 404
     internal_server_error = 500,
     server_busy = 503
+
+
+def _sign_message_with_transaction(transaction, message_type, key):
+    """
+    Signs a transaction message or transaction
+    :param transaction (dict):
+    :param key (str): A signing key
+    returns message, txnid (tuple): The first 16 characters
+    of a sha256 hexdigest.
+    """
+    transaction['Nonce'] = time.time()
+    sig = pybitcointools.ecdsa_sign(
+        _dict2cbor(transaction),
+        key
+    )
+    transaction['Signature'] = sig
+
+    txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
+    message = {
+        'Transaction': transaction,
+        '__TYPE__': message_type,
+        '__NONCE__': time.time(),
+    }
+    cbor_serialized_message = _dict2cbor(message)
+    signature = pybitcointools.ecdsa_sign(
+        cbor_serialized_message,
+        key
+    )
+    message['__SIGNATURE__'] = signature
+    return message, txnid
+
+
+def _pretty_print_dict(dictionary):
+    """Generates a pretty-print formatted version of the input JSON.
+
+    Args:
+        dictionary (dict): the JSON string to format.
+
+    Returns:
+        str: pretty-print formatted string.
+    """
+    return json.dumps(_ascii_encode_dict(dictionary), indent=2, sort_keys=True)
+
+
+def _json2dict(dictionary):
+    """Deserializes JSON into a dictionary.
+
+    Args:
+        dictionary (str): the JSON string to deserialize.
+
+    Returns:
+        dict: a dictionary object reflecting the structure of the JSON.
+    """
+    return _ascii_encode_dict(json.loads(dictionary))
+
+
+def _cbor2dict(dictionary):
+    """Deserializes CBOR into a dictionary.
+
+    Args:
+        dictionary (bytes): the CBOR object to deserialize.
+
+    Returns:
+        dict: a dictionary object reflecting the structure of the CBOR.
+    """
+
+    return _ascii_encode_dict(cbor.loads(dictionary))
+
+
+def _dict2cbor(dictionary):
+    """Serializes a dictionary into CBOR.
+
+    Args:
+        dictionary (dict): a dictionary object to serialize into CBOR.
+
+    Returns:
+        bytes: a CBOR object reflecting the structure of the input dict.
+    """
+
+    return cbor.dumps(_unicode_encode_dict(dictionary), sort_keys=True)
+
+
+def _ascii_encode_dict(item):
+    """
+    Support method to ensure that JSON is converted to ascii since unicode
+    identifiers, in particular, can cause problems
+    """
+    if isinstance(item, dict):
+        return OrderedDict(
+            (_ascii_encode_dict(key), _ascii_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [_ascii_encode_dict(element) for element in item]
+    elif isinstance(item, unicode):
+        return item.encode('ascii')
+    else:
+        return item
+
+
+def _unicode_encode_dict(item):
+    """
+    Support method to ensure that JSON is converted to ascii since unicode
+    identifiers, in particular, can cause problems
+    """
+    if isinstance(item, dict):
+        return OrderedDict(
+            (_unicode_encode_dict(key), _unicode_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [_unicode_encode_dict(element) for element in item]
+    elif isinstance(item, str):
+        return unicode(item)
+    else:
+        return item
 
 
 class _Communication(object):
@@ -133,9 +245,9 @@ class _Communication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            return json2dict(content)
+            return _json2dict(content)
         elif encoding == 'application/cbor':
-            return cbor2dict(content)
+            return _cbor2dict(content)
         else:
             return content
 
@@ -145,7 +257,7 @@ class _Communication(object):
         and return the corresponding dictionary.
         """
 
-        data = dict2cbor(info)
+        data = _dict2cbor(info)
         datalen = len(data)
         url = urlparse.urljoin(self._base_url, msgtype)
 
@@ -171,9 +283,9 @@ class _Communication(object):
                 encoding = headers.get('Content-Type')
 
                 if encoding == 'application/json':
-                    value = json2dict(content)
+                    value = _json2dict(content)
                 elif encoding == 'application/cbor':
-                    value = cbor2dict(content)
+                    value = _cbor2dict(content)
                 else:
                     LOGGER.warn('operation failed with response: %s', err.code)
                     raise MessageException(
@@ -204,15 +316,15 @@ class _Communication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            value = json2dict(content)
+            value = _json2dict(content)
         elif encoding == 'application/cbor':
-            value = cbor2dict(content)
+            value = _cbor2dict(content)
         else:
             LOGGER.info('server responds with message %s of type %s', content,
                         encoding)
             return None
 
-        LOGGER.debug(pretty_print_dict(value))
+        LOGGER.debug(_pretty_print_dict(value))
         return value
 
 
@@ -527,7 +639,7 @@ class SawtoothClient(object):
         if 'Dependencies' not in txn:
             txn['Dependencies'] = []
 
-        msg, txnid = sign_message_with_transaction(
+        msg, txnid = _sign_message_with_transaction(
             txn,
             msgtype_name,
             self._signing_key)
