@@ -23,14 +23,13 @@ try:  # weird windows behavior
 except ImportError:
     from enum import Enum
 
-from gossip import node
-from gossip import signed_object
-from gossip.common import json2dict
-from gossip.common import cbor2dict
-from gossip.common import dict2cbor
-from gossip.common import pretty_print_dict
-from journal import global_store_manager
-from journal import transaction
+import pybitcointools
+
+from sawtooth.client_utils import json2dict
+from sawtooth.client_utils import cbor2dict
+from sawtooth.client_utils import dict2cbor
+from sawtooth.client_utils import pretty_print_dict
+from sawtooth.client_utils import sign_message_with_transaction
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
@@ -313,71 +312,49 @@ class SawtoothClient(object):
                  base_url,
                  store_name=None,
                  name='SawtoothClient',
-                 transaction_type=None,
-                 message_type=None,
+                 txntype_name=None,
+                 msgtype_name=None,
                  keystring=None,
                  keyfile=None,
                  disable_client_validation=False):
         self._base_url = base_url
-        self._message_type = message_type
-        self._transaction_type = transaction_type
+        self._message_type = msgtype_name
+        self._transaction_type = txntype_name
 
-        # An explicit store name takes precedence over a store name
-        # implied by the transaction type.
+        # an explicit store name takes precedence over a store name
+        # implied by the transaction type
         self._store_name = None
         if store_name is not None:
             self._store_name = store_name.strip('/')
-        elif transaction_type is not None:
-            self._store_name = transaction_type.TransactionTypeName.strip('/')
+        elif txntype_name is not None:
+            self._store_name = txntype_name.strip('/')
 
         self._communication = _Communication(base_url)
         self._last_transaction = None
-        self._local_node = None
+        self._signing_key = None
+        self._identifier = None
         self._update_batch = None
         self._disable_client_validation = disable_client_validation
 
-        # We only keep current state if we have a store name
-        self._current_state = None
-        if self._store_name is not None:
-            state_type = global_store_manager.KeyValueStore
-            if transaction_type is not None:
-                state_type = transaction_type.TransactionStoreType
-
-            self._current_state = \
-                _ClientState(client=self, state_type=state_type)
-            self.fetch_state()
-
-        signing_key = None
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            signing_key = signed_object.generate_signing_key(wifstr=keystring)
+            self._signing_key = pybitcointools.decode_privkey(keystring, 'wif')
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                signing_key = signed_object.generate_signing_key(
-                    wifstr=open(keyfile, "r").read().strip())
+                self._signing_key = pybitcointools.decode_privkey(
+                    open(keyfile, "r").read().strip(), 'wif')
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))
 
-        if signing_key:
-            identifier = signed_object.generate_identifier(signing_key)
-            self._local_node = node.Node(identifier=identifier,
-                                         signingkey=signing_key,
-                                         name=name)
+        if self._signing_key is not None:
+            self._identifier = pybitcointools.pubtoaddr(
+                pybitcointools.privtopub(self._signing_key))
 
     @property
     def base_url(self):
         return self._base_url
-
-    @property
-    def state(self):
-        if self._current_state is None:
-            raise \
-                ClientException('Client must be configured with a store name '
-                                'to access its current state')
-
-        return self._current_state.state
 
     @property
     def last_transaction_id(self):
@@ -530,37 +507,33 @@ class SawtoothClient(object):
                 'Updates': updates,
                 'Dependencies': dependencies,
             },
-            txn_type=self._transaction_type,
-            txn_msg_type=self._message_type)
+            txntype_name=self._transaction_type,
+            msgtype_name=self._message_type)
 
-    def sendtxn(self, txn_type, txn_msg_type, minfo):
+    def sendtxn(self, txntype_name, msgtype_name, minfo):
         """
         Build a transaction for the update, wrap it in a message with all
-        of the appropriate signatures and post it to the validator
+        of the appropriate signatures and post it to the validator. Will
+        not work with UpdatesTransaction txn families but will work with
+        txn families in Arcade.
         """
 
-        if self._local_node is None:
+        if self._signing_key is None:
             raise ClientException(
                 'can not send transactions as a read-only client')
 
-        txn_type = txn_type or self._transaction_type
-        txn_msg_type = txn_msg_type or self._message_type
+        txn = {'TransactionType': txntype_name}
+        txn = dict(txn, **minfo)
+        if 'Dependencies' not in txn:
+            txn['Dependencies'] = []
 
-        txn = txn_type(minfo=minfo)
-        txn.sign_from_node(self._local_node)
-        txnid = txn.Identifier
-
-        if not self._disable_client_validation:
-            txn.check_valid(self._current_state.state)
-
-        msg = txn_msg_type()
-        msg.Transaction = txn
-        msg.SenderID = self._local_node.Identifier
-        msg.sign_from_node(self._local_node)
-
+        msg, txnid = sign_message_with_transaction(
+            txn,
+            msgtype_name,
+            self._signing_key)
         try:
             LOGGER.debug('Posting transaction: %s', txnid)
-            result = self._communication.postmsg(msg.MessageType, msg.dump())
+            result = self._communication.postmsg(msgtype_name, msg)
         except MessageException as e:
             LOGGER.warn('Posting transaction failed: %s', str(e))
             return None
