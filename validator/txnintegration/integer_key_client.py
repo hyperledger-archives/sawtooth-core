@@ -33,8 +33,8 @@ class IntegerKeyClient(SawtoothClient):
             base_url=baseurl,
             name=name,
             store_name="IntegerKeyTransaction",
-            transaction_type=integer_key.IntegerKeyTransaction,
-            message_type=integer_key.IntegerKeyTransaction.MessageType,
+            txntype_name=integer_key.IntegerKeyTransaction,
+            msgtype_name=integer_key.IntegerKeyTransaction.MessageType,
             keystring=keystring,
             keyfile=keyfile,
             disable_client_validation=disable_client_validation)
@@ -54,8 +54,10 @@ class IntegerKeyClient(SawtoothClient):
             minfo["Dependencies"] = [txndep]
 
         return self.sendtxn(
-            txn_type=integer_key.IntegerKeyTransaction,
-            txn_msg_type=integer_key.IntegerKeyTransaction.MessageType,
+            txntype_name=integer_key.IntegerKeyTransaction.
+            TransactionTypeName,
+            msgtype_name=integer_key.IntegerKeyTransaction.
+            MessageType.MessageType,
             minfo=minfo)
 
     def set(self, key, value, txndep=None, postmsg=True):

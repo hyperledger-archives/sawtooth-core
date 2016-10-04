@@ -251,7 +251,7 @@ class _Communication(object):
         else:
             return content
 
-    def postmsg(self, msgtype, info):
+    def postmsg(self, msgtype_name, info):
         """
         Post a transaction message to the validator, parse the returning CBOR
         and return the corresponding dictionary.
@@ -259,7 +259,7 @@ class _Communication(object):
 
         data = _dict2cbor(info)
         datalen = len(data)
-        url = urlparse.urljoin(self._base_url, msgtype)
+        url = urlparse.urljoin(self._base_url, msgtype_name)
 
         LOGGER.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
                      datalen, data)
@@ -479,14 +479,7 @@ class SawtoothClient(object):
                               delta=False):
         path = 'store'
 
-        # If we are provided a transaction class or object, we will infer
-        # the store name from it.  Otherwise, we will assume we have a store
-        # name.
-        if txn_type_or_name is not None:
-            if isinstance(txn_type_or_name, transaction.Transaction):
-                path += '/' + txn_type_or_name.TransactionTypeName.strip('/')
-            else:
-                path += '/' + txn_type_or_name.strip('/')
+        path += '/' + txn_type_or_name.strip('/')
 
         if key is not None:
             path += '/' + key.strip('/')
@@ -580,8 +573,8 @@ class SawtoothClient(object):
 
         return self.sendtxn(
             minfo=msg_info,
-            txn_type=self._transaction_type,
-            txn_msg_type=self._message_type)
+            txntype_name=self._transaction_type,
+            msgtype_name=self._message_type)
 
     def send_update(self, updates, dependencies=None):
         """

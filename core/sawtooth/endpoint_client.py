@@ -33,8 +33,8 @@ class EndpointClient(SawtoothClient):
             base_url=base_url,
             store_name='EndpointRegistryTransaction',
             name='EndpointClient',
-            transaction_type=EndpointRegistryTransaction,
-            message_type=EndpointRegistryTransaction.MessageType)
+            txntype_name=EndpointRegistryTransaction.TransactionTypeName,
+            msgtype_name=EndpointRegistryTransaction.MessageType.MessageType)
 
     def get_endpoint_list(self):
         """

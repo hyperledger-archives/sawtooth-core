@@ -25,8 +25,8 @@ class RPSClient(SawtoothClient):
             base_url=base_url,
             store_name='RPSTransaction',
             name='RPSClient',
-            transaction_type=RPSTransaction,
-            message_type=RPSTransaction.MessageType,
+            txntype_name=RPSTransaction.TransactionTypeName,
+            msgtype_name=RPSTransaction.MessageType.MessageType,
             keyfile=keyfile,
         )
 
@@ -37,8 +37,8 @@ class RPSClient(SawtoothClient):
             'Players': players,
         }
 
-        return \
-            self.sendtxn(RPSTransaction, RPSTransaction.MessageType, update)
+        return self.sendtxn(RPSTransaction.TransactionTypeName,
+                            RPSTransaction.MessageType.MessageType, update)
 
     def shoot(self, name, hand):
         update = {
@@ -47,5 +47,5 @@ class RPSClient(SawtoothClient):
             'Hand': hand,
         }
 
-        return \
-            self.sendtxn(RPSTransaction, RPSTransaction.MessageType, update)
+        return self.sendtxn(RPSTransaction.TransactionTypeName,
+                            RPSTransaction.MessageType.MessageType, update)
