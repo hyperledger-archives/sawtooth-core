@@ -16,8 +16,6 @@
 
 from sawtooth.client import SawtoothClient
 
-from sawtooth_rps.txn_family import RPSTransaction
-
 
 class RPSClient(SawtoothClient):
     def __init__(self, base_url, keyfile):
@@ -25,8 +23,8 @@ class RPSClient(SawtoothClient):
             base_url=base_url,
             store_name='RPSTransaction',
             name='RPSClient',
-            txntype_name=RPSTransaction.TransactionTypeName,
-            msgtype_name=RPSTransaction.MessageType.MessageType,
+            txntype_name='/RPSTransaction',
+            msgtype_name='/RPS/Transaction',
             keyfile=keyfile,
         )
 
@@ -37,8 +35,8 @@ class RPSClient(SawtoothClient):
             'Players': players,
         }
 
-        return self.sendtxn(RPSTransaction.TransactionTypeName,
-                            RPSTransaction.MessageType.MessageType, update)
+        return self.sendtxn('/RPSTransaction',
+                            '/RPS/Transaction', update)
 
     def shoot(self, name, hand):
         update = {
@@ -47,5 +45,5 @@ class RPSClient(SawtoothClient):
             'Hand': hand,
         }
 
-        return self.sendtxn(RPSTransaction.TransactionTypeName,
-                            RPSTransaction.MessageType.MessageType, update)
+        return self.sendtxn('/RPSTransaction',
+                            '/RPS/Transaction', update)

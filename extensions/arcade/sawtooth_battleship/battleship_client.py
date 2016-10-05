@@ -17,8 +17,6 @@ import logging
 
 from sawtooth.client import SawtoothClient
 
-from sawtooth_battleship.txn_family import BattleshipTransaction
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,11 +29,11 @@ class BattleshipClient(SawtoothClient):
             base_url=base_url,
             store_name='BattleshipTransaction',
             name='BattleshipClient',
-            txntype_name=BattleshipTransaction,
-            msgtype_name=BattleshipTransaction.MessageType,
+            txntype_name='/BattleshipTransaction',
+            msgtype_name='/Battleship/Transaction',
             keyfile=keyfile)
 
-    def sendbattleshiptxn(self, update):
+    def send_battleship_txn(self, update):
         """The client needs to have the same
             defaults as the Transaction subclass
             before it is signed inside sendtxn
@@ -55,8 +53,8 @@ class BattleshipClient(SawtoothClient):
             if 'Row' not in update:
                 update['Row'] = None
 
-        return self.sendtxn(BattleshipTransaction.TransactionTypeName,
-                            BattleshipTransaction.MessageType.MessageType,
+        return self.sendtxn('/BattleshipTransaction',
+                            '/Battleship/Transaction',
                             update)
 
     def create(self, name, ships):
@@ -68,7 +66,7 @@ class BattleshipClient(SawtoothClient):
             'Ships': ships
         }
 
-        return self.sendbattleshiptxn(update)
+        return self.send_battleship_txn(update)
 
     def join(self, name, board):
         """
@@ -79,7 +77,7 @@ class BattleshipClient(SawtoothClient):
             'Board': board
         }
 
-        return self.sendbattleshiptxn(update)
+        return self.send_battleship_txn(update)
 
     def fire(self, name, column, row, reveal_space, reveal_nonce):
         """
@@ -97,4 +95,4 @@ class BattleshipClient(SawtoothClient):
         if reveal_nonce is not None:
             update['RevealNonce'] = reveal_nonce
 
-        return self.sendbattleshiptxn(update)
+        return self.send_battleship_txn(update)
