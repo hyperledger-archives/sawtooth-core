@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 
+from gossip.gossip_core import Gossip
 from journal.consensus.poet0.poet_journal import PoetJournal
 from ledger.transaction import endpoint_registry
 from ledger.transaction import integer_key
@@ -84,10 +85,49 @@ def do_genesis(args):
     for key, value in cfg.iteritems():
         LOGGER.debug("CONFIG: %s = %s", key, value)
 
-    # instantiate ledger (from node)
+    # set WaitTimer globals
+    target_wait_time = cfg.get("TargetWaitTime")
+    initial_wait_time = cfg.get("InitialWaitTime")
+    certificate_sample_length = cfg.get('CertificateSampleLength')
+    fixed_duration_blocks = cfg.get("FixedDurationBlocks")
+    from journal.consensus.poet0.wait_timer \
+        import set_wait_timer_globals
+    set_wait_timer_globals(target_wait_time,
+                           initial_wait_time,
+                           certificate_sample_length,
+                           fixed_duration_blocks,
+                           )
+
+    # build gossiper
     (nd, _) = parse_networking_info(cfg)
+    minimum_retries = cfg.get("MinimumRetries")
+    retry_interval = cfg.get("RetryInterval")
+    gossiper = Gossip(nd, minimum_retries, retry_interval)
+
+    # build journal
+    min_txn_per_block = cfg.get("MinimumTransactionsPerBlock")
+    max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
+    max_txn_age = cfg.get("MaxTxnAge")
+    genesis_ledger = cfg.get("GenesisLedger")
+    restore = cfg.get("Restore")
+    data_directory = cfg.get("DataDirectory")
+    store_type = cfg.get("StoreType")
+
+    stat_domains = {}
     # in future, dynamically select ledger obj based on LedgerType
-    ledger = PoetJournal(nd, **cfg)
+    ledger = PoetJournal(gossiper.LocalNode,
+                         gossiper,
+                         gossiper.dispatcher,
+                         stat_domains,
+                         cfg,
+                         minimum_transactions_per_block=min_txn_per_block,
+                         max_transactions_per_block=max_txn_per_block,
+                         max_txn_age=max_txn_age,
+                         genesis_ledger=genesis_ledger,
+                         restore=restore,
+                         data_directory=data_directory,
+                         store_type=store_type,
+                         )
     # may need to add transaction family objects ad hoc from cfg
     dfl_txn_families = [endpoint_registry, integer_key]
     for txnfamily in dfl_txn_families:
@@ -99,8 +139,8 @@ def do_genesis(args):
     # calling initialization_complete will create the genesis block
     ledger.initialization_complete()
     # simulate receiving the genesis block msg from reactor to force commit
-    msg = ledger.gossip.MessageQueue.pop()
-    (_, msg_handler) = ledger.MessageHandlerMap[msg.MessageType]
+    msg = ledger.gossip.IncomingMessageQueue.pop()
+    (_, msg_handler) = ledger.dispatcher.message_handler_map[msg.MessageType]
     msg_handler(msg, ledger)
 
     # Report, then shutdown to save state:
