@@ -13,19 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
-import socket
-
-from gossip import node
-from gossip.signed_object import generate_identifier
-from gossip.signed_object import generate_signing_key
 
 from journal.consensus.poet0.poet_journal import PoetJournal
 from ledger.transaction import endpoint_registry
 from ledger.transaction import integer_key
-from txnintegration.utils import read_key_file
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.validator_config import get_validator_configuration
-from sawtooth.validator_config import parse_listen_directives
+from txnserver.validator import parse_networking_info
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,22 +45,6 @@ def add_genesis_parser(subparsers, parent_parser):
                         help='Specify transaction families to load. Multiple'
                              ' -F options can be specified.',
                         action='append')
-
-
-def node_from_config(config):
-    name = config['NodeName']
-    signing_key = generate_signing_key(wifstr=read_key_file(config['KeyFile']))
-    listen_info = config.get("Listen")
-    (gossip_host, gossip_port) = parse_listen_directives(listen_info)['gossip']
-    # stubbing endpoint address for now
-    endpoint_addr = (None, None)
-    nd = node.Node(address=(socket.gethostbyname(gossip_host), gossip_port),
-                   identifier=generate_identifier(signing_key),
-                   signingkey=signing_key,
-                   name=name,
-                   endpoint_address=endpoint_addr,
-                   )
-    return nd
 
 
 def do_genesis(args):
@@ -107,7 +85,7 @@ def do_genesis(args):
         LOGGER.debug("CONFIG: %s = %s", key, value)
 
     # instantiate ledger (from node)
-    nd = node_from_config(cfg)
+    (nd, _) = parse_networking_info(cfg)
     # in future, dynamically select ledger obj based on LedgerType
     ledger = PoetJournal(nd, **cfg)
     # may need to add transaction family objects ad hoc from cfg
