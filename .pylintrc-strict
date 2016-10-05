@@ -67,7 +67,8 @@ disable=
     missing-docstring,
     no-member,
     unused-argument,
-    locally-disabled
+    locally-disabled,
+    no-self-use
 
 [REPORTS]
 

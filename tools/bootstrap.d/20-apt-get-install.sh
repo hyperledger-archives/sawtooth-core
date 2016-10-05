@@ -16,7 +16,8 @@ if [ "$VER" = "16.04" ] ; then
         python-cryptography \
         python-service-identity \
         python-openssl \
-        python-twisted-core
+        python-twisted-core \
+        python-ipaddr
 else
     apt-get install -y -q \
         python-enum34
