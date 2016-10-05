@@ -163,7 +163,6 @@ setup(
     data_files=data_files,
     entry_points={
         'console_scripts': [
-            'txnkeygen = txnmain.key_gen_cli:main',
             'txnvalidator = txnmain.validator_cli:main_wrapper',
             'txnadmin = txnmain.admin_cli:main'
         ]

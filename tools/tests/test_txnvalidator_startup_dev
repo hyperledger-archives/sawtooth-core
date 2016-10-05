@@ -36,7 +36,6 @@ cd $CURRENCYHOME || exit 1
 
 rm -f logs/*.log
 
-./scripts/txnkeygen --force --keydir=keys base000 || exit 1
 
 sed -i.bak \
     -e "s/AdministrationNode.*/AdministrationNode\" : \"$(cat keys/base000.addr)\",/" \
