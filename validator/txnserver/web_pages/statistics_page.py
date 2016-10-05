@@ -35,13 +35,13 @@ class StatisticsPage(BasePage):
             raise Error(http.BAD_REQUEST, 'missing stat family')
         source = components.pop(0)
         result = {}
-        if source == 'ledger':
-            for domain in self.Validator.stat_domains.iterkeys():
-                result[domain] = self.Validator.stat_domains[domain]\
+        if source == 'journal':
+            for domain in self.validator.stat_domains.iterkeys():
+                result[domain] = self.validator.stat_domains[domain]\
                     .get_stats()
             return result
         if source == 'node':
-            for peer in self.Validator.gossip.NodeMap.itervalues():
+            for peer in self.validator.gossip.NodeMap.itervalues():
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
             return result
@@ -50,22 +50,22 @@ class StatisticsPage(BasePage):
             result['platform'] = self.ps.get_data_as_dict()
             return result
         if source == 'all':
-            for domain in self.Validator.stat_domains.iterkeys():
-                result[domain] = self.Validator.stat_domains[domain]\
+            for domain in self.validator.stat_domains.iterkeys():
+                result[domain] = self.validator.stat_domains[domain]\
                     .get_stats()
-            for peer in self.Validator.gossip.NodeMap.itervalues():
+            for peer in self.validator.gossip.NodeMap.itervalues():
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
             self.ps.get_stats()
             result['platform'] = self.ps.get_data_as_dict()
             return result
 
-        if 'ledger' in args:
-            for domain in self.Validator.stat_domains.iterkeys():
-                result[domain] = self.Validator.stat_domains[domain]\
+        if 'journal' in args:
+            for domain in self.validator.stat_domains.iterkeys():
+                result[domain] = self.validator.stat_domains[domain]\
                     .get_stats()
         if 'node' in args:
-            for peer in self.Validator.gossip.NodeMap.itervalues():
+            for peer in self.validator.gossip.NodeMap.itervalues():
                 result[peer.Name] = peer.Stats.get_stats()
                 result[peer.Name]['IsPeer'] = peer.is_peer
         if 'platform' in args:

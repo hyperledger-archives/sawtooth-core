@@ -37,14 +37,14 @@ class StorePage(BasePage):
                 store
             store name, key != '*' -- return the data associated with the key
         """
-        if not self.Ledger.GlobalStore:
+        if not self.journal.GlobalStore:
             raise Error(http.BAD_REQUEST, 'no global store')
 
-        block_id = self.Ledger.MostRecentCommittedBlockID
+        block_id = self.journal.MostRecentCommittedBlockID
         if 'blockid' in msg:
             block_id = msg.get('blockid').pop(0)
 
-        storemap = self.Ledger.GlobalStoreMap.get_block_store(block_id)
+        storemap = self.journal.GlobalStoreMap.get_block_store(block_id)
         if not storemap:
             return self._encode_error_response(
                 request,

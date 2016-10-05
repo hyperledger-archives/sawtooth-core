@@ -434,7 +434,6 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         info = msg.dump()
         m = core.dispatcher.unpack_message(
             '/gossip.messages.ShutdownMessage/ShutdownMessage', info)
-            info)
         self.assertEquals(msg.Identifier, m.Identifier)
 
     def test_gossip_add_and_drop_node(self):

@@ -52,7 +52,7 @@ class StatsClient(object):
 
         self.validator_state = "UNKNWN"
 
-        self.ledgerstats = {}
+        self.journal_stats = {}
         self.nodestats = {}
 
         self.vsm = ValidatorStatsManager()
@@ -87,7 +87,7 @@ class StatsClient(object):
             self.no_response_reason = ""
 
     def _stats_error(self, failure):
-        self.vsm.update_stats(self.ledgerstats, False, 0, 0)
+        self.vsm.update_stats(self.journal_stats, False, 0, 0)
         self.responding = False
         self.validator_state = "NO_RESP"
         self.no_response_reason = failure.type.__name__
@@ -149,15 +149,15 @@ class ValidatorStatsManager(object):
                     json_stats["packet"]["BytesSent"]
 
                 self.vstats = ValStats(
-                    json_stats["ledger"]["BlocksClaimed"],
-                    json_stats["ledger"]["CommittedBlockCount"],
-                    json_stats["ledger"]["PendingBlockCount"],
+                    json_stats["journal"]["BlocksClaimed"],
+                    json_stats["journal"]["CommittedBlockCount"],
+                    json_stats["journal"]["PendingBlockCount"],
 
-                    json_stats["ledger"].get("LocalMeanTime", 0.0),
-                    json_stats["ledger"].get("ExpectedExpirationTime", 0.0),
-                    json_stats["ledger"].get("PreviousBlockID", 'broken'),
-                    json_stats["ledger"].get("CommittedTxnCount", 0),
-                    json_stats["ledger"].get("PendingTxnCount", 0),
+                    json_stats["journal"].get("LocalMeanTime", 0.0),
+                    json_stats["journal"].get("ExpectedExpirationTime", 0.0),
+                    json_stats["journal"].get("PreviousBlockID", 'broken'),
+                    json_stats["journal"].get("CommittedTxnCount", 0),
+                    json_stats["journal"].get("PendingTxnCount", 0),
 
                     json_stats["packet"]["DroppedPackets"],
                     json_stats["packet"]["DuplicatePackets"],

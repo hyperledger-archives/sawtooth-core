@@ -1375,5 +1375,5 @@ class Journal(object):
             stats.Sample('MaximumTransactionsPerBlock',
                          lambda: self.MaximumTransactionsPerBlock))
         if stat_domains is not None:
-            stat_domains['ledger'] = self.JournalStats
-            stat_domains['ledgerconfig'] = self.JournalConfigStats
+            stat_domains['journal'] = self.JournalStats
+            stat_domains['journalconfig'] = self.JournalConfigStats

@@ -41,11 +41,11 @@ from txnserver.web_pages.transaction_page import TransactionPage
 
 
 class TestValidator(object):
-    def __init__(self, test_gossip, test_ledger, stat_domains):
-        self.Ledger = test_ledger
+    def __init__(self, test_gossip, test_journal, stat_domains):
+        self.journal = test_journal
         self.gossip = test_gossip
         self.web_thread_pool = TestThreadPool()
-        self.Config = {}
+        self.config = {}
         self.stat_domains = stat_domains
 
 
@@ -152,7 +152,7 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_store(self):
         # Test _handlestorerequest
         validator = self._create_validator()
-        journal = validator.Ledger
+        journal = validator.journal
         store_page = StorePage(validator)
         request = self._create_get_request("/store", {})
         try:
@@ -206,10 +206,10 @@ class TestWebApi(unittest.TestCase):
         # Test _handleblkrequest
         validator = self._create_validator()
         gossip = validator.gossip
-        journal = validator.Ledger
+        journal = validator.journal
         block_page = BlockPage(validator)
 
-        # TransactionBlock to the ledger
+        # TransactionBlock to the journal
         trans_block = self._create_tblock(gossip.LocalNode,
                                           0,
                                           common.NullIdentifier,
@@ -252,10 +252,10 @@ class TestWebApi(unittest.TestCase):
     def test_web_api_transaction(self):
         validator = self._create_validator()
         gossip = validator.gossip
-        journal = validator.Ledger
+        journal = validator.journal
         transaction_page = TransactionPage(validator)
 
-        # TransactionBlock to the ledger
+        # TransactionBlock to the journal
         txns = []
         i = 0
         while i < 10:
@@ -312,13 +312,13 @@ class TestWebApi(unittest.TestCase):
             self.assertIsNotNone(statistics_page)
 
         dic = {}
-        dic["ledger"] = validator.stat_domains["ledger"].get_stats()
-        dic["ledgerconfig"] = validator.stat_domains["ledgerconfig"].\
+        dic["journal"] = validator.stat_domains["journal"].get_stats()
+        dic["journalconfig"] = validator.stat_domains["journalconfig"].\
             get_stats()
         dic["message"] = validator.stat_domains["message"].get_stats()
         dic["packet"] = validator.stat_domains["packet"].get_stats()
-        # GET /statistics/ledger
-        request = self._create_get_request("/statistics/ledger", {})
+        # GET /statistics/journal
+        request = self._create_get_request("/statistics/journal", {})
         self.assertEquals(yaml.load(statistics_page.do_get(request)), dic)
         # GET /statistics/node - with no peers
         request = self._create_get_request("/statistics/node", {})

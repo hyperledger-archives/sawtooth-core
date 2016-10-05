@@ -38,7 +38,7 @@ class ForwardPage(BasePage):
         """
         data = request.content.getvalue()
         msg = self._get_message(request)
-        if self.Validator.Config.get("LocalValidation", True):
+        if self.validator.config.get("LocalValidation", True):
             # determine if the message contains a valid transaction before
             # we send the message to the network
 
@@ -55,9 +55,9 @@ class ForwardPage(BasePage):
                             mytxn.TransactionTypeName)
 
                 pending_block_txns = None
-                if self.Ledger.PendingTransactionBlock is not None:
+                if self.journal.PendingTransactionBlock is not None:
                     pending_block_txns = \
-                        self.Ledger.PendingTransactionBlock.TransactionIDs
+                        self.journal.PendingTransactionBlock.TransactionIDs
 
                 try:
                     temp_store_map = self._get_store_map()
@@ -66,14 +66,14 @@ class ForwardPage(BasePage):
                         request,
                         http.NOT_FOUND,
                         e)
-                pending_txns = copy.copy(self.Ledger.PendingTransactions)
+                pending_txns = copy.copy(self.journal.PendingTransactions)
                 pending_txn_ids = [x for x in pending_txns.iterkeys()]
 
                 # clone a copy of the ledger's message queue so we can
                 # temporarily play forward all locally submitted yet
                 # uncommitted transactions
                 my_queue = copy.deepcopy(
-                    self.Validator.gossip.IncomingMessageQueue)
+                    self.validator.gossip.IncomingMessageQueue)
 
                 transaction_type = mytxn.TransactionTypeName
                 if transaction_type not in temp_store_map.TransactionStores:
@@ -90,8 +90,8 @@ class ForwardPage(BasePage):
 
                 # apply any local pending transactions
                 for txn_id in pending_txn_ids:
-                    if txn_id in self.Ledger.TransactionStore:
-                        pend_txn = self.Ledger.TransactionStore[txn_id]
+                    if txn_id in self.journal.TransactionStore:
+                        pend_txn = self.journal.TransactionStore[txn_id]
                         my_store = temp_store_map.get_transaction_store(
                             pend_txn.TransactionTypeName)
                         if pend_txn and pend_txn.is_valid(my_store):
@@ -102,7 +102,7 @@ class ForwardPage(BasePage):
                 while len(my_queue) > 0:
                     qmsg = my_queue.pop()
                     if qmsg and \
-                            self.Ledger.gossip.dispatcher.\
+                            self.journal.gossip.dispatcher.\
                             has_message_handler(qmsg.MessageType):
                         if (hasattr(qmsg, 'Transaction') and
                                 qmsg.Transaction is not None):
@@ -140,5 +140,5 @@ class ForwardPage(BasePage):
         # and finally execute the associated method
         # and send back the results
 
-        self.Validator.gossip.broadcast_message(msg)
+        self.validator.gossip.broadcast_message(msg)
         return msg.dump()

@@ -39,10 +39,10 @@ class BasePage(Resource):
 
     def __init__(self, validator, page_name=None):
         Resource.__init__(self)
-        self.Ledger = validator.Ledger
-        self.Validator = validator
+        self.journal = validator.journal
+        self.validator = validator
         self.thread_pool = validator.web_thread_pool
-        self.max_workers = self.Validator.Config.get("MaxWebWorkers", 7)
+        self.max_workers = self.validator.config.get("MaxWebWorkers", 7)
         if page_name is None:
             self.page_name = self.__class__.__name__.lower()
             loc = self.page_name.find("page")
@@ -167,18 +167,18 @@ class BasePage(Resource):
                 'unknown message'
                 ' encoding: {0}'.format(encoding))
         typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
-        if not self.Validator.gossip.dispatcher.has_message_handler(typename):
+        if not self.validator.gossip.dispatcher.has_message_handler(typename):
             return self._encode_error_response(
                 request,
                 http.NOT_FOUND,
                 'received request for unknown message'
                 ' type, {0}'.format(typename))
-        return self.Validator.gossip.dispatcher.unpack_message(typename, minfo)
+        return self.validator.gossip.dispatcher.unpack_message(typename, minfo)
 
     def _get_store_map(self):
-        block_id = self.Ledger.MostRecentCommittedBlockID
+        block_id = self.journal.MostRecentCommittedBlockID
         real_store_map = \
-            self.Ledger.GlobalStoreMap.get_block_store(block_id)
+            self.journal.GlobalStoreMap.get_block_store(block_id)
         temp_store_map = \
             global_store_manager.BlockStore(real_store_map)
         if not temp_store_map:

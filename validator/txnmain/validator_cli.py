@@ -60,14 +60,14 @@ def local_main(config, windows_service=False, daemonized=False):
 
     logger.warn('validator pid is %s', os.getpid())
 
-    ledgertype = config.get('LedgerType', 'poet0')
+    consensus_type = config.get('LedgerType', 'poet0')
     stat_domains = {}
 
     try:
         (node, http_port) = parse_networking_info(config)
-        # to construct a validator, we pass it a consensus specific ledger
+        # to construct a validator, we pass it a consensus specific journal
         validator = None
-        ledger = None
+        journal = None
         # Gossip parameters
         minimum_retries = config.get("MinimumRetries")
         retry_interval = config.get("RetryInterval")
@@ -87,7 +87,7 @@ def local_main(config, windows_service=False, daemonized=False):
         data_directory = config.get("DataDirectory")
         store_type = config.get("StoreType")
 
-        if ledgertype == 'poet0':
+        if consensus_type == 'poet0':
             from journal.consensus.poet0 import poet_journal
             from journal.consensus.poet0.wait_timer \
                 import set_wait_timer_globals
@@ -97,7 +97,7 @@ def local_main(config, windows_service=False, daemonized=False):
                                    fixed_duration_blocks)
             # Continue to pass config to PoetJournal for possible other enclave
             # implementations - poet_enclave.initialize
-            ledger = poet_journal.PoetJournal(
+            journal = poet_journal.PoetJournal(
                 gossip.LocalNode,
                 gossip,
                 gossip.dispatcher,
@@ -110,7 +110,7 @@ def local_main(config, windows_service=False, daemonized=False):
                 restore,
                 data_directory,
                 store_type)
-        elif ledgertype == 'poet1':
+        elif consensus_type == 'poet1':
             from journal.consensus.poet1 import poet_journal
             from journal.consensus.poet1.wait_timer \
                 import set_wait_timer_globals
@@ -121,7 +121,7 @@ def local_main(config, windows_service=False, daemonized=False):
                                    minimum_wait_time)
             # Continue to pass config to PoetJournal for possible other enclave
             # implementations - poet_enclave.initialize
-            ledger = poet_journal.PoetJournal(
+            journal = poet_journal.PoetJournal(
                 gossip.LocalNode,
                 gossip,
                 gossip.dispatcher,
@@ -134,14 +134,14 @@ def local_main(config, windows_service=False, daemonized=False):
                 restore,
                 data_directory,
                 store_type)
-        elif ledgertype == 'quorum':
+        elif consensus_type == 'quorum':
             quorum = config.get("Quorum")
             nodes = config.get("Nodes")
             vote_time_interval = config.get("VoteTimeInterval")
             ballot_time_interval = config.get("BallotTimeInterval")
             voting_quorum_target_size = config.get("VotingQuorumTargetSize")
             from journal.consensus.quorum import quorum_journal
-            ledger = quorum_journal.QuorumJournal(
+            journal = quorum_journal.QuorumJournal(
                 gossip.LocalNode,
                 gossip,
                 gossip.dispatcher,
@@ -156,11 +156,11 @@ def local_main(config, windows_service=False, daemonized=False):
                 vote_time_interval,
                 ballot_time_interval,
                 voting_quorum_target_size)
-            ledger.initialize_quorum_map(quorum, nodes)
-        elif ledgertype == 'dev_mode':
+            journal.initialize_quorum_map(quorum, nodes)
+        elif consensus_type == 'dev_mode':
             block_wait_time = config.get("BlockWaitTime")
             from journal.consensus.dev_mode import dev_mode_journal
-            ledger = dev_mode_journal.DevModeJournal(
+            journal = dev_mode_journal.DevModeJournal(
                 gossip.LocalNode,
                 gossip,
                 gossip.dispatcher,
@@ -174,12 +174,12 @@ def local_main(config, windows_service=False, daemonized=False):
                 store_type,
                 block_wait_time)
         else:
-            warnings.warn('Unknown ledger type %s' % ledgertype)
+            warnings.warn('Unknown consensus type %s' % consensus_type)
             sys.exit(1)
 
         validator = Validator(
             gossip,
-            ledger,
+            journal,
             stat_domains,
             config,
             windows_service=windows_service,
