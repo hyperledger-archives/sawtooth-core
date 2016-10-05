@@ -54,7 +54,6 @@ def local_main(config, windows_service=False, daemonized=False):
     from twisted.internet import reactor
     from txnserver.validator import parse_networking_info
     from txnserver.validator import Validator
-    from txnserver import quorum_validator
     from txnserver import web_api
     from gossip.gossip_core import GossipException
     from gossip.gossip_core import Gossip
@@ -158,14 +157,6 @@ def local_main(config, windows_service=False, daemonized=False):
                 ballot_time_interval,
                 voting_quorum_target_size)
             ledger.initialize_quorum_map(quorum, nodes)
-            # quorum validator is still sub-classed for now...
-            validator = quorum_validator.QuorumValidator(
-                gossip,
-                ledger,
-                stat_domains,
-                config,
-                windows_service=windows_service,
-                http_port=http_port)
         elif ledgertype == 'dev_mode':
             block_wait_time = config.get("BlockWaitTime")
             from journal.consensus.dev_mode import dev_mode_journal
@@ -185,15 +176,15 @@ def local_main(config, windows_service=False, daemonized=False):
         else:
             warnings.warn('Unknown ledger type %s' % ledgertype)
             sys.exit(1)
-        if validator is None:
-            # null-check until we get rid of QuorumValidator subclass
-            validator = Validator(
-                gossip,
-                ledger,
-                stat_domains,
-                config,
-                windows_service=windows_service,
-                http_port=http_port)
+
+        validator = Validator(
+            gossip,
+            ledger,
+            stat_domains,
+            config,
+            windows_service=windows_service,
+            http_port=http_port,
+        )
     except GossipException as e:
         print >> sys.stderr, str(e)
         sys.exit(1)
