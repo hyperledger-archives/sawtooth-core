@@ -34,13 +34,18 @@ def register_message_handlers(gossiper):
     Args:
         gossiper (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(PingMessage, _pinghandler)
-    gossiper.register_message_handler(DumpConnectionsMessage,
-                                      _dumpconnectionshandler)
-    gossiper.register_message_handler(DumpPeerStatsMessage, _dumppeerhandler)
-    gossiper.register_message_handler(ResetPeerStatsMessage, _resetpeerhandler)
-    gossiper.register_message_handler(DumpNodeStatsMessage, _dumpstatshandler)
-    gossiper.register_message_handler(ResetStatsMessage, _resetstatshandler)
+    gossiper.dispatcher.register_message_handler(PingMessage,
+                                                 _pinghandler)
+    gossiper.dispatcher.register_message_handler(DumpConnectionsMessage,
+                                                 _dumpconnectionshandler)
+    gossiper.dispatcher.register_message_handler(DumpPeerStatsMessage,
+                                                 _dumppeerhandler)
+    gossiper.dispatcher.register_message_handler(ResetPeerStatsMessage,
+                                                 _resetpeerhandler)
+    gossiper.dispatcher.register_message_handler(DumpNodeStatsMessage,
+                                                 _dumpstatshandler)
+    gossiper.dispatcher.register_message_handler(ResetStatsMessage,
+                                                 _resetstatshandler)
 
 
 class PingMessage(message.Message):

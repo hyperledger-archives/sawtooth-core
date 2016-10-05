@@ -24,11 +24,18 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MessageDispatcher(object):
+    """
+    Attributes:
+        message_handler_map (dict): A map of message types to handler
+            functions.
+        on_heartbeat (EventHandler): An EventHandler for functions
+            to call when the heartbeat timer fires.
+    """
+
     def __init__(self,
                  context=None,
                  message_source=None):
         """
-
         :param context: context object to pass to message handlers.
         :param message_source: A message source(dispatcher) that provides
             the incoming messages to dispatch.
@@ -41,6 +48,9 @@ class MessageDispatcher(object):
             'MessageDispatcher.on_heartbeat')
         self._heartbeat_timer = task.LoopingCall(self._heartbeat)
         self._heartbeat_timer.start(0.05)
+
+    def has_message_handler(self, type_name):
+        return type_name in self.message_handler_map
 
     def register_message_handler(self, msg, handler):
         """Register a function to handle incoming messages for the
@@ -82,7 +92,20 @@ class MessageDispatcher(object):
         """
         return self.message_handler_map[msg.MessageType][1]
 
-    def dispatch(self, msg, context):
+    def unpack_message(self, mtype, minfo):
+        """Unpack a dictionary into a message object using the
+        registered handlers.
+
+        Args:
+            mtype (str): Name of the message type.
+            minfo (dict): Dictionary with message data.
+
+        Returns:
+            The result of the handler called with minfo.
+        """
+        return self.message_handler_map[mtype][0](minfo)
+
+    def dispatch(self, msg, context=None):
         """Dispatch message to handler if there is a
         registered handler.
         """

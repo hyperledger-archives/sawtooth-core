@@ -41,10 +41,12 @@ from txnserver.web_pages.transaction_page import TransactionPage
 
 
 class TestValidator(object):
-    def __init__(self, test_ledger):
-        self.Ledger = test_ledger
+    def __init__(self, test_gossip, test_journal, stat_domains):
+        self.journal = test_journal
+        self.gossip = test_gossip
         self.web_thread_pool = TestThreadPool()
-        self.Config = {}
+        self.config = {}
+        self.stat_domains = stat_domains
 
 
 class TestThreadPool(object):
@@ -56,14 +58,36 @@ class TestThreadPool(object):
 
 
 class TestWebApi(unittest.TestCase):
+    _next_port = 8643
 
     # Helper functions
-    def _create_node(self, port):
+    def _create_node(self, port=None):
+        if port is None:
+            port = self._next_port
+            self.__class__._next_port = self._next_port + 1
         signingkey = sign_obj.generate_signing_key()
         ident = sign_obj.generate_identifier(signingkey)
         node = Node(identifier=ident, signingkey=signingkey,
                     address=("localhost", port))
         return node
+
+    def _create_journal(self, node=None):
+        node = node or self._create_node()
+        stat_domains = {}
+        gossip = Gossip(node, stat_domains=stat_domains)
+        # Takes a journal, create a temporary directory to use with the journal
+        path = tempfile.mkdtemp()
+        journal = Journal(
+            gossip.LocalNode,
+            gossip,
+            gossip.dispatcher,
+            stat_domains,
+            data_directory=path)
+        return (gossip, journal, stat_domains)
+
+    def _create_validator(self):
+        gossip, journal, stat_domains = self._create_journal()
+        return TestValidator(gossip, journal, stat_domains)
 
     def _create_tblock(self, node, blocknum, prev_block, trans_id):
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": blocknum,
@@ -93,13 +117,7 @@ class TestWebApi(unittest.TestCase):
 
     def test_web_api_error_response(self):
         # Test error_response
-        local_node = self._create_node(8809)
-        gossip = Gossip(local_node)
-        path = tempfile.mkdtemp()
-        # Setup ledger and RootPage
-
-        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
-        validator = TestValidator(ledger)
+        validator = self._create_validator()
         root = BasePage(validator)
         request = self._create_get_request("/stat", {})
 
@@ -110,22 +128,19 @@ class TestWebApi(unittest.TestCase):
 
     def test_web_api_forward(self):
         # Test _msgforward
-        local_node = self._create_node(8807)
-        gossip = Gossip(local_node)
-        path = tempfile.mkdtemp()
-        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
+        validator = self._create_validator()
         # Create peers for the message to be forwarded to
         node1 = self._create_node(8881)
         node2 = self._create_node(8882)
         node1.is_peer = True
         node2.is_peer = True
-        gossip.add_node(node1)
-        gossip.add_node(node2)
-        validator = TestValidator(ledger)
+        validator.gossip.add_node(node1)
+        validator.gossip.add_node(node2)
+
         forward_page = ForwardPage(validator)
         # Create message to use and the data to forward
         msg = shutdown_message.ShutdownMessage()
-        msg.sign_from_node(local_node)
+        msg.sign_from_node(validator.gossip.LocalNode)
         data = msg.dump()
         # Post /forward
         request = self._create_post_request("forward", data)
@@ -136,24 +151,21 @@ class TestWebApi(unittest.TestCase):
 
     def test_web_api_store(self):
         # Test _handlestorerequest
-        local_node = self._create_node(8800)
-        gossip = Gossip(local_node)
-        path = tempfile.mkdtemp()
-        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
-        validator = TestValidator(ledger)
+        validator = self._create_validator()
+        journal = validator.journal
         store_page = StorePage(validator)
         request = self._create_get_request("/store", {})
         try:
             # Test no GlobalStore
-            ledger.GlobalStore = None
+            journal.GlobalStore = None
             store_page.do_get(request)
             self.fail("This should throw an error.")
         except:
-            self.assertIsNotNone(ledger.GlobalStore)
+            self.assertIsNotNone(journal.GlobalStore)
         kv = KeyValueStore()
-        ledger.GlobalStore.TransactionStores["/TestTransaction"] = kv
-        ledger.GlobalStore.TransactionStores["/TestTransaction"].set("TestKey",
-                                                                     0)
+        journal.GlobalStore.TransactionStores["/TestTransaction"] = kv
+        journal.GlobalStore.TransactionStores["/TestTransaction"].set(
+            "TestKey", 0)
         # GET /store
         self.assertEquals(store_page.do_get(request), '["/TestTransaction"]')
 
@@ -175,7 +187,7 @@ class TestWebApi(unittest.TestCase):
 
         try:
             blockstore = BlockStore()
-            ledger.GlobalStoreMap.commit_block_store("123", blockstore)
+            journal.GlobalStoreMap.commit_block_store("123", blockstore)
             request = self._create_get_request("/store/TestTransaction/*",
                                                {"blockid": ["123"]})
             store_page.do_get(request)
@@ -183,7 +195,7 @@ class TestWebApi(unittest.TestCase):
         except:
             blockstore = BlockStore()
             blockstore.add_transaction_store("/TestTransaction", kv)
-            ledger.GlobalStoreMap.commit_block_store("123", blockstore)
+            journal.GlobalStoreMap.commit_block_store("123", blockstore)
 
         # GET /store/TestTransaction/*?blockid=123
         request = self._create_get_request("/store/TestTransaction/*",
@@ -192,24 +204,24 @@ class TestWebApi(unittest.TestCase):
 
     def test_web_api_block(self):
         # Test _handleblkrequest
-        local_node = self._create_node(8801)
-        gossip = Gossip(local_node)
-        path = tempfile.mkdtemp()
-        # Setup ledger and RootPage
-        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
-        validator = TestValidator(ledger)
+        validator = self._create_validator()
+        gossip = validator.gossip
+        journal = validator.journal
         block_page = BlockPage(validator)
 
-        # TransactionBlock to the ledger
-        trans_block = self._create_tblock(local_node, 0, common.NullIdentifier,
+        # TransactionBlock to the journal
+        trans_block = self._create_tblock(gossip.LocalNode,
+                                          0,
+                                          common.NullIdentifier,
                                           [])
-        trans_block2 = self._create_tblock(local_node, 1,
+        trans_block2 = self._create_tblock(gossip.LocalNode,
+                                           1,
                                            trans_block.Identifier,
                                            [])
-        ledger.BlockStore[trans_block.Identifier] = trans_block
-        ledger.BlockStore[trans_block2.Identifier] = trans_block2
-        ledger.handle_advance(trans_block)
-        ledger.handle_advance(trans_block2)
+        journal.BlockStore[trans_block.Identifier] = trans_block
+        journal.BlockStore[trans_block2.Identifier] = trans_block2
+        journal.handle_advance(trans_block)
+        journal.handle_advance(trans_block2)
 
         # GET /block
         request = self._create_get_request("/block", {})
@@ -238,28 +250,26 @@ class TestWebApi(unittest.TestCase):
                           trans_block.Signature + '"')
 
     def test_web_api_transaction(self):
-        # Test _handletxnrequest
-        local_node = self._create_node(8802)
-        gossip = Gossip(local_node)
-        path = tempfile.mkdtemp()
-        # Setup ledger and RootPage
-        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
-        validator = TestValidator(ledger)
+        validator = self._create_validator()
+        gossip = validator.gossip
+        journal = validator.journal
         transaction_page = TransactionPage(validator)
 
-        # TransactionBlock to the ledger
+        # TransactionBlock to the journal
         txns = []
         i = 0
         while i < 10:
             txn = Transaction()
-            txn.sign_from_node(local_node)
+            txn.sign_from_node(gossip.LocalNode)
             txns += [txn.Identifier]
-            ledger.TransactionStore[txn.Identifier] = txn
+            journal.TransactionStore[txn.Identifier] = txn
             i += 1
-        trans_block = self._create_tblock(local_node, 0, common.NullIdentifier,
+        trans_block = self._create_tblock(gossip.LocalNode,
+                                          0,
+                                          common.NullIdentifier,
                                           txns)
-        ledger.BlockStore[trans_block.Identifier] = trans_block
-        ledger.handle_advance(trans_block)
+        journal.BlockStore[trans_block.Identifier] = trans_block
+        journal.handle_advance(trans_block)
         # GET /transaction
         request = self._create_get_request("/transaction/", {})
         r = transaction_page.do_get(request)
@@ -276,7 +286,7 @@ class TestWebApi(unittest.TestCase):
         # Returns None if testing
         # GET /transaction/{TransactionID}
         request = self._create_get_request("/transaction/" + txns[1], {})
-        txn = ledger.TransactionStore[txns[1]]
+        txn = journal.TransactionStore[txns[1]]
         tinfo = txn.dump()
         tinfo['Identifier'] = txn.Identifier
         tinfo['Status'] = txn.Status
@@ -291,12 +301,8 @@ class TestWebApi(unittest.TestCase):
 
     def test_web_api_stats(self):
         # Test _handlestatrequest
-        local_node = self._create_node(8803)
-        gossip = Gossip(local_node)
-        path = tempfile.mkdtemp()
-        # Setup ledger and RootPage
-        ledger = Journal(gossip, data_directory=path, genesis_ledger=True)
-        validator = TestValidator(ledger)
+        validator = self._create_validator()
+        gossip = validator.gossip
         statistics_page = StatisticsPage(validator)
         request = self._create_get_request("/stat", {})
         try:
@@ -306,12 +312,13 @@ class TestWebApi(unittest.TestCase):
             self.assertIsNotNone(statistics_page)
 
         dic = {}
-        dic["ledger"] = gossip.StatDomains["ledger"].get_stats()
-        dic["ledgerconfig"] = gossip.StatDomains["ledgerconfig"].get_stats()
-        dic["message"] = gossip.StatDomains["message"].get_stats()
-        dic["packet"] = gossip.StatDomains["packet"].get_stats()
-        # GET /statistics/ledger
-        request = self._create_get_request("/statistics/ledger", {})
+        dic["journal"] = validator.stat_domains["journal"].get_stats()
+        dic["journalconfig"] = validator.stat_domains["journalconfig"].\
+            get_stats()
+        dic["message"] = validator.stat_domains["message"].get_stats()
+        dic["packet"] = validator.stat_domains["packet"].get_stats()
+        # GET /statistics/journal
+        request = self._create_get_request("/statistics/journal", {})
         self.assertEquals(yaml.load(statistics_page.do_get(request)), dic)
         # GET /statistics/node - with no peers
         request = self._create_get_request("/statistics/node", {})

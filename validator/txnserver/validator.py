@@ -105,13 +105,13 @@ def parse_networking_info(config):
 
 class Validator(object):
     DefaultTransactionFamilies = [
-        # IntegerKey,
         endpoint_registry
     ]
 
     def __init__(self,
                  gossip_obj,
-                 ledger_obj,
+                 journal_obj,
+                 stat_domains,
                  config,
                  windows_service=False,
                  http_port=None,
@@ -121,13 +121,14 @@ class Validator(object):
         initialization on it's ledger_obj argumenet
         Args:
             node_obj: (gossip.Node)
-            ledger_obj: (journal.Journal)
+            journal_obj: (journal.Journal)
             config: (dict)
             windows_service: (bool)
             http_port: (int)
         '''
         self.status = 'stopped'
-        self.Config = config
+        self.config = config
+        self.stat_domains = stat_domains
 
         self.gossip = gossip_obj
         node_obj = gossip_obj.LocalNode
@@ -138,9 +139,9 @@ class Validator(object):
         self._endpoint_port = node_obj.endpoint_port
         self._endpoint_http_port = http_port
 
-        self.Ledger = ledger_obj
+        self.journal = journal_obj
 
-        self.profile = self.Config.get('Profile', False)
+        self.profile = self.config.get('Profile', False)
 
         if self.profile:
             self.pr = cProfile.Profile()
@@ -150,7 +151,7 @@ class Validator(object):
 
         # flag to indicate that a topology update is in progress
         self._topology_update_in_progress = False
-        self.delaystart = self.Config['DelayStart']
+        self.delay_start = self.config['DelayStart']
 
         # set up signal handlers for shutdown
         if not windows_service:
@@ -166,7 +167,7 @@ class Validator(object):
         # ---------- Initialize the Ledger ----------
         self.initialize_ledger_object()
 
-        maxsize = self.Config.get("WebPoolSize", 8)
+        maxsize = self.config.get("WebPoolSize", 8)
         self.web_thread_pool = ThreadPool(0, maxsize, "WebThreadPool")
 
     def handle_shutdown_signal(self, signum, frame):
@@ -182,9 +183,9 @@ class Validator(object):
         self.status = 'stopping'
         if self.profile:
             self.pr.create_stats()
-            loc = os.path.join(self.Config.get('DataDirectory', '/tmp'),
+            loc = os.path.join(self.config.get('DataDirectory', '/tmp'),
                                '{0}.cprofile'.format(
-                                   self.Config.get('NodeName',
+                                   self.config.get('NodeName',
                                                    str(os.getpid()))))
             self.pr.dump_stats(loc)
 
@@ -197,7 +198,7 @@ class Validator(object):
         reactor.callLater(1.0, self.handle_ledger_shutdown)
 
     def handle_ledger_shutdown(self):
-        self.Ledger.shutdown()
+        self.journal.shutdown()
         self.gossip.shutdown()
 
         # Need to wait long enough for all the shutdown packets to be sent out
@@ -210,32 +211,32 @@ class Validator(object):
         self.status = 'stopped'
 
     def initialize_common_configuration(self):
-        self.GenesisLedger = self.Config.get('GenesisLedger', False)
+        self.GenesisLedger = self.config.get('GenesisLedger', False)
 
         # Handle the common configuration variables
-        if 'NetworkFlowRate' in self.Config:
-            token_bucket.TokenBucket.DefaultDripRate = self.Config[
+        if 'NetworkFlowRate' in self.config:
+            token_bucket.TokenBucket.DefaultDripRate = self.config[
                 'NetworkFlowRate']
 
-        if 'NetworkBurstRate' in self.Config:
-            token_bucket.TokenBucket.DefaultDripRate = self.Config[
+        if 'NetworkBurstRate' in self.config:
+            token_bucket.TokenBucket.DefaultDripRate = self.config[
                 'NetworkBurstRate']
 
-        if 'AdministrationNode' in self.Config:
+        if 'AdministrationNode' in self.config:
             logger.info('set administration node to %s',
-                        self.Config.get('AdministrationNode'))
-            shutdown_message.AdministrationNode = self.Config[
+                        self.config.get('AdministrationNode'))
+            shutdown_message.AdministrationNode = self.config[
                 'AdministrationNode']
 
-        if 'NetworkDelayRange' in self.Config:
-            node.Node.DelayRange = self.Config['NetworkDelayRange']
+        if 'NetworkDelayRange' in self.config:
+            node.Node.DelayRange = self.config['NetworkDelayRange']
 
-        if 'UseFixedDelay' in self.Config:
-            node.Node.UseFixedDelay = self.Config['UseFixedDelay']
+        if 'UseFixedDelay' in self.config:
+            node.Node.UseFixedDelay = self.config['UseFixedDelay']
 
     def initialize_node_map(self):
         self.NodeMap = {}
-        for nodedata in self.Config.get("Nodes", []):
+        for nodedata in self.config.get("Nodes", []):
             addr = (socket.gethostbyname(nodedata["Host"]), nodedata["Port"])
             nd = node.Node(address=addr,
                            identifier=nodedata["Identifier"],
@@ -243,10 +244,10 @@ class Validator(object):
             self.NodeMap[nodedata["NodeName"]] = nd
 
     def initialize_ledger_object(self):
-        assert self.Ledger
+        assert self.journal
 
         for txnfamily in self.DefaultTransactionFamilies:
-            txnfamily.register_transaction_types(self.Ledger)
+            txnfamily.register_transaction_types(self.journal)
 
         self.gossip.onNodeDisconnect += self.handle_node_disconnect_event
 
@@ -256,10 +257,10 @@ class Validator(object):
                     self.gossip.LocalNode.NetAddress)
 
     def add_transaction_family(self, txnfamily):
-        txnfamily.register_transaction_types(self.Ledger)
+        txnfamily.register_transaction_types(self.journal)
 
     def pre_start(self):
-        if self.delaystart is True:
+        if self.delay_start is True:
             logger.debug("DelayStart is in effect, waiting for /start")
             reactor.callLater(1, self.pre_start)
         else:
@@ -268,7 +269,7 @@ class Validator(object):
 
     def start(self):
         # add blacklist before we attempt any peering
-        self.gossip.blacklist = self.Config.get('Blacklist', [])
+        self.gossip.blacklist = self.config.get('Blacklist', [])
         # if this is the genesis ledger then there isn't anything left to do
         if self.GenesisLedger:
             self.start_ledger()
@@ -293,7 +294,7 @@ class Validator(object):
         # there are many possible policies for when to kick off
         # new topology probes. for the moment, just use the initial
         # connectivity as a lower threshhold
-        minpeercount = self.Config.get("InitialConnectivity", 1)
+        minpeercount = self.config.get("InitialConnectivity", 1)
         peerlist = self.gossip.peer_list()
         if len(peerlist) <= minpeercount:
             def disconnect_callback():
@@ -318,10 +319,10 @@ class Validator(object):
 
         # Continue to support existing config files with single
         # string values.
-        if isinstance(self.Config.get('LedgerURL'), basestring):
-            urls = [self.Config.get('LedgerURL')]
+        if isinstance(self.config.get('LedgerURL'), basestring):
+            urls = [self.config.get('LedgerURL')]
         else:
-            urls = self.Config.get('LedgerURL', [])
+            urls = self.config.get('LedgerURL', [])
 
         # We randomize the url list here so that we avoid the
         # condition of a small number of validators referencing
@@ -343,17 +344,17 @@ class Validator(object):
                              str(e))
 
         # We may also be able to rediscover peers via the persistence layer.
-        if self.Ledger.Restore:
-            for blockid in self.Ledger.GlobalStoreMap.persistmap_keys():
-                blk = self.Ledger.GlobalStoreMap.get_block_store(blockid)
+        if self.journal.Restore:
+            for blockid in self.journal.GlobalStoreMap.persistmap_keys():
+                blk = self.journal.GlobalStoreMap.get_block_store(blockid)
                 sto = blk.get_transaction_store('/EndpointRegistryTransaction')
                 for key in sto:
                     nd = self._endpoint_info_to_node(sto[key])
                     self.NodeMap[nd.Name] = nd
 
         # Build a list of nodes that we can use for the initial connection
-        minpeercount = self.Config.get("InitialConnectivity", 1)
-        peerset = set(self.Config.get('Peers', []))
+        minpeercount = self.config.get("InitialConnectivity", 1)
+        peerset = set(self.config.get('Peers', []))
         nodeset = set(self.NodeMap.keys())
         if len(peerset) < minpeercount and len(nodeset) > 0:
             nodeset.discard(self.gossip.LocalNode.Name)
@@ -364,7 +365,7 @@ class Validator(object):
         return peerset
 
     def _connect_to_peers(self):
-        min_peer_count = self.Config.get("InitialConnectivity", 1)
+        min_peer_count = self.config.get("InitialConnectivity", 1)
         current_peer_count = len(self.gossip.peer_list())
 
         logger.debug("peer count is %d of %d",
@@ -395,7 +396,7 @@ class Validator(object):
         Connect the ledger to the rest of the network.
         """
 
-        assert self.Ledger
+        assert self.journal
 
         self.status = 'waiting for initial connections'
 
@@ -421,19 +422,19 @@ class Validator(object):
         self._topology_update_in_progress = False
 
         # and now its time to pick the topology protocol
-        topology = self.Config.get("TopologyAlgorithm", "RandomWalk")
+        topology = self.config.get("TopologyAlgorithm", "RandomWalk")
         if topology == "RandomWalk":
-            if 'TargetConnectivity' in self.Config:
-                random_walk.TargetConnectivity = self.Config[
+            if 'TargetConnectivity' in self.config:
+                random_walk.TargetConnectivity = self.config[
                     'TargetConnectivity']
             self.random_walk_initialization(callback)
 
         elif topology == "BarabasiAlbert":
-            if 'MaximumConnectivity' in self.Config:
-                barabasi_albert.MaximumConnectivity = self.Config[
+            if 'MaximumConnectivity' in self.config:
+                barabasi_albert.MaximumConnectivity = self.config[
                     'MaximumConnectivity']
-            if 'MinimumConnectivity' in self.Config:
-                barabasi_albert.MinimumConnectivity = self.Config[
+            if 'MinimumConnectivity' in self.config:
+                barabasi_albert.MinimumConnectivity = self.config[
                     'MinimumConnectivity']
             self.barabasi_initialization(callback)
 
@@ -452,13 +453,15 @@ class Validator(object):
 
     def start_journal_transfer(self):
         self.status = 'transferring ledger'
-        if not journal_transfer.start_journal_transfer(self.Ledger,
-                                                       self.start_ledger):
+        if not journal_transfer.start_journal_transfer(
+                self.gossip,
+                self.journal,
+                self.start_ledger):
             self.start_ledger()
 
     def start_ledger(self):
         logger.info('ledger initialization complete')
-        self.Ledger.initialization_complete()
+        self.journal.initialization_complete()
         self.status = 'started'
         self.register_endpoint(self.gossip.LocalNode)
 
@@ -469,12 +472,10 @@ class Validator(object):
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
 
         logger.info('register endpoint %s with name %s', node.Identifier[:8],
                     node.Name)
-        self.gossip.handle_message(msg)
+        self.gossip.broadcast_message(msg)
 
     def unregister_endpoint(self, node):
         txn = endpoint_registry.EndpointRegistryTransaction \
@@ -485,11 +486,9 @@ class Validator(object):
         # queue
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
         logger.info('unregister endpoint %s with name %s', node.Identifier[:8],
                     node.Name)
-        self.gossip.handle_message(msg)
+        self.gossip.broadcast_message(msg)
 
     def get_endpoint_nodes(self, url):
         client = EndpointClient(url)

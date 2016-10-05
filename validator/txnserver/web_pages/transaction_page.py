@@ -57,21 +57,21 @@ class TransactionPage(BasePage):
                 blkcount = int(msg.get('blockcount').pop(0))
 
             txnids = []
-            blockids = self.Ledger.committed_block_ids(blkcount)
+            blockids = self.journal.committed_block_ids(blkcount)
             while blockids:
                 blockid = blockids.pop()
-                txnids.extend(self.Ledger.BlockStore[blockid].TransactionIDs)
+                txnids.extend(self.journal.BlockStore[blockid].TransactionIDs)
             return txnids
 
         txnid = components.pop(0)
 
-        if txnid not in self.Ledger.TransactionStore:
+        if txnid not in self.journal.TransactionStore:
             return self._encode_error_response(
                 request,
                 http.NOT_FOUND,
                 LookupError('no such transaction {0}'.format(txnid)))
 
-        txn = self.Ledger.TransactionStore[txnid]
+        txn = self.journal.TransactionStore[txnid]
 
         test_only = (request.method == 'HEAD')
         if test_only:

@@ -33,13 +33,14 @@ logger = logging.getLogger(__name__)
 AdministrationNode = None
 
 
-def register_message_handlers(gossiper):
+def register_message_handlers(gossip):
     """Registers the shutdown-related message handlers for a node.
 
     Args:
-        gossiper (Node): The node to register message handlers on.
+        gossip (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(ShutdownMessage, shutdown_handler)
+    gossip.dispatcher.register_message_handler(ShutdownMessage,
+                                               shutdown_handler)
 
 
 class ShutdownMessage(message.Message):

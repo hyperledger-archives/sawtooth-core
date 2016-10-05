@@ -47,13 +47,14 @@ def send_random_walk_message(gossiper):
         gossiper.send_message(msg, peerid)
 
 
-def register_message_handlers(gossiper):
+def register_message_handlers(gossip):
     """Registers the random-walk related message handlers for a node.
 
     Args:
         gossiper (Node): The node to register message handlers on.
     """
-    gossiper.register_message_handler(RandomWalkMessage, random_walk_handler)
+    gossip.dispatcher.register_message_handler(RandomWalkMessage,
+                                               random_walk_handler)
 
 
 class RandomWalkMessage(message.Message):

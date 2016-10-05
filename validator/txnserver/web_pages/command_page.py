@@ -54,8 +54,8 @@ class CommandPage(BasePage):
         # process /command
         try:
             if minfo['action'] == 'start':
-                if self.Validator.delaystart is True:
-                    self.Validator.delaystart = False
+                if self.validator.delaystart is True:
+                    self.validator.delaystart = False
                     LOGGER.info("command received : %s", minfo['action'])
                     minfo['action'] = 'started'
                 else:

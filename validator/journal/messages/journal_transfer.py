@@ -59,22 +59,21 @@ class BlockListRequestMessage(message.Message):
 
 def _blocklistrequesthandler(msg, journal):
     gossip = journal.gossip
-    source = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+    source = gossip.node_id_to_name(msg.OriginatorID)
     logger.debug(
         'processing incoming blocklist request for journal transfer from %s',
         source)
 
-    if msg.OriginatorID == gossip.LocalNode.Identifier:
+    if msg.OriginatorID == journal.local_node.Identifier:
         logger.info('node %s received its own request, ignore',
-                    gossip.LocalNode.Identifier[:8])
+                    source)
         return
 
     if journal.Initializing:
-        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received blocklist transfer request from %s prior to completing '
             'initialization',
-            src)
+            source)
         gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
@@ -148,24 +147,23 @@ class UncommittedListRequestMessage(message.Message):
 
 def _uncommittedlistrequesthandler(msg, journal):
     gossip = journal.gossip
-    source = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+    source = gossip.node_id_to_name(msg.OriginatorID)
     logger.debug(
         'processing incoming uncommitted list request for journal transfer '
         'from %s',
         source)
 
-    if msg.OriginatorID == gossip.LocalNode.Identifier:
+    if msg.OriginatorID == journal.local_node.Identifier:
         logger.info('node %s received its own request, ignore',
-                    gossip.LocalNode.Identifier[:8])
+                    gossip.node_id_to_name(msg.OriginatorID))
         return
 
     if journal.Initializing:
-        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received uncommitted list transfer request from %s prior to '
             'completing initialization',
-            src)
-        journal.send_message(TransferFailedMessage(), msg.OriginatorID)
+            source)
+        gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
     reply = UncommittedListReplyMessage()
@@ -231,14 +229,14 @@ class BlockRequestMessage(message.Message):
 
 
 def _blockrequesthandler(msg, journal):
-    logger.debug('processing incoming block request for journal transfer')
     gossip = journal.gossip
+    source = gossip.node_id_to_name(msg.OriginatorID)
+    logger.debug('processing incoming block request for journal transfer')
     if journal.Initializing:
-        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
         logger.warn(
             'received block transfer request from %s prior to completing '
             'initialization',
-            src)
+            source)
         gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 
@@ -304,15 +302,15 @@ class TransactionRequestMessage(message.Message):
 
 
 def _txnrequesthandler(msg, journal):
+    gossip = journal.gossip
     logger.debug(
         'processing incoming transaction request for journal transfer')
-    gossip = journal.gossip
     if journal.Initializing:
-        src = gossip.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8])
+        source = gossip.node_id_to_name(msg.OriginatorID)
         logger.warn(
             'received transaction transfer request from %s prior to '
             'completing initialization',
-            src)
+            source)
         gossip.send_message(TransferFailedMessage(), msg.OriginatorID)
         return
 

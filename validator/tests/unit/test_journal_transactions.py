@@ -18,7 +18,7 @@ import time
 import tempfile
 
 
-import gossip.signed_object as SigObj
+from gossip import signed_object
 from gossip.gossip_core import Gossip
 from gossip.node import Node
 
@@ -79,46 +79,65 @@ class TestingJournalTransaction(unittest.TestCase):
                  'Dependencies': []}
         transaction = Transaction(minfo)
         time.sleep(0.5)
-        tDic = transaction.dump()
+        t_dict = transaction.dump()
         new = time.time()
-        self.assertLess(tDic["Nonce"], new)
-        self.assertEquals(tDic["Dependencies"], [])
-        self.assertEquals(tDic["TransactionType"], '/Transaction')
+        self.assertLess(t_dict["Nonce"], new)
+        self.assertEquals(t_dict["Dependencies"], [])
+        self.assertEquals(t_dict["TransactionType"], '/Transaction')
 
 
 class TestingJournalTransactionBlock(unittest.TestCase):
 
+    _next_port = 10000
+
+    def _create_node(self):
+        signingkey = signed_object.generate_signing_key()
+        ident = signed_object.generate_identifier(signingkey)
+        node = Node(identifier=ident, signingkey=signingkey,
+                    address=("localhost", self._next_port))
+        self.__class__._next_port = self._next_port + 1
+        return node
+
+    def _create_journal(self, node=None):
+        node = node or self._create_node()
+        gossip = Gossip(node)
+        # Takes a journal, create a temporary directory to use with the journal
+        path = tempfile.mkdtemp()
+        journal = Journal(
+            gossip.LocalNode,
+            gossip,
+            gossip.dispatcher,
+            data_directory=path)
+        return (gossip, journal)
+
     def test_journal_transaction_block_init(self):
         # Test normal init of a transaction
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        self.assertEquals(transBlock.BlockNum, 0)
-        self.assertEquals(transBlock.TransactionIDs, [])
-        self.assertEquals(transBlock.Status, tbStatus.incomplete)
-        self.assertEquals(transBlock.TransactionDepth, 0)
+        trans_block = TransactionBlock(minfo)
+        self.assertEquals(trans_block.BlockNum, 0)
+        self.assertEquals(trans_block.TransactionIDs, [])
+        self.assertEquals(trans_block.Status, tbStatus.incomplete)
+        self.assertEquals(trans_block.TransactionDepth, 0)
 
     def test_journal_transaction_block_str(self):
         # Test str function for a signed transaction block
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 8800))
+        trans_block = TransactionBlock(minfo)
+        node = self._create_node()
         # Need to sign TransactionBlock, use sign_from_node form signed object
-        transBlock.sign_from_node(node)
-        self.assertEquals(str(transBlock), "{0}, {1}, {2}, {3:0.2f}"
-                          .format(transBlock.BlockNum,
-                                  transBlock.Identifier[:8],
-                                  len(transBlock.TransactionIDs),
-                                  transBlock.CommitTime))
+        trans_block.sign_from_node(node)
+        self.assertEquals(str(trans_block), "{0}, {1}, {2}, {3:0.2f}"
+                          .format(trans_block.BlockNum,
+                                  trans_block.Identifier[:8],
+                                  len(trans_block.TransactionIDs),
+                                  trans_block.CommitTime))
 
     def test_journal_transaction_block_str_unsigned(self):
         # Test that an assertion error is caused if the Block is not signed
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
+        trans_block = TransactionBlock(minfo)
         try:
-            str(transBlock)
+            str(trans_block)
             self.fail("This should cause an AssertError")
         except AssertionError, e:
             self.assertIsInstance(e, AssertionError)
@@ -127,40 +146,34 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         # Test the overridden cmp function
         # Needs the Blocks to be signed and valid
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock1 = TransactionBlock(minfo)
-        transBlock2 = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 8800))
+        trans_block1 = TransactionBlock(minfo)
+        trans_block2 = TransactionBlock(minfo)
+        node = self._create_node()
         # Need to sign TransactionBlock, use sign_from_node form signed object
-        transBlock1.sign_from_node(node)
-        transBlock2.sign_from_node(node)
-        transBlock1.Status = tbStatus.valid
-        transBlock2.Status = tbStatus.valid
+        trans_block1.sign_from_node(node)
+        trans_block2.sign_from_node(node)
+        trans_block1.Status = tbStatus.valid
+        trans_block2.Status = tbStatus.valid
         # Test Equal Transaction Blocks
-        self.assertEquals(cmp(transBlock2, transBlock1), 0)
+        self.assertEquals(cmp(trans_block2, trans_block1), 0)
         # Test a Transaction Block with greater Transaction Depth
-        transBlock2.TransactionDepth = 10
-        self.assertEquals(cmp(transBlock2, transBlock1), 1)
+        trans_block2.TransactionDepth = 10
+        self.assertEquals(cmp(trans_block2, trans_block1), 1)
         # Test a Transaction Block with lesser Transaction Depth
-        transBlock1.TransactionDepth = 20
-        self.assertEquals(cmp(transBlock2, transBlock1), -1)
+        trans_block1.TransactionDepth = 20
+        self.assertEquals(cmp(trans_block2, trans_block1), -1)
 
     def test_journal_transaction_block_cmp_nonvalid_blocks(self):
-        # Test that a ValueError is raised when a transBlock is not valid
+        # Test that a ValueError is raised when a trans_block is not valid
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock1 = TransactionBlock(minfo)
-        transBlock2 = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 8800))
+        trans_block1 = TransactionBlock(minfo)
+        trans_block2 = TransactionBlock(minfo)
+        node = self._create_node()
         # Need to sign TransactionBlock, use sign_from_node form signed object
-        transBlock1.sign_from_node(node)
-        transBlock2.sign_from_node(node)
+        trans_block1.sign_from_node(node)
+        trans_block2.sign_from_node(node)
         try:
-            cmp(transBlock2, transBlock1)
+            cmp(trans_block2, trans_block1)
             self.fail("This should cause a ValueError")
         except ValueError, e1:
             self.assertIsInstance(e1, ValueError)
@@ -169,12 +182,12 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         # Test AssertionError is raised if TransactionBlock are not signed
         # Need a signature to use Identifier
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock1 = TransactionBlock(minfo)
-        transBlock2 = TransactionBlock(minfo)
-        transBlock1.Status = tbStatus.valid
-        transBlock2.Status = tbStatus.valid
+        trans_block1 = TransactionBlock(minfo)
+        trans_block2 = TransactionBlock(minfo)
+        trans_block1.Status = tbStatus.valid
+        trans_block2.Status = tbStatus.valid
         try:
-            cmp(transBlock2, transBlock1)
+            cmp(trans_block2, trans_block1)
             self.fail("This should cause an AssertionError")
         except AssertionError, e2:
             self.assertIsInstance(e2, AssertionError)
@@ -182,52 +195,36 @@ class TestingJournalTransactionBlock(unittest.TestCase):
     def test_journal_transaction_block_is_valid(self):
         # Test whether or not a transblock is valid
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 10000))
-        gossip = Gossip(node)
-
-        # Takes a journal, create a temporary directory to use with the journal
-        path = tempfile.mkdtemp()
-        journal = Journal(gossip, data_directory=path)
-        # Need to sign TransactionBlock, use sign_from_node form signed object
-        transBlock.sign_from_node(node)
-        self.assertTrue(transBlock.is_valid(journal))
+        trans_block = TransactionBlock(minfo)
+        (gossip, journal) = self._create_journal()
+        # Need to sign TransactionBlock, use sign_from_node
+        # from signed object
+        trans_block.sign_from_node(gossip.LocalNode)
+        self.assertTrue(trans_block.is_valid(journal))
 
     def test_journal_transaction_block_not_is_valid(self):
-        # Test that an invalid Transblock does not get verified as valid
+        # Test that an invalid transaction block does not get verified as valid
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 10001))
-        gossip = Gossip(node)
-        # Takes a journal, create a temporary directory to use with the journal
-        path = tempfile.mkdtemp()
-        journal = Journal(gossip, data_directory=path)
-        # Need to sign TransactionBlock, use sign_from_node form signed object
+        trans_block = TransactionBlock(minfo)
+        (gossip, journal) = self._create_journal()
+        # Need to sign TransactionBlock, use sign_from_node from signed object
         try:
-            transBlock.is_valid(journal)
+            trans_block.is_valid(journal)
         except AssertionError, e:
             self.assertIsInstance(e, AssertionError)
+        finally:
+            if gossip is not None:
+                gossip.shutdown()
 
     def test_journal_transaction_block_missing_transactions(self):
-        # Test missing transactions, should return list of missing transactions
+        # Test missing transactions, should return list of missing
+        # transactions
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 10002))
-        gossip = Gossip(node)
-        path = tempfile.mkdtemp()
-        # Takes a journal, create a temporary directory to use with the journal
-        journal = Journal(gossip, data_directory=path)
-        transBlock.sign_from_node(node)
-        missing = transBlock.missing_transactions(journal)
+        trans_block = TransactionBlock(minfo)
+        (gossip, journal) = self._create_journal()
+        node = gossip.LocalNode
+        trans_block.sign_from_node(node)
+        missing = trans_block.missing_transactions(journal)
         # No missing transactions
         self.assertEquals(missing, [])
 
@@ -235,82 +232,70 @@ class TestingJournalTransactionBlock(unittest.TestCase):
                  'Dependencies': []}
         transaction = Transaction(minfo)
         transaction.sign_from_node(node)
-        transBlock.TransactionIDs += [transaction.Identifier]
-        missing = transBlock.missing_transactions(journal)
+        trans_block.TransactionIDs += [transaction.Identifier]
+        missing = trans_block.missing_transactions(journal)
         # One missing transactions
         self.assertEquals(missing, [transaction.Identifier])
 
         journal.TransactionStore[transaction.Identifier] = transaction
-        missing = transBlock.missing_transactions(journal)
+        missing = trans_block.missing_transactions(journal)
         # Back to no missing transactions
         self.assertEquals(missing, [])
 
     def test_journal_transaction_block_update_block_weight(self):
         # Test block update weight
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        transBlock.Status = tbStatus.valid
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 10003))
-        gossip = Gossip(node)
+        trans_block = TransactionBlock(minfo)
+        trans_block.Status = tbStatus.valid
 
-        # Takes a journal, create a temporary directory to use with the journal
-        path = tempfile.mkdtemp()
-        journal = Journal(gossip, data_directory=path)
-        transBlock.sign_from_node(node)
-        transBlock.update_block_weight(journal)
+        (gossip, journal) = self._create_journal()
+        node = gossip.LocalNode
+        trans_block.sign_from_node(gossip.LocalNode)
+        trans_block.update_block_weight(journal)
         # No transactions
-        self.assertEquals(transBlock.TransactionDepth, 0)
+        self.assertEquals(trans_block.TransactionDepth, 0)
 
         minfo = {'__SIGNATURE__': 'Test', '__NONCE__': time.time(),
                  'Dependencies': []}
         transaction = Transaction(minfo)
         transaction.sign_from_node(node)
-        transBlock.TransactionIDs += [transaction.Identifier]
-        transBlock.update_block_weight(journal)
+        trans_block.TransactionIDs += [transaction.Identifier]
+        trans_block.update_block_weight(journal)
         # One transaction
-        self.assertEquals(transBlock.TransactionDepth, 1)
+        self.assertEquals(trans_block.TransactionDepth, 1)
 
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 1,
-                 'PreviousBlockID': transBlock.Identifier}
-        newTransBlock = TransactionBlock(minfo)
-        newTransBlock.Status = tbStatus.valid
-        journal.BlockStore[transBlock.Identifier] = transBlock
-        newTransBlock.update_block_weight(journal)
+                 'PreviousBlockID': trans_block.Identifier}
+        new_trans_block = TransactionBlock(minfo)
+        new_trans_block.Status = tbStatus.valid
+        journal.BlockStore[trans_block.Identifier] = trans_block
+        new_trans_block.update_block_weight(journal)
         # Get depth from previous block
-        self.assertEquals(newTransBlock.TransactionDepth, 1)
+        self.assertEquals(new_trans_block.TransactionDepth, 1)
 
     def test_journal_transaction_block_build_message(self):
         # Test build_message, returns a TransactionBlockMessage
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 8800))
-        transBlock.sign_from_node(node)
-        transBlock.Status = tbStatus.valid
-        msg = transBlock.build_message()
+        trans_block = TransactionBlock(minfo)
+        node = self._create_node()
+        trans_block.sign_from_node(node)
+        trans_block.Status = tbStatus.valid
+        msg = trans_block.build_message()
         self.assertEquals(msg.MessageType,
                           "/journal.messages.TransactionBlockMessage" +
                           "/TransactionBlock")
-        self.assertEquals(msg.TransactionBlock, transBlock)
+        self.assertEquals(msg.TransactionBlock, trans_block)
 
     def test_journal_transaction_block_dump(self):
         # Test that transactions dump the correct info
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
-        transBlock = TransactionBlock(minfo)
-        signingkey = SigObj.generate_signing_key()
-        ident = SigObj.generate_identifier(signingkey)
-        node = Node(identifier=ident, signingkey=signingkey,
-                    address=("localhost", 8800))
-        transBlock.sign_from_node(node)
-        transBlock.Status = tbStatus.valid
-        tbDic = transBlock.dump()
-        self.assertEquals(tbDic["TransactionIDs"], [])
-        self.assertEquals(tbDic["TransactionBlockType"], "/TransactionBlock")
-        self.assertEquals(tbDic["BlockNum"], 0)
-        self.assertIsNotNone(tbDic["Signature"])
-        self.assertNotEquals(tbDic["Signature"], "")
+        trans_block = TransactionBlock(minfo)
+        node = self._create_node()
+        trans_block.sign_from_node(node)
+        trans_block.Status = tbStatus.valid
+        tb_dic = trans_block.dump()
+        self.assertEquals(tb_dic["TransactionIDs"], [])
+        self.assertEquals(tb_dic["TransactionBlockType"], "/TransactionBlock")
+        self.assertEquals(tb_dic["BlockNum"], 0)
+        self.assertIsNotNone(tb_dic["Signature"])
+        self.assertNotEquals(tb_dic["Signature"], "")

@@ -28,24 +28,37 @@ class DevModeJournal(journal_core.Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking
             calls to make when the heartbeat timer fires.
     """
-    def __init__(self, gossip, minimum_transactions_per_block=None,
-                 max_transactions_per_block=None, max_txn_age=None,
-                 genesis_ledger=None, restore=None, data_directory=None,
-                 store_type=None, block_wait_time=None):
+    def __init__(self,
+                 local_node,
+                 gossip,
+                 gossip_dispatcher,
+                 stat_domains,
+                 minimum_transactions_per_block=None,
+                 max_transactions_per_block=None,
+                 max_txn_age=None,
+                 genesis_ledger=None,
+                 restore=None,
+                 data_directory=None,
+                 store_type=None,
+                 block_wait_time=None):
         """Constructor for the DevModeJournal class.
 
         Args:
             node (Node): The local node.
         """
 
-        super(DevModeJournal, self).__init__(gossip,
-                                             minimum_transactions_per_block,
-                                             max_transactions_per_block,
-                                             max_txn_age,
-                                             genesis_ledger,
-                                             restore,
-                                             data_directory,
-                                             store_type)
+        super(DevModeJournal, self).__init__(
+            local_node,
+            gossip,
+            gossip_dispatcher,
+            stat_domains,
+            minimum_transactions_per_block,
+            max_transactions_per_block,
+            max_txn_age,
+            genesis_ledger,
+            restore,
+            data_directory,
+            store_type)
 
         # the one who can publish blocks is always the genesis ledger
         self.block_publisher = self.GenesisLedger
@@ -124,10 +137,10 @@ class DevModeJournal(journal_core.Journal):
         nblock.TransactionIDs = txn_list
 
         logger.info('node %s validates block with %d transactions',
-                    self.gossip.LocalNode.Name, len(nblock.TransactionIDs))
+                    self.local_node.Name, len(nblock.TransactionIDs))
 
         # Claim the block
-        nblock.sign_from_node(self.gossip.LocalNode)
+        nblock.sign_from_node(self.local_node)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
@@ -136,7 +149,7 @@ class DevModeJournal(journal_core.Journal):
         # And send out the message that we won
         msg = dev_mode_transaction_block.DevModeTransactionBlockMessage()
         msg.TransactionBlock = nblock
-        self.sign_and_send_message(msg)
+        self.gossip.broadcast_message(msg)
 
     def _check_claim_block(self, now):
         if not self.block_publisher:
