@@ -112,6 +112,7 @@ class Validator(object):
     def __init__(self,
                  gossip_obj,
                  ledger_obj,
+                 stat_domains,
                  config,
                  windows_service=False,
                  http_port=None,
@@ -128,6 +129,7 @@ class Validator(object):
         '''
         self.status = 'stopped'
         self.Config = config
+        self.stat_domains = stat_domains
 
         self.gossip = gossip_obj
         node_obj = gossip_obj.LocalNode
@@ -452,8 +454,10 @@ class Validator(object):
 
     def start_journal_transfer(self):
         self.status = 'transferring ledger'
-        if not journal_transfer.start_journal_transfer(self.Ledger,
-                                                       self.start_ledger):
+        if not journal_transfer.start_journal_transfer(
+                self.gossip,
+                self.Ledger,
+                self.start_ledger):
             self.start_ledger()
 
     def start_ledger(self):
@@ -469,12 +473,10 @@ class Validator(object):
 
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
 
         logger.info('register endpoint %s with name %s', node.Identifier[:8],
                     node.Name)
-        self.gossip.handle_message(msg)
+        self.gossip.broadcast_message(msg)
 
     def unregister_endpoint(self, node):
         txn = endpoint_registry.EndpointRegistryTransaction \
@@ -485,11 +487,9 @@ class Validator(object):
         # queue
         msg = endpoint_registry.EndpointRegistryTransactionMessage()
         msg.Transaction = txn
-        msg.SenderID = str(node.Identifier)
-        msg.sign_from_node(node)
         logger.info('unregister endpoint %s with name %s', node.Identifier[:8],
                     node.Name)
-        self.gossip.handle_message(msg)
+        self.gossip.broadcast_message(msg)
 
     def get_endpoint_nodes(self, url):
         client = EndpointClient(url)

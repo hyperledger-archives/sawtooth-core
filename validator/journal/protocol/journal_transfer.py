@@ -39,7 +39,7 @@ from journal.messages.journal_transfer import TransferFailedMessage
 logger = logging.getLogger(__name__)
 
 
-def start_journal_transfer(journal, oncomplete):
+def start_journal_transfer(gossip, journal, oncomplete):
     """Initiates journal transfer to peers.
 
     Args:
@@ -58,7 +58,7 @@ def start_journal_transfer(journal, oncomplete):
         else:
             logger.warn('restoration from persistence layer not possible')
 
-    transfer = JournalTransfer(journal, oncomplete)
+    transfer = JournalTransfer(gossip, journal, oncomplete)
     transfer.initiate_journal_transfer()
 
     return True
@@ -72,7 +72,7 @@ class JournalTransfer(object):
         Callback (function): The function to call when the
             journal transfer has completed.
     """
-    def __init__(self, journal, callback):
+    def __init__(self, gossip, journal, callback):
         """Constructor for the JournalTransfer class.
 
         Args:
@@ -80,9 +80,9 @@ class JournalTransfer(object):
             callback (function): The function to call when
                 the journal transfer has completed.
         """
-        self.Journal = journal
-        self.gossip = journal.gossip
-        self.Callback = callback
+        self.journal = journal
+        self.gossip = gossip
+        self.callback = callback
 
     def initiate_journal_transfer(self):
         """Initiates journal transfer to peers.
@@ -102,19 +102,19 @@ class JournalTransfer(object):
         self.ProcessingUncommitted = False
         self.UncommittedTransactions = []
 
-        self.Journal.dispatcher.register_message_handler(
+        self.journal.dispatcher.register_message_handler(
             BlockListReplyMessage,
             self._blocklistreplyhandler)
-        self.Journal.dispatcher.register_message_handler(
+        self.journal.dispatcher.register_message_handler(
             BlockReplyMessage,
             self._blockreplyhandler)
-        self.Journal.dispatcher.register_message_handler(
+        self.journal.dispatcher.register_message_handler(
             UncommittedListReplyMessage,
             self._txnlistreplyhandler)
-        self.Journal.dispatcher.register_message_handler(
+        self.journal.dispatcher.register_message_handler(
             TransactionReplyMessage,
             self._txnreplyhandler)
-        self.Journal.dispatcher.register_message_handler(
+        self.journal.dispatcher.register_message_handler(
             TransferFailedMessage,
             self._failedhandler)
 
@@ -126,12 +126,12 @@ class JournalTransfer(object):
         logger.warn('journal transfer failed')
 
         # clear all of the message handlers
-        self.Journal.dispatcher.clear_message_handler(BlockListReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(BlockReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(
+        self.journal.dispatcher.clear_message_handler(BlockListReplyMessage)
+        self.journal.dispatcher.clear_message_handler(BlockReplyMessage)
+        self.journal.dispatcher.clear_message_handler(
             UncommittedListReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(TransactionReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(TransferFailedMessage)
+        self.journal.dispatcher.clear_message_handler(TransactionReplyMessage)
+        self.journal.dispatcher.clear_message_handler(TransferFailedMessage)
 
         self.RetryID = reactor.callLater(10, self.initiate_journal_transfer)
 
@@ -142,14 +142,14 @@ class JournalTransfer(object):
         """
         while len(self.PendingBlocks) > 0:
             blockid = self.PendingBlocks.pop(0)
-            if blockid not in self.Journal.BlockStore:
+            if blockid not in self.journal.BlockStore:
                 request = BlockRequestMessage()
                 request.BlockID = blockid
                 self.gossip.send_message(request, self.Peer.Identifier)
                 return True
 
             # copy the block information
-            self.BlockMap[blockid] = self.Journal.BlockStore[blockid]
+            self.BlockMap[blockid] = self.journal.BlockStore[blockid]
 
             # add all the transaction to the transaction map in order
             for txnid in self.BlockMap[blockid].TransactionIDs:
@@ -167,13 +167,13 @@ class JournalTransfer(object):
         """
         while len(self.PendingTransactions) > 0:
             txnid = self.PendingTransactions.pop(0)
-            if txnid not in self.Journal.TransactionStore:
+            if txnid not in self.journal.TransactionStore:
                 request = TransactionRequestMessage()
                 request.TransactionID = txnid
                 self.gossip.send_message(request, self.Peer.Identifier)
                 return True
 
-            self.TransactionMap[txnid] = self.Journal.TransactionStore[txnid]
+            self.TransactionMap[txnid] = self.journal.TransactionStore[txnid]
 
         return False
 
@@ -309,11 +309,11 @@ class JournalTransfer(object):
 
         try:
             for txnid, txn in self.TransactionMap.iteritems():
-                self.Journal.add_pending_transaction(txn,
+                self.journal.add_pending_transaction(txn,
                                                      build_block=False)
 
             for blkid, blk in self.BlockMap.iteritems():
-                self.Journal.commit_transaction_block(blk)
+                self.journal.commit_transaction_block(blk)
 
         except AssertionError:
             (etype, evalue, trace) = sys.exc_info()
@@ -331,15 +331,15 @@ class JournalTransfer(object):
             'journal transferred from %s, %d transactions, %d blocks, current '
             'head is %s',
             self.Peer, len(self.TransactionMap), len(self.BlockMap),
-            self.Journal.MostRecentCommittedBlockID[:8])
+            self.journal.MostRecentCommittedBlockID[:8])
 
         # clear all of the message handlers
-        self.Journal.dispatcher.clear_message_handler(BlockListReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(BlockReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(
+        self.journal.dispatcher.clear_message_handler(BlockListReplyMessage)
+        self.journal.dispatcher.clear_message_handler(BlockReplyMessage)
+        self.journal.dispatcher.clear_message_handler(
             UncommittedListReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(TransactionReplyMessage)
-        self.Journal.dispatcher.clear_message_handler(TransferFailedMessage)
+        self.journal.dispatcher.clear_message_handler(TransactionReplyMessage)
+        self.journal.dispatcher.clear_message_handler(TransferFailedMessage)
 
         # self.RetryID.cancel()
-        self.Callback()
+        self.callback()

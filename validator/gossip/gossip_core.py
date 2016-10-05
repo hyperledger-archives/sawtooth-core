@@ -21,7 +21,7 @@ import logging
 import socket
 import time
 
-from twisted.internet import reactor, task
+from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
 from gossip import event_handler
@@ -84,7 +84,11 @@ class Gossip(object, DatagramProtocol):
     CleanupInterval = 1.00
     KeepAliveInterval = 10.0
 
-    def __init__(self, node, minimum_retries=None, retry_interval=None):
+    def __init__(self,
+                 node,
+                 minimum_retries=None,
+                 retry_interval=None,
+                 stat_domains=None):
         """Constructor for the Gossip class.
 
         Args:
@@ -113,7 +117,7 @@ class Gossip(object, DatagramProtocol):
         self.NextCleanup = time.time() + self.CleanupInterval
         self.NextKeepAlive = time.time() + self.KeepAliveInterval
 
-        self._init_gossip_stats()
+        self._init_gossip_stats(stat_domains)
 
         self.dispatcher = MessageDispatcher(self)
 
@@ -145,7 +149,7 @@ class Gossip(object, DatagramProtocol):
                 "Failed to connect local "
                 "socket, server shutting down")
 
-    def _init_gossip_stats(self):
+    def _init_gossip_stats(self, stat_domains):
         self.PacketStats = stats.Stats(self.LocalNode.Name, 'packet')
         self.PacketStats.add_metric(stats.Average('BytesSent'))
         self.PacketStats.add_metric(stats.Average('BytesReceived'))
@@ -159,11 +163,9 @@ class Gossip(object, DatagramProtocol):
 
         self.MessageStats = stats.Stats(self.LocalNode.Name, 'message')
         self.MessageStats.add_metric(stats.MapCounter('MessageType'))
-
-        self.StatDomains = {
-            'packet': self.PacketStats,
-            'message': self.MessageStats
-        }
+        if stat_domains is not None:
+            stat_domains['packet'] = self.PacketStats
+            stat_domains['message'] = self.MessageStats
 
     def peer_list(self, allflag=False, exceptions=None):
         """Returns a list of peer nodes.
@@ -332,7 +334,7 @@ class Gossip(object, DatagramProtocol):
         self.PacketStats.MessagesHandled.increment()
 
         if (srcpeer and srcpeer.is_peer) or msg.IsSystemMessage:
-            self.handle_message(msg)
+            self._handle_message(msg)
             return
 
         logger.warn('received message %s from an unknown peer %s', msg,
@@ -620,12 +622,12 @@ class Gossip(object, DatagramProtocol):
 
         if exceptions is None:
             exceptions = []
-        self.multicast_message(
+        self._multicast_message(
             msg,
             self.peer_id_list(exceptions=exceptions),
             initialize)
 
-    def multicast_message(self, msg, nodeids, initialize=True):
+    def _multicast_message(self, msg, nodeids, initialize=True):
         """
         Send an encoded message to a list of participants
 
@@ -643,6 +645,7 @@ class Gossip(object, DatagramProtocol):
             msg.IsForward = False
 
         if initialize:
+            msg.SenderID = self.LocalNode.Identifier
             msg.sign_from_node(self.LocalNode)
 
         self._send_msg(msg, nodeids)
@@ -658,27 +661,9 @@ class Gossip(object, DatagramProtocol):
                 for initial send of the message.
         """
 
-        self.multicast_message(msg, [nodeid], initialize)
+        self._multicast_message(msg, [nodeid], initialize)
 
-    def broadcast_message(self, msg, initialize=True):
-        """Send an encoded message through the peers to the entire network
-        of participants.
-
-        Args:
-            msg (message.Message): The message to broadcast.
-            initialize (bool): Whether to initialize the origin fields, used
-                for initial send of the message.
-        """
-
-        self.handle_message(msg)
-
-    def handle_message(self, msg):
-        """Handle a message.
-
-        Args:
-            msg (message.Message): The message to handle.
-        """
-        # mark the message as handled
+    def _handle_message(self, msg):
         logger.debug('calling handler for message %s from %s of type %s',
                      msg.Identifier[:8], msg.SenderID[:8], msg.MessageType)
 
@@ -689,3 +674,28 @@ class Gossip(object, DatagramProtocol):
         # and now forward it on to the peers if it is marked for forwarding
         if msg.IsForward and msg.TimeToLive > 0:
             self._send_msg(msg, self.peer_id_list(exceptions=[msg.SenderID]))
+
+    def broadcast_message(self, msg, initialize=True):
+        """
+        Send an encoded message through the peers to the entire network
+        of participants, including this node
+
+        Args:
+            msg (message.Message): The message to handle.
+        """
+        # mark the message as handled
+
+        if initialize:
+            msg.SenderID = self.LocalNode.Identifier
+            msg.sign_from_node(self.LocalNode)
+
+        self._handle_message(msg)
+
+    def node_id_to_name(self, node_id):
+        if node_id in self.NodeMap:
+            return str(self.NodeMap[node_id])
+
+        if node_id == self.LocalNode.Identifier:
+            return str(self.LocalNode)
+
+        return node_id[:8]

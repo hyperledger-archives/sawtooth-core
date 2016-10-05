@@ -62,6 +62,7 @@ def local_main(config, windows_service=False, daemonized=False):
     logger.warn('validator pid is %s', os.getpid())
 
     ledgertype = config.get('LedgerType', 'poet0')
+    stat_domains = {}
 
     try:
         (node, http_port) = parse_networking_info(config)
@@ -71,7 +72,7 @@ def local_main(config, windows_service=False, daemonized=False):
         # Gossip parameters
         minimum_retries = config.get("MinimumRetries")
         retry_interval = config.get("RetryInterval")
-        gossip = Gossip(node, minimum_retries, retry_interval)
+        gossip = Gossip(node, minimum_retries, retry_interval, stat_domains)
         # WaitTimer globals
         target_wait_time = config.get("TargetWaitTime")
         initial_wait_time = config.get("InitialWaitTime")
@@ -96,10 +97,19 @@ def local_main(config, windows_service=False, daemonized=False):
                                    certificate_sample_length,
                                    fixed_duration_blocks)
             # Continue to pass config to PoetJournal for possible other enclave
-            # implmentations - poet_enclave.initialize
+            # implementations - poet_enclave.initialize
             ledger = poet_journal.PoetJournal(
-                gossip, config, min_txn_per_block, max_txn_per_block,
-                max_txn_age, genesis_ledger, restore, data_directory,
+                gossip.LocalNode,
+                gossip,
+                gossip.dispatcher,
+                stat_domains,
+                config,
+                min_txn_per_block,
+                max_txn_per_block,
+                max_txn_age,
+                genesis_ledger,
+                restore,
+                data_directory,
                 store_type)
         elif ledgertype == 'poet1':
             from journal.consensus.poet1 import poet_journal
@@ -111,10 +121,19 @@ def local_main(config, windows_service=False, daemonized=False):
                                    fixed_duration_blocks,
                                    minimum_wait_time)
             # Continue to pass config to PoetJournal for possible other enclave
-            # implmentations - poet_enclave.initialize
+            # implementations - poet_enclave.initialize
             ledger = poet_journal.PoetJournal(
-                gossip, config, min_txn_per_block, max_txn_per_block,
-                max_txn_age, genesis_ledger, restore, data_directory,
+                gossip.LocalNode,
+                gossip,
+                gossip.dispatcher,
+                stat_domains,
+                config,
+                min_txn_per_block,
+                max_txn_per_block,
+                max_txn_age,
+                genesis_ledger,
+                restore,
+                data_directory,
                 store_type)
         elif ledgertype == 'quorum':
             quorum = config.get("Quorum")
@@ -124,15 +143,26 @@ def local_main(config, windows_service=False, daemonized=False):
             voting_quorum_target_size = config.get("VotingQuorumTargetSize")
             from journal.consensus.quorum import quorum_journal
             ledger = quorum_journal.QuorumJournal(
-                gossip, min_txn_per_block, max_txn_per_block, max_txn_age,
-                genesis_ledger, restore, data_directory, store_type,
-                vote_time_interval, ballot_time_interval,
+                gossip.LocalNode,
+                gossip,
+                gossip.dispatcher,
+                stat_domains,
+                min_txn_per_block,
+                max_txn_per_block,
+                max_txn_age,
+                genesis_ledger,
+                restore,
+                data_directory,
+                store_type,
+                vote_time_interval,
+                ballot_time_interval,
                 voting_quorum_target_size)
             ledger.initialize_quorum_map(quorum, nodes)
             # quorum validator is still sub-classed for now...
             validator = quorum_validator.QuorumValidator(
                 gossip,
                 ledger,
+                stat_domains,
                 config,
                 windows_service=windows_service,
                 http_port=http_port)
@@ -140,8 +170,17 @@ def local_main(config, windows_service=False, daemonized=False):
             block_wait_time = config.get("BlockWaitTime")
             from journal.consensus.dev_mode import dev_mode_journal
             ledger = dev_mode_journal.DevModeJournal(
-                gossip, min_txn_per_block, max_txn_per_block, max_txn_age,
-                genesis_ledger, restore, data_directory, store_type,
+                gossip.LocalNode,
+                gossip,
+                gossip.dispatcher,
+                stat_domains,
+                min_txn_per_block,
+                max_txn_per_block,
+                max_txn_age,
+                genesis_ledger,
+                restore,
+                data_directory,
+                store_type,
                 block_wait_time)
         else:
             warnings.warn('Unknown ledger type %s' % ledgertype)
@@ -151,10 +190,10 @@ def local_main(config, windows_service=False, daemonized=False):
             validator = Validator(
                 gossip,
                 ledger,
+                stat_domains,
                 config,
                 windows_service=windows_service,
-                http_port=http_port,
-            )
+                http_port=http_port)
     except GossipException as e:
         print >> sys.stderr, str(e)
         sys.exit(1)

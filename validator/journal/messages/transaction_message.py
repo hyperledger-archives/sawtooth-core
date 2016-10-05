@@ -66,9 +66,9 @@ def transaction_message_handler(msg, journal):
             return
 
         journal.add_pending_transaction(msg.Transaction)
-        journal.forward_message(msg,
-                                exceptions=[msg.SenderID],
-                                initialize=False)
+        journal.gossip.forward_message(msg,
+                                       exceptions=[msg.SenderID],
+                                       initialize=False)
 
 
 class TransactionRequestMessage(message.Message):
@@ -100,7 +100,7 @@ def _txn_request_handler(msg, journal):
         txn = journal.TransactionStore.get(msg.TransactionID)
         if txn:
             reply = txn.build_message()
-            journal.forward_message(reply)
+            journal.gossip.forward_message(reply)
             return
 
         journal.request_missing_txn(msg.TransactionID,

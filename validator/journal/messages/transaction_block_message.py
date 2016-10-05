@@ -102,7 +102,9 @@ def transaction_block_message_handler(msg, journal):
         return
 
     journal.commit_transaction_block(msg.TransactionBlock)
-    journal.forward_message(msg, exceptions=[msg.SenderID], initialize=False)
+    journal.gossip.forward_message(msg,
+                                   exceptions=[msg.SenderID],
+                                   initialize=False)
 
 
 class BlockRequestMessage(message.Message):
@@ -155,7 +157,7 @@ def _block_request_handler(msg, journal):
     blk = journal.BlockStore.get(msg.BlockID)
     if blk:
         reply = blk.build_message()
-        journal.forward_message(reply)
+        journal.gossip.forward_message(reply)
         return
 
     journal.request_missing_block(msg.BlockID,

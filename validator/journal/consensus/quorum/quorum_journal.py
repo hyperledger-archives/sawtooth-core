@@ -43,7 +43,7 @@ class QuorumJournal(Journal):
         BallotTimeFudgeFactor (float): The average fudge factor added
             to the ballot interval, in seconds.  Used in conjunction with
             randomization functions to stagger network initiative.
-        VoteThreshholds (list): The mimimum votes required for a
+        VoteThreshholds (list): The minimum votes required for a
             transaction to proceed to the next ballot.
         VotingQuorumTargetSize (int): The target size for the local
             quorum set (note: this should be a function of network size).
@@ -54,25 +54,39 @@ class QuorumJournal(Journal):
         onHeartBeatTimer (EventHandler): The EventHandler tracking calls
             to make when the heartbeat timer fires.
     """
-    def __init__(self, gossip, minimum_transactions_per_block=None,
-                 max_transactions_per_block=None, max_txn_age=None,
-                 genesis_ledger=None, restore=None, data_directory=None,
-                 store_type=None, vote_time_interval=None,
-                 ballot_time_interval=None, voting_quorum_target_size=None):
+    def __init__(self,
+                 local_node,
+                 gossip,
+                 gossip_dispatcher,
+                 stat_domains,
+                 minimum_transactions_per_block=None,
+                 max_transactions_per_block=None,
+                 max_txn_age=None,
+                 genesis_ledger=None,
+                 restore=None,
+                 data_directory=None,
+                 store_type=None,
+                 vote_time_interval=None,
+                 ballot_time_interval=None,
+                 voting_quorum_target_size=None):
         """Constructor for the QuorumJournal class.
 
         Args:
             nd (Node): The local node.
         """
 
-        super(QuorumJournal, self).__init__(gossip,
-                                            minimum_transactions_per_block,
-                                            max_transactions_per_block,
-                                            max_txn_age,
-                                            genesis_ledger,
-                                            restore,
-                                            data_directory,
-                                            store_type)
+        super(QuorumJournal, self).__init__(
+            local_node,
+            gossip,
+            gossip_dispatcher,
+            stat_domains,
+            minimum_transactions_per_block,
+            max_transactions_per_block,
+            max_txn_age,
+            genesis_ledger,
+            restore,
+            data_directory,
+            store_type)
 
         # minimum time between votes
         if vote_time_interval is not None:
@@ -105,8 +119,8 @@ class QuorumJournal(Journal):
         self.QuorumMap = dict()
         self.VotingQuorum = dict()
         # we are always a member of our own quorum
-        self.VotingQuorum[self.gossip.LocalNode.Identifier] = \
-            self.gossip.LocalNode
+        self.VotingQuorum[self.local_node.Identifier] = \
+            self.local_node
 
         self.CurrentQuorumVote = None
         self.NextVoteTime = self._nextvotetime()
@@ -120,7 +134,7 @@ class QuorumJournal(Journal):
 
     def initialize_quorum_map(self, quorum, nodes):
         q = quorum
-        if self.gossip.LocalNode.Name not in q:
+        if self.local_node.Name not in q:
             logger.fatal("node must be in its own quorum")
             self.shutdown()
             return
@@ -163,7 +177,7 @@ class QuorumJournal(Journal):
         if force:
             block = quorum_transaction_block.QuorumTransactionBlock()
             block.BlockNumber = 0
-            block.sign_from_node(self.gossip.LocalNode)
+            block.sign_from_node(self.local_node)
             return block
 
         return None
@@ -193,7 +207,7 @@ class QuorumJournal(Journal):
             nd (Node): The node to add to the quorum set.
         """
         logger.info('attempt to add quorum voting node %s to %s', str(nd),
-                    str(self.gossip.LocalNode))
+                    str(self.local_node))
 
         if nd.Identifier in self.VotingQuorum:
             logger.info('attempt to add duplicate node to quorum')
@@ -321,7 +335,7 @@ class QuorumJournal(Journal):
         nblock.BlockNumber = blocknum
         nblock.PreviousBlockID = self.MostRecentCommittedBlockID
         nblock.TransactionIDs = txnlist[:]
-        nblock.sign_from_node(self.gossip.LocalNode)
+        nblock.sign_from_node(self.local_node)
 
         logger.info('commit: %s', nblock.dump())
 

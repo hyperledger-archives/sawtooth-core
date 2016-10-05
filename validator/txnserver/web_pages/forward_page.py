@@ -73,7 +73,7 @@ class ForwardPage(BasePage):
                 # temporarily play forward all locally submitted yet
                 # uncommitted transactions
                 my_queue = copy.deepcopy(
-                    self.Ledger.gossip.IncomingMessageQueue)
+                    self.Validator.gossip.IncomingMessageQueue)
 
                 transaction_type = mytxn.TransactionTypeName
                 if transaction_type not in temp_store_map.TransactionStores:
@@ -140,5 +140,5 @@ class ForwardPage(BasePage):
         # and finally execute the associated method
         # and send back the results
 
-        self.Ledger.gossip.handle_message(msg)
+        self.Validator.gossip.broadcast_message(msg)
         return msg.dump()

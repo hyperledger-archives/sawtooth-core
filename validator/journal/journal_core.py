@@ -104,9 +104,17 @@ class Journal(object):
             various persistence stores.
     """
 
-    def __init__(self, gossip, minimum_transactions_per_block=None,
-                 max_transactions_per_block=None, max_txn_age=None,
-                 genesis_ledger=None, restore=None, data_directory=None,
+    def __init__(self,
+                 local_node,
+                 gossip,
+                 gossip_dispatcher,
+                 stat_domains=None,
+                 minimum_transactions_per_block=None,
+                 max_transactions_per_block=None,
+                 max_txn_age=None,
+                 genesis_ledger=None,
+                 restore=None,
+                 data_directory=None,
                  store_type=None):
         """Constructor for the Journal class.
 
@@ -117,8 +125,9 @@ class Journal(object):
             Restore (bool): Whether or not to restore block data.
             DataDirectory (str):
         """
+        self.local_node = local_node
         self.gossip = gossip
-        self.dispatcher = MessageDispatcher(self, gossip.dispatcher)
+        self.dispatcher = MessageDispatcher(self, gossip_dispatcher)
 
         self.StartTime = time.time()
         self.Initializing = True
@@ -196,7 +205,7 @@ class Journal(object):
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
-        dbprefix = dbdir + "/" + str(self.gossip.LocalNode)
+        dbprefix = dbdir + "/" + str(self.local_node)
 
         if store_type == 'shelf':
             from journal.database import shelf_database
@@ -294,7 +303,7 @@ class Journal(object):
         self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_state" + ".dbm",
                                                  dbflag)
         # initialize the ledger stats data structures
-        self._initledgerstats()
+        self._initledgerstats(stat_domains)
 
         # connect the message handlers
         journal_debug.register_message_handlers(self)
@@ -360,14 +369,6 @@ class Journal(object):
         tname = family.TransactionTypeName
         tstore = family.TransactionStoreType()
         self.GlobalStoreMap.add_transaction_store(tname, tstore)
-
-    def sign_and_send_message(self, msg):
-        msg.SenderID = self.gossip.LocalNode.Identifier
-        msg.sign_from_node(self.gossip.LocalNode)
-        self.gossip.handle_message(msg)
-
-    def forward_message(self, msg, exceptions=None, initialize=True):
-        self.gossip.forward_message(msg, exceptions, initialize)
 
     @property
     def GlobalStore(self):
@@ -505,7 +506,7 @@ class Journal(object):
         # block
         if self.GenesisLedger:
             logger.warn('node %s claims the genesis block',
-                        self.gossip.LocalNode.Name)
+                        self.local_node.Name)
             self.onGenesisBlock.fire(self)
             self.claim_transaction_block(self.build_transaction_block(True))
             self.GenesisLedger = False
@@ -676,11 +677,11 @@ class Journal(object):
         if not request:
             request = transaction_block_message.BlockRequestMessage(
                 {'BlockID': blockid})
-            self.forward_message(request, exceptions=exceptions)
+            self.gossip.forward_message(request, exceptions=exceptions)
         else:
-            self.forward_message(request,
-                                 exceptions=exceptions,
-                                 initialize=False)
+            self.gossip.forward_message(request,
+                                        exceptions=exceptions,
+                                        initialize=False)
 
     def request_missing_txn(self, txnid, exceptions=None, request=None):
         """Requests that neighbors send a transaction.
@@ -696,8 +697,6 @@ class Journal(object):
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
-        if exceptions is None:
-            exceptions = []
         logger.info('txnid: %s - missing_txn called', txnid[:8])
 
         now = time.time()
@@ -715,16 +714,17 @@ class Journal(object):
         # we need to reuse the request or we'll process multiple copies
         if not request:
             logger.info('txnid: %s - new request from same node(%s)',
-                        txnid[:8], self.gossip.LocalNode.Name)
+                        txnid[:8], self.local_node.Name)
             request = transaction_message.TransactionRequestMessage(
                 {'TransactionID': txnid})
-            self.forward_message(request, exceptions=exceptions)
+            self.gossip.forward_message(request, exceptions=exceptions)
         else:
             logger.info('txnid: %s - new request from another node(%s)  ',
-                        txnid[:8], self._id2name(request.SenderID))
-            self.forward_message(request,
-                                 exceptions=exceptions,
-                                 initialize=False)
+                        txnid[:8],
+                        self.gossip.node_id_to_name(request.SenderID))
+            self.gossip.forward_message(request,
+                                        exceptions=exceptions,
+                                        initialize=False)
 
     def build_transaction_block(self, genesis=False):
         """Builds the next transaction block for the ledger.
@@ -779,7 +779,7 @@ class Journal(object):
                 'blkid: %s - (fork) received disconnected from %s with'
                 ' previous id %s, expecting %s',
                 tblock.Identifier[:8],
-                self._id2name(tblock.OriginatorID),
+                self.gossip.node_id_to_name(tblock.OriginatorID),
                 tblock.PreviousBlockID[:8],
                 self.MostRecentCommittedBlockID[:8])
 
@@ -989,7 +989,7 @@ class Journal(object):
         if time.time() > self.next_block_retry:
             self.next_block_retry = time.time() + self.BlockRetryInterval
             msg = transaction_block_message.BlockRetryMessage()
-            self.sign_and_send_message(msg)
+            self.gossip.broadcast_message(msg)
 
     def _commitblockchain(self, blockid, forkid):
         """
@@ -1024,7 +1024,7 @@ class Journal(object):
             logger.info('blkid: %s - commit block from %s with previous '
                         'blkid: %s',
                         tblock.Identifier[:8],
-                        self._id2name(tblock.OriginatorID),
+                        self.gossip.node_id_to_name(tblock.OriginatorID),
                         tblock.PreviousBlockID[:8])
 
             assert tblock.Status == transaction_block.Status.valid
@@ -1351,8 +1351,8 @@ class Journal(object):
                     logger.debug('flatten storage for block %s', blockid)
                     self.GlobalStoreMap.flatten_block_store(blockid)
 
-    def _initledgerstats(self):
-        self.JournalStats = stats.Stats(self.gossip.LocalNode.Name, 'ledger')
+    def _initledgerstats(self, stat_domains):
+        self.JournalStats = stats.Stats(self.local_node.Name, 'ledger')
         self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
         self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
         self.JournalStats.add_metric(stats.Value('CommittedBlockCount', 0))
@@ -1366,10 +1366,7 @@ class Journal(object):
         self.JournalStats.add_metric(stats.Sample(
             'PendingTxnCount',
             lambda: self.PendingTxnCount))
-
-        self.gossip.StatDomains['ledger'] = self.JournalStats
-
-        self.JournalConfigStats = stats.Stats(self.gossip.LocalNode.Name,
+        self.JournalConfigStats = stats.Stats(self.local_node.Name,
                                               'ledgerconfig')
         self.JournalConfigStats.add_metric(
             stats.Sample('MinimumTransactionsPerBlock',
@@ -1377,19 +1374,6 @@ class Journal(object):
         self.JournalConfigStats.add_metric(
             stats.Sample('MaximumTransactionsPerBlock',
                          lambda: self.MaximumTransactionsPerBlock))
-
-        self.gossip.StatDomains['ledgerconfig'] = self.JournalConfigStats
-
-    def _id2name(self, nodeid):
-        if nodeid in self.gossip.NodeMap:
-            return str(self.gossip.NodeMap[nodeid])
-
-        if nodeid == self.gossip.LocalNode.Identifier:
-            return str(self.gossip.LocalNode)
-
-        store = self.GlobalStore.TransactionStores[
-            '/EndpointRegistryTransaction']
-        if nodeid in store and 'Name' in store[nodeid]:
-            return str(store[nodeid]['Name'])
-
-        return nodeid[:8]
+        if stat_domains is not None:
+            stat_domains['ledger'] = self.JournalStats
+            stat_domains['ledgerconfig'] = self.JournalConfigStats

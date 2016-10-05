@@ -39,23 +39,36 @@ class PoetJournal(journal_core.Journal):
             keep.
     """
 
-    def __init__(self, gossip, kwargs, minimum_transactions_per_block=None,
-                 max_transactions_per_block=None, max_txn_age=None,
-                 genesis_ledger=None, restore=None, data_directory=None,
+    def __init__(self,
+                 local_node,
+                 gossip,
+                 gossip_dispatcher,
+                 stat_domains,
+                 kwargs,
+                 minimum_transactions_per_block=None,
+                 max_transactions_per_block=None,
+                 max_txn_age=None,
+                 genesis_ledger=None,
+                 restore=None,
+                 data_directory=None,
                  store_type=None):
         """Constructor for the PoetJournal class.
 
         Args:
             node (Node): The local node.
         """
-        super(PoetJournal, self).__init__(gossip,
-                                          minimum_transactions_per_block,
-                                          max_transactions_per_block,
-                                          max_txn_age,
-                                          genesis_ledger,
-                                          restore,
-                                          data_directory,
-                                          store_type)
+        super(PoetJournal, self).__init__(
+            local_node,
+            gossip,
+            gossip_dispatcher,
+            stat_domains,
+            minimum_transactions_per_block,
+            max_transactions_per_block,
+            max_txn_age,
+            genesis_ledger,
+            restore,
+            data_directory,
+            store_type)
 
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
@@ -149,7 +162,7 @@ class PoetJournal(journal_core.Journal):
             nblock.TransactionIDs = txnlist
 
             nblock.create_wait_timer(
-                self.gossip.LocalNode.signing_address(),
+                self.local_node.signing_address(),
                 self._build_certificate_list(nblock))
 
             self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
@@ -195,11 +208,11 @@ class PoetJournal(journal_core.Journal):
             nblock (PoetTransactionBlock): The block to claim.
         """
         logger.info('node %s validates block with %d transactions',
-                    self.gossip.LocalNode.Name, len(nblock.TransactionIDs))
+                    self.local_node.Name, len(nblock.TransactionIDs))
 
         # Claim the block
         nblock.create_wait_certificate()
-        nblock.sign_from_node(self.gossip.LocalNode)
+        nblock.sign_from_node(self.local_node)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
@@ -208,7 +221,7 @@ class PoetJournal(journal_core.Journal):
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
         msg.TransactionBlock = nblock
-        self.sign_and_send_message(msg)
+        self.gossip.broadcast_message(msg)
 
         self.PendingTransactionBlock = None
 

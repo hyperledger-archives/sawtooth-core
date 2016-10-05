@@ -57,7 +57,7 @@ def _build_block(ledger, block):
             MarketPlaceTransaction.TransactionTypeName)
         if mktstore:
             holdingname = "//{0}/holding/validation-token".format(
-                ledger.gossip.LocalNode.Name)
+                ledger.local_node.Name)
             holdingid = mktstore.n2i(holdingname, 'Holding')
             if holdingid:
                 logger.info('set validator holding id to %s', holdingid)
@@ -87,7 +87,7 @@ def _build_block(ledger, block):
                 'Count': count,
             }]
         })
-        itxn.sign_from_node(ledger.gossip.LocalNode)
+        itxn.sign_from_node(ledger.local_node)
 
         logger.debug('add incentive transaction %s to block', itxn.Identifier)
         ledger.TransactionStore[itxn.Identifier] = itxn
@@ -119,13 +119,13 @@ def _claim_block(ledger, block):
         itxn.Status = transaction.Status.pending
         msg = MarketPlaceTransactionMessage()
         msg.Transaction = itxn
-        ledger.sign_and_send_message(msg)
+        ledger.gossip.broadcast_message(msg)
 
         logger.info(
             'sending the incentive transaction %s for holding %s for block %s',
             itxn.Identifier, itxn.get_first_update().HoldingID,
             block.Identifier)
-        ledger.handle_message(msg)
+        ledger.gossip.broadcast_message(msg)
 
 
 def _block_test(ledger, block):

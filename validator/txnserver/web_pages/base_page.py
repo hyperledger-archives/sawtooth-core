@@ -167,13 +167,13 @@ class BasePage(Resource):
                 'unknown message'
                 ' encoding: {0}'.format(encoding))
         typename = minfo.get('__TYPE__', '**UNSPECIFIED**')
-        if not self.Ledger.gossip.dispatcher.has_message_handler(typename):
+        if not self.Validator.gossip.dispatcher.has_message_handler(typename):
             return self._encode_error_response(
                 request,
                 http.NOT_FOUND,
                 'received request for unknown message'
                 ' type, {0}'.format(typename))
-        return self.Ledger.gossip.dispatcher.unpack_message(typename, minfo)
+        return self.Validator.gossip.dispatcher.unpack_message(typename, minfo)
 
     def _get_store_map(self):
         block_id = self.Ledger.MostRecentCommittedBlockID

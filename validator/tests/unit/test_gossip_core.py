@@ -434,6 +434,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         info = msg.dump()
         m = core.dispatcher.unpack_message(
             '/gossip.messages.ShutdownMessage/ShutdownMessage', info)
+            info)
         self.assertEquals(msg.Identifier, m.Identifier)
 
     def test_gossip_add_and_drop_node(self):
@@ -456,7 +457,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         node2 = self._create_node(8821)
         core.add_node(node1)
         core.add_node(node2)
-        core.multicast_message(msg, [node1.Identifier, node2.Identifier])
+        core._multicast_message(msg, [node1.Identifier, node2.Identifier])
         self.assertEquals(str(node1.MessageQ), str(node2.MessageQ))
 
     def test_gossip_send_message(self):
@@ -492,7 +493,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         node2 = self._create_node(8827)
         core.add_node(node1)
         core.add_node(node2)
-        core.handle_message(msg)
+        core._handle_message(msg)
         self.assertEquals(str(node1.MessageQ), str(node2.MessageQ))
         self.assertIn(msg.Identifier, core.MessageHandledMap)
         self.assertNotEquals(str(node1.MessageQ), "[]")
