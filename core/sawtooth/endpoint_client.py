@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth.client import SawtoothClient
-from ledger.transaction.endpoint_registry import EndpointRegistryTransaction
 
 
 class EndpointClient(SawtoothClient):
@@ -33,8 +32,8 @@ class EndpointClient(SawtoothClient):
             base_url=base_url,
             store_name='EndpointRegistryTransaction',
             name='EndpointClient',
-            transaction_type=EndpointRegistryTransaction,
-            message_type=EndpointRegistryTransaction.MessageType)
+            txntype_name='/EndpointRegistryTransaction',
+            msgtype_name='/ledger.transaction.EndpointRegistry/Transaction')
 
     def get_endpoint_list(self):
         """
@@ -48,9 +47,8 @@ class EndpointClient(SawtoothClient):
             from EndpointRegistryTransaction.
         """
 
-        # Refresh the endpoint registry, then return the values as a list
-        self.fetch_state()
-        return [endpoint for _, endpoint in self.state.iteritems()]
+        return [endpoint for endpoint in
+                self.get_all_store_objects().itervalues()]
 
     def get_validator_url_list(self):
         """

@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
+from collections import OrderedDict
+import hashlib
+import json
 import logging
 import time
 import urllib
@@ -23,14 +25,9 @@ try:  # weird windows behavior
 except ImportError:
     from enum import Enum
 
-from gossip import node
-from gossip import signed_object
-from gossip.common import json2dict
-from gossip.common import cbor2dict
-from gossip.common import dict2cbor
-from gossip.common import pretty_print_dict
-from journal import global_store_manager
-from journal import transaction
+import cbor
+import pybitcointools
+
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
@@ -46,6 +43,120 @@ class TransactionStatus(Enum):
     not_found = 404
     internal_server_error = 500,
     server_busy = 503
+
+
+def _sign_message_with_transaction(transaction, message_type, key):
+    """
+    Signs a transaction message or transaction
+    :param transaction (dict):
+    :param key (str): A signing key
+    returns message, txnid (tuple): The first 16 characters
+    of a sha256 hexdigest.
+    """
+    transaction['Nonce'] = time.time()
+    sig = pybitcointools.ecdsa_sign(
+        _dict2cbor(transaction),
+        key
+    )
+    transaction['Signature'] = sig
+
+    txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
+    message = {
+        'Transaction': transaction,
+        '__TYPE__': message_type,
+        '__NONCE__': time.time(),
+    }
+    cbor_serialized_message = _dict2cbor(message)
+    signature = pybitcointools.ecdsa_sign(
+        cbor_serialized_message,
+        key
+    )
+    message['__SIGNATURE__'] = signature
+    return message, txnid
+
+
+def _pretty_print_dict(dictionary):
+    """Generates a pretty-print formatted version of the input JSON.
+
+    Args:
+        dictionary (dict): the JSON string to format.
+
+    Returns:
+        str: pretty-print formatted string.
+    """
+    return json.dumps(_ascii_encode_dict(dictionary), indent=2, sort_keys=True)
+
+
+def _json2dict(dictionary):
+    """Deserializes JSON into a dictionary.
+
+    Args:
+        dictionary (str): the JSON string to deserialize.
+
+    Returns:
+        dict: a dictionary object reflecting the structure of the JSON.
+    """
+    return _ascii_encode_dict(json.loads(dictionary))
+
+
+def _cbor2dict(dictionary):
+    """Deserializes CBOR into a dictionary.
+
+    Args:
+        dictionary (bytes): the CBOR object to deserialize.
+
+    Returns:
+        dict: a dictionary object reflecting the structure of the CBOR.
+    """
+
+    return _ascii_encode_dict(cbor.loads(dictionary))
+
+
+def _dict2cbor(dictionary):
+    """Serializes a dictionary into CBOR.
+
+    Args:
+        dictionary (dict): a dictionary object to serialize into CBOR.
+
+    Returns:
+        bytes: a CBOR object reflecting the structure of the input dict.
+    """
+
+    return cbor.dumps(_unicode_encode_dict(dictionary), sort_keys=True)
+
+
+def _ascii_encode_dict(item):
+    """
+    Support method to ensure that JSON is converted to ascii since unicode
+    identifiers, in particular, can cause problems
+    """
+    if isinstance(item, dict):
+        return OrderedDict(
+            (_ascii_encode_dict(key), _ascii_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [_ascii_encode_dict(element) for element in item]
+    elif isinstance(item, unicode):
+        return item.encode('ascii')
+    else:
+        return item
+
+
+def _unicode_encode_dict(item):
+    """
+    Support method to ensure that JSON is converted to ascii since unicode
+    identifiers, in particular, can cause problems
+    """
+    if isinstance(item, dict):
+        return OrderedDict(
+            (_unicode_encode_dict(key), _unicode_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [_unicode_encode_dict(element) for element in item]
+    elif isinstance(item, str):
+        return unicode(item)
+    else:
+        return item
 
 
 class _Communication(object):
@@ -134,21 +245,21 @@ class _Communication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            return json2dict(content)
+            return _json2dict(content)
         elif encoding == 'application/cbor':
-            return cbor2dict(content)
+            return _cbor2dict(content)
         else:
             return content
 
-    def postmsg(self, msgtype, info):
+    def postmsg(self, msgtype_name, info):
         """
         Post a transaction message to the validator, parse the returning CBOR
         and return the corresponding dictionary.
         """
 
-        data = dict2cbor(info)
+        data = _dict2cbor(info)
         datalen = len(data)
-        url = urlparse.urljoin(self._base_url, msgtype)
+        url = urlparse.urljoin(self._base_url, msgtype_name)
 
         LOGGER.debug('post transaction to %s with DATALEN=%d, DATA=<%s>', url,
                      datalen, data)
@@ -172,9 +283,9 @@ class _Communication(object):
                 encoding = headers.get('Content-Type')
 
                 if encoding == 'application/json':
-                    value = json2dict(content)
+                    value = _json2dict(content)
                 elif encoding == 'application/cbor':
-                    value = cbor2dict(content)
+                    value = _cbor2dict(content)
                 else:
                     LOGGER.warn('operation failed with response: %s', err.code)
                     raise MessageException(
@@ -205,73 +316,16 @@ class _Communication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            value = json2dict(content)
+            value = _json2dict(content)
         elif encoding == 'application/cbor':
-            value = cbor2dict(content)
+            value = _cbor2dict(content)
         else:
             LOGGER.info('server responds with message %s of type %s', content,
                         encoding)
             return None
 
-        LOGGER.debug(pretty_print_dict(value))
+        LOGGER.debug(_pretty_print_dict(value))
         return value
-
-
-class _ClientState(object):
-    def __init__(self,
-                 client,
-                 state_type=global_store_manager.KeyValueStore):
-        self._client = client
-        self._state_type = state_type
-        self._state = None
-        self._current_state = None
-        if self._client is None:
-            self._state = self._state_type()
-            self._current_state = self._state.clone_store()
-        self._current_block_id = None
-
-    @property
-    def state(self):
-        return self._current_state
-
-    def fetch(self):
-        """
-        Retrieve the current state from the validator. Rebuild
-        the name, type, and id maps for the resulting objects.
-        """
-        LOGGER.debug('fetch state from %s', self._client.base_url)
-
-        # get the last ten block ids
-        block_ids = self._client.get_block_list(10)
-        block_id = block_ids[0]
-
-        # if the latest block is the one we have.
-        if block_id == self._current_block_id:
-            return
-
-        # look for the last common block.
-        if self._current_block_id in block_ids:
-            fetch_list = block_ids[:block_ids.index(self._current_block_id)]
-            # request the updates for all the new blocks we don't have
-            for fetch_id in reversed(fetch_list):
-                LOGGER.debug('only fetch delta of state for block %s',
-                             fetch_id)
-                delta = self._client.get_store_delta_for_block(fetch_id)
-                self._state = self._state.clone_store(delta)
-        else:
-            # no common block re-fetch full state.
-            LOGGER.debug('full fetch of state for block %s', block_id)
-            state = self._client.get_store_objects_through_block(block_id)
-            self._state = self._state_type(prevstore=None,
-                                           storeinfo={'Store': state,
-                                                      'DeletedKeys': []})
-
-        # State is actually a clone of the block state, this is a free
-        # operation because of the copy on write implementation of the global
-        # store. This way clients can update the state speculatively
-        # without corrupting the synchronized storage
-        self._current_state = self._state.clone_store()
-        self._current_block_id = block_id
 
 
 class UpdateBatch(object):
@@ -313,71 +367,49 @@ class SawtoothClient(object):
                  base_url,
                  store_name=None,
                  name='SawtoothClient',
-                 transaction_type=None,
-                 message_type=None,
+                 txntype_name=None,
+                 msgtype_name=None,
                  keystring=None,
                  keyfile=None,
                  disable_client_validation=False):
         self._base_url = base_url
-        self._message_type = message_type
-        self._transaction_type = transaction_type
+        self._message_type = msgtype_name
+        self._transaction_type = txntype_name
 
-        # An explicit store name takes precedence over a store name
-        # implied by the transaction type.
+        # an explicit store name takes precedence over a store name
+        # implied by the transaction type
         self._store_name = None
         if store_name is not None:
             self._store_name = store_name.strip('/')
-        elif transaction_type is not None:
-            self._store_name = transaction_type.TransactionTypeName.strip('/')
+        elif txntype_name is not None:
+            self._store_name = txntype_name.strip('/')
 
         self._communication = _Communication(base_url)
         self._last_transaction = None
-        self._local_node = None
+        self._signing_key = None
+        self._identifier = None
         self._update_batch = None
         self._disable_client_validation = disable_client_validation
 
-        # We only keep current state if we have a store name
-        self._current_state = None
-        if self._store_name is not None:
-            state_type = global_store_manager.KeyValueStore
-            if transaction_type is not None:
-                state_type = transaction_type.TransactionStoreType
-
-            self._current_state = \
-                _ClientState(client=self, state_type=state_type)
-            self.fetch_state()
-
-        signing_key = None
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            signing_key = signed_object.generate_signing_key(wifstr=keystring)
+            self._signing_key = pybitcointools.decode_privkey(keystring, 'wif')
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                signing_key = signed_object.generate_signing_key(
-                    wifstr=open(keyfile, "r").read().strip())
+                self._signing_key = pybitcointools.decode_privkey(
+                    open(keyfile, "r").read().strip(), 'wif')
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))
 
-        if signing_key:
-            identifier = signed_object.generate_identifier(signing_key)
-            self._local_node = node.Node(identifier=identifier,
-                                         signingkey=signing_key,
-                                         name=name)
+        if self._signing_key is not None:
+            self._identifier = pybitcointools.pubtoaddr(
+                pybitcointools.privtopub(self._signing_key))
 
     @property
     def base_url(self):
         return self._base_url
-
-    @property
-    def state(self):
-        if self._current_state is None:
-            raise \
-                ClientException('Client must be configured with a store name '
-                                'to access its current state')
-
-        return self._current_state.state
 
     @property
     def last_transaction_id(self):
@@ -390,14 +422,7 @@ class SawtoothClient(object):
                               delta=False):
         path = 'store'
 
-        # If we are provided a transaction class or object, we will infer
-        # the store name from it.  Otherwise, we will assume we have a store
-        # name.
-        if txn_type_or_name is not None:
-            if isinstance(txn_type_or_name, transaction.Transaction):
-                path += '/' + txn_type_or_name.TransactionTypeName.strip('/')
-            else:
-                path += '/' + txn_type_or_name.strip('/')
+        path += '/' + txn_type_or_name.strip('/')
 
         if key is not None:
             path += '/' + key.strip('/')
@@ -491,8 +516,8 @@ class SawtoothClient(object):
 
         return self.sendtxn(
             minfo=msg_info,
-            txn_type=self._transaction_type,
-            txn_msg_type=self._message_type)
+            txntype_name=self._transaction_type,
+            msgtype_name=self._message_type)
 
     def send_update(self, updates, dependencies=None):
         """
@@ -530,37 +555,33 @@ class SawtoothClient(object):
                 'Updates': updates,
                 'Dependencies': dependencies,
             },
-            txn_type=self._transaction_type,
-            txn_msg_type=self._message_type)
+            txntype_name=self._transaction_type,
+            msgtype_name=self._message_type)
 
-    def sendtxn(self, txn_type, txn_msg_type, minfo):
+    def sendtxn(self, txntype_name, msgtype_name, minfo):
         """
         Build a transaction for the update, wrap it in a message with all
-        of the appropriate signatures and post it to the validator
+        of the appropriate signatures and post it to the validator. Will
+        not work with UpdatesTransaction txn families but will work with
+        txn families in Arcade.
         """
 
-        if self._local_node is None:
+        if self._signing_key is None:
             raise ClientException(
                 'can not send transactions as a read-only client')
 
-        txn_type = txn_type or self._transaction_type
-        txn_msg_type = txn_msg_type or self._message_type
+        txn = {'TransactionType': txntype_name}
+        txn = dict(txn, **minfo)
+        if 'Dependencies' not in txn:
+            txn['Dependencies'] = []
 
-        txn = txn_type(minfo=minfo)
-        txn.sign_from_node(self._local_node)
-        txnid = txn.Identifier
-
-        if not self._disable_client_validation:
-            txn.check_valid(self._current_state.state)
-
-        msg = txn_msg_type()
-        msg.Transaction = txn
-        msg.SenderID = self._local_node.Identifier
-        msg.sign_from_node(self._local_node)
-
+        msg, txnid = _sign_message_with_transaction(
+            txn,
+            msgtype_name,
+            self._signing_key)
         try:
             LOGGER.debug('Posting transaction: %s', txnid)
-            result = self._communication.postmsg(msg.MessageType, msg.dump())
+            result = self._communication.postmsg(msgtype_name, msg)
         except MessageException as e:
             LOGGER.warn('Posting transaction failed: %s', str(e))
             return None
@@ -570,37 +591,9 @@ class SawtoothClient(object):
         assert result
 
         # if the message was successfully posted, then save the transaction
-        # id for future dependencies this could be a problem if the transaction
-        # fails during application
+        # id for future dependencies
         self._last_transaction = txnid
-        if not self._disable_client_validation:
-            txn.apply(self._current_state.state)
         return txnid
-
-    def fetch_state(self):
-        """
-        Refresh the state for the client.
-
-        Returns:
-            Nothing
-        """
-        if self._current_state is None:
-            raise \
-                ClientException('Client must be configured with a store name '
-                                'to access its current state')
-
-        self._current_state.fetch()
-
-    def get_state(self):
-        """
-        Return the most-recently-cached state for the client.  Note that this
-        data may be stale and so it might be desirable to call fetch_state
-        first.
-
-        Returns:
-            The most-recently-cached state for the client.
-        """
-        return self.state
 
     def get_status(self, timeout=30):
         """

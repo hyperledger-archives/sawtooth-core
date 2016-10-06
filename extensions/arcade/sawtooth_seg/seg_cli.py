@@ -207,7 +207,7 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = SegClient(base_url=url, keyfile=key_file)
-    state = client.get_state()
+    state = client.get_all_store_objects()
 
     fmt = "%-15s %-15s %-15s %s %s"
     print fmt % ('GAME', 'PLAYER', 'ADDRESS', 'GUESS', 'RESULT')

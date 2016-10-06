@@ -184,10 +184,6 @@ class IntKeyLoadTest(object):
             .format(rounds, numkeys, txintv)
 
         for r in range(0, rounds):
-            with Progress("Updating clients state") as p:
-                for c in self.clients:
-                    c.fetch_state()
-                    p.step()
             cnt = 0
             starttime = time.time()
             with Progress("Round {}".format(r)) as p:
