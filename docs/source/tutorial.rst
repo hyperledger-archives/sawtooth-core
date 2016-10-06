@@ -342,7 +342,8 @@ offer from the mkt participant to receive 1000 USD.
    //bob> holding reg --name /USD --account /account --asset //mkt/asset/currency/USD
    //bob> holding reg --name /holding/token --count 1 --account /account --asset //marketplace/asset/token
    //bob> waitforcommit
-   //bob> exchange --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
+   //bob> exchange --type SellOffer --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
+
 
 Next, let's create an empty cookie jar for Chocolate Chip cookies:
 
@@ -374,7 +375,7 @@ Alice's initalization is the same as Bob's:
    //alice> holding reg --name /USD --account /account --asset //mkt/asset/currency/USD
    //alice> holding reg --name /holding/token --count 1 --account /account --asset //marketplace/asset/token
    //alice> waitforcommit
-   //alice> exchange --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
+   //alice> exchange --type SellOffer --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
    //alice> holding reg --name /jars/choc_chip --account /account --asset //mkt/asset/cookie/choc_chip
    //alice> waitforcommit
    //alice> exit
@@ -446,7 +447,7 @@ Execute an exchange (accepting Bob's offer):
 
 .. code-block:: none
 
-   //alice> exchange --src /USD --dst /jars/choc_chip --offers //bob/choc_chip_sale --count 24
+   //alice> exchange --type ExchangeOffer --src /USD --dst /jars/choc_chip --offers //bob/choc_chip_sale --count 24
    //alice> waitforcommit
 
 The count above is related to the --src argument, so 24 USD for a dozen
