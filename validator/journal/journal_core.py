@@ -174,9 +174,8 @@ class Journal(object):
         else:
             self.GenesisLedger = False
 
-        if restore is None:
-            self.Restore = restore
-        else:
+        self.Restore = restore
+        if restore is not True:
             self.Restore = False
 
         # set up the event handlers that the transaction families can use
