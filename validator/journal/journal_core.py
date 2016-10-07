@@ -504,10 +504,11 @@ class Journal(object):
         # generate a block, if none exists then generate and commit the root
         # block
         if self.GenesisLedger:
-            logger.warn('node %s claims the genesis block',
-                        self.local_node.Name)
             self.onGenesisBlock.fire(self)
-            self.claim_transaction_block(self.build_transaction_block(True))
+            genesis_block = self.build_transaction_block(True)
+            self.claim_transaction_block(genesis_block)
+            logger.warn('node %s claims the genesis block: %s',
+                        self.local_node.Name, genesis_block.Identifier)
             self.GenesisLedger = False
         else:
             if self.MostRecentCommittedBlockID == common.NullIdentifier:
