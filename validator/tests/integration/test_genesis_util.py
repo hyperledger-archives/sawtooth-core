@@ -23,7 +23,7 @@ import time
 import traceback
 import unittest
 
-from sawtooth.cli.genesis import do_genesis
+from sawtooth.cli.poet0_genesis import do_poet0_genesis
 from sawtooth.cli.keygen import do_keygen
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration
@@ -63,10 +63,11 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertEqual(True, os.path.exists('%s.wif' % base_name))
             self.assertEqual(True, os.path.exists('%s.addr' % base_name))
 
-            # test genesis tool
+            # test admin poet0-genesis tool
             ns = argparse.Namespace()
+            ns.admin_cmd = 'poet0-genesis'
             ns.config = [config_file]
-            (bid, clen) = do_genesis(ns)
+            (bid, clen) = do_poet0_genesis(ns)
 
             # verify genesis tool (also tests restore)
             # ...hack the cfg to restore w/o peering and rewrite
