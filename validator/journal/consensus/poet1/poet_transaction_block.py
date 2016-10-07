@@ -23,7 +23,7 @@ from journal.consensus.poet1.wait_certificate import WaitCertificate
 from journal.consensus.poet1.wait_certificate import WaitTimer
 from gossip.common import NullIdentifier
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
@@ -169,14 +169,14 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         WaitCertificate.
 
         Args:
-            journal (PoetJorunal): Journal for pulling context.
+            journal (PoetJournal): Journal for pulling context.
         """
         with self._lock:
             if not super(PoetTransactionBlock, self).is_valid(journal):
                 return False
 
             if not self.WaitCertificate:
-                logger.info('not a valid block, no wait certificate')
+                LOGGER.info('not a valid block, no wait certificate')
                 return False
 
             # TO DO - get PoET public key for originator.
@@ -187,7 +187,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                     journal._build_certificate_list(self),
                     encoded_poet_public_key)
 
-    def create_wait_timer(self, validator_address, certlist):
+    def create_wait_timer(self, certlist):
         """Creates a wait timer for the journal based on a list
         of wait certificates.
 
@@ -201,25 +201,27 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         """Create a wait certificate for the journal based on the wait timer.
         """
         with self._lock:
+            LOGGER.debug("WAIT_TIMER: %s", str(self.WaitTimer))
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
                 hasher.update(tid)
             block_hash = hasher.hexdigest()
 
-            self.WaitCertificate = WaitCertificate.create_wait_certificate(
-                self.WaitTimer,
-                block_hash)
+            self.WaitCertificate = \
+                WaitCertificate.create_wait_certificate(
+                    wait_timer=self.WaitTimer,
+                    block_digest=block_hash)
             if self.WaitCertificate:
                 self.WaitTimer = None
 
-    def wait_timer_is_expired(self, now):
-        """Determines if the wait timer is expired.
+    def wait_timer_has_expired(self, now):
+        """Determines if the wait timer has expired.
 
         Returns:
-            bool: Whether or not the wait timer is expired.
+            bool: Whether or not the wait timer has expired.
         """
         with self._lock:
-            return self.WaitTimer.is_expired(now)
+            return self.WaitTimer.has_expired(now)
 
     def dump(self):
         """Returns a dict with information about the block.

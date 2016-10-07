@@ -21,6 +21,10 @@ from gossip.common import NullIdentifier
 LOGGER = logging.getLogger(__name__)
 
 
+class WaitTimerError(Exception):
+    pass
+
+
 class WaitTimer(object):
     """Wait timers represent a random duration incorporated into a wait
     certificate.
@@ -175,7 +179,7 @@ class WaitTimer(object):
                 self.duration,
                 self.previous_certificate_id)
 
-    def is_expired(self, now):
+    def has_expired(self, now):
         """Determines whether the timer has expired.
 
         Args:

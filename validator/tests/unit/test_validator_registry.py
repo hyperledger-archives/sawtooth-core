@@ -19,6 +19,8 @@ from gossip import signed_object
 from gossip.common import dict2json
 from journal.global_store_manager import KeyValueStore
 
+import pybitcointools
+
 from journal.consensus.poet1.validator_registry \
     import ValidatorRegistryTransaction
 from sawtooth.exceptions import InvalidTransactionError
@@ -32,57 +34,76 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
             import poet_enclave_simulator
         SignupInfo.poet_enclave = poet_enclave_simulator
 
+        poet_enclave_simulator.initialize(**{'NodeName': "DasValidator"})
+
     def test_register_validator_valid(self):
         key = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
-        signup_info = dict2json({'poet_public_key': 'fake_key',
-                                 'anti_sybil_id': 'some_token',
-                                 'proof_data': 'proof'})
+        signup_info = \
+            SignupInfo.create_signup_info(
+                originator_public_key=pybitcointools.privtopub(key),
+                validator_network_basename='TODO: FIX ME!!!!',
+                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+
         store = KeyValueStore()
-        transaction = ValidatorRegistryTransaction.register_validator(
-            name, validator_id, signup_info)
+        transaction = \
+            ValidatorRegistryTransaction.register_validator(
+                name,
+                validator_id,
+                signup_info)
         transaction.sign_object(key)
         try:
             transaction.check_valid(store)
             transaction.apply(store)
-        except InvalidTransactionError:
-            self.fail("Bad: Failed valid transaction")
+        except InvalidTransactionError as e:
+            self.fail('Failed valid transaction: {}'.format(e))
 
     def test_register_validator_re_register(self):
         key = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
-        signup_info = dict2json({'poet_public_key': 'fake_key',
-                                 'anti_sybil_id': 'some_token',
-                                 'proof_data': 'proof'})
+        signup_info = \
+            SignupInfo.create_signup_info(
+                originator_public_key=pybitcointools.privtopub(key),
+                validator_network_basename='TODO: FIX ME!!!!',
+                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+
         store = KeyValueStore()
-        transaction = ValidatorRegistryTransaction.register_validator(
-            name, validator_id, signup_info)
+        transaction = \
+            ValidatorRegistryTransaction.register_validator(
+                name,
+                validator_id,
+                signup_info)
         transaction.sign_object(key)
         try:
             transaction.check_valid(store)
             transaction.apply(store)
-        except InvalidTransactionError:
-            self.fail("Failure: Failed valid transaction")
+        except InvalidTransactionError as e:
+            self.fail('Failed valid transaction: {}'.format(e))
         try:  # check if valid to register again
             transaction.check_valid(store)
-        except InvalidTransactionError:
-            self.fail("Failure: Double registered validator.")
+        except InvalidTransactionError as e:
+            self.fail('Failure: Double registered validator: {}'.format(e))
 
     def test_register_validator_key_mismatch(self):
         key = signed_object.generate_signing_key()
         key2 = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
-        signup_info = dict2json({'poet_public_key': 'fake_key',
-                                 'anti_sybil_id': 'some_token',
-                                 'proof_data': 'proof'})
+        signup_info = \
+            SignupInfo.create_signup_info(
+                originator_public_key=pybitcointools.privtopub(key),
+                validator_network_basename='TODO: FIX ME!!!!',
+                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+
         store = KeyValueStore()
-        transaction = ValidatorRegistryTransaction.register_validator(
-            name, validator_id, signup_info)
+        transaction = \
+            ValidatorRegistryTransaction.register_validator(
+                name,
+                validator_id,
+                signup_info)
         transaction.sign_object(key2)
         with self.assertRaises(InvalidTransactionError):
             transaction.check_valid(store)
-            transaction.apply(store)
             self.fail("Failure: Verified an invalid transaction")

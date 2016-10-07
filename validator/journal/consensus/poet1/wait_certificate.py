@@ -24,6 +24,10 @@ from journal.consensus.poet1.wait_timer import WaitTimer
 LOGGER = logging.getLogger(__name__)
 
 
+class WaitCertificateError(Exception):
+    pass
+
+
 # This is necessary for float comparisons
 def _is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
     """Determines whether two floats are within a tolerance.
@@ -54,13 +58,15 @@ class WaitCertificate(object):
     poet_enclave = None
 
     @classmethod
-    def create_wait_certificate(cls, timer, block_digest):
+    def create_wait_certificate(cls,
+                                wait_timer,
+                                block_digest):
         """Creates a wait certificate in the enclave and then constructs
         a WaitCertificate object from it.
 
         Args:
-            timer (journal.consensus.poet1.wait_timer.WaitTimer): The wait
-                timer to use in creating the certificate.
+            wait_timer (journal.consensus.poet1.wait_timer.WaitTimer): The
+                wait timer to use in creating the certificate.
             block_digest (str): The block digest/hash for the block for which
                 this certificate is being created.
 
@@ -71,11 +77,11 @@ class WaitCertificate(object):
 
         enclave_certificate = \
             cls.poet_enclave.create_wait_certificate(
-                timer.enclave_wait_timer,
-                block_digest)
+                wait_timer=wait_timer.enclave_wait_timer,
+                block_digest=block_digest)
 
         if not enclave_certificate:
-            LOGGER.warn('invalid timer: %s', timer)
+            LOGGER.warn('invalid timer: %s', wait_timer)
             raise \
                 Exception(
                     'Attempt to create wait certificate from invalid wait '

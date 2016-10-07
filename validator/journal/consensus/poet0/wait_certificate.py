@@ -63,6 +63,7 @@ class WaitCertificate(object):
         Args:
             timer (journal.consensus.poet.wait_timer.WaitTimer): The wait
                 timer to use in creating the certificate.
+            block_hash (str): The digest of the block
 
         Returns:
             journal.consensus.poet.wait_certificate.WaitCertificate: A new wait

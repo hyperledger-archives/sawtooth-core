@@ -104,7 +104,10 @@ class PoetJournal(journal_core.Journal):
         sealed_signup_data = self.LocalStore.get('sealed_signup_data')
 
         # If we haven't signed up, we need to do that first.
-        SignupInfo.create_signup_info(self.local_node.public_key())
+        SignupInfo.create_signup_info(
+            originator_public_key=self.gossip.LocalNode.public_key(),
+            validator_network_basename='TODO: FIX ME!!!!',
+            most_recent_wait_certificate_id=self.MostRecentCommittedBlockID)
 
         self.dispatcher.on_heartbeat += self._check_certificate
 
@@ -171,9 +174,7 @@ class PoetJournal(journal_core.Journal):
             nblock.PreviousBlockID = self.MostRecentCommittedBlockID
             nblock.TransactionIDs = txnlist
 
-            nblock.create_wait_timer(
-                self.local_node.signing_address(),
-                self._build_certificate_list(nblock))
+            nblock.create_wait_timer(self._build_certificate_list(nblock))
 
             self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
             self.JournalStats.PopulationEstimate.Value = \
@@ -210,27 +211,28 @@ class PoetJournal(journal_core.Journal):
 
             return nblock
 
-    def claim_transaction_block(self, nblock):
+    def claim_transaction_block(self, block):
         """Claims the block and transmits a message to the network
         that the local node won.
 
         Args:
-            nblock (PoetTransactionBlock): The block to claim.
+            block (PoetTransactionBlock): The block to claim.
+            genesis (bool): Are we claiming the genesis block?
         """
         LOGGER.info('node %s validates block with %d transactions',
-                    self.local_node.Name, len(nblock.TransactionIDs))
+                    self.local_node.Name, len(block.TransactionIDs))
 
         # Claim the block
-        nblock.create_wait_certificate()
-        nblock.sign_from_node(self.local_node)
+        block.create_wait_certificate()
+        block.sign_from_node(self.local_node)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
-        self.onClaimBlock.fire(self, nblock)
+        self.onClaimBlock.fire(self, block)
 
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
-        msg.TransactionBlock = nblock
+        msg.TransactionBlock = block
         self.gossip.broadcast_message(msg)
 
         self.PendingTransactionBlock = None
@@ -252,8 +254,9 @@ class PoetJournal(journal_core.Journal):
     def _check_certificate(self, now):
         with self._txn_lock:
             if self.PendingTransactionBlock:
-                if self.PendingTransactionBlock.wait_timer_is_expired(now):
-                    self.claim_transaction_block(self.PendingTransactionBlock)
+                if self.PendingTransactionBlock.wait_timer_has_expired(now):
+                    self.claim_transaction_block(
+                        block=self.PendingTransactionBlock)
             else:
                 # No transaction block - check if we must make one due to time
                 # waited
