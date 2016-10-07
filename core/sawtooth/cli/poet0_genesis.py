@@ -25,8 +25,8 @@ from txnserver.validator import parse_networking_info
 LOGGER = logging.getLogger(__name__)
 
 
-def add_genesis_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('genesis')
+def add_poet0_genesis_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('poet0-genesis')
     parser.add_argument('--config',
                         help='Comma-separated list of config files to '
                              'load. Alternatively, multiple --config '
@@ -48,7 +48,7 @@ def add_genesis_parser(subparsers, parent_parser):
                         action='append')
 
 
-def do_genesis(args):
+def do_poet0_genesis(args):
 
     # Get ledger config:
     # set the default value of config because argparse 'default' in
