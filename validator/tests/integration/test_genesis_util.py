@@ -23,7 +23,7 @@ import time
 import traceback
 import unittest
 
-from sawtooth.cli.poet0_genesis import do_poet0_genesis
+from sawtooth.cli.admin_sub.poet0_genesis import do_poet0_genesis
 from sawtooth.cli.keygen import do_keygen
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration

@@ -15,8 +15,8 @@
 import logging
 
 from sawtooth.cli.exceptions import CliException
-from sawtooth.cli.poet0_genesis import add_poet0_genesis_parser
-from sawtooth.cli.poet0_genesis import do_poet0_genesis
+from sawtooth.cli.admin_sub.poet0_genesis import add_poet0_genesis_parser
+from sawtooth.cli.admin_sub.poet0_genesis import do_poet0_genesis
 
 LOGGER = logging.getLogger(__name__)
 
