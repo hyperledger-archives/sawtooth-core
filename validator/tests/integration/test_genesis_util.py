@@ -40,7 +40,7 @@ class TestGenesisUtil(unittest.TestCase):
         tmp_home = tempfile.mkdtemp()
         proc = None
         try:
-            # set up env and config
+            # Set up env and config
             os.environ['CURRENCYHOME'] = tmp_home
             cfg = get_validator_configuration([], {})
             config_file = tmp_home + os.path.sep + 'cfg.cfg'
@@ -51,7 +51,7 @@ class TestGenesisUtil(unittest.TestCase):
             os.makedirs(cfg['DataDirectory'])
             os.makedirs(cfg['LogDirectory'])
 
-            # en route, test keygen client via main
+            # En route, test keygen client via main
             key_name = cfg['NodeName']
             key_dir = cfg['KeyDirectory']
             cmd = 'keygen %s --key-dir %s' % (key_name, key_dir)
@@ -60,7 +60,7 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue(os.path.exists('%s.wif' % base_name))
             self.assertTrue(os.path.exists('%s.addr' % base_name))
 
-            # test admin poet0-genesis tool
+            # Test admin poet0-genesis tool
             fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(fname))
             cmd = 'admin poet0-genesis --config %s' % config_file
@@ -72,8 +72,8 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in dat.keys())
             tgt_block = dat['GenesisId']
 
-            # verify genesis tool (also tests restore)
-            # ...hack the cfg to restore w/o peering and rewrite
+            # Verify genesis tool (also tests restore)
+            # ...hack validator cfg to restore w/o peering
             cfg['Restore'] = True
             cfg['LedgerURL'] = []
             cfg['InitialConnectivity'] = 0
@@ -86,12 +86,12 @@ class TestGenesisUtil(unittest.TestCase):
             if not os.path.isfile(config_file):
                 raise RuntimeError('%s is not a file' % config_file)
             cmd = '%s -vv --config %s' % (validator_file, config_file)
-            # ...spawn validator using our new genesis block
+            # ...launch validator
             proc = subprocess.Popen(cmd.split(),
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE,
                                     env=os.environ.copy())
-            # ...demonstrate that validator is building on our new block
+            # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
             prog_str = 'TEST ROOT RESTORATION (expect %s)\n' % tgt_block
@@ -111,11 +111,14 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertEqual(tgt_block, root)
 
         finally:
+            # Shut down validator
             if proc is not None:
                 proc.kill()
+            # Restore environmental vars
             if old_home is None:
                 os.unsetenv('CURRENCYHOME')
             else:
                 os.environ['CURRENCYHOME'] = old_home
+            # Delete temp dir
             if os.path.exists(tmp_home):
                 shutil.rmtree(tmp_home)
