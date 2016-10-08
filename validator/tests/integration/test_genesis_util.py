@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import argparse
 import json
 import logging
 import os
@@ -23,8 +22,8 @@ import time
 import traceback
 import unittest
 
-from sawtooth.cli.admin_sub.poet0_genesis import do_poet0_genesis
-from sawtooth.cli.keygen import do_keygen
+from sawtooth.cli.admin_sub.poet0_genesis import get_genesis_block_id_file_name
+from sawtooth.cli.main import main as entry_point
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration
 from txnintegration.utils import find_txn_validator
@@ -52,22 +51,26 @@ class TestGenesisUtil(unittest.TestCase):
             os.makedirs(cfg['DataDirectory'])
             os.makedirs(cfg['LogDirectory'])
 
-            # en route, test keygen client
-            ns = argparse.Namespace()
-            ns.key_dir = cfg['KeyDirectory']
-            ns.key_name = cfg['NodeName']
-            ns.force = True
-            ns.quiet = False
-            do_keygen(ns)
-            base_name = ns.key_dir + os.path.sep + ns.key_name
+            # en route, test keygen client via main
+            key_name = cfg['NodeName']
+            key_dir = cfg['KeyDirectory']
+            cmd = 'keygen %s --key-dir %s' % (key_name, key_dir)
+            entry_point(args=cmd.split(), with_loggers=False)
+            base_name = key_dir + os.path.sep + key_name
             self.assertTrue(os.path.exists('%s.wif' % base_name))
             self.assertTrue(os.path.exists('%s.addr' % base_name))
 
             # test admin poet0-genesis tool
-            ns = argparse.Namespace()
-            ns.admin_cmd = 'poet0-genesis'
-            ns.config = [config_file]
-            (tgt_block, clen) = do_poet0_genesis(ns)
+            fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
+            self.assertFalse(os.path.exists(fname))
+            cmd = 'admin poet0-genesis --config %s' % config_file
+            entry_point(args=cmd.split(), with_loggers=False)
+            self.assertTrue(os.path.exists(fname))
+            dat = None
+            with open(fname, 'r') as f:
+                dat = json.load(f)
+            self.assertTrue('GenesisId' in dat.keys())
+            tgt_block = dat['GenesisId']
 
             # verify genesis tool (also tests restore)
             # ...hack the cfg to restore w/o peering and rewrite
