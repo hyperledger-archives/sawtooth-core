@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+import os
+import json
 
 from gossip.gossip_core import Gossip
 from journal.consensus.poet0.poet_journal import PoetJournal
@@ -46,6 +48,10 @@ def add_poet0_genesis_parser(subparsers, parent_parser):
                         help='Specify transaction families to load. Multiple'
                              ' -F options can be specified.',
                         action='append')
+
+
+def get_genesis_block_id_file_name(directory):
+    return '{0}{1}genesis_data.json'.format(directory, os.path.sep)
 
 
 def do_poet0_genesis(args):
@@ -143,9 +149,18 @@ def do_poet0_genesis(args):
     (_, msg_handler) = ledger.dispatcher.message_handler_map[msg.MessageType]
     msg_handler(msg, ledger)
 
-    # Report, then shutdown to save state:
+    # Gather data, then shutdown to save state:
     head = ledger.MostRecentCommittedBlockID
     n_blks = ledger.CommittedBlockCount
-    LOGGER.info('current chain head: %s; current chain len: %s', head, n_blks)
     ledger.shutdown()
-    return (head, n_blks)  # return values for unit and/or integration tests
+
+    # log genesis data, then write it out to ease dissemination
+    genesis_data = {
+        'GenesisId': head,
+        'ChainLength': n_blks,
+    }
+    gblock_fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
+    LOGGER.info('genesis data: %s', genesis_data)
+    LOGGER.info('writing genesis data to %s', gblock_fname)
+    with open(gblock_fname, 'w') as f:
+        f.write(json.dumps(genesis_data))
