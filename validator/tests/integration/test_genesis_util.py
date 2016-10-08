@@ -102,6 +102,7 @@ class TestGenesisUtil(unittest.TestCase):
                         pass
                     time.sleep(1)
                     p.step()
+            self.assertIsNotNone(blk_lists)
             root = blk_lists[0][0]
             self.assertEqual(bid, root)
 
