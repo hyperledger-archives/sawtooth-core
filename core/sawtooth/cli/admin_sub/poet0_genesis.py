@@ -151,6 +151,8 @@ def do_poet0_genesis(args):
 
     # Gather data, then shutdown to save state:
     head = ledger.MostRecentCommittedBlockID
+    # ...not sure why n_blocks is experimentally 0 and not 1
+    # ...if we only make the genesis, it would be good to check n_blks = 1
     n_blks = ledger.CommittedBlockCount
     ledger.shutdown()
 
