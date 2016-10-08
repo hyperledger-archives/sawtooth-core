@@ -50,14 +50,15 @@ class NetworkConfig(object):
                  ):
         self.n_mag = n_mag
         self.use_genesis = use_genesis
-        self.keys = [generate_private_key() for _ in range(n_mag)]
         self.nodes = []
-        for (idx, wif) in enumerate(self.keys):
+        for idx in range(n_mag):
+            key = generate_private_key()
             nd = OrderedDict()
             nd.update(cfg)
             nd["id"] = idx
             nd["NodeName"] = "{0}-{1}".format(base_name, idx)
-            nd["Identifier"] = get_address_from_private_key_wif(wif)
+            nd["SigningKey"] = key
+            nd["Identifier"] = get_address_from_private_key_wif(key)
             nd['Host'] = "localhost"
             if base_host is not None:
                 nd['Host'] = "%s-%s" % (base_host, idx)
@@ -148,7 +149,6 @@ class NetworkConfig(object):
 
     def get_node_cfg(self, idx):
         ret = self.nodes[idx].copy()
-        ret["SigningKey"] = self.keys[idx]
         return ret
 
     def get_config_list(self):
