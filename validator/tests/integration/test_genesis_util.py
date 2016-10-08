@@ -47,7 +47,7 @@ class TestGenesisUtil(unittest.TestCase):
             config_file = tmp_home + os.path.sep + 'cfg.cfg'
             with open(config_file, 'w') as f:
                 f.write(json.dumps(cfg, indent=4) + '\n')
-            self.assertEqual(False, os.path.exists(cfg['KeyDirectory']))
+            self.assertFalse(os.path.exists(cfg['KeyDirectory']))
             os.makedirs(cfg['KeyDirectory'])
             os.makedirs(cfg['DataDirectory'])
             os.makedirs(cfg['LogDirectory'])
@@ -60,8 +60,8 @@ class TestGenesisUtil(unittest.TestCase):
             ns.quiet = False
             do_keygen(ns)
             base_name = ns.key_dir + os.path.sep + ns.key_name
-            self.assertEqual(True, os.path.exists('%s.wif' % base_name))
-            self.assertEqual(True, os.path.exists('%s.addr' % base_name))
+            self.assertTrue(os.path.exists('%s.wif' % base_name))
+            self.assertTrue(os.path.exists('%s.addr' % base_name))
 
             # test admin poet0-genesis tool
             ns = argparse.Namespace()
