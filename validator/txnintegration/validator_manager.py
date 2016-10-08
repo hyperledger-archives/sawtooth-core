@@ -59,7 +59,10 @@ class ValidatorManager(object):
         self._data_dir = data_dir
 
         # Handle validator keys
-        if self.static_node:
+        if self.static_node and 'KeyFile' in config.keys():
+            self._key = read_key_file(config['KeyFile'])
+            self._address = get_address_from_private_key_wif(self._key)
+        elif self.static_node:
             self._key = config['SigningKey']
             self._address = config['Identifier']
         else:
