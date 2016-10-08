@@ -44,13 +44,10 @@ class TestGenesisUtil(unittest.TestCase):
             # Set up env and config
             os.environ['CURRENCYHOME'] = tmp_home
             cfg = get_validator_configuration([], {})
-            config_file = tmp_home + os.path.sep + 'cfg.json'
-            with open(config_file, 'w') as f:
-                f.write(json.dumps(cfg, indent=4) + '\n')
-            self.assertFalse(os.path.exists(cfg['KeyDirectory']))
-            os.makedirs(cfg['KeyDirectory'])
-            os.makedirs(cfg['DataDirectory'])
-            os.makedirs(cfg['LogDirectory'])
+            # ...rewire for ValidatorManager compatibility
+            cfg['KeyDirectory'] = tmp_home
+            cfg['DataDirectory'] = tmp_home
+            cfg['LogDirectory'] = tmp_home
 
             # En route, test keygen client via main
             key_name = cfg['NodeName']
@@ -60,10 +57,14 @@ class TestGenesisUtil(unittest.TestCase):
             base_name = key_dir + os.path.sep + key_name
             self.assertTrue(os.path.exists('%s.wif' % base_name))
             self.assertTrue(os.path.exists('%s.addr' % base_name))
+            cfg['KeyFile'] = '%s.wif' % base_name
 
             # Test admin poet0-genesis tool
             fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(fname))
+            config_file = tmp_home + os.path.sep + 'cfg.json'
+            with open(config_file, 'w') as f:
+                f.write(json.dumps(cfg, indent=4) + '\n')
             cmd = 'admin poet0-genesis --config %s' % config_file
             entry_point(args=cmd.split(), with_loggers=False)
             self.assertTrue(os.path.exists(fname))
