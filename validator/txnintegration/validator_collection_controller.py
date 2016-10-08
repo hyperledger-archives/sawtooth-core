@@ -154,7 +154,7 @@ class ValidatorCollectionController(NodeController):
                         "{} failed to initialize within {}S.".format(
                             validator.name, to.WaitTime))
                 try:
-                    success = validator.is_ready()
+                    success = validator.is_started()
                 except Exception as e:
                     print e.message
                 p.step()
