@@ -16,32 +16,35 @@ import json
 import logging
 import os
 import shutil
-import subprocess
 import tempfile
 import time
-import traceback
 import unittest
 
 from sawtooth.cli.admin_sub.poet0_genesis import get_genesis_block_id_file_name
 from sawtooth.cli.main import main as entry_point
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration
+from txnintegration.netconfig import NetworkConfig
 from txnintegration.utils import find_txn_validator
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
+from txnintegration.validator_collection_controller \
+    import ValidatorCollectionController
 
 LOGGER = logging.getLogger(__name__)
 
 
 class TestGenesisUtil(unittest.TestCase):
+
     def test_genesis_util(self):
         print
         old_home = os.getenv('CURRENCYHOME')
         tmp_home = tempfile.mkdtemp()
-        proc = None
+        vcc = None
         try:
             # Set up env and config
+            v_file = find_txn_validator()
             os.environ['CURRENCYHOME'] = tmp_home
             cfg = get_validator_configuration([], {})
             # ...rewire for ValidatorManager compatibility
@@ -79,20 +82,11 @@ class TestGenesisUtil(unittest.TestCase):
             cfg['Restore'] = True
             cfg['LedgerURL'] = []
             cfg['InitialConnectivity'] = 0
-            with open(config_file, 'w') as f:
-                f.write(json.dumps(cfg, indent=4) + '\n')
-            # ...test inputs to cmd (before passing to popen)
-            validator_file = find_txn_validator()
-            if not os.path.isfile(validator_file):
-                raise RuntimeError('%s is not a file' % validator_file)
-            if not os.path.isfile(config_file):
-                raise RuntimeError('%s is not a file' % config_file)
-            cmd = '%s -vv --config %s' % (validator_file, config_file)
             # ...launch validator
-            proc = subprocess.Popen(cmd.split(),
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    env=os.environ.copy())
+            net_cfg = NetworkConfig.from_config_list([cfg])
+            vcc = ValidatorCollectionController(net_cfg, data_dir=tmp_home,
+                                                txnvalidator=v_file)
+            vcc.activate(0, probe_seconds=120)
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -115,8 +109,8 @@ class TestGenesisUtil(unittest.TestCase):
 
         finally:
             # Shut down validator
-            if proc is not None:
-                proc.kill()
+            if vcc is not None:
+                vcc.shutdown()
             # Restore environmental vars
             if old_home is None:
                 os.unsetenv('CURRENCYHOME')
