@@ -89,7 +89,6 @@ class TestGenesisUtil(unittest.TestCase):
                                     stderr=subprocess.PIPE,
                                     env=os.environ.copy())
             # ...demonstrate that validator is building on our new block
-            expected = 'operation failed: [Errno 111] Connection refused'
             to = TimeOut(64)
             blk_lists = None
             with Progress('TEST ROOT RESTORATION (expect %s)\n' % bid) as p:
@@ -100,8 +99,7 @@ class TestGenesisUtil(unittest.TestCase):
                         if len(blk_lists) < 1 or len(blk_lists[0]) < 2:
                             blk_lists = None
                     except MessageException as e:
-                        if e.message != expected:
-                            raise
+                        pass
                     time.sleep(1)
                     p.step()
             root = blk_lists[0][0]
