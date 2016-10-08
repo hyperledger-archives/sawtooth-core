@@ -80,7 +80,7 @@ class ValidatorManager(object):
                node=None):
         listen_directives = parse_listen_directives(self.config["Listen"])
         http_host = listen_directives['http'].host
-        if "Endpoint" in self.config:
+        if "Endpoint" in self.config and self.config['Endpoint'] is not None:
             http_host = self.config["Endpoint"]["Host"]
 
         self.url = "http://{}:{}".format(http_host,
