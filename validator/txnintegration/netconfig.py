@@ -41,6 +41,21 @@ def gen_dfl_cfg_quorum(q_mag):
 
 
 class NetworkConfig(object):
+    @staticmethod
+    def from_config_list(config_list):
+        '''
+        Creates a NetworkConfig from an existing list of config files by
+        calling the constructor and then replacing the nodes
+        Args:
+            config_list: (list<dict>)
+        Returns:
+            net_cfg: (NetworkConfig)
+
+        '''
+        net_cfg = NetworkConfig({}, len(config_list))
+        net_cfg.nodes = config_list
+        return net_cfg
+
     def __init__(self, cfg, n_mag,
                  use_genesis=True,
                  base_host=None,
