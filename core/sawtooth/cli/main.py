@@ -108,16 +108,17 @@ def create_parser(prog_name):
     return parser
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
+def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
+         with_loggers=True):
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 
-    if args.verbose is None:
-        verbose_level = 0
-    else:
-        verbose_level = args.verbose
-
-    setup_loggers(verbose_level=verbose_level)
+    if with_loggers is True:
+        if args.verbose is None:
+            verbose_level = 0
+        else:
+            verbose_level = args.verbose
+        setup_loggers(verbose_level=verbose_level)
 
     if args.command == 'keygen':
         do_keygen(args)
