@@ -67,7 +67,7 @@ class TestGenesisUtil(unittest.TestCase):
             ns = argparse.Namespace()
             ns.admin_cmd = 'poet0-genesis'
             ns.config = [config_file]
-            (bid, clen) = do_poet0_genesis(ns)
+            (tgt_block, clen) = do_poet0_genesis(ns)
 
             # verify genesis tool (also tests restore)
             # ...hack the cfg to restore w/o peering and rewrite
@@ -91,7 +91,8 @@ class TestGenesisUtil(unittest.TestCase):
             # ...demonstrate that validator is building on our new block
             to = TimeOut(64)
             blk_lists = None
-            with Progress('TEST ROOT RESTORATION (expect %s)\n' % bid) as p:
+            prog_str = 'TEST ROOT RESTORATION (expect %s)\n' % tgt_block
+            with Progress(prog_str) as p:
                 while not to.is_timed_out() and blk_lists is None:
                     try:
                         blk_lists = get_blocklists(['http://localhost:8800'])
@@ -104,7 +105,7 @@ class TestGenesisUtil(unittest.TestCase):
                     p.step()
             self.assertIsNotNone(blk_lists)
             root = blk_lists[0][0]
-            self.assertEqual(bid, root)
+            self.assertEqual(tgt_block, root)
 
         finally:
             if proc is not None:
