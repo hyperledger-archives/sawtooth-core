@@ -36,6 +36,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TestGenesisUtil(unittest.TestCase):
     def test_genesis_util(self):
+        print
         old_home = os.getenv('CURRENCYHOME')
         tmp_home = tempfile.mkdtemp()
         proc = None
@@ -43,7 +44,7 @@ class TestGenesisUtil(unittest.TestCase):
             # Set up env and config
             os.environ['CURRENCYHOME'] = tmp_home
             cfg = get_validator_configuration([], {})
-            config_file = tmp_home + os.path.sep + 'cfg.cfg'
+            config_file = tmp_home + os.path.sep + 'cfg.json'
             with open(config_file, 'w') as f:
                 f.write(json.dumps(cfg, indent=4) + '\n')
             self.assertFalse(os.path.exists(cfg['KeyDirectory']))
@@ -94,8 +95,9 @@ class TestGenesisUtil(unittest.TestCase):
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
-            prog_str = 'TEST ROOT RESTORATION (expect %s)\n' % tgt_block
+            prog_str = 'TEST ROOT RESTORATION (expect %s)' % tgt_block
             with Progress(prog_str) as p:
+                print
                 while not to.is_timed_out() and blk_lists is None:
                     try:
                         blk_lists = get_blocklists(['http://localhost:8800'])
