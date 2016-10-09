@@ -118,50 +118,7 @@ def do_transaction(args):
                     web_client.get_transaction_list(
                         block_count=args.blockcount)
 
-            if args.format == 'default':
-                print '{:20} {:20} {:6} {:30} {:12} {:18} {:40}'.format(
-                    'TRANS', 'BLOCK', 'STATUS', 'TXNTYPE', 'NODENAME',
-                    'HOST', 'DOMAIN')
-
-                for txn_id in tsctids:
-                    trans_id, in_block, tran_status, txn_type, node_name,\
-                        host, domain = get_trans_info(web_client, txn_id)
-                    print '{:20} {:20} {:6} {:30} {:12} {:18} {:40}'.format(
-                        trans_id, in_block, tran_status, txn_type, node_name,
-                        host, domain)
-                return
-
-            elif args.format == 'csv':
-                try:
-                    writer = csv.writer(sys.stdout)
-                    writer.writerow((
-                        'TRANS', 'BLOCK', 'STATUS', 'TXNTYPE', 'NODENAME',
-                        'HOST', 'DOMAIN'))
-                    for txn_id in tsctids:
-                        writer.writerow(
-                            (get_trans_info(web_client, txn_id)))
-                except csv.Error as e:
-                    raise CliException(e)
-
-            elif args.format == 'json' or args.format == 'yaml':
-                json_dict = []
-                for txn_id in tsctids:
-                    trans_id, in_block, tran_status, txn_type, node_name,\
-                        host, domain = get_trans_info(web_client, txn_id)
-                    json_block = {
-                        'TRANS': trans_id, 'BLOCK': in_block,
-                        'STATUS': tran_status, 'TXNTYPE': txn_type,
-                        'NODENAME': node_name, 'HOST': host, 'DOMAIN': domain}
-                    json_dict.append(json_block)
-
-                if args.format == 'json':
-                    print json.dumps(json_dict)
-                else:
-                    print yaml.dump(json_dict, default_flow_style=False)
-
-            else:
-                raise CliException(
-                    "unknown format option: {}".format(args.format))
+            print_trans_info(args, web_client, tsctids)
 
         elif args.subcommand == 'show':
             tsct_info = \
@@ -189,15 +146,97 @@ def do_transaction(args):
         raise CliException(e)
 
 
-def get_trans_info(web_client, txn_id):
-    trans_info = web_client.get_transaction(txn_id)
-    update = trans_info["Update"]
-    trans_id = trans_info["Identifier"]
-    in_block = trans_info["InBlock"]
-    tran_status = trans_info["Status"]
-    txn_type = trans_info["TransactionType"]
-    node_name = update["Name"]
-    host = update["NetHost"]
-    domain = update["Domain"]
+def print_trans_info(args, web_client, tsctids):
+    request_field = ['TRANS', 'BLOCK', "STATUS", "TXNTYPE"]
+    info_fields_mapping = {request_field[0]: 'Identifier',
+                           request_field[1]: 'InBlock',
+                           request_field[2]: 'Status',
+                           request_field[3]: 'TransactionType'}
+    format_mapping = {request_field[0]: '20',
+                      request_field[1]: '20',
+                      request_field[2]: '8',
+                      request_field[3]: '30'}
 
-    return trans_id, in_block, tran_status, txn_type, node_name, host, domain
+#     request_field = ['TRANS', 'BLOCK', "STATUS", "TXNTYPE", "NODENAME"]
+#     info_fields_mapping = {request_field[0]: 'Identifier',
+#                            request_field[1]: 'InBlock',
+#                            request_field[2]: 'Status',
+#                            request_field[3]: 'TransactionType',
+#                            request_field[4]: 'Update.Name'}
+#     format_mapping = {request_field[0]: '20',
+#                       request_field[1]: '20',
+#                       request_field[2]: '8',
+#                       request_field[3]: '30',
+#                       request_field[4]: '20'}
+
+    if args.format == 'default':
+        string_format = ''
+        for _, item in enumerate(request_field):
+            string_format = string_format +\
+                ('{:' + format_mapping[item] + '}').format(item)
+        print string_format
+
+        for txn_id in tsctids:
+            string_format = ''
+            trans_dict = get_trans_info(web_client, txn_id,
+                                        info_fields_mapping)
+            for _, item in enumerate(request_field):
+                string_format = string_format +\
+                    ('{:' + format_mapping[item] + '}')\
+                    .format(str(trans_dict[item]))
+            print string_format
+
+        return
+
+    elif args.format == 'csv':
+        try:
+            writer = csv.writer(sys.stdout)
+            writer.writerow(request_field)
+            for txn_id in tsctids:
+                trans_dict = get_trans_info(web_client, txn_id,
+                                            info_fields_mapping)
+                result = []
+                for _, item in enumerate(request_field):
+                    result.append(trans_dict[item])
+                writer.writerow(result)
+        except csv.Error as e:
+            raise CliException(e)
+
+    elif args.format == 'json' or args.format == 'yaml':
+        json_dict = []
+        for txn_id in tsctids:
+            trans_dict = get_trans_info(web_client, txn_id,
+                                        info_fields_mapping)
+            json_dict.append(trans_dict)
+        if args.format == 'json':
+            print json.dumps(json_dict)
+        else:
+            print yaml.dump(json_dict, default_flow_style=False)
+
+    else:
+        raise CliException(
+            "unknown format option: {}".format(args.format))
+
+
+def get_trans_info(web_client, txn_id, info_fields_mapping=None):
+    trans_info = web_client.get_transaction(txn_id)
+    trans_info_specified = {}
+    if info_fields_mapping is not None:
+        for k, field in info_fields_mapping.iteritems():
+            field_split = field.split(".")
+            if len(field_split) == 1:
+                trans_info_specified[k] = trans_info[field_split[0]]
+            elif len(field_split) == 2:
+                update = trans_info[field_split[0]]
+                trans_info_specified[k] = update[field_split[1]]
+            elif len(field_split) > 2:
+                raise CliException(
+                    "unknown format info_fields_mapping: {}"
+                    .format(info_fields_mapping))
+    else:
+        trans_info_specified['TRANS'] = trans_info['Identifier']
+        trans_info_specified['BLOCK'] = trans_info['InBlock']
+        trans_info_specified['Status'] = trans_info['Status']
+        trans_info_specified['TXNTYPE'] = trans_info['TransactionType']
+
+    return trans_info_specified
