@@ -18,6 +18,7 @@
 
 var I = require('immutable');
 var cbor = require('cbor');
+var streamBuffers = require('stream-buffers');
 var sha256 = require('sha256');
 var binstring = require('binstring');
 
@@ -42,7 +43,7 @@ var _cloneData = function(obj) {
 };
 
 var _convertRatios = function(ratioKeys) {
-    let f = (v, k) => {
+    var f = function(v, k) {
         if(I.Iterable.isIterable(v)) {
             return v.map(f);
         } else if (ratioKeys.includes(k)) {
@@ -83,7 +84,16 @@ var _toJS = function(signableObj) {
 };
 
 var _toCBOR = function(signableObj) {
-        return cbor.encode(signableObj.sortBy(_byKey).toJSON());
+    var encoder = new cbor.Encoder();
+    var output = new streamBuffers.WritableStreamBuffer({
+        initalSize: (16 * 1024),
+    });
+    encoder.pipe(output);
+
+    encoder.write(signableObj.sortBy(_byKey).toJSON());
+
+    encoder.end();
+    return output.getContents();
 };
 
 // Generate a hash string usable as an Object Id
