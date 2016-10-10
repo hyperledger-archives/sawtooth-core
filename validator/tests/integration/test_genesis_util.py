@@ -44,7 +44,7 @@ class TestGenesisUtil(unittest.TestCase):
             # set up env and config
             os.environ['CURRENCYHOME'] = tmp_home
             cfg = get_validator_configuration([], {})
-            config_file = tmp_home + '/cfg.cfg'
+            config_file = tmp_home + os.path.sep + 'cfg.cfg'
             with open(config_file, 'w') as f:
                 f.write(json.dumps(cfg, indent=4) + '\n')
             self.assertEqual(False, os.path.exists(cfg['KeyDirectory']))
@@ -59,7 +59,7 @@ class TestGenesisUtil(unittest.TestCase):
             ns.force = True
             ns.quiet = False
             do_keygen(ns)
-            base_name = '%s/%s' % (ns.key_dir, ns.key_name)
+            base_name = ns.key_dir + os.path.sep + ns.key_name
             self.assertEqual(True, os.path.exists('%s.wif' % base_name))
             self.assertEqual(True, os.path.exists('%s.addr' % base_name))
 
