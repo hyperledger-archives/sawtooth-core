@@ -28,8 +28,8 @@ from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.cli.block import add_block_parser
 from sawtooth.cli.block import do_block
 from sawtooth.cli.exceptions import CliException
-from sawtooth.cli.genesis import add_genesis_parser
-from sawtooth.cli.genesis import do_genesis
+from sawtooth.cli.admin import add_admin_parser
+from sawtooth.cli.admin import do_admin
 from sawtooth.cli.keygen import add_keygen_parser
 from sawtooth.cli.keygen import do_keygen
 from sawtooth.cli.cluster import add_cluster_parser
@@ -103,21 +103,22 @@ def create_parser(prog_name):
     add_block_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
     add_store_parser(subparsers, parent_parser)
-    add_genesis_parser(subparsers, parent_parser)
+    add_admin_parser(subparsers, parent_parser)
 
     return parser
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
+def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
+         with_loggers=True):
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 
-    if args.verbose is None:
-        verbose_level = 0
-    else:
-        verbose_level = args.verbose
-
-    setup_loggers(verbose_level=verbose_level)
+    if with_loggers is True:
+        if args.verbose is None:
+            verbose_level = 0
+        else:
+            verbose_level = args.verbose
+        setup_loggers(verbose_level=verbose_level)
 
     if args.command == 'keygen':
         do_keygen(args)
@@ -133,8 +134,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_transaction(args)
     elif args.command == 'store':
         do_store(args)
-    elif args.command == 'genesis':
-        do_genesis(args)
+    elif args.command == 'admin':
+        do_admin(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 

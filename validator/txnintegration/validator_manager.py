@@ -59,7 +59,10 @@ class ValidatorManager(object):
         self._data_dir = data_dir
 
         # Handle validator keys
-        if self.static_node:
+        if self.static_node and 'KeyFile' in config.keys():
+            self._key = read_key_file(config['KeyFile'])
+            self._address = get_address_from_private_key_wif(self._key)
+        elif self.static_node:
             self._key = config['SigningKey']
             self._address = config['Identifier']
         else:
@@ -80,7 +83,7 @@ class ValidatorManager(object):
                node=None):
         listen_directives = parse_listen_directives(self.config["Listen"])
         http_host = listen_directives['http'].host
-        if "Endpoint" in self.config:
+        if "Endpoint" in self.config and self.config['Endpoint'] is not None:
             http_host = self.config["Endpoint"]["Host"]
 
         self.url = "http://{}:{}".format(http_host,

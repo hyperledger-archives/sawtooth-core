@@ -113,7 +113,6 @@ class ValidatorCollectionController(NodeController):
         assert sta is None
         cfg['DataDirectory'] = self.data_dir
         cfg["AdministrationNode"] = self.admin_node.Address
-        cfg['Restore'] = False
         log_config = self.validator_log_config
         if log_config is not None:
             log_config = self.validator_log_config.copy()
@@ -155,7 +154,7 @@ class ValidatorCollectionController(NodeController):
                         "{} failed to initialize within {}S.".format(
                             validator.name, to.WaitTime))
                 try:
-                    success = validator.is_ready()
+                    success = validator.is_started()
                 except Exception as e:
                     print e.message
                 p.step()

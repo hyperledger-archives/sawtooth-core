@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+import os
+import json
 
 from gossip.gossip_core import Gossip
 from journal.consensus.poet0.poet_journal import PoetJournal
@@ -25,8 +27,8 @@ from txnserver.validator import parse_networking_info
 LOGGER = logging.getLogger(__name__)
 
 
-def add_genesis_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('genesis')
+def add_poet0_genesis_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('poet0-genesis')
     parser.add_argument('--config',
                         help='Comma-separated list of config files to '
                              'load. Alternatively, multiple --config '
@@ -48,7 +50,11 @@ def add_genesis_parser(subparsers, parent_parser):
                         action='append')
 
 
-def do_genesis(args):
+def get_genesis_block_id_file_name(directory):
+    return '{0}{1}genesis_data.json'.format(directory, os.path.sep)
+
+
+def do_poet0_genesis(args):
 
     # Get ledger config:
     # set the default value of config because argparse 'default' in
@@ -143,9 +149,20 @@ def do_genesis(args):
     (_, msg_handler) = ledger.dispatcher.message_handler_map[msg.MessageType]
     msg_handler(msg, ledger)
 
-    # Report, then shutdown to save state:
+    # Gather data, then shutdown to save state:
     head = ledger.MostRecentCommittedBlockID
+    # ...not sure why n_blocks is experimentally 0 and not 1
+    # ...if we only make the genesis, it would be good to check n_blks = 1
     n_blks = ledger.CommittedBlockCount
-    LOGGER.info('current chain head: %s; current chain len: %s', head, n_blks)
     ledger.shutdown()
-    return (head, n_blks)  # return values for unit and/or integration tests
+
+    # log genesis data, then write it out to ease dissemination
+    genesis_data = {
+        'GenesisId': head,
+        'ChainLength': n_blks,
+    }
+    gblock_fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
+    LOGGER.info('genesis data: %s', genesis_data)
+    LOGGER.info('writing genesis data to %s', gblock_fname)
+    with open(gblock_fname, 'w') as f:
+        f.write(json.dumps(genesis_data))
