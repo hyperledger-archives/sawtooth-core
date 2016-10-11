@@ -167,8 +167,8 @@ class Update(object):
         try:
             self.signup_info.check_valid(
                 originator_public_key=txn.originator_public_key,
-                validator_network_basename='TODO: FIX ME!!!!',
-                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+                validator_network_basename='Intel Validator Network',
+                most_recent_wait_certificate_id='0' * 16)
         except SignupInfoError as error:
             raise InvalidTransactionError(
                 'Invalid Signup Info: {0}, Reason: {1}'.format(
@@ -197,7 +197,7 @@ class Update(object):
                 'validator_name': self.validator_name,
                 'validator_id': self.validator_id,
                 'poet_public_key': self.signup_info.poet_public_key,
-                'proof_data': self.signup_info.proof_data,
+                'anti_sybil_id': self.signup_info.anti_sybil_id,
                 'revoked': None,
             }
         else:

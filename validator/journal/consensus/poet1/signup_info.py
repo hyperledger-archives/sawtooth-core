@@ -34,7 +34,7 @@ class SignupInfo(object):
                     that contains attestation evidence payload and the
                     anti-Sybil ID
                 'signature': The signature of the attestation verification
-                    report using the IAS report key.
+                    report using the report key.
         sealed_signup_data (array): data that can be persisted and can be
             presented at a later time to restore the PoET enclave
     """

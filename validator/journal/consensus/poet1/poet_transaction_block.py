@@ -93,10 +93,18 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             wc = minfo.get('WaitCertificate')
             serialized_certificate = wc.get('SerializedCertificate')
             signature = wc.get('Signature')
+            #
+            # To make this work properly we need to be able to take an
+            # Originator ID and translate that to the
+            # Disguised PoET public key that corresponds to the
+            # Originator which was placed in the validator registry.
+            #
+            poet_public_key = None
             self.WaitCertificate = \
                 WaitCertificate.wait_certificate_from_serialized(
-                    serialized_certificate,
-                    signature)
+                    serialized=serialized_certificate,
+                    signature=signature,
+                    encoded_poet_public_key=poet_public_key)
 
         self.AggregateLocalMean = 0.0
 
@@ -179,13 +187,18 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 LOGGER.info('not a valid block, no wait certificate')
                 return False
 
-            # TO DO - get PoET public key for originator.
-            encoded_poet_public_key = None
+            #
+            # To make this work properly we need to be able to take an
+            # Originator ID and translate that to the
+            # Disguised PoET public key that corresponds to the
+            # Originator which was placed in the validator registry.
+            #
+            poet_public_key = None
 
             return \
                 self.WaitCertificate.is_valid(
-                    journal._build_certificate_list(self),
-                    encoded_poet_public_key)
+                    certificates=journal._build_certificate_list(self),
+                    encoded_poet_public_key=poet_public_key)
 
     def create_wait_timer(self, certlist):
         """Creates a wait timer for the journal based on a list
@@ -209,7 +222,6 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             self.WaitCertificate = \
                 WaitCertificate.create_wait_certificate(
-                    wait_timer=self.WaitTimer,
                     block_digest=block_hash)
             if self.WaitCertificate:
                 self.WaitTimer = None

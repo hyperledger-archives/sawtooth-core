@@ -43,8 +43,8 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key=pybitcointools.privtopub(key),
-                validator_network_basename='TODO: FIX ME!!!!',
-                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+                validator_network_basename='Intel Validator Network',
+                most_recent_wait_certificate_id='0' * 16)
 
         store = KeyValueStore()
         transaction = \
@@ -66,8 +66,8 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key=pybitcointools.privtopub(key),
-                validator_network_basename='TODO: FIX ME!!!!',
-                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+                validator_network_basename='Intel Validator Network',
+                most_recent_wait_certificate_id='0' * 16)
 
         store = KeyValueStore()
         transaction = \
@@ -94,8 +94,8 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key=pybitcointools.privtopub(key),
-                validator_network_basename='TODO: FIX ME!!!!',
-                most_recent_wait_certificate_id='TODO: FIX ME!!!!')
+                validator_network_basename='Intel Validator Network',
+                most_recent_wait_certificate_id='0' * 16)
 
         store = KeyValueStore()
         transaction = \

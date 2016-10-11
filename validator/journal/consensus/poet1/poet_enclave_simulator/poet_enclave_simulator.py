@@ -55,14 +55,14 @@ class _PoetEnclaveSimulator(object):
         pybitcointools.decode_privkey(__SEAL_PRIVATE_KEY_WIF, 'wif')
     _seal_public_key = pybitcointools.privtopub(_seal_private_key)
 
-    # The WIF-encoded private IAS report key.  From it, we will create private
-    # key we can use for signing IAS reports.
-    __IAS_REPORT_PRIVATE_KEY_WIF = \
+    # The WIF-encoded private report key.  From it, we will create private
+    # key we can use for signing attestation verification reports.
+    __REPORT_PRIVATE_KEY_WIF = \
         '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
 
-    _ias_report_private_key = \
-        pybitcointools.decode_privkey(__IAS_REPORT_PRIVATE_KEY_WIF, 'wif')
-    _ias_report_public_key = pybitcointools.privtopub(_ias_report_private_key)
+    _report_private_key = \
+        pybitcointools.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
+    _report_public_key = pybitcointools.privtopub(_report_private_key)
 
     # Minimum duration for PoET 1 simulator is 30 seconds
     __MINIMUM_DURATTION = 30.0
@@ -139,7 +139,7 @@ class _PoetEnclaveSimulator(object):
                 'signature':
                     pybitcointools.ecdsa_sign(
                         dict2json(attestation_verification_report),
-                        cls._ias_report_private_key)
+                        cls._report_private_key)
             }
 
             return \
@@ -206,7 +206,7 @@ class _PoetEnclaveSimulator(object):
         if not pybitcointools.ecdsa_verify(
                 dict2json(attestation_verification_report),
                 signup_info.proof_data.get('signature'),
-                cls._ias_report_public_key):
+                cls._report_public_key):
             raise \
                 SignupInfoError(
                     'Attestation verification report signature is invalid')
@@ -345,19 +345,13 @@ class _PoetEnclaveSimulator(object):
                 signature=signature)
 
     @classmethod
-    def create_wait_certificate(cls,
-                                wait_timer,
-                                block_digest):
+    def create_wait_certificate(cls, block_digest):
         with cls._lock:
-            # TO DO - implement PoET 1 create certificate logic
-
             # Several criteria we need to be met before we can create a wait
             # certificate:
             # 1. We have an active timer
-            # 2. The timer provided has expired
-            # 3. The timer provided has not timed out
-            # TO DO - do we need to verify that the timer provided is the
-            #         active one?
+            # 2. The active timer has expired
+            # 3. The active timer has not timed out
             if cls._active_wait_timer is None:
                 raise \
                     _PoetEnclaveError(
@@ -365,12 +359,18 @@ class _PoetEnclaveSimulator(object):
 
             # HACK ALERT!!  HACK ALERT!!  HACK ALERT!!  HACK ALERT!!
             #
-            # TO DO:  Once we have the genesis utility, this code needs to
-            #         be uncommented.  Currently when the genesis blocks is
-            #         created the timer is not checked first.
+            # Today, without the genesis utility we cannot make these checks.
+            # Once we have the genesis utility, this code needs to change to
+            # Depend upon the timer not being expired or timed out.  The
+            # Original specification requires this check.
             #
             # HACK ALERT!!  HACK ALERT!!  HACK ALERT!!  HACK ALERT!!
             #
+            # if not cls._active_wait_timer.has_expired():
+            #     raise \
+            #         WaitCertificateError(
+            #             'Cannot create wait certificate because timer has '
+            #             'not expired')
             # if wait_timer.has_timed_out():
             #     raise \
             #         WaitCertificateError(
@@ -384,7 +384,7 @@ class _PoetEnclaveSimulator(object):
             # standards, but it is good enough for the simulator.
             random_string = \
                 dict2json({
-                    'wait_timer_signature': wait_timer.signature,
+                    'wait_timer_signature': cls._active_wait_timer.signature,
                     'now': datetime.datetime.utcnow().isoformat()
                 })
             nonce = pybitcointools.sha256(random_string)
@@ -393,7 +393,7 @@ class _PoetEnclaveSimulator(object):
             # provided and then sign the certificate with the PoET private key
             wait_certificate = \
                 EnclaveWaitCertificate.wait_certificate_with_wait_timer(
-                    wait_timer=wait_timer,
+                    wait_timer=cls._active_wait_timer,
                     nonce=nonce,
                     block_digest=block_digest)
             wait_certificate.signature = \
@@ -409,14 +409,6 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def deserialize_wait_certificate(cls, serialized_certificate, signature):
-        with cls._lock:
-            # Verify the signature before trying to deserialize
-            if not pybitcointools.ecdsa_verify(
-                    serialized_certificate,
-                    signature,
-                    cls._poet_public_key):
-                return None
-
         return \
             EnclaveWaitCertificate.wait_certificate_from_serialized(
                 serialized_certificate=serialized_certificate,
@@ -427,7 +419,6 @@ class _PoetEnclaveSimulator(object):
         # poet_public_key = \
         #     pybitcointools.decode_pubkey(encoded_poet_public_key, 'hex')
         #
-        # TO DO - implement PoET 1 create certificate logic
         # return \
         #     pybitcointools.ecdsa_verify(
         #         certificate.serialize(),
@@ -495,7 +486,6 @@ def verify_wait_timer(timer):
 def create_wait_certificate(wait_timer, block_digest):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
-            wait_timer=wait_timer,
             block_digest=block_digest)
 
 
