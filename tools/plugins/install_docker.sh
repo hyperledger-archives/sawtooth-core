@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+. /vagrant/conf.sh
+
 set -e
 
 if [ ! -f /etc/debian_version ]; then
@@ -20,4 +22,4 @@ fi
 apt-get update
 apt-get install -y --show-progress linux-image-extra-$(uname -r) apparmor docker-engine
 
-usermod -aG docker vagrant
+usermod -aG docker $VAGRANT_USER

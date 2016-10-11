@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+. /vagrant/conf.sh
+
 set -e
 
 if [ ! -f /etc/debian_version ]; then
@@ -47,7 +49,7 @@ apt-get install -y -q \
     nodejs
 $GEM install sass
 
-sudo -i -u vagrant npm set progress=false
+sudo -i -u $VAGRANT_USER npm set progress=false
 
 npm install -g forever
 
