@@ -15,7 +15,6 @@
 
 import argparse
 import collections
-import json
 import sys
 import time
 
@@ -23,8 +22,6 @@ from twisted.internet import reactor
 from twisted.internet import task
 
 from twisted.web.client import Agent
-from twisted.web.client import readBody
-from twisted.web.http_headers import Headers
 
 from txnintegration.stats_print import ConsolePrint
 from txnintegration.stats_print import StatsPrintManager
@@ -33,6 +30,8 @@ from txnintegration.stats_utils import SummaryStatsCsvManager
 from txnintegration.stats_utils import TopologyManager
 from txnintegration.stats_utils import TransactionRate
 from txnintegration.stats_utils import ValidatorStatsCsvManager
+from txnintegration.stats_utils import ValidatorCommunications
+from txnintegration.fork_detect import BranchManager
 
 from txnintegration.utils import PlatformStats
 from txnintegration.utils import StatsCollector
@@ -52,7 +51,7 @@ class StatsClient(object):
 
         self.validator_state = "UNKNWN"
 
-        self.journal_stats = {}
+        self.ledgerstats = {}
         self.nodestats = {}
 
         self.vsm = ValidatorStatsManager()
@@ -64,10 +63,10 @@ class StatsClient(object):
         self.request_complete = 0.0
         self.response_time = 0.0
 
-        self.vc = ValidatorCommunications()
+        self.vc = ValidatorCommunications(Agent(reactor))
 
     def stats_request(self):
-        # initialize endpoint urls from specified validator url
+        # request stats from specified validator url
         self.request_start = time.clock()
         self.path = self.url + "/statistics/all"
         self.vc.get_request(self.path,
@@ -87,7 +86,7 @@ class StatsClient(object):
             self.no_response_reason = ""
 
     def _stats_error(self, failure):
-        self.vsm.update_stats(self.journal_stats, False, 0, 0)
+        self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
         self.validator_state = "NO_RESP"
         self.no_response_reason = failure.type.__name__
@@ -390,7 +389,9 @@ class SystemStats(StatsCollector):
 
 
 class StatsManager(object):
-    def __init__(self):
+    def __init__(self, endpointmanager):
+        self.epm = endpointmanager
+
         self.cp = ConsolePrint()
 
         self.ss = SystemStats()
@@ -403,22 +404,26 @@ class StatsManager(object):
         self.previous_net_bytes_sent = 0
 
         self.clients = []
-        self.known_endpoint_urls = []
         self.known_endpoint_names = []
+        self.endpoints = {}
         self.stats_loop_count = 0
 
         self.tm = TopologyManager(self.clients)
+
+        self.bm = BranchManager(self.epm, Agent(reactor))
 
         self.spm = StatsPrintManager(
             self.ss,
             self.ps,
             self.tm.topology_stats,
+            self.bm,
             self.clients)
 
         self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
         self.vscm = ValidatorStatsCsvManager(self.clients)
 
     def initialize_client_list(self, endpoints):
+        self.endpoints = endpoints
         # add validator stats client for each endpoint
         for val_num, endpoint in enumerate(endpoints.values()):
             url = 'http://{0}:{1}'.format(
@@ -433,6 +438,7 @@ class StatsManager(object):
             self.clients.append(c)
 
     def update_client_list(self, endpoints):
+        self.endpoints = endpoints
         # add validator stats client for each endpoint name
         for val_num, endpoint in enumerate(endpoints.values()):
             if endpoint["Name"] not in self.known_endpoint_names:
@@ -477,6 +483,9 @@ class StatsManager(object):
 
         self.tm.update_topology()
 
+        self.bm.update_client_list(self.endpoints)
+        self.bm.update()
+
     def print_stats(self):
         self.spm.print_stats()
 
@@ -506,8 +515,8 @@ class EndpointManager(object):
         self.no_endpoint_responders = False
         self.initial_discovery = True
         self.endpoint_urls = []
-        self.endpoints = None
-        self.vc = ValidatorCommunications()
+        self.endpoints = {}  # None
+        self.vc = ValidatorCommunications(Agent(reactor))
 
     def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
@@ -537,12 +546,13 @@ class EndpointManager(object):
         # if response not OK, then validator must be busy,
         # if initial discovery, try again, else try another validator
         if response_code is 200:
-            self.endpoint_urls = []
+            updated_endpoint_urls = []
             self.endpoints = results
             for endpoint in results.values():
-                self.endpoint_urls.append(
+                updated_endpoint_urls.append(
                     'http://{0}:{1}'.format(
                         endpoint["Host"], endpoint["HttpPort"]))
+            self.endpoint_urls = updated_endpoint_urls
             self.endpoint_completion_cb(self.endpoints,
                                         **self.endpoint_completion_cb_args)
             self.initial_discovery = False
@@ -585,71 +595,6 @@ class EndpointManager(object):
         print "stopping stats client"
         reactor.stop()
         return
-
-
-class ValidatorCommunications(object):
-    def __init__(self):
-        self.request_count = 0
-        self.error_count = 0
-        self.agent = Agent(reactor)
-        self.completion_callback = None
-        self.error_callback = None
-        self.request_path = None
-
-        self.error_value = None
-        self.error_type = None
-        self.error_name = None
-        self.error_message = None
-
-    def get_request(self, path, ccb=None, ecb=None):
-        self.completion_callback = self._completion_default if ccb is None \
-            else ccb
-        self.error_callback = self._error_default if ecb is None \
-            else ecb
-
-        self.request_path = path
-        d = self.agent.request(
-            'GET',
-            path,
-            Headers({'User-Agent': ['sawtooth stats collector']}),
-            None)
-
-        d.addCallback(self._handle_request)
-        d.addErrback(self._handle_error)
-
-        return d
-
-    def _handle_request(self, response):
-        self.responding = True
-        self.response_code = response.code
-        d = readBody(response)
-        d.addCallback(self._handle_body)
-        return d
-
-    def _handle_body(self, body):
-        if self.response_code is 200:
-            self.json_stats = json.loads(body)
-        else:
-            self.json_stats = None
-        self.completion_callback(self.json_stats, self.response_code)
-
-    def _handle_error(self, failure):
-        self.error_value = failure.value
-        self.error_type = failure.type
-        self.error_name = failure.type.__name__
-        self.error_message = failure.getErrorMessage()
-
-        self.error_count += 1
-        self.error_callback(failure)
-
-    def _completion_default(self, data):
-        print "ValidatorCommunications.get_request() " \
-              "default completion handler"
-        print json.dumps(data, indent=4)
-
-    def _error_default(self):
-        print "ValidatorCommunications.get_request() " \
-              "default error handler"
 
 
 def parse_args(args):
@@ -716,7 +661,7 @@ def run_stats(url,
         # initialize globals when we are read for stats display. This keeps
         # curses from messing up the status prints prior to stats start up.
         epm = EndpointManager()
-        sm = StatsManager()  # sm assumes epm is created!
+        sm = StatsManager(epm)  # sm assumes epm is created!
 
         # initialize csv stats file generation
         print "initializing csv"
