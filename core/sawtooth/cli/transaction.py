@@ -37,7 +37,9 @@ def add_transaction_parser(subparsers, parent_parser):
 
     epilog = '''
     details:
-      list the transaction IDs from the newest to the oldest.
+      list the transactions from the newest to the oldest.
+      if a field doesn't correspond to a transaction family
+      '*******' will be printed in the field value's place.
     '''
 
     list_parser = grand_parsers.add_parser('list', epilog=epilog)
@@ -147,58 +149,56 @@ def do_transaction(args):
 
 
 def print_trans_info(args, web_client, tsctids):
-    request_field = ['TRANS', 'BLOCK', "STATUS", "TXNTYPE"]
-    info_fields_mapping = {request_field[0]: 'Identifier',
-                           request_field[1]: 'InBlock',
-                           request_field[2]: 'Status',
-                           request_field[3]: 'TransactionType'}
-    format_mapping = {request_field[0]: '20',
-                      request_field[1]: '20',
-                      request_field[2]: '8',
-                      request_field[3]: '30'}
+    info_fields_mapping = {
+        # These map the names of the keys in the returned ordered dict
+        # to the field names that will be displayed.
+        "Identifier": "TRANS",
+        "InBlock": "BLOCK",
+        "Status": "STATUS",
+        "TransactionType": "TXNTYPE",
+        "Update": {
+            "HttpPort": "HTTPPORT",
+            "NetHost": "HOST",
+            "NetPort": "UDPPORT",
+            "Name": "NAME",
+            "NodeIdentifier": "NODE",
+            "Verb": "VERB"
+        }
+    }
+    format_mapping = {"TRANS": '20',
+                      "BLOCK": '20',
+                      "STATUS": '8',
+                      "TXNTYPE": '30',
+                      "HTTPPORT": '8',
+                      "HOST": '15',
+                      "UDPPORT": '8',
+                      "NAME": '15',
+                      "NODE": '35',
+                      "VERB": '5'}
 
-#     request_field = ['TRANS', 'BLOCK', "STATUS", "TXNTYPE", "NODENAME"]
-#     info_fields_mapping = {request_field[0]: 'Identifier',
-#                            request_field[1]: 'InBlock',
-#                            request_field[2]: 'Status',
-#                            request_field[3]: 'TransactionType',
-#                            request_field[4]: 'Update.Name'}
-#     format_mapping = {request_field[0]: '20',
-#                       request_field[1]: '20',
-#                       request_field[2]: '8',
-#                       request_field[3]: '30',
-#                       request_field[4]: '20'}
-
+    fields = [f for f in format_mapping.iterkeys()]
     if args.format == 'default':
-        string_format = ''
-        for _, item in enumerate(request_field):
-            string_format = string_format +\
-                ('{:' + format_mapping[item] + '}').format(item)
-        print string_format
+        format_string = "".join([
+            "{:^" + f_length + "}" for f_length
+            in format_mapping.itervalues()
+        ])
 
+        print format_string.format(*fields)
         for txn_id in tsctids:
-            string_format = ''
-            trans_dict = get_trans_info(web_client, txn_id,
+            trans_dict = get_trans_info(web_client,
+                                        txn_id,
                                         info_fields_mapping)
-            for _, item in enumerate(request_field):
-                string_format = string_format +\
-                    ('{:' + format_mapping[item] + '}')\
-                    .format(str(trans_dict[item]))
-            print string_format
-
-        return
+            print format_string.format(*[trans_dict[f] for f in fields])
 
     elif args.format == 'csv':
         try:
             writer = csv.writer(sys.stdout)
-            writer.writerow(request_field)
+            writer.writerow(fields)
             for txn_id in tsctids:
                 trans_dict = get_trans_info(web_client, txn_id,
                                             info_fields_mapping)
-                result = []
-                for _, item in enumerate(request_field):
-                    result.append(trans_dict[item])
-                writer.writerow(result)
+                field_values = [trans_dict[f] for f in fields]
+                writer.writerow(field_values)
         except csv.Error as e:
             raise CliException(e)
 
@@ -222,17 +222,18 @@ def get_trans_info(web_client, txn_id, info_fields_mapping=None):
     trans_info = web_client.get_transaction(txn_id)
     trans_info_specified = {}
     if info_fields_mapping is not None:
-        for k, field in info_fields_mapping.iteritems():
-            field_split = field.split(".")
-            if len(field_split) == 1:
-                trans_info_specified[k] = trans_info[field_split[0]]
-            elif len(field_split) == 2:
-                update = trans_info[field_split[0]]
-                trans_info_specified[k] = update[field_split[1]]
-            elif len(field_split) > 2:
-                raise CliException(
-                    "unknown format info_fields_mapping: {}"
-                    .format(info_fields_mapping))
+        for input_key, output_field in info_fields_mapping.iteritems():
+            if isinstance(output_field, str):
+                trans_info_specified[output_field] = trans_info[input_key] \
+                    if input_key in trans_info else '*******'
+            else:
+                # else it is the 'Update' dict
+                for k, field in output_field.iteritems():
+                    update = trans_info.get('Update')
+                    if update is not None:
+                        trans_info_specified[field] = update[k]
+                    else:
+                        trans_info_specified[field] = '*******'
     else:
         trans_info_specified['TRANS'] = trans_info['Identifier']
         trans_info_specified['BLOCK'] = trans_info['InBlock']
