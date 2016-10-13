@@ -23,7 +23,7 @@ from journal.consensus.poet1.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
 
 
-class TestPoet1SignupInfo(unittest.TestCase):
+class TestSignupInfo(unittest.TestCase):
 
     _originator_public_key = None
     _another_originator_public_key = None

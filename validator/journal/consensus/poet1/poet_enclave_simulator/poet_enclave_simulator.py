@@ -30,6 +30,7 @@ from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_timer \
 from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_certificate \
     import EnclaveWaitCertificate
 from journal.consensus.poet1.signup_info import SignupInfoError
+from journal.consensus.poet1.wait_timer import WaitTimerError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,13 +70,19 @@ class _PoetEnclaveSimulator(object):
 
     # The anti-sybil ID for this particular validator.  This will get set when
     # the enclave is initialized
-    anti_sybil_id = None
+    _anti_sybil_id = None
 
     # The PoET keys will remain unset until signup info is either created or
     # unsealed
     _poet_public_key = None
     _poet_private_key = None
     _active_wait_timer = None
+
+    @classmethod
+    def initialize(cls, **kwargs):
+        # Create an anti-Sybil ID that is unique for this validator
+        cls._anti_sybil_id = \
+            pybitcointools.sha256(kwargs.get('NodeName', 'validator'))
 
     @classmethod
     def create_signup_info(cls,
@@ -130,7 +137,7 @@ class _PoetEnclaveSimulator(object):
 
             attestation_verification_report = {
                 'attestation_evidence_payload': attestation_evidence_payload,
-                'anti_sybil_id': cls.anti_sybil_id
+                'anti_sybil_id': cls._anti_sybil_id
             }
 
             proof_data = {
@@ -299,6 +306,15 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def create_wait_timer(cls, previous_certificate_id, local_mean):
         with cls._lock:
+            # If we don't have a PoET private key, then the enclave has not
+            # been properly initialized (either by calling create_signup_info
+            # or unseal_signup_data)
+            if cls._poet_private_key is None:
+                raise \
+                    WaitTimerError(
+                        'Enclave must be initialized before attempting to '
+                        'create a wait timer.')
+
             # Create some value from the cert ID.  We are just going to use
             # the seal key to sign the cert ID.  We will then use the
             # low-order 64 bits to change that to a number [0, 1]
@@ -429,10 +445,7 @@ class _PoetEnclaveSimulator(object):
 
 
 def initialize(**kwargs):
-    # Create an anti-Sybil ID that is unique for this validator
-    _PoetEnclaveSimulator.anti_sybil_id = \
-        pybitcointools.sha256(kwargs.get('NodeName', 'validator'))
-
+    _PoetEnclaveSimulator.initialize(**kwargs)
 
 def create_signup_info(originator_public_key,
                        validator_network_basename,

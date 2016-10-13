@@ -23,7 +23,7 @@ from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_certificate \
     import EnclaveWaitCertificate
 
 
-class TestEnclaveWaitCertificate(unittest.TestCase):
+class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
 
     @classmethod
     def _create_random_key(cls):

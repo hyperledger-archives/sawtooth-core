@@ -22,7 +22,7 @@ from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_timer \
     import EnclaveWaitTimer
 
 
-class TestEnclaveWaitTimer(unittest.TestCase):
+class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
 
     @classmethod
     def _create_random_key(cls):

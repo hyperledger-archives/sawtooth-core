@@ -19,7 +19,7 @@ from journal.consensus.poet1.poet_enclave_simulator.enclave_signup_info \
     import EnclaveSignupInfo
 
 
-class TestEnclaveSignupInfo(unittest.TestCase):
+class TestEnclaveSimulatorSignupInfo(unittest.TestCase):
 
     def test_create_signup_info(self):
         signup_info = \
