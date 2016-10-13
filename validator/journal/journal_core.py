@@ -177,6 +177,7 @@ class Journal(object):
         self.Restore = restore
         if restore is not True:
             self.Restore = False
+        self.Restored = False
 
         # set up the event handlers that the transaction families can use
         self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
@@ -459,6 +460,26 @@ class Journal(object):
         blocklist = sorted(list(depths), key=lambda blkid: depths[blkid])
         return blocklist[-1]
 
+    def restore(self):
+        if not self.Restore:
+            return
+        logger.info('restore ledger state from persistence')
+        head = None
+        try:
+            head = self.ChainStore['MostRecentBlockID']
+        except KeyError:
+            if len(self.BlockStore) > 0:
+                logger.warn('unable to load the most recent block id; '
+                            'recomputing')
+                head = self.compute_chain_root()
+        if head is not None:
+            self.MostRecentCommittedBlockID = head
+            self.GlobalStoreMap.get_block_store(head)
+            logger.info('commit head: %s', head)
+            self.Restored = True
+        else:
+            logger.warn('unable to restore ledger state')
+
     def initialization_complete(self):
         """Processes all invocations that arrived while the ledger was
         being initialized.
@@ -468,17 +489,7 @@ class Journal(object):
         self.Initializing = False
         self.InitialLoad = True
 
-        if self.Restore:
-            logger.info('restore ledger state from the backup data stores')
-            try:
-                self.MostRecentCommittedBlockID = \
-                    self.ChainStore['MostRecentBlockID']
-                logger.info('commit head: %s', self.MostRecentCommittedBlockID)
-            except KeyError:
-                logger.warn('unable to load the most recent block id, '
-                            'recomputing')
-                self.MostRecentCommittedBlockID = self.compute_chain_root()
-
+        if self.Restored is True:
             return
 
         for txn in self.InitialTransactions:

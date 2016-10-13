@@ -203,6 +203,9 @@ def local_main(config, windows_service=False, daemonized=False):
             warnings.warn("transaction family not found: {}".format(txnfamily))
             sys.exit(1)
 
+    # attempt to restore journal state from persistence
+    validator.journal.restore()
+
     try:
         validator.pre_start()
 
