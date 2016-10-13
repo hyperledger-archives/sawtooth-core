@@ -42,13 +42,31 @@ class EnclaveWaitCertificate(object):
     """
 
     @classmethod
-    def wait_certificate_with_timer(cls, timer, block_digest):
+    def wait_certificate_with_wait_timer(cls,
+                                         wait_timer,
+                                         nonce,
+                                         block_digest):
+        """
+        Creates a wait certificate object using an already-created wait
+        timer.
+
+        Args:
+            wait_timer (EnclaveWaitTimer): The wait timer we are creating
+                wait certificate for
+            nonce (str): A random nonce created for this certificate
+            block_digest (str): The digest for the block that this wait
+                certificate is being created for
+
+        Returns:
+            An EnclaveWaitCertificate object
+        """
         return \
             EnclaveWaitCertificate(
-                request_time=timer.request_time,
-                duration=timer.duration,
-                previous_certificate_id=timer.previous_certificate_id,
-                local_mean=timer.local_mean,
+                duration=wait_timer.duration,
+                previous_certificate_id=wait_timer.previous_certificate_id,
+                local_mean=wait_timer.local_mean,
+                request_time=wait_timer.request_time,
+                nonce=nonce,
                 block_digest=block_digest)
 
     @classmethod
@@ -70,14 +88,13 @@ class EnclaveWaitCertificate(object):
 
         certificate = \
             EnclaveWaitCertificate(
-                request_time=float(deserialized_certificate.get(
-                    'request_time')),
-                duration=float(deserialized_certificate.get(
-                    'duration')),
-                previous_certificate_id=str(deserialized_certificate.get(
-                    'previous_certificate_id')),
-                local_mean=float(deserialized_certificate.get(
-                    'local_mean')),
+                duration=float(deserialized_certificate.get('duration')),
+                previous_certificate_id=str(
+                    deserialized_certificate.get('previous_certificate_id')),
+                local_mean=float(deserialized_certificate.get('local_mean')),
+                request_time=float(
+                    deserialized_certificate.get('request_time')),
+                nonce=str(deserialized_certificate.get('nonce')),
                 block_digest=str(deserialized_certificate.get(
                     'block_digest')))
 
@@ -96,16 +113,18 @@ class EnclaveWaitCertificate(object):
         return my_id[:16]
 
     def __init__(self,
-                 request_time,
                  duration,
                  previous_certificate_id,
                  local_mean,
+                 request_time,
+                 nonce,
                  block_digest):
-        self.request_time = request_time
-        self.duration = duration
-        self.previous_certificate_id = previous_certificate_id
-        self.local_mean = local_mean
-        self.block_digest = block_digest
+        self.duration = float(duration)
+        self.previous_certificate_id = str(previous_certificate_id)
+        self.local_mean = float(local_mean)
+        self.request_time = float(request_time)
+        self.nonce = str(nonce)
+        self.block_digest = str(block_digest)
         self.signature = None
 
     def __str__(self):
@@ -125,10 +144,11 @@ class EnclaveWaitCertificate(object):
             A JSON string representing the serialized version of the object
         """
         certificate_dict = {
-            'request_time': self.request_time,
             'duration': self.duration,
             'previous_certificate_id': self.previous_certificate_id,
             'local_mean': self.local_mean,
+            'request_time': self.request_time,
+            'nonce': self.nonce,
             'block_digest': self.block_digest
         }
 

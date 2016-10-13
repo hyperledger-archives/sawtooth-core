@@ -15,9 +15,11 @@
 
 import logging
 
-from journal import transaction, global_store_manager
+from journal import transaction
+from journal import global_store_manager
 from journal.messages import transaction_message
 from journal.consensus.poet1.signup_info import SignupInfo
+from journal.consensus.poet1.signup_info import SignupInfoError
 
 from gossip.common import NullIdentifier
 from sawtooth.exceptions import InvalidTransactionError
@@ -82,10 +84,11 @@ class Update(object):
         """Creates a new Update object to register a validator.
 
         Args:
-            validator_name: Human readable name of the validator
-            validator_id: Bitcoin-style address of the validators public key
-            signup_info: Serialized dict of SignupData with keys...
-                anti_sybil_id, poet_public_key, proof_data
+            validator_name (str): Human readable name of the validator
+            validator_id (str): Bitcoin-style address of the validators
+                public key
+            signup_info (SignupInfo): A SignupInfo object that was
+                previoulsy created by a call to SignupInfo.create_signup_info
 
         Returns:
             validator_registry.Update: An update object for registering the
@@ -94,7 +97,7 @@ class Update(object):
         minfo = {}
         minfo['validator_name'] = validator_name
         minfo['validator_id'] = validator_id
-        minfo['signup_info'] = signup_info
+        minfo['signup_info'] = signup_info.serialize()
         update = Update(minfo)
         update.verb = 'reg'
         return update
@@ -161,9 +164,17 @@ class Update(object):
         # and create a new entry.
 
         # Check signup_info. Policy is encapsulated by SignupInfo.
-        if not self.signup_info.is_valid():
+        try:
+            self.signup_info.check_valid(
+                originator_public_key=txn.originator_public_key,
+                validator_network_basename='Intel Validator Network',
+                most_recent_wait_certificate_id='0' * 16)
+        except SignupInfoError as error:
             raise InvalidTransactionError(
-                'Invalid Signup Info: {}'.format(self.signup_info))
+                'Invalid Signup Info: {0}, Reason: {1}'.format(
+                    self.signup_info,
+                    error))
+
         return True
 
     def apply(self, store, txn):
@@ -187,7 +198,6 @@ class Update(object):
                 'validator_id': self.validator_id,
                 'poet_public_key': self.signup_info.poet_public_key,
                 'anti_sybil_id': self.signup_info.anti_sybil_id,
-                'proof_data': self.signup_info.proof_data,
                 'revoked': None,
             }
         else:
@@ -231,21 +241,25 @@ class ValidatorRegistryTransaction(transaction.Transaction):
     MessageType = ValidatorRegistryTransactionMessage
 
     @staticmethod
-    def register_validator(validator_id, validator_name, signup_info):
+    def register_validator(validator_name, validator_id, signup_info):
         """Creates a new ValidatorRegistryTransaction object
 
         Args:
-            validator_id: Bitcoin-style address of the validators public key
-            validator_name: Human readable name of the validator
-            signup_info: Serialized signup information
-                including poet public key and anti sybil token
+            validator_name (str): Human readable name of the validator
+            validator_id (str): Bitcoin-style address of the validators
+                public key
+            signup_info (SignupInfo): A SignupInfo object that was
+                previoulsy created by a call to SignupInfo.create_signup_info
         Returns:
             validator_registry.Update: A transaction containing an update for
                 registering the validator.
         """
         regtxn = ValidatorRegistryTransaction()
-        regtxn.Update = Update.register_validator(validator_id, validator_name,
-                                                  signup_info)
+        regtxn.Update = \
+            Update.register_validator(
+                validator_name,
+                validator_id,
+                signup_info)
 
         return regtxn
 

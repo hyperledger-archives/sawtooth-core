@@ -100,7 +100,7 @@ class EnclaveWaitTimer(object):
 
         return dict2json(timer_dict)
 
-    def is_expired(self):
+    def has_expired(self):
         """
         Determines if the wait timer has expired
 

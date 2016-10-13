@@ -23,6 +23,7 @@ from gossip import common
 from gossip import stats
 from journal import journal_core
 from journal.consensus.poet1 import poet_transaction_block
+from journal.consensus.poet1 import validator_registry as val_reg
 from journal.consensus.poet1.signup_info import SignupInfo
 from journal.consensus.poet1.wait_timer import WaitTimer
 from journal.consensus.poet1.wait_certificate import WaitCertificate
@@ -99,14 +100,64 @@ class PoetJournal(journal_core.Journal):
         self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
                                        WaitTimer.certificate_sample_length)
 
-        # Check to see if there is any pre-existing sealed signup data stored
-        # in the local store
+        self.dispatcher.on_heartbeat += self._check_certificate
+
+    def initialization_complete(self):
+        """Processes all invocations that arrived while the ledger was
+        being initialized.
+        """
+        # Before we allow the base journal to do anything that might result
+        # in a wait timer or wait certificate from being created, we have to
+        # ensure that the PoET enclave has been initialized.  This can be done
+        # in one of two ways:
+        # 1. If we have sealed signup data (meaning that we have previously
+        #    created signup info), we can request that the enclave unseal it,
+        #    in the process restoring the enclave to its previous state.
+        # 2. Create new signup information.
+        signup_info = None
         sealed_signup_data = self.LocalStore.get('sealed_signup_data')
 
-        # If we haven't signed up, we need to do that first.
-        SignupInfo.create_signup_info(self.local_node.public_key())
+        if sealed_signup_data is not None:
+            SignupInfo.unseal_signup_data(
+                sealed_signup_data=sealed_signup_data)
+        else:
+            wait_certificate_id = self.MostRecentCommittedBlockID
+            signup_info = \
+                SignupInfo.create_signup_info(
+                    originator_public_key=self.local_node.public_key(),
+                    validator_network_basename='Intel Validator Network',
+                    most_recent_wait_certificate_id=wait_certificate_id)
 
-        self.dispatcher.on_heartbeat += self._check_certificate
+            # Save off the sealed signup data
+            self.LocalStore.set(
+                'sealed_signup_data',
+                signup_info.sealed_signup_data)
+            self.LocalStore.sync()
+
+        # We are going to first let our super do any initialization necessary
+        super(PoetJournal, self).initialization_complete()
+
+        # If we created signup information, then insert ourselves into the
+        # validator registry.
+        if signup_info is not None:
+            # Create a validator register transaction and sign it.  Wrap
+            # the transaction in a message.  Broadcast it to out.
+            transaction = \
+                val_reg.ValidatorRegistryTransaction.register_validator(
+                    self.local_node.Name,
+                    self.local_node.Identifier,
+                    signup_info)
+            transaction.sign_from_node(self.local_node)
+
+            message = \
+                val_reg.ValidatorRegistryTransactionMessage()
+            message.Transaction = transaction
+
+            LOGGER.info(
+                'Register PoET 1 validator with name %s',
+                self.local_node.Name)
+
+            self.gossip.broadcast_message(message)
 
     def build_transaction_block(self, genesis=False):
         """Builds a transaction block that is specific to this particular
@@ -171,9 +222,7 @@ class PoetJournal(journal_core.Journal):
             nblock.PreviousBlockID = self.MostRecentCommittedBlockID
             nblock.TransactionIDs = txnlist
 
-            nblock.create_wait_timer(
-                self.local_node.signing_address(),
-                self._build_certificate_list(nblock))
+            nblock.create_wait_timer(self._build_certificate_list(nblock))
 
             self.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
             self.JournalStats.PopulationEstimate.Value = \
@@ -210,27 +259,28 @@ class PoetJournal(journal_core.Journal):
 
             return nblock
 
-    def claim_transaction_block(self, nblock):
+    def claim_transaction_block(self, block):
         """Claims the block and transmits a message to the network
         that the local node won.
 
         Args:
-            nblock (PoetTransactionBlock): The block to claim.
+            block (PoetTransactionBlock): The block to claim.
+            genesis (bool): Are we claiming the genesis block?
         """
         LOGGER.info('node %s validates block with %d transactions',
-                    self.local_node.Name, len(nblock.TransactionIDs))
+                    self.local_node.Name, len(block.TransactionIDs))
 
         # Claim the block
-        nblock.create_wait_certificate()
-        nblock.sign_from_node(self.local_node)
+        block.create_wait_certificate()
+        block.sign_from_node(self.local_node)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
-        self.onClaimBlock.fire(self, nblock)
+        self.onClaimBlock.fire(self, block)
 
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
-        msg.TransactionBlock = nblock
+        msg.TransactionBlock = block
         self.gossip.broadcast_message(msg)
 
         self.PendingTransactionBlock = None
@@ -252,8 +302,9 @@ class PoetJournal(journal_core.Journal):
     def _check_certificate(self, now):
         with self._txn_lock:
             if self.PendingTransactionBlock:
-                if self.PendingTransactionBlock.wait_timer_is_expired(now):
-                    self.claim_transaction_block(self.PendingTransactionBlock)
+                if self.PendingTransactionBlock.wait_timer_has_expired(now):
+                    self.claim_transaction_block(
+                        block=self.PendingTransactionBlock)
             else:
                 # No transaction block - check if we must make one due to time
                 # waited

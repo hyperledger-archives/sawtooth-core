@@ -151,6 +151,7 @@ class SignedObject(object):
         self._identifier = hashlib.sha256(
             self.Signature).hexdigest() if self.Signature else None
         self._originator_id = None
+        self._originator_public_key = None
         self._data = None
 
     def __repr__(self):
@@ -182,10 +183,26 @@ class SignedObject(object):
             self._originator_id = \
                 self.signature_cache[self.Signature]
             if not self._originator_id:
-                serialized = self.serialize(signable=True)
-                verifying_key = get_verifying_key(serialized, self.Signature)
-                self._originator_id = pybitcointools.pubtoaddr(verifying_key)
+                self._originator_id = \
+                    pybitcointools.pubtoaddr(self.originator_public_key)
                 self.signature_cache[self.Signature] = self._originator_id
+
+    @property
+    def originator_public_key(self):
+        """
+        Return the originator's public key (i.e., the key used to verify
+        the object' signature)
+
+        Returns:
+            Originator public key
+        """
+        if self._originator_public_key is None:
+            self._originator_public_key = \
+                get_verifying_key(
+                    self.serialize(signable=True),
+                    self.Signature)
+
+        return self._originator_public_key
 
     @property
     def OriginatorID(self):

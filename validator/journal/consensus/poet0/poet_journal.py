@@ -200,27 +200,27 @@ class PoetJournal(journal_core.Journal):
 
             return nblock
 
-    def claim_transaction_block(self, nblock):
+    def claim_transaction_block(self, block):
         """Claims the block and transmits a message to the network
         that the local node won.
 
         Args:
-            nblock (PoetTransactionBlock): The block to claim.
+            block (PoetTransactionBlock): The block to claim.
         """
         logger.info('node %s validates block with %d transactions',
-                    self.local_node.Name, len(nblock.TransactionIDs))
+                    self.local_node.Name, len(block.TransactionIDs))
 
         # Claim the block
-        nblock.create_wait_certificate()
-        nblock.sign_from_node(self.local_node)
+        block.create_wait_certificate()
+        block.sign_from_node(self.local_node)
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
-        self.onClaimBlock.fire(self, nblock)
+        self.onClaimBlock.fire(self, block)
 
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
-        msg.TransactionBlock = nblock
+        msg.TransactionBlock = block
         self.gossip.broadcast_message(msg)
 
         self.PendingTransactionBlock = None

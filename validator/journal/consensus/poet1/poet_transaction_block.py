@@ -23,7 +23,7 @@ from journal.consensus.poet1.wait_certificate import WaitCertificate
 from journal.consensus.poet1.wait_certificate import WaitTimer
 from gossip.common import NullIdentifier
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
@@ -93,10 +93,18 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             wc = minfo.get('WaitCertificate')
             serialized_certificate = wc.get('SerializedCertificate')
             signature = wc.get('Signature')
+            #
+            # To make this work properly we need to be able to take an
+            # Originator ID and translate that to the
+            # Disguised PoET public key that corresponds to the
+            # Originator which was placed in the validator registry.
+            #
+            poet_public_key = None
             self.WaitCertificate = \
                 WaitCertificate.wait_certificate_from_serialized(
-                    serialized_certificate,
-                    signature)
+                    serialized=serialized_certificate,
+                    signature=signature,
+                    encoded_poet_public_key=poet_public_key)
 
         self.AggregateLocalMean = 0.0
 
@@ -169,25 +177,30 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         WaitCertificate.
 
         Args:
-            journal (PoetJorunal): Journal for pulling context.
+            journal (PoetJournal): Journal for pulling context.
         """
         with self._lock:
             if not super(PoetTransactionBlock, self).is_valid(journal):
                 return False
 
             if not self.WaitCertificate:
-                logger.info('not a valid block, no wait certificate')
+                LOGGER.info('not a valid block, no wait certificate')
                 return False
 
-            # TO DO - get PoET public key for originator.
-            encoded_poet_public_key = None
+            #
+            # To make this work properly we need to be able to take an
+            # Originator ID and translate that to the
+            # Disguised PoET public key that corresponds to the
+            # Originator which was placed in the validator registry.
+            #
+            poet_public_key = None
 
             return \
                 self.WaitCertificate.is_valid(
-                    journal._build_certificate_list(self),
-                    encoded_poet_public_key)
+                    certificates=journal._build_certificate_list(self),
+                    encoded_poet_public_key=poet_public_key)
 
-    def create_wait_timer(self, validator_address, certlist):
+    def create_wait_timer(self, certlist):
         """Creates a wait timer for the journal based on a list
         of wait certificates.
 
@@ -201,25 +214,26 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         """Create a wait certificate for the journal based on the wait timer.
         """
         with self._lock:
+            LOGGER.debug("WAIT_TIMER: %s", str(self.WaitTimer))
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
                 hasher.update(tid)
             block_hash = hasher.hexdigest()
 
-            self.WaitCertificate = WaitCertificate.create_wait_certificate(
-                self.WaitTimer,
-                block_hash)
+            self.WaitCertificate = \
+                WaitCertificate.create_wait_certificate(
+                    block_digest=block_hash)
             if self.WaitCertificate:
                 self.WaitTimer = None
 
-    def wait_timer_is_expired(self, now):
-        """Determines if the wait timer is expired.
+    def wait_timer_has_expired(self, now):
+        """Determines if the wait timer has expired.
 
         Returns:
-            bool: Whether or not the wait timer is expired.
+            bool: Whether or not the wait timer has expired.
         """
         with self._lock:
-            return self.WaitTimer.is_expired(now)
+            return self.WaitTimer.has_expired(now)
 
     def dump(self):
         """Returns a dict with information about the block.

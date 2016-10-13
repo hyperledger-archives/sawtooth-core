@@ -13,12 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from gossip.common import json2dict
-from gossip.common import dict2json
-
 import logging
 
 LOGGER = logging.getLogger(__name__)
+
+
+class SignupInfoError(Exception):
+    pass
 
 
 class SignupInfo(object):
@@ -27,42 +28,91 @@ class SignupInfo(object):
     Attributes:
         poet_public_key (str): Encoded PoET public key corresponding to
             private key used by PoET to sign wait certificates.
-        anti_sybil_id (str): A token, such as an EPID pseudonym, to restrict
-            the number of identities an entity can assume in the network.
-        proof_data (array): signed fields proving validity of signup info
+        proof_data (dict): signed fields proving validity of signup info.  The
+            proof data dictionary contains:
+                'attestation_verification_report' (dict): Another dict
+                    that contains attestation evidence payload and the
+                    anti-Sybil ID
+                'signature': The signature of the attestation verification
+                    report using the report key.
         sealed_signup_data (array): data that can be persisted and can be
             presented at a later time to restore the PoET enclave
     """
     poet_enclave = None
 
     @classmethod
-    def create_signup_info(cls, originator_public_key):
+    def create_signup_info(cls,
+                           originator_public_key,
+                           validator_network_basename,
+                           most_recent_wait_certificate_id):
         """
         Creates signup information a PoET 1 validator uses to join the
         validator network.
 
         Args:
             originator_public_key: The originator's public key
+            validator_network_basename (str): The basename for the validator
+                network.
+            most_recent_wait_certificate_id (str): The ID of the
+                most-recently-created wait certificate.
 
         Returns:
             SignupInfo object
         """
-        return cls.poet_enclave.create_signup_info(originator_public_key)
+
+        enclave_signup_info = \
+            cls.poet_enclave.create_signup_info(
+                originator_public_key,
+                validator_network_basename,
+                most_recent_wait_certificate_id)
+        signup_info = cls(enclave_signup_info)
+
+        LOGGER.info("signup info created: %s", signup_info)
+
+        return signup_info
 
     @classmethod
-    def verify_signup_info(cls, serialized_signup_info):
+    def signup_info_from_serialized(cls, serialized):
         """
-        Verifies the validity of signup information provided by another
-        validator.
+        Converts serialized signup info into an object.
 
         Args:
-            serialized_signup_info: The serialized validator information
-                that was submitted to the blockchain.
+            serialized (str): The serialized signup info
 
         Returns:
-            True if the signup info is valid, False otherwise.
+            journal.consensus.poet1.signup_info.SignupInfo: A signup
+                info object.
         """
-        return cls.poet_enclave.verify_signup_info(serialized_signup_info)
+        enclave_signup_info = \
+            cls.poet_enclave.deserialize_signup_info(
+                serialized_signup_info=serialized)
+
+        return cls(enclave_signup_info)
+
+    @property
+    def enclave_signup_info(self):
+        if self._enclave_signup_info is None:
+            self._enclave_signup_info = \
+                self.poet_enclave.deserialize_signup_info(
+                    self._serialized_signup_info)
+
+        return self._enclave_signup_info
+
+    @property
+    def attestation_verification_report(self):
+        if self._attestation_verification_rep is None:
+            self._attestation_verification_rep = \
+                self.proof_data.get('attestation_verification_report')
+
+        return self._attestation_verification_rep
+
+    @property
+    def anti_sybil_id(self):
+        if self._anti_sybil_id is None:
+            self._anti_sybil_id = \
+                self.attestation_verification_report.get('anti_sybil_id')
+
+        return self._anti_sybil_id
 
     @classmethod
     def unseal_signup_data(cls, sealed_signup_data):
@@ -83,35 +133,53 @@ class SignupInfo(object):
             cls.poet_enclave.unseal_signup_data(
                 sealed_signup_data=sealed_signup_data)
 
-    @classmethod
-    def signup_info_from_serialized(cls, serialized):
-        deserialized = json2dict(serialized)
+    def __init__(self, enclave_signup_info):
+        self.poet_public_key = enclave_signup_info.poet_public_key
+        self.proof_data = enclave_signup_info.proof_data
+        self.sealed_signup_data = enclave_signup_info.sealed_signup_data
 
-        return \
-            SignupInfo(
-                anti_sybil_id=deserialized.get('anti_sybil_id'),
-                poet_public_key=deserialized.get('poet_public_key'),
-                proof_data=deserialized.get('proof_data'))
+        self._enclave_signup_info = None
+        self._attestation_verification_rep = None
+        self._anti_sybil_id = None
 
-    def __init__(self,
-                 anti_sybil_id,
-                 poet_public_key,
-                 proof_data,
-                 sealed_signup_data=None):
-        self.anti_sybil_id = anti_sybil_id
-        self.poet_public_key = poet_public_key
-        self.proof_data = proof_data
-        self.sealed_signup_data = sealed_signup_data
+        # We cannot hold the signup info because it cannot be pickled for
+        # storage
+        self._serialized_signup_info = enclave_signup_info.serialize()
 
     def __str__(self):
-        return "<{0}, {1}, {2}>".format(self.anti_sybil_id,
-                                        self.poet_public_key,
-                                        self.proof_data)
+        return \
+            'SIGNUP_INFO: {0}, {1}, {2}'.format(
+                self.proof_data.get(
+                    'attestation_verification_report').get(
+                        'anti_sybil_id'),
+                self.poet_public_key,
+                self.proof_data)
+
+    def check_valid(self,
+                    originator_public_key,
+                    validator_network_basename,
+                    most_recent_wait_certificate_id):
+        """
+        Checks the validity of the signup information.
+
+        Args:
+            originator_public_key: The public key of the validator that
+                submitted the signup information.
+            validator_network_basename (str): The basename for the validator
+                network the validator wishes to be validated against.
+            most_recent_wait_certificate_id (str): The ID of the
+                most-recently-created wait certificate.
+
+        Returns:
+            SignupInfo object
+        """
+        self.poet_enclave.verify_signup_info(
+            signup_info=self.enclave_signup_info,
+            originator_public_key=originator_public_key,
+            validator_network_basename=validator_network_basename,
+            most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
     def serialize(self):
-        return dict2json({'anti_sybil_id': self.anti_sybil_id,
-                          'poet_public_key': self.poet_public_key,
-                          'proof_data': self.proof_data})
-
-    def is_valid(self):
-        return self.verify_signup_info(self.serialize())
+        # Simply return the serialized version of the enclave signup info
+        # as we don't have anything to add.
+        return self._serialized_signup_info

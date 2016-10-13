@@ -24,6 +24,10 @@ from journal.consensus.poet1.wait_timer import WaitTimer
 LOGGER = logging.getLogger(__name__)
 
 
+class WaitCertificateError(Exception):
+    pass
+
+
 # This is necessary for float comparisons
 def _is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
     """Determines whether two floats are within a tolerance.
@@ -54,13 +58,11 @@ class WaitCertificate(object):
     poet_enclave = None
 
     @classmethod
-    def create_wait_certificate(cls, timer, block_digest):
+    def create_wait_certificate(cls, block_digest):
         """Creates a wait certificate in the enclave and then constructs
         a WaitCertificate object from it.
 
         Args:
-            timer (journal.consensus.poet1.wait_timer.WaitTimer): The wait
-                timer to use in creating the certificate.
             block_digest (str): The block digest/hash for the block for which
                 this certificate is being created.
 
@@ -71,15 +73,10 @@ class WaitCertificate(object):
 
         enclave_certificate = \
             cls.poet_enclave.create_wait_certificate(
-                timer.enclave_wait_timer,
-                block_digest)
+                block_digest=block_digest)
 
         if not enclave_certificate:
-            LOGGER.warn('invalid timer: %s', timer)
-            raise \
-                Exception(
-                    'Attempt to create wait certificate from invalid wait '
-                    'timer')
+            raise Exception('Failed attempting to create wait certificate ')
 
         certificate = cls(enclave_certificate)
         LOGGER.info('wait certificate created: %s', certificate)
@@ -87,12 +84,20 @@ class WaitCertificate(object):
         return certificate
 
     @classmethod
-    def wait_certificate_from_serialized(cls, serialized, signature):
+    def wait_certificate_from_serialized(cls,
+                                         serialized,
+                                         signature,
+                                         encoded_poet_public_key):
         """Converts a serialized wait certificate into an object.
 
         Args:
             serialized (str): The serialized wait certificate.
             signature (str): The signature.
+            encoded_poet_public_key (str): The encoded PoET public key that
+                corresponds to the private key used to sign the certificate.
+                This is obtained from the signup information for the validator
+                that is the originator of the block for which the wait
+                certificate is associated.
 
         Returns:
             journal.consensus.poet1.wait_certificate.WaitCertificate: A wait
@@ -101,12 +106,13 @@ class WaitCertificate(object):
         """
         enclave_certificate = \
             cls.poet_enclave.deserialize_wait_certificate(
-                serialized=serialized,
+                serialized_certificate=serialized,
                 signature=signature)
 
         if not enclave_certificate or \
                 not cls.poet_enclave.verify_wait_certificate(
-                    enclave_certificate):
+                    certificate=enclave_certificate,
+                    encoded_poet_public_key=encoded_poet_public_key):
             raise \
                 Exception(
                     'Attempt to deserialize an invalid wait certificate')
@@ -153,9 +159,11 @@ class WaitCertificate(object):
 
         Args:
             certificates (list): A list of historical certs.
-            encoded_poet_public_key (str): The PoET public key that
+            encoded_poet_public_key (str): The encoded PoET public key that
                 corresponds to the private key used to sign the certificate.
-                This is provided with a validator's signup information.
+                This is obtained from the signup information for the validator
+                that is the originator of the block for which the wait
+                certificate is associated.
 
         Returns:
             True if the wait certificate is valid, False otherwise.
