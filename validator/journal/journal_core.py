@@ -327,6 +327,20 @@ class Journal(object):
         tstore = family.TransactionStoreType()
         self.global_store_map.add_transaction_store(tname, tstore)
 
+    def get_transaction_store(self, family, block_id):
+        """Retrieve a transaction-family-specific store from the global store
+
+        Args:
+            family (transaction.Transaction): The transaction family for which
+                the store will be retrieved.
+            block_id (str): Identifier for block for which the  store will be
+                retrieved.
+        """
+        return \
+            self.global_store_map.get_transaction_store(
+                family.TransactionTypeName,
+                block_id)
+
     @property
     def global_store(self):
         """Returns a reference to the global store associated with the
@@ -897,7 +911,7 @@ class Journal(object):
 
             if hasattr(tblock, 'AggregateLocalMean'):
                 self.JournalStats.AggregateLocalMean.Value = \
-                    tblock.AggregateLocalMean
+                    tblock.aggregate_local_mean
 
             # time to apply the transactions in the block to get a new state
             self.global_store_map.commit_block_store(tblock.Identifier,

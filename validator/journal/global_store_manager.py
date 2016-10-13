@@ -99,6 +99,20 @@ class GlobalStoreManager(object):
             dict2cbor(rootstore.dump_block(True))
         self._persistmap.sync()
 
+    def get_transaction_store(self, transaction_name, block_id):
+        """Retrieves teh data store for a particular transaction type.
+
+        Args:
+            transaction_name (str): The name of the transaction type.
+            block_id (str): Identifier for block for which transaction
+                store will be retrieved.
+
+        Returns:
+            The transaction store.
+        """
+        block_store = self.get_block_store(block_id).clone_block()
+        return block_store.get_transaction_store(transaction_name)
+
     def commit_block_store(self, blockid, blockstore):
         """Associates the blockstore with the blockid and commits
         the blockstore to disk.

@@ -21,6 +21,8 @@ from journal import transaction_block
 from journal.messages import transaction_block_message
 from journal.consensus.poet1.wait_certificate import WaitCertificate
 from journal.consensus.poet1.wait_certificate import WaitTimer
+from journal.consensus.poet1.validator_registry \
+    import ValidatorRegistryTransaction
 from gossip.common import NullIdentifier
 
 LOGGER = logging.getLogger(__name__)
@@ -65,11 +67,9 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         PoetTransactionBlock.TransactionBlockTypeName (str): The name of the
             transaction block type.
         PoetTransactionBlock.MessageType (type): The message class.
-        PoetTransactionBlock.WaitTimer (wait_timer.WaitTimer): The wait timer
-            for the block.
-        PoetTransactionBlock.WaitCertificate
-            (wait_certificate.WaitCertificate): The wait certificate for the
-            block.
+        wait_timer (wait_timer.WaitTimer): The wait timer for the block.
+        wait_certificate (wait_certificate.WaitCertificate): The wait
+            certificate for the block.
     """
     TransactionBlockTypeName = '/Poet/PoetTransactionBlock'
     MessageType = PoetTransactionBlockMessage
@@ -86,8 +86,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         super(PoetTransactionBlock, self).__init__(minfo)
 
         self._lock = RLock()
-        self.WaitTimer = None
-        self.WaitCertificate = None
+        self.wait_timer = None
+        self.wait_certificate = None
 
         if 'WaitCertificate' in minfo:
             wc = minfo.get('WaitCertificate')
@@ -100,13 +100,13 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             # Originator which was placed in the validator registry.
             #
             poet_public_key = None
-            self.WaitCertificate = \
+            self.wait_certificate = \
                 WaitCertificate.wait_certificate_from_serialized(
                     serialized=serialized_certificate,
                     signature=signature,
-                    encoded_poet_public_key=poet_public_key)
+                    poet_public_key=poet_public_key)
 
-        self.AggregateLocalMean = 0.0
+        self.aggregate_local_mean = 0.0
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -120,7 +120,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
     def __str__(self):
         return "{0}, {1}, {2}, {3:0.2f}, {4}".format(
             self.BlockNum, self.Identifier[:8], len(self.TransactionIDs),
-            self.CommitTime, self.WaitCertificate)
+            self.CommitTime, self.wait_certificate)
 
     def __cmp__(self, other):
         """
@@ -139,19 +139,19 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         # Criteria #1: if both blocks share the same previous block,
         # then the block with the smallest duration wins
         if self.PreviousBlockID == other.PreviousBlockID:
-            if self.WaitCertificate.duration < \
-                    other.WaitCertificate.duration:
+            if self.wait_certificate.duration < \
+                    other.wait_certificate.duration:
                 return 1
-            elif self.WaitCertificate.duration > \
-                    other.WaitCertificate.duration:
+            elif self.wait_certificate.duration > \
+                    other.wait_certificate.duration:
                 return -1
         # Criteria #2: if there is a difference between the immediate
         # ancestors then pick the chain with the highest aggregate
         # local mean, this will be the largest population (more or less)
         else:
-            if self.AggregateLocalMean > other.AggregateLocalMean:
+            if self.aggregate_local_mean > other.aggregate_local_mean:
                 return 1
-            elif self.AggregateLocalMean < other.AggregateLocalMean:
+            elif self.aggregate_local_mean < other.aggregate_local_mean:
                 return -1
         # Criteria #3... use number of transactions as a tie breaker, this
         # should not happen except in very rare cases
@@ -162,14 +162,14 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             assert self.Status == transaction_block.Status.valid
             super(PoetTransactionBlock, self).update_block_weight(journal)
 
-            assert self.WaitCertificate
-            self.AggregateLocalMean = self.WaitCertificate.local_mean
+            assert self.wait_certificate
+            self.aggregate_local_mean = self.wait_certificate.local_mean
 
             if self.PreviousBlockID != NullIdentifier:
                 assert self.PreviousBlockID in journal.block_store
-                self.AggregateLocalMean += \
-                    journal.block_store[self.PreviousBlockID]\
-                    .AggregateLocalMean
+                self.aggregate_local_mean += \
+                    journal.block_store[self.PreviousBlockID].\
+                    aggregate_local_mean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
@@ -184,7 +184,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             if not super(PoetTransactionBlock, self).is_valid(journal):
                 return False
 
-            if not self.WaitCertificate:
+            if not self.wait_certificate:
                 LOGGER.info('not a valid block, no wait certificate')
                 return False
 
@@ -194,13 +194,42 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             # Disguised PoET public key that corresponds to the
             # Originator which was placed in the validator registry.
             #
+            # We need to get the PoET public key that for the originator
+            # of the transaction block.  To do that, we first need to get
+            # the store for validator signup information.  Then from that
+            # we can do an indexed search for the registration entry and
+            # therefore the PoET public key.
             poet_public_key = None
+            try:
+                # First we need to get the store for validator signup
+                # information
+                store = \
+                    journal.get_transaction_store(
+                        ValidatorRegistryTransaction,
+                        self.Identifier)
+
+                if store is None:
+                    return False
+
+                registration = store.get(self.OriginatorID)
+
+                poet_public_key = registration.get('poet-public-key')
+                LOGGER.debug(
+                    'Validator ID {0} <==> PoET Public Key {1}'.format(
+                        self.OriginatorID,
+                        poet_public_key))
+            except KeyError as ke:
+                LOGGER.info(
+                    'Cannot validate wait certificate because cannot retrieve '
+                    'PoET public key for validator with ID={}'.format(
+                        self.OriginatorID))
+                return False
 
             return \
-                self.WaitCertificate.is_valid(
+                self.wait_certificate.is_valid(
                     certificates=journal.consensus._build_certificate_list(
                         journal.block_store, self),
-                    encoded_poet_public_key=poet_public_key)
+                    poet_public_key=poet_public_key)
 
     def create_wait_timer(self, certlist):
         """Creates a wait timer for the journal based on a list
@@ -210,23 +239,23 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             certlist (list): A list of wait certificates.
         """
         with self._lock:
-            self.WaitTimer = WaitTimer.create_wait_timer(certlist)
+            self.wait_timer = WaitTimer.create_wait_timer(certlist)
 
     def create_wait_certificate(self):
         """Create a wait certificate for the journal based on the wait timer.
         """
         with self._lock:
-            LOGGER.debug("WAIT_TIMER: %s", str(self.WaitTimer))
+            LOGGER.debug("WAIT_TIMER: %s", str(self.wait_timer))
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
                 hasher.update(tid)
             block_hash = hasher.hexdigest()
 
-            self.WaitCertificate = \
+            self.wait_certificate = \
                 WaitCertificate.create_wait_certificate(
                     block_digest=block_hash)
-            if self.WaitCertificate:
-                self.WaitTimer = None
+            if self.wait_certificate:
+                self.wait_timer = None
 
     def wait_timer_has_expired(self, now):
         """Determines if the wait timer has expired.
@@ -235,7 +264,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             bool: Whether or not the wait timer has expired.
         """
         with self._lock:
-            return self.WaitTimer.has_expired(now)
+            return self.wait_timer.has_expired(now)
 
     def dump(self):
         """Returns a dict with information about the block.
@@ -245,6 +274,6 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         """
         with self._lock:
             result = super(PoetTransactionBlock, self).dump()
-            result['WaitCertificate'] = self.WaitCertificate.dump()
+            result['WaitCertificate'] = self.wait_certificate.dump()
 
             return result

@@ -77,12 +77,12 @@ class TestSignupInfo(unittest.TestCase):
                 originator_public_key=self._originator_public_key,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
-        encoded_poet_public_key = \
+        poet_public_key = \
             SignupInfo.unseal_signup_data(signup_info.sealed_signup_data)
 
         self.assertEqual(
             signup_info.poet_public_key,
-            encoded_poet_public_key,
+            poet_public_key,
             msg="PoET public key in signup info and sealed data don't match")
 
     def test_verify_signup_info(self):

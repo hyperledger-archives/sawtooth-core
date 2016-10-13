@@ -78,7 +78,9 @@ class WaitCertificate(object):
                 block_digest=block_digest)
 
         if not enclave_certificate:
-            raise Exception('Failed attempting to create wait certificate ')
+            raise \
+                WaitCertificateError(
+                    'Failed to create an enclave wait certificate')
 
         certificate = cls(enclave_certificate)
         LOGGER.info('wait certificate created: %s', certificate)
@@ -89,15 +91,15 @@ class WaitCertificate(object):
     def wait_certificate_from_serialized(cls,
                                          serialized,
                                          signature,
-                                         encoded_poet_public_key):
+                                         poet_public_key):
         """Converts a serialized wait certificate into an object.
 
         Args:
             serialized (str): The serialized wait certificate.
             signature (str): The signature.
-            encoded_poet_public_key (str): The encoded PoET public key that
-                corresponds to the private key used to sign the certificate.
-                This is obtained from the signup information for the validator
+            poet_public_key (str): The PoET public key that corresponds to
+                the private key used to sign the certificate.  This is
+                obtained from the signup information for the validator
                 that is the originator of the block for which the wait
                 certificate is associated.
 
@@ -114,7 +116,7 @@ class WaitCertificate(object):
         if not enclave_certificate or \
                 not cls.poet_enclave.verify_wait_certificate(
                     certificate=enclave_certificate,
-                    encoded_poet_public_key=encoded_poet_public_key):
+                    poet_public_key=poet_public_key):
             raise \
                 Exception(
                     'Attempt to deserialize an invalid wait certificate')
@@ -156,14 +158,14 @@ class WaitCertificate(object):
                 self.identifier,
                 self.previous_certificate_id)
 
-    def is_valid(self, certificates, encoded_poet_public_key):
+    def is_valid(self, certificates, poet_public_key):
         """Determines whether the wait certificate is valid.
 
         Args:
             certificates (list): A list of historical certs.
-            encoded_poet_public_key (str): The encoded PoET public key that
-                corresponds to the private key used to sign the certificate.
-                This is obtained from the signup information for the validator
+            poet_public_key (str): The PoET public key that corresponds to
+                the private key used to sign the certificate.  This is
+                obtained from the signup information for the validator
                 that is the originator of the block for which the wait
                 certificate is associated.
 
@@ -204,7 +206,7 @@ class WaitCertificate(object):
             return \
                 self.poet_enclave.verify_wait_certificate(
                     certificate=enclave_certificate,
-                    encoded_poet_public_key=encoded_poet_public_key)
+                    poet_public_key=poet_public_key)
         except Timeout:
             raise NotAvailableException
         except ConnectionError:

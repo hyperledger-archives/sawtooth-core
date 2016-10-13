@@ -64,11 +64,9 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         PoetTransactionBlock.TransactionBlockTypeName (str): The name of the
             transaction block type.
         PoetTransactionBlock.MessageType (type): The message class.
-        PoetTransactionBlock.WaitTimer (wait_timer.WaitTimer): The wait timer
-            for the block.
-        PoetTransactionBlock.WaitCertificate
-            (wait_certificate.WaitCertificate): The wait certificate for the
-            block.
+        wait_timer (wait_timer.WaitTimer): The wait timer for the block.
+        wait_certificate (wait_certificate.WaitCertificate): The wait
+            certificate for the block.
     """
     TransactionBlockTypeName = '/Poet/PoetTransactionBlock'
     MessageType = PoetTransactionBlockMessage
@@ -85,18 +83,18 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         super(PoetTransactionBlock, self).__init__(minfo)
 
         self._lock = RLock()
-        self.WaitTimer = None
-        self.WaitCertificate = None
+        self.wait_timer = None
+        self.wait_certificate = None
 
         if 'WaitCertificate' in minfo:
             wc = minfo.get('WaitCertificate')
             serialized = wc.get('SerializedCert')
             signature = wc.get('Signature')
-            self.WaitCertificate = \
+            self.wait_certificate = \
                 WaitCertificate.deserialize_wait_certificate(
                     serialized, signature)
 
-        self.AggregateLocalMean = 0.0
+        self.aggregate_local_mean = 0.0
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -110,7 +108,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
     def __str__(self):
         return "{0}, {1}, {2}, {3:0.2f}, {4}".format(
             self.BlockNum, self.Identifier[:8], len(self.TransactionIDs),
-            self.CommitTime, self.WaitCertificate)
+            self.CommitTime, self.wait_certificate)
 
     def __cmp__(self, other):
         """
@@ -129,19 +127,19 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         # Criteria #1: if both blocks share the same previous block,
         # then the block with the smallest duration wins
         if self.PreviousBlockID == other.PreviousBlockID:
-            if self.WaitCertificate.duration < \
-                    other.WaitCertificate.duration:
+            if self.wait_certificate.duration < \
+                    other.wait_certificate.duration:
                 return 1
-            elif self.WaitCertificate.duration > \
-                    other.WaitCertificate.duration:
+            elif self.wait_certificate.duration > \
+                    other.wait_certificate.duration:
                 return -1
         # Criteria #2: if there is a difference between the immediate
         # ancestors then pick the chain with the highest aggregate
         # local mean, this will be the largest population (more or less)
         else:
-            if self.AggregateLocalMean > other.AggregateLocalMean:
+            if self.aggregate_local_mean > other.aggregate_local_mean:
                 return 1
-            elif self.AggregateLocalMean < other.AggregateLocalMean:
+            elif self.aggregate_local_mean < other.aggregate_local_mean:
                 return -1
         # Criteria #3... use number of transactions as a tie breaker, this
         # should not happen except in very rare cases
@@ -152,14 +150,14 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             assert self.Status == transaction_block.Status.valid
             super(PoetTransactionBlock, self).update_block_weight(journal)
 
-            assert self.WaitCertificate
-            self.AggregateLocalMean = self.WaitCertificate.local_mean
+            assert self.wait_certificate
+            self.aggregate_local_mean = self.wait_certificate.local_mean
 
             if self.PreviousBlockID != NullIdentifier:
                 assert self.PreviousBlockID in journal.block_store
-                self.AggregateLocalMean += \
-                    journal.block_store[self.PreviousBlockID]\
-                    .AggregateLocalMean
+                self.aggregate_local_mean += \
+                    journal.block_store[self.PreviousBlockID].\
+                        aggregate_local_mean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
@@ -174,11 +172,11 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             if not super(PoetTransactionBlock, self).is_valid(journal):
                 return False
 
-            if not self.WaitCertificate:
+            if not self.wait_certificate:
                 logger.info('not a valid block, no wait certificate')
                 return False
 
-            return self.WaitCertificate.is_valid_wait_certificate(
+            return self.wait_certificate.is_valid_wait_certificate(
                 self.OriginatorID,
                 journal.consensus._build_certificate_list(
                     journal.block_store, self),
@@ -192,7 +190,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             certlist (list): A list of wait certificates.
         """
         with self._lock:
-            self.WaitTimer = WaitTimer.create_wait_timer(
+            self.wait_timer = WaitTimer.create_wait_timer(
                 validator_address,
                 certlist)
 
@@ -205,11 +203,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 hasher.update(tid)
             block_hash = hasher.hexdigest()
 
-            self.WaitCertificate = WaitCertificate.create_wait_certificate(
-                self.WaitTimer,
-                block_hash)
-            if self.WaitCertificate:
-                self.WaitTimer = None
+            self.wait_certificate = \
+                WaitCertificate.create_wait_certificate(
+                    self.wait_timer,
+                    block_hash)
+            if self.wait_certificate:
+                self.wait_timer = None
 
     def wait_timer_is_expired(self, now):
         """Determines if the wait timer is expired.
@@ -218,7 +217,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             bool: Whether or not the wait timer is expired.
         """
         with self._lock:
-            return self.WaitTimer.is_expired(now)
+            return self.wait_timer.is_expired(now)
 
     def dump(self):
         """Returns a dict with information about the block.
@@ -228,6 +227,6 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         """
         with self._lock:
             result = super(PoetTransactionBlock, self).dump()
-            result['WaitCertificate'] = self.WaitCertificate.dump()
+            result['WaitCertificate'] = self.wait_certificate.dump()
 
             return result

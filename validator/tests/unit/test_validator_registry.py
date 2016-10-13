@@ -16,7 +16,7 @@
 import unittest
 
 from gossip import signed_object
-from journal.global_store_manager import KeyValueStore
+from journal.object_store import ObjectStore
 
 import pybitcointools
 
@@ -45,7 +45,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
-        store = KeyValueStore()
+        store = ObjectStore()
         transaction = \
             ValidatorRegistryTransaction.register_validator(
                 name,
@@ -68,7 +68,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
-        store = KeyValueStore()
+        store = ObjectStore()
         transaction = \
             ValidatorRegistryTransaction.register_validator(
                 name,
@@ -96,7 +96,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
-        store = KeyValueStore()
+        store = ObjectStore()
         transaction = \
             ValidatorRegistryTransaction.register_validator(
                 name,

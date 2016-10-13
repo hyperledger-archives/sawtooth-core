@@ -441,7 +441,7 @@ class _PoetEnclaveSimulator(object):
                 signature=signature)
 
     @classmethod
-    def verify_wait_certificate(cls, certificate, encoded_poet_public_key):
+    def verify_wait_certificate(cls, certificate, poet_public_key):
         # poet_public_key = \
         #     pybitcointools.decode_pubkey(encoded_poet_public_key, 'hex')
         #
@@ -520,8 +520,8 @@ def deserialize_wait_certificate(serialized_certificate, signature):
             signature=signature)
 
 
-def verify_wait_certificate(certificate, encoded_poet_public_key):
+def verify_wait_certificate(certificate, poet_public_key):
     return \
         _PoetEnclaveSimulator.verify_wait_certificate(
             certificate=certificate,
-            encoded_poet_public_key=encoded_poet_public_key)
+            poet_public_key=poet_public_key)

@@ -16,7 +16,7 @@
 import logging
 
 from journal import transaction
-from journal import global_store_manager
+from journal import object_store
 from journal.messages import transaction_message
 from journal.consensus.poet1.signup_info import SignupInfo
 from journal.consensus.poet1.signup_info import SignupInfoError
@@ -88,7 +88,7 @@ class Update(object):
             validator_id (str): Bitcoin-style address of the validators
                 public key
             signup_info (SignupInfo): A SignupInfo object that was
-                previoulsy created by a call to SignupInfo.create_signup_info
+                previously created by a call to SignupInfo.create_signup_info
 
         Returns:
             validator_registry.Update: An update object for registering the
@@ -163,7 +163,6 @@ class Update(object):
         # Apply will invalidate any previous entries for this anti_sybil_id
         # and create a new entry.
 
-        # Check signup_info. Policy is encapsulated by SignupInfo.
         try:
             self.signup_info.check_valid(
                 originator_public_key=txn.originator_public_key,
@@ -186,19 +185,34 @@ class Update(object):
         """
         LOGGER.debug('apply %s', str(self))
 
-        # invalidate any previous entries
-        for validator, registration in store.iteritems():
-            if registration['anti_sybil_id'] == self.signup_info.anti_sybil_id:
-                if registration['revoked'] is not None:
-                    registration['revoked'] = txn.Identifier
-
         if self.verb == 'reg':
+            # invalidate any previous entries
+            try:
+                registration = \
+                    store.lookup(
+                        'poet-validator:anti-sybil-id',
+                        self.signup_info.anti_sybil_id)
+                registration['revoked'] = txn.Identifier
+
+                LOGGER.info(
+                    'Transaction {0} Revoking public key {1} for {2} ({3}) '
+                    'with anti-Sybil ID {4}'.format(
+                        txn.Identifier,
+                        self.signup_info.poet_public_key,
+                        self.validator_name,
+                        self.validator_id,
+                        self.signup_info.anti_sybil_id))
+            except KeyError:
+                pass
+
             store[self.validator_id] = {
-                'validator_name': self.validator_name,
-                'validator_id': self.validator_id,
-                'poet_public_key': self.signup_info.poet_public_key,
-                'anti_sybil_id': self.signup_info.anti_sybil_id,
-                'revoked': None,
+                'object-type': 'poet-validator',
+                'object-id': self.validator_id,
+                'validator-id': self.validator_id,
+                'validator-name': self.validator_name,
+                'poet-public-key': self.signup_info.poet_public_key,
+                'anti-sybil-id': self.signup_info.anti_sybil_id,
+                'revoked': None
             }
         else:
             LOGGER.info('unknown verb %s', self.verb)
@@ -237,7 +251,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
             with this transaction.
     """
     TransactionTypeName = '/ValidatorRegistryTransaction'
-    TransactionStoreType = global_store_manager.KeyValueStore
+    TransactionStoreType = object_store.ObjectStore
     MessageType = ValidatorRegistryTransactionMessage
 
     @staticmethod
