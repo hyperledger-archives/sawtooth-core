@@ -403,8 +403,10 @@ class Validator(object):
         if not self._connect_to_peers():
             reactor.callLater(2.0, self.initialize_ledger_connection)
         else:
-            reactor.callLater(2.0, self.initialize_ledger_topology,
-                              self.start_journal_transfer)
+            callback = self.start_ledger
+            if self.journal.Restored is False:
+                callback = self.start_journal_transfer
+            reactor.callLater(2.0, self.initialize_ledger_topology, callback)
 
     def initialize_ledger_topology(self, callback):
         """
