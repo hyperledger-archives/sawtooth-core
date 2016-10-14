@@ -83,7 +83,6 @@ def local_main(config, windows_service=False, daemonized=False):
         max_txn_per_block = config.get("MaxTransactionsPerBlock")
         max_txn_age = config.get("MaxTxnAge")
         genesis_ledger = config.get("GenesisLedger")
-        restore = config.get("Restore")
         data_directory = config.get("DataDirectory")
         store_type = config.get("StoreType")
 
@@ -107,7 +106,6 @@ def local_main(config, windows_service=False, daemonized=False):
                 max_txn_per_block,
                 max_txn_age,
                 genesis_ledger,
-                restore,
                 data_directory,
                 store_type)
         elif consensus_type == 'poet1':
@@ -131,7 +129,6 @@ def local_main(config, windows_service=False, daemonized=False):
                 max_txn_per_block,
                 max_txn_age,
                 genesis_ledger,
-                restore,
                 data_directory,
                 store_type)
         elif consensus_type == 'quorum':
@@ -150,7 +147,6 @@ def local_main(config, windows_service=False, daemonized=False):
                 max_txn_per_block,
                 max_txn_age,
                 genesis_ledger,
-                restore,
                 data_directory,
                 store_type,
                 vote_time_interval,
@@ -169,7 +165,6 @@ def local_main(config, windows_service=False, daemonized=False):
                 max_txn_per_block,
                 max_txn_age,
                 genesis_ledger,
-                restore,
                 data_directory,
                 store_type,
                 block_wait_time)
@@ -253,9 +248,6 @@ def parse_command_line(args):
              'options can be specified.',
         action='append')
     parser.add_argument('--node', help='Short form name of the node')
-    parser.add_argument('--restore',
-                        help='Restore previous block chain',
-                        action='store_true')
     parser.add_argument('--type', help='Type of ledger to create')
     parser.add_argument('-v', '--verbose',
                         action='count',
@@ -297,7 +289,6 @@ def parse_command_line(args):
     # them to prevent the False value from overriding during aggregation
 
     remove_false_key(result, "genesis")
-    remove_false_key(result, "restore")
     remove_false_key(result, "daemon")
     remove_false_key(result, "check_elevated")
 
@@ -331,7 +322,6 @@ def get_configuration(args, os_name=os.name, config_files_required=None):
             ('log_config', 'LogConfigFile'),
             ('keyfile', 'KeyFile'),
             ('node', 'NodeName'),
-            ('restore', 'Restore'),
             ('peers', 'Peers'),
             ('genesis', 'GenesisLedger'),
             ('url', 'LedgerURL'),

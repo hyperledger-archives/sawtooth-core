@@ -310,7 +310,6 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
         # startup options
         self['LedgerURL'] = 'http://localhost:8800/'
         self['GenesisLedger'] = False
-        self['Restore'] = False
 
         # topological configuration
         self['TopologyAlgorithm'] = 'RandomWalk'

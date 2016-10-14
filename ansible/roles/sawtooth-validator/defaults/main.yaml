@@ -25,6 +25,5 @@ sawtooth_validator_transaction_families:
     - "ledger.transaction.integer_key"
 sawtooth_validator_ledger_type: "lottery"
 sawtooth_validator_genesis_ledger: "false"
-sawtooth_validator_restore: "false"
 sawtooth_validator_administration_node: "NOT_SET"
 sawtooth_validator_key_file: "{key_dir}/{node}.wif"

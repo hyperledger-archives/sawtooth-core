@@ -77,9 +77,8 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in dat.keys())
             tgt_block = dat['GenesisId']
 
-            # Verify genesis tool (also tests restore)
+            # Verify genesis tool (also tests blockchain restoration)
             # ...hack validator cfg to restore w/o peering
-            cfg['Restore'] = True
             cfg['LedgerURL'] = []
             cfg['InitialConnectivity'] = 0
             # ...launch validator

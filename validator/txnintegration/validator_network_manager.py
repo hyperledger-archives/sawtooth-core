@@ -38,7 +38,6 @@ defaultValidatorConfig = {u'CertificateSampleLength': 5,
                           u'NetworkBurstRate': 128000,
                           u'NetworkDelayRange': [0.0, 0.1],
                           u'NetworkFlowRate': 96000,
-                          u'Restore': False,
                           u'TargetConnectivity': 3,
                           u'TargetWaitTime': 5.0,
                           u'TopologyAlgorithm': u'RandomWalk',
@@ -106,7 +105,6 @@ class ValidatorNetworkManager(object):
 
         self.validator_config['DataDirectory'] = self.data_dir
         self.validator_config["AdministrationNode"] = self.admin_node.Address
-        self.validator_config['Restore'] = False
 
     def __del__(self):
         if self.temp_data_dir:
@@ -158,9 +156,7 @@ class ValidatorNetworkManager(object):
         validators = []
 
         with Progress("Launching initial validator") as p:
-            cfg = {
-                'Restore': self.block_chain_archive,
-            }
+            cfg = {}
             validator = self.launch_node(overrides=cfg,
                                          genesis=True,
                                          daemon=False)
@@ -182,7 +178,6 @@ class ValidatorNetworkManager(object):
             with Progress("Launching validator network") as p:
                 cfg = {
                     'LedgerURL': validator.url,
-                    'Restore': self.block_chain_archive,
                 }
                 for _ in range(1, count):
                     v = self.launch_node(overrides=cfg,

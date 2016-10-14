@@ -62,7 +62,6 @@ class Journal(object):
         InitialBlockList (list): A list of initial blocks to process.
         GenesisLedger (bool): Whether or not this journal is associated
             with a genesis node.
-        Restore (bool): Whether or not to restore block data.
         onGenesisBlock (EventHandler): An EventHandler for functions
             to call when processing a genesis block.
         onPreBuildBlock (EventHandler): An EventHandler for functions
@@ -114,7 +113,6 @@ class Journal(object):
                  max_transactions_per_block=None,
                  max_txn_age=None,
                  genesis_ledger=None,
-                 restore=None,
                  data_directory=None,
                  store_type=None):
         """Constructor for the Journal class.
@@ -123,7 +121,6 @@ class Journal(object):
             node (Node): The local node.
             GenesisLedger (bool): Whether or not this journal is associated
                 with a genesis node.
-            Restore (bool): Whether or not to restore block data.
             DataDirectory (str):
         """
         self.local_node = local_node

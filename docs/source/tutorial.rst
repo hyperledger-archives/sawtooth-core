@@ -124,9 +124,9 @@ To stop the validator, press CTRL-c.
 
 .. caution::
 
-   When run as above, txnvalidator will start a new blockchain each time
-   it starts.  If you want to start txnvalidator with the previous
-   blockchain, use the '--restore' flag.
+   When run with the genesis flag, txnvalidator will start a new blockchain
+   each time it starts.  Omit the genesis flag to restore an existing
+   blockchain.
 
 .. _mktplace-transaction-family-tutorial-label:
 

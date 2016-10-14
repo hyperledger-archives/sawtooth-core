@@ -51,9 +51,6 @@
         "ledger.transaction.integer_key"
     ],
 
-    ## do not restart 
-    "Restore" : false,
-
     ## This value should be set to the identifier which is
     ## permitted to send shutdown messages on the network.
     ## By default, no AdministrationNode is set.
