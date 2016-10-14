@@ -17,6 +17,7 @@ import logging
 from threading import RLock
 import time
 from collections import OrderedDict
+import os
 
 from gossip import common
 from gossip import event_handler
@@ -174,9 +175,6 @@ class Journal(object):
         else:
             self.GenesisLedger = False
 
-        self.Restore = restore
-        if restore is not True:
-            self.Restore = False
         self.Restored = False
 
         # set up the event handlers that the transaction families can use
@@ -188,103 +186,42 @@ class Journal(object):
         self.onDecommitBlock = event_handler.EventHandler('onDecommitBlock')
         self.onBlockTest = event_handler.EventHandler('onBlockTest')
 
-        # this flag indicates whether we should create a completely new
-        # database file or reuse an existing file
-        dbflag = 'c' if self.Restore else 'n'
-        if data_directory is not None:
-            dbdir = data_directory
-        else:
-            dbdir = 'db'
-
-        if store_type is not None:
-            store_type = store_type
-        else:
-            store_type = 'shelf'
-
         self._txn_lock = RLock()
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
+        store_type = 'shelf' if store_type is None else store_type
+        dbdir = 'db' if data_directory is None else data_directory
         dbprefix = dbdir + "/" + str(self.local_node)
 
-        if store_type == 'shelf':
-            from journal.database import shelf_database
+        if store_type in ['shelf', 'cached-shelf', 'lmdb', 'cached-lmdb']:
+            def get_store(db_name, db_type):
+                file_name = db_name
+                db_cls = None
+                if db_type in ['shelf', 'cached-shelf']:
+                    from journal.database import shelf_database
+                    db_cls = shelf_database.ShelfDatabase
+                    file_name += '.shelf'
+                elif db_type in ['lmdb', 'cached-lmdb']:
+                    from journal.database import lmdb_database
+                    db_cls = lmdb_database.LMDBDatabase
+                    file_name += '.lmdb'
+                db_flag = 'c' if os.path.isfile(file_name) else 'n'
+                db = db_cls(file_name, db_flag)
+                if db_type in ['cached-shelf', 'cached-lmdb']:
+                    from journal.database.database import CachedDatabase
+                    db = CachedDatabase(db)
+                return journal_store.JournalStore(db)
 
-            self.TransactionStore = journal_store.JournalStore(
-                shelf_database.ShelfDatabase(dbprefix + "_txn" + ".shelf",
-                                             dbflag))
-            self.BlockStore = journal_store.JournalStore(
-                shelf_database.ShelfDatabase(dbprefix + "_block" + ".shelf",
-                                             dbflag))
-            self.ChainStore = journal_store.JournalStore(
-                shelf_database.ShelfDatabase(dbprefix + "_chain" + ".shelf",
-                                             dbflag))
-            self.LocalStore = journal_store.JournalStore(
-                shelf_database.ShelfDatabase(dbprefix + "_local" + ".shelf",
-                                             dbflag))
-        elif store_type == 'cached-shelf':
-            from journal.database import shelf_database
-            from journal.database.database import CachedDatabase
+            self.TransactionStore = get_store(dbprefix + '_txn', store_type)
+            self.BlockStore = get_store(dbprefix + '_block', store_type)
+            self.ChainStore = get_store(dbprefix + '_chain', store_type)
+            self.LocalStore = get_store(dbprefix + '_local', store_type)
 
-            txn_database = shelf_database.ShelfDatabase(
-                dbprefix + "_txn" + ".shelf",
-                dbflag)
-            block_database = shelf_database.ShelfDatabase(
-                dbprefix + "_block" + ".shelf",
-                dbflag)
-            chain_database = shelf_database.ShelfDatabase(
-                dbprefix + "_chain" + ".shelf",
-                dbflag)
-            local_database = shelf_database.ShelfDatabase(
-                dbprefix + "_local" + ".shelf",
-                dbflag)
-            self.TransactionStore = journal_store.JournalStore(
-                CachedDatabase(txn_database))
-            self.BlockStore = journal_store.JournalStore(
-                CachedDatabase(block_database))
-            self.ChainStore = journal_store.JournalStore(
-                CachedDatabase(chain_database))
-            self.LocalStore = journal_store.JournalStore(
-                CachedDatabase(local_database))
-        elif store_type == 'lmdb':
-            from journal.database import lmdb_database
-
-            self.TransactionStore = journal_store.JournalStore(
-                lmdb_database.LMDBDatabase(dbprefix + "_txn" + ".lmdb",
-                                           dbflag))
-            self.BlockStore = journal_store.JournalStore(
-                lmdb_database.LMDBDatabase(dbprefix + "_block" + ".lmdb",
-                                           dbflag))
-            self.ChainStore = journal_store.JournalStore(
-                lmdb_database.LMDBDatabase(dbprefix + "_chain" + ".lmdb",
-                                           dbflag))
-            self.LocalStore = journal_store.JournalStore(
-                lmdb_database.LMDBDatabase(dbprefix + "_local" + ".lmdb",
-                                           dbflag))
-        elif store_type == 'cached-lmdb':
-            from journal.database import lmdb_database
-            from journal.database.database import CachedDatabase
-            txn_database = lmdb_database.LMDBDatabase(
-                dbprefix + "_txn" + ".lmdb", dbflag)
-            block_database = lmdb_database.LMDBDatabase(
-                dbprefix + "_block" + ".lmdb",
-                dbflag)
-            chain_database = lmdb_database.LMDBDatabase(
-                dbprefix + "_chain" + ".lmdb",
-                dbflag)
-            local_database = lmdb_database.LMDBDatabase(
-                dbprefix + "_local" + ".lmdb",
-                dbflag)
-            self.TransactionStore = journal_store.JournalStore(
-                CachedDatabase(txn_database))
-            self.BlockStore = journal_store.JournalStore(
-                CachedDatabase(block_database))
-            self.ChainStore = journal_store.JournalStore(
-                CachedDatabase(chain_database))
-            self.LocalStore = journal_store.JournalStore(
-                CachedDatabase(local_database))
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
+
+        # get our stores using get_store_func
 
         self.RequestedTransactions = {}
         self.RequestedBlocks = {}
@@ -300,8 +237,10 @@ class Journal(object):
         self.InvalidBlockIDs = set()
 
         # Set up the global store and transaction handlers
-        self.GlobalStoreMap = GlobalStoreManager(dbprefix + "_state" + ".dbm",
-                                                 dbflag)
+        gsm_fname = dbprefix + "_state" + ".dbm"
+        db_flag = 'c' if os.path.isfile(gsm_fname) else 'n'
+        self.GlobalStoreMap = GlobalStoreManager(gsm_fname, db_flag)
+
         # initialize the ledger stats data structures
         self._initledgerstats(stat_domains)
 
@@ -461,8 +400,6 @@ class Journal(object):
         return blocklist[-1]
 
     def restore(self):
-        if not self.Restore:
-            return
         logger.info('restore ledger state from persistence')
         head = None
         try:

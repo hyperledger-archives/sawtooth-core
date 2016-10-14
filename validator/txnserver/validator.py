@@ -344,13 +344,12 @@ class Validator(object):
                              str(e))
 
         # We may also be able to rediscover peers via the persistence layer.
-        if self.journal.Restore:
-            for blockid in self.journal.GlobalStoreMap.persistmap_keys():
-                blk = self.journal.GlobalStoreMap.get_block_store(blockid)
-                sto = blk.get_transaction_store('/EndpointRegistryTransaction')
-                for key in sto:
-                    nd = self._endpoint_info_to_node(sto[key])
-                    self.NodeMap[nd.Name] = nd
+        for blockid in self.journal.GlobalStoreMap.persistmap_keys():
+            blk = self.journal.GlobalStoreMap.get_block_store(blockid)
+            sto = blk.get_transaction_store('/EndpointRegistryTransaction')
+            for key in sto:
+                nd = self._endpoint_info_to_node(sto[key])
+                self.NodeMap[nd.Name] = nd
 
         # Build a list of nodes that we can use for the initial connection
         minpeercount = self.config.get("InitialConnectivity", 1)
@@ -455,11 +454,9 @@ class Validator(object):
 
     def start_journal_transfer(self):
         self.status = 'transferring ledger'
-        if not journal_transfer.start_journal_transfer(
-                self.gossip,
-                self.journal,
-                self.start_ledger):
-            self.start_ledger()
+        journal_transfer.start_journal_transfer(self.gossip,
+                                                self.journal,
+                                                self.start_ledger)
 
     def start_ledger(self):
         logger.info('ledger initialization complete')
