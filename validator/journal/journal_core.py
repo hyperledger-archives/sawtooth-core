@@ -187,6 +187,41 @@ class Journal(object):
         self.PendingTransactions = OrderedDict()
         self.TransactionEnqueueTime = None
 
+        self.TransactionStore = None
+        self.BlockStore = None
+        self.ChainStore = None
+        self.LocalStore = None
+        self.GlobalStoreMap = None
+        self.open_databases(store_type, data_directory)
+
+        self.RequestedTransactions = {}
+        self.RequestedBlocks = {}
+
+        self.next_block_retry = time.time() + self.BlockRetryInterval
+
+        self.dispatcher.on_heartbeat += self._trigger_retry_blocks
+
+        self.MostRecentCommittedBlockID = common.NullIdentifier
+        self.PendingTransactionBlock = None
+
+        self.PendingBlockIDs = set()
+        self.InvalidBlockIDs = set()
+
+        # initialize the ledger stats data structures
+        self._initledgerstats(stat_domains)
+
+        # connect the message handlers
+        journal_debug.register_message_handlers(self)
+        transaction_message.register_message_handlers(self)
+        transaction_block_message.register_message_handlers(self)
+        journal_transfer.register_message_handlers(self)
+
+    def open_databases(self, store_type, data_directory):
+
+        # this flag indicates whether we should create a completely new
+        # database file or reuse an existing file
+        dbflag = 'c' if self.Restore else 'n'
+
         store_type = 'shelf' if store_type is None else store_type
         dbdir = 'db' if data_directory is None else data_directory
         dbprefix = dbdir + "/" + str(self.local_node)
@@ -218,34 +253,10 @@ class Journal(object):
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
 
-        # get our stores using get_store_func
-
-        self.RequestedTransactions = {}
-        self.RequestedBlocks = {}
-
-        self.next_block_retry = time.time() + self.BlockRetryInterval
-
-        self.dispatcher.on_heartbeat += self._trigger_retry_blocks
-
-        self.MostRecentCommittedBlockID = common.NullIdentifier
-        self.PendingTransactionBlock = None
-
-        self.PendingBlockIDs = set()
-        self.InvalidBlockIDs = set()
-
         # Set up the global store and transaction handlers
         gsm_fname = dbprefix + "_state" + ".dbm"
         db_flag = 'c' if os.path.isfile(gsm_fname) else 'n'
         self.GlobalStoreMap = GlobalStoreManager(gsm_fname, db_flag)
-
-        # initialize the ledger stats data structures
-        self._initledgerstats(stat_domains)
-
-        # connect the message handlers
-        journal_debug.register_message_handlers(self)
-        transaction_message.register_message_handlers(self)
-        transaction_block_message.register_message_handlers(self)
-        journal_transfer.register_message_handlers(self)
 
     @property
     def CommittedBlockCount(self):
