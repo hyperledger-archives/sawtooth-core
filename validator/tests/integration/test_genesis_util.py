@@ -78,8 +78,7 @@ class TestGenesisUtil(unittest.TestCase):
             tgt_block = dat['GenesisId']
 
             # Verify genesis tool (also tests blockchain restoration)
-            # ...hack validator cfg to restore w/o peering
-            cfg['LedgerURL'] = []
+            # ...initial connectivity must be zero for the initial validator
             cfg['InitialConnectivity'] = 0
             # ...launch validator
             net_cfg = NetworkConfig.from_config_list([cfg])
