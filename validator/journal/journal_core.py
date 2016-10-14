@@ -1270,8 +1270,15 @@ class Journal(object):
                 # there are no loops in the dependencies but not doing that
                 # right now
                 deptxn = self.TransactionStore.get(dependencyID)
-                if deptxn and self._preparetransaction(addtxns, deltxns, store,
-                                                       deptxn):
+                if deptxn:
+                    if not self._preparetransaction(addtxns, deltxns,
+                                                    store, deptxn):
+                        if dependencyID in deltxns:
+                            logger.info('txnid: %s - depends on '
+                                        'deleted transaction %s',
+                                        txn.Identifier[:8], dependencyID[:8])
+                            deltxns.append(txn.Identifier)
+                        ready = False
                     continue
 
                 # at this point we cannot find the dependency so send out a
