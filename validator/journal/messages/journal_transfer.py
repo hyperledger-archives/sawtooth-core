@@ -171,7 +171,7 @@ def _uncommittedlistrequesthandler(msg, journal):
     reply.TransactionListIndex = msg.TransactionListIndex
 
     index = msg.TransactionListIndex
-    txns = journal.PendingTransactions.keys()
+    txns = journal.pending_transactions.keys()
     if index < len(txns):
         reply.TransactionIDs = txns[index:index + 100]
 

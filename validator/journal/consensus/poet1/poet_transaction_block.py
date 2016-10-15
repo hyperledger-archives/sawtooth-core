@@ -198,7 +198,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             return \
                 self.WaitCertificate.is_valid(
-                    certificates=journal._build_certificate_list(self),
+                    certificates=journal.consensus._build_certificate_list(
+                        journal.block_store, self),
                     encoded_poet_public_key=poet_public_key)
 
     def create_wait_timer(self, certlist):

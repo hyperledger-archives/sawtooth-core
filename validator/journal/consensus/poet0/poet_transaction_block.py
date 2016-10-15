@@ -180,7 +180,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             return self.WaitCertificate.is_valid_wait_certificate(
                 self.OriginatorID,
-                journal._build_certificate_list(self),
+                journal.consensus._build_certificate_list(
+                    journal.block_store, self),
                 self.TransactionIDs)
 
     def create_wait_timer(self, validator_address, certlist):

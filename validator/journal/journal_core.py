@@ -25,6 +25,7 @@ from gossip.message_dispatcher import MessageDispatcher
 from gossip import stats
 
 from journal import journal_store
+from journal.consensus.consensus_base import Consensus
 from journal import transaction
 from journal import transaction_block
 from journal.global_store_manager import GlobalStoreManager
@@ -95,8 +96,8 @@ class Journal(object):
             from peers.
         most_recent_committed_block_id (str): The block ID of the most
             recently committed block.
-        pending_transaction_block (TransactionBlock): The constructed
-            pending transaction block.
+        pending_block (TransactionBlock): The constructed
+            candidate transaction block to claim.
         pending_block_ids (builtin set): A set of pending block identifiers.
         invalid_block_ids (builtin set): A set of invalid block identifiers.
         FrontierBlockIDs (builtin set): A set of block identifiers for blocks
@@ -109,6 +110,7 @@ class Journal(object):
                  local_node,
                  gossip,
                  gossip_dispatcher,
+                 consensus,
                  stat_domains=None,
                  minimum_transactions_per_block=None,
                  max_transactions_per_block=None,
@@ -127,6 +129,10 @@ class Journal(object):
         self.local_node = local_node
         self.gossip = gossip
         self.dispatcher = MessageDispatcher(self, gossip_dispatcher)
+        if not isinstance(consensus, Consensus):
+            raise TypeError("Expected consensus to be subclass of the "
+                            "Consensus abstract base class")
+        self.consensus = consensus
 
         self.start_time = time.time()
         self.initializing = True
@@ -141,7 +147,7 @@ class Journal(object):
         # Minimum number of transactions per block
         if minimum_transactions_per_block is not None:
             self.minimum_transactions_per_block = \
-                minimum_transactions_per_block
+                int(minimum_transactions_per_block)
         else:
             self.minimum_transactions_per_block = 1
 
@@ -150,11 +156,12 @@ class Journal(object):
         # less then the MinimumTransactionsPerBlock count.
         # This is a safety measure to allow the validator network to function
         # with low transaction volume, such as network start up.
-        self.MaximumTransactionsWaitTime = 60
+        self._maximum_transaction_wait_time = 60
 
         # Maximum number of transactions per block
         if max_transactions_per_block is not None:
-            self.maximum_transactions_per_block = max_transactions_per_block
+            self.maximum_transactions_per_block = \
+                int(max_transactions_per_block)
         else:
             self.maximum_transactions_per_block = 1000
 
@@ -202,9 +209,10 @@ class Journal(object):
         self.next_block_retry = time.time() + self.block_retry_interval
 
         self.dispatcher.on_heartbeat += self._trigger_retry_blocks
+        self.dispatcher.on_heartbeat += self._check_claim_block
 
         self.most_recent_committed_block_id = common.NullIdentifier
-        self.pending_transaction_block = None
+        self.pending_block = None
 
         self.pending_block_ids = set()
         self.invalid_block_ids = set()
@@ -217,6 +225,7 @@ class Journal(object):
         transaction_message.register_message_handlers(self)
         transaction_block_message.register_message_handlers(self)
         journal_transfer.register_message_handlers(self)
+        self.consensus.initialization_complete(self)
 
     def open_databases(self, store_type, data_directory):
         # this flag indicates whether we should create a completely new
@@ -244,10 +253,10 @@ class Journal(object):
                     db = CachedDatabase(db)
                 return journal_store.JournalStore(db)
 
-            self.TransactionStore = get_store(dbprefix + '_txn', store_type)
-            self.BlockStore = get_store(dbprefix + '_block', store_type)
-            self.ChainStore = get_store(dbprefix + '_chain', store_type)
-            self.LocalStore = get_store(dbprefix + '_local', store_type)
+            self.transaction_store = get_store(dbprefix + '_txn', store_type)
+            self.block_store = get_store(dbprefix + '_block', store_type)
+            self.chain_store = get_store(dbprefix + '_chain', store_type)
+            self.local_store = get_store(dbprefix + '_local', store_type)
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
 
@@ -256,7 +265,6 @@ class Journal(object):
         db_flag = 'c' if os.path.isfile(gsm_fname) else 'n'
         self.global_store_map = GlobalStoreManager(gsm_fname, db_flag)
 
-
     @property
     def committed_block_count(self):
         """Returns the block number of the most recently committed block.
@@ -264,7 +272,9 @@ class Journal(object):
         Returns:
             int: most recently committed block number.
         """
-        return self.most_recent_committed_block.BlockNum
+        if self.most_recent_committed_block is not None:
+            return self.most_recent_committed_block.BlockNum
+        return 0
 
     @property
     def committed_txn_count(self):
@@ -408,7 +418,7 @@ class Journal(object):
                             'recomputing')
                 head = self.compute_chain_root()
         if head is not None:
-            self.most_recent_committed_block_id= head
+            self.most_recent_committed_block_id = head
             self.global_store_map.get_block_store(head)
             logger.info('commit head: %s', head)
             self.restored = True
@@ -452,8 +462,8 @@ class Journal(object):
         # block
         if self.genesis_ledger:
             self.on_genesis_block.fire(self)
-            genesis_block = self.build_transaction_block(True)
-            self.claim_transaction_block(genesis_block)
+            genesis_block = self.build_block(True)
+            self.claim_block(genesis_block)
             logger.warn('node %s claims the genesis block: %s',
                         self.local_node.Name, genesis_block.Identifier)
             self.genesis_ledger = False
@@ -463,7 +473,6 @@ class Journal(object):
                 return
 
         self.initial_load = False
-
         logger.info('finished processing initial transactions and blocks')
 
     def add_pending_transaction(self, txn, prepend=False, build_block=True):
@@ -525,8 +534,8 @@ class Journal(object):
             # because there were insufficient transactions, this is where
             # we check to see if there are now enough to run the validation
             # algorithm
-            if not self.pending_transaction_block and build_block:
-                self.pending_transaction_block = self.build_transaction_block()
+            if not self.pending_block and build_block:
+                self.pending_block = self.build_block()
 
     def commit_transaction_block(self, tblock):
         """Commits a block of transactions to the chain.
@@ -585,17 +594,26 @@ class Journal(object):
 
         self._handleblock(tblock)
 
-    def claim_transaction_block(self, block):
-        """Fires the onClaimBlock event handler and locally commits the
+    def claim_block(self, block=None):
+        """Fires the on_claim_block event handler and locally commits the
         transaction block.
 
         Args:
             block (Transaction.TransactionBlock): A block of
                 transactions to claim.
         """
-        # fire the event handler for claiming the transaction block
-        self.on_claim_block.fire(self, block)
-        self.commit_transaction_block(block)
+        with self._txn_lock:
+            if block is None:
+                if self.pending_block is not None:
+                    block = self.pending_block
+                else:
+                    return  # No block to claim
+
+            # fire the event handler for claiming the transaction block
+            msg = self.consensus.claim_block(self, block)
+            self.on_claim_block.fire(self, block)
+
+            self.gossip.broadcast_message(msg)
 
     def request_missing_block(self, block_id, exceptions=None, request=None):
         """Requests neighbors to send a transaction block.
@@ -607,7 +625,7 @@ class Journal(object):
         Args:
             block_id (str): The identifier of the missing block.
             exceptions (list): Identifiers of nodes we know don't have
-                the block.
+            the block.
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
@@ -676,7 +694,7 @@ class Journal(object):
                                         exceptions=exceptions,
                                         initialize=False)
 
-    def build_transaction_block(self, genesis=False):
+    def build_block(self, genesis=False):
         """Builds the next transaction block for the ledger.
 
         Note:
@@ -686,9 +704,11 @@ class Journal(object):
             genesis (bool): Whether to force the creation of the
                 initial block.
         """
-
-        self.on_pre_build_block.fire(self, None)
-        self.on_build_block.fire(self, None)
+        block = self.consensus.build_block(self, genesis)
+        if block is not None:
+            # fire the build block event handlers
+            self.on_build_block.fire(self, block)
+        return block
 
     def handle_advance(self, tblock):
         """Handles the case where we are attempting to commit a block that
@@ -700,16 +720,16 @@ class Journal(object):
         """
         assert tblock.Status == transaction_block.Status.valid
 
-        pending = self.pending_transaction_block
-        self.pending_transaction_block = None
+        pending = self.pending_block
+        self.pending_block = None
         try:
             self._commit_block(tblock)
             if not self.initial_load:
-                self.pending_transaction_block = self.build_transaction_block()
+                self.pending_block = self.build_block()
         except Exception as e:
             logger.error("blkid: %s - Error advancing block chain: %s",
                          tblock.Identifier[:8], e)
-            self.pending_transaction_block = pending
+            self.pending_block = pending
             raise
 
     def handle_fork(self, tblock):
@@ -720,8 +740,8 @@ class Journal(object):
             tblock (Transaction.TransactionBlock): A disconnected block.
         """
 
-        pending = self.pending_transaction_block
-        self.pending_transaction_block = None
+        pending = self.pending_block
+        self.pending_block = None
         try:
             assert tblock.Status == transaction_block.Status.valid
 
@@ -744,7 +764,7 @@ class Journal(object):
                             self.most_recent_committed_block_id[:8],
                             tblock.Identifier[:8],
                             )
-                self.pending_transaction_block = pending
+                self.pending_block = pending
                 return
 
             logger.info('blkid: %s - (fork) new chain is the valid one, '
@@ -769,16 +789,16 @@ class Journal(object):
 
             # move the new blocks from the orphaned list to the committed list
             self._commit_block_chain(tblock.Identifier, fork_id)
-            self.pending_transaction_block = self.build_transaction_block()
+            self.pending_block = self.build_block()
         except Exception as e:
             logger.exception("blkid: %s - (fork) error resolving fork",
                              tblock.Identifier[:8])
-            self.pending_transaction_block = pending
+            self.pending_block = pending
             raise
+
     #
     # UTILITY FUNCTIONS
     #
-
     def _handleblock(self, tblock):
         # pylint: disable=redefined-variable-type
         """
@@ -1330,3 +1350,37 @@ class Journal(object):
         if stat_domains is not None:
             stat_domains['journal'] = self.JournalStats
             stat_domains['journalconfig'] = self.JournalConfigStats
+
+    def _check_claim_block(self, now):
+        with self._txn_lock:
+            if not self.pending_block:
+                if self.transaction_enqueue_time is not None:
+                    transaction_time_waiting = \
+                        now - self.transaction_enqueue_time
+                else:
+                    transaction_time_waiting = 0
+                txn_list = self._prepare_transaction_list()
+                txn_count = len(txn_list)
+                build_block = (
+                    txn_count > self.minimum_transactions_per_block or
+                    (txn_count > 0 and
+                        transaction_time_waiting >
+                        self._maximum_transaction_wait_time))
+                if build_block:
+                    self.pending_block = self.build_block()
+                    # we know that the transaction list is a subset of the
+                    # pending transactions, if it is less then all of them
+                    # then set the TransactionEnqueueTime we can track these
+                    # transactions wait time.
+                    remaining_transactions = \
+                        len(self.pending_transactions) - txn_count
+                    self.transaction_enqueue_time =\
+                        time.time() if remaining_transactions > 0 else None
+
+        with self._txn_lock:
+            if self.pending_block and \
+                    self.consensus.check_claim_block(
+                        self,
+                        self.pending_block,
+                        now):
+                self.claim_block()

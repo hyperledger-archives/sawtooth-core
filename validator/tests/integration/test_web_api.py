@@ -26,6 +26,7 @@ from gossip.gossip_core import Gossip
 from gossip.node import Node
 from gossip.messages import shutdown_message
 
+from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
 from journal.global_store_manager import KeyValueStore, BlockStore
 from journal.transaction_block import TransactionBlock, Status
 from journal.transaction import Transaction
@@ -81,6 +82,7 @@ class TestWebApi(unittest.TestCase):
             gossip.LocalNode,
             gossip,
             gossip.dispatcher,
+            DevModeConsensus(),
             stat_domains,
             data_directory=path)
         return (gossip, journal, stat_domains)

@@ -94,7 +94,7 @@ def _build_block(journal, block):
         block.TransactionIDs.append(itxn.Identifier)
 
 
-def _claim_block(ledger, block):
+def _claim_block(journal, block):
     logger.info('prepare to claim block %s', block.Identifier)
 
     # send out the incentive transactions prior to sending out the
@@ -102,7 +102,7 @@ def _claim_block(ledger, block):
     itxns = []
 
     for txnid in block.TransactionIDs:
-        txn = ledger.transaction_store[txnid]
+        txn = journal.transaction_store[txnid]
         if isinstance(txn, MarketPlaceTransaction):
             # grab all of the incentive transactions, in theory one
             # should be sufficient though i suppose more could be added
@@ -119,16 +119,16 @@ def _claim_block(ledger, block):
         itxn.Status = transaction.Status.pending
         msg = MarketPlaceTransactionMessage()
         msg.Transaction = itxn
-        ledger.gossip.broadcast_message(msg)
+        journal.gossip.broadcast_message(msg)
 
         logger.info(
             'sending the incentive transaction %s for holding %s for block %s',
             itxn.Identifier, itxn.get_first_update().HoldingID,
             block.Identifier)
-        ledger.gossip.broadcast_message(msg)
+        journal.gossip.broadcast_message(msg)
 
 
-def _block_test(ledger, block):
+def _block_test(journal, block):
     logger.debug('test for valid marketplace block')
     assert block.Status == transaction_block.Status.complete
 
@@ -137,7 +137,7 @@ def _block_test(ledger, block):
     itxns = []
 
     for txnid in block.TransactionIDs:
-        txn = ledger.transaction_store[txnid]
+        txn = journal.transaction_store[txnid]
         if isinstance(txn, MarketPlaceTransaction):
             # grab all of the incentive transactions, in theory one
             # should be sufficient though i suppose more could be added

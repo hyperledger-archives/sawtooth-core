@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import journal.consensus.dev_mode.dev_mode_journal
+import journal.consensus.dev_mode.dev_mode_consensus
 import journal.consensus.dev_mode.dev_mode_transaction_block
 
-__all__ = ['dev_mode_journal', 'dev_mode_transaction_block']
+__all__ = ['dev_mode_consensus', 'dev_mode_transaction_block']

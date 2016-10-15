@@ -270,8 +270,9 @@ class Validator(object):
     def start(self):
         # add blacklist before we attempt any peering
         self.gossip.blacklist = self.config.get('Blacklist', [])
+
         # if this is the genesis ledger then there isn't anything left to do
-        if self.GenesisLedger:
+        if self.genesis_ledger:
             self.start_ledger()
             return
 
@@ -403,7 +404,7 @@ class Validator(object):
             reactor.callLater(2.0, self.initialize_ledger_connection)
         else:
             callback = self.start_ledger
-            if self.journal.Restored is False:
+            if self.journal.restored is False:
                 callback = self.start_journal_transfer
             reactor.callLater(2.0, self.initialize_ledger_topology, callback)
 

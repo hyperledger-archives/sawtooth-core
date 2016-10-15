@@ -55,9 +55,9 @@ class ForwardPage(BasePage):
                             mytxn.TransactionTypeName)
 
                 pending_block_txns = None
-                if self.journal.pending_transaction_block is not None:
+                if self.journal.pending_block is not None:
                     pending_block_txns = \
-                        self.journal.pending_transaction_block.TransactionIDs
+                        self.journal.pending_block.TransactionIDs
 
                 try:
                     temp_store_map = self._get_store_map()

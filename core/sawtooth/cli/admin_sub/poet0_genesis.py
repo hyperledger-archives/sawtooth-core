@@ -17,7 +17,8 @@ import os
 import json
 
 from gossip.gossip_core import Gossip
-from journal.consensus.poet0.poet_journal import PoetJournal
+from journal.journal_core import Journal
+from journal.consensus.poet0.poet_consensus import PoetConsensus
 from ledger.transaction import endpoint_registry
 from ledger.transaction import integer_key
 from sawtooth.config import ArgparseOptionsConfig
@@ -118,19 +119,20 @@ def do_poet0_genesis(args):
     store_type = cfg.get("StoreType")
 
     stat_domains = {}
-    # in future, dynamically select ledger obj based on LedgerType
-    journal = PoetJournal(gossiper.LocalNode,
-                          gossiper,
-                          gossiper.dispatcher,
-                          stat_domains,
-                          cfg,
-                          minimum_transactions_per_block=min_txn_per_block,
-                          max_transactions_per_block=max_txn_per_block,
-                          max_txn_age=max_txn_age,
-                          genesis_ledger=genesis_ledger,
-                          data_directory=data_directory,
-                          store_type=store_type,
-                          )
+
+    # in future, dynamically select consensus obj based on ConsensusType
+    journal = Journal(gossiper.LocalNode,
+                      gossiper,
+                      gossiper.dispatcher,
+                      PoetConsensus(cfg),
+                      stat_domains,
+                      minimum_transactions_per_block=min_txn_per_block,
+                      max_transactions_per_block=max_txn_per_block,
+                      max_txn_age=max_txn_age,
+                      genesis_ledger=genesis_ledger,
+                      data_directory=data_directory,
+                      store_type=store_type,
+                      )
     # may need to add transaction family objects ad hoc from cfg
     dfl_txn_families = [endpoint_registry, integer_key]
     for txnfamily in dfl_txn_families:

@@ -21,7 +21,7 @@ import tempfile
 from gossip import signed_object
 from gossip.gossip_core import Gossip
 from gossip.node import Node
-
+from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
 from journal.transaction import Transaction
 from journal.transaction_block import TransactionBlock
 from journal.transaction import Status as tStatus
@@ -107,6 +107,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
             gossip.LocalNode,
             gossip,
             gossip.dispatcher,
+            consensus=DevModeConsensus(),
             data_directory=path)
         return (gossip, journal)
 

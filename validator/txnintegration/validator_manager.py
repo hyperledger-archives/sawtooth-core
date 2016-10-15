@@ -271,7 +271,7 @@ class ValidatorManager(object):
                                     line.strip() == ''):
                                 raise ValidatorManagerException(
                                     "stderr has {} lines of output:\n {}"
-                                    .format(len(lines), '\t'.join(lines)))
+                                    .format(len(lines), '    '.join(lines)))
                     self._check_log_error()
         else:
             raise ValidatorManagerException("validator not running")
