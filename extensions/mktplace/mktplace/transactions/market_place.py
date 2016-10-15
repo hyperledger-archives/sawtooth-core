@@ -42,22 +42,22 @@ def register_transaction_types(journal):
         MarketPlaceTransactionMessage,
         transaction_message.transaction_message_handler)
     journal.add_transaction_store(MarketPlaceTransaction)
-    journal.onBlockTest += _block_test
-    journal.onBuildBlock += _build_block
-    journal.onClaimBlock += _claim_block
-    journal.onGenesisBlock += _prepare_genesis_transactions
+    journal.on_block_test += _block_test
+    journal.on_build_block += _build_block
+    journal.on_claim_block += _claim_block
+    journal.on_genesis_block += _prepare_genesis_transactions
 
 
-def _build_block(ledger, block):
+def _build_block(journal, block):
     logger.debug('build a new block')
 
     global ValidatorHoldingID
     if not ValidatorHoldingID:
-        mktstore = ledger.GlobalStore.TransactionStores.get(
+        mktstore = journal.global_store.TransactionStores.get(
             MarketPlaceTransaction.TransactionTypeName)
         if mktstore:
             holdingname = "//{0}/holding/validation-token".format(
-                ledger.local_node.Name)
+                journal.local_node.Name)
             holdingid = mktstore.n2i(holdingname, 'Holding')
             if holdingid:
                 logger.info('set validator holding id to %s', holdingid)
@@ -66,7 +66,7 @@ def _build_block(ledger, block):
     # the initial count is the minimum incentive for validating a block
     count = BaseValidationReward
     for txnid in block.TransactionIDs:
-        txn = ledger.TransactionStore[txnid]
+        txn = journal.transaction_store[txnid]
         if isinstance(txn, MarketPlaceTransaction):
             # check for payment, we don't actually need to
             # check whether the payment is valid at this point
@@ -87,10 +87,10 @@ def _build_block(ledger, block):
                 'Count': count,
             }]
         })
-        itxn.sign_from_node(ledger.local_node)
+        itxn.sign_from_node(journal.local_node)
 
         logger.debug('add incentive transaction %s to block', itxn.Identifier)
-        ledger.TransactionStore[itxn.Identifier] = itxn
+        journal.transaction_store[itxn.Identifier] = itxn
         block.TransactionIDs.append(itxn.Identifier)
 
 
@@ -102,7 +102,7 @@ def _claim_block(ledger, block):
     itxns = []
 
     for txnid in block.TransactionIDs:
-        txn = ledger.TransactionStore[txnid]
+        txn = ledger.transaction_store[txnid]
         if isinstance(txn, MarketPlaceTransaction):
             # grab all of the incentive transactions, in theory one
             # should be sufficient though i suppose more could be added
@@ -137,7 +137,7 @@ def _block_test(ledger, block):
     itxns = []
 
     for txnid in block.TransactionIDs:
-        txn = ledger.TransactionStore[txnid]
+        txn = ledger.transaction_store[txnid]
         if isinstance(txn, MarketPlaceTransaction):
             # grab all of the incentive transactions, in theory one
             # should be sufficient though i suppose more could be added

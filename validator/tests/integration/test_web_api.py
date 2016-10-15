@@ -157,14 +157,14 @@ class TestWebApi(unittest.TestCase):
         request = self._create_get_request("/store", {})
         try:
             # Test no GlobalStore
-            journal.GlobalStore = None
+            journal.global_store = None
             store_page.do_get(request)
             self.fail("This should throw an error.")
         except:
-            self.assertIsNotNone(journal.GlobalStore)
+            self.assertIsNotNone(journal.global_store)
         kv = KeyValueStore()
-        journal.GlobalStore.TransactionStores["/TestTransaction"] = kv
-        journal.GlobalStore.TransactionStores["/TestTransaction"].set(
+        journal.global_store.TransactionStores["/TestTransaction"] = kv
+        journal.global_store.TransactionStores["/TestTransaction"].set(
             "TestKey", 0)
         # GET /store
         self.assertEquals(store_page.do_get(request), '["/TestTransaction"]')
@@ -187,7 +187,7 @@ class TestWebApi(unittest.TestCase):
 
         try:
             blockstore = BlockStore()
-            journal.GlobalStoreMap.commit_block_store("123", blockstore)
+            journal.global_store_map.commit_block_store("123", blockstore)
             request = self._create_get_request("/store/TestTransaction/*",
                                                {"blockid": ["123"]})
             store_page.do_get(request)
@@ -195,7 +195,7 @@ class TestWebApi(unittest.TestCase):
         except:
             blockstore = BlockStore()
             blockstore.add_transaction_store("/TestTransaction", kv)
-            journal.GlobalStoreMap.commit_block_store("123", blockstore)
+            journal.global_store_map.commit_block_store("123", blockstore)
 
         # GET /store/TestTransaction/*?blockid=123
         request = self._create_get_request("/store/TestTransaction/*",
@@ -218,8 +218,8 @@ class TestWebApi(unittest.TestCase):
                                            1,
                                            trans_block.Identifier,
                                            [])
-        journal.BlockStore[trans_block.Identifier] = trans_block
-        journal.BlockStore[trans_block2.Identifier] = trans_block2
+        journal.block_store[trans_block.Identifier] = trans_block
+        journal.block_store[trans_block2.Identifier] = trans_block2
         journal.handle_advance(trans_block)
         journal.handle_advance(trans_block2)
 
@@ -262,13 +262,13 @@ class TestWebApi(unittest.TestCase):
             txn = Transaction()
             txn.sign_from_node(gossip.LocalNode)
             txns += [txn.Identifier]
-            journal.TransactionStore[txn.Identifier] = txn
+            journal.transaction_store[txn.Identifier] = txn
             i += 1
         trans_block = self._create_tblock(gossip.LocalNode,
                                           0,
                                           common.NullIdentifier,
                                           txns)
-        journal.BlockStore[trans_block.Identifier] = trans_block
+        journal.block_store[trans_block.Identifier] = trans_block
         journal.handle_advance(trans_block)
         # GET /transaction
         request = self._create_get_request("/transaction/", {})
@@ -286,7 +286,7 @@ class TestWebApi(unittest.TestCase):
         # Returns None if testing
         # GET /transaction/{TransactionID}
         request = self._create_get_request("/transaction/" + txns[1], {})
-        txn = journal.TransactionStore[txns[1]]
+        txn = journal.transaction_store[txns[1]]
         tinfo = txn.dump()
         tinfo['Identifier'] = txn.Identifier
         tinfo['Status'] = txn.Status

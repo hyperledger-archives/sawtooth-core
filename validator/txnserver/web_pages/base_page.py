@@ -176,9 +176,9 @@ class BasePage(Resource):
         return self.validator.gossip.dispatcher.unpack_message(typename, minfo)
 
     def _get_store_map(self):
-        block_id = self.journal.MostRecentCommittedBlockID
+        block_id = self.journal.most_recent_committed_block_id
         real_store_map = \
-            self.journal.GlobalStoreMap.get_block_store(block_id)
+            self.journal.global_store_map.get_block_store(block_id)
         temp_store_map = \
             global_store_manager.BlockStore(real_store_map)
         if not temp_store_map:

@@ -237,7 +237,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         # One missing transactions
         self.assertEquals(missing, [transaction.Identifier])
 
-        journal.TransactionStore[transaction.Identifier] = transaction
+        journal.transaction_store[transaction.Identifier] = transaction
         missing = trans_block.missing_transactions(journal)
         # Back to no missing transactions
         self.assertEquals(missing, [])
@@ -268,7 +268,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
                  'PreviousBlockID': trans_block.Identifier}
         new_trans_block = TransactionBlock(minfo)
         new_trans_block.Status = tbStatus.valid
-        journal.BlockStore[trans_block.Identifier] = trans_block
+        journal.block_store[trans_block.Identifier] = trans_block
         new_trans_block.update_block_weight(journal)
         # Get depth from previous block
         self.assertEquals(new_trans_block.TransactionDepth, 1)

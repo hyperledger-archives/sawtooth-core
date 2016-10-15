@@ -55,9 +55,9 @@ class ForwardPage(BasePage):
                             mytxn.TransactionTypeName)
 
                 pending_block_txns = None
-                if self.journal.PendingTransactionBlock is not None:
+                if self.journal.pending_transaction_block is not None:
                     pending_block_txns = \
-                        self.journal.PendingTransactionBlock.TransactionIDs
+                        self.journal.pending_transaction_block.TransactionIDs
 
                 try:
                     temp_store_map = self._get_store_map()
@@ -66,7 +66,7 @@ class ForwardPage(BasePage):
                         request,
                         http.NOT_FOUND,
                         e)
-                pending_txns = copy.copy(self.journal.PendingTransactions)
+                pending_txns = copy.copy(self.journal.pending_transactions)
                 pending_txn_ids = [x for x in pending_txns.iterkeys()]
 
                 # clone a copy of the ledger's message queue so we can
@@ -90,8 +90,8 @@ class ForwardPage(BasePage):
 
                 # apply any local pending transactions
                 for txn_id in pending_txn_ids:
-                    if txn_id in self.journal.TransactionStore:
-                        pend_txn = self.journal.TransactionStore[txn_id]
+                    if txn_id in self.journal.transaction_store:
+                        pend_txn = self.journal.transaction_store[txn_id]
                         my_store = temp_store_map.get_transaction_store(
                             pend_txn.TransactionTypeName)
                         if pend_txn and pend_txn.is_valid(my_store):

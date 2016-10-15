@@ -211,7 +211,7 @@ class Validator(object):
         self.status = 'stopped'
 
     def initialize_common_configuration(self):
-        self.GenesisLedger = self.config.get('GenesisLedger', False)
+        self.genesis_ledger = self.config.get('GenesisLedger', False)
 
         # Handle the common configuration variables
         if 'NetworkFlowRate' in self.config:
@@ -344,8 +344,8 @@ class Validator(object):
                              str(e))
 
         # We may also be able to rediscover peers via the persistence layer.
-        for blockid in self.journal.GlobalStoreMap.persistmap_keys():
-            blk = self.journal.GlobalStoreMap.get_block_store(blockid)
+        for blockid in self.journal.global_store_map.persistmap_keys():
+            blk = self.journal.global_store_map.get_block_store(blockid)
             sto = blk.get_transaction_store('/EndpointRegistryTransaction')
             for key in sto:
                 nd = self._endpoint_info_to_node(sto[key])

@@ -129,7 +129,7 @@ class TransactionBlock(signed_object.SignedObject):
         """
         missing = []
         for txnid in self.TransactionIDs:
-            if txnid not in journal.TransactionStore:
+            if txnid not in journal.transaction_store:
                 missing.append(txnid)
 
         return missing
@@ -144,8 +144,8 @@ class TransactionBlock(signed_object.SignedObject):
         self.TransactionDepth = len(self.TransactionIDs)
 
         if self.PreviousBlockID != common.NullIdentifier:
-            assert self.PreviousBlockID in journal.BlockStore
-            self.TransactionDepth += journal.BlockStore[
+            assert self.PreviousBlockID in journal.block_store
+            self.TransactionDepth += journal.block_store[
                 self.PreviousBlockID].TransactionDepth
 
     def build_message(self):

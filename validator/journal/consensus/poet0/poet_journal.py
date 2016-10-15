@@ -91,8 +91,8 @@ class PoetJournal(journal_core.Journal):
         self.JournalStats.add_metric(stats.Value('Duration', '0'))
 
         # propagate the maximum blocks to keep
-        self.MaximumBlocksToKeep = max(self.MaximumBlocksToKeep,
-                                       WaitTimer.certificate_sample_length)
+        self.maximum_blocks_to_keep = max(self.maximum_blocks_to_keep,
+                                          WaitTimer.certificate_sample_length)
 
         self.dispatcher.on_heartbeat += self._check_certificate
 
@@ -110,23 +110,23 @@ class PoetJournal(journal_core.Journal):
                 certificate.
         """
         logger.debug('attempt to build transaction block extending %s',
-                     self.MostRecentCommittedBlockID[:8])
+                     self.most_recent_committed_block_id[:8])
         with self._txn_lock:
             # Create a new block from all of our pending transactions
             nblock = poet_transaction_block.PoetTransactionBlock()
-            nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
-                + 1 if self.MostRecentCommittedBlock else 0
-            nblock.PreviousBlockID = self.MostRecentCommittedBlockID
+            nblock.BlockNum = self.most_recent_committed_block.BlockNum \
+                + 1 if self.most_recent_committed_block else 0
+            nblock.PreviousBlockID = self.most_recent_committed_block_id
 
-            self.onPreBuildBlock.fire(self, nblock)
+            self.on_pre_build_block.fire(self, nblock)
 
             # Get the list of prepared transactions, if there aren't enough
             # then just return
-            txnlist = self._preparetransactionlist(
-                self.MaximumTransactionsPerBlock)
-            transaction_time_waiting = time() - self.TransactionEnqueueTime\
-                if self.TransactionEnqueueTime is not None else 0
-            if len(txnlist) < self.MinimumTransactionsPerBlock and\
+            txnlist = self._prepare_transaction_list(
+                self.maximum_transactions_per_block)
+            transaction_time_waiting = time() - self.transaction_enqueue_time\
+                if self.transaction_enqueue_time is not None else 0
+            if len(txnlist) < self.minimum_transactions_per_block and\
                     not genesis and\
                     transaction_time_waiting <\
                     self.MaximumTransactionsWaitTime:
@@ -134,7 +134,7 @@ class PoetJournal(journal_core.Journal):
                              'build block, no block constructed. Mandatory'
                              'block creation in %f seconds',
                              len(txnlist),
-                             self.MinimumTransactionsPerBlock,
+                             self.minimum_transactions_per_block,
                              self.MaximumTransactionsWaitTime -
                              transaction_time_waiting)
                 return None
@@ -143,20 +143,20 @@ class PoetJournal(journal_core.Journal):
                 # pending transactions, if it is less then all of them
                 # then set the TransactionEnqueueTime we can track these
                 # transactions wait time.
-                remaining_transactions = len(self.PendingTransactions) - \
+                remaining_transactions = len(self.pending_transactions) - \
                     len(txnlist)
-                self.TransactionEnqueueTime =\
+                self.transaction_enqueue_time =\
                     time() if remaining_transactions > 0 else None
 
             logger.info('build transaction block to extend %s with %s '
                         'transactions',
-                        self.MostRecentCommittedBlockID[:8], len(txnlist))
+                        self.most_recent_committed_block_id[:8], len(txnlist))
 
             # Create a new block from all of our pending transactions
             nblock = poet_transaction_block.PoetTransactionBlock()
-            nblock.BlockNum = self.MostRecentCommittedBlock.BlockNum \
-                + 1 if self.MostRecentCommittedBlock else 0
-            nblock.PreviousBlockID = self.MostRecentCommittedBlockID
+            nblock.BlockNum = self.most_recent_committed_block.BlockNum \
+                + 1 if self.most_recent_committed_block else 0
+            nblock.PreviousBlockID = self.most_recent_committed_block_id
             nblock.TransactionIDs = txnlist
 
             nblock.create_wait_timer(
@@ -174,9 +174,10 @@ class PoetJournal(journal_core.Journal):
             self.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
 
             # must put a cap on the transactions in the block
-            if len(nblock.TransactionIDs) >= self.MaximumTransactionsPerBlock:
+            if len(nblock.TransactionIDs) >= \
+                    self.maximum_transactions_per_block:
                 nblock.TransactionIDs = \
-                    nblock.TransactionIDs[:self.MaximumTransactionsPerBlock]
+                    nblock.TransactionIDs[:self.maximum_transactions_per_block]
 
             logger.debug('created new pending block with timer <%s> and '
                          '%d transactions', nblock.WaitTimer,
@@ -190,11 +191,11 @@ class PoetJournal(journal_core.Journal):
                 round(nblock.WaitTimer.duration, 2)
 
             for txnid in nblock.TransactionIDs:
-                txn = self.TransactionStore[txnid]
+                txn = self.transaction_store[txnid]
                 txn.InBlock = "Uncommitted"
-                self.TransactionStore[txnid] = txn
+                self.transaction_store[txnid] = txn
             # fire the build block event handlers
-            self.onBuildBlock.fire(self, nblock)
+            self.on_build_block.fire(self, nblock)
 
             return nblock
 
@@ -214,14 +215,14 @@ class PoetJournal(journal_core.Journal):
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
-        self.onClaimBlock.fire(self, block)
+        self.on_claim_block.fire(self, block)
 
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
         msg.TransactionBlock = block
         self.gossip.broadcast_message(msg)
 
-        self.PendingTransactionBlock = None
+        self.pending_transaction_block = None
 
     def _build_certificate_list(self, block):
         # for the moment we just dump all of these into one list,
@@ -231,7 +232,7 @@ class PoetJournal(journal_core.Journal):
 
         while block.PreviousBlockID != common.NullIdentifier \
                 and len(certs) < count:
-            block = self.BlockStore[block.PreviousBlockID]
+            block = self.block_store[block.PreviousBlockID]
             certs.appendleft(block.WaitCertificate)
 
         # drop the root block off the computation
@@ -239,19 +240,20 @@ class PoetJournal(journal_core.Journal):
 
     def _check_certificate(self, now):
         with self._txn_lock:
-            if self.PendingTransactionBlock:
-                if self.PendingTransactionBlock.wait_timer_is_expired(now):
-                    self.claim_transaction_block(self.PendingTransactionBlock)
+            if self.pending_transaction_block:
+                if self.pending_transaction_block.wait_timer_is_expired(now):
+                    self.claim_transaction_block(
+                        self.pending_transaction_block)
             else:
                 # No transaction block - check if we must make one due to time
                 # waited
-                if self.TransactionEnqueueTime is not None:
+                if self.transaction_enqueue_time is not None:
                     transaction_time_waiting = \
-                        time() - self.TransactionEnqueueTime
+                        time() - self.transaction_enqueue_time
                 else:
                     transaction_time_waiting = 0
                 if transaction_time_waiting > self.MaximumTransactionsWaitTime:
                     logger.debug("Transaction wait timeout "
                                  "calling build block")
-                    self.PendingTransactionBlock = \
+                    self.pending_transaction_block = \
                         self.build_transaction_block()

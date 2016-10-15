@@ -97,7 +97,7 @@ class PrevalidationPage(BasePage):
 
             if not temp_store_session.my_store:
                 temp_store_map = self._get_store_map()
-                if transaction_type not in temp_store_map.TransactionStores:
+                if transaction_type not in temp_store_map.transaction_store:
                     LOGGER.info('transaction type %s not in global store map',
                                 transaction_type)
                     raise Error(http.BAD_REQUEST,

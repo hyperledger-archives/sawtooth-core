@@ -42,65 +42,66 @@ class Journal(object):
     """The base journal class.
 
     Attributes:
-        MaximumBlocksToKeep (int): Maximum number of blocks to keep in cache.
-        MinimumTransactionsPerBlock (int): Minimum number of transactions
+        maximum_blocks_to_keep (int): Maximum number of blocks to keep in
+        cache.
+        minimum_transactions_per_block (int): Minimum number of transactions
             per block.
-        MaximumTransactionsPerBlock (int): Maximum number of transactions
+        maximum_transactions_per_block (int): Maximum number of transactions
             per block.
-        MissingRequestInterval (float): Time in seconds between sending
+        missing_request_interval (float): Time in seconds between sending
             requests for a missing transaction block.
-        BlockRetryInterval (float): Time in seconds between retrying
+        block_retry_interval (float): Time in seconds between retrying
             block validations that
-        StartTime (float): The initialization time of the journal in
+        start_time (float): The initialization time of the journal in
             seconds since the epoch.
-        Initializing (bool): Whether or not the journal is in an
+        initializing (bool): Whether or not the journal is in an
             initializing state.
-        InitialLoad (bool): Whether or not the journal is in an initial
+        initial_load (bool): Whether or not the journal is in an initial
             loading state.
-        InitialTransactions (list): A list of initial transactions to
+        initial_transactions (list): A list of initial transactions to
             process.
-        InitialBlockList (list): A list of initial blocks to process.
-        GenesisLedger (bool): Whether or not this journal is associated
+        initial_block_list (list): A list of initial blocks to process.
+        genesis_ledger (bool): Whether or not this journal is associated
             with a genesis node.
         onGenesisBlock (EventHandler): An EventHandler for functions
             to call when processing a genesis block.
-        onPreBuildBlock (EventHandler): An EventHandler for functions
+        on_pre_build_block (EventHandler): An EventHandler for functions
             to call when before processing a build block.
-        onBuildBlock (EventHandler): An EventHandler for functions
+        on_build_block (EventHandler): An EventHandler for functions
             to call when processing a build block.
-        onClaimBlock (EventHandler): An EventHandler for functions
+        on_claim_block (EventHandler): An EventHandler for functions
             to call when processing a claim block.
-        onCommitBlock (EventHandler): An EventHandler for functions
+        on_commit_block (EventHandler): An EventHandler for functions
             to call when processing a commit block.
-        onDecommitBlock (EventHandler): An EventHandler for functions
+        on_decommit_block (EventHandler): An EventHandler for functions
             to call when processing a decommit block.
-        onBlockTest (EventHandler): An EventHandler for functions
+        on_block_test (EventHandler): An EventHandler for functions
             to call when processing a block test.
-        PendingTransactions (dict): A dict of pending, unprocessed
+        pending_transactions (dict): A dict of pending, unprocessed
             transactions.
-        TransactionStore (JournalStore): A dict-like object representing
+        transaction_store (JournalStore): A dict-like object representing
             the persisted copy of the transaction store.
-        BlockStore (JournalStore): A dict-like object representing the
+        block_store (JournalStore): A dict-like object representing the
             persisted copy of the block store.
-        ChainStore (JournalStore): A dict-like object representing the
+        chain_store (JournalStore): A dict-like object representing the
             persisted copy of the chain store.
-        LocalStore (JournalStore): A dict-like object representing the
+        local_store (JournalStore): A dict-like object representing the
             persisted local state of the journal.
-        RequestedTransactions (dict): A dict of transactions which are
+        requested_transactions (dict): A dict of transactions which are
             not in the local cache, the details of which have been
             requested from peers.
-        RequestedBlocks (dict): A dict of blocks which are not in the
+        requested_blocks (dict): A dict of blocks which are not in the
             local cache, the details of which have been requested
             from peers.
-        MostRecentCommittedBlockID (str): The block ID of the most
+        most_recent_committed_block_id (str): The block ID of the most
             recently committed block.
-        PendingTransactionBlock (TransactionBlock): The constructed
+        pending_transaction_block (TransactionBlock): The constructed
             pending transaction block.
-        PendingBlockIDs (builtin set): A set of pending block identifiers.
-        InvalidBlockIDs (builtin set): A set of invalid block identifiers.
+        pending_block_ids (builtin set): A set of pending block identifiers.
+        invalid_block_ids (builtin set): A set of invalid block identifiers.
         FrontierBlockIDs (builtin set): A set of block identifiers for blocks
             which still need to be processed.
-        GlobalStoreMap (GlobalStoreManager): Manages access to the
+        global_store_map (GlobalStoreManager): Manages access to the
             various persistence stores.
     """
 
@@ -119,7 +120,7 @@ class Journal(object):
 
         Args:
             node (Node): The local node.
-            GenesisLedger (bool): Whether or not this journal is associated
+            genesis_ledger (bool): Whether or not this journal is associated
                 with a genesis node.
             DataDirectory (str):
         """
@@ -127,21 +128,22 @@ class Journal(object):
         self.gossip = gossip
         self.dispatcher = MessageDispatcher(self, gossip_dispatcher)
 
-        self.StartTime = time.time()
-        self.Initializing = True
-        self.InitialLoad = False
+        self.start_time = time.time()
+        self.initializing = True
+        self.initial_load = False
 
-        self.InitialTransactions = []
-        self.InitialBlockList = []
+        self.initial_transactions = []
+        self.initial_block_list = []
 
         # For storage management, minimum blocks to keep cached
-        self.MaximumBlocksToKeep = 50
+        self.maximum_blocks_to_keep = 50
 
         # Minimum number of transactions per block
         if minimum_transactions_per_block is not None:
-            self.MinimumTransactionsPerBlock = minimum_transactions_per_block
+            self.minimum_transactions_per_block = \
+                minimum_transactions_per_block
         else:
-            self.MinimumTransactionsPerBlock = 1
+            self.minimum_transactions_per_block = 1
 
         # Amount of time(in sec) transactions can wait to meet the
         # MinimumTransactionsPerBlock before a block gets built with
@@ -152,63 +154,63 @@ class Journal(object):
 
         # Maximum number of transactions per block
         if max_transactions_per_block is not None:
-            self.MaximumTransactionsPerBlock = max_transactions_per_block
+            self.maximum_transactions_per_block = max_transactions_per_block
         else:
-            self.MaximumTransactionsPerBlock = 1000
+            self.maximum_transactions_per_block = 1000
 
         # Time between sending requests for a missing transaction block
-        self.MissingRequestInterval = 30.0
+        self.missing_request_interval = 30.0
 
         # Time between sending requests for a missing transaction block
-        self.BlockRetryInterval = 10.0
+        self.block_retry_interval = 10.0
 
         if max_txn_age is not None:
-            self.MaxTxnAge = max_txn_age
+            self.max_txn_age = max_txn_age
         else:
-            self.MaxTxnAge = 3
+            self.max_txn_age = 3
 
         if genesis_ledger is not None:
-            self.GenesisLedger = genesis_ledger
+            self.genesis_ledger = genesis_ledger
         else:
-            self.GenesisLedger = False
+            self.genesis_ledger = False
 
-        self.Restored = False
+        self.restored = False
 
         # set up the event handlers that the transaction families can use
-        self.onGenesisBlock = event_handler.EventHandler('onGenesisBlock')
-        self.onPreBuildBlock = event_handler.EventHandler('onPreBuildBlock')
-        self.onBuildBlock = event_handler.EventHandler('onBuildBlock')
-        self.onClaimBlock = event_handler.EventHandler('onClaimBlock')
-        self.onCommitBlock = event_handler.EventHandler('onCommitBlock')
-        self.onDecommitBlock = event_handler.EventHandler('onDecommitBlock')
-        self.onBlockTest = event_handler.EventHandler('onBlockTest')
+        self.on_genesis_block = event_handler.EventHandler('onGenesisBlock')
+        self.on_pre_build_block = event_handler.EventHandler('onPreBuildBlock')
+        self.on_build_block = event_handler.EventHandler('onBuildBlock')
+        self.on_claim_block = event_handler.EventHandler('onClaimBlock')
+        self.on_commit_block = event_handler.EventHandler('onCommitBlock')
+        self.on_decommit_block = event_handler.EventHandler('onDecommitBlock')
+        self.on_block_test = event_handler.EventHandler('onBlockTest')
 
         self._txn_lock = RLock()
-        self.PendingTransactions = OrderedDict()
-        self.TransactionEnqueueTime = None
+        self.pending_transactions = OrderedDict()
+        self.transaction_enqueue_time = None
 
-        self.TransactionStore = None
-        self.BlockStore = None
-        self.ChainStore = None
-        self.LocalStore = None
-        self.GlobalStoreMap = None
+        self.transaction_store = None
+        self.block_store = None
+        self.chain_store = None
+        self.local_store = None
+        self.global_store_map = None
         self.open_databases(store_type, data_directory)
 
-        self.RequestedTransactions = {}
-        self.RequestedBlocks = {}
+        self.requested_transactions = {}
+        self.requested_blocks = {}
 
-        self.next_block_retry = time.time() + self.BlockRetryInterval
+        self.next_block_retry = time.time() + self.block_retry_interval
 
         self.dispatcher.on_heartbeat += self._trigger_retry_blocks
 
-        self.MostRecentCommittedBlockID = common.NullIdentifier
-        self.PendingTransactionBlock = None
+        self.most_recent_committed_block_id = common.NullIdentifier
+        self.pending_transaction_block = None
 
-        self.PendingBlockIDs = set()
-        self.InvalidBlockIDs = set()
+        self.pending_block_ids = set()
+        self.invalid_block_ids = set()
 
         # initialize the ledger stats data structures
-        self._initledgerstats(stat_domains)
+        self._init_ledger_stats(stat_domains)
 
         # connect the message handlers
         journal_debug.register_message_handlers(self)
@@ -217,11 +219,8 @@ class Journal(object):
         journal_transfer.register_message_handlers(self)
 
     def open_databases(self, store_type, data_directory):
-
         # this flag indicates whether we should create a completely new
         # database file or reuse an existing file
-        dbflag = 'c' if self.Restore else 'n'
-
         store_type = 'shelf' if store_type is None else store_type
         dbdir = 'db' if data_directory is None else data_directory
         dbprefix = dbdir + "/" + str(self.local_node)
@@ -249,51 +248,51 @@ class Journal(object):
             self.BlockStore = get_store(dbprefix + '_block', store_type)
             self.ChainStore = get_store(dbprefix + '_chain', store_type)
             self.LocalStore = get_store(dbprefix + '_local', store_type)
-
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
 
         # Set up the global store and transaction handlers
         gsm_fname = dbprefix + "_state" + ".dbm"
         db_flag = 'c' if os.path.isfile(gsm_fname) else 'n'
-        self.GlobalStoreMap = GlobalStoreManager(gsm_fname, db_flag)
+        self.global_store_map = GlobalStoreManager(gsm_fname, db_flag)
+
 
     @property
-    def CommittedBlockCount(self):
+    def committed_block_count(self):
         """Returns the block number of the most recently committed block.
 
         Returns:
             int: most recently committed block number.
         """
-        return self.MostRecentCommittedBlock.BlockNum
+        return self.most_recent_committed_block.BlockNum
 
     @property
-    def CommittedTxnCount(self):
+    def committed_txn_count(self):
         """Returns the committed transaction count.
 
         Returns:
             int: the transaction depth based on the most recently
                 committed block.
         """
-        return self.MostRecentCommittedBlock.TransactionDepth
+        return self.most_recent_committed_block.TransactionDepth
 
     @property
-    def PendingBlockCount(self):
+    def pending_block_count(self):
         """Returns the number of pending blocks.
 
         Returns:
             int: the number of pending blocks.
         """
-        return len(self.PendingBlockIDs)
+        return len(self.pending_block_ids)
 
     @property
-    def PendingTxnCount(self):
+    def pending_txn_count(self):
         """Returns the number of pending transactions.
 
         Returns:
             int: the number of pending transactions.
         """
-        return len(self.PendingTransactions)
+        return len(self.pending_transactions)
 
     def shutdown(self):
         """Shuts down the journal in an orderly fashion.
@@ -301,12 +300,12 @@ class Journal(object):
         logger.info('close journal databases in preparation for shutdown')
 
         # Global store manager handles its own database
-        self.GlobalStoreMap.close()
+        self.global_store_map.close()
 
-        self.TransactionStore.close()
-        self.BlockStore.close()
-        self.ChainStore.close()
-        self.LocalStore.close()
+        self.transaction_store.close()
+        self.block_store.close()
+        self.chain_store.close()
+        self.local_store.close()
 
     def add_transaction_store(self, family):
         """Add a transaction type-specific store to the global store.
@@ -316,37 +315,28 @@ class Journal(object):
         """
         tname = family.TransactionTypeName
         tstore = family.TransactionStoreType()
-        self.GlobalStoreMap.add_transaction_store(tname, tstore)
+        self.global_store_map.add_transaction_store(tname, tstore)
 
     @property
-    def GlobalStore(self):
+    def global_store(self):
         """Returns a reference to the global store associated with the
         most recently committed block that this validator possesses.
 
         Returns:
             Shelf: The block store.
         """
-        blkid = self.MostRecentCommittedBlockID
+        blkid = self.most_recent_committed_block_id
 
-        return self.GlobalStoreMap.get_block_store(blkid)
+        return self.global_store_map.get_block_store(blkid)
 
     @property
-    def MostRecentCommittedBlock(self):
+    def most_recent_committed_block(self):
         """Returns the most recently committed block.
 
         Returns:
             dict: the most recently committed block.
         """
-        return self.BlockStore.get(self.MostRecentCommittedBlockID)
-
-    @property
-    def CommittedBlockIDCount(self):
-        """Returns the count of blocks in the block store.
-
-        Returns:
-            int: count of blocks in the block store.
-        """
-        return len(self.BlockStore)
+        return self.block_store.get(self.most_recent_committed_block_id)
 
     def committed_block_ids(self, count=0):
         """Returns the list of block identifiers starting from the
@@ -359,16 +349,16 @@ class Journal(object):
             list: A list of committed block ids.
         """
         if count == 0:
-            count = len(self.BlockStore)
+            count = len(self.block_store)
 
-        blockids = []
+        block_ids = []
 
-        blkid = self.MostRecentCommittedBlockID
-        while blkid != common.NullIdentifier and len(blockids) < count:
-            blockids.append(blkid)
-            blkid = self.BlockStore[blkid].PreviousBlockID
+        blkid = self.most_recent_committed_block_id
+        while blkid != common.NullIdentifier and len(block_ids) < count:
+            block_ids.append(blkid)
+            blkid = self.block_store[blkid].PreviousBlockID
 
-        return blockids
+        return block_ids
 
     def compute_chain_root(self):
         """
@@ -384,44 +374,44 @@ class Journal(object):
         depths = dict()
         depths[common.NullIdentifier] = 0
 
-        for blockid in self.BlockStore.iterkeys():
+        for block_id in self.block_store.iterkeys():
             count = 0
-            blkid = blockid
-            while blkid in self.BlockStore:
+            blkid = block_id
+            while blkid in self.block_store:
                 if blkid in depths:
                     count += depths[blkid]
                     break
 
-                blkid = self.BlockStore[blkid].PreviousBlockID
+                blkid = self.block_store[blkid].PreviousBlockID
                 count += 1
 
-            depths[blockid] = count
-            while blkid in self.BlockStore:
-                blkid = self.BlockStore[blkid].PreviousBlockID
+            depths[block_id] = count
+            while blkid in self.block_store:
+                blkid = self.block_store[blkid].PreviousBlockID
                 if blkid in depths:
                     break
 
                 count -= 1
                 depths[blkid] = count
 
-        blocklist = sorted(list(depths), key=lambda blkid: depths[blkid])
-        return blocklist[-1]
+        block_list = sorted(list(depths), key=lambda blkid: depths[blkid])
+        return block_list[-1]
 
     def restore(self):
         logger.info('restore ledger state from persistence')
         head = None
         try:
-            head = self.ChainStore['MostRecentBlockID']
+            head = self.chain_store['MostRecentBlockID']
         except KeyError:
-            if len(self.BlockStore) > 0:
+            if len(self.block_store) > 0:
                 logger.warn('unable to load the most recent block id; '
                             'recomputing')
                 head = self.compute_chain_root()
         if head is not None:
-            self.MostRecentCommittedBlockID = head
-            self.GlobalStoreMap.get_block_store(head)
+            self.most_recent_committed_block_id= head
+            self.global_store_map.get_block_store(head)
             logger.info('commit head: %s', head)
-            self.Restored = True
+            self.restored = True
         else:
             logger.warn('unable to restore ledger state')
 
@@ -431,23 +421,23 @@ class Journal(object):
         """
         logger.info('process initial transactions and blocks')
 
-        self.Initializing = False
-        self.InitialLoad = True
+        self.initializing = False
+        self.initial_load = True
 
-        if self.Restored is True:
+        if self.restored is True:
             return
 
-        for txn in self.InitialTransactions:
+        for txn in self.initial_transactions:
             self.add_pending_transaction(txn, build_block=False)
-        self.InitialTransactions = None
+        self.initial_transactions = None
 
-        logger.debug('initial block list: %s', self.InitialBlockList)
+        logger.debug('initial block list: %s', self.initial_block_list)
 
         # Generate a unique list of initial blocks to process, sorted
         # by BlockNum
         initial_block_list = []
         seen = set()
-        for block in self.InitialBlockList:
+        for block in self.initial_block_list:
             if block.Identifier not in seen:
                 initial_block_list.append(block)
                 seen.add(block.Identifier)
@@ -456,23 +446,23 @@ class Journal(object):
         for block in initial_block_list:
             logger.debug('initial block processing of block: %s', block)
             self.commit_transaction_block(block)
-        self.InitialBlockList = None
+        self.initial_block_list = None
 
         # generate a block, if none exists then generate and commit the root
         # block
-        if self.GenesisLedger:
-            self.onGenesisBlock.fire(self)
+        if self.genesis_ledger:
+            self.on_genesis_block.fire(self)
             genesis_block = self.build_transaction_block(True)
             self.claim_transaction_block(genesis_block)
             logger.warn('node %s claims the genesis block: %s',
                         self.local_node.Name, genesis_block.Identifier)
-            self.GenesisLedger = False
+            self.genesis_ledger = False
         else:
-            if self.MostRecentCommittedBlockID == common.NullIdentifier:
+            if self.most_recent_committed_block_id == common.NullIdentifier:
                 logger.critical('no ledger for a new network node')
                 return
 
-        self.InitialLoad = False
+        self.initial_load = False
 
         logger.info('finished processing initial transactions and blocks')
 
@@ -481,60 +471,62 @@ class Journal(object):
 
         Args:
             txn (Transaction.Transaction): The newly arrived transaction
+            prepend - add to front of list
+            build_block - force build of transaction block
         """
         with self._txn_lock:
             logger.debug('txnid: %s - add_pending_transaction',
                          txn.Identifier[:8])
 
             # nothing more to do, we are initializing
-            if self.Initializing:
-                self.InitialTransactions.append(txn)
+            if self.initializing:
+                self.initial_transactions.append(txn)
                 return
 
             # if we already have the transaction there is nothing to do
-            if txn.Identifier in self.TransactionStore:
-                assert self.TransactionStore[txn.Identifier]
+            if txn.Identifier in self.transaction_store:
+                assert self.transaction_store[txn.Identifier]
                 return
 
             # add it to the transaction store
             txn.Status = transaction.Status.pending
-            self.TransactionStore[txn.Identifier] = txn
+            self.transaction_store[txn.Identifier] = txn
             if txn.add_to_pending():
                 if prepend:
                     pending = OrderedDict()
                     pending[txn.Identifier] = True
-                    pending.update(self.PendingTransactions)
-                    self.PendingTransactions = pending
+                    pending.update(self.pending_transactions)
+                    self.pending_transactions = pending
                 else:
-                    self.PendingTransactions[txn.Identifier] = True
-                if self.TransactionEnqueueTime is None:
-                    self.TransactionEnqueueTime = time.time()
+                    self.pending_transactions[txn.Identifier] = True
+                if self.transaction_enqueue_time is None:
+                    self.transaction_enqueue_time = time.time()
 
             # if this is a transaction we requested, then remove it from
             # the list and look for any blocks that might be completed
             # as a result of processing the transaction
-            if txn.Identifier in self.RequestedTransactions:
+            if txn.Identifier in self.requested_transactions:
                 logger.info('txnid %s - catching up',
                             txn.Identifier[:8])
-                del self.RequestedTransactions[txn.Identifier]
+                del self.requested_transactions[txn.Identifier]
                 txn.InBlock = "Uncommitted"
-                self.TransactionStore[txn.Identifier] = txn
+                self.transaction_store[txn.Identifier] = txn
 
-                blockids = []
-                for blockid in self.PendingBlockIDs:
+                block_ids = []
+                for block_id in self.pending_block_ids:
                     if txn.Identifier in \
-                            self.BlockStore[blockid].TransactionIDs:
-                        blockids.append(blockid)
+                            self.block_store[block_id].TransactionIDs:
+                        block_ids.append(block_id)
 
-                for blockid in blockids:
-                    self._handleblock(self.BlockStore[blockid])
+                for block_id in block_ids:
+                    self._handleblock(self.block_store[block_id])
 
             # there is a chance the we deferred creating a transaction block
             # because there were insufficient transactions, this is where
             # we check to see if there are now enough to run the validation
             # algorithm
-            if not self.PendingTransactionBlock and build_block:
-                self.PendingTransactionBlock = self.build_transaction_block()
+            if not self.pending_transaction_block and build_block:
+                self.pending_transaction_block = self.build_transaction_block()
 
     def commit_transaction_block(self, tblock):
         """Commits a block of transactions to the chain.
@@ -556,7 +548,7 @@ class Journal(object):
 
         # Don't do anything with incoming blocks if we are initializing, wait
         # for the connections to be fully established
-        if self.Initializing:
+        if self.initializing:
             logger.debug('blkid: %s - adding block to the pending queue',
                          tblock.Identifier[:8])
 
@@ -568,18 +560,18 @@ class Journal(object):
             # circumvent the commit logic and just add the block to the chain.
             # However that does mean that we have to TRUST our peer which is
             # not necessarily such a good thing...
-            if tblock.Identifier in self.BlockStore:
-                del self.BlockStore[tblock.Identifier]
+            if tblock.Identifier in self.block_store:
+                del self.block_store[tblock.Identifier]
 
-            self.InitialBlockList.append(tblock)
+            self.initial_block_list.append(tblock)
             return
 
         # If this is a block we requested, then remove it from the list
-        if tblock.Identifier in self.RequestedBlocks:
-            del self.RequestedBlocks[tblock.Identifier]
+        if tblock.Identifier in self.requested_blocks:
+            del self.requested_blocks[tblock.Identifier]
 
         # Make sure that we have not already processed this block
-        if tblock.Identifier in self.BlockStore:
+        if tblock.Identifier in self.block_store:
             logger.info('blkid: %s - previously committed block',
                         tblock.Identifier[:8])
             return
@@ -588,8 +580,8 @@ class Journal(object):
         tblock.Status = transaction_block.Status.incomplete
 
         # Add this block to block pool, mark as orphaned until it is committed
-        self.PendingBlockIDs.add(tblock.Identifier)
-        self.BlockStore[tblock.Identifier] = tblock
+        self.pending_block_ids.add(tblock.Identifier)
+        self.block_store[tblock.Identifier] = tblock
 
         self._handleblock(tblock)
 
@@ -602,10 +594,10 @@ class Journal(object):
                 transactions to claim.
         """
         # fire the event handler for claiming the transaction block
-        self.onClaimBlock.fire(self, block)
+        self.on_claim_block.fire(self, block)
         self.commit_transaction_block(block)
 
-    def request_missing_block(self, blockid, exceptions=None, request=None):
+    def request_missing_block(self, block_id, exceptions=None, request=None):
         """Requests neighbors to send a transaction block.
 
         This method is called when one block references another block
@@ -613,7 +605,7 @@ class Journal(object):
         periodically to avoid spamming the network with duplicate requests.
 
         Args:
-            blockid (str): The identifier of the missing block.
+            block_id (str): The identifier of the missing block.
             exceptions (list): Identifiers of nodes we know don't have
                 the block.
             request (message.Message): A previously initialized message for
@@ -623,24 +615,24 @@ class Journal(object):
             exceptions = []
         now = time.time()
 
-        if blockid in self.RequestedBlocks and now < self.RequestedBlocks[
-                blockid]:
+        if block_id in self.requested_blocks and now < self.requested_blocks[
+                block_id]:
             return
 
-        self.RequestedBlocks[blockid] = now + self.MissingRequestInterval
+        self.requested_blocks[block_id] = now + self.missing_request_interval
 
         # if the request for the missing block came from another node, then
         # we need to reuse the request or we'll process multiple copies
         if not request:
             request = transaction_block_message.BlockRequestMessage(
-                {'BlockID': blockid})
+                {'BlockID': block_id})
             self.gossip.forward_message(request, exceptions=exceptions)
         else:
             self.gossip.forward_message(request,
                                         exceptions=exceptions,
                                         initialize=False)
 
-    def request_missing_txn(self, txnid, exceptions=None, request=None):
+    def request_missing_txn(self, txn_id, exceptions=None, request=None):
         """Requests that neighbors send a transaction.
 
         This method is called when a block references a transaction
@@ -648,22 +640,23 @@ class Journal(object):
         periodically to avoid spamming the network with duplicate requests.
 
         Args:
-            txnid (str): The identifier of the missing transaction.
+            txn_id (str): The identifier of the missing transaction.
             exceptions (list): Identifiers of nodes we know don't have
                 the block.
             request (message.Message): A previously initialized message for
                 sending the request; avoids duplicates.
         """
-        logger.info('txnid: %s - missing_txn called', txnid[:8])
+        logger.info('txnid: %s - missing_txn called', txn_id[:8])
 
         now = time.time()
 
-        if txnid in self.RequestedTransactions and now < \
-                self.RequestedTransactions[txnid]:
-            logger.info('txnid: %s - already in RequestedTxn', txnid[:8])
+        if txn_id in self.requested_transactions and now < \
+                self.requested_transactions[txn_id]:
+            logger.info('txnid: %s - already in RequestedTxn', txn_id[:8])
             return
 
-        self.RequestedTransactions[txnid] = now + self.MissingRequestInterval
+        self.requested_transactions[txn_id] = now + \
+            self.missing_request_interval
 
         self.JournalStats.MissingTxnRequestCount.increment()
 
@@ -671,13 +664,13 @@ class Journal(object):
         # we need to reuse the request or we'll process multiple copies
         if not request:
             logger.info('txnid: %s - new request from same node(%s)',
-                        txnid[:8], self.local_node.Name)
+                        txn_id[:8], self.local_node.Name)
             request = transaction_message.TransactionRequestMessage(
-                {'TransactionID': txnid})
+                {'TransactionID': txn_id})
             self.gossip.forward_message(request, exceptions=exceptions)
         else:
             logger.info('txnid: %s - new request from another node(%s)  ',
-                        txnid[:8],
+                        txn_id[:8],
                         self.gossip.node_id_to_name(request.SenderID))
             self.gossip.forward_message(request,
                                         exceptions=exceptions,
@@ -694,8 +687,8 @@ class Journal(object):
                 initial block.
         """
 
-        self.onPreBuildBlock.fire(self, None)
-        self.onBuildBlock.fire(self, None)
+        self.on_pre_build_block.fire(self, None)
+        self.on_build_block.fire(self, None)
 
     def handle_advance(self, tblock):
         """Handles the case where we are attempting to commit a block that
@@ -707,16 +700,16 @@ class Journal(object):
         """
         assert tblock.Status == transaction_block.Status.valid
 
-        pending = self.PendingTransactionBlock
-        self.PendingTransactionBlock = None
+        pending = self.pending_transaction_block
+        self.pending_transaction_block = None
         try:
-            self._commitblock(tblock)
-            if not self.InitialLoad:
-                self.PendingTransactionBlock = self.build_transaction_block()
+            self._commit_block(tblock)
+            if not self.initial_load:
+                self.pending_transaction_block = self.build_transaction_block()
         except Exception as e:
             logger.error("blkid: %s - Error advancing block chain: %s",
                          tblock.Identifier[:8], e)
-            self.PendingTransactionBlock = pending
+            self.pending_transaction_block = pending
             raise
 
     def handle_fork(self, tblock):
@@ -727,8 +720,8 @@ class Journal(object):
             tblock (Transaction.TransactionBlock): A disconnected block.
         """
 
-        pending = self.PendingTransactionBlock
-        self.PendingTransactionBlock = None
+        pending = self.pending_transaction_block
+        self.pending_transaction_block = None
         try:
             assert tblock.Status == transaction_block.Status.valid
 
@@ -738,30 +731,30 @@ class Journal(object):
                 tblock.Identifier[:8],
                 self.gossip.node_id_to_name(tblock.OriginatorID),
                 tblock.PreviousBlockID[:8],
-                self.MostRecentCommittedBlockID[:8])
+                self.most_recent_committed_block_id[:8])
 
             # First see if the chain rooted in tblock is the one we should use,
             # if it is not, then we are building on the correct block and
             # nothing needs to change
 
-            assert self.MostRecentCommittedBlockID != common.NullIdentifier
-            if cmp(tblock, self.MostRecentCommittedBlock) < 0:
+            assert self.most_recent_committed_block_id != common.NullIdentifier
+            if cmp(tblock, self.most_recent_committed_block) < 0:
                 logger.info('blkid: %s - (fork) existing chain is the '
                             'valid one, discarding blkid: %s',
-                            self.MostRecentCommittedBlockID[:8],
+                            self.most_recent_committed_block_id[:8],
                             tblock.Identifier[:8],
                             )
-                self.PendingTransactionBlock = pending
+                self.pending_transaction_block = pending
                 return
 
             logger.info('blkid: %s - (fork) new chain is the valid one, '
                         ' replace the current chain blkid: %s',
                         tblock.Identifier[:8],
-                        self.MostRecentCommittedBlockID[:8]
+                        self.most_recent_committed_block_id[:8]
                         )
 
             # now find the root of the fork
-            fork_id = self._findfork(tblock)
+            fork_id = self._find_fork(tblock)
 
             assert fork_id
 
@@ -772,15 +765,15 @@ class Journal(object):
             # store
 
             # move the previously committed blocks into the orphaned list
-            self._decommitblockchain(fork_id)
+            self._decommit_block_chain(fork_id)
 
             # move the new blocks from the orphaned list to the committed list
-            self._commitblockchain(tblock.Identifier, fork_id)
-            self.PendingTransactionBlock = self.build_transaction_block()
+            self._commit_block_chain(tblock.Identifier, fork_id)
+            self.pending_transaction_block = self.build_transaction_block()
         except Exception as e:
             logger.exception("blkid: %s - (fork) error resolving fork",
                              tblock.Identifier[:8])
-            self.PendingTransactionBlock = pending
+            self.pending_transaction_block = pending
             raise
     #
     # UTILITY FUNCTIONS
@@ -792,11 +785,11 @@ class Journal(object):
         Attempt to add a block to the chain.
         """
 
-        assert tblock.Identifier in self.PendingBlockIDs
+        assert tblock.Identifier in self.pending_block_ids
 
         with self._txn_lock:
             # initialize the state of this block
-            self.BlockStore[tblock.Identifier] = tblock
+            self.block_store[tblock.Identifier] = tblock
 
             # if this block is the genesis block then we can assume that
             # it meets all criteria for dependent blocks
@@ -804,7 +797,7 @@ class Journal(object):
                 # first test... do we have the previous block, if not then this
                 # block remains incomplete awaiting the arrival of the
                 # predecessor
-                pblock = self.BlockStore.get(tblock.PreviousBlockID)
+                pblock = self.block_store.get(tblock.PreviousBlockID)
                 if not pblock:
                     self.request_missing_block(tblock.PreviousBlockID)
                     return
@@ -815,10 +808,10 @@ class Journal(object):
                 # block store though we could substitute a check for the
                 # previous block in the invalid block list
                 if pblock.Status == transaction_block.Status.invalid:
-                    self.PendingBlockIDs.discard(tblock.Identifier)
-                    self.InvalidBlockIDs.add(tblock.Identifier)
+                    self.pending_block_ids.discard(tblock.Identifier)
+                    self.invalid_block_ids.add(tblock.Identifier)
                     tblock.Status = transaction_block.Status.invalid
-                    self.BlockStore[tblock.Identifier] = tblock
+                    self.block_store[tblock.Identifier] = tblock
                     return
 
                 # third test... is the previous block complete, if not then
@@ -842,24 +835,24 @@ class Journal(object):
 
             # at this point we know that the block is complete
             tblock.Status = transaction_block.Status.complete
-            self.BlockStore[tblock.Identifier] = tblock
+            self.block_store[tblock.Identifier] = tblock
 
             # fifth test... run the checks for a valid block, generally
             # these are specific to the various transaction families or
             # consensus mechanisms
             try:
                 if (not tblock.is_valid(self)
-                        or not self.onBlockTest.fire(self, tblock)):
+                        or not self.on_block_test.fire(self, tblock)):
                     logger.debug('blkid: %s - block test failed',
                                  tblock.Identifier[:8])
-                    self.PendingBlockIDs.discard(tblock.Identifier)
-                    self.InvalidBlockIDs.add(tblock.Identifier)
+                    self.pending_block_ids.discard(tblock.Identifier)
+                    self.invalid_block_ids.add(tblock.Identifier)
                     tblock.Status = transaction_block.Status.invalid
-                    self.BlockStore[tblock.Identifier] = tblock
+                    self.block_store[tblock.Identifier] = tblock
                     return
             except NotAvailableException:
                 tblock.Status = transaction_block.Status.retry
-                self.BlockStore[tblock.Identifier] = tblock
+                self.block_store[tblock.Identifier] = tblock
                 logger.debug('blkid: %s - NotAvailableException - not able to '
                              'verify, will retry later',
                              tblock.Identifier[:8])
@@ -867,19 +860,19 @@ class Journal(object):
 
             # sixth test... verify that every transaction in the now complete
             # block is valid independently and build the new data store
-            newstore = self._testandapplyblock(tblock)
+            newstore = self._test_and_apply_block(tblock)
             if newstore is None:
                 logger.debug('blkid: %s - transaction validity test failed',
                              tblock.Identifier[:8])
-                self.PendingBlockIDs.discard(tblock.Identifier)
-                self.InvalidBlockIDs.add(tblock.Identifier)
+                self.pending_block_ids.discard(tblock.Identifier)
+                self.invalid_block_ids.add(tblock.Identifier)
                 tblock.Status = transaction_block.Status.invalid
-                self.BlockStore[tblock.Identifier] = tblock
+                self.block_store[tblock.Identifier] = tblock
                 return
 
             # at this point we know that the block is valid
             tblock.Status = transaction_block.Status.valid
-            tblock.CommitTime = time.time() - self.StartTime
+            tblock.CommitTime = time.time() - self.start_time
             tblock.update_block_weight(self)
 
             if hasattr(tblock, 'AggregateLocalMean'):
@@ -887,23 +880,24 @@ class Journal(object):
                     tblock.AggregateLocalMean
 
             # time to apply the transactions in the block to get a new state
-            self.GlobalStoreMap.commit_block_store(tblock.Identifier, newstore)
-            self.BlockStore[tblock.Identifier] = tblock
+            self.global_store_map.commit_block_store(tblock.Identifier,
+                                                     newstore)
+            self.block_store[tblock.Identifier] = tblock
 
             # remove the block from the pending block list
-            self.PendingBlockIDs.discard(tblock.Identifier)
+            self.pending_block_ids.discard(tblock.Identifier)
 
             # and now check to see if we should start to use this block as the
             # one on which we build a new chain
 
             # handle the easy, common case here where the new block extends the
             # current chain
-            if tblock.PreviousBlockID == self.MostRecentCommittedBlockID:
+            if tblock.PreviousBlockID == self.most_recent_committed_block_id:
                 self.handle_advance(tblock)
             else:
                 self.handle_fork(tblock)
 
-            self._cleantransactionblocks()
+            self._clean_transaction_blocks()
 
             # check the other orphaned blocks to see if this
             # block connects one to the chain, if a new block is connected to
@@ -912,13 +906,13 @@ class Journal(object):
             # Also checks if we have pending blocks that need to be retried. If
             # so adds them to the list to be handled.
             blockids = set()
-            for blockid in self.PendingBlockIDs:
-                if self.BlockStore[blockid].PreviousBlockID ==\
+            for blockid in self.pending_block_ids:
+                if self.block_store[blockid].PreviousBlockID ==\
                         tblock.Identifier:
                     blockids.add(blockid)
 
             for blockid in blockids:
-                self._handleblock(self.BlockStore[blockid])
+                self._handleblock(self.block_store[blockid])
 
             self.retry_blocks()
 
@@ -931,8 +925,8 @@ class Journal(object):
         # PendingBlockIDs set, so we can not be iterating the set as
         # the retry happens.
         retry_block = None
-        for blockid in self.PendingBlockIDs:
-            block = self.BlockStore[blockid]
+        for blockid in self.pending_block_ids:
+            block = self.block_store[blockid]
             if block.Status == transaction_block.Status.retry:
                 retry_block = block
                 break
@@ -944,11 +938,11 @@ class Journal(object):
 
     def _trigger_retry_blocks(self, now):
         if time.time() > self.next_block_retry:
-            self.next_block_retry = time.time() + self.BlockRetryInterval
+            self.next_block_retry = time.time() + self.block_retry_interval
             msg = transaction_block_message.BlockRetryMessage()
             self.gossip.broadcast_message(msg)
 
-    def _commitblockchain(self, blockid, forkid):
+    def _commit_block_chain(self, blockid, forkid):
         """
         commit a chain of block starting with the forked block through the head
         of the chain
@@ -960,14 +954,14 @@ class Journal(object):
         chain = []
         b_id = blockid
         while b_id != forkid:
-            block = self.BlockStore[b_id]
+            block = self.block_store[b_id]
             chain.append(block)
             b_id = block.PreviousBlockID
         chain.reverse()
         for block in chain:
-            self._commitblock(block)
+            self._commit_block(block)
 
-    def _commitblock(self, tblock):
+    def _commit_block(self, tblock):
         """
         Add a block to the committed chain, this function extends the
         chain by updating the most recent committed block field
@@ -989,44 +983,44 @@ class Journal(object):
             # Remove all of the newly committed transactions from the
             # pending list and put them in the committed list
             for txnid in tblock.TransactionIDs:
-                assert txnid in self.TransactionStore
-                if txnid in self.PendingTransactions:
-                    del self.PendingTransactions[txnid]
+                assert txnid in self.transaction_store
+                if txnid in self.pending_transactions:
+                    del self.pending_transactions[txnid]
 
-                txn = self.TransactionStore[txnid]
+                txn = self.transaction_store[txnid]
                 txn.Status = transaction.Status.committed
                 txn.InBlock = tblock.Identifier
-                self.TransactionStore[txnid] = txn
+                self.transaction_store[txnid] = txn
 
             # Update the head of the chain
-            self.MostRecentCommittedBlockID = tblock.Identifier
-            self.ChainStore['MostRecentBlockID'] = \
-                self.MostRecentCommittedBlockID
+            self.most_recent_committed_block_id = tblock.Identifier
+            self.chain_store['MostRecentBlockID'] = \
+                self.most_recent_committed_block_id
             self.JournalStats.PreviousBlockID.Value = \
-                self.MostRecentCommittedBlockID
+                self.most_recent_committed_block_id
 
             # Update stats
             self.JournalStats.CommittedTxnCount.increment(len(
                 tblock.TransactionIDs))
             self.JournalStats.CommittedBlockCount.Value = \
-                self.CommittedBlockCount + 1
+                self.committed_block_count + 1
 
             # fire the event handler for block commit
-            self.onCommitBlock.fire(self, tblock)
+            self.on_commit_block.fire(self, tblock)
 
-    def _decommitblockchain(self, forkid):
+    def _decommit_block_chain(self, forkid):
         """
         decommit blocks from the head of the chain through the forked block
 
         Args:
             forkid (UUID) -- identifier of the block where the fork occurred
         """
-        blockid = self.MostRecentCommittedBlockID
+        blockid = self.most_recent_committed_block_id
         while blockid != forkid:
-            self._decommitblock()
-            blockid = self.MostRecentCommittedBlockID
+            self._decommit_block()
+            blockid = self.most_recent_committed_block_id
 
-    def _decommitblock(self):
+    def _decommit_block(self):
         """
         Move the head of the block chain from the committed pool to the
         orphaned pool and move all transactions in the block back into the
@@ -1034,17 +1028,17 @@ class Journal(object):
         """
 
         with self._txn_lock:
-            blockid = self.MostRecentCommittedBlockID
-            block = self.BlockStore[blockid]
+            blockid = self.most_recent_committed_block_id
+            block = self.block_store[blockid]
             assert block.Status == transaction_block.Status.valid
 
             # fire the event handler for block decommit
-            self.onDecommitBlock.fire(self, block)
+            self.on_decommit_block.fire(self, block)
 
             # move the head of the chain back
-            self.MostRecentCommittedBlockID = block.PreviousBlockID
-            self.ChainStore['MostRecentBlockID'] = \
-                self.MostRecentCommittedBlockID
+            self.most_recent_committed_block_id = block.PreviousBlockID
+            self.chain_store['MostRecentBlockID'] = \
+                self.most_recent_committed_block_id
 
             # this bizarre bit of code is intended to preserve the ordering of
             # transactions, where all committed transactions occur before
@@ -1054,24 +1048,24 @@ class Journal(object):
                 # there is a chance that this block is incomplete and some
                 # of the transactions have not arrived, don't put
                 # transactions into pending if we dont have the transaction
-                txn = self.TransactionStore.get(txnid)
+                txn = self.transaction_store.get(txnid)
                 if txn:
                     txn.Status = transaction.Status.pending
-                    self.TransactionStore[txnid] = txn
+                    self.transaction_store[txnid] = txn
 
                     if txn.add_to_pending():
                         pending[txnid] = True
 
-            pending.update(self.PendingTransactions)
-            self.PendingTransactions = pending
+            pending.update(self.pending_transactions)
+            self.pending_transactions = pending
 
             # update stats
             self.JournalStats.CommittedBlockCount.Value = \
-                self.CommittedBlockCount + 1
+                self.committed_block_count + 1
             self.JournalStats.CommittedTxnCount.increment(-len(
                 block.TransactionIDs))
 
-    def _testandapplyblock(self, tblock):
+    def _test_and_apply_block(self, tblock):
         """Test and apply transactions to the previous block's global
         store to create a new version of the store
 
@@ -1087,13 +1081,13 @@ class Journal(object):
 
             # make a copy of the store from the previous block, the previous
             # block must be complete if this block is complete
-            teststore = self.GlobalStoreMap.get_block_store(
+            teststore = self.global_store_map.get_block_store(
                 tblock.PreviousBlockID).clone_block()
 
             # apply the transactions
             try:
                 for txnid in tblock.TransactionIDs:
-                    txn = self.TransactionStore[txnid]
+                    txn = self.transaction_store[txnid]
                     txnstore = teststore.get_transaction_store(
                         txn.TransactionTypeName)
                     if not txn.is_valid(txnstore):
@@ -1109,7 +1103,7 @@ class Journal(object):
 
             return teststore
 
-    def _findfork(self, tblock):
+    def _find_fork(self, tblock):
         """
         Find most recent predecessor of tblock that is in the committed
         chain, searching through at most depth blocks
@@ -1124,12 +1118,12 @@ class Journal(object):
             if forkid == common.NullIdentifier or forkid in blockids:
                 return forkid
 
-            assert forkid in self.BlockStore
-            forkid = self.BlockStore[forkid].PreviousBlockID
+            assert forkid in self.block_store
+            forkid = self.block_store[forkid].PreviousBlockID
 
         return None
 
-    def _preparetransactionlist(self, maxcount=0):
+    def _prepare_transaction_list(self, maxcount=0):
         """
         Prepare an ordered list of valid transactions that can be included in
         the next consensus round
@@ -1142,11 +1136,11 @@ class Journal(object):
             # generate a list of valid transactions to place in the new block
             addtxns = []
             deltxns = []
-            store = self.GlobalStore.clone_block()
-            for txnid in self.PendingTransactions.iterkeys():
-                txn = self.TransactionStore[txnid]
+            store = self.global_store.clone_block()
+            for txnid in self.pending_transactions.iterkeys():
+                txn = self.transaction_store[txnid]
                 if txn:
-                    self._preparetransaction(addtxns, deltxns, store, txn)
+                    self._prepare_transaction(addtxns, deltxns, store, txn)
 
                 if maxcount and len(addtxns) >= maxcount:
                     break
@@ -1156,20 +1150,20 @@ class Journal(object):
             # had all dependencies met we know that they will never be valid
             for txnid in deltxns:
                 self.JournalStats.InvalidTxnCount.increment()
-                if txnid in self.TransactionStore:
-                    txn = self.TransactionStore[txnid]
+                if txnid in self.transaction_store:
+                    txn = self.transaction_store[txnid]
                     if txn.InBlock is None:
                         logger.debug("txnid: %s - deleting from transaction "
                                      "store", txnid)
-                        del self.TransactionStore[txnid]
-                if txnid in self.PendingTransactions:
+                        del self.transaction_store[txnid]
+                if txnid in self.pending_transactions:
                     logger.debug("txnid: %s - deleting from pending "
                                  "transactions", txnid)
-                    del self.PendingTransactions[txnid]
+                    del self.pending_transactions[txnid]
 
             return addtxns
 
-    def _preparetransaction(self, addtxns, deltxns, store, txn):
+    def _prepare_transaction(self, addtxns, deltxns, store, txn):
         """
         Determine if a particular transaction is valid
 
@@ -1202,8 +1196,8 @@ class Journal(object):
                              txn.Identifier[:8], dependencyID[:8])
 
                 # check to see if the dependency has already been committed
-                if (dependencyID in self.TransactionStore and
-                        (self.TransactionStore[dependencyID].Status ==
+                if (dependencyID in self.transaction_store and
+                        (self.transaction_store[dependencyID].Status ==
                          transaction.Status.committed)):
                     continue
 
@@ -1225,9 +1219,11 @@ class Journal(object):
                 # recurse into the dependency, note that we need to make sure
                 # there are no loops in the dependencies but not doing that
                 # right now
-                deptxn = self.TransactionStore.get(dependencyID)
-                if deptxn and self._preparetransaction(addtxns, deltxns, store,
-                                                       deptxn):
+                deptxn = self.transaction_store.get(dependencyID)
+                if deptxn and self._prepare_transaction(addtxns,
+                                                        deltxns,
+                                                        store,
+                                                        deptxn):
                     continue
 
                 # at this point we cannot find the dependency so send out a
@@ -1246,10 +1242,10 @@ class Journal(object):
             # point in continuing on so bail out
             if not ready:
                 txn.increment_age()
-                self.TransactionStore[txn.Identifier] = txn
+                self.transaction_store[txn.Identifier] = txn
                 logger.info('txnid: %s - not ready (age %s)',
                             txn.Identifier[:8], txn.age)
-                if txn.age > self.MaxTxnAge:
+                if txn.age > self.max_txn_age:
                     logger.warn('txnid: %s - too old, dropping - %s',
                                 txn.Identifier[:8], str(txn))
                     deltxns.append(txn.Identifier)
@@ -1276,16 +1272,16 @@ class Journal(object):
             deltxns.append(txn.Identifier)
             return False
 
-    def _cleantransactionblocks(self):
+    def _clean_transaction_blocks(self):
         """
-        _cleantransactionblocks -- for blocks and transactions that are with
+        _clean_transaction_blocks -- for blocks and transactions that are with
         high probability no longer going to change, clean out the bulk of the
         memory used to store the block and the corresponding transactions
         """
         with self._txn_lock:
-            self.ChainStore.sync()
-            self.TransactionStore.sync()
-            self.BlockStore.sync()
+            self.chain_store.sync()
+            self.transaction_store.sync()
+            self.block_store.sync()
 
             # with the state storage, we can flatten old blocks to reduce
             # memory footprint, they can always be recovered from
@@ -1293,22 +1289,22 @@ class Journal(object):
             # process increases memory usage so we don't want to do
             # it too often, the code below keeps the number of blocks
             # kept in memory less than 2 * self.MaximumBlocksToKeep
-            if self.MostRecentCommittedBlock.BlockNum \
-                    % self.MaximumBlocksToKeep == 0:
+            if self.most_recent_committed_block.BlockNum \
+                    % self.maximum_blocks_to_keep == 0:
                 logger.info('compress global state for block number %s',
-                            self.MostRecentCommittedBlock.BlockNum)
+                            self.most_recent_committed_block.BlockNum)
                 depth = 0
-                blockid = self.MostRecentCommittedBlockID
+                blockid = self.most_recent_committed_block_id
                 while (blockid != common.NullIdentifier and
-                       depth < self.MaximumBlocksToKeep):
-                    blockid = self.BlockStore[blockid].PreviousBlockID
+                       depth < self.maximum_blocks_to_keep):
+                    blockid = self.block_store[blockid].PreviousBlockID
                     depth += 1
 
                 if blockid != common.NullIdentifier:
                     logger.debug('flatten storage for block %s', blockid)
-                    self.GlobalStoreMap.flatten_block_store(blockid)
+                    self.global_store_map.flatten_block_store(blockid)
 
-    def _initledgerstats(self, stat_domains):
+    def _init_ledger_stats(self, stat_domains):
         self.JournalStats = stats.Stats(self.local_node.Name, 'ledger')
         self.JournalStats.add_metric(stats.Counter('BlocksClaimed'))
         self.JournalStats.add_metric(stats.Value('PreviousBlockID', '0'))
@@ -1319,18 +1315,18 @@ class Journal(object):
         self.JournalStats.add_metric(stats.Counter('MissingTxnFromBlockCount'))
         self.JournalStats.add_metric(stats.Counter('MissingTxnDepCount'))
         self.JournalStats.add_metric(stats.Sample(
-            'PendingBlockCount', lambda: self.PendingBlockCount))
+            'PendingBlockCount', lambda: self.pending_block_count))
         self.JournalStats.add_metric(stats.Sample(
             'PendingTxnCount',
-            lambda: self.PendingTxnCount))
+            lambda: self.pending_txn_count))
         self.JournalConfigStats = stats.Stats(self.local_node.Name,
                                               'ledgerconfig')
         self.JournalConfigStats.add_metric(
             stats.Sample('MinimumTransactionsPerBlock',
-                         lambda: self.MinimumTransactionsPerBlock))
+                         lambda: self.minimum_transactions_per_block))
         self.JournalConfigStats.add_metric(
             stats.Sample('MaximumTransactionsPerBlock',
-                         lambda: self.MaximumTransactionsPerBlock))
+                         lambda: self.maximum_transactions_per_block))
         if stat_domains is not None:
             stat_domains['journal'] = self.JournalStats
             stat_domains['journalconfig'] = self.JournalConfigStats

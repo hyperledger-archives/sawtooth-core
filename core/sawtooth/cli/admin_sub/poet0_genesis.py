@@ -119,39 +119,39 @@ def do_poet0_genesis(args):
 
     stat_domains = {}
     # in future, dynamically select ledger obj based on LedgerType
-    ledger = PoetJournal(gossiper.LocalNode,
-                         gossiper,
-                         gossiper.dispatcher,
-                         stat_domains,
-                         cfg,
-                         minimum_transactions_per_block=min_txn_per_block,
-                         max_transactions_per_block=max_txn_per_block,
-                         max_txn_age=max_txn_age,
-                         genesis_ledger=genesis_ledger,
-                         data_directory=data_directory,
-                         store_type=store_type,
-                         )
+    journal = PoetJournal(gossiper.LocalNode,
+                          gossiper,
+                          gossiper.dispatcher,
+                          stat_domains,
+                          cfg,
+                          minimum_transactions_per_block=min_txn_per_block,
+                          max_transactions_per_block=max_txn_per_block,
+                          max_txn_age=max_txn_age,
+                          genesis_ledger=genesis_ledger,
+                          data_directory=data_directory,
+                          store_type=store_type,
+                          )
     # may need to add transaction family objects ad hoc from cfg
     dfl_txn_families = [endpoint_registry, integer_key]
     for txnfamily in dfl_txn_families:
-        txnfamily.register_transaction_types(ledger)
+        txnfamily.register_transaction_types(journal)
     # ...skipping onNodeDisconnect handler (using ledger, not validator...)
 
     # Create genesis block:
     # we should make sure there is no current chain here, or fail
     # calling initialization_complete will create the genesis block
-    ledger.initialization_complete()
+    journal.initialization_complete()
     # simulate receiving the genesis block msg from reactor to force commit
-    msg = ledger.gossip.IncomingMessageQueue.pop()
-    (_, msg_handler) = ledger.dispatcher.message_handler_map[msg.MessageType]
-    msg_handler(msg, ledger)
+    msg = journal.gossip.IncomingMessageQueue.pop()
+    (_, msg_handler) = journal.dispatcher.message_handler_map[msg.MessageType]
+    msg_handler(msg, journal)
 
     # Gather data, then shutdown to save state:
-    head = ledger.MostRecentCommittedBlockID
+    head = journal.most_recent_committed_block_id
     # ...not sure why n_blocks is experimentally 0 and not 1
     # ...if we only make the genesis, it would be good to check n_blks = 1
-    n_blks = ledger.CommittedBlockCount
-    ledger.shutdown()
+    n_blks = journal.committed_block_count
+    journal.shutdown()
 
     # log genesis data, then write it out to ease dissemination
     genesis_data = {

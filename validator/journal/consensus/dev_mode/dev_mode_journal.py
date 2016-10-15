@@ -90,31 +90,32 @@ class DevModeJournal(journal_core.Journal):
             return None
 
         if not force and \
-                len(self.PendingTransactions) == 0:
+                len(self.pending_transactions) == 0:
             return None
 
         logger.debug('attempt to build transaction block extending %s',
-                     self.MostRecentCommittedBlockID[:8])
+                     self.most_recent_committed_block_id[:8])
 
         logger.info('build transaction block to extend %s'
-                    'transactions', self.MostRecentCommittedBlockID[:8])
+                    'transactions', self.most_recent_committed_block_id[:8])
 
         # Create a new block from all of our pending transactions
         new_block = dev_mode_transaction_block.DevModeTransactionBlock()
-        new_block.BlockNum = self.MostRecentCommittedBlock.BlockNum \
-            + 1 if self.MostRecentCommittedBlock else 0
-        new_block.PreviousBlockID = self.MostRecentCommittedBlockID
-        self.onPreBuildBlock.fire(self, new_block)
+        new_block.BlockNum = self.most_recent_committed_block.BlockNum \
+            + 1 if self.most_recent_committed_block else 0
+        new_block.PreviousBlockID = self.most_recent_committed_block_id
+        self.on_pre_build_block.fire(self, new_block)
 
         # must put a cap on the transactions in the block
-        if len(new_block.TransactionIDs) >= self.MaximumTransactionsPerBlock:
+        if len(new_block.TransactionIDs) >= \
+                self.maximum_transactions_per_block:
             new_block.TransactionIDs = \
-                new_block.TransactionIDs[:self.MaximumTransactionsPerBlock]
+                new_block.TransactionIDs[:self.maximum_transactions_per_block]
 
         logger.debug('created new pending block')
 
         # fire the build block event handlers
-        self.onBuildBlock.fire(self, new_block)
+        self.on_build_block.fire(self, new_block)
 
         self.next_block_time = time() + self.block_wait_time
         return new_block
@@ -128,10 +129,10 @@ class DevModeJournal(journal_core.Journal):
         """
         # Get the list of prepared transactions, if there aren't enough
         # then just return
-        self.PendingTransactionBlock = None
+        self.pending_transaction_block = None
 
-        txn_list = self._preparetransactionlist(
-            self.MaximumTransactionsPerBlock)
+        txn_list = self._prepare_transaction_list(
+            self.maximum_transactions_per_block)
         nblock.TransactionIDs = txn_list
 
         logger.info('node %s validates block with %d transactions',
@@ -142,7 +143,7 @@ class DevModeJournal(journal_core.Journal):
         self.JournalStats.BlocksClaimed.increment()
 
         # Fire the event handler for block claim
-        self.onClaimBlock.fire(self, nblock)
+        self.on_claim_block.fire(self, nblock)
 
         # And send out the message that we won
         msg = dev_mode_transaction_block.DevModeTransactionBlockMessage()
@@ -153,7 +154,7 @@ class DevModeJournal(journal_core.Journal):
         if not self.block_publisher:
             return
 
-        if self.PendingTransactionBlock and \
-                len(self.PendingTransactions) != 0 and \
+        if self.pending_transaction_block and \
+                len(self.pending_transactions) != 0 and \
                 time() > self.next_block_time:
-            self.claim_transaction_block(self.PendingTransactionBlock)
+            self.claim_transaction_block(self.pending_transaction_block)
