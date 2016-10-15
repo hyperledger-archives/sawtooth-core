@@ -270,8 +270,8 @@ class ValidatorManager(object):
                             if not (line.startswith('pydev') or
                                     line.strip() == ''):
                                 raise ValidatorManagerException(
-                                    "stderr has output: line 1 of {}: {}"
-                                    .format(len(lines), lines[0]))
+                                    "stderr has {} lines of output:\n {}"
+                                    .format(len(lines), '\t'.join(lines)))
                     self._check_log_error()
         else:
             raise ValidatorManagerException("validator not running")
