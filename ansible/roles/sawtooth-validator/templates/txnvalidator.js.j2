@@ -41,9 +41,6 @@
 {% endfor %}
     ],
 
-    ## do not restart
-    "Restore" : {{ sawtooth_validator_restore }},
-
     ## administration node, the only node identifier from which
     ## we will accept shutdown messages
     "AdministrationNode" : "{{ sawtooth_validator_administration_node }}",

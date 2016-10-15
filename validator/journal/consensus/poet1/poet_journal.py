@@ -52,7 +52,6 @@ class PoetJournal(journal_core.Journal):
                  max_transactions_per_block=None,
                  max_txn_age=None,
                  genesis_ledger=None,
-                 restore=None,
                  data_directory=None,
                  store_type=None):
         """Constructor for the PoetJournal class.
@@ -69,7 +68,6 @@ class PoetJournal(journal_core.Journal):
             max_transactions_per_block,
             max_txn_age,
             genesis_ledger,
-            restore,
             data_directory,
             store_type)
 

@@ -85,7 +85,6 @@ def do_poet0_genesis(args):
 
     # Perform requisite overrides and validation:
     cfg['GenesisLedger'] = True
-    cfg['Restore'] = False
     # should check that sigining key exists...
     # debug report
     for key, value in cfg.iteritems():
@@ -115,7 +114,6 @@ def do_poet0_genesis(args):
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
     genesis_ledger = cfg.get("GenesisLedger")
-    restore = cfg.get("Restore")
     data_directory = cfg.get("DataDirectory")
     store_type = cfg.get("StoreType")
 
@@ -130,7 +128,6 @@ def do_poet0_genesis(args):
                          max_transactions_per_block=max_txn_per_block,
                          max_txn_age=max_txn_age,
                          genesis_ledger=genesis_ledger,
-                         restore=restore,
                          data_directory=data_directory,
                          store_type=store_type,
                          )

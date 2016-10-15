@@ -168,7 +168,6 @@ class ValidatorCollectionController(NodeController):
         cfg = self.config_list[idx]
         cfg['DataDirectory'] = self.data_dir
         cfg["AdministrationNode"] = self.admin_node.address
-        cfg['Restore'] = False
         log_config = self.validator_log_config
         if log_config is not None:
             log_config = self.validator_log_config.copy()

@@ -170,12 +170,10 @@ class TestBasicStartup(unittest.TestCase):
     def test_initial_connectivity_n_minus_1(self):
         try:
             self.vnm.validator_config['LedgerURL'] = "**none**"
-            self.vnm.validator_config['Restore'] = False
             validator = self.vnm.launch_node(genesis=True)
             validators = [validator]
             with Progress("Launching validator network") as p:
                 self.vnm.validator_config['LedgerURL'] = validator.url
-                self.vnm.validator_config['Restore'] = False
                 node_identifiers = [validator.Address]
                 for i in range(1, 5):
                     self.vnm.validator_config['InitialConnectivity'] = i

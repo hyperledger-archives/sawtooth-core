@@ -46,22 +46,10 @@ def start_journal_transfer(gossip, journal, oncomplete):
         journal (journal_core.Journal): The journal to transfer.
         oncomplete (function): The function to call when the
             journal transfer has completed.
-
-    Returns:
-        bool: Whether or not a journal transfer was initiated.
     """
-
-    if journal.Restore is True:
-        if len(journal.GlobalStoreMap.persistmap_keys()) > 1:
-            # we have persistence; do not fetch remote ledger
-            return False
-        else:
-            logger.warn('restoration from persistence layer not possible')
 
     transfer = JournalTransfer(gossip, journal, oncomplete)
     transfer.initiate_journal_transfer()
-
-    return True
 
 
 class JournalTransfer(object):

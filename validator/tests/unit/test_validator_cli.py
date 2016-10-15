@@ -123,14 +123,6 @@ class TestValidatorCLI(unittest.TestCase):
         self.assertIn("Listen", cfg)
         self.assertEquals(cfg["Listen"], ['"localhost:5500/UDP gossip"'])
 
-    def test_options_mapping_restore(self):
-        os.environ.clear()
-
-        cfg = get_configuration(args=["--restore"],
-                                config_files_required=False)
-
-        self.assertEquals(cfg["Restore"], True)
-
     def test_options_mapping_peers(self):
         os.environ.clear()
 
