@@ -15,23 +15,17 @@
 import json
 import logging
 import os
-import shutil
-import tempfile
 import time
 import unittest
 
 from sawtooth.cli.admin_sub.poet0_genesis import get_genesis_block_id_file_name
 from sawtooth.exceptions import MessageException
-from sawtooth.validator_config import get_validator_configuration
-from txnintegration.netconfig import NetworkConfig
-from txnintegration.utils import find_txn_validator
-from txnintegration.utils import find_or_create_test_key
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import Progress
 from txnintegration.utils import sawtooth_cli_intercept
 from txnintegration.utils import TimeOut
-from txnintegration.validator_collection_controller \
-    import ValidatorCollectionController
+
+from txnintegration.simcontroller import get_default_sim_controller
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,50 +34,30 @@ class TestGenesisUtil(unittest.TestCase):
 
     def test_genesis_util(self):
         print
-        old_home = os.getenv('CURRENCYHOME')
-        tmp_home = tempfile.mkdtemp()
-        vcc = None
+        top = None
         try:
-            # Set up env and config
-            v_file = find_txn_validator()
-            os.environ['CURRENCYHOME'] = tmp_home
-            cfg = get_validator_configuration([], {})
-            # ...rewire for ValidatorManager compatibility
-            cfg['KeyDirectory'] = tmp_home
-            cfg['DataDirectory'] = tmp_home
-            cfg['LogDirectory'] = tmp_home
-
-            # En route, test keygen client via main
-            key_name = cfg['NodeName']
-            key_dir = cfg['KeyDirectory']
-            # get key using sawtooth interface
-            (key_file, secret, addr) = find_or_create_test_key(key_name,
-                                                               key_dir)
-            cfg['KeyFile'] = key_file
-
+            # Get config and resources for a ValidatorManager compliant node
+            top = get_default_sim_controller(1)
+            cfg = top.get_configuration(0)
+            data_dir = cfg['DataDirectory']
             # Test admin poet0-genesis tool
-            fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
+            fname = get_genesis_block_id_file_name(data_dir)
             self.assertFalse(os.path.exists(fname))
-            config_file = tmp_home + os.path.sep + 'cfg.json'
-            with open(config_file, 'w') as f:
-                f.write(json.dumps(cfg, indent=4) + '\n')
-            cmd = 'admin poet0-genesis --config %s' % config_file
-            sawtooth_cli_intercept(cmd)
+            config_file = top.write_configuration(0)
+            cli_args = 'admin poet0-genesis --config %s' % config_file
+            sawtooth_cli_intercept(cli_args)
             self.assertTrue(os.path.exists(fname))
-            dat = None
+            genesis_dat = None
             with open(fname, 'r') as f:
-                dat = json.load(f)
-            self.assertTrue('GenesisId' in dat.keys())
-            tgt_block = dat['GenesisId']
-
+                genesis_dat = json.load(f)
+            self.assertTrue('GenesisId' in genesis_dat.keys())
+            tgt_block = genesis_dat['GenesisId']
             # Verify genesis tool (also tests blockchain restoration)
             # ...initial connectivity must be zero for the initial validator
             cfg['InitialConnectivity'] = 0
+            top.set_configuration(0, cfg)
             # ...launch validator
-            net_cfg = NetworkConfig.from_config_list([cfg])
-            vcc = ValidatorCollectionController(net_cfg, data_dir=tmp_home,
-                                                txnvalidator=v_file)
-            vcc.activate(0, probe_seconds=120)
+            top.node_controller.activate(0, probe_seconds=32)
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -105,14 +79,5 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertEqual(tgt_block, root)
 
         finally:
-            # Shut down validator
-            if vcc is not None:
-                vcc.shutdown()
-            # Restore environmental vars
-            if old_home is None:
-                os.unsetenv('CURRENCYHOME')
-            else:
-                os.environ['CURRENCYHOME'] = old_home
-            # Delete temp dir
-            if os.path.exists(tmp_home):
-                shutil.rmtree(tmp_home)
+            if top is not None:
+                top.shutdown()
