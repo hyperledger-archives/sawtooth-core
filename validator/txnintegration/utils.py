@@ -247,6 +247,42 @@ class TimeOut(object):
         return time.time() > self.ExpireTime
 
 
+def find_or_create_test_key(key_base_name, key_dir=None):
+    '''
+    Interface to sawtooth cli: creates .wif key file if it does not exist, and
+    returns a tupple containing all pertinent information.  Useful for testing.
+    Args:
+        key_base_name: (str)
+        key_dir: (str)
+    Returns: (tupple)
+        key_file: (str)
+        private_key: (str)
+        public_key: (str)
+    '''
+    use_key_dir = key_dir is not None and not os.path.isabs(key_base_name)
+    key_file = key_base_name
+    if not key_file.endswith('.wif'):
+        key_file += '.wif'
+    if use_key_dir:
+        key_file = os.path.join(key_dir, key_file)
+    if not os.path.isfile(key_file):
+        if key_base_name.endswith('.wif'):
+            key_base_name = ''.join(key_base_name.split('.')[:-1])
+        cmd = 'keygen %s' % key_base_name
+        if use_key_dir:
+            cmd += ' --key-dir %s' % key_dir
+        sawtooth_cli_intercept(cmd)
+    assert os.path.exists(key_file)
+    addr_file = '.'.join(key_file.split('.')[:-1]) + '.addr'
+    assert os.path.exists(addr_file)
+    key_str = None
+    with open(key_file, 'r') as f:
+        key_str = f.read()
+    signing_key = key_str.split('\n')[0]
+    identifier = pybitcointools.privtoaddr(signing_key)
+    return (key_file, signing_key, identifier)
+
+
 def generate_private_key():
     return pybitcointools.encode_privkey(pybitcointools.random_key(), 'wif')
 

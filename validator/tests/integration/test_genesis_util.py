@@ -25,6 +25,7 @@ from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.utils import find_txn_validator
+from txnintegration.utils import find_or_create_test_key
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import Progress
 from txnintegration.utils import sawtooth_cli_intercept
@@ -55,12 +56,10 @@ class TestGenesisUtil(unittest.TestCase):
             # En route, test keygen client via main
             key_name = cfg['NodeName']
             key_dir = cfg['KeyDirectory']
-            cmd = 'keygen %s --key-dir %s' % (key_name, key_dir)
-            sawtooth_cli_intercept(cmd)
-            base_name = key_dir + os.path.sep + key_name
-            self.assertTrue(os.path.exists('%s.wif' % base_name))
-            self.assertTrue(os.path.exists('%s.addr' % base_name))
-            cfg['KeyFile'] = '%s.wif' % base_name
+            # get key using sawtooth interface
+            (key_file, secret, addr) = find_or_create_test_key(key_name,
+                                                               key_dir)
+            cfg['KeyFile'] = key_file
 
             # Test admin poet0-genesis tool
             fname = get_genesis_block_id_file_name(cfg['DataDirectory'])

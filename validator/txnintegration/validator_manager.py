@@ -26,6 +26,7 @@ from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
 from txnintegration.utils import read_key_file
+from txnintegration.utils import find_or_create_test_key
 from gossip.messages import shutdown_message
 from sawtooth.client import SawtoothClient
 from sawtooth.exceptions import MessageException
@@ -60,8 +61,9 @@ class ValidatorManager(object):
 
         # Handle validator keys
         if self.static_node and 'KeyFile' in config.keys():
-            self._key = read_key_file(config['KeyFile'])
-            self._address = get_address_from_private_key_wif(self._key)
+            (_, secret, addr) = find_or_create_test_key(config['KeyFile'])
+            self._key = secret
+            self._address = addr
         elif self.static_node:
             self._key = config['SigningKey']
             self._address = config['Identifier']
