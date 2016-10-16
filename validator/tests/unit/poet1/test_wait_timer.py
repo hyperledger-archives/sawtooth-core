@@ -31,10 +31,6 @@ class TestWaitTimer(unittest.TestCase):
         # Reload the wait timer module to clear any changed global state
         reload(wait_timer)
 
-        args = { "NodeName": "DasValidator"}
-        poet_enclave.initialize(**args)
-        wait_timer.WaitTimer.poet_enclave = poet_enclave
-
         cls._originator_public_key = cls._create_random_public_key()
 
     @classmethod
@@ -45,10 +41,17 @@ class TestWaitTimer(unittest.TestCase):
     def _create_random_public_key(cls):
         return pybitcointools.privtopub(cls._create_random_private_key())
 
-    def test_create_wait_timer_with_invalid_certificate_list(self):
-        # Ensure that the enclave is set back to initial state
-        wait_timer.WaitTimer.poet_enclave = reload(poet_enclave)
+    def setUp(self):
+        # This is a little ham-handed, but we need to ensure that the
+        # PoET enclave is set back to initial state at the start of every
+        # test.
+        SignupInfo.poet_enclave = reload(poet_enclave)
+        wait_timer.WaitTimer.poet_enclave = poet_enclave
 
+        args = {"NodeName": "DasValidator"}
+        SignupInfo.poet_enclave.initialize(**args)
+
+    def test_create_wait_timer_with_invalid_certificate_list(self):
         # Make sure that invalid certificate lists cause error
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(None)
@@ -65,6 +68,7 @@ class TestWaitTimer(unittest.TestCase):
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer('Not a valid list')
 
+    def test_create_wait_timer_before_create_signup_info(self):
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
         with self.assertRaises(wait_timer.WaitTimerError):
@@ -73,6 +77,7 @@ class TestWaitTimer(unittest.TestCase):
         with self.assertRaises(wait_timer.WaitTimerError):
             wait_timer.WaitTimer.create_wait_timer(tuple())
 
+    def test_create_wait_timer(self):
         # Need to create signup information first
         signup_info = \
             SignupInfo.create_signup_info(
@@ -91,7 +96,9 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEquals(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
-        self.assertGreaterEqual(wt.duration, wait_timer.WaitTimer.minimum_wait_time)
+        self.assertGreaterEqual(
+            wt.duration,
+            wait_timer.WaitTimer.minimum_wait_time)
 
         wt = wait_timer.WaitTimer.create_wait_timer(tuple())
 
@@ -100,10 +107,13 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEquals(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
-        self.assertGreaterEqual(wt.duration, wait_timer.WaitTimer.minimum_wait_time)
+        self.assertGreaterEqual(
+            wt.duration,
+            wait_timer.WaitTimer.minimum_wait_time)
 
         # Ensure that the enclave is set back to initial state
-        wait_timer.WaitTimer.poet_enclave = reload(poet_enclave)
+        SignupInfo.poet_enclave = reload(poet_enclave)
+        wait_timer.WaitTimer.poet_enclave = SignupInfo.poet_enclave
 
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
@@ -127,7 +137,9 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEquals(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
-        self.assertGreaterEqual(wt.duration, wait_timer.WaitTimer.minimum_wait_time)
+        self.assertGreaterEqual(
+            wt.duration,
+            wait_timer.WaitTimer.minimum_wait_time)
 
         wt = wait_timer.WaitTimer.create_wait_timer(tuple())
 
@@ -136,7 +148,9 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEquals(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
-        self.assertGreaterEqual(wt.duration, wait_timer.WaitTimer.minimum_wait_time)
+        self.assertGreaterEqual(
+            wt.duration,
+            wait_timer.WaitTimer.minimum_wait_time)
 
     def test_compute_local_mean(self):
         # Make sure that invalid certificate lists cause error

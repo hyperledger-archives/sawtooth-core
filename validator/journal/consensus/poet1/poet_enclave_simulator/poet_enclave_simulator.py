@@ -31,6 +31,7 @@ from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_certificate \
     import EnclaveWaitCertificate
 from journal.consensus.poet1.signup_info import SignupInfoError
 from journal.consensus.poet1.wait_timer import WaitTimerError
+from journal.consensus.poet1.wait_certificate import WaitCertificateError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -313,7 +314,7 @@ class _PoetEnclaveSimulator(object):
                 raise \
                     WaitTimerError(
                         'Enclave must be initialized before attempting to '
-                        'create a wait timer.')
+                        'create a wait timer')
 
             # Create some value from the cert ID.  We are just going to use
             # the seal key to sign the cert ID.  We will then use the
@@ -363,6 +364,15 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def create_wait_certificate(cls, block_digest):
         with cls._lock:
+            # If we don't have a PoET private key, then the enclave has not
+            # been properly initialized (either by calling create_signup_info
+            # or unseal_signup_data)
+            if cls._poet_private_key is None:
+                raise \
+                    WaitCertificateError(
+                        'Enclave must be initialized before attempting to '
+                        'create a wait certificate')
+
             # Several criteria we need to be met before we can create a wait
             # certificate:
             # 1. We have an active timer
@@ -370,7 +380,7 @@ class _PoetEnclaveSimulator(object):
             # 3. The active timer has not timed out
             if cls._active_wait_timer is None:
                 raise \
-                    _PoetEnclaveError(
+                    WaitCertificateError(
                         'Enclave active wait timer has not been initialized')
 
             # HACK ALERT!!  HACK ALERT!!  HACK ALERT!!  HACK ALERT!!
@@ -447,6 +457,7 @@ class _PoetEnclaveSimulator(object):
 def initialize(**kwargs):
     _PoetEnclaveSimulator.initialize(**kwargs)
 
+
 def create_signup_info(originator_public_key,
                        validator_network_basename,
                        most_recent_wait_certificate_id):
@@ -496,7 +507,7 @@ def verify_wait_timer(timer):
     return timer.has_expired()
 
 
-def create_wait_certificate(wait_timer, block_digest):
+def create_wait_certificate(block_digest):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
             block_digest=block_digest)
