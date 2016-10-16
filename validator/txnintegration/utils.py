@@ -30,7 +30,20 @@ from colorlog import ColoredFormatter
 import yaml
 
 from txnintegration.exceptions import ExitError
+from sawtooth.cli.main import main as sawtooth_cli_entry_point
 from sawtooth.client import SawtoothClient
+
+
+def sawtooth_cli_intercept(cmd_string):
+    '''
+    Isolates code intercepts of the sawtooth cli command line interface.  We
+    rely on the sawtooth cli to sanitize input via its argparse derivation.
+    Args:
+        cmd_string: (str)
+    Returns:
+        None
+    '''
+    sawtooth_cli_entry_point(args=cmd_string.split(), with_loggers=False)
 
 
 def get_blocklists(urls):

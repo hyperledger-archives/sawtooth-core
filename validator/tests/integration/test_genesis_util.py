@@ -21,13 +21,13 @@ import time
 import unittest
 
 from sawtooth.cli.admin_sub.poet0_genesis import get_genesis_block_id_file_name
-from sawtooth.cli.main import main as entry_point
 from sawtooth.exceptions import MessageException
 from sawtooth.validator_config import get_validator_configuration
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.utils import find_txn_validator
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import Progress
+from txnintegration.utils import sawtooth_cli_intercept
 from txnintegration.utils import TimeOut
 from txnintegration.validator_collection_controller \
     import ValidatorCollectionController
@@ -56,7 +56,7 @@ class TestGenesisUtil(unittest.TestCase):
             key_name = cfg['NodeName']
             key_dir = cfg['KeyDirectory']
             cmd = 'keygen %s --key-dir %s' % (key_name, key_dir)
-            entry_point(args=cmd.split(), with_loggers=False)
+            sawtooth_cli_intercept(cmd)
             base_name = key_dir + os.path.sep + key_name
             self.assertTrue(os.path.exists('%s.wif' % base_name))
             self.assertTrue(os.path.exists('%s.addr' % base_name))
@@ -69,7 +69,7 @@ class TestGenesisUtil(unittest.TestCase):
             with open(config_file, 'w') as f:
                 f.write(json.dumps(cfg, indent=4) + '\n')
             cmd = 'admin poet0-genesis --config %s' % config_file
-            entry_point(args=cmd.split(), with_loggers=False)
+            sawtooth_cli_intercept(cmd)
             self.assertTrue(os.path.exists(fname))
             dat = None
             with open(fname, 'r') as f:
