@@ -20,6 +20,13 @@ from mktmain.client_cli import get_configuration
 
 
 class TestClientCLI(unittest.TestCase):
+    def setUp(self):
+        self.save_environ = os.environ.copy()
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.save_environ)
+
     def test_currency_home(self):
         os.environ.clear()
         os.environ["CURRENCYHOME"] = "/test_path"

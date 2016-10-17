@@ -26,6 +26,13 @@ from integration import ENABLE_INTEGRATION_TESTS
 
 @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
 class TestCommercialPaperScenarios(unittest.TestCase):
+    def setUp(self):
+        self.save_environ = os.environ.copy()
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.save_environ)
+
     @classmethod
     def setUpClass(cls):
         cls.vnm = None

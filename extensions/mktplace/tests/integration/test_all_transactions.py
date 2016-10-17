@@ -28,6 +28,13 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 
 @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
 class TestAllTransactions(unittest.TestCase):
+    def setUp(self):
+        self.save_environ = os.environ.copy()
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.save_environ)
+
     @classmethod
     def setUpClass(cls):
         cls.vnm = None
