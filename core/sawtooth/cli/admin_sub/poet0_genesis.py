@@ -13,14 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
-import os
 import json
 
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
-from journal.consensus.poet0.poet_consensus import PoetConsensus
 from ledger.transaction import endpoint_registry
 from ledger.transaction import integer_key
+from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.validator_config import get_validator_configuration
 from txnserver.validator import parse_networking_info
@@ -49,10 +48,6 @@ def add_poet0_genesis_parser(subparsers, parent_parser):
                         help='Specify transaction families to load. Multiple'
                              ' -F options can be specified.',
                         action='append')
-
-
-def get_genesis_block_id_file_name(directory):
-    return os.path.join(directory, 'genesis_data.json')
 
 
 def do_poet0_genesis(args):
@@ -120,7 +115,7 @@ def do_poet0_genesis(args):
 
     stat_domains = {}
 
-    # in future, dynamically select consensus obj based on ConsensusType
+    from journal.consensus.poet0.poet_consensus import PoetConsensus
     journal = Journal(gossiper.LocalNode,
                       gossiper,
                       gossiper.dispatcher,
@@ -162,7 +157,7 @@ def do_poet0_genesis(args):
         'GenesisId': head,
         'ChainLength': n_blks,
     }
-    gblock_fname = get_genesis_block_id_file_name(cfg['DataDirectory'])
+    gblock_fname = genesis_info_file_name(cfg['DataDirectory'])
     LOGGER.info('genesis data: %s', genesis_data)
     LOGGER.info('writing genesis data to %s', gblock_fname)
     with open(gblock_fname, 'w') as f:

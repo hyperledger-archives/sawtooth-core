@@ -18,7 +18,7 @@ import os
 import time
 import unittest
 
-from sawtooth.cli.admin_sub.poet0_genesis import get_genesis_block_id_file_name
+from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.exceptions import MessageException
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import Progress
@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TestGenesisUtil(unittest.TestCase):
 
-    def test_genesis_util(self):
+    def extend_genesis_util(self, admin_sub_cmd):
         print
         top = None
         try:
@@ -41,10 +41,10 @@ class TestGenesisUtil(unittest.TestCase):
             cfg = top.get_configuration(0)
             data_dir = cfg['DataDirectory']
             # Test admin poet0-genesis tool
-            fname = get_genesis_block_id_file_name(data_dir)
+            fname = genesis_info_file_name(data_dir)
             self.assertFalse(os.path.exists(fname))
             config_file = top.write_configuration(0)
-            cli_args = 'admin poet0-genesis --config %s' % config_file
+            cli_args = 'admin %s --config %s' % (admin_sub_cmd, config_file)
             sawtooth_cli_intercept(cli_args)
             self.assertTrue(os.path.exists(fname))
             genesis_dat = None
@@ -81,3 +81,6 @@ class TestGenesisUtil(unittest.TestCase):
         finally:
             if top is not None:
                 top.shutdown()
+
+    def test_poet0_genesis(self):
+        self.extend_genesis_util('poet0-genesis')
