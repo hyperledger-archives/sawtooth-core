@@ -52,6 +52,8 @@ class WaitCertificate(object):
         request_time (float): The request time of the
             certificate.
         duration (float): The duration of the wait timer.
+        block_digest (str): The block digest of the block for which this
+            wait certificate was created.
         signature (str): The signature of the certificate.
         identifier (str): The identifier of this certificate.
     """
@@ -63,7 +65,7 @@ class WaitCertificate(object):
         a WaitCertificate object from it.
 
         Args:
-            block_digest (str): The block digest/hash for the block for which
+            block_digest (str): The block digest of the block for which
                 this certificate is being created.
 
         Returns:
