@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import time
+
 curses_imported = True
 try:
     import curses
@@ -76,60 +78,51 @@ class StatsPrintManager(object):
                  system_stats,
                  platform_stats,
                  topology_stats,
-                 clients):
+                 branch_manager,
+                 stats_clients):
 
         self.cp = ConsolePrint()
         self.ss = system_stats
         self.ps = platform_stats
         self.ts = topology_stats
-        self.clients = clients
+        self.bm = branch_manager
+        self.stats_clients = stats_clients
 
         self.view_mode = "general"
+        self.print_view = self.print_general_view
 
     def print_stats(self):
-
-        self.check_mode()
-
+        self.check_view()
         self.print_summary()
-
-        if self.view_mode is "general":
-            self.print_general_view()
-        elif self.view_mode is "platform":
-            self.print_platform_view()
-        elif self.view_mode is "consensus":
-            self.print_consensus_view()
-        elif self.view_mode is "packet":
-            self.print_packet_view()
-        elif self.view_mode is "network":
-            self.print_network_view()
-        elif self.view_mode is "transaction":
-            self.print_transaction_view()
+        self.print_view()
         self.cp.cpprint("", True)
 
-    def check_mode(self):
+    def check_view(self):
         if self.cp.scrn:
             char_buffer = self.cp.scrn.getch()
-            if char_buffer == ord('g'):
-                self.view_mode = "general"
-            elif char_buffer == ord('p'):
-                self.view_mode = "platform"
-            elif char_buffer == ord('c'):
-                self.view_mode = "consensus"
-            elif char_buffer == ord('n'):
-                self.view_mode = "network"
-            elif char_buffer == ord('t'):
-                self.view_mode = "transaction"
-            elif char_buffer == ord('k'):
-                self.view_mode = "packet"
 
-            return self.view_mode
-        return None
+            view_options = {
+                ord('g'): ["general", self.print_general_view],
+                ord('p'): ["platform", self.print_platform_view],
+                ord('c'): ["consensus", self.print_consensus_view],
+                ord('n'): ["network", self.print_network_view],
+                ord('t'): ["transaction", self.print_transaction_view],
+                ord('k'): ["packet", self.print_packet_view],
+                ord('b'): ["branch", self.print_branch_view],
+                ord('f'): ["fork", self.print_fork_view]
+            }
+
+            vo = view_options.get(char_buffer)
+
+            if vo is not None:
+                self.view_mode = vo[0]
+                self.print_view = vo[1]
 
     def print_summary(self):
         validator_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9.3f} {6:16.16} ' \
-            '{7:9.3f} {8:16.16} {9:9d} {10:17.17}'
+            '{7:9.3f} {8:16.16} {9:9d} {10:19.19}'
         self.cp.cpprint(validator_formatter.format(
             "Validators:",
             self.ss.sys_client.known_validators, "known",
@@ -141,7 +134,7 @@ class StatsPrintManager(object):
         blocks_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:17.17}'
+            '{7:9d} {8:16.16} {9:9d} {10:19.19}'
         self.cp.cpprint(blocks_formatter.format(
             "Blocks:",
             self.ss.sys_blocks.blocks_max_committed, "max committed",
@@ -154,7 +147,7 @@ class StatsPrintManager(object):
         txns_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:17.17}'
+            '{7:9d} {8:16.16} {9:9d} {10:19.19}'
         self.cp.cpprint(txns_formatter.format(
             "Transactions:",
             self.ss.sys_txns.txns_max_committed, "max committed",
@@ -166,7 +159,7 @@ class StatsPrintManager(object):
         pkt_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:17.17} {11:9d} {12:17.17}'
+            '{7:9d} {8:16.16} {9:9d} {10:19.19} {11:9d} {12:17.17}'
         self.cp.cpprint(pkt_formatter.format(
             "Packet totals:",
             self.ss.sys_packets.packets_max_dropped, "max dropped",
@@ -201,7 +194,7 @@ class StatsPrintManager(object):
         topo_1_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9.2f} {10:17.17}'
+            '{7:9d} {8:16.16} {9:9.2f} {10:19.19}'
         self.cp.cpprint(topo_1_formatter.format(
             "Topology:",
             self.ts.connected_component_count, "components",
@@ -213,7 +206,7 @@ class StatsPrintManager(object):
         topo_2_formatter = \
             '{0:>16} ' \
             '{1:9.2f} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9.2f} {8:16.16} {9:9.2f} {10:17.17}'
+            '{7:9.2f} {8:16.16} {9:9.2f} {10:19.19}'
         self.cp.cpprint(topo_2_formatter.format(
             "Topology:",
             self.ts.average_shortest_path_length, "avg shortest pth",
@@ -221,6 +214,32 @@ class StatsPrintManager(object):
             self.ts.minimum_connectivity, "min connectivity",
             self.ts.maximum_degree_centrality, "max degree cent",
             self.ts.maximum_between_centrality, "max between cent"))
+
+        branch_formatter = \
+            '{0:>16} ' \
+            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16} {9:9d} {10:19.19} {11:9d} {12:17.17}'
+        self.cp.cpprint(branch_formatter.format(
+            "Branch:",
+            self.bm.bm_stats.identified, "identified",
+            self.bm.bm_stats.active, "active",
+            self.bm.bm_stats.longest, "longest",
+            self.bm.bm_stats.longest_active, "longest active",
+            self.bm.bm_stats.next_longest_active, "next longest active",
+            # self.bm.bm_stats.validators, "validator count"))
+            self.bm.bm_stats.blocks_processed, "blocks processed"))
+
+        fork_formatter = \
+            '{0:>16} ' \
+            '{1:9} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
+            '{7:9d} {8:16.16} {9:9d} {10:19.19}'
+        self.cp.cpprint(fork_formatter.format(
+            "Fork:",
+            self.bm.f_stats.status, "status",
+            self.bm.f_stats.fork_count, "fork count",
+            self.bm.f_stats.parent_count, "parent forks",
+            self.bm.f_stats.child_count, "child forks",
+            self.bm.f_stats.longest_child_fork_length, "longest child fork"))
 
         poet_formatter = \
             '{0:>16} ' \
@@ -236,17 +255,25 @@ class StatsPrintManager(object):
         view_formatter = \
             '{0:>16} ' \
             '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
-            '{7:>9} {8:16.16} {9:>9} {10:17.17} {11:>9} {12:17.17} '\
-            '{13:>9} {14:17.17}'
+            '{7:>9} {8:16.16} {9:>9} {10:19.19}'
         self.cp.cpprint(view_formatter.format(
             "View ({0:1.8}):".format(self.view_mode),
             "(g)", "general",
             "(t)", "transaction",
             "(k)", "packet",
             "(c)", "consensus",
-            "(o)", "topology",
+            "(o)", "topology"))
+
+        view_formatter_2 = \
+            '{0:>16} ' \
+            '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
+            '{7:>9} {8:16.16}'
+        self.cp.cpprint(view_formatter_2.format(
+            "View ({0:1.8}):".format(self.view_mode),
             "(p)", "platform",
-            "(n)", "network"))
+            "(n)", "network",
+            "(b)", "branch",
+            "(f)", "fork"))
 
     def print_general_view(self):
         header_formatter = \
@@ -279,7 +306,7 @@ class StatsPrintManager(object):
             'NAME', 'URL'),
             reverse=True)
 
-        for c in self.clients:
+        for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
@@ -344,7 +371,7 @@ class StatsPrintManager(object):
             'NAME', 'URL'),
             reverse=True)
 
-        for c in self.clients:
+        for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
@@ -355,8 +382,8 @@ class StatsPrintManager(object):
                     c.vsm.val_stats["platform"]["scpu"]["idle_time"],
                     c.vsm.val_stats["platform"]["svmem"]["percent"],
                     c.vsm.val_stats["platform"]["svmem"]["total"] / 1000000,
-                    c.vsm.val_stats["platform"]["svmem"]["available"]
-                    / 1000000,
+                    c.vsm.val_stats["platform"]["svmem"]["available"] /
+                    1000000,
                     c.vsm.psis.intv_disk_bytes_read,
                     c.vsm.psis.intv_disk_bytes_write,
                     c.vsm.psis.intv_disk_count_read,
@@ -401,15 +428,15 @@ class StatsPrintManager(object):
             'NAME', 'URL'),
             reverse=True)
 
-        for c in self.clients:
+        for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
-                    c.vsm.val_stats["ledger"].get("LocalMeanTime", 0.0),
-                    c.vsm.val_stats["ledger"].get("PopulationEstimate", 0.0),
-                    c.vsm.val_stats["ledger"].get("AggregateLocalMean", 0.0),
-                    c.vsm.val_stats["ledger"].get("PreviousBlockID", 'error'),
+                    c.vsm.val_stats["journal"].get("LocalMeanTime", 0.0),
+                    c.vsm.val_stats["journal"].get("PopulationEstimate", 0.0),
+                    c.vsm.val_stats["journal"].get("AggregateLocalMean", 0.0),
+                    c.vsm.val_stats["journal"].get("PreviousBlockID", 'error'),
 
                     c.name[:16],
                     c.url),
@@ -454,7 +481,7 @@ class StatsPrintManager(object):
             'NAME', 'URL'),
             reverse=True)
 
-        for c in self.clients:
+        for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
@@ -512,7 +539,7 @@ class StatsPrintManager(object):
             'NAME', 'URL'),
             reverse=True)
 
-        for c in self.clients:
+        for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
@@ -570,18 +597,18 @@ class StatsPrintManager(object):
             'NAME', 'URL'),
             reverse=True)
 
-        for c in self.clients:
+        for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
-                    c.vsm.val_stats["ledger"]["CommittedBlockCount"],
-                    c.vsm.val_stats["ledger"]["PendingBlockCount"],
-                    c.vsm.val_stats["ledger"]["CommittedTxnCount"],
-                    c.vsm.val_stats["ledger"]["PendingTxnCount"],
-                    c.vsm.val_stats["ledger"]["MissingTxnDepCount"],
-                    c.vsm.val_stats["ledger"]["MissingTxnFromBlockCount"],
-                    c.vsm.val_stats["ledger"]["InvalidTxnCount"],
+                    c.vsm.val_stats["journal"]["CommittedBlockCount"],
+                    c.vsm.val_stats["journal"]["PendingBlockCount"],
+                    c.vsm.val_stats["journal"]["CommittedTxnCount"],
+                    c.vsm.val_stats["journal"]["PendingTxnCount"],
+                    c.vsm.val_stats["journal"]["MissingTxnDepCount"],
+                    c.vsm.val_stats["journal"]["MissingTxnFromBlockCount"],
+                    c.vsm.val_stats["journal"]["InvalidTxnCount"],
 
                     c.name[:16],
                     c.url),
@@ -595,3 +622,146 @@ class StatsPrintManager(object):
                     c.name[:16],
                     c.url),
                     False)
+
+    def print_branch_view(self):
+        # determine which branch has the longest active list
+        # and active history list; size columns to match
+        max_active = 0
+        max_active_history = 0
+        for b in self.bm.branches:
+            als = str(b.is_active_list).replace(" ", "")
+            ahls = str(b.is_active_history).replace(" ", "")
+            if len(als) > max_active:
+                max_active = len(als)
+            if len(ahls) > max_active_history:
+                max_active_history = len(ahls)
+        mastr = str(max_active) + '}'
+        mahstr = str(max_active_history) + '}'
+
+        header_formatter = \
+            '{0:>12} {1:>10} {2:>6} ' \
+            '{3:>16} {4:>10} ' \
+            '{5:>16} {6:>10} ' \
+            '{7:>12} {8:>16} {9:>10} ' \
+            '{10:>14} {11:>14} ' \
+            '{12:>8} ' \
+            '{13:>' + mastr + ' {14:>' + mahstr
+        resp_formatter = \
+            '{0:>12} {1:>10d} {2:>6} ' \
+            '{3:>16} {4:>10} ' \
+            '{5:>16} {6:>10} ' \
+            '{7:>12} {8:>16} {9:>10} ' \
+            '{10:>14} {11:>14} ' \
+            '{12:>8d} ' \
+            '{13:>' + mastr + ' {14:>' + mahstr
+
+        self.cp.cpprint(header_formatter.format(
+            'BRANCH', 'BRANCH', 'ACTIVE',
+            'TAIL', 'TAIL',
+            'HEAD', 'HEAD',
+            'ANCESTOR', 'ANCESTOR', 'ANCESTOR',
+            'CREATE TIME', 'LAST ACTIVE',
+            'ACTIVE',
+            'ACTIVE', 'ACTIVE'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'LENGTH', 'STATUS',
+            'BLOCK ID', 'BLOCK NUM',
+            'BLOCK ID', 'BLOCK NUM',
+            'BRANCH ID', 'BLOCK ID', 'BLOCK NUM',
+            'MM:DD:HH:MM:SS', 'MM:DD:HH:MM:SS',
+            'COUNT',
+            'LIST', 'HISTORY'),
+            reverse=True)
+
+        for b in self.bm.branches:
+            branch_create_time = time.strftime(
+                "%m:%d:%H:%M:%S", time.localtime(b.create_time))
+            branch_last_active_time = time.strftime(
+                "%m:%d:%H:%M:%S", time.localtime(b.last_active_time))
+            ancestor_branch_id = \
+                "None" if b.ancestor_branch is None else b.ancestor_branch.id
+            ancestor_block_id = \
+                "None" if b.ancestor_branch is None else b.ancestor_block_id
+            ancestor_block_num = \
+                "None" if \
+                b.ancestor_branch is None else str(b.ancestor_block_num)
+
+            self.cp.cpprint(resp_formatter.format(
+                b.id,
+                len(b.blocks),
+                "Active" if b.is_active else "Idle",
+                b.tail_block_id,
+                str(b.tail_block_num),
+                b.head_block_id,
+                str(b.head_block_num),
+                ancestor_branch_id,
+                ancestor_block_id,
+                ancestor_block_num,
+                branch_create_time,
+                branch_last_active_time,
+                len(b.is_active_list),
+                str(b.is_active_list).replace(" ", ""),
+                str(b.is_active_history).replace(" ", "")),
+                False)
+
+    def print_fork_view(self):
+
+        header_formatter = \
+            '{0:>12} {1:>10} {2:>10} ' \
+            '{3:>16} {4:>10} ' \
+            '{5:>16} {6:>10} ' \
+            '{7:>9} {8:>6} ' \
+            '{9:>10} ' \
+            '{10:>16} {11:>10} '
+
+        resp_formatter = \
+            '{0:>12} {1:>10d} {2:>10d} ' \
+            '{3:>16} {4:>10} ' \
+            '{5:>16} {6:>10} ' \
+            '{7:>9d} {8:>6} ' \
+            '{9:>10} ' \
+            '{10:>16} {11:>10} '
+
+        self.cp.cpprint(header_formatter.format(
+            'FORK', 'TOTAL', 'BRANCH',
+            'TAIL', 'TAIL',
+            'HEAD', 'HEAD',
+            'VALIDATOR', 'FORK',
+            'FORK',
+            'INTERCEPT', 'INTERCEPT'),
+            reverse=True)
+
+        self.cp.cpprint(header_formatter.format(
+            'ID', 'LENGTH', 'COUNT',
+            'BLOCK ID', 'BLOCK NUM',
+            'BLOCK ID', 'BLOCK NUM',
+            'COUNT', 'STATUS',
+            'LENGTH',
+            'BLOCK ID', 'BLOCK NUM'),
+            reverse=True)
+
+        for f in self.bm.forks:
+            status = "parent" if f.is_parent is True else "child"
+            fork_intercept_length = "" if \
+                f.fork_intercept_length is None else \
+                str(f.fork_intercept_length)
+            intercept_block_id = "" if \
+                f.intercept_block_id is None else str(f.intercept_block_id)
+            intercept_block_num = "" if \
+                f.intercept_block_num is None else str(f.intercept_block_num)
+            self.cp.cpprint(resp_formatter.format(
+                f.id,
+                f.block_count,
+                f.branch_count,
+                f.tail_block_id,
+                f.tail_block_num,
+                f.head_block_id,
+                f.tail_block_num,
+                f.validator_count,
+                status,
+                fork_intercept_length,
+                intercept_block_id,
+                intercept_block_num),
+                False)

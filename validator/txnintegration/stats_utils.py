@@ -15,8 +15,78 @@
 
 import time
 import csv
+import json
 import collections
 import networkx as nx
+
+from twisted.web.client import readBody
+from twisted.web.http_headers import Headers
+
+
+class ValidatorCommunications(object):
+
+    def __init__(self, reactor_agent):
+        self.request_count = 0
+        self.error_count = 0
+        self.agent = reactor_agent
+        self.completion_callback = None
+        self.error_callback = None
+        self.request_path = None
+
+        self.error_value = None
+        self.error_type = None
+        self.error_name = None
+        self.error_message = None
+
+    def get_request(self, path, ccb=None, ecb=None):
+        self.completion_callback = self._completion_default if ccb is None \
+            else ccb
+        self.error_callback = self._error_default if ecb is None \
+            else ecb
+
+        self.request_path = path
+        d = self.agent.request(
+            'GET',
+            path,
+            Headers({'User-Agent': ['sawtooth stats collector']}),
+            None)
+
+        d.addCallback(self._handle_request)
+        d.addErrback(self._handle_error)
+
+        return d
+
+    def _handle_request(self, response):
+        self.responding = True
+        self.response_code = response.code
+        d = readBody(response)
+        d.addCallback(self._handle_body)
+        return d
+
+    def _handle_body(self, body):
+        if self.response_code is 200:
+            self.json_stats = json.loads(body)
+        else:
+            self.json_stats = None
+        self.completion_callback(self.json_stats, self.response_code)
+
+    def _handle_error(self, failure):
+        self.error_value = failure.value
+        self.error_type = failure.type
+        self.error_name = failure.type.__name__
+        self.error_message = failure.getErrorMessage()
+
+        self.error_count += 1
+        self.error_callback(failure)
+
+    def _completion_default(self, data):
+        print "ValidatorCommunications.get_request() " \
+              "default completion handler"
+        print json.dumps(data, indent=4)
+
+    def _error_default(self):
+        print "ValidatorCommunications.get_request() " \
+              "default error handler"
 
 
 class CsvManager(object):
