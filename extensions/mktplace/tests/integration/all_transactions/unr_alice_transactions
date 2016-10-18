@@ -1,0 +1,14 @@
+echo Running: All unregister transaction test
+
+holding unr --name /jars/choc_chip
+waitforcommit
+holding unr --name /USD
+waitforcommit
+holding unr --name /holding/token
+waitforcommit
+account unr --name /account
+waitforcommit
+participant unr --name //alice
+waitforcommit
+
+exit
