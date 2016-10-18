@@ -1,0 +1,14 @@
+participant reg --name bob
+account reg --name /account
+waitforcommit
+holding reg --name /USD --account /account --asset //mkt/asset/currency/USD
+holding reg --name /holding/token --count 1 --account /account --asset //marketplace/asset/token
+waitforcommit
+exchange --type SellOffer --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
+holding reg --name /jars/choc_chip --account /account --asset //mkt/asset/cookie/choc_chip
+waitforcommit
+holding reg --name /batches/choc_chip001 --account /account --asset //mkt/asset/cookie/choc_chip --count 24
+waitforcommit
+exchangeoffer reg --output /batches/choc_chip001 --input /USD --ratio 2 1 --name /choc_chip_sale
+waitforcommit
+exit
