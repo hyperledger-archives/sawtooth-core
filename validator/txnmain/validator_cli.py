@@ -199,7 +199,12 @@ def local_main(config, windows_service=False, daemonized=False):
             sys.exit(1)
 
     # attempt to restore journal state from persistence
-    validator.journal.restore()
+    try:
+        validator.journal.restore()
+    except KeyError as e:
+        logger.error("Config is not compatible with data files"
+                     " found on restore. Keyerror on %s", e)
+        sys.exit(1)
 
     try:
         validator.pre_start()
