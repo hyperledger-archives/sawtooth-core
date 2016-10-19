@@ -1,6 +1,9 @@
 # rename to vagrant.local.yaml to override default vagrant file options
 
-# Valid options "ubuntu/trusty64", "boxcutter/ubuntu1604", "bento/opensuse-13.2"
+# Vagrant box image to use.
+# VAGRANT_BOX: "bento/opensuse-13.2"
+# VAGRANT_BOX: "boxcutter/ubuntu1604"
+# VAGRANT_BOX: "ubuntu/xenial64"
 VAGRANT_BOX: "ubuntu/trusty64"
 
 # Whether to enable or disable forwarding of the vagrant ports to host. These
