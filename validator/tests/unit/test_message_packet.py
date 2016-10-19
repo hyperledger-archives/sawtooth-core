@@ -167,7 +167,8 @@ class TestMessage(unittest.TestCase):
         # Test dump for message
         msg = Message({'__SIGNATURE__': "Test", "__NONCE__": 1000.3})
         expectedDump = {'__SIGNATURE__': "Test", "__NONCE__": 1000.3,
-                        "__TYPE__": "/gossip.Message/MessageBase"}
+                        "__TYPE__": "/gossip.Message/MessageBase",
+                        "public_key": None}
         self.assertEquals(msg.dump(), expectedDump)
 
     def test_unpack_message(self):
