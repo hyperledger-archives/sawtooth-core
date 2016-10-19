@@ -17,9 +17,7 @@ mkdir -p $pkg_dir
 
 
 VER=$(lsb_release -sr)
-if [ "$VER" = "16.04" ] ; then
-    echo "Dependencies not built for Ubuntu 16.04"
-else
+if [ "$VER" = "14.04" ] ; then
     if [ ! -f $pkg_dir/python-cbor_0.1.24-1_amd64.deb ]; then
         cd $build_dir
         wget https://pypi.python.org/packages/source/c/cbor/cbor-0.1.24.tar.gz
@@ -37,13 +35,13 @@ else
         python setup.py --command-packages=stdeb.command bdist_deb
         cp deb_dist/python-colorlog*.deb $pkg_dir
     fi
+fi
 
-    if [ ! -f $pkg_dir/python-pybitcointools_1.1.15-1_all.deb ]; then
-        cd $build_dir
-        wget https://pypi.python.org/packages/source/p/pybitcointools/pybitcointools-1.1.15.tar.gz
-        tar xvfz pybitcointools-1.1.15.tar.gz
-        cd pybitcointools-1.1.15
-        python setup.py --command-packages=stdeb.command bdist_deb
-        cp deb_dist/python-pybitcointools*.deb $pkg_dir
-    fi
+if [ ! -f $pkg_dir/python-pybitcointools_1.1.15-1_all.deb ]; then
+    cd $build_dir
+    wget https://pypi.python.org/packages/source/p/pybitcointools/pybitcointools-1.1.15.tar.gz
+    tar xvfz pybitcointools-1.1.15.tar.gz
+    cd pybitcointools-1.1.15
+    python setup.py --command-packages=stdeb.command bdist_deb
+    cp deb_dist/python-pybitcointools*.deb $pkg_dir
 fi

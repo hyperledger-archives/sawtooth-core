@@ -1,6 +1,8 @@
 libcrypto++-dev
 libjson0
 libjson0-dev
+python-cbor
+python-colorlog
 python-cryptography
 python-dev
 python-ipaddr
