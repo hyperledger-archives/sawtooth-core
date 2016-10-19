@@ -20,16 +20,16 @@ import socket
 
 from gossip import common
 from gossip import node
+from journal.consensus.consensus_base import Consensus
 from journal.consensus.quorum import quorum_transaction_block
 from journal.consensus.quorum.messages import quorum_debug
 from journal.consensus.quorum.messages import quorum_ballot
 from journal.consensus.quorum.protocols import quorum_vote
-from journal.journal_core import Journal
 
 logger = logging.getLogger(__name__)
 
 
-class QuorumJournal(Journal):
+class QuorumConsensus(Consensus):
     """Implements a journal based on participant voting.
 
     Attributes:
@@ -55,36 +55,16 @@ class QuorumJournal(Journal):
             to make when the heartbeat timer fires.
     """
     def __init__(self,
-                 local_node,
-                 gossip,
-                 gossip_dispatcher,
-                 stat_domains,
-                 minimum_transactions_per_block=None,
-                 max_transactions_per_block=None,
-                 max_txn_age=None,
-                 genesis_ledger=None,
-                 data_directory=None,
-                 store_type=None,
                  vote_time_interval=None,
                  ballot_time_interval=None,
-                 voting_quorum_target_size=None):
+                 voting_quorum_target_size=None,
+                 quorum=None,
+                 nodes=None):
         """Constructor for the QuorumJournal class.
 
         Args:
             nd (Node): The local node.
         """
-
-        super(QuorumJournal, self).__init__(
-            local_node,
-            gossip,
-            gossip_dispatcher,
-            stat_domains,
-            minimum_transactions_per_block,
-            max_transactions_per_block,
-            max_txn_age,
-            genesis_ledger,
-            data_directory,
-            store_type)
 
         # minimum time between votes
         if vote_time_interval is not None:
@@ -123,9 +103,10 @@ class QuorumJournal(Journal):
         self.CurrentQuorumVote = None
         self.NextVoteTime = self._nextvotetime()
         self.NextBallotTime = 0
+        self.initialize_quorum_map(quorum, nodes)
 
-        self.dispatcher.on_heartbeat += self._triggervote
-
+    def initialization_complete(self, journal):
+        # initialize the block handlers
         quorum_ballot.register_message_handlers(self)
         quorum_debug.register_message_handlers(self)
         quorum_transaction_block.register_message_handlers(self)
@@ -155,7 +136,7 @@ class QuorumJournal(Journal):
     # GENERAL JOURNAL API
     #
 
-    def build_transaction_block(self, force=False):
+    def build_block(self, journal, force=False):
         """Builds the next transaction block for the journal.
 
         Note:
@@ -192,7 +173,8 @@ class QuorumJournal(Journal):
             'received a forked block %s from %s with previous id %s, '
             'expecting %s',
             tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
-            tblock.PreviousBlockID[:8], self.MostRecentCommittedBlockID[:8])
+            tblock.PreviousBlockID[:8],
+            self.most_recent_committed_block_id[:8])
 
     #
     # CUSTOM JOURNAL API
@@ -222,7 +204,7 @@ class QuorumJournal(Journal):
         that a new vote should be initiated.
         """
         logger.info('quorum, initiate, %s',
-                    self.MostRecentCommittedBlockID[:8])
+                    self.most_recent_committed_block_id[:8])
 
         # check alleged connectivity
         if not self._connected():
@@ -231,17 +213,17 @@ class QuorumJournal(Journal):
             return
 
         # check that we have enough transactions
-        txnlist = self._preparetransactionlist(
-            maxcount=self.MaximumTransactionsPerBlock)
-        if len(txnlist) < self.MinimumTransactionsPerBlock:
+        txnlist = self._prepare_transaction_list(
+            maxcount=self.maximum_transactions_per_block)
+        if len(txnlist) < self.minimum_transactions_per_block:
             logger.debug('insufficient transactions for vote; %d out of %d',
-                         len(txnlist), self.MinimumTransactionsPerBlock)
+                         len(txnlist), self.minimum_transactions_per_block)
             self.NextVoteTime = self._nextvotetime()
             self.NextBallotTime = 0
             return
 
         # we are initiating the vote, send the message to the world
-        newblocknum = self.MostRecentCommittedBlock.BlockNumber + 1
+        newblocknum = self.most_recent_committed_block.BlockNumber + 1
         msg = quorum_ballot.QuorumInitiateVoteMessage()
         msg.BlockNumber = newblocknum
         self.forward_message(msg)
@@ -260,15 +242,15 @@ class QuorumJournal(Journal):
         """
         if not self._connected():
             return False
-        if self.MostRecentCommittedBlockID == common.NullIdentifier:
+        if self.most_recent_committed_block_id == common.NullIdentifier:
             logger.warn('self.MostRecentCommittedBlockID is %s',
-                        self.MostRecentCommittedBlockID)
+                        self.most_recent_committed_block_id)
             return False
 
-        if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
+        if blocknum != self.most_recent_committed_block.BlockNumber + 1:
             logger.warn(
                 'attempt initiate vote on block %d, expecting block %d',
-                blocknum, self.MostRecentCommittedBlock.BlockNumber + 1)
+                blocknum, self.most_recent_committed_block.BlockNumber + 1)
             return False
 
         if self.CurrentQuorumVote:
@@ -277,10 +259,10 @@ class QuorumJournal(Journal):
             return False
 
         logger.info('quorum, handle initiate, %s',
-                    self.MostRecentCommittedBlockID[:8])
+                    self.most_recent_committed_block_id[:8])
 
-        txnlist = self._preparetransactionlist(
-            maxcount=self.MaximumTransactionsPerBlock)
+        txnlist = self._prepare_transaction_list(
+            maxcount=self.maximum_transactions_per_block)
         self.CurrentQuorumVote = quorum_vote.QuorumVote(self, blocknum,
                                                         txnlist)
         self.NextVoteTime = 0
@@ -295,7 +277,7 @@ class QuorumJournal(Journal):
         particular ballot is complete.
         """
         logger.info('quorum, ballot, %s, %d',
-                    self.MostRecentCommittedBlockID[:8],
+                    self.most_recent_committed_block_id[:8],
                     self.CurrentQuorumVote.Ballot)
 
         self.NextBallotTime = self._nextballottime()
@@ -314,7 +296,7 @@ class QuorumJournal(Journal):
         """
 
         logger.debug('complete the vote for block based on %s',
-                     self.MostRecentCommittedBlockID)
+                     self.most_recent_committed_block_id)
 
         if len(txnlist) == 0:
             logger.warn('no transactions to commit')
@@ -323,15 +305,15 @@ class QuorumJournal(Journal):
             self.NextBallotTime = 0
             return
 
-        if blocknum != self.MostRecentCommittedBlock.BlockNumber + 1:
+        if blocknum != self.most_recent_committed_block.BlockNumber + 1:
             logger.warn(
                 'attempt complete vote on block %d, expecting block %d',
-                blocknum, self.MostRecentCommittedBlock.BlockNumber + 1)
+                blocknum, self.most_recent_committed_block.BlockNumber + 1)
             return
 
         nblock = quorum_transaction_block.QuorumTransactionBlock()
         nblock.BlockNumber = blocknum
-        nblock.PreviousBlockID = self.MostRecentCommittedBlockID
+        nblock.PreviousBlockID = self.most_recent_committed_block_id
         nblock.TransactionIDs = txnlist[:]
         nblock.sign_from_node(self.local_node)
 
@@ -342,6 +324,10 @@ class QuorumJournal(Journal):
         self.CurrentQuorumVote = None
         self.NextVoteTime = self._nextvotetime()
         self.NextBallotTime = 0
+
+    def claim_block(self, journal, block):
+        """Placeholder for when the block is complete. """
+        pass
 
     def quorum_list(self):
         return [x for x in self.QuorumMap.itervalues()]
@@ -356,9 +342,8 @@ class QuorumJournal(Journal):
             logger.warn('not sufficiently connected')
         return rslt
 
-    def _triggervote(self, now):
-        """
-        Handle timer events
+    def check_claim_block(self, journal, block, now):
+        """ Check if it is time to vote
         """
 
         if self.NextVoteTime != 0:

@@ -156,9 +156,10 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             self.AggregateLocalMean = self.WaitCertificate.local_mean
 
             if self.PreviousBlockID != NullIdentifier:
-                assert self.PreviousBlockID in journal.BlockStore
+                assert self.PreviousBlockID in journal.block_store
                 self.AggregateLocalMean += \
-                    journal.BlockStore[self.PreviousBlockID].AggregateLocalMean
+                    journal.block_store[self.PreviousBlockID]\
+                    .AggregateLocalMean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
@@ -179,7 +180,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             return self.WaitCertificate.is_valid_wait_certificate(
                 self.OriginatorID,
-                journal._build_certificate_list(self),
+                journal.consensus._build_certificate_list(
+                    journal.block_store, self),
                 self.TransactionIDs)
 
     def create_wait_timer(self, validator_address, certlist):

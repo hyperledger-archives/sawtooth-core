@@ -16,7 +16,6 @@
 import unittest
 
 from gossip import signed_object
-from gossip.common import dict2json
 from journal.global_store_manager import KeyValueStore
 
 import pybitcointools

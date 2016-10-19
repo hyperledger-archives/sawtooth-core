@@ -70,13 +70,13 @@ class BlockPage(BasePage):
             return block_ids
 
         block_id = components.pop(0)
-        if block_id not in self.journal.BlockStore:
+        if block_id not in self.journal.block_store:
             return self._encode_error_response(
                 request,
                 http.NOT_FOUND,
                 KeyError('unknown block {0}'.format(block_id)))
 
-        binfo = self.journal.BlockStore[block_id].dump()
+        binfo = self.journal.block_store[block_id].dump()
         binfo['Identifier'] = block_id
 
         if not components:
@@ -96,7 +96,7 @@ class BlockPage(BasePage):
 
         if 'startid' in msg:
             block_id = msg.get('startid').pop(0)
-            if block_id not in self.journal.BlockStore:
+            if block_id not in self.journal.block_store:
                 return self._encode_error_response(
                     request,
                     http.NOT_FOUND,
@@ -114,7 +114,7 @@ class BlockPage(BasePage):
         if 'blockcount' in msg:
             count = int(msg.get('blockcount').pop(0))
         if count is 0:
-            count = self.journal.CommittedBlockIDCount
+            count = self.journal.committed_Block_count
 
         short = 1
         if 'short' in msg:
@@ -125,7 +125,7 @@ class BlockPage(BasePage):
         info["head"] = block_id
         info["blocks"] = {}
         for _ in range(0, count):
-            binfo = self.journal.BlockStore[block_id].dump()
+            binfo = self.journal.block_store[block_id].dump()
             if short is 1:
                 info["blocks"][block_id] = \
                     {"PreviousBlockID": binfo["PreviousBlockID"],

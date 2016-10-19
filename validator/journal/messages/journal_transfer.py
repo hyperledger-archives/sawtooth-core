@@ -69,7 +69,7 @@ def _blocklistrequesthandler(msg, journal):
                     source)
         return
 
-    if journal.Initializing:
+    if journal.initializing:
         logger.warn(
             'received blocklist transfer request from %s prior to completing '
             'initialization',
@@ -158,7 +158,7 @@ def _uncommittedlistrequesthandler(msg, journal):
                     gossip.node_id_to_name(msg.OriginatorID))
         return
 
-    if journal.Initializing:
+    if journal.initializing:
         logger.warn(
             'received uncommitted list transfer request from %s prior to '
             'completing initialization',
@@ -171,7 +171,7 @@ def _uncommittedlistrequesthandler(msg, journal):
     reply.TransactionListIndex = msg.TransactionListIndex
 
     index = msg.TransactionListIndex
-    txns = journal.PendingTransactions.keys()
+    txns = journal.pending_transactions.keys()
     if index < len(txns):
         reply.TransactionIDs = txns[index:index + 100]
 
@@ -232,7 +232,7 @@ def _blockrequesthandler(msg, journal):
     gossip = journal.gossip
     source = gossip.node_id_to_name(msg.OriginatorID)
     logger.debug('processing incoming block request for journal transfer')
-    if journal.Initializing:
+    if journal.initializing:
         logger.warn(
             'received block transfer request from %s prior to completing '
             'initialization',
@@ -242,8 +242,8 @@ def _blockrequesthandler(msg, journal):
 
     reply = BlockReplyMessage()
     reply.InReplyTo = msg.Identifier
-    if msg.BlockID in journal.BlockStore:
-        blk = journal.BlockStore[msg.BlockID]
+    if msg.BlockID in journal.block_store:
+        blk = journal.block_store[msg.BlockID]
         bmsg = blk.build_message()
         reply.TransactionBlockMessage = bmsg.dump()
     else:
@@ -305,7 +305,7 @@ def _txnrequesthandler(msg, journal):
     gossip = journal.gossip
     logger.debug(
         'processing incoming transaction request for journal transfer')
-    if journal.Initializing:
+    if journal.initializing:
         source = gossip.node_id_to_name(msg.OriginatorID)
         logger.warn(
             'received transaction transfer request from %s prior to '
@@ -316,8 +316,8 @@ def _txnrequesthandler(msg, journal):
 
     reply = TransactionReplyMessage()
     reply.InReplyTo = msg.Identifier
-    if msg.TransactionID in journal.TransactionStore:
-        txn = journal.TransactionStore[msg.TransactionID]
+    if msg.TransactionID in journal.transaction_store:
+        txn = journal.transaction_store[msg.TransactionID]
         tmsg = txn.build_message()
         reply.TransactionMessage = tmsg.dump()
     else:

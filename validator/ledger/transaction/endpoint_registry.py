@@ -50,7 +50,7 @@ def send_to_closest_nodes(ledger, msg, addr, count=1, initialize=True):
     add them.
     """
 
-    storemap = ledger.GlobalStore
+    storemap = ledger.global_store
     epstore = storemap.GetTransactionStore(
         EndpointRegistryTransaction.TransactionTypeName)
     assert epstore

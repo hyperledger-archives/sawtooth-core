@@ -211,7 +211,7 @@ class Validator(object):
         self.status = 'stopped'
 
     def initialize_common_configuration(self):
-        self.GenesisLedger = self.config.get('GenesisLedger', False)
+        self.genesis_ledger = self.config.get('GenesisLedger', False)
 
         # Handle the common configuration variables
         if 'NetworkFlowRate' in self.config:
@@ -270,8 +270,9 @@ class Validator(object):
     def start(self):
         # add blacklist before we attempt any peering
         self.gossip.blacklist = self.config.get('Blacklist', [])
+
         # if this is the genesis ledger then there isn't anything left to do
-        if self.GenesisLedger:
+        if self.genesis_ledger:
             self.start_ledger()
             return
 
@@ -344,8 +345,8 @@ class Validator(object):
                              str(e))
 
         # We may also be able to rediscover peers via the persistence layer.
-        for blockid in self.journal.GlobalStoreMap.persistmap_keys():
-            blk = self.journal.GlobalStoreMap.get_block_store(blockid)
+        for blockid in self.journal.global_store_map.persistmap_keys():
+            blk = self.journal.global_store_map.get_block_store(blockid)
             sto = blk.get_transaction_store('/EndpointRegistryTransaction')
             for key in sto:
                 nd = self._endpoint_info_to_node(sto[key])
@@ -403,7 +404,7 @@ class Validator(object):
             reactor.callLater(2.0, self.initialize_ledger_connection)
         else:
             callback = self.start_ledger
-            if self.journal.Restored is False:
+            if self.journal.restored is False:
                 callback = self.start_journal_transfer
             reactor.callLater(2.0, self.initialize_ledger_topology, callback)
 

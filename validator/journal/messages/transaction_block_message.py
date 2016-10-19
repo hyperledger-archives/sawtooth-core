@@ -98,7 +98,7 @@ def transaction_block_message_handler(msg, journal):
                     msg.MessageType)
         return
 
-    if msg.TransactionBlock.Identifier in journal.BlockStore:
+    if msg.TransactionBlock.Identifier in journal.block_store:
         return
 
     journal.commit_transaction_block(msg.TransactionBlock)
@@ -154,7 +154,7 @@ class BlockRequestMessage(message.Message):
 
 
 def _block_request_handler(msg, journal):
-    blk = journal.BlockStore.get(msg.BlockID)
+    blk = journal.block_store.get(msg.BlockID)
     if blk:
         reply = blk.build_message()
         journal.gossip.forward_message(reply)

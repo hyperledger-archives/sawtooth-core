@@ -112,27 +112,6 @@ class TestSmoke(unittest.TestCase):
         cfg['LedgerType'] = 'poet0'
         self._run_int_load(cfg, 5, "TestSmokeResultsPoet")
 
-    @unittest.skip("LedgerType quorum is broken.")
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load_quorum(self):
-        n = 4   # size of network
-        q = 4   # size of quorum
-        network = StaticNetworkConfig(n, q=q, use_quorum=True)
-        cfg = defaultValidatorConfig.copy()
-        cfg['LedgerType'] = 'quorum'
-        cfg['TopologyAlgorithm'] = "Quorum"
-        cfg["MinimumConnectivity"] = q
-        cfg["TargetConnectivity"] = q
-        cfg['VotingQuorumTargetSize'] = q
-        cfg['Nodes'] = network.get_nodes()
-        cfg['VoteTimeInterval'] = 48.0
-        cfg['BallotTimeInterval'] = 8.0
-        self._run_int_load(cfg, n, "TestSmokeResultsQuorum",
-                           tolerance=0, block_id=False,
-                           static_network=network,
-                           vnm_timeout=240, txn_timeout=240,
-                           n_keys=100, n_runs=1)
-
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_intkey_load_dev_mode(self):
         cfg = defaultValidatorConfig.copy()

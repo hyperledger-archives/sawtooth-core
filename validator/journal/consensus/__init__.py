@@ -13,4 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = []
+import journal.consensus.consensus_base
+
+__all__ = ["consensus_base"]
