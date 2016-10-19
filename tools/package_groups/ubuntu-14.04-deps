@@ -1,0 +1,9 @@
+libcrypto++-dev
+libjson0
+libjson0-dev
+python-dev
+python-enum34
+python-numpy
+python-twisted
+python-twisted-web
+python-yaml
