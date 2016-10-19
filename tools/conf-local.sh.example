@@ -24,8 +24,5 @@ export SETUP_SAWTOOTH_ENVIRONMENT=yes
 #export SETUP_SAWTOOTH_PATH=yes
 export SETUP_SAWTOOTH_PATH=no
 
-#export START_TXNVALIDATOR=no
-#export START_TXNVALIDATOR=yes
-
 # Custom configuration plugins you want to run to install optional components
 # export PLUGINS="build_ubuntu_deps install_docker install_ubuntu_deps install_sphinx"
