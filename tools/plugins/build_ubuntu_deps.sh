@@ -20,14 +20,6 @@ VER=$(lsb_release -sr)
 if [ "$VER" = "16.04" ] ; then
     echo "Dependencies not built for Ubuntu 16.04"
 else
-    apt-get install -y -q \
-        python-dev \
-        python-setuptools \
-        g++ \
-        git \
-        python-all-dev \
-        python-stdeb
-
     if [ ! -f $pkg_dir/python-cbor_0.1.24-1_amd64.deb ]; then
         cd $build_dir
         wget https://pypi.python.org/packages/source/c/cbor/cbor-0.1.24.tar.gz
