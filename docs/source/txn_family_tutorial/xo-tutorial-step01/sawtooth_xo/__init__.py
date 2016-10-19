@@ -16,9 +16,12 @@
 from sawtooth_xo.txn_family import _register_transaction_types
 
 __all__ = [
-    'txn_family'
+    'txn_family',
+    'xo_cli',
+    'xo_client',
+    'xo_exceptions'
 ]
 
 
-def register_transaction_types(ledger):
-    _register_transaction_types(ledger)
+def register_transaction_types(journal):
+    _register_transaction_types(journal)
