@@ -12,9 +12,6 @@
 # The number of CPUs for the VM
 # export VAGRANT_CPUS=2
 
-# export INSTALL_TYPE=setup.py
-export INSTALL_TYPE=none
-
 # Setting INSTALL_SPHINX to yes will add over 700MB to the vagrant image.
 # This installs the dependencies to build sphinx docs and make PDF targets.
 #export INSTALL_SPHINX=yes
