@@ -15,20 +15,40 @@
 
 from sawtooth.client import SawtoothClient
 
-from sawtooth_xo.txn_family import XoTransaction
-
 
 class XoClient(SawtoothClient):
     def __init__(self,
                  base_url,
-                 keyfile):
+                 keyfile,
+                 disable_client_validation=False):
         super(XoClient, self).__init__(
             base_url=base_url,
             store_name='XoTransaction',
             name='XoClient',
-            transaction_type=XoTransaction,
-            message_type=XoTransaction.MessageType,
-            keyfile=keyfile)
+            txntype_name='/XoTransaction',
+            msgtype_name='/Xo/Transaction',
+            keyfile=keyfile,
+            disable_client_validation=disable_client_validation)
+
+    def send_xo_txn(self, update):
+        """
+        This sets up the same defaults as the Transaction so when
+        signing happens in sendtxn, the same payload is signed.
+        Args:
+            update: dict The data associated with the Xo data model
+        Returns:
+            txnid: str The txnid associated with the transaction
+
+        """
+        if 'Name' not in update:
+            update['Name'] = None
+        if 'Action' not in update:
+            update['Action'] = None
+        if 'Space' in update and update['Space'] is None:
+            del update['Space']
+        return self.sendtxn('/XoTransaction',
+                            '/Xo/Transaction',
+                            update)
 
     def create(self, name):
         """
@@ -38,7 +58,7 @@ class XoClient(SawtoothClient):
             'Name': name
         }
 
-        return self.sendtxn(XoTransaction, XoTransaction.MessageType, update)
+        return self.send_xo_txn(update)
 
     def take(self, name, space):
         """
@@ -48,5 +68,4 @@ class XoClient(SawtoothClient):
             'Name': name,
             'Space': space,
         }
-
-        return self.sendtxn(XoTransaction, XoTransaction.MessageType, update)
+        return self.send_xo_txn(update)

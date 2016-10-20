@@ -276,7 +276,6 @@ The transaction class is the heart of a transaction family.  It must define:
 - MessageType class attribute
 - An __init__() method which implements deserialization
 - A __str__() method
-- An is_valid() method which reduces check_valid() to a boolean
 - A check_valid() method which throws an exception if the transaction is not valid
 - An apply() method which updates the store
 - A dump() method which implements serialization
@@ -365,22 +364,45 @@ provides a couple methods for creating transactions:
 
 .. code-block:: python
 
+    def send_xo_txn(self, update):
+        """
+        This sets up the same defaults as the Transaction so when
+        signing happens in sendtxn, the same payload is signed.
+        Args:
+            update: dict The data associated with the Xo data model
+        Returns:
+            txnid: str The txnid associated with the transaction
+
+        """
+        if 'Name' not in update:
+            update['Name'] = None
+        if 'Action' not in update:
+            update['Action'] = None
+        if 'Space' in update and update['Space'] is None:
+            del update['Space']
+        return self.sendtxn('/XoTransaction',
+                            '/Xo/Transaction',
+                            update)
+
     def create(self, name):
+        """
+        """
         update = {
             'Action': 'CREATE',
             'Name': name
         }
 
-        return self.sendtxn(XoTransaction, XoTransactionMessage, update)
+        return self.send_xo_txn(update)
 
     def take(self, name, space):
+        """
+        """
         update = {
             'Action': 'TAKE',
             'Name': name,
             'Space': space,
         }
-
-        return self.sendtxn(XoTransaction, XoTransactionMessage, update)
+        return self.send_xo_txn(update)
 
 In both cases, an XoTransaction is sent (wrapped in a XoTransactionMessage),
 but the update has different actions.  The two allowable actions for
@@ -409,7 +431,11 @@ First, startup txnvaldiator inside vagrant (and leave it running):
 .. code-block:: console
 
     $ cd /project/sawtooth-core
+    $ rm /home/vagrant/sawtooth/data/*.*
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
+
+.. note:: The **rm** command above is necessary to clean the validator state
+          of the old blocks from the previous run of the validator.
 
 Next, in a separate vagrant window, use the xo CLI to create a key for player1:
 
@@ -424,14 +450,10 @@ Then, attempt to create a game:
 .. code-block:: console
 
     $ ./bin/xo create -vvv game000
-    [04:02:01 DEBUG   client] fetch state from http://localhost:8800/XoTransaction/*
-    [04:02:01 DEBUG   client] get content from url <http://localhost:8800/store/XoTransaction/*>
-    [04:02:01 DEBUG   client] set signing key from file /home/vagrant/.sawtooth/keys/player1.wif
-    [04:02:01 DEBUG   txn_family] minfo: {'Action': 'CREATE', 'Name': 'game000'}
-    [04:02:01 ERROR   txn_family] XoTransaction __init__ not implemented
-    [04:02:01 ERROR   txn_family] XoTransaction.dump is not implemented
-    [04:02:01 ERROR   txn_family] XoTransaction __str__ not implemented
-    [04:02:01 DEBUG   txn_family] checking XoTransaction
+    [15:40:54 DEBUG   client] set signing key from file /home/vagrant/.sawtooth/keys/player1.wif
+    [15:40:54 DEBUG   client] Posting transaction: 77b85773bbb5a3d0
+    ?iSignaturexXHIkL44U02V3SfohF6KjVA3xvxbIwWpGsxehOiKyhOWEaCtchVgGGe5jmlQrJ6ASEW8vxOyKbkOllC4lmimFVlYw=oTransactionTypen/XoTransactioni__NONCE__?A???y:m__SIGNATURE__xXGwHRqQG0gMaqp3qOC944bveycd+n5cSrGez32NtN6TO7wMGpnJnONCNQ0ImJo4+l1r91iI0tQ1CprFxZPzWat/k=h__TYPE__o/Xo/Transaction>
+    [15:40:54 WARNING client] operation failed with response: 400 OrderedDict([('error', 'XoTransaction.check_valid is not implemented'), ('errorType', 'InvalidTransactionError'), ('status', 400L)])
     Error: XoTransaction.check_valid is not implemented
 
 Stop the validator with CTRL-C.
@@ -639,6 +661,7 @@ It is now possible to play the game:
 
     $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step04/env.sh
     $ cd /project/sawtooth-core
+    $ rm /home/vagrant/sawtooth/data/*.*
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
 Then, create a game in a separate vagrant window (log in with "vagrant ssh" from the tools directory):
