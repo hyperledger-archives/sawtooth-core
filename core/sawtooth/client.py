@@ -54,6 +54,9 @@ def _sign_message_with_transaction(transaction, message_type, key):
     of a sha256 hexdigest.
     """
     transaction['Nonce'] = time.time()
+    pub = pybitcointools.encode_pubkey(pybitcointools.privkey_to_pubkey(key),
+                                       "hex")
+    transaction["public_key"] = pub
     sig = pybitcointools.ecdsa_sign(
         _dict2cbor(transaction),
         key
