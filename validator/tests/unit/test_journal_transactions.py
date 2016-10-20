@@ -16,7 +16,7 @@
 import unittest
 import time
 import tempfile
-
+import pybitcointools
 
 from gossip import signed_object
 from gossip.gossip_core import Gossip
@@ -84,6 +84,26 @@ class TestingJournalTransaction(unittest.TestCase):
         self.assertLess(t_dict["Nonce"], new)
         self.assertEquals(t_dict["Dependencies"], [])
         self.assertEquals(t_dict["TransactionType"], '/Transaction')
+
+    def test_is_valid_pub_key(self):
+        pubkey = pybitcointools.privkey_to_pubkey("5KQ4iQQGgbQX9MmfiPUwwHBL1R"
+                                                  "GPa86NwFbqrWoodjuzruqFVDd")
+        pub = pybitcointools.encode_pubkey(pubkey, "hex")
+        minfo = {'Nonce': 100, 'public_key': pub,
+                 'TransactionType': '/Transaction', 'Dependencies': []}
+        sig = pybitcointools.ecdsa_sign(
+            signed_object.dict2cbor(minfo),
+            "5KQ4iQQGgbQX9MmfiPUwwHBL1RGPa86NwFbqrWoodjuzruqFVDd"
+        )
+        # Create valid transaction
+        minfo["Signature"] = sig
+        temp = Transaction(minfo)
+        self.assertTrue(temp.is_valid("unused"))
+
+        # Change transaction after it was signed
+        minfo["Nonce"] = time.time()
+        temp = Transaction(minfo)
+        self.assertFalse(temp.is_valid("unused"))
 
 
 class TestingJournalTransactionBlock(unittest.TestCase):
