@@ -1,7 +1,0 @@
-echo Running: All exchange transaction test
-
-exchange --src /user/holding/currency/USD --dst /user/holding/good/paper --offers /offer-a --count 1 --type ExchangeOffer
-waitforcommit
-
-
-exit

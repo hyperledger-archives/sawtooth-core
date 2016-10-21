@@ -24,6 +24,8 @@ import traceback
 import warnings
 import ctypes
 
+from journal.journal_core import Journal
+
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
@@ -87,29 +89,18 @@ def local_main(config, windows_service=False, daemonized=False):
         store_type = config.get("StoreType")
 
         if consensus_type == 'poet0':
-            from journal.consensus.poet0 import poet_journal
+            from journal.consensus.poet0 import poet_consensus
             from journal.consensus.poet0.wait_timer \
                 import set_wait_timer_globals
             set_wait_timer_globals(target_wait_time,
                                    initial_wait_time,
                                    certificate_sample_length,
                                    fixed_duration_blocks)
-            # Continue to pass config to PoetJournal for possible other enclave
-            # implementations - poet_enclave.initialize
-            journal = poet_journal.PoetJournal(
-                gossip.LocalNode,
-                gossip,
-                gossip.dispatcher,
-                stat_domains,
-                config,
-                min_txn_per_block,
-                max_txn_per_block,
-                max_txn_age,
-                genesis_ledger,
-                data_directory,
-                store_type)
+            # Continue to pass config to PoetConsensus for possible other
+            # enclave implementations - poet_enclave.initialize
+            consensus = poet_consensus.PoetConsensus(config)
         elif consensus_type == 'poet1':
-            from journal.consensus.poet1 import poet_journal
+            from journal.consensus.poet1 import poet_consensus
             from journal.consensus.poet1.wait_timer \
                 import set_wait_timer_globals
             set_wait_timer_globals(target_wait_time,
@@ -117,60 +108,44 @@ def local_main(config, windows_service=False, daemonized=False):
                                    certificate_sample_length,
                                    fixed_duration_blocks,
                                    minimum_wait_time)
-            # Continue to pass config to PoetJournal for possible other enclave
-            # implementations - poet_enclave.initialize
-            journal = poet_journal.PoetJournal(
-                gossip.LocalNode,
-                gossip,
-                gossip.dispatcher,
-                stat_domains,
-                config,
-                min_txn_per_block,
-                max_txn_per_block,
-                max_txn_age,
-                genesis_ledger,
-                data_directory,
-                store_type)
+            # Continue to pass config to PoetConsensus for possible other
+            # enclave implementations - poet_enclave.initialize
+            consensus = poet_consensus.PoetConsensus(config)
         elif consensus_type == 'quorum':
             quorum = config.get("Quorum")
             nodes = config.get("Nodes")
             vote_time_interval = config.get("VoteTimeInterval")
             ballot_time_interval = config.get("BallotTimeInterval")
             voting_quorum_target_size = config.get("VotingQuorumTargetSize")
-            from journal.consensus.quorum import quorum_journal
-            journal = quorum_journal.QuorumJournal(
-                gossip.LocalNode,
-                gossip,
-                gossip.dispatcher,
-                stat_domains,
-                min_txn_per_block,
-                max_txn_per_block,
-                max_txn_age,
-                genesis_ledger,
-                data_directory,
-                store_type,
+            from journal.consensus.quorum import quorum_consensus
+            consensus = quorum_consensus.QsuorumConsensus(
                 vote_time_interval,
                 ballot_time_interval,
-                voting_quorum_target_size)
-            journal.initialize_quorum_map(quorum, nodes)
+                voting_quorum_target_size,
+                quorum,
+                nodes)
         elif consensus_type == 'dev_mode':
             block_wait_time = config.get("BlockWaitTime")
-            from journal.consensus.dev_mode import dev_mode_journal
-            journal = dev_mode_journal.DevModeJournal(
-                gossip.LocalNode,
-                gossip,
-                gossip.dispatcher,
-                stat_domains,
-                min_txn_per_block,
-                max_txn_per_block,
-                max_txn_age,
+            from journal.consensus.dev_mode import dev_mode_consensus
+            consensus = dev_mode_consensus.DevModeConsensus(
                 genesis_ledger,
-                data_directory,
-                store_type,
                 block_wait_time)
         else:
             warnings.warn('Unknown consensus type %s' % consensus_type)
             sys.exit(1)
+
+        journal = Journal(
+            gossip.LocalNode,
+            gossip,
+            gossip.dispatcher,
+            consensus,
+            stat_domains,
+            min_txn_per_block,
+            max_txn_per_block,
+            max_txn_age,
+            genesis_ledger,
+            data_directory,
+            store_type)
 
         validator = Validator(
             gossip,
@@ -199,7 +174,12 @@ def local_main(config, windows_service=False, daemonized=False):
             sys.exit(1)
 
     # attempt to restore journal state from persistence
-    validator.journal.restore()
+    try:
+        validator.journal.restore()
+    except KeyError as e:
+        logger.error("Config is not compatible with data files"
+                     " found on restore. Keyerror on %s", e)
+        sys.exit(1)
 
     try:
         validator.pre_start()

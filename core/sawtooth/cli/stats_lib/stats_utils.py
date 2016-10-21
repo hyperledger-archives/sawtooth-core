@@ -37,6 +37,9 @@ class ValidatorCommunications(object):
         self.error_type = None
         self.error_name = None
         self.error_message = None
+        self.responding = None
+        self.json_stats = None
+        self.response_code = None
 
     def get_request(self, path, ccb=None, ecb=None):
         self.completion_callback = self._completion_default if ccb is None \
@@ -132,8 +135,8 @@ class SummaryStatsCsvManager(object):
         self.csv_enabled = False
         self.csv_mgr = CsvManager()
 
-        self.ss = system_stats
-        self.ps = platform_stats
+        self.system_stats = system_stats
+        self.platform_stats = platform_stats
 
     def initialize(self):
         self.csv_enabled = True
@@ -141,16 +144,16 @@ class SummaryStatsCsvManager(object):
         filename = "summary_stats_" + str(int(time.time())) + ".csv"
         self.csv_mgr.open_csv_file(filename)
 
-        header = self.ss.get_names()
+        header = self.system_stats.get_names()
         self.csv_mgr.csv_append(header)
-        header = self.ps.get_names()
+        header = self.platform_stats.get_names()
         self.csv_mgr.csv_write_header(header)
 
     def write_stats(self):
         if self.csv_enabled:
-            data = self.ss.get_data()
+            data = self.system_stats.get_data()
             self.csv_mgr.csv_append(data)
-            data = self.ps.get_data()
+            data = self.platform_stats.get_data()
             self.csv_mgr.csv_write_data(data)
 
     def stop(self):
@@ -168,7 +171,7 @@ class ValidatorStatsCsvManager(object):
         self.clients = client_list
         self.stat_names = []
 
-        self.dw = DictWalker()
+        self.dict_walker = DictWalker()
 
     def initialize(self):
         self.csv_enabled = True
@@ -185,14 +188,14 @@ class ValidatorStatsCsvManager(object):
         if self.csv_enabled:
             for client in self.clients:
                 if client.responding:
-                    self.dw.walk(client.vsm.val_stats)
+                    self.dict_walker.walk(client.vsm.val_stats)
                     if self.get_header:
-                        names = self.dw.get_names()
+                        names = self.dict_walker.get_names()
                         names.insert(0, "validator_name")
                         names.insert(0, "time")
                         self.csv_mgr.csv_write_header(names, add_time=False)
                         self.get_header = False
-                    data = self.dw.get_data()
+                    data = self.dict_walker.get_data()
                     data.insert(0, client.name)
                     data.insert(0, current_time)
                     self.csv_mgr.csv_write_data(data, add_time=False)
@@ -439,6 +442,24 @@ class TopologyStats(object):
 
         self.graph = None
         self.clear_stats()
+        self.diameter = None
+        self.maximum_shortest_path_length = None
+        self.edge_count = None
+        self.shortest_path_count = None
+        self.maximum_between_centrality = None
+        self.maximum_degree = None
+        self.maximum_degree_centrality = None
+        self.minimum_connectivity = None
+        self.elapsed_time = None
+        self.degree_histogram = None
+        self.connected_component_count = None
+        self.average_degree = None
+        self.minimum_degree = None
+        self.largest_component_graph = None
+        self.average_shortest_path_length = None
+        self.node_count = None
+        self.connected_component_graphs = None
+
 
     def clear_stats(self):
         self.graph = 0

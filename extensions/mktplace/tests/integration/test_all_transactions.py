@@ -68,80 +68,120 @@ class TestAllTransactions(unittest.TestCase):
                 cls.vnm.shutdown()
             raise
 
-    def test_transactions_reg(self):
-        client_cli.main(args=["--name", "user",
+    def transactions_reg(self):
+        client_cli.main(args=['--name', 'mkt',
+                              '--script',
+                              os.path.join(self.script_path,
+                                           'reg_mkt_transactions'),
+                              '--echo', '--url',
+                              self.url])
+
+        client_cli.main(args=["--name", "alice",
                               "--script",
                               os.path.join(self.script_path,
-                                           "reg_transactions"),
+                                           "reg_alice_transactions"),
+                              "--echo",
+                              "--url",
+                              self.url])
+
+        client_cli.main(args=["--name", "bob",
+                              "--script",
+                              os.path.join(self.script_path,
+                                           "reg_bob_transactions"),
                               "--echo",
                               "--url",
                               self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertIsNotNone(state.n2i("//user", 'Participant'))
-        self.assertIsNotNone(state.n2i("//user/user/account",
+        self.assertIsNotNone(state.n2i("//alice", 'Participant'))
+        self.assertIsNotNone(state.n2i("//mkt", 'Participant'))
+        self.assertIsNotNone(state.n2i("//bob", 'Participant'))
+        self.assertIsNotNone(state.n2i("//alice/account",
                                        'Account'))
-        self.assertIsNotNone(state.n2i("//user/asset-type/currency",
+        self.assertIsNotNone(state.n2i("//mkt/asset-type/currency",
                                        'AssetType'))
-        self.assertIsNotNone(state.n2i("//user/asset-type/good",
+        self.assertIsNotNone(state.n2i("//mkt/asset-type/cookie",
                                        'AssetType'))
-        self.assertIsNotNone(state.n2i("//user/asset/currency/USD",
+        self.assertIsNotNone(state.n2i("//mkt/asset/currency/USD",
                                        'Asset'))
-        self.assertIsNotNone(state.n2i("//user/asset/good/paper",
-                                       'Asset'))
-        self.assertIsNotNone(state.n2i("//user/user/holding/currency/USD",
-                                       'Holding'))
-        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper",
-                                       'Holding'))
-        self.assertIsNotNone(state.n2i("//user/user/holding/token",
-                                       'Holding'))
-        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper",
-                                       'Holding'))
-        self.assertIsNotNone(state.n2i("//user/user/holding/good/paper",
-                                       'Holding'))
 
-    def test_transactions_exchange(self):
-        client_cli.main(args=["--name", "user",
+        self.assertIsNotNone(state.n2i("//alice/USD",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//alice/jars/choc_chip",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//alice/holding/token",
+                                       'Holding'))
+        self.assertIsNotNone(state.n2i("//bob/USD", "Holding"))
+        self.assertIsNotNone(state.n2i("//bob/jars/choc_chip", "Holding"))
+
+    def transactions_exchange(self):
+        client_cli.main(args=["--name", "alice",
                               "--script",
                               os.path.join(self.script_path,
-                                           "ex_transactions"),
+                                           "ex_alice_transactions"),
                               "--echo",
                               "--url",
                               self.url])
+        state = mktplace_state.MarketPlaceState(self.url)
+        state.fetch()
+        self.assertEqual(
+            state.State[state.n2i(
+                "//bob/USD", "Holding")]['count'], 1024)
+        self.assertEqual(
+            state.State[state.n2i(
+                "//bob/batches/choc_chip001", "Holding")]['count'], 12)
+        self.assertEqual(
+            state.State[state.n2i(
+                "//bob/holding/token", "Holding")]['count'], 1)
+        self.assertEqual(
+            state.State[state.n2i(
+                "//bob/jars/choc_chip",
+                "Holding"
+            )]['count'], 0)
+        self.assertEqual(
+            state.State[state.n2i(
+                "//alice/USD",
+                "Holding"
+            )]['count'],
+            976)
+        self.assertEqual(
+            state.State[state.n2i(
+                "//alice/holding/token",
+                "Holding"
+            )]['count'],
+            1)
+        self.assertEqual(
+            state.State[state.n2i(
+                "//alice/jars/choc_chip",
+                "Holding"
+            )]['count'],
+            12)
 
-    def test_transactions_unr(self):
-        client_cli.main(args=["--name", "user",
+    def transactions_unr(self):
+        client_cli.main(args=["--name", "alice",
                               "--script",
                               os.path.join(self.script_path,
-                                           "unr_transactions"),
+                                           "unr_alice_transactions"),
                               "--echo",
                               "--url",
                               self.url])
 
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
-        self.assertIsNone(state.n2i("//user", 'Participant'))
-        self.assertIsNone(state.n2i("//user/user/account",
-                                    'Account'))
-        self.assertIsNone(state.n2i("//user/asset-type/currency",
-                                    'AssetType'))
-        self.assertIsNone(state.n2i("//user/asset-type/good",
-                                    'AssetType'))
-        self.assertIsNone(state.n2i("//user/asset/currency/USD",
-                                    'Asset'))
-        self.assertIsNone(state.n2i("//user/asset/good/paper",
-                                    'Asset'))
-        self.assertIsNone(state.n2i("//user/user/holding/currency/USD",
-                                    'Holding'))
-        self.assertIsNone(state.n2i("//user/user/holding/good/paper",
-                                    'Holding'))
-        self.assertIsNone(state.n2i("//user/user/holding/token",
-                                    'Holding'))
-        self.assertIsNone(state.n2i("//user/user/holding/good/paper",
-                                    'Holding'))
-        self.assertIsNone(state.n2i("//user/user/holding/good/paper",
-                                    'Holding'))
+        self.assertIsNone(state.n2i("//alice", 'Participant'))
+        self.assertIsNone(state.n2i("//alice/jars/choc_chip",
+                                    "Holding"))
+        self.assertIsNone(state.n2i("//alice/USD",
+                                    "Holding"))
+        self.assertIsNone(state.n2i("//alice/holding/token",
+                                    "Holding"))
+        self.assertIsNone(state.n2i("//alice/account", "Account"))
+
+    def test_all_transactions(self):
+        self.transactions_reg()
+        self.transactions_exchange()
+        self.transactions_unr()
 
     @classmethod
     def tearDownClass(cls):

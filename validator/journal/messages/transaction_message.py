@@ -59,10 +59,10 @@ def transaction_message_handler(msg, journal):
                  msg.Transaction.Identifier)
 
     with journal._txn_lock:
-        if journal.TransactionStore.get(msg.Transaction.Identifier):
+        if journal.transaction_store.get(msg.Transaction.Identifier):
             return
 
-        if journal.PendingTransactions.get(msg.Transaction.Identifier):
+        if journal.pending_transactions.get(msg.Transaction.Identifier):
             return
 
         journal.add_pending_transaction(msg.Transaction)
@@ -97,7 +97,7 @@ def _txn_request_handler(msg, journal):
     # placeholder, so we have to make sure that it is there and that it is not
     # None
     with journal._txn_lock:
-        txn = journal.TransactionStore.get(msg.TransactionID)
+        txn = journal.transaction_store.get(msg.TransactionID)
         if txn:
             reply = txn.build_message()
             journal.gossip.forward_message(reply)

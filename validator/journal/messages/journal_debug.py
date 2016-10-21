@@ -111,15 +111,15 @@ def _dumpjournalvaluehandler(msg, journal):
 
     # if the current journal contains incomplete blocks then we won't have any
     # global store
-    if not journal.GlobalStore:
+    if not journal.global_store:
         logger.info("keylookup, %s, incomplete, 0", cmn)
-    elif tname not in journal.GlobalStore.TransactionStores:
+    elif tname not in journal.global_store.TransactionStores:
         logger.info("keylookup, %s, unknown type", cmn)
-    elif key not in journal.GlobalStore.TransactionStores[tname]:
+    elif key not in journal.global_store.TransactionStores[tname]:
         logger.info("keylookup, %s, no value, 0", cmn)
     else:
         logger.info("keylookup, %s, known, %s", cmn,
-                    str(journal.GlobalStore.TransactionStores[tname][key]))
+                    str(journal.global_store.TransactionStores[tname][key]))
 
 
 class DumpJournalValueMessage(message.Message):

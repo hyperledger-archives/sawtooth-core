@@ -1,0 +1,5 @@
+echo Running: All exchange transaction test
+
+exchange --type ExchangeOffer --src /USD --dst /jars/choc_chip --offers //bob/choc_chip_sale --count 24
+waitforcommit
+exit

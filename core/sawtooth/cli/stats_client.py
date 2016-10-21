@@ -45,7 +45,7 @@ except ImportError:
 
 class StatsClient(object):
     def __init__(self, val_id, fullurl):
-        self.id = val_id
+        self.val_id = val_id
         self.url = fullurl
         self.name = "validator_{0}".format(val_id)
 
@@ -255,6 +255,7 @@ class SystemStats(StatsCollector):
 
         self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
                           self.sys_packets, self.sys_msgs, self.poet_stats]
+        self.last_unique_block_id = None
 
         # accumulators
         self.response_times = []
@@ -272,6 +273,7 @@ class SystemStats(StatsCollector):
 
         self.local_mean = []
         self.previous_blockid = []
+        self.avg_local_mean = None
 
     def collect_stats(self, stats_clients):
         # must clear the accumulators at start of each sample interval
@@ -361,13 +363,13 @@ class SystemStats(StatsCollector):
                 / len(self.local_mean)
 
             unique_blockid_list = list(set(self.previous_blockid))
-            self.last_unique_blockID = \
+            self.last_unique_block_id = \
                 unique_blockid_list[len(unique_blockid_list) - 1]
             self.poet_stats = PoetStats(
                 self.avg_local_mean,
                 max(self.local_mean),
                 min(self.local_mean),
-                self.last_unique_blockID
+                self.last_unique_block_id
             )
 
             # because named tuples are immutable,
@@ -395,13 +397,13 @@ class StatsManager(object):
     def __init__(self, endpointmanager):
         self.epm = endpointmanager
 
-        self.cp = ConsolePrint()
+        self.console_print = ConsolePrint()
 
-        self.ss = SystemStats()
+        self.system_stats = SystemStats()
 
-        self.ps = PlatformStats()
+        self.platform_stats = PlatformStats()
         self.psis = PlatformIntervalStats()
-        self.ps.psis = self.psis
+        self.platform_stats.psis = self.psis
 
         self.previous_net_bytes_recv = 0
         self.previous_net_bytes_sent = 0
@@ -411,18 +413,19 @@ class StatsManager(object):
         self.endpoints = {}
         self.stats_loop_count = 0
 
-        self.tm = TopologyManager(self.clients)
+        self.topology_manager = TopologyManager(self.clients)
 
-        self.bm = BranchManager(self.epm, Agent(reactor))
+        self.branch_manager = BranchManager(self.epm, Agent(reactor))
 
         self.spm = StatsPrintManager(
-            self.ss,
-            self.ps,
-            self.tm.topology_stats,
-            self.bm,
+            self.system_stats,
+            self.platform_stats,
+            self.topology_manager.topology_stats,
+            self.branch_manager,
             self.clients)
 
-        self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
+        self.sscm = SummaryStatsCsvManager(self.system_stats,
+                                           self.platform_stats)
         self.vscm = ValidatorStatsCsvManager(self.clients)
 
     def initialize_client_list(self, endpoints):
@@ -467,25 +470,25 @@ class StatsManager(object):
         reactor.stop()
 
     def stats_loop_error(self, failure):
-        self.cp.cpstop()
+        self.console_print.cpstop()
         print failure
         reactor.stop()
 
     def process_stats(self, statsclients):
-        self.ss.known_validators = len(statsclients)
-        self.ss.active_validators = 0
+        self.system_stats.known_validators = len(statsclients)
+        self.system_stats.active_validators = 0
 
-        self.ss.collect_stats(statsclients)
-        self.ss.calculate_stats()
+        self.system_stats.collect_stats(statsclients)
+        self.system_stats.calculate_stats()
 
-        self.ps.get_stats()
-        psr = {"platform": self.ps.get_data_as_dict()}
+        self.platform_stats.get_stats()
+        psr = {"platform": self.platform_stats.get_data_as_dict()}
         self.psis.calculate_interval_stats(psr)
 
-        self.tm.update_topology()
+        self.topology_manager.update_topology()
 
-        self.bm.update_client_list(self.endpoints)
-        self.bm.update()
+        self.branch_manager.update_client_list(self.endpoints)
+        self.branch_manager.update()
 
     def print_stats(self):
         self.spm.print_stats()
@@ -506,7 +509,7 @@ class StatsManager(object):
 
     def stats_stop(self):
         print "StatsManager is stopping"
-        self.cp.cpstop()
+        self.console_print.cpstop()
         self.csv_stop()
 
 
@@ -518,6 +521,11 @@ class EndpointManager(object):
         self.endpoint_urls = []
         self.endpoints = {}  # None
         self.validator_comm = ValidatorCommunications(Agent(reactor))
+        self.contact_list = None
+        self.endpoint_completion_cb = None
+        self.initial_url = None
+        self.init_path = None
+        self.endpoint_completion_cb_args = None
 
     def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url

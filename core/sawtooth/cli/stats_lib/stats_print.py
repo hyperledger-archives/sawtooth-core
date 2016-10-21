@@ -309,7 +309,7 @@ class StatsPrintManager(object):
         for c in self.stats_clients:
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
-                    c.id,
+                    c.val_id,
                     c.validator_state,
                     c.response_time,
                     c.vsm.val_stats["journal"]["BlocksClaimed"],
@@ -327,7 +327,7 @@ class StatsPrintManager(object):
                     False)
             else:
                 self.cp.cpprint(no_resp_formatter.format(
-                    c.id,
+                    c.val_id,
                     c.validator_state,
                     c.no_response_reason, "", "", "",
                     "", "", "", "", "", "",

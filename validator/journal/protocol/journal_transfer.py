@@ -130,14 +130,14 @@ class JournalTransfer(object):
         """
         while len(self.PendingBlocks) > 0:
             blockid = self.PendingBlocks.pop(0)
-            if blockid not in self.journal.BlockStore:
+            if blockid not in self.journal.block_store:
                 request = BlockRequestMessage()
                 request.BlockID = blockid
                 self.gossip.send_message(request, self.Peer.Identifier)
                 return True
 
             # copy the block information
-            self.BlockMap[blockid] = self.journal.BlockStore[blockid]
+            self.BlockMap[blockid] = self.journal.block_store[blockid]
 
             # add all the transaction to the transaction map in order
             for txnid in self.BlockMap[blockid].TransactionIDs:
@@ -155,13 +155,13 @@ class JournalTransfer(object):
         """
         while len(self.PendingTransactions) > 0:
             txnid = self.PendingTransactions.pop(0)
-            if txnid not in self.journal.TransactionStore:
+            if txnid not in self.journal.transaction_store:
                 request = TransactionRequestMessage()
                 request.TransactionID = txnid
                 self.gossip.send_message(request, self.Peer.Identifier)
                 return True
 
-            self.TransactionMap[txnid] = self.journal.TransactionStore[txnid]
+            self.TransactionMap[txnid] = self.journal.transaction_store[txnid]
 
         return False
 
@@ -319,7 +319,7 @@ class JournalTransfer(object):
             'journal transferred from %s, %d transactions, %d blocks, current '
             'head is %s',
             self.Peer, len(self.TransactionMap), len(self.BlockMap),
-            self.journal.MostRecentCommittedBlockID[:8])
+            self.journal.most_recent_committed_block_id[:8])
 
         # clear all of the message handlers
         self.journal.dispatcher.clear_message_handler(BlockListReplyMessage)
