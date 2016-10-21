@@ -254,6 +254,7 @@ class ValidatorManager(object):
 
     def is_running(self):
         if self._handle:
+            self._handle.poll()
             return self._handle.returncode is None
         return False
 
