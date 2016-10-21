@@ -106,6 +106,8 @@ class ValidatorNetworkManager(object):
         self.validator_config['DataDirectory'] = self.data_dir
         self.validator_config["AdministrationNode"] = self.admin_node.Address
 
+        self.timeout = 3
+
     def __del__(self):
         if self.temp_data_dir:
             if os.path.exists(self.data_dir):
@@ -316,7 +318,7 @@ class ValidatorNetworkManager(object):
                 p.step()
 
         running_count = 0
-        to = TimeOut(1)
+        to = TimeOut(self.timeout)
         with Progress("Giving validators time to shutdown: ") as p:
             while True:
                 running_count = 0
