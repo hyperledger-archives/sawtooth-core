@@ -38,6 +38,8 @@ from sawtooth.cli.docker import add_docker_parser
 from sawtooth.cli.docker import do_docker
 from sawtooth.cli.store import add_store_parser
 from sawtooth.cli.store import do_store
+from sawtooth.cli.stats_client import add_stats_parser
+from sawtooth.cli.stats_client import do_stats
 from sawtooth.cli.submit import add_submit_parser
 from sawtooth.cli.submit import do_submit
 from sawtooth.cli.transaction import add_transaction_parser
@@ -104,6 +106,7 @@ def create_parser(prog_name):
     add_transaction_parser(subparsers, parent_parser)
     add_store_parser(subparsers, parent_parser)
     add_admin_parser(subparsers, parent_parser)
+    add_stats_parser(subparsers, parent_parser)
 
     return parser
 
@@ -136,6 +139,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_store(args)
     elif args.command == 'admin':
         do_admin(args)
+    elif args.command == 'stats':
+        do_stats(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 

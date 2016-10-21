@@ -1,3 +1,4 @@
+
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,34 +14,33 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import argparse
 import collections
-import sys
-import time
 
+import time
 from twisted.internet import reactor
 from twisted.internet import task
 
 from twisted.web.client import Agent
 
-from txnintegration.stats_print import ConsolePrint
-from txnintegration.stats_print import StatsPrintManager
-from txnintegration.stats_utils import PlatformIntervalStats
-from txnintegration.stats_utils import SummaryStatsCsvManager
-from txnintegration.stats_utils import TopologyManager
-from txnintegration.stats_utils import TransactionRate
-from txnintegration.stats_utils import ValidatorStatsCsvManager
-from txnintegration.stats_utils import ValidatorCommunications
-from txnintegration.fork_detect import BranchManager
+from sawtooth.cli.stats_lib.stats_print import ConsolePrint
+from sawtooth.cli.stats_lib.stats_print import StatsPrintManager
+from sawtooth.cli.stats_lib.stats_utils import PlatformIntervalStats
+from sawtooth.cli.stats_lib.stats_utils import SummaryStatsCsvManager
+from sawtooth.cli.stats_lib.stats_utils import TopologyManager
+from sawtooth.cli.stats_lib.stats_utils import TransactionRate
+from sawtooth.cli.stats_lib.stats_utils import ValidatorStatsCsvManager
+from sawtooth.cli.stats_lib.stats_utils import ValidatorCommunications
+from sawtooth.cli.stats_lib.fork_detect import BranchManager
 
-from txnintegration.utils import PlatformStats
-from txnintegration.utils import StatsCollector
+from sawtooth.cli.stats_lib.utils import PlatformStats
+from sawtooth.cli.stats_lib.utils import StatsCollector
+from sawtooth.cli.exceptions import CliException
 
-curses_imported = True
+CURSES_IMPORTED = True
 try:
     import curses
 except ImportError:
-    curses_imported = False
+    CURSES_IMPORTED = False
 
 
 class StatsClient(object):
@@ -63,23 +63,26 @@ class StatsClient(object):
         self.request_complete = 0.0
         self.response_time = 0.0
 
-        self.vc = ValidatorCommunications(Agent(reactor))
+        self.validator_comm = ValidatorCommunications(Agent(reactor))
+        self.path = self.url + "/statistics/all"
 
     def stats_request(self):
         # request stats from specified validator url
         self.request_start = time.clock()
-        self.path = self.url + "/statistics/all"
-        self.vc.get_request(self.path,
-                            self._stats_completion,
-                            self._stats_error)
+        # self.path = self.url + "/statistics/all"
+        self.validator_comm.get_request(
+            self.path,
+            self._stats_completion,
+            self._stats_error)
 
     def _stats_completion(self, json_stats, response_code):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
         self.validator_state = "RESP_{}".format(response_code)
         if response_code is 200:
-            self.vsm.update_stats(json_stats, True, self.request_start,
-                                  self.request_complete)
+            self.vsm.update_stats(
+                json_stats, True, self.request_start,
+                self.request_complete)
             self.responding = True
         else:
             self.responding = False
@@ -428,13 +431,11 @@ class StatsManager(object):
         for val_num, endpoint in enumerate(endpoints.values()):
             url = 'http://{0}:{1}'.format(
                 endpoint["Host"], endpoint["HttpPort"])
-            try:
-                c = StatsClient(val_num, url)
-                c.name = endpoint["Name"]
-                self.known_endpoint_names.append(endpoint["Name"])
-            except:
-                e = sys.exc_info()[0]
-                print ("error creating stats clients: ", e)
+
+            c = StatsClient(val_num, url)
+            c.name = endpoint["Name"]
+            self.known_endpoint_names.append(endpoint["Name"])
+
             self.clients.append(c)
 
     def update_client_list(self, endpoints):
@@ -516,7 +517,7 @@ class EndpointManager(object):
         self.initial_discovery = True
         self.endpoint_urls = []
         self.endpoints = {}  # None
-        self.vc = ValidatorCommunications(Agent(reactor))
+        self.validator_comm = ValidatorCommunications(Agent(reactor))
 
     def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
@@ -525,9 +526,10 @@ class EndpointManager(object):
         self.endpoint_completion_cb_args = init_args or {}
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.init_path = path
-        self.vc.get_request(path,
-                            self.endpoint_discovery_response,
-                            self._init_terminate)
+        self.validator_comm.get_request(
+            path,
+            self.endpoint_discovery_response,
+            self._init_terminate)
 
     def update_endpoint_discovery(self, update_cb):
         # initiates update of endpoint urls
@@ -536,9 +538,9 @@ class EndpointManager(object):
         self.contact_list = list(self.endpoint_urls)
         url = self.contact_list.pop()
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
-        self.vc.get_request(path,
-                            self.endpoint_discovery_response,
-                            self._update_endpoint_continue)
+        self.validator_comm.get_request(
+            path, self.endpoint_discovery_response,
+            self._update_endpoint_continue)
 
     def endpoint_discovery_response(self, results, response_code):
         # response has been received
@@ -572,9 +574,9 @@ class EndpointManager(object):
         if len(self.contact_list) > 0:
             url = self.contact_list.pop()
             path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
-            self.vc.get_request(path,
-                                self.endpoint_discovery_response,
-                                self._update_endpoint_continue)
+            self.validator_comm.get_request(
+                path, self.endpoint_discovery_response,
+                self._update_endpoint_continue)
         else:
             self.no_endpoint_responders = True
 
@@ -597,8 +599,8 @@ class EndpointManager(object):
         return
 
 
-def parse_args(args):
-    parser = argparse.ArgumentParser()
+def add_stats_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('stats', parents=[parent_parser])
 
     parser.add_argument('--url',
                         metavar="",
@@ -629,8 +631,6 @@ def parse_args(args):
                              '(default: %(default)s)',
                         default=False,
                         type=bool)
-
-    return parser.parse_args(args)
 
 
 def startup(urls, loop_times, stats_man, ep_man):
@@ -669,7 +669,7 @@ def run_stats(url,
 
         # prevent curses import from modifying normal terminal operation
         # (suppression of cr-lf) during display of help screen, config settings
-        if curses_imported:
+        if CURSES_IMPORTED:
             curses.endwin()
 
         # discover validator endpoints; if successful, continue with startup()
@@ -688,13 +688,13 @@ def run_stats(url,
 
         sm.stats_stop()
     except Exception as e:
-        if curses_imported:
+        if CURSES_IMPORTED:
             curses.endwin()
         print e
         raise
 
 
-def main():
+def do_stats(opts):
     """
     Synopsis:
     1) Twisted http Agent
@@ -738,13 +738,13 @@ def main():
         a) Handles low-level details of issuing an http request
             via twisted http agent async i/o
      """
-    opts = parse_args(sys.argv[1:])
+    # opts = parse_args(sys.argv[1:])
 
-    run_stats(opts.url,
-              csv_enable_summary=opts.csv_enable_summary,
-              csv_enable_validator=opts.csv_enable_validator,
-              stats_update_frequency=opts.stats_time,
-              endpoint_update_frequency=opts.endpoint_time)
-
-if __name__ == "__main__":
-    main()
+    try:
+        run_stats(opts.url,
+                  csv_enable_summary=opts.csv_enable_summary,
+                  csv_enable_validator=opts.csv_enable_validator,
+                  stats_update_frequency=opts.stats_time,
+                  endpoint_update_frequency=opts.endpoint_time)
+    except Exception as e:
+        raise CliException(e)
