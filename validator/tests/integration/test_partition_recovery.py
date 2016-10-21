@@ -68,6 +68,7 @@ class TestPartitionRecovery(unittest.TestCase):
             ik_client.set(key=str(i), value=math.pow(2, i))
             ik_client.waitforcommit()
 
+    @unittest.skip("temporarily disabling")
     def test_two_clique(self):
         # this topology forms 2 exclusive cliques when n2 is severed
         vulnerable_mat = [
