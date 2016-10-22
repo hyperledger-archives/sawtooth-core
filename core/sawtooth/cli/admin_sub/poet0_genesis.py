@@ -52,7 +52,7 @@ def add_poet0_genesis_parser(subparsers, parent_parser):
 
 
 def get_genesis_block_id_file_name(directory):
-    return '{0}{1}genesis_data.json'.format(directory, os.path.sep)
+    return os.path.join(directory, 'genesis_data.json')
 
 
 def do_poet0_genesis(args):
@@ -86,7 +86,7 @@ def do_poet0_genesis(args):
 
     # Perform requisite overrides and validation:
     cfg['GenesisLedger'] = True
-    # should check that sigining key exists...
+    # should check that signing key exists...
     # debug report
     for key, value in cfg.iteritems():
         LOGGER.debug("CONFIG: %s = %s", key, value)
@@ -152,8 +152,10 @@ def do_poet0_genesis(args):
     head = journal.most_recent_committed_block_id
     # ...not sure why n_blocks is experimentally 0 and not 1
     # ...if we only make the genesis, it would be good to check n_blks = 1
-    n_blks = journal.committed_block_count
+    n_blks = len(journal.committed_block_ids())
     journal.shutdown()
+    gossiper.Listener.loseConnection()
+    gossiper.Listener.connectionLost(reason=None)
 
     # log genesis data, then write it out to ease dissemination
     genesis_data = {
