@@ -1,9 +1,11 @@
 #!/bin/bash -x
 
+. /vagrant/conf.sh
+
 set -e
 
-mkdir /home/vagrant/sawtooth
-mkdir /home/vagrant/sawtooth/logs
-mkdir /home/vagrant/sawtooth/data
-mkdir /home/vagrant/sawtooth/keys
-chown -R vagrant:vagrant /home/vagrant/sawtooth
+mkdir /home/$VAGRANT_USER/sawtooth
+mkdir /home/$VAGRANT_USER/sawtooth/logs
+mkdir /home/$VAGRANT_USER/sawtooth/data
+mkdir /home/$VAGRANT_USER/sawtooth/keys
+chown -R $VAGRANT_USER:$VAGRANT_USER /home/$VAGRANT_USER/sawtooth

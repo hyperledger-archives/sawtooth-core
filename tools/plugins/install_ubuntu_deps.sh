@@ -9,7 +9,9 @@ pkg_dir=$build_dir/packages
 
 VER=$(lsb_release -sr)
 if [ "$VER" = "16.04" ] ; then
-    echo "Dependencies not installed for Ubuntu 16.04"
+    cd $pkg_dir
+    dpkg -i \
+        python-pybitcointools_1.1.15-1_all.deb
 else
     cd $pkg_dir
     dpkg -i \

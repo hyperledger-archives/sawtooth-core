@@ -12,9 +12,6 @@
 # The number of CPUs for the VM
 # export VAGRANT_CPUS=2
 
-# export INSTALL_TYPE=setup.py
-export INSTALL_TYPE=none
-
 # Setting INSTALL_SPHINX to yes will add over 700MB to the vagrant image.
 # This installs the dependencies to build sphinx docs and make PDF targets.
 #export INSTALL_SPHINX=yes
@@ -26,9 +23,6 @@ export SETUP_SAWTOOTH_ENVIRONMENT=yes
 # Add the project bin dirs to the PATH
 #export SETUP_SAWTOOTH_PATH=yes
 export SETUP_SAWTOOTH_PATH=no
-
-#export START_TXNVALIDATOR=no
-#export START_TXNVALIDATOR=yes
 
 # Custom configuration plugins you want to run to install optional components
 # export PLUGINS="build_ubuntu_deps install_docker install_ubuntu_deps install_sphinx"

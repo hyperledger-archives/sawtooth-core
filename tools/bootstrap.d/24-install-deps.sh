@@ -4,4 +4,4 @@
 
 set -e
 
-package_group_install latex
+package_group_install deps
