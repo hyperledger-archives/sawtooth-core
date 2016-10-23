@@ -45,8 +45,6 @@ class ValidatorCollectionController(NodeController):
                  net_config,
                  txnvalidator=None,
                  data_dir=None,
-                 endpoint_host=None,
-                 block_chain_archive=None,
                  log_config=None,
                  ):
         super(ValidatorCollectionController, self).__init__(net_config.n_mag)
@@ -56,8 +54,6 @@ class ValidatorCollectionController(NodeController):
             txnvalidator = find_txn_validator()
         self.txnvalidator = txnvalidator
 
-        self._endpoint_host = endpoint_host
-
         self.validator_log_config = log_config
 
         self.temp_data_dir = False
@@ -65,14 +61,6 @@ class ValidatorCollectionController(NodeController):
             self.temp_data_dir = True
             data_dir = tempfile.mkdtemp()
         self.data_dir = data_dir
-
-        self.block_chain_archive = block_chain_archive
-        if block_chain_archive is not None:
-            if not os.path.isfile(block_chain_archive):
-                raise ExitError("Block chain archive to load {} does not "
-                                "exist.".format(block_chain_archive))
-            else:
-                self.unpack_blockchain(block_chain_archive)
 
         self.admin_node = ValidatorCollectionController.AdminNode()
 
@@ -160,27 +148,6 @@ class ValidatorCollectionController(NodeController):
                 p.step()
                 time.sleep(1)
 
-    def launch_node(self, idx,
-                    launch=True,
-                    daemon=False,
-                    delay=False,
-                    ):
-        cfg = self.config_list[idx]
-        cfg['DataDirectory'] = self.data_dir
-        cfg["AdministrationNode"] = self.admin_node.address
-        log_config = self.validator_log_config
-        if log_config is not None:
-            log_config = self.validator_log_config.copy()
-        v = ValidatorManager(self.txnvalidator,
-                             cfg,
-                             self.data_dir,
-                             self.admin_node,
-                             log_config,
-                             )
-        v.launch(launch, daemon=daemon, delay=delay)
-        self._validators.append(v)
-        return v
-
     def wait_for_registration(self, validators, validator, max_time=None):
         """
         Wait for newly launched validators to register.
@@ -260,28 +227,6 @@ class ValidatorCollectionController(NodeController):
                     fp = os.path.join(dir_path, f)
                     tar.add(fp, os.path.join(base_name, f))
             tar.close()
-
-    def unpack_blockchain(self, archive_name):
-        ext = ["cb", "cs", "gs", "xn"]
-        dirs = set()
-        tar = tarfile.open(archive_name, "r|gz")
-        for f in tar:
-            e = f.name[-2:]
-            if e in ext or f.name.endswith("wif"):
-                base_name = os.path.basename(f.name)
-                dest_file = os.path.join(self.data_dir, base_name)
-                if os.path.exists(dest_file):
-                    os.remove(dest_file)
-                tar.extract(f, self.data_dir)
-                # extract put the file in a directory below DataDir
-                # move the file from extract location to dest_file
-                ext_file = os.path.join(self.data_dir, f.name)
-                os.rename(ext_file, dest_file)
-                # and remember the extract directory for deletion
-                dirs.add(os.path.dirname(ext_file))
-        tar.close()
-        for d in dirs:
-            os.rmdir(d)
 
     @staticmethod
     def get_archive_base_name(path):
