@@ -53,11 +53,11 @@ def add_poet1_genesis_parser(subparsers, parent_parser):
 def do_poet1_genesis(args):
 
     # Get ledger config:
-    # set the default value of config because argparse 'default' in
-    # combination with action='append' does the wrong thing.
+    # ...set the default value of config because argparse 'default' in
+    # ...combination with action='append' does the wrong thing.
     if args.config is None:
         args.config = ['txnvalidator.js']
-    # convert any comma-delimited argument strings to list elements
+    # ...convert any comma-delimited argument strings to list elements
     for arglist in [args.config]:
         if arglist is not None:
             for arg in arglist:
@@ -118,13 +118,13 @@ def do_poet1_genesis(args):
                       data_directory=data_directory,
                       store_type=store_type,
                       )
-
     # ...add txn families (needs dynamic loading)
     dfl_txn_families = [endpoint_registry, integer_key]
     for txnfamily in dfl_txn_families:
         txnfamily.register_transaction_types(journal)
 
     # Make genesis block:
+    # ...make sure there is no current chain here, or fail
     # ...pop VR seed (we'll presently defer resolving VR seed issues)
     _ = gossiper.IncomingMessageQueue.pop()
     # ...create block g_block (including VR seed txn just popped)

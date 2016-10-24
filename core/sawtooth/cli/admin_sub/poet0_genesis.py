@@ -53,11 +53,11 @@ def add_poet0_genesis_parser(subparsers, parent_parser):
 def do_poet0_genesis(args):
 
     # Get ledger config:
-    # set the default value of config because argparse 'default' in
-    # combination with action='append' does the wrong thing.
+    # ...set the default value of config because argparse 'default' in
+    # ...combination with action='append' does the wrong thing.
     if args.config is None:
         args.config = ['txnvalidator.js']
-    # convert any comma-delimited argument strings to list elements
+    # ...convert any comma-delimited argument strings to list elements
     for arglist in [args.config]:
         if arglist is not None:
             for arg in arglist:
@@ -79,47 +79,39 @@ def do_poet0_genesis(args):
         ], args)
     cfg = get_validator_configuration(args.config, options_config)
 
-    # Perform requisite overrides and validation:
+    # Obtain Journal object:
+    # ...perform requisite overrides and validation:
     cfg['GenesisLedger'] = True
-    # should check that signing key exists...
-    # debug report
-    for key, value in cfg.iteritems():
-        LOGGER.debug("CONFIG: %s = %s", key, value)
-
-    # set WaitTimer globals
+    # ...set WaitTimer globals
     target_wait_time = cfg.get("TargetWaitTime")
     initial_wait_time = cfg.get("InitialWaitTime")
     certificate_sample_length = cfg.get('CertificateSampleLength')
     fixed_duration_blocks = cfg.get("FixedDurationBlocks")
-    from journal.consensus.poet0.wait_timer \
-        import set_wait_timer_globals
+    from journal.consensus.poet0.wait_timer import set_wait_timer_globals
     set_wait_timer_globals(target_wait_time,
                            initial_wait_time,
                            certificate_sample_length,
                            fixed_duration_blocks,
                            )
-
-    # build gossiper
+    # ...build Gossip dependency
     (nd, _) = parse_networking_info(cfg)
     minimum_retries = cfg.get("MinimumRetries")
     retry_interval = cfg.get("RetryInterval")
     gossiper = Gossip(nd, minimum_retries, retry_interval)
-
-    # build journal
+    # ...build Journal
     min_txn_per_block = cfg.get("MinimumTransactionsPerBlock")
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
     genesis_ledger = cfg.get("GenesisLedger")
     data_directory = cfg.get("DataDirectory")
     store_type = cfg.get("StoreType")
-
     stat_domains = {}
-
     from journal.consensus.poet0.poet_consensus import PoetConsensus
+    consensus_obj = PoetConsensus(cfg)
     journal = Journal(gossiper.LocalNode,
                       gossiper,
                       gossiper.dispatcher,
-                      PoetConsensus(cfg),
+                      consensus_obj,
                       stat_domains,
                       minimum_transactions_per_block=min_txn_per_block,
                       max_transactions_per_block=max_txn_per_block,
@@ -128,34 +120,33 @@ def do_poet0_genesis(args):
                       data_directory=data_directory,
                       store_type=store_type,
                       )
-    # may need to add transaction family objects ad hoc from cfg
+    # ...add txn families (needs dynamic loading)
     dfl_txn_families = [endpoint_registry, integer_key]
     for txnfamily in dfl_txn_families:
         txnfamily.register_transaction_types(journal)
-    # ...skipping onNodeDisconnect handler (using ledger, not validator...)
 
-    # Create genesis block:
-    # we should make sure there is no current chain here, or fail
-    # calling initialization_complete will create the genesis block
+    # Make genesis block:
+    # ...make sure there is no current chain here, or fail
+    # ...calling initialization_complete will create the genesis block
     journal.initialization_complete()
-    # simulate receiving the genesis block msg from reactor to force commit
+    # ...simulate receiving the genesis block msg from reactor to force commit
     msg = journal.gossip.IncomingMessageQueue.pop()
     (_, msg_handler) = journal.dispatcher.message_handler_map[msg.MessageType]
     msg_handler(msg, journal)
-
-    # Gather data, then shutdown to save state:
     head = journal.most_recent_committed_block_id
-    # ...not sure why n_blocks is experimentally 0 and not 1
-    # ...if we only make the genesis, it would be good to check n_blks = 1
-    n_blks = len(journal.committed_block_ids())
+    chain_len = len(journal.committed_block_ids())
+
+    # Run shutdown:
+    # ...persist new state
     journal.shutdown()
+    # ...release gossip obj's UDP port
     gossiper.Listener.loseConnection()
     gossiper.Listener.connectionLost(reason=None)
 
-    # log genesis data, then write it out to ease dissemination
+    # Log genesis data, then write it out to ease dissemination
     genesis_data = {
         'GenesisId': head,
-        'ChainLength': n_blks,
+        'ChainLength': chain_len,
     }
     gblock_fname = genesis_info_file_name(cfg['DataDirectory'])
     LOGGER.info('genesis data: %s', genesis_data)
