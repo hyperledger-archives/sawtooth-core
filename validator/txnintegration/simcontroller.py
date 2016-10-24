@@ -16,43 +16,7 @@ import numpy
 
 from txnintegration.matrices import NodeController
 from txnintegration.matrices import EdgeController
-from txnintegration.matrices import NopEdgeController
 from txnintegration.netconfig import NetworkConfig
-from txnintegration.netconfig import gen_dfl_cfg_poet0
-from txnintegration.netconfig import gen_dfl_cfg_quorum
-from txnintegration.validator_collection_controller import \
-    ValidatorCollectionController
-
-
-def set_default_topology(topology,
-                         ledger_type,
-                         cfg_overrides=None,
-                         use_ledger_url=True,
-                         use_mktplace=False,
-                         q_mag=None
-                         ):
-    cfg = None
-    if ledger_type in ['dev_mode', 'poet0']:
-        cfg = gen_dfl_cfg_poet0()
-    elif ledger_type in ['quorum']:
-        q = q_mag
-        if q is None:
-            q = topology.n_mag
-        cfg = gen_dfl_cfg_quorum(q)
-    cfg['LedgerType'] = ledger_type
-    if cfg_overrides is not None:
-        cfg.update(cfg_overrides)
-    if use_mktplace is True and 'mktplace.transactions.market_place' \
-            not in cfg['TransactionFamilies']:
-        cfg['TransactionFamilies'].append('mktplace.transactions.market_place')
-    net = NetworkConfig(cfg, topology.n_mag)
-    if use_ledger_url:
-        for i in range(1, topology.n_mag):
-            net.set_ledger_url(i, [0])
-    vnm = ValidatorCollectionController(net)
-    web = NopEdgeController(net)
-    topology.initialize(vnm, web)
-    return topology
 
 
 class SimController(object):
@@ -62,10 +26,12 @@ class SimController(object):
         self.edge_controller = None
         self._initialized = False
 
-    def initialize(self, node_controller, edge_controller):
+    def initialize(self, net_config, node_controller, edge_controller):
+        assert isinstance(net_config, NetworkConfig)
         assert isinstance(node_controller, NodeController)
         assert isinstance(edge_controller, EdgeController)
         assert node_controller.get_mag() == edge_controller.get_mag()
+        self.net_config = net_config
         self.node_controller = node_controller
         self.edge_controller = edge_controller
         self._initialized = True
@@ -92,13 +58,17 @@ class SimController(object):
         self.edge_controller.animate(edge_mat, **kwargs)
         self.node_controller.animate(node_mat, **kwargs)
 
-    def get_validator_configuration(self, idx):
+    def get_configuration(self, idx):
         assert self._initialized
-        return self.node_controller.configuration(idx)
+        return self.net_config.get_node_cfg(idx)
 
-    def set_validator_configuration(self, idx, cfg):
+    def set_configuration(self, idx, cfg):
         assert self._initialized
-        self.node_controller.set_validator_configuration(idx, cfg)
+        return self.net_config.set_node_cfg(idx, cfg)
+
+    def write_configuration(self, idx, path=None):
+        assert self._initialized
+        return self.net_config.write_node_cfg(idx, path)
 
     def urls(self):
         assert self._initialized
@@ -108,3 +78,18 @@ class SimController(object):
         if self._initialized:
             self.node_controller.shutdown(**kwargs)
             self.edge_controller.shutdown(**kwargs)
+            if self.net_config.provider is not None:
+                self.net_config.provider.shutdown()
+
+
+def get_default_sim_controller(n, ledger_type=None):
+    from txnintegration.netconfig import gen_dfl_net_cfg
+    from txnintegration.matrices import NopEdgeController
+    from txnintegration.validator_collection_controller import \
+        ValidatorCollectionController
+    ret = SimController(n)
+    net_cfg = gen_dfl_net_cfg(n, ledger_type=ledger_type)
+    vnm = ValidatorCollectionController(net_cfg)
+    nop = NopEdgeController(net_cfg)
+    ret.initialize(net_cfg, vnm, nop)
+    return ret

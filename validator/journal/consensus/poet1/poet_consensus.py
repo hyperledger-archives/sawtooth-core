@@ -44,7 +44,7 @@ class PoetConsensus(Consensus):
         """Constructor for the PoetJournal class.
 
         Args:
-            node (Node): The local node.
+            kwargs (dict):
         """
 
         if 'PoetEnclaveImplementation' in kwargs:
@@ -59,18 +59,14 @@ class PoetConsensus(Consensus):
         WaitTimer.poet_enclave = poet_enclave
         SignupInfo.poet_enclave = poet_enclave
 
-        # propagate the maximum blocks to keep
-        self.maximum_blocks_to_keep = max(self.maximum_blocks_to_keep,
-                                          WaitTimer.certificate_sample_length)
-
     def initialization_complete(self, journal):
         """Processes all invocations that arrived while the ledger was
         being initialized.
         """
         # Before we allow the base journal to do anything that might result
-        # in a wait timer or wait certificate from being created, we have to
-        # ensure that the PoET enclave has been initialized.  This can be done
-        # in one of two ways:
+        # in a wait timer or wait certificate being created, we have to ensure
+        # the PoET enclave has been initialized.  This can be done in one of
+        # two ways:
         # 1. If we have sealed signup data (meaning that we have previously
         #    created signup info), we can request that the enclave unseal it,
         #    in the process restoring the enclave to its previous state.
@@ -90,24 +86,26 @@ class PoetConsensus(Consensus):
                     most_recent_wait_certificate_id=wait_certificate_id)
 
             # Save off the sealed signup data
-            self.local_store.set(
+            journal.local_store.set(
                 'sealed_signup_data',
                 signup_info.sealed_signup_data)
-            self.local_store.sync()
+            journal.local_store.sync()
 
-            # initialize the poet handlers
-            poet_transaction_block.register_message_handlers(journal)
+        # propagate the maximum blocks to keep
+        journal.maximum_blocks_to_keep = max(
+            journal.maximum_blocks_to_keep,
+            WaitTimer.certificate_sample_length)
 
-            # initialize stats specifically for the block chain journal
-            journal.JournalStats.add_metric(stats.Value('LocalMeanTime', 0))
-            journal.JournalStats.add_metric(stats.Value('AggregateLocalMean',
-                                                        '0'))
-            journal.JournalStats.add_metric(stats.Value('PopulationEstimate',
-                                                        '0'))
-            journal.JournalStats.add_metric(stats.Value(
-                'ExpectedExpirationTime',
-                '0'))
-            journal.JournalStats.add_metric(stats.Value('Duration', '0'))
+        # initialize stats specifically for the block chain journal
+        journal.JournalStats.add_metric(stats.Value('LocalMeanTime', 0))
+        journal.JournalStats.add_metric(stats.Value('AggregateLocalMean', '0'))
+        journal.JournalStats.add_metric(stats.Value('PopulationEstimate', '0'))
+        journal.JournalStats.add_metric(stats.Value('ExpectedExpirationTime',
+                                                    '0'))
+        journal.JournalStats.add_metric(stats.Value('Duration', '0'))
+
+        # initialize the block handlers
+        poet_transaction_block.register_message_handlers(journal)
 
         # If we created signup information, then insert ourselves into the
         # validator registry.
@@ -116,10 +114,10 @@ class PoetConsensus(Consensus):
             # the transaction in a message.  Broadcast it to out.
             transaction = \
                 val_reg.ValidatorRegistryTransaction.register_validator(
-                    self.local_node.Name,
-                    self.local_node.Identifier,
+                    journal.local_node.Name,
+                    journal.local_node.Identifier,
                     signup_info)
-            transaction.sign_from_node(self.local_node)
+            transaction.sign_from_node(journal.local_node)
 
             message = \
                 val_reg.ValidatorRegistryTransactionMessage()
@@ -225,7 +223,7 @@ class PoetConsensus(Consensus):
         # And send out the message that we won
         msg = poet_transaction_block.PoetTransactionBlockMessage()
         msg.TransactionBlock = block
-        journal.gossip.broadcast_message(msg)
+        return msg
 
     def _build_certificate_list(self, block_store, block):
         # for the moment we just dump all of these into one list,

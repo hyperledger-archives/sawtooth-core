@@ -23,7 +23,7 @@ import unittest
 from sawtooth.client import SawtoothClient
 from txnintegration.netconfig import gen_dfl_cfg_poet0
 from txnintegration.netconfig import NetworkConfig
-from txnintegration.simcontroller import NopEdgeController
+from txnintegration.matrices import NopEdgeController
 from txnintegration.simcontroller import SimController
 from txnintegration.validator_collection_controller import \
     ValidatorCollectionController
@@ -85,13 +85,14 @@ class TestPartitionRecovery(unittest.TestCase):
         print
         try:
             print 'phase 0: build vulnerably connected 5-net:'
-            net_cfg = NetworkConfig(gen_dfl_cfg_poet0(), n)
+            from txnintegration.netconfig import NetworkConfigProvider
+            net_cfg = NetworkConfig(gen_dfl_cfg_poet0(), n,
+                                    provider=NetworkConfigProvider())
             net_cfg.set_nodes(vulnerable_mat)
             net_cfg.set_peers(vulnerable_mat)
             net_cfg.set_blacklist()
             vnm = ValidatorCollectionController(net_cfg)
-            web = NopEdgeController(net_cfg)
-            top.initialize(vnm, web)
+            top.initialize(net_cfg, vnm, NopEdgeController(net_cfg))
             print 'phase 1: launch vulnerably connected 5-net:'
             top.do_genesis(probe_seconds=0)
             top.launch(probe_seconds=0)
@@ -122,9 +123,9 @@ class TestPartitionRecovery(unittest.TestCase):
             self.assertEquals(False, is_convergent(top.urls(), standard=3))
             print 'phase 6: reconnect 5-net:'
             print 'rezzing validator-2 with InitialConnectivity = |Peers|...'
-            cfg = top.get_validator_configuration(2)
+            cfg = top.get_configuration(2)
             cfg['InitialConnectivity'] = 2
-            top.set_validator_configuration(2, cfg)
+            top.set_configuration(2, cfg)
             top.update(node_mat=vulnerable_mat, probe_seconds=0, reg_seconds=0)
             print 'phase 7: validate state across 5-net:'
             print 'providing time for global convergence...'

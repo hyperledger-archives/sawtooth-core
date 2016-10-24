@@ -17,6 +17,8 @@ import logging
 from sawtooth.cli.exceptions import CliException
 from sawtooth.cli.admin_sub.poet0_genesis import add_poet0_genesis_parser
 from sawtooth.cli.admin_sub.poet0_genesis import do_poet0_genesis
+from sawtooth.cli.admin_sub.poet1_genesis import add_poet1_genesis_parser
+from sawtooth.cli.admin_sub.poet1_genesis import do_poet1_genesis
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +26,8 @@ LOGGER = logging.getLogger(__name__)
 def do_admin(args):
     if args.admin_cmd == 'poet0-genesis':
         do_poet0_genesis(args)
+    elif args.admin_cmd == 'poet1-genesis':
+        do_poet1_genesis(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
@@ -32,3 +36,4 @@ def add_admin_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('admin')
     admin_sub = parser.add_subparsers(title='admin_commands', dest='admin_cmd')
     add_poet0_genesis_parser(admin_sub, parser)
+    add_poet1_genesis_parser(admin_sub, parser)
