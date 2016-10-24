@@ -136,6 +136,7 @@ def do_poet1_genesis(args):
     # ...create block g_block (including VR seed txn just popped)
     g_block = journal.build_block(genesis=True)  # seed later...
     journal.claim_block(g_block)
+    # ...simulate receiving the genesis block msg from reactor to force commit
     g_block_msg = gossiper.IncomingMessageQueue.pop()
     journal.dispatcher.dispatch(g_block_msg)
     journal.initialization_complete()

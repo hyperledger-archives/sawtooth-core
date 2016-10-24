@@ -80,8 +80,6 @@ def do_poet0_genesis(args):
     cfg = get_validator_configuration(args.config, options_config)
 
     # Obtain Journal object:
-    # ...perform requisite overrides and validation:
-    cfg['GenesisLedger'] = True
     # ...set WaitTimer globals
     target_wait_time = cfg.get("TargetWaitTime")
     initial_wait_time = cfg.get("InitialWaitTime")
@@ -133,12 +131,13 @@ def do_poet0_genesis(args):
 
     # Make genesis block:
     # ...make sure there is no current chain here, or fail
-    # ...calling initialization_complete will create the genesis block
-    journal.initialization_complete()
+    # ...create block g_block
+    g_block = journal.build_block(genesis=True)
+    journal.claim_block(g_block)
     # ...simulate receiving the genesis block msg from reactor to force commit
-    msg = journal.gossip.IncomingMessageQueue.pop()
-    (_, msg_handler) = journal.dispatcher.message_handler_map[msg.MessageType]
-    msg_handler(msg, journal)
+    g_block_msg = gossiper.IncomingMessageQueue.pop()
+    journal.dispatcher.dispatch(g_block_msg)
+    journal.initialization_complete()
     head = journal.most_recent_committed_block_id
     chain_len = len(journal.committed_block_ids())
 
