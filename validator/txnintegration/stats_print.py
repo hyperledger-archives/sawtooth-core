@@ -257,7 +257,7 @@ class StatsPrintManager(object):
             '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
             '{7:>9} {8:16.16} {9:>9} {10:19.19}'
         self.cp.cpprint(view_formatter.format(
-            "View ({0:1.8}):".format(self.view_mode),
+            "View:",
             "(g)", "general",
             "(t)", "transaction",
             "(k)", "packet",
@@ -269,7 +269,7 @@ class StatsPrintManager(object):
             '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
             '{7:>9} {8:16.16}'
         self.cp.cpprint(view_formatter_2.format(
-            "View ({0:1.8}):".format(self.view_mode),
+            "({})".format(self.view_mode),
             "(p)", "platform",
             "(n)", "network",
             "(b)", "branch",
@@ -310,15 +310,15 @@ class StatsPrintManager(object):
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.response_time,
                     c.vsm.val_stats["journal"]["BlocksClaimed"],
                     c.vsm.val_stats["journal"]["CommittedBlockCount"],
                     c.vsm.val_stats["journal"]["PendingBlockCount"],
                     c.vsm.val_stats["journal"].get("CommittedTxnCount", 0),
                     c.vsm.val_stats["journal"].get("PendingTxnCount", 0),
-                    c.vsm.txn_rate.avg_txn_rate,
-                    c.vsm.txn_rate.avg_block_time,
+                    c.vsm.calculated_stats.average_transaction_rate,
+                    c.vsm.calculated_stats.average_block_time,
                     c.vsm.val_stats["journal"].get("LocalMeanTime", 0.0),
                     c.vsm.val_stats["journal"].get("PreviousBlockID",
                                                    'not reported'),
@@ -328,7 +328,7 @@ class StatsPrintManager(object):
             else:
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.no_response_reason, "", "", "",
                     "", "", "", "", "", "",
                     c.name[:16],
@@ -375,7 +375,7 @@ class StatsPrintManager(object):
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.vsm.val_stats["platform"]["scpu"]["percent"],
                     c.vsm.val_stats["platform"]["scpu"]["user_time"],
                     c.vsm.val_stats["platform"]["scpu"]["system_time"],
@@ -394,7 +394,7 @@ class StatsPrintManager(object):
             else:
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     "", "", "", "", "",
                     "", "", "",
                     "", "", "", "",
@@ -432,7 +432,7 @@ class StatsPrintManager(object):
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.vsm.val_stats["journal"].get("LocalMeanTime", 0.0),
                     c.vsm.val_stats["journal"].get("PopulationEstimate", 0.0),
                     c.vsm.val_stats["journal"].get("AggregateLocalMean", 0.0),
@@ -444,7 +444,7 @@ class StatsPrintManager(object):
             else:
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     "", "", "", "",
                     c.name[:16],
                     c.url),
@@ -485,7 +485,7 @@ class StatsPrintManager(object):
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.vsm.val_stats["packet"]["AcksReceived"],
                     c.vsm.val_stats["packet"]["BytesReceived"][0],
                     c.vsm.val_stats["packet"]["BytesSent"][0],
@@ -501,7 +501,7 @@ class StatsPrintManager(object):
             else:
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     "", "", "", "",
                     "", "", "", "",
                     c.name[:16],
@@ -543,7 +543,7 @@ class StatsPrintManager(object):
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.vsm.val_stats["platform"]["snetio"]["bytes_recv"],
                     c.vsm.val_stats["platform"]["snetio"]["bytes_sent"],
                     c.vsm.val_stats["platform"]["snetio"]["packets_recv"],
@@ -559,7 +559,7 @@ class StatsPrintManager(object):
             else:
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     "", "", "", "",
                     "", "", "", "",
                     c.name[:16],
@@ -601,7 +601,7 @@ class StatsPrintManager(object):
             if c.responding:
                 self.cp.cpprint(resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     c.vsm.val_stats["journal"]["CommittedBlockCount"],
                     c.vsm.val_stats["journal"]["PendingBlockCount"],
                     c.vsm.val_stats["journal"]["CommittedTxnCount"],
@@ -616,7 +616,7 @@ class StatsPrintManager(object):
             else:
                 self.cp.cpprint(no_resp_formatter.format(
                     c.id,
-                    c.validator_state,
+                    c.state,
                     "", "", "", "",
                     "", "", "",
                     c.name[:16],
@@ -629,8 +629,8 @@ class StatsPrintManager(object):
         max_active = 0
         max_active_history = 0
         for b in self.bm.branches:
-            als = str(b.is_active_list).replace(" ", "")
-            ahls = str(b.is_active_history).replace(" ", "")
+            als = str(b._is_active_list).replace(" ", "")
+            ahls = str(b._is_active_history).replace(" ", "")
             if len(als) > max_active:
                 max_active = len(als)
             if len(ahls) > max_active_history:
@@ -690,7 +690,7 @@ class StatsPrintManager(object):
 
             self.cp.cpprint(resp_formatter.format(
                 b.id,
-                len(b.blocks),
+                b.block_count,
                 "Active" if b.is_active else "Idle",
                 b.tail_block_id,
                 str(b.tail_block_num),
@@ -701,9 +701,9 @@ class StatsPrintManager(object):
                 ancestor_block_num,
                 branch_create_time,
                 branch_last_active_time,
-                len(b.is_active_list),
-                str(b.is_active_list).replace(" ", ""),
-                str(b.is_active_history).replace(" ", "")),
+                b.is_active_count,
+                str(b._is_active_list).replace(" ", ""),
+                str(b._is_active_history).replace(" ", "")),
                 False)
 
     def print_fork_view(self):

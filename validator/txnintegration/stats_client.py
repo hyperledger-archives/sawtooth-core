@@ -17,6 +17,7 @@ import argparse
 import collections
 import sys
 import time
+import signal
 
 from twisted.internet import reactor
 from twisted.internet import task
@@ -31,6 +32,9 @@ from txnintegration.stats_utils import TopologyManager
 from txnintegration.stats_utils import TransactionRate
 from txnintegration.stats_utils import ValidatorStatsCsvManager
 from txnintegration.stats_utils import ValidatorCommunications
+from txnintegration.stats_utils import named_tuple_init
+from txnintegration.stats_utils import StatsSnapshotWriter
+
 from txnintegration.fork_detect import BranchManager
 
 from txnintegration.utils import PlatformStats
@@ -49,7 +53,7 @@ class StatsClient(object):
         self.url = fullurl
         self.name = "validator_{0}".format(val_id)
 
-        self.validator_state = "UNKNWN"
+        self.state = "UNKNWN"
 
         self.ledgerstats = {}
         self.nodestats = {}
@@ -65,6 +69,8 @@ class StatsClient(object):
 
         self.vc = ValidatorCommunications(Agent(reactor))
 
+        self.path = None
+
     def stats_request(self):
         # request stats from specified validator url
         self.request_start = time.clock()
@@ -76,7 +82,7 @@ class StatsClient(object):
     def _stats_completion(self, json_stats, response_code):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
-        self.validator_state = "RESP_{}".format(response_code)
+        self.state = "RESP_{}".format(response_code)
         if response_code is 200:
             self.vsm.update_stats(json_stats, True, self.request_start,
                                   self.request_complete)
@@ -88,49 +94,30 @@ class StatsClient(object):
     def _stats_error(self, failure):
         self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
-        self.validator_state = "NO_RESP"
+        self.state = "NO_RESP"
         self.no_response_reason = failure.type.__name__
         return
 
-
-ValStats = collections.namedtuple('validatorstats',
-                                  'blocks_claimed '
-                                  'blocks_committed '
-                                  'blocks_pending '
-                                  'local_mean '
-                                  'expected_expiration '
-                                  'previous_blockid '
-                                  'txns_committed '
-                                  'txns_pending '
-                                  'packets_dropped '
-                                  'packets_duplicates '
-                                  'packets_acks_received '
-                                  'msgs_handled '
-                                  'msgs_acked '
+ValStats = collections.namedtuple('calculated_validator_stats',
                                   'packet_bytes_received_total '
                                   'pacet_bytes_received_average '
                                   'packet_bytes_sent_total '
-                                  'packet_bytes_sent_average')
-
-
-class ValidatorStats(ValStats, StatsCollector):
-    def __init__(self, *args):
-        super(ValidatorStats, self).__init__()
-        self.statslist = [self]
+                                  'packet_bytes_sent_average '
+                                  'average_transaction_rate '
+                                  'average_block_time')
 
 
 class ValidatorStatsManager(object):
     def __init__(self):
-        self.vstats = ValidatorStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 0, 0, 0)
 
-        self.val_name = None
-        self.val_url = None
+        self.calculated_stats = named_tuple_init(ValStats, 0)
+        self.val_stats = None
+
+        # self.val_name = None
+        # self.val_url = None
         self.active = False
         self.request_time = 0.0
         self.response_time = 0.0
-
-        self.val_stats = None
 
         self.txn_rate = TransactionRate()
         self.psis = PlatformIntervalStats()
@@ -139,37 +126,27 @@ class ValidatorStatsManager(object):
 
         if active:
 
-            self.val_stats = json_stats
+            self.val_stats = json_stats.copy()
 
-            try:
-                bytes_received_total, bytes_received_average = \
-                    json_stats["packet"]["BytesReceived"]
-                bytes_sent_total, bytes_sent_average = \
-                    json_stats["packet"]["BytesSent"]
+            # unpack stats that are delivered as lists of unnamed values
+            bytes_received_total, bytes_received_average = \
+                json_stats["packet"]["BytesReceived"]
+            bytes_sent_total, bytes_sent_average = \
+                json_stats["packet"]["BytesSent"]
 
-                self.vstats = ValStats(
-                    json_stats["journal"]["BlocksClaimed"],
-                    json_stats["journal"]["CommittedBlockCount"],
-                    json_stats["journal"]["PendingBlockCount"],
+            self.txn_rate.calculate_txn_rate(
+                self.val_stats["journal"]["CommittedBlockCount"],
+                self.val_stats["journal"].get("CommittedTxnCount", 0)
+            )
 
-                    json_stats["journal"].get("LocalMeanTime", 0.0),
-                    json_stats["journal"].get("ExpectedExpirationTime", 0.0),
-                    json_stats["journal"].get("PreviousBlockID", 'broken'),
-                    json_stats["journal"].get("CommittedTxnCount", 0),
-                    json_stats["journal"].get("PendingTxnCount", 0),
-
-                    json_stats["packet"]["DroppedPackets"],
-                    json_stats["packet"]["DuplicatePackets"],
-                    json_stats["packet"]["AcksReceived"],
-                    json_stats["packet"]["MessagesHandled"],
-                    json_stats["packet"]["MessagesAcked"],
-                    bytes_received_total,
-                    bytes_received_average,
-                    bytes_sent_total,
-                    bytes_sent_average
-                )
-            except KeyError as ke:
-                print "invalid key in vsm.update_stats()", ke
+            self.calculated_stats = ValStats(
+                bytes_received_total,
+                bytes_received_average,
+                bytes_sent_total,
+                bytes_sent_average,
+                self.txn_rate.avg_txn_rate,
+                self.txn_rate.avg_block_time
+            )
 
             self.active = True
             self.request_time = starttime
@@ -181,10 +158,6 @@ class ValidatorStatsManager(object):
             self.request_time = starttime
             self.response_time = endtime - starttime
 
-        self.txn_rate.calculate_txn_rate(
-            self.vstats.blocks_committed,
-            self.vstats.txns_committed
-        )
 
 SysClient = collections.namedtuple('sys_client',
                                    'starttime '
@@ -222,7 +195,6 @@ SysMsgs = collections.namedtuple('sys_messages',
                                  'msgs_min_handled '
                                  'msgs_max_acked '
                                  'msgs_min_acked')
-
 PoetStats = collections.namedtuple('poet_stats',
                                    'avg_local_mean '
                                    'max_local_mean '
@@ -242,13 +214,14 @@ class SystemStats(StatsCollector):
         self.max_client_time = 0
         self.txn_rate = 0
 
-        self.sys_client = SysClient(self.starttime, 0, 0, 0, 0, 0)
-        self.sys_blocks = SysBlocks(0, 0, 0, 0, 0, 0, 0, 0)
-        self.sys_txns = SysTxns(0, 0, 0, 0, 0, 0, 0)
-        self.sys_packets = SysPackets(0, 0, 0, 0, 0, 0)
-        self.sys_msgs = SysMsgs(0, 0, 0, 0)
-
-        self.poet_stats = PoetStats(0.0, 0.0, 0.0, '')
+        self.sys_client = named_tuple_init(
+            SysClient, 0, {'starttime': self.starttime})
+        self.sys_blocks = named_tuple_init(SysBlocks, 0)
+        self.sys_txns = named_tuple_init(SysTxns, 0)
+        self.sys_packets = named_tuple_init(SysPackets, 0)
+        self.sys_msgs = named_tuple_init(SysMsgs, 0)
+        self.poet_stats = named_tuple_init(
+            PoetStats, 0.0, {'last_unique_blockID': ''})
 
         self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
                           self.sys_packets, self.sys_msgs, self.poet_stats]
@@ -280,20 +253,33 @@ class SystemStats(StatsCollector):
 
                 self.response_times.append(c.vsm.response_time)
 
-                self.blocks_claimed.append(c.vsm.vstats.blocks_claimed)
-                self.blocks_committed.append(c.vsm.vstats.blocks_committed)
-                self.blocks_pending.append(c.vsm.vstats.blocks_pending)
-                self.txns_committed.append(c.vsm.vstats.txns_committed)
-                self.txns_pending.append(c.vsm.vstats.txns_pending)
-                self.packets_dropped.append(c.vsm.vstats.packets_dropped)
-                self.packets_duplicates.append(c.vsm.vstats.packets_duplicates)
-                self.packets_acks_received \
-                    .append(c.vsm.vstats.packets_acks_received)
-                self.msgs_handled.append(c.vsm.vstats.msgs_handled)
-                self.msgs_acked.append(c.vsm.vstats.msgs_acked)
+                self.blocks_claimed.append(
+                    c.vsm.val_stats["journal"]["BlocksClaimed"])
+                self.blocks_committed.append(
+                    c.vsm.val_stats["journal"]["CommittedBlockCount"])
+                self.blocks_pending.append(
+                    c.vsm.val_stats["journal"]["PendingBlockCount"])
+                self.txns_committed.append(
+                    c.vsm.val_stats["journal"].get("CommittedTxnCount", 0))
+                self.txns_pending.append(
+                    c.vsm.val_stats["journal"].get("PendingTxnCount", 0))
+                self.packets_dropped.append(
+                    c.vsm.val_stats["packet"]["DroppedPackets"])
+                self.packets_duplicates.append(
+                    c.vsm.val_stats["packet"]["DuplicatePackets"])
+                self.packets_acks_received.append(
+                    c.vsm.val_stats["packet"]["AcksReceived"])
+                self.msgs_handled.append(
+                    c.vsm.val_stats["packet"]["MessagesHandled"])
+                self.msgs_acked.append(
+                    c.vsm.val_stats["packet"]["MessagesAcked"])
 
-                self.local_mean.append(c.vsm.vstats.local_mean)
-                self.previous_blockid.append(c.vsm.vstats.previous_blockid)
+                self.local_mean.append(
+                    c.vsm.val_stats["journal"].get(
+                        "LocalMeanTime", 0.0))
+                self.previous_blockid.append(
+                    c.vsm.val_stats["journal"].get(
+                        "PreviousBlockID", 'broken'))
 
     def calculate_stats(self):
         self.runtime = int(time.time()) - self.starttime
@@ -387,15 +373,16 @@ class SystemStats(StatsCollector):
         self.local_mean = []
         self.previous_blockid = []
 
+    def get_stats_as_dict(self):
+        pass
+
 
 class StatsManager(object):
     def __init__(self, endpointmanager):
         self.epm = endpointmanager
-
         self.cp = ConsolePrint()
 
         self.ss = SystemStats()
-
         self.ps = PlatformStats()
         self.psis = PlatformIntervalStats()
         self.ps.psis = self.psis
@@ -409,15 +396,16 @@ class StatsManager(object):
         self.stats_loop_count = 0
 
         self.tm = TopologyManager(self.clients)
-
         self.bm = BranchManager(self.epm, Agent(reactor))
 
-        self.spm = StatsPrintManager(
-            self.ss,
-            self.ps,
-            self.tm.topology_stats,
-            self.bm,
-            self.clients)
+        stats_providers = [self.ss,
+                           self.ps,
+                           self.tm.topology_stats,
+                           self.bm,
+                           self.clients]
+
+        self.spm = StatsPrintManager(*stats_providers)
+        self.ssw = StatsSnapshotWriter(*stats_providers)
 
         self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
         self.vscm = ValidatorStatsCsvManager(self.clients)
@@ -454,6 +442,7 @@ class StatsManager(object):
         self.process_stats(self.clients)
         self.print_stats()
         self.csv_write()
+        self.ssw.write_snapshot()
 
         for c in self.clients:
             c.stats_request()
@@ -502,6 +491,9 @@ class StatsManager(object):
     def csv_stop(self):
         self.sscm.stop()
         self.vscm.stop()
+
+    def snapshot_write(self, signum, frame):
+        self.ssw.do_snapshot = True
 
     def stats_stop(self):
         print "StatsManager is stopping"
@@ -666,6 +658,9 @@ def run_stats(url,
         # initialize csv stats file generation
         print "initializing csv"
         sm.csv_init(csv_enable_summary, csv_enable_validator)
+
+        # set up SIGUSR1 handler for stats snapshots
+        signal.signal(signal.SIGUSR1, sm.snapshot_write)
 
         # prevent curses import from modifying normal terminal operation
         # (suppression of cr-lf) during display of help screen, config settings
