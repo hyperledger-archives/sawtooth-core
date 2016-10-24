@@ -19,6 +19,7 @@ import tempfile
 import time
 import os
 from os import walk
+import json
 
 import pybitcointools
 
@@ -337,7 +338,50 @@ class ValidatorNetworkManager(object):
                 for v in self._validators:
                     if v.is_running():
                         v.shutdown(True)
-                    p.step()
+                        p.step()
+
+    def validator_shutdown(self, validator_id, force=False, archive=None):
+        print "shutting down specific validator w/ SIGKILL"
+
+        if len(self._validators) == 0:
+            # no validator to shutdown
+            return
+
+        if archive is not None:
+            self.create_validator_archive(
+                "ValidatorShutdownNoRestore.tar.gz", validator_id)
+
+        v = self._validators[validator_id]
+        with Progress("Sending interrupt signal to specified validator:") as p:
+            if v.is_running():
+                if force is False:
+                    v.shutdown()
+                else:
+                    v.shutdown(True)
+            p.step()
+
+        running_count = 0
+        to = TimeOut(self.timeout)
+        with Progress("Giving specified validator time to shutdown: ") as p:
+            while True:
+                running_count = 0
+                if v.is_running():
+                    running_count += 1
+                if to.is_timed_out() or running_count == 0:
+                    break
+                else:
+                    time.sleep(1)
+                p.step()
+
+        if v.is_running():
+            raise Exception("validator {} is still running after SIGKILL"
+                            .format(v))
+        else:
+            print ("validator {} successfully shutdown after SIGKILL"
+                   .format(v))
+
+            self._validators.pop(validator_id)
+            del self._validator_map[validator_id]
 
     def status(self):
         out = []
@@ -361,6 +405,31 @@ class ValidatorNetworkManager(object):
                 for f in filenames:
                     fp = os.path.join(dir_path, f)
                     tar.add(fp, os.path.join(base_name, f))
+            tar.close()
+            return True
+        return False
+
+    def create_validator_archive(self,
+                                 validator_id,
+                                 archive_name):
+        if validator_id is not None:
+            validator_text = 'validator-' + str(validator_id) \
+                             + '.json'
+        if self.data_dir is not None \
+                and os.path.exists(self.data_dir) \
+                and len(self._validators) != 0:
+            tar = tarfile.open(archive_name, "w|gz")
+            base_name = self.get_archive_base_name(archive_name)
+            for (dir_path, _, filenames) in walk(self.data_dir):
+                for f in filenames:
+                    fp = os.path.join(dir_path, f)
+                    tar.add(fp, os.path.join(base_name, f))
+                    if (validator_id is not None) \
+                            and (f == validator_text):
+                        with open(fp) as json_data:
+                            self.removed_validator_config = \
+                                json.load(json_data)
+
             tar.close()
             return True
         return False
