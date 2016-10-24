@@ -109,3 +109,13 @@ class TestGenesisUtil(unittest.TestCase):
             'InitialConnectivity': 0,
         }
         self.extend_genesis_util('poet0', pre_dict, post_dict)
+
+    def test_poet1_genesis(self):
+        pre_dict = {
+            'GenesisLedger': False,
+        }
+        post_dict = {
+            'GenesisLedger': False,
+            'InitialConnectivity': 0,
+        }
+        self.extend_genesis_util('poet1', pre_dict, post_dict)
