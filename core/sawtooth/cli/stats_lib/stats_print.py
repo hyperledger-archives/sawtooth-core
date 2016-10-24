@@ -15,17 +15,17 @@
 
 import time
 
-curses_imported = True
+CURSES_IMPORTED = True
 try:
     import curses
 except ImportError:
-    curses_imported = False
+    CURSES_IMPORTED = False
 
 
 class ConsolePrint(object):
 
     def __init__(self):
-        self.use_curses = True if curses_imported else False
+        self.use_curses = True if CURSES_IMPORTED else False
         self.start = True
         self.scrn = None
 
@@ -81,11 +81,11 @@ class StatsPrintManager(object):
                  branch_manager,
                  stats_clients):
 
-        self.cp = ConsolePrint()
-        self.ss = system_stats
-        self.ps = platform_stats
-        self.ts = topology_stats
-        self.bm = branch_manager
+        self.console_print = ConsolePrint()
+        self.system_stats = system_stats
+        self.platform_stats = platform_stats
+        self.topology_stats = topology_stats
+        self.branch_manager = branch_manager
         self.stats_clients = stats_clients
 
         self.view_mode = "general"
@@ -95,11 +95,11 @@ class StatsPrintManager(object):
         self.check_view()
         self.print_summary()
         self.print_view()
-        self.cp.cpprint("", True)
+        self.console_print.cpprint("", True)
 
     def check_view(self):
-        if self.cp.scrn:
-            char_buffer = self.cp.scrn.getch()
+        if self.console_print.scrn:
+            char_buffer = self.console_print.scrn.getch()
 
             view_options = {
                 ord('g'): ["general", self.print_general_view],
@@ -123,140 +123,150 @@ class StatsPrintManager(object):
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9.3f} {6:16.16} ' \
             '{7:9.3f} {8:16.16} {9:9d} {10:19.19}'
-        self.cp.cpprint(validator_formatter.format(
+        self.console_print.cpprint(validator_formatter.format(
             "Validators:",
-            self.ss.sys_client.known_validators, "known",
-            self.ss.sys_client.active_validators, "responding",
-            self.ss.sys_client.avg_client_time, "avg time(s)",
-            self.ss.sys_client.max_client_time, "max time(s)",
-            self.ss.sys_client.runtime, "run time(s)"))
+            self.system_stats.sys_client.known_validators, "known",
+            self.system_stats.sys_client.active_validators, "responding",
+            self.system_stats.sys_client.avg_client_time, "avg time(s)",
+            self.system_stats.sys_client.max_client_time, "max time(s)",
+            self.system_stats.sys_client.runtime, "run time(s)"))
 
         blocks_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16} {9:9d} {10:19.19}'
-        self.cp.cpprint(blocks_formatter.format(
+        self.console_print.cpprint(blocks_formatter.format(
             "Blocks:",
-            self.ss.sys_blocks.blocks_max_committed, "max committed",
-            self.ss.sys_blocks.blocks_min_committed, "min committed",
-            self.ss.sys_blocks.blocks_max_pending, "max pending",
-            self.ss.sys_blocks.blocks_min_pending, "min pending",
-            self.ss.sys_blocks.blocks_max_claimed, "max claimed",
-            self.ss.sys_blocks.blocks_min_claimed, "min claimed"))
+            self.system_stats.sys_blocks.blocks_max_committed, "max committed",
+            self.system_stats.sys_blocks.blocks_min_committed, "min committed",
+            self.system_stats.sys_blocks.blocks_max_pending, "max pending",
+            self.system_stats.sys_blocks.blocks_min_pending, "min pending",
+            self.system_stats.sys_blocks.blocks_max_claimed, "max claimed",
+            self.system_stats.sys_blocks.blocks_min_claimed, "min claimed"))
 
         txns_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16} {9:9d} {10:19.19}'
-        self.cp.cpprint(txns_formatter.format(
+        self.console_print.cpprint(txns_formatter.format(
             "Transactions:",
-            self.ss.sys_txns.txns_max_committed, "max committed",
-            self.ss.sys_txns.txns_min_committed, "min committed",
-            self.ss.sys_txns.txns_max_pending, "max pending",
-            self.ss.sys_txns.txns_min_pending, "min pending",
+            self.system_stats.sys_txns.txns_max_committed, "max committed",
+            self.system_stats.sys_txns.txns_min_committed, "min committed",
+            self.system_stats.sys_txns.txns_max_pending, "max pending",
+            self.system_stats.sys_txns.txns_min_pending, "min pending",
             0, "rate (t/s)"))
 
         pkt_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16} {9:9d} {10:19.19} {11:9d} {12:17.17}'
-        self.cp.cpprint(pkt_formatter.format(
+        self.console_print.cpprint(pkt_formatter.format(
             "Packet totals:",
-            self.ss.sys_packets.packets_max_dropped, "max dropped",
-            self.ss.sys_packets.packets_min_dropped, "min dropped",
-            self.ss.sys_packets.packets_max_duplicates, "max duplicated",
-            self.ss.sys_packets.packets_min_duplicates, "min duplicated",
-            self.ss.sys_packets.packets_max_acks_received, "max acks rcvd",
-            self.ss.sys_packets.packets_min_acks_received, "min acks rcvd"))
+            self.system_stats.sys_packets.packets_max_dropped, "max dropped",
+            self.system_stats.sys_packets.packets_min_dropped, "min dropped",
+            self.system_stats.sys_packets.packets_max_duplicates,
+            "max duplicated",
+            self.system_stats.sys_packets.packets_min_duplicates,
+            "min duplicated",
+            self.system_stats.sys_packets.packets_max_acks_received,
+            "max acks rcvd",
+            self.system_stats.sys_packets.packets_min_acks_received,
+            "min acks rcvd"))
 
         msg_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16}'
-        self.cp.cpprint(msg_formatter.format(
+        self.console_print.cpprint(msg_formatter.format(
             "Message totals:",
-            self.ss.sys_msgs.msgs_max_handled, "max handled",
-            self.ss.sys_msgs.msgs_min_handled, "min handled",
-            self.ss.sys_msgs.msgs_max_acked, "max acked",
-            self.ss.sys_msgs.msgs_min_acked, "min acked"))
+            self.system_stats.sys_msgs.msgs_max_handled, "max handled",
+            self.system_stats.sys_msgs.msgs_min_handled, "min handled",
+            self.system_stats.sys_msgs.msgs_max_acked, "max acked",
+            self.system_stats.sys_msgs.msgs_min_acked, "min acked"))
 
         platform_formatter = \
             '{0:>16} ' \
             '{1:9.2f} {2:16.16} {3:9.2f} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16}'
-        self.cp.cpprint(platform_formatter.format(
+        self.console_print.cpprint(platform_formatter.format(
             "Platform:",
-            self.ps.cpu_stats.percent, "cpu pct",
-            self.ps.vmem_stats.percent, "vmem pct",
-            self.ps.psis.intv_net_bytes_sent, "ntwrk bytes tx",
-            self.ps.psis.intv_net_bytes_recv, "ntwrk bytes rx"))
+            self.platform_stats.cpu_stats.percent, "cpu pct",
+            self.platform_stats.vmem_stats.percent, "vmem pct",
+            self.platform_stats.psis.intv_net_bytes_sent, "ntwrk bytes tx",
+            self.platform_stats.psis.intv_net_bytes_recv, "ntwrk bytes rx"))
 
         topo_1_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16} {9:9.2f} {10:19.19}'
-        self.cp.cpprint(topo_1_formatter.format(
+        self.console_print.cpprint(topo_1_formatter.format(
             "Topology:",
-            self.ts.connected_component_count, "components",
-            self.ts.node_count, "nodes",
-            self.ts.edge_count, "edges",
-            self.ts.maximum_degree, "max peers",
-            self.ts.minimum_degree, "min peers"))
+            self.topology_stats.connected_component_count, "components",
+            self.topology_stats.node_count, "nodes",
+            self.topology_stats.edge_count, "edges",
+            self.topology_stats.maximum_degree, "max peers",
+            self.topology_stats.minimum_degree, "min peers"))
 
         topo_2_formatter = \
             '{0:>16} ' \
             '{1:9.2f} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9.2f} {8:16.16} {9:9.2f} {10:19.19}'
-        self.cp.cpprint(topo_2_formatter.format(
+        self.console_print.cpprint(topo_2_formatter.format(
             "Topology:",
-            self.ts.average_shortest_path_length, "avg shortest pth",
-            self.ts.maximum_shortest_path_length, "max shortest pth",
-            self.ts.minimum_connectivity, "min connectivity",
-            self.ts.maximum_degree_centrality, "max degree cent",
-            self.ts.maximum_between_centrality, "max between cent"))
+            self.topology_stats.average_shortest_path_length,
+            "avg shortest pth",
+            self.topology_stats.maximum_shortest_path_length,
+            "max shortest pth",
+            self.topology_stats.minimum_connectivity, "min connectivity",
+            self.topology_stats.maximum_degree_centrality, "max degree cent",
+            self.topology_stats.maximum_between_centrality,
+            "max between cent"))
 
         branch_formatter = \
             '{0:>16} ' \
             '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16} {9:9d} {10:19.19} {11:9d} {12:17.17}'
-        self.cp.cpprint(branch_formatter.format(
+        self.console_print.cpprint(branch_formatter.format(
             "Branch:",
-            self.bm.bm_stats.identified, "identified",
-            self.bm.bm_stats.active, "active",
-            self.bm.bm_stats.longest, "longest",
-            self.bm.bm_stats.longest_active, "longest active",
-            self.bm.bm_stats.next_longest_active, "next longest active",
-            # self.bm.bm_stats.validators, "validator count"))
-            self.bm.bm_stats.blocks_processed, "blocks processed"))
+            self.branch_manager.bm_stats.identified, "identified",
+            self.branch_manager.bm_stats.active, "active",
+            self.branch_manager.bm_stats.longest, "longest",
+            self.branch_manager.bm_stats.longest_active, "longest active",
+            self.branch_manager.bm_stats.next_longest_active,
+            "next longest active",
+            # self.branch_manager.bm_stats.validators, "validator count"))
+            self.branch_manager.bm_stats.blocks_processed, "blocks processed"))
 
         fork_formatter = \
             '{0:>16} ' \
             '{1:9} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
             '{7:9d} {8:16.16} {9:9d} {10:19.19}'
-        self.cp.cpprint(fork_formatter.format(
+        self.console_print.cpprint(fork_formatter.format(
             "Fork:",
-            self.bm.f_stats.status, "status",
-            self.bm.f_stats.fork_count, "fork count",
-            self.bm.f_stats.parent_count, "parent forks",
-            self.bm.f_stats.child_count, "child forks",
-            self.bm.f_stats.longest_child_fork_length, "longest child fork"))
+            self.branch_manager.f_stats.status, "status",
+            self.branch_manager.f_stats.fork_count, "fork count",
+            self.branch_manager.f_stats.parent_count, "parent forks",
+            self.branch_manager.f_stats.child_count, "child forks",
+            self.branch_manager.f_stats.longest_child_fork_length,
+            "longest child fork"))
 
         poet_formatter = \
             '{0:>16} ' \
             '{1:9.2f} {2:16.16} {3:9.2f} {4:16.16} {5:9.2f} {6:16.16} ' \
             '{7:>26.16} {8:22.22}'
-        self.cp.cpprint(poet_formatter.format(
+        self.console_print.cpprint(poet_formatter.format(
             "Poet:",
-            self.ss.poet_stats.avg_local_mean, "avg local mean",
-            self.ss.poet_stats.max_local_mean, "max local mean",
-            self.ss.poet_stats.min_local_mean, "min local mean",
-            self.ss.poet_stats.last_unique_blockID, "last unique block ID"))
+            self.system_stats.poet_stats.avg_local_mean, "avg local mean",
+            self.system_stats.poet_stats.max_local_mean, "max local mean",
+            self.system_stats.poet_stats.min_local_mean, "min local mean",
+            self.system_stats.poet_stats.last_unique_blockID,
+            "last unique block ID"))
 
         view_formatter = \
             '{0:>16} ' \
             '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
             '{7:>9} {8:16.16} {9:>9} {10:19.19}'
-        self.cp.cpprint(view_formatter.format(
+        self.console_print.cpprint(view_formatter.format(
             "View ({0:1.8}):".format(self.view_mode),
             "(g)", "general",
             "(t)", "transaction",
@@ -268,7 +278,7 @@ class StatsPrintManager(object):
             '{0:>16} ' \
             '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
             '{7:>9} {8:16.16}'
-        self.cp.cpprint(view_formatter_2.format(
+        self.console_print.cpprint(view_formatter_2.format(
             "View ({0:1.8}):".format(self.view_mode),
             "(p)", "platform",
             "(n)", "network",
@@ -292,14 +302,14 @@ class StatsPrintManager(object):
             '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
             '{12:>18.18} {13:>28.28}'
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'VAL', 'VAL',
             'RESPONSE', 'BLOCKS', 'BLOCKS', 'BLOCKS',
             'TXNS', 'TXNS', 'AVG TXN', 'AVG BLK', 'LOCAL', 'PREVIOUS',
             ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'STATE',
             'TIME(S)', 'CLAIMED', 'COMMITTED', 'PENDING',
             'COMMITTED', 'PENDING', 'RATE(T/S)', 'TIME(S)', 'MEAN', 'BLOCKID',
@@ -308,7 +318,7 @@ class StatsPrintManager(object):
 
         for c in self.stats_clients:
             if c.responding:
-                self.cp.cpprint(resp_formatter.format(
+                self.console_print.cpprint(resp_formatter.format(
                     c.val_id,
                     c.validator_state,
                     c.response_time,
@@ -326,7 +336,7 @@ class StatsPrintManager(object):
                     c.url),
                     False)
             else:
-                self.cp.cpprint(no_resp_formatter.format(
+                self.console_print.cpprint(no_resp_formatter.format(
                     c.val_id,
                     c.validator_state,
                     c.no_response_reason, "", "", "",
@@ -355,7 +365,7 @@ class StatsPrintManager(object):
             '{9:>8} {10:>8} {11:>8} {12:>8}  ' \
             '{13:>18.18} {14:>28.28}'
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'VAL', 'VAL',
             'CPU', 'CPU', 'CPU', 'CPU',
             'MEM', 'MEM', 'MEM',
@@ -363,7 +373,7 @@ class StatsPrintManager(object):
             ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'STATE',
             'PERCENT', 'USER PCT', 'SYS PCT', 'IDLE PCT',
             'PERCENT', 'TOTAL MB', 'AVAIL MB',
@@ -373,7 +383,7 @@ class StatsPrintManager(object):
 
         for c in self.stats_clients:
             if c.responding:
-                self.cp.cpprint(resp_formatter.format(
+                self.console_print.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
                     c.vsm.val_stats["platform"]["scpu"]["percent"],
@@ -392,7 +402,7 @@ class StatsPrintManager(object):
                     c.url),
                     False)
             else:
-                self.cp.cpprint(no_resp_formatter.format(
+                self.console_print.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
                     "", "", "", "", "",
@@ -416,13 +426,13 @@ class StatsPrintManager(object):
             '{2:>8} {3:>10} {4:>12} {5:>16} ' \
             '{6:>18.18} {7:>28.28}'
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'VAL', 'VAL',
             'LOCAL', 'POPULATION', 'AGGREGATE', 'LAST',
             ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'STATE',
             'MEAN', 'ESTIMATE', 'LOCALMEAN', 'BLOCKID',
             'NAME', 'URL'),
@@ -430,7 +440,7 @@ class StatsPrintManager(object):
 
         for c in self.stats_clients:
             if c.responding:
-                self.cp.cpprint(resp_formatter.format(
+                self.console_print.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
                     c.vsm.val_stats["journal"].get("LocalMeanTime", 0.0),
@@ -442,7 +452,7 @@ class StatsPrintManager(object):
                     c.url),
                     False)
             else:
-                self.cp.cpprint(no_resp_formatter.format(
+                self.console_print.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
                     "", "", "", "",
@@ -467,14 +477,14 @@ class StatsPrintManager(object):
             '{6:>12} {7:>12} {8:>12} {9:>12}' \
             '{10:>18.18} {11:>28.28}'
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'VAL', 'VAL',
             'ACKS', 'BYTES', 'BYTES', 'PACKETS',
             'PACKETS', 'UNACKED', 'MESSAGE', 'MESSAGE',
             ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'STATE',
             'RECEIVED', 'RECEIVED', 'SENT', 'DROPPED',
             'DUPLICATED', 'PACKETCOUNT', 'ACKED', 'HANDLED',
@@ -483,7 +493,7 @@ class StatsPrintManager(object):
 
         for c in self.stats_clients:
             if c.responding:
-                self.cp.cpprint(resp_formatter.format(
+                self.console_print.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
                     c.vsm.val_stats["packet"]["AcksReceived"],
@@ -499,7 +509,7 @@ class StatsPrintManager(object):
                     c.url),
                     False)
             else:
-                self.cp.cpprint(no_resp_formatter.format(
+                self.console_print.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
                     "", "", "", "",
@@ -525,14 +535,14 @@ class StatsPrintManager(object):
             '{6:>12} {7:>12} {8:>14} {9:>14}' \
             '{10:>18.18} {11:>28.28}'
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'VAL', 'VAL',
             'SEND', 'RECEIVE', 'SEND', 'RECEIVE',
             'SEND', 'RECEIVE', 'SEND', 'RECEIVE',
             ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'STATE',
             'BYTES', 'BYTES', 'PCKT BYTES', 'PCKT BYTES',
             'BYTES ERR', 'BYTES ERR', 'DROPPED PCKTS', 'DROPPED PCKTS',
@@ -541,7 +551,7 @@ class StatsPrintManager(object):
 
         for c in self.stats_clients:
             if c.responding:
-                self.cp.cpprint(resp_formatter.format(
+                self.console_print.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
                     c.vsm.val_stats["platform"]["snetio"]["bytes_recv"],
@@ -557,7 +567,7 @@ class StatsPrintManager(object):
                     c.url),
                     False)
             else:
-                self.cp.cpprint(no_resp_formatter.format(
+                self.console_print.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
                     "", "", "", "",
@@ -583,14 +593,14 @@ class StatsPrintManager(object):
             '{6:>16} {7:>14} {8:>14}' \
             '{9:>18.18} {10:>28.28}'
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'VAL', 'VAL',
             'BLOCK', 'BLOCK', 'TXN', 'TXN',
             'MISSING TXN', 'MISSING TXN', 'INVALID',
             ' VALIDATOR', 'VALIDATOR'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'STATE',
             'COMMITTED', 'PENDING', 'COMMITTED', 'PENDING',
             'DEPENDENCY CNT', 'BLOCK CNT', 'TXN CNT',
@@ -599,7 +609,7 @@ class StatsPrintManager(object):
 
         for c in self.stats_clients:
             if c.responding:
-                self.cp.cpprint(resp_formatter.format(
+                self.console_print.cpprint(resp_formatter.format(
                     c.id,
                     c.validator_state,
                     c.vsm.val_stats["journal"]["CommittedBlockCount"],
@@ -614,7 +624,7 @@ class StatsPrintManager(object):
                     c.url),
                     False)
             else:
-                self.cp.cpprint(no_resp_formatter.format(
+                self.console_print.cpprint(no_resp_formatter.format(
                     c.id,
                     c.validator_state,
                     "", "", "", "",
@@ -628,7 +638,7 @@ class StatsPrintManager(object):
         # and active history list; size columns to match
         max_active = 0
         max_active_history = 0
-        for b in self.bm.branches:
+        for b in self.branch_manager.branches:
             als = str(b.is_active_list).replace(" ", "")
             ahls = str(b.is_active_history).replace(" ", "")
             if len(als) > max_active:
@@ -655,7 +665,7 @@ class StatsPrintManager(object):
             '{12:>8d} ' \
             '{13:>' + mastr + ' {14:>' + mahstr
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'BRANCH', 'BRANCH', 'ACTIVE',
             'TAIL', 'TAIL',
             'HEAD', 'HEAD',
@@ -665,7 +675,7 @@ class StatsPrintManager(object):
             'ACTIVE', 'ACTIVE'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'LENGTH', 'STATUS',
             'BLOCK ID', 'BLOCK NUM',
             'BLOCK ID', 'BLOCK NUM',
@@ -675,7 +685,7 @@ class StatsPrintManager(object):
             'LIST', 'HISTORY'),
             reverse=True)
 
-        for b in self.bm.branches:
+        for b in self.branch_manager.branches:
             branch_create_time = time.strftime(
                 "%m:%d:%H:%M:%S", time.localtime(b.create_time))
             branch_last_active_time = time.strftime(
@@ -688,7 +698,7 @@ class StatsPrintManager(object):
                 "None" if \
                 b.ancestor_branch is None else str(b.ancestor_block_num)
 
-            self.cp.cpprint(resp_formatter.format(
+            self.console_print.cpprint(resp_formatter.format(
                 b.id,
                 len(b.blocks),
                 "Active" if b.is_active else "Idle",
@@ -724,7 +734,7 @@ class StatsPrintManager(object):
             '{9:>10} ' \
             '{10:>16} {11:>10} '
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'FORK', 'TOTAL', 'BRANCH',
             'TAIL', 'TAIL',
             'HEAD', 'HEAD',
@@ -733,7 +743,7 @@ class StatsPrintManager(object):
             'INTERCEPT', 'INTERCEPT'),
             reverse=True)
 
-        self.cp.cpprint(header_formatter.format(
+        self.console_print.cpprint(header_formatter.format(
             'ID', 'LENGTH', 'COUNT',
             'BLOCK ID', 'BLOCK NUM',
             'BLOCK ID', 'BLOCK NUM',
@@ -742,7 +752,7 @@ class StatsPrintManager(object):
             'BLOCK ID', 'BLOCK NUM'),
             reverse=True)
 
-        for f in self.bm.forks:
+        for f in self.branch_manager.forks:
             status = "parent" if f.is_parent is True else "child"
             fork_intercept_length = "" if \
                 f.fork_intercept_length is None else \
@@ -751,7 +761,7 @@ class StatsPrintManager(object):
                 f.intercept_block_id is None else str(f.intercept_block_id)
             intercept_block_num = "" if \
                 f.intercept_block_num is None else str(f.intercept_block_num)
-            self.cp.cpprint(resp_formatter.format(
+            self.console_print.cpprint(resp_formatter.format(
                 f.id,
                 f.block_count,
                 f.branch_count,

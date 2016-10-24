@@ -1,4 +1,3 @@
-
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -703,50 +702,48 @@ def run_stats(url,
 
 
 def do_stats(opts):
-    """
-    Synopsis:
-    1) Twisted http Agent
-        a) Handles http communications
-    2) EndpointManager
-        a) Maintains list of validator endpoints and their associated urls
-        b) update_endpoint_urls is called periodically to update the list of
-            registered urls
-    3) StatsManager
-        a) Creates instance of SystemStats and PlatformStats
-        b) Maintains list of validator StatsClient instances
-            using url list maintained by EndpointManager
-        c) StatsManager.stats_loop is called periodically to...
-            i) Call SystemStats.process() to generate summary statistics
-            ii) Call StatsPrintManager.stats_print()
-            iii) Call CsvManager.write() to write stats to CSV file
-            iv) Call each StatsClient instance to initiate a stats request
-    4) StatsClient
-        a) Sends stats requests to its associated validator url
-        b) Handles stats response
-        c) Handles any errors, including unresponsive validator
-    5) Global
-        a) Creates instance of twisted http agent,
-            StatsManager, and EndpointManager
-    6) Main
-        a) calls endpoint manager to initialize url list.
-            i) Program continues at Setup() if request succeeds
-            ii) Program terminates request fails
-        b) sets up looping call for StatsManager.stats_loop
-        c) sets up looping call for EndpointManager.update_validator_urls
-    7) StatsPrintManager
-        a) Handles formatting of console output
-    8) ConsolePrint() manages low-level details of printing to console.
-        When printing to posix (linux)console, curses allows a "top"-like
-        non-scrolling display to be implemented.  When printing to a non-posix
-        console, results simply scroll.
-    9) CsvManager
-        a) Handles file management and timestamped output
-            for csv file generation
-    10) ValidatorCommunications
-        a) Handles low-level details of issuing an http request
-            via twisted http agent async i/o
-     """
-    # opts = parse_args(sys.argv[1:])
+    # Synopsis:
+    #
+    # 1) Twisted http Agent
+    #     a) Handles http communications
+    # 2) EndpointManager
+    #     a) Maintains list of validator endpoints and their associated urls
+    #     b) update_endpoint_urls is called periodically to update the list of
+    #         registered urls
+    # 3) StatsManager
+    #     a) Creates instance of SystemStats and PlatformStats
+    #     b) Maintains list of validator StatsClient instances
+    #         using url list maintained by EndpointManager
+    #     c) StatsManager.stats_loop is called periodically to...
+    #         i) Call SystemStats.process() to generate summary statistics
+    #         ii) Call StatsPrintManager.stats_print()
+    #         iii) Call CsvManager.write() to write stats to CSV file
+    #         iv) Call each StatsClient instance to initiate a stats request
+    # 4) StatsClient
+    #     a) Sends stats requests to its associated validator url
+    #     b) Handles stats response
+    #     c) Handles any errors, including unresponsive validator
+    # 5) Global
+    #     a) Creates instance of twisted http agent,
+    #         StatsManager, and EndpointManager
+    # 6) Main
+    #     a) calls endpoint manager to initialize url list.
+    #         i) Program continues at Setup() if request succeeds
+    #         ii) Program terminates request fails
+    #     b) sets up looping call for StatsManager.stats_loop
+    #     c) sets up looping call for EndpointManager.update_validator_urls
+    # 7) StatsPrintManager
+    #     a) Handles formatting of console output
+    # 8) ConsolePrint() manages low-level details of printing to console.
+    #     When printing to posix (linux)console, curses allows a "top"-like
+    #     non-scrolling display to be implemented.  When printing to a
+    #     non-posix console, results simply scroll.
+    # 9) CsvManager
+    #     a) Handles file management and timestamped output
+    #         for csv file generation
+    # 10) ValidatorCommunications
+    #     a) Handles low-level details of issuing an http request
+    #         via twisted http agent async i/o
 
     try:
         run_stats(opts.url,

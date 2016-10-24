@@ -460,7 +460,6 @@ class TopologyStats(object):
         self.node_count = None
         self.connected_component_graphs = None
 
-
     def clear_stats(self):
         self.graph = 0
         self.node_count = 0

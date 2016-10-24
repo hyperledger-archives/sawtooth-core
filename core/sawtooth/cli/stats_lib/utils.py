@@ -22,8 +22,9 @@ import string
 import sys
 import time
 import warnings
-import psutil
 import collections
+import psutil
+
 
 import pybitcointools
 from colorlog import ColoredFormatter
@@ -122,7 +123,7 @@ class StaticNetworkConfig(object):
         self.nodes = [
             {
                 "NodeName": "{0}-{1}".format(base_name, idx),
-                "Identifier": get_address_from_private_key_wif(wif),
+                "Identifier": get_addr_from_private_key_wif(wif),
                 "Host": "localhost",
                 "Port": base_port + idx,
                 "HttpPort": base_http_port + idx,
@@ -179,12 +180,13 @@ class Progress(object):
     def __init__(self, msg=None):
         if msg:
             sys.stdout.write(msg + ": ")
+            self.start = None
 
     def __enter__(self):
         self.start = time.time()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, value, traceback):
         sys.stdout.write(" {0:.2f}S \n".format(time.time() - self.start))
         sys.stdout.flush()
 
@@ -193,29 +195,29 @@ class Progress(object):
         sys.stdout.flush()
 
 
-suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+SUFFIXES = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
 
 
 def human_size(nbytes):
     if nbytes == 0:
         return '0 B'
     i = 0
-    while nbytes >= 1024 and i < len(suffixes) - 1:
+    while nbytes >= 1024 and i < len(SUFFIXES) - 1:
         nbytes /= 1024.
         i += 1
     f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
-    return '%s %s' % (f, suffixes[i])
+    return '%s %s' % (f, SUFFIXES[i])
 
 
 class Timer(object):
     def __init__(self):
-        pass
+        self.start = None
 
     def __enter__(self):
         self.start = time.time()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, value, traceback):
         print time.time() - self.start
 
     def elapsed(self):
@@ -224,8 +226,8 @@ class Timer(object):
 
 class TimeOut(object):
     def __init__(self, wait):
-        self.WaitTime = wait
-        self.ExpireTime = time.time() + wait
+        self.wait_time = wait
+        self.expire_time = time.time() + wait
 
     def is_timed_out(self):
         return time.time() > self.ExpireTime
@@ -238,7 +240,7 @@ def generate_private_key():
     return pybitcointools.encode_privkey(pybitcointools.random_key(), 'wif')
 
 
-def get_address_from_private_key_wif(key):
+def get_addr_from_private_key_wif(key):
     return pybitcointools.privtoaddr(pybitcointools.decode_privkey(key, 'wif'))
 
 
@@ -254,10 +256,10 @@ def write_key_file(keyfile, key):
         wif_fd.write("\n")
 
 
-def random_name(len=16):
+def random_name(length=16):
     return '/' + ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-        for _ in range(len))
+        for _ in range(length))
 
 
 def parse_configuration_file(filename):
@@ -289,16 +291,16 @@ def prompt_yes_no(question):
 
 def find_txn_validator():
     validator = None
-    scriptDir = os.path.dirname(os.path.realpath(__file__))
+    script_dir = os.path.dirname(os.path.realpath(__file__))
     search_path = ""
     if "CURRENCYHOME" in os.environ:
         search_path = os.path.join(
             os.environ['CURRENCYHOME'], 'bin') \
             + os.pathsep \
-            + os.path.realpath(os.path.join(scriptDir, '..', 'bin'))
+            + os.path.realpath(os.path.join(script_dir, '..', 'bin'))
     else:
         search_path = os.path.realpath(
-            os.path.join(scriptDir, '..', 'bin'))
+            os.path.join(script_dir, '..', 'bin'))
 
     if 'PATH' in os.environ:
         search_path = search_path + os.pathsep + os.environ['PATH']

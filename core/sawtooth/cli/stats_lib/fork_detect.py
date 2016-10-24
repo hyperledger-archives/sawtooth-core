@@ -12,14 +12,14 @@ class BlockClient(object):
     def __init__(self, bc_id, full_url, agent,
                  look_back_count=5, validator=None):
         self.validator = validator
-        self.id = bc_id
+        self.bc_id = bc_id
         self.url = full_url
         self.agent = agent
         self.name = "block_client_{0}".format(bc_id)
         self.bc_state = "UNKNWN"
         self.responding = None
 
-        self.vc = ValidatorCommunications(self.agent) \
+        self.validator_comm = ValidatorCommunications(self.agent) \
             if agent is not None else None
 
         self.new_blocks = []
@@ -28,14 +28,17 @@ class BlockClient(object):
         self.last_block_previous_block_id = None
         self.lb_count = look_back_count
         self.current_branch = None
+        self.no_response_reason = None
+        self.path = None
 
     def blocks_request(self):
         # request block info for 5 newest blocks from specified validator url
-        if self.vc is not None:
+        if self.validator_comm is not None:
             self.path = self.url + "/block?info=1&blockcount=5"
-            self.vc.get_request(self.path,
-                                self._blocks_completion,
-                                self._blocks_error)
+            self.validator_comm.get_request(
+                self.path,
+                self._blocks_completion,
+                self._blocks_error)
 
     def _blocks_completion(self, block_response, response_code):
         self.bc_state = "RESP_{}".format(response_code)
@@ -87,7 +90,7 @@ class BlockClient(object):
 
 class BlockChainBranch(object):
     def __init__(self):
-        self.id = None
+        self.bcb_id = None
 
         self.blocks = {}
         self.predecessor_ids = {}
@@ -224,7 +227,7 @@ class BlockChainBranch(object):
     def print_branch(self, do_print=False, print_all=False, print_terse=False):
         block_list = []
         info_list = []
-        for key, block in self.blocks.iteritems():
+        for _, block in self.blocks.iteritems():
             block_list.append([block["Identifier"], block["BlockNum"],
                                block["PreviousBlockID"]])
         sorted_list = sorted(block_list, key=itemgetter(1))
@@ -260,7 +263,7 @@ class BlockChainBranch(object):
 
 class BlockChainFork(object):
     def __init__(self):
-        self.id = ""
+        self.bcf_id = ""
 
         self.head_branch = None
         self.tail_branch = None
@@ -334,17 +337,15 @@ class BlockChainFork(object):
                 index - 1].ancestor_block_num
 
     def find_intercept(self, child_fork):
-        '''
-        while stepping through child fork branches from head to tail
-            if the child fork branch is found in parent fork branches
-                if the child fork branch intercept block num is less than
-                the parent fork branch intercept block num
-                    then intercept block num is child intercept block num
-                if the child fork branch intercept block num is greater than
-                the parent fork branch intercept block num
-                    then intercept block num is parent intercept block num
-        else there is no intercept
-        '''
+        # while stepping through child fork branches from head to tail
+        #     if the child fork branch is found in parent fork branches
+        #         if the child fork branch intercept block num is less than
+        #         the parent fork branch intercept block num
+        #             then intercept block num is child intercept block num
+        #         if the child fork branch intercept block num is greater than
+        #         the parent fork branch intercept block num
+        #             then intercept block num is parent intercept block num
+        # else there is no intercept
 
         for child_fork_branch in child_fork.branches:
             if child_fork_branch in self.branches:
@@ -429,7 +430,9 @@ class BranchManager(object):
         self.block_clients = []
 
         self.bm_stats = BranchManagerStats()
+        self.bm_stats.sorted_longest_active = None
         self.f_stats = ForkStats()
+        self.f_stats.validator_count = None
 
         self.forks = []
 
@@ -490,7 +493,7 @@ class BranchManager(object):
 
         if not found:
             bc_branch = BlockChainBranch()
-            bc_branch.id = "brn_{0:08d}".format(self.branch_count)
+            bc_branch.bcb_id = "brn_{0:08d}".format(self.branch_count)
             bc_branch.assess(block)
             self.branches.append(bc_branch)
 
@@ -604,9 +607,9 @@ class BranchManager(object):
                     if branch.blocks.get(bc.last_block_id, None) is not None:
                         branch.is_active = True
                         branch.last_active_time = time.time()
-                        active_list.append(bc.id)
-                        if bc.id not in branch.is_active_history:
-                            branch.is_active_history.append(bc.id)
+                        active_list.append(bc.bc_id)
+                        if bc.bc_id not in branch.is_active_history:
+                            branch.is_active_history.append(bc.bc_id)
             branch.is_active_list = active_list
 
     def _find_forks(self):
@@ -630,7 +633,7 @@ class BranchManager(object):
         forks = []
         for branch in sorted_branches_ex:
             fork = BlockChainFork()
-            fork.id = "fork_{0:07d}".format(len(forks))
+            fork.bcf_id = "fork_{0:07d}".format(len(forks))
             fork.validator_count = branch[0].is_active_count
             fork.build_fork(branch[0])
             forks.append(fork)
