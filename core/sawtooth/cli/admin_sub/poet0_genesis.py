@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import logging
+import importlib
 import json
+import logging
 
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
 from ledger.transaction import endpoint_registry
-from ledger.transaction import integer_key
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.validator_config import get_validator_configuration
@@ -120,10 +120,16 @@ def do_poet0_genesis(args):
                       data_directory=data_directory,
                       store_type=store_type,
                       )
-    # ...add txn families (needs dynamic loading)
-    dfl_txn_families = [endpoint_registry, integer_key]
-    for txnfamily in dfl_txn_families:
-        txnfamily.register_transaction_types(journal)
+    # ...add 'built in' txn families
+    default_transaction_families = [
+        endpoint_registry
+    ]
+    for txn_family in default_transaction_families:
+        txn_family.register_transaction_types(journal)
+    # ...add auxiliary transaction families
+    for txn_family_module_name in cfg.get("TransactionFamilies", []):
+        txn_family = importlib.import_module(txn_family_module_name)
+        txn_family.register_transaction_types(journal)
 
     # Make genesis block:
     # ...make sure there is no current chain here, or fail
