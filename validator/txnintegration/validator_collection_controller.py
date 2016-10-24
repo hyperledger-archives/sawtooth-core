@@ -171,7 +171,7 @@ class ValidatorCollectionController(NodeController):
                         v.shutdown()
                     p.step()
             running_count = 0
-            to = TimeOut(1)
+            to = TimeOut(3)
             with Progress("Giving validators time to shutdown: ") as p:
                 while True:
                     running_count = 0
