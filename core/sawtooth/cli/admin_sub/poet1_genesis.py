@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import logging
+import importlib
 import json
+import logging
 
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
 from ledger.transaction import endpoint_registry
-from ledger.transaction import integer_key
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.validator_config import get_validator_configuration
@@ -53,11 +53,11 @@ def add_poet1_genesis_parser(subparsers, parent_parser):
 def do_poet1_genesis(args):
 
     # Get ledger config:
-    # set the default value of config because argparse 'default' in
-    # combination with action='append' does the wrong thing.
+    # ...set the default value of config because argparse 'default' in
+    # ...combination with action='append' does the wrong thing.
     if args.config is None:
         args.config = ['txnvalidator.js']
-    # convert any comma-delimited argument strings to list elements
+    # ...convert any comma-delimited argument strings to list elements
     for arglist in [args.config]:
         if arglist is not None:
             for arg in arglist:
@@ -118,18 +118,25 @@ def do_poet1_genesis(args):
                       data_directory=data_directory,
                       store_type=store_type,
                       )
-
-    # ...add txn families (needs dynamic loading)
-    dfl_txn_families = [endpoint_registry, integer_key]
-    for txnfamily in dfl_txn_families:
-        txnfamily.register_transaction_types(journal)
+    # ...add 'built in' txn families
+    default_transaction_families = [
+        endpoint_registry
+    ]
+    for txn_family in default_transaction_families:
+        txn_family.register_transaction_types(journal)
+    # ...add auxiliary transaction families
+    for txn_family_module_name in cfg.get("TransactionFamilies", []):
+        txn_family = importlib.import_module(txn_family_module_name)
+        txn_family.register_transaction_types(journal)
 
     # Make genesis block:
+    # ...make sure there is no current chain here, or fail
     # ...pop VR seed (we'll presently defer resolving VR seed issues)
     _ = gossiper.IncomingMessageQueue.pop()
     # ...create block g_block (including VR seed txn just popped)
     g_block = journal.build_block(genesis=True)  # seed later...
     journal.claim_block(g_block)
+    # ...simulate receiving the genesis block msg from reactor to force commit
     g_block_msg = gossiper.IncomingMessageQueue.pop()
     journal.dispatcher.dispatch(g_block_msg)
     journal.initialization_complete()

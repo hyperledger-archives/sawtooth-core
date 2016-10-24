@@ -44,6 +44,7 @@ class TestGenesisUtil(unittest.TestCase):
             top.set_configuration(0, cfg)
             config_file = top.write_configuration(0)
             # Test genesis tool
+            print 'testing genesis util...'
             gblock_file = genesis_info_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(gblock_file))
             cli_args = 'admin %s-genesis --config %s' % (ledger_type,
@@ -57,6 +58,7 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in genesis_dat.keys())
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
+            print 'testing efficacy...'
             # ...apply validator-related overrides to validator-0
             cfg = top.get_configuration(0)
             cfg.update(post_overrides)
@@ -102,7 +104,7 @@ class TestGenesisUtil(unittest.TestCase):
 
     def test_poet0_genesis(self):
         pre_dict = {
-            'GenesisLedger': True,
+            'GenesisLedger': False,
         }
         post_dict = {
             'GenesisLedger': False,
