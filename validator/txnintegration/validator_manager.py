@@ -22,10 +22,7 @@ import re
 import json
 
 from txnintegration.exceptions import ValidatorManagerException
-from txnintegration.utils import generate_private_key
-from txnintegration.utils import get_address_from_private_key_wif
 from txnintegration.utils import human_size
-from txnintegration.utils import read_key_file
 from txnintegration.utils import find_or_create_test_key
 from gossip.messages import shutdown_message
 from sawtooth.client import SawtoothClient
@@ -60,16 +57,13 @@ class ValidatorManager(object):
         self._data_dir = data_dir
 
         # Handle validator keys
-        if self.static_node and 'KeyFile' in config.keys():
-            (_, secret, addr) = find_or_create_test_key(config['KeyFile'])
-            self._key = secret
-            self._address = addr
-        elif self.static_node:
-            self._key = config['SigningKey']
-            self._address = config['Identifier']
-        else:
-            self._key = generate_private_key()
-            self._address = get_address_from_private_key_wif(self._key)
+        key_file = config.get("KeyFile", None)
+        if key_file is None:
+            key_file = os.path.join(self._data_dir, "{}.wif".format(self.name))
+            config["KeyFile"] = key_file
+        (_, secret, addr) = find_or_create_test_key(key_file, data_dir)
+        self._key = secret
+        self._address = addr
 
         self.url = None
         self._command = None
@@ -94,19 +88,6 @@ class ValidatorManager(object):
         self.config['LogDirectory'] = self._data_dir
         self._log_file = os.path.join(self._data_dir,
                                       "{}-debug.log".format(self.name))
-
-        self.config['KeyFile'] = os.path.join(self._data_dir,
-                                              "{}.wif".format(self.name))
-        if self.static_node:
-            if os.path.isfile(self.config['KeyFile']):
-                os.remove(self.config['KeyFile'])
-        if not os.path.isfile(self.config['KeyFile']):
-            with open(self.config['KeyFile'], 'w') as fp:
-                fp.write(self._key)
-                fp.write("\n")
-        else:
-            self._key = read_key_file(self.config['KeyFile'])
-            self._address = get_address_from_private_key_wif(self._key)
 
         if self.log_config:
             for v in self.log_config["handlers"].itervalues():
