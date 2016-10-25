@@ -30,6 +30,9 @@ from txnintegration.simcontroller import get_default_sim_controller
 
 LOGGER = logging.getLogger(__name__)
 
+DISABLE_POET1_SGX = True \
+    if os.environ.get("DISABLE_POET1_SGX", False) == "1" else False
+
 
 class TestGenesisUtil(unittest.TestCase):
     def extend_genesis_util(self, ledger_type, pre_overrides, post_overrides):
@@ -112,6 +115,7 @@ class TestGenesisUtil(unittest.TestCase):
         }
         self.extend_genesis_util('poet0', pre_dict, post_dict)
 
+    @unittest.skipIf(DISABLE_POET1_SGX, 'SGX currently behind simulator')
     def test_poet1_genesis(self):
         pre_dict = {
             'GenesisLedger': False,
