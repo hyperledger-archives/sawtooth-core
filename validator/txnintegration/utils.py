@@ -247,7 +247,7 @@ class TimeOut(object):
         return time.time() > self.ExpireTime
 
 
-def find_or_create_test_key(key_base_name, key_dir=None):
+def find_or_create_test_key(key_base_name, key_dir=None, quiet=True):
     '''
     Interface to sawtooth cli: creates .wif key file if it does not exist, and
     returns a tupple containing all pertinent information.  Useful for testing.
@@ -271,6 +271,8 @@ def find_or_create_test_key(key_base_name, key_dir=None):
         cmd = 'keygen %s' % key_base_name
         if use_key_dir:
             cmd += ' --key-dir %s' % key_dir
+        if quiet is True:
+            cmd += ' -q'
         sawtooth_cli_intercept(cmd)
     assert os.path.exists(key_file)
     addr_file = '.'.join(key_file.split('.')[:-1]) + '.addr'
