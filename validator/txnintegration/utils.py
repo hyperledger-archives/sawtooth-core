@@ -59,6 +59,29 @@ def get_blocklists(urls):
 
 
 def is_convergent(urls, tolerance=2, standard=5):
+    '''
+    Args:
+        urls (list<str>):   List of validator urls whose chains are expected
+            to converge
+        tolerance (int):    Length in blocks of permissible intra-validator
+            forks
+        standard (int):     A variable intended to guarantee that our block
+            level identity checks have significant data to operate on.
+            Conceptually, depends on the value of tolerance:
+                case(tolerance):
+                    0:          minimum # of blocks required per validator
+                    otherwise:  minimum # of converged blocks required per
+                                divergent block (per validator)
+            Motivation: We want to compare identity across the network on
+            some meaningfully large set of blocks.  Introducing fork
+            tolerance is problematic: the variable tolerance which is used
+            to trim the ends of each ledger's block-chain could be abused
+            to trivialize the test.  Therefore, as tolerance is increased
+            (if non-zero), we use standard to proportionally increase the
+            minimum number of overall blocks required by the test.
+    Returns:
+        (bool)
+    '''
     # check for block id convergence across network:
     sample_size = max(1, tolerance) * standard
     print "testing block-level convergence with min sample size:",
