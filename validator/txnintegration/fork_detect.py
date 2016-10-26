@@ -1,6 +1,8 @@
 import time
 from operator import itemgetter
+
 from txnintegration.stats_utils import ValidatorCommunications
+from txnintegration.stats_utils import get_public_attrs_as_dict
 
 # Reference value in gossip.common - NullIdentifier
 # Not imported here to avoid needless ECDSARecoveryModule dependency
@@ -28,6 +30,8 @@ class BlockClient(object):
         self.last_block_previous_block_id = None
         self.lb_count = look_back_count
         self.current_branch = None
+
+        self.path = None
 
     def blocks_request(self):
         # request block info for 5 newest blocks from specified validator url
@@ -89,10 +93,15 @@ class BlockChainBranch(object):
     def __init__(self):
         self.id = None
 
-        self.blocks = {}
-        self.predecessor_ids = {}
-        self.block_numbers = {}
+        # local attributes
+        self._blocks = {}
+        self._predecessor_ids = {}
+        self._block_numbers = {}
 
+        self._is_active_list = []
+        self._is_active_history = []
+
+        # public attributes - will be published as stats
         self.head_block_id = None
         self.tail_block_id = None
 
@@ -100,8 +109,6 @@ class BlockChainBranch(object):
         self.tail_block_num = None
 
         self.is_active = False
-        self.is_active_list = []
-        self.is_active_history = []
 
         self.create_time = time.time()
         self.last_active_time = time.time()
@@ -116,11 +123,11 @@ class BlockChainBranch(object):
 
     @property
     def block_count(self):
-        return len(self.blocks)
+        return len(self._blocks)
 
     @property
     def is_active_count(self):
-        return len(self.is_active_list)
+        return len(self._is_active_list)
 
     def assess(self, block):
         """
@@ -132,7 +139,7 @@ class BlockChainBranch(object):
         current_block_num = block["BlockNum"]
         current_block_id = block["Identifier"]
         current_block_pbid = block["PreviousBlockID"]
-        if len(self.block_numbers) is 0:
+        if len(self._block_numbers) is 0:
             self._add_block(block)
             self.head_block_id = current_block_id
             self.tail_block_id = current_block_id
@@ -141,14 +148,14 @@ class BlockChainBranch(object):
             # first block in branch
             return True
         # if id in blocks{} and block matches
-        existing_block = self.blocks.get(current_block_id, None)
+        existing_block = self._blocks.get(current_block_id, None)
         if existing_block is not None:
             # return true if current block id exists in blocks{}
             # and blocks match (have same block num and predecessor id)
             return existing_block["BlockNum"] == current_block_num and \
                 existing_block["PreviousBlockID"] == current_block_pbid
         # current block id does not exist in blocks{} - continue
-        existing_block_num = self.block_numbers.get(current_block_num, None)
+        existing_block_num = self._block_numbers.get(current_block_num, None)
         if existing_block_num is not None:
             # block number exists in block_numbers{} and cannot be replaced
             return False
@@ -156,9 +163,9 @@ class BlockChainBranch(object):
         # check if current block is an immediate predecessor...
         # current blocks previous block id must be in predecessor_ids{}
         # and successor block number must equal current block number + 1
-        successor_block_id = self.predecessor_ids.get(current_block_id, None)
+        successor_block_id = self._predecessor_ids.get(current_block_id, None)
         if successor_block_id is not None:
-            successor_block = self.blocks[successor_block_id]
+            successor_block = self._blocks[successor_block_id]
             if successor_block["PreviousBlockID"] == current_block_id and \
                     successor_block["BlockNum"] == current_block_num + 1:
                 self._add_block(block)
@@ -169,7 +176,7 @@ class BlockChainBranch(object):
         # else check if current block is an immediate successor...
         # current blocks previous block id must exist in blocks
         # and predecessor block number must equal current block number - 1
-        predecessor_block = self.blocks.get(current_block_pbid, None)
+        predecessor_block = self._blocks.get(current_block_pbid, None)
         if predecessor_block is not None:
             if predecessor_block["BlockNum"] == current_block_num - 1:
                 self._add_block(block)
@@ -184,17 +191,17 @@ class BlockChainBranch(object):
         current_block_num = current_block["BlockNum"]
         current_block_id = current_block["Identifier"]
         current_block_pbid = current_block["PreviousBlockID"]
-        self.blocks[current_block_id] = current_block
-        self.predecessor_ids[current_block_pbid] = current_block_id
-        self.block_numbers[current_block_num] = current_block_id
+        self._blocks[current_block_id] = current_block
+        self._predecessor_ids[current_block_pbid] = current_block_id
+        self._block_numbers[current_block_num] = current_block_id
 
     def remove_head(self):
         if self.head_block_id == self.tail_block_id:
             self._remove_last()
         else:
-            head_block = self.blocks.get(self.head_block_id)
+            head_block = self._blocks.get(self.head_block_id)
             predecessor_block_id = head_block["PreviousBlockID"]
-            predecessor_block = self.blocks.get(predecessor_block_id)
+            predecessor_block = self._blocks.get(predecessor_block_id)
             self._remove_block(self.head_block_id)
             self.head_block_id = predecessor_block_id
             self.head_block_num = predecessor_block["BlockNum"]
@@ -203,8 +210,8 @@ class BlockChainBranch(object):
         if self.head_block_id == self.tail_block_id:
             self._remove_last()
         else:
-            successor_block_id = self.predecessor_ids[self.tail_block_id]
-            successor_block = self.blocks.get(successor_block_id)
+            successor_block_id = self._predecessor_ids[self.tail_block_id]
+            successor_block = self._blocks.get(successor_block_id)
             self._remove_block(self.tail_block_id)
             self.tail_block_id = successor_block_id
             self.tail_block_num = successor_block["BlockNum"]
@@ -217,14 +224,14 @@ class BlockChainBranch(object):
         self.tail_block_num = None
 
     def _remove_block(self, block_id):
-        removed_block = self.blocks.pop(block_id)
-        self.predecessor_ids.pop(removed_block["PreviousBlockID"])
-        self.block_numbers.pop(removed_block["BlockNum"])
+        removed_block = self._blocks.pop(block_id)
+        self._predecessor_ids.pop(removed_block["PreviousBlockID"])
+        self._block_numbers.pop(removed_block["BlockNum"])
 
     def print_branch(self, do_print=False, print_all=False, print_terse=False):
         block_list = []
         info_list = []
-        for key, block in self.blocks.iteritems():
+        for key, block in self._blocks.iteritems():
             block_list.append([block["Identifier"], block["BlockNum"],
                                block["PreviousBlockID"]])
         sorted_list = sorted(block_list, key=itemgetter(1))
@@ -237,7 +244,7 @@ class BlockChainBranch(object):
             print
         else:
             for block_id, block_num, pred_id in sorted_list:
-                block = self.blocks[block_id]
+                block = self._blocks[block_id]
                 block_info = {"Identifier": block_id,
                               "BlockNum": block_num,
                               "PreviousBlockID": pred_id}
@@ -245,9 +252,9 @@ class BlockChainBranch(object):
                     print block["Identifier"], block["BlockNum"], block[
                         "PreviousBlockID"],
                 if print_all:
-                    successor = self.predecessor_ids.get(
+                    successor = self._predecessor_ids.get(
                         block["PreviousBlockID"], None)
-                    bid = self.block_numbers.get(block["BlockNum"], None)
+                    bid = self._block_numbers.get(block["BlockNum"], None)
                     block_info["PreviousIDToSuccessorID"] = successor
                     block_info["BlockNumToBlockID"] = bid
                     if do_print:
@@ -257,25 +264,35 @@ class BlockChainBranch(object):
                 info_list.append(block_info)
         return info_list
 
+    def get_stats_as_dict(self):
+        stats = get_public_attrs_as_dict(self)
+        stats['block_count'] = self.block_count
+        stats['is_active_count'] = self.is_active_count
+        return stats
+
 
 class BlockChainFork(object):
     def __init__(self):
+        # private attributes
+        self._branches = []
+        self._head_branch = None
+        self._tail_branch = None
+        # used by find_fork_intercept() in branch_manager
+        self._intercept_branch = None
+
+        # public attributes - will be published as stats
         self.id = ""
 
-        self.head_branch = None
-        self.tail_branch = None
-
         self.validator_count = 0
+
         self.head_block_id = None
         self.head_block_num = None
         self.tail_block_id = None
         self.tail_block_num = None
+
         self.block_count = 0
 
-        self.branches = []
-
         # used by find_fork_intercept() in branch_manager
-        self.intercept_branch = None
         self.intercept_branch_id = None
         self.intercept_block_id = None
         self.intercept_block_num = None
@@ -287,17 +304,17 @@ class BlockChainFork(object):
 
     @property
     def branch_count(self):
-        return len(self.branches)
+        return len(self._branches)
 
     def build_fork(self, active_branch):
-        self.head_branch = active_branch
-        self.head_block_id = self.head_branch.head_block_id
-        self.head_block_num = self.head_branch.head_block_num
-        self.validator_count = self.head_branch.is_active_count
+        self._head_branch = active_branch
+        self.head_block_id = self._head_branch.head_block_id
+        self.head_block_num = self._head_branch.head_block_num
+        self.validator_count = self._head_branch.is_active_count
 
         fork_branches = []
         block_count = 0
-        branch = self.head_branch
+        branch = self._head_branch
         ancestor_branch_intercept = branch.head_block_num
 
         while True:
@@ -307,7 +324,7 @@ class BlockChainFork(object):
             block_count += (ancestor_branch_intercept -
                             branch.tail_block_num) + 1
             ancestor_branch_intercept = branch.ancestor_block_num
-            self.tail_branch = branch
+            self._tail_branch = branch
             self.tail_block_id = branch.tail_block_id
             self.tail_block_num = branch.tail_block_num
             # get the next branch
@@ -319,18 +336,18 @@ class BlockChainFork(object):
             # assert that number of blocks in fork equal to
             # head block num - tail block num (0-based index)
             assert self.head_block_num - self.tail_block_num == block_count - 1
-        self.branches = fork_branches
+        self._branches = fork_branches
         self.block_count = block_count
 
     def get_successor_info(self, info_branch):
-        index = self.branches.index(info_branch)
+        index = self._branches.index(info_branch)
         if index is 0:
             # the head branch doesn't have a successor to get
             # ancestor block id and num from, so....
-            return self.branches[0].head_block_id, self.branches[
+            return self._branches[0].head_block_id, self._branches[
                 0].head_block_num
         else:
-            return self.branches[index - 1].ancestor_block_id, self.branches[
+            return self._branches[index - 1].ancestor_block_id, self._branches[
                 index - 1].ancestor_block_num
 
     def find_intercept(self, child_fork):
@@ -347,7 +364,7 @@ class BlockChainFork(object):
         '''
 
         for child_fork_branch in child_fork.branches:
-            if child_fork_branch in self.branches:
+            if child_fork_branch in self._branches:
                 parent_intercept_block_id, parent_intercept_block_num = \
                     self.get_successor_info(child_fork_branch)
                 child_intercept_block_id, child_intercept_block_num = \
@@ -368,8 +385,8 @@ class BlockChainFork(object):
                     assert False, "should never get here"
                     return False
 
-                child_fork.intercept_branch = child_fork_branch
-                child_fork.intercept_branch_id = child_fork_branch.id
+                child_fork._intercept_branch = child_fork_branch
+                child_fork._intercept_branch_id = child_fork_branch.id
                 child_fork.fork_intercept_length = \
                     child_fork.head_block_num - child_fork.intercept_block_num
                 return True
@@ -377,8 +394,13 @@ class BlockChainFork(object):
         child_fork.intercept_where = "none"
         return False
 
+    def get_stats_as_dict(self):
+        stats = get_public_attrs_as_dict(self)
+        stats['branch_count'] = self.branch_count
+        return stats
 
-class ForkStats(object):
+
+class ForkManagerStats(object):
     def __init__(self):
         self.status = None
         self.fork_count = 0
@@ -392,6 +414,9 @@ class ForkStats(object):
         print "  parent forks:", self.parent_count,
         print "  child forks:", self.child_count,
         print "  longest child fork:", self.longest_child_fork_length
+
+    def get_stats_as_dict(self):
+        return get_public_attrs_as_dict(self)
 
 
 class BranchManagerStats(object):
@@ -418,6 +443,9 @@ class BranchManagerStats(object):
             self.next_longest_active,
         print "  validator count:", self.validators
 
+    def get_stats_as_dict(self):
+        return get_public_attrs_as_dict(self)
+
 
 class BranchManager(object):
     def __init__(self, endpointmanager, reactoragent):
@@ -429,7 +457,7 @@ class BranchManager(object):
         self.block_clients = []
 
         self.bm_stats = BranchManagerStats()
-        self.f_stats = ForkStats()
+        self.f_stats = ForkManagerStats()
 
         self.forks = []
 
@@ -520,12 +548,12 @@ class BranchManager(object):
         blocks_merged = 0
 
         while sb.tail_block_id is not None and db.assess(
-                sb.blocks.get(sb.tail_block_id)):
+                sb._blocks.get(sb.tail_block_id)):
             sb.remove_tail()
             blocks_merged += 1
 
         while sb.head_block_id is not None and db.assess(
-                sb.blocks.get(sb.head_block_id)):
+                sb._blocks.get(sb.head_block_id)):
             sb.remove_head()
             blocks_merged += 1
 
@@ -546,14 +574,14 @@ class BranchManager(object):
             assign it to branch.ancestor_block_num
         """
         for branch in self.branches:
-            tail_block = branch.blocks.get(branch.tail_block_id)
+            tail_block = branch._blocks.get(branch.tail_block_id)
             if tail_block is not None:
                 ancestor_block_id = tail_block["PreviousBlockID"]
                 if ancestor_block_id is not None and \
                         ancestor_block_id is not GENESIS_PREVIOUS_BLOCK_ID:
                     ancestor_branches = []
                     for peer_branch in self.branches:
-                        ancestor_block = peer_branch.blocks.get(
+                        ancestor_block = peer_branch._blocks.get(
                             ancestor_block_id, None)
                         if ancestor_block is not None:
                             ancestor_branches.append(peer_branch)
@@ -601,13 +629,13 @@ class BranchManager(object):
             active_list = []
             for bc in self.block_clients:
                 if bc.responding is True:
-                    if branch.blocks.get(bc.last_block_id, None) is not None:
+                    if branch._blocks.get(bc.last_block_id, None) is not None:
                         branch.is_active = True
                         branch.last_active_time = time.time()
                         active_list.append(bc.id)
-                        if bc.id not in branch.is_active_history:
-                            branch.is_active_history.append(bc.id)
-            branch.is_active_list = active_list
+                        if bc.id not in branch._is_active_history:
+                            branch._is_active_history.append(bc.id)
+            branch._is_active_list = active_list
 
     def _find_forks(self):
         '''
