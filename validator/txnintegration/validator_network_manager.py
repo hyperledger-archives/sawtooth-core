@@ -19,7 +19,6 @@ import tempfile
 import time
 import os
 from os import walk
-import json
 
 import pybitcointools
 
@@ -338,10 +337,11 @@ class ValidatorNetworkManager(object):
                 for v in self._validators:
                     if v.is_running():
                         v.shutdown(True)
-                        p.step()
+                    p.step()
 
-    def validator_shutdown(self, validator_id, force=False, archive=None):
-        print "shutting down specific validator w/ SIGKILL"
+    def validator_shutdown(self, validator_id, force=False,
+                           term=False, archive=None):
+        print "shutting down specific validator"
 
         if len(self._validators) == 0:
             # no validator to shutdown
@@ -354,34 +354,34 @@ class ValidatorNetworkManager(object):
         v = self._validators[validator_id]
         with Progress("Sending interrupt signal to specified validator:") as p:
             if v.is_running():
-                if force is False:
+                if term is True:
+                    v.shutdown(term=True)
+                    shutdown_type = 'SIGTERM'
+                elif force is False:
                     v.shutdown()
+                    shutdown_type = 'SIGINT'
                 else:
-                    v.shutdown(True)
+                    v.shutdown(force=True)
+                    shutdown_type = 'SIGKILL'
             p.step()
 
-        running_count = 0
         to = TimeOut(self.timeout)
         with Progress("Giving specified validator time to shutdown: ") as p:
             while True:
-                running_count = 0
-                if v.is_running():
-                    running_count += 1
-                if to.is_timed_out() or running_count == 0:
+                if to.is_timed_out() or not v.is_running():
                     break
                 else:
                     time.sleep(1)
                 p.step()
 
         if v.is_running():
-            raise Exception("validator {} is still running after SIGKILL"
-                            .format(v))
+            raise Exception("validator {} is still running after {}"
+                            .format(validator_id, shutdown_type))
         else:
-            print ("validator {} successfully shutdown after SIGKILL"
-                   .format(v))
+            print ("validator {} successfully shutdown after {}"
+                   .format(validator_id, shutdown_type))
 
             self._validators.pop(validator_id)
-            del self._validator_map[validator_id]
 
     def status(self):
         out = []
@@ -405,31 +405,6 @@ class ValidatorNetworkManager(object):
                 for f in filenames:
                     fp = os.path.join(dir_path, f)
                     tar.add(fp, os.path.join(base_name, f))
-            tar.close()
-            return True
-        return False
-
-    def create_validator_archive(self,
-                                 validator_id,
-                                 archive_name):
-        if validator_id is not None:
-            validator_text = 'validator-' + str(validator_id) \
-                             + '.json'
-        if self.data_dir is not None \
-                and os.path.exists(self.data_dir) \
-                and len(self._validators) != 0:
-            tar = tarfile.open(archive_name, "w|gz")
-            base_name = self.get_archive_base_name(archive_name)
-            for (dir_path, _, filenames) in walk(self.data_dir):
-                for f in filenames:
-                    fp = os.path.join(dir_path, f)
-                    tar.add(fp, os.path.join(base_name, f))
-                    if (validator_id is not None) \
-                            and (f == validator_text):
-                        with open(fp) as json_data:
-                            self.removed_validator_config = \
-                                json.load(json_data)
-
             tar.close()
             return True
         return False

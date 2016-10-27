@@ -50,6 +50,7 @@ class TestValidatorShutdown(unittest.TestCase):
             print ("shutting down validator ", validator_to_be_removed)
             vnm.validator_shutdown(validator_to_be_removed,
                                    force=True,
+                                   term=False,
                                    archive=None
                                    )
 
@@ -64,12 +65,28 @@ class TestValidatorShutdown(unittest.TestCase):
             print ("shutdown(SIGINT) of validator ", validator_to_be_removed)
             vnm.validator_shutdown(validator_to_be_removed,
                                    force=False,
+                                   term=False,
                                    archive=None
                                    )
 
             print "sending more txns after SIGINT"
             urls = []
             urls = vnm.urls()
+            test.setup(urls, keys)
+            test.validate()
+            test.run(keys, rounds, txn_intv)
+
+            validator_to_be_removed = len(vnm.urls()) - 1
+            print ("shutdown(SIGTERM) of validator ",
+                   validator_to_be_removed)
+            vnm.validator_shutdown(validator_to_be_removed,
+                                   force=False,
+                                   term=True,
+                                   archive=None
+                                   )
+
+            print "sending more txns after SIGTERM"
+            urls.pop(validator_to_be_removed)
             test.setup(urls, keys)
             test.validate()
             test.run(keys, rounds, txn_intv)

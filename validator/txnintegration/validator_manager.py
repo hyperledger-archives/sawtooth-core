@@ -198,16 +198,26 @@ class ValidatorManager(object):
             return sta.get('Status', '') == 'started'
         return False
 
-    def shutdown(self, force=False):
+    def shutdown(self, force=False, term=False):
         if self._handle:
             self._handle.poll()
             if not self._handle.returncode:
-                if force:
+                if term:
+                    try:
+                        if os.name == "nt":
+                            self._handle.terminate()
+                        else:
+                            self._handle.send_signal(signal.SIGTERM)
+                            print "sending SIGTERM"
+                    except OSError:
+                        pass
+                elif force:
                     try:
                         if os.name == "nt":
                             self._handle.kill()
                         else:
                             self._handle.send_signal(signal.SIGKILL)
+                            print "sending SIGKILL"
                     except OSError:
                         pass  # ignore invalid process and other os type errors
                 else:
@@ -216,6 +226,7 @@ class ValidatorManager(object):
                             self._handle.terminate()
                         else:
                             self._handle.send_signal(signal.SIGINT)
+                            print "sending SIGINT"
                     except OSError:
                         pass
         if self._output and not self._output.closed:
