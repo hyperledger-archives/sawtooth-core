@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import unittest
 import logging
 
@@ -23,32 +24,17 @@ from txnintegration.validator_network_manager import get_default_vnm
 
 logger = logging.getLogger(__name__)
 
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
+
 
 class TestLocalValidationErrors(unittest.TestCase):
-
-    def _generate_invalid_transactions(self, url):
+    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
+    def test_local_validation_errors(self):
+        url = "http://localhost:8800"
         client = IntegerKeyClient(url,
                                   keystring=generate_private_key(),
                                   disable_client_validation=True)
+
         with self.assertRaises(InvalidTransactionError):
             client.inc("bob", 1)
-
-    def test_local_validation_errors(self):
-        vnm = None
-        try:
-            print
-            overrides = {
-                'LedgerType': 'dev_mode',
-                'BlockWaitTime': 0,
-                'LocalValidation': True,
-            }
-            vnm = get_default_vnm(1, overrides=overrides)
-            vnm.do_genesis()
-            vnm.launch()
-            urls = vnm.urls()
-            self._generate_invalid_transactions(urls[0])
-        finally:
-            if vnm is not None:
-                vnm.shutdown(archive_name=self._testMethodName)
-            else:
-                print "No Validator data and logs to preserve"
