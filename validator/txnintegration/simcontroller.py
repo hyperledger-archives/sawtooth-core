@@ -12,11 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import json
+import logging
 import numpy
+import os
+import subprocess
 
+from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
+from txnintegration.exceptions import ExitError
 from txnintegration.matrices import NodeController
 from txnintegration.matrices import EdgeController
 from txnintegration.netconfig import NetworkConfig
+from txnintegration.utils import find_executable
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SimController(object):
@@ -38,15 +47,42 @@ class SimController(object):
 
     def do_genesis(self, do_genesis_validator_idx=0, **kwargs):
         assert self._initialized
-        idx = do_genesis_validator_idx
-        cfg = self.net_config.get_node_cfg(idx)
-        special = {"GenesisLedger": True}
-        cfg.update(special)
-        self.net_config.set_node_cfg(idx, cfg)
-        print 'launching genesis node:', cfg['NodeName']
-        mat = numpy.zeros(shape=(self.n_mag, self.n_mag))
-        mat[idx, idx] = 1
-        self.node_controller.animate(mat, **kwargs)
+
+        cfg = self.get_configuration(do_genesis_validator_idx)
+        overrides = {
+            "GenesisLedger": False,
+            "InitialConnectivity": 0,
+            "DevModePublisher": True,
+        }
+        cfg.update(overrides)
+        self.set_configuration(do_genesis_validator_idx, cfg)
+        config_file = self.write_configuration(do_genesis_validator_idx)
+        cfg = self.get_configuration(do_genesis_validator_idx)
+        ledger_type = cfg.get('LedgerType', 'poet0')
+        # validate user input to Popen
+        assert ledger_type in ['dev_mode', 'poet0', 'poet1']
+        assert os.path.isfile(config_file)
+        cli_args = ' admin %s-genesis --config %s' % (ledger_type, config_file)
+        try:
+            executable = find_executable('sawtooth')
+        except ExitError:
+            path = os.path.dirname(self.node_controller.txnvalidator)
+            executable = os.path.join(path, 'sawtooth')
+        assert os.path.isfile(executable)
+        cmd = executable + cli_args
+        proc = subprocess.Popen(cmd.split())
+        proc.wait()
+        if proc.returncode != 0:
+            return
+        # Get genesis block id
+        gblock_file = genesis_info_file_name(cfg['DataDirectory'])
+        assert os.path.exists(gblock_file) is True
+        genesis_dat = None
+        with open(gblock_file, 'r') as f:
+            genesis_dat = json.load(f)
+        assert 'GenesisId' in genesis_dat.keys()
+        head = genesis_dat['GenesisId']
+        print 'created genesis block: %s' % head
 
     def launch(self, **kwargs):
         assert self._initialized

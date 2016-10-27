@@ -361,8 +361,8 @@ def prompt_yes_no(question):
             return False
 
 
-def find_txn_validator():
-    validator = None
+def find_executable(executable_name):
+    ret_val = None
     scriptDir = os.path.dirname(os.path.realpath(__file__))
     search_path = ""
     if "CURRENCYHOME" in os.environ:
@@ -373,20 +373,16 @@ def find_txn_validator():
     else:
         search_path = os.path.realpath(
             os.path.join(scriptDir, '..', 'bin'))
-
     if 'PATH' in os.environ:
         search_path = search_path + os.pathsep + os.environ['PATH']
-
     for directory in search_path.split(os.pathsep):
-        if os.path.exists(os.path.join(directory, 'txnvalidator')):
-            validator = os.path.join(directory, 'txnvalidator')
-            return validator
-
-    if validator is None:
-        print "txnvalidator: {}".format(validator)
-        raise ExitError("Could not find txnvalidator in your $PATH")
-
-    return validator
+        if os.path.exists(os.path.join(directory, executable_name)):
+            ret_val = os.path.join(directory, executable_name)
+            return ret_val
+    if ret_val is None:
+        print "%s: %s" % (executable_name, ret_val)
+        raise ExitError("Could not find %s in your $PATH" % executable_name)
+    return ret_val
 
 
 def setup_loggers(config):

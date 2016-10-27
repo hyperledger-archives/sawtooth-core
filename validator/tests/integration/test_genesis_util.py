@@ -23,7 +23,6 @@ from sawtooth.exceptions import MessageException
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import is_convergent
 from txnintegration.utils import Progress
-from txnintegration.utils import sawtooth_cli_intercept
 from txnintegration.utils import TimeOut
 
 from txnintegration.simcontroller import get_default_sim_controller
@@ -36,27 +35,16 @@ DISABLE_POET1_SGX = True \
 
 class TestGenesisUtil(unittest.TestCase):
     def extend_genesis_util(self, overrides):
+        print
         top = None
-        special_overrides = {
-            'GenesisLedger': False,     # this is the default at this point...
-            'InitialConnectivity': 0,
-            'DevModePublisher': True,
-        }
         try:
             top = get_default_sim_controller(2, overrides=overrides)
-            cfg = top.get_configuration(0)
-            cfg.update(special_overrides)
-            top.set_configuration(0, cfg)
-            print 'testing genesis util...'
-            config_file = top.write_configuration(0)
+            # Test genesis util
             cfg = top.get_configuration(0)
             ledger_type = cfg['LedgerType']
             gblock_file = genesis_info_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(gblock_file))
-            cli_args = 'admin %s-genesis --config %s' % (ledger_type,
-                                                         config_file)
-            sawtooth_cli_intercept(cli_args)
-            # Get genesis block id
+            top.do_genesis()
             self.assertTrue(os.path.exists(gblock_file))
             genesis_dat = None
             with open(gblock_file, 'r') as f:
@@ -64,7 +52,6 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in genesis_dat.keys())
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
-            # ...launch entire network (w/o do_genesis)
             top.launch()
             # ...verify validator is extending tgt_block
             to = TimeOut(64)

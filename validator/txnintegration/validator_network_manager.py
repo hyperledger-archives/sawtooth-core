@@ -24,7 +24,7 @@ import pybitcointools
 
 from txnintegration.exceptions import ExitError
 from txnintegration.exceptions import ValidatorManagerException
-from txnintegration.utils import find_txn_validator
+from txnintegration.utils import find_executable
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.validator_manager import ValidatorManager
@@ -85,7 +85,7 @@ class ValidatorNetworkManager(object):
         self.validator_config = cfg or defaultValidatorConfig
         self.validator_log_config = log_config
 
-        self.txnvalidator = txnvalidator or find_txn_validator()
+        self.txnvalidator = txnvalidator or find_executable('txnvalidator')
 
         self.temp_data_dir = False
         if data_dir is None:

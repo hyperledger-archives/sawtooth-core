@@ -23,7 +23,7 @@ import pybitcointools
 from txnintegration.exceptions import ExitError
 from txnintegration.exceptions import ValidatorManagerException
 from txnintegration.matrices import NodeController
-from txnintegration.utils import find_txn_validator
+from txnintegration.utils import find_executable
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.validator_manager import ValidatorManager
@@ -47,7 +47,7 @@ class ValidatorCollectionController(NodeController):
         if self.net_config.provider is not None:
             self.data_dir = self.net_config.provider.currency_home
         if txnvalidator is None:
-            txnvalidator = find_txn_validator()
+            txnvalidator = find_executable('txnvalidator')
         self.txnvalidator = txnvalidator
         self.validator_log_config = log_config
         self.admin_node = ValidatorCollectionController.AdminNode()

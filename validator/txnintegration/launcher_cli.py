@@ -26,8 +26,8 @@ import tarfile
 
 from txnintegration.exceptions import ExitError
 from txnintegration.simcontroller import get_default_sim_controller as get_sim
+from txnintegration.utils import find_executable
 from txnintegration.stats_client import run_stats
-from txnintegration.utils import find_txn_validator
 from txnintegration.utils import load_log_config
 from txnintegration.utils import parse_configuration_file
 
@@ -114,7 +114,7 @@ def configure(args):
 
     # Find the validator to use
     if opts.validator is None:
-        opts.validator = find_txn_validator()
+        opts.validator = find_executable('txnvalidator')
         if not os.path.isfile(opts.validator):
             print "txnvalidator: {}".format(opts.validator)
             raise ExitError("Could not find txnvalidator.")
