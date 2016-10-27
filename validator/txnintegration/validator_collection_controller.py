@@ -67,7 +67,7 @@ class ValidatorCollectionController(NodeController):
         return [v.url for v in self.active_validators()]
 
     def activate(self, idx,
-                 probe_seconds=30,
+                 probe_seconds=0,
                  launch=True,
                  daemon=False,
                  delay=False,

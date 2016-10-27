@@ -59,6 +59,29 @@ def get_blocklists(urls):
 
 
 def is_convergent(urls, tolerance=2, standard=5):
+    '''
+    Args:
+        urls (list<str>):   List of validator urls whose chains are expected
+            to converge
+        tolerance (int):    Length in blocks of permissible intra-validator
+            forks
+        standard (int):     A variable intended to guarantee that our block
+            level identity checks have significant data to operate on.
+            Conceptually, depends on the value of tolerance:
+                case(tolerance):
+                    0:          minimum # of blocks required per validator
+                    otherwise:  minimum # of converged blocks required per
+                                divergent block (per validator)
+            Motivation: We want to compare identity across the network on
+            some meaningfully large set of blocks.  Introducing fork
+            tolerance is problematic: the variable tolerance which is used
+            to trim the ends of each ledger's block-chain could be abused
+            to trivialize the test.  Therefore, as tolerance is increased
+            (if non-zero), we use standard to proportionally increase the
+            minimum number of overall blocks required by the test.
+    Returns:
+        (bool)
+    '''
     # check for block id convergence across network:
     sample_size = max(1, tolerance) * standard
     print "testing block-level convergence with min sample size:",
@@ -247,7 +270,7 @@ class TimeOut(object):
         return time.time() > self.ExpireTime
 
 
-def find_or_create_test_key(key_base_name, key_dir=None):
+def find_or_create_test_key(key_base_name, key_dir=None, quiet=True):
     '''
     Interface to sawtooth cli: creates .wif key file if it does not exist, and
     returns a tupple containing all pertinent information.  Useful for testing.
@@ -271,6 +294,8 @@ def find_or_create_test_key(key_base_name, key_dir=None):
         cmd = 'keygen %s' % key_base_name
         if use_key_dir:
             cmd += ' --key-dir %s' % key_dir
+        if quiet is True:
+            cmd += ' -q'
         sawtooth_cli_intercept(cmd)
     assert os.path.exists(key_file)
     addr_file = '.'.join(key_file.split('.')[:-1]) + '.addr'
