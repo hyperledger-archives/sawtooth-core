@@ -20,6 +20,9 @@ export PYTHONPATH
 cd validator
 nose2 -v unit
 nose2 -v integration
+export RUN_TEST_SUITES=1
+nose2 -v integration.dev_mode_test_suite.DevModeTestSuite.test_suite
+unset RUN_TEST_SUITES
 cd ..
 
 PYTHONPATH=$top_dir/core
