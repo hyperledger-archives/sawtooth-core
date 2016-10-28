@@ -184,7 +184,7 @@ def local_main(config, windows_service=False, daemonized=False):
     try:
         validator.pre_start()
 
-        reactor.run()
+        reactor.run(installSignalHandlers=False)
     except KeyboardInterrupt:
         pass
     except SystemExit as e:

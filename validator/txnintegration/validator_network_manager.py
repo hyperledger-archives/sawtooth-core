@@ -339,6 +339,50 @@ class ValidatorNetworkManager(object):
                         v.shutdown(True)
                     p.step()
 
+    def validator_shutdown(self, validator_id, force=False,
+                           term=False, archive=None):
+        print "shutting down specific validator"
+
+        if len(self._validators) == 0:
+            # no validator to shutdown
+            return
+
+        if archive is not None:
+            self.create_validator_archive(
+                "ValidatorShutdownNoRestore.tar.gz", validator_id)
+
+        v = self._validators[validator_id]
+        with Progress("Sending interrupt signal to specified validator:") as p:
+            if v.is_running():
+                if term is True:
+                    v.shutdown(term=True)
+                    shutdown_type = 'SIGTERM'
+                elif force is False:
+                    v.shutdown()
+                    shutdown_type = 'SIGINT'
+                else:
+                    v.shutdown(force=True)
+                    shutdown_type = 'SIGKILL'
+            p.step()
+
+        to = TimeOut(self.timeout)
+        with Progress("Giving specified validator time to shutdown: ") as p:
+            while True:
+                if to.is_timed_out() or not v.is_running():
+                    break
+                else:
+                    time.sleep(1)
+                p.step()
+
+        if v.is_running():
+            raise Exception("validator {} is still running after {}"
+                            .format(validator_id, shutdown_type))
+        else:
+            print ("validator {} successfully shutdown after {}"
+                   .format(validator_id, shutdown_type))
+
+            self._validators.pop(validator_id)
+
     def status(self):
         out = []
         for v in self._validators:
