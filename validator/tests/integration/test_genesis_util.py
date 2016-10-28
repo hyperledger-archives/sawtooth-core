@@ -105,6 +105,17 @@ class TestGenesisUtil(unittest.TestCase):
                 archive_name = 'Test%sGenesisResults' % ledger_type.upper()
                 top.shutdown(archive_name=archive_name)
 
+    def test_dev_mode_genesis(self):
+        pre_dict = {
+            'GenesisLedger': False,
+            'DevModePublisher': True,
+        }
+        post_dict = {
+            'GenesisLedger': False,
+            'InitialConnectivity': 0,
+        }
+        self.extend_genesis_util('dev_mode', pre_dict, post_dict)
+
     def test_poet0_genesis(self):
         pre_dict = {
             'GenesisLedger': False,

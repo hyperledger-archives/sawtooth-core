@@ -125,10 +125,11 @@ def local_main(config, windows_service=False, daemonized=False):
                 quorum,
                 nodes)
         elif consensus_type == 'dev_mode':
+            block_publisher = config.get("DevModePublisher", False)
             block_wait_time = config.get("BlockWaitTime")
             from journal.consensus.dev_mode import dev_mode_consensus
             consensus = dev_mode_consensus.DevModeConsensus(
-                genesis_ledger,
+                block_publisher,
                 block_wait_time)
         else:
             warnings.warn('Unknown consensus type %s' % consensus_type)
