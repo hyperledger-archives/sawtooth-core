@@ -19,6 +19,7 @@ import logging
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
 from ledger.transaction import endpoint_registry
+from sawtooth.cli.admin_sub.genesis_common import check_for_chain
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.validator_config import get_validator_configuration
@@ -79,6 +80,12 @@ def do_dev_mode_genesis(args):
         ], args)
     cfg = get_validator_configuration(args.config, options_config)
 
+    # check for existing block store
+    node_name = cfg.get("NodeName")
+    data_directory = cfg.get("DataDirectory")
+    store_type = cfg.get("StoreType")
+    check_for_chain(data_directory, node_name, store_type)
+
     # Obtain Journal object:
     # ...build Gossip dependency
     (nd, _) = parse_networking_info(cfg)
@@ -90,8 +97,6 @@ def do_dev_mode_genesis(args):
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
     genesis_ledger = cfg.get("GenesisLedger")
-    data_directory = cfg.get("DataDirectory")
-    store_type = cfg.get("StoreType")
     stat_domains = {}
     from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
     consensus_obj = DevModeConsensus(block_publisher=True,

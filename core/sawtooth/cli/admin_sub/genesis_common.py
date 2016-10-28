@@ -15,8 +15,20 @@
 import logging
 import os
 
+from journal.journal_core import Journal
+from sawtooth.cli.exceptions import CliException
+
 LOGGER = logging.getLogger(__name__)
 
 
 def genesis_info_file_name(directory):
     return os.path.join(directory, 'genesis_data.json')
+
+
+def check_for_chain(data_dir, node_name, store_type):
+    block_store = Journal.get_store_file(node_name, 'block', data_dir,
+                                         store_type=store_type)
+    if os.path.isfile(block_store):
+        msg = 'block store: %s exists; ' % block_store
+        msg += 'skipping genesis block creation.'
+        raise CliException(msg)
