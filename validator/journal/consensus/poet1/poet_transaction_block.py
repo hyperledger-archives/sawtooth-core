@@ -223,7 +223,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                     'Cannot validate wait certificate because cannot retrieve '
                     'PoET public key for validator with ID=%s',
                     self.OriginatorID)
-                return False
+                #
+                # Right now we let this fall through because we have a
+                # validator seed problem that has to be fixed.  Once it is
+                # fixed, we can re-instate the failure.
+                #
+                # return False
 
             return \
                 self.wait_certificate.is_valid(
