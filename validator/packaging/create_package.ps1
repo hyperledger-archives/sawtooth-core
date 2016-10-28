@@ -63,7 +63,6 @@ foreach ($script in (ls $PSScriptRoot\create_package.d)) {
     if ($lastexitcode -ne 0) { write-host "ERROR: There were problems running $script"; exit 1 }
 }
 
-move-item 'C:\Program Files (x86)\Intel\sawtooth-validator\conf\txnvalidator.js' 'C:\Program Files (x86)\Intel\sawtooth-validator\conf\txnvalidator.js.example'
 
 # ensure config files have windows line endings
 
