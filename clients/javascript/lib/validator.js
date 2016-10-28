@@ -27,6 +27,8 @@ var cbor = require('cbor');
 var sha256 = require('sha256');
 var conv = require('binstring');
 
+var CHUNK_SIZE = 10 * 1024;
+
 function _httpRequest(options, data) {
     return new Promise(function (resolve, reject) {
         var req = http.request(options, function(response) {
@@ -54,12 +56,21 @@ function _httpRequest(options, data) {
                     });
                 });
             });
+
+            response.on('error', reject);
         });
 
         req.on('error', reject);
 
         if(data) {
-            req.write(data);
+            var buffer = Buffer.isBuffer(data) ? data : new Buffer(data);
+            var chunk = buffer.slice(0, CHUNK_SIZE);
+            var i = 1;
+            while(chunk.length > 0) {
+                req.write(chunk);
+                chunk = buffer.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                i++;
+            }
         }
 
         req.end();
