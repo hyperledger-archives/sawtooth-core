@@ -35,19 +35,22 @@ DISABLE_POET1_SGX = True \
 
 
 class TestGenesisUtil(unittest.TestCase):
-    def extend_genesis_util(self, ledger_type, pre_overrides, post_overrides):
-        print
+    def extend_genesis_util(self, overrides):
         top = None
+        special_overrides = {
+            'GenesisLedger': False,     # this is the default at this point...
+            'InitialConnectivity': 0,
+            'DevModePublisher': True,
+        }
         try:
-            # Get configs and resources for a ValidatorManager compliant nodes
-            top = get_default_sim_controller(2, ledger_type=ledger_type)
-            # Set up validator-0
+            top = get_default_sim_controller(2, overrides=overrides)
             cfg = top.get_configuration(0)
-            cfg.update(pre_overrides)
+            cfg.update(special_overrides)
             top.set_configuration(0, cfg)
-            config_file = top.write_configuration(0)
-            # Test genesis tool
             print 'testing genesis util...'
+            config_file = top.write_configuration(0)
+            cfg = top.get_configuration(0)
+            ledger_type = cfg['LedgerType']
             gblock_file = genesis_info_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(gblock_file))
             cli_args = 'admin %s-genesis --config %s' % (ledger_type,
@@ -61,13 +64,8 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in genesis_dat.keys())
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
-            print 'testing efficacy...'
-            # ...apply validator-related overrides to validator-0
-            cfg = top.get_configuration(0)
-            cfg.update(post_overrides)
-            top.set_configuration(0, cfg)
-            # ...launch entire network
-            top.launch(probe_seconds=0, reg_seconds=0)
+            # ...launch entire network (w/o do_genesis)
+            top.launch()
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -106,33 +104,11 @@ class TestGenesisUtil(unittest.TestCase):
                 top.shutdown(archive_name=archive_name)
 
     def test_dev_mode_genesis(self):
-        pre_dict = {
-            'GenesisLedger': False,
-            'DevModePublisher': True,
-        }
-        post_dict = {
-            'GenesisLedger': False,
-            'InitialConnectivity': 0,
-        }
-        self.extend_genesis_util('dev_mode', pre_dict, post_dict)
+        self.extend_genesis_util({'LedgerType': 'dev_mode'})
 
     def test_poet0_genesis(self):
-        pre_dict = {
-            'GenesisLedger': False,
-        }
-        post_dict = {
-            'GenesisLedger': False,
-            'InitialConnectivity': 0,
-        }
-        self.extend_genesis_util('poet0', pre_dict, post_dict)
+        self.extend_genesis_util({})
 
     @unittest.skipIf(DISABLE_POET1_SGX, 'SGX currently behind simulator')
     def test_poet1_genesis(self):
-        pre_dict = {
-            'GenesisLedger': False,
-        }
-        post_dict = {
-            'GenesisLedger': False,
-            'InitialConnectivity': 0,
-        }
-        self.extend_genesis_util('poet1', pre_dict, post_dict)
+        self.extend_genesis_util({'LedgerType': 'poet1'})

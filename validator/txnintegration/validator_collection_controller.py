@@ -39,11 +39,7 @@ class ValidatorCollectionController(NodeController):
             self.SigningKey = pybitcointools.random_key()
             self.Address = pybitcointools.privtoaddr(self.SigningKey)
 
-    def __init__(self,
-                 net_config,
-                 txnvalidator=None,
-                 log_config=None,
-                 ):
+    def __init__(self, net_config, txnvalidator=None, log_config=None):
         super(ValidatorCollectionController, self).__init__(net_config.n_mag)
         self.net_config = net_config
         self.hdls = [None for _ in range(net_config.n_mag)]
@@ -53,7 +49,6 @@ class ValidatorCollectionController(NodeController):
         if txnvalidator is None:
             txnvalidator = find_txn_validator()
         self.txnvalidator = txnvalidator
-
         self.validator_log_config = log_config
         self.admin_node = ValidatorCollectionController.AdminNode()
 

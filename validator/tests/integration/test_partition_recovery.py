@@ -20,8 +20,6 @@ import time
 import traceback
 import unittest
 
-from sawtooth.client import SawtoothClient
-from txnintegration.netconfig import gen_dfl_cfg_poet0
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.matrices import NopEdgeController
 from txnintegration.simcontroller import SimController
@@ -41,34 +39,13 @@ if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
 
 
 class TestPartitionRecovery(unittest.TestCase):
-
-    def _get_blocklists(self, urls):
-        ret = [(SawtoothClient(base_url=u)).get_block_list() for u in urls]
-        for (i, arr) in enumerate(ret):
-            arr.reverse()
-            ret[i] = [hsh[:4] for hsh in arr]
-        return ret
-
-    def _validate_blocklists(self, blocklists, verbose=True, strict=False):
-        if verbose:
-            print 'validating block lists....'
-        reference = blocklists[0]
-        valid = True
-        for (i, x) in enumerate(blocklists):
-            if strict:
-                self.assertEqual(reference, x,
-                                 'validator %s blocklist is divergent' % i)
-            if reference != x:
-                valid = False
-        if verbose and valid:
-            print '....block lists have converged'
-
     def _do_work(self, ik_client, off, n_mag):
         for i in range(off, off + n_mag):
             ik_client.set(key=str(i), value=math.pow(2, i))
             ik_client.waitforcommit()
 
     @unittest.skip("temporarily disabling")
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_two_clique(self):
         # this topology forms 2 exclusive cliques when n2 is severed
         vulnerable_mat = [
@@ -86,13 +63,13 @@ class TestPartitionRecovery(unittest.TestCase):
         try:
             print 'phase 0: build vulnerably connected 5-net:'
             from txnintegration.netconfig import NetworkConfigProvider
-            net_cfg = NetworkConfig(gen_dfl_cfg_poet0(), n,
-                                    provider=NetworkConfigProvider())
+            provider = NetworkConfigProvider()
+            net_cfg = NetworkConfig(n, provider=provider)
             net_cfg.set_nodes(vulnerable_mat)
             net_cfg.set_peers(vulnerable_mat)
             net_cfg.set_blacklist()
-            vnm = ValidatorCollectionController(net_cfg)
-            top.initialize(net_cfg, vnm, NopEdgeController(net_cfg))
+            vcc = ValidatorCollectionController(net_cfg)
+            top.initialize(net_cfg, vcc, NopEdgeController(net_cfg))
             print 'phase 1: launch vulnerably connected 5-net:'
             top.do_genesis(probe_seconds=0)
             top.launch(probe_seconds=0)
