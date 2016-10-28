@@ -23,7 +23,6 @@
 var _ = require('underscore');
 
 var bitcoin = require('bitcoinjs-lib');
-var cbor = require('cbor');
 var BigInteger = require('bigi');
 
 var I = require('immutable');
@@ -43,7 +42,7 @@ var _doSign = (field, signingKey, obj, opts) => {
     field = field || 'Signature';
     var signableObj = signedObject.createSignableObj(obj, opts).remove(field);
     
-    var objectInCbor = cbor.encode(signableObj.toJS());
+    var objectInCbor = signedObject.toCBOR(signableObj);
 
     var keyPair = bitcoin.ECPair.fromWIF(signingKey);
 
@@ -97,6 +96,6 @@ function verify(address, signedMessage, opts) {
     var signature = signedMessage[field];
     var signableObj = signedObject.createSignableObj(signedMessage, opts).remove(field);
     
-    var objectInCbor = cbor.encode(signableObj.toJS());
+    var objectInCbor = signedObject.toCBOR(signableObj);
     return bitcoin.message.verify(address, signature, objectInCbor, bitcoin.networks.bitcoin); 
 }
