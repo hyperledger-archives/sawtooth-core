@@ -205,8 +205,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 # information
                 store = \
                     journal.get_transaction_store(
-                        ValidatorRegistryTransaction,
-                        self.Identifier)
+                        family=ValidatorRegistryTransaction,
+                        block_id=self.Identifier)
 
                 if store is None:
                     return False
@@ -215,14 +215,14 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
                 poet_public_key = registration.get('poet-public-key')
                 LOGGER.debug(
-                    'Validator ID {0} <==> PoET Public Key {1}'.format(
-                        self.OriginatorID,
-                        poet_public_key))
-            except KeyError as ke:
+                    'Validator ID %s <==> PoET Public Key %s',
+                    self.OriginatorID,
+                    poet_public_key)
+            except KeyError:
                 LOGGER.info(
                     'Cannot validate wait certificate because cannot retrieve '
-                    'PoET public key for validator with ID={}'.format(
-                        self.OriginatorID))
+                    'PoET public key for validator with ID=%s',
+                    self.OriginatorID)
                 return False
 
             return \

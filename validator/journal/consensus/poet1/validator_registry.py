@@ -14,6 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import hashlib
+
+import pybitcointools
 
 from journal import transaction
 from journal import object_store
@@ -164,8 +167,14 @@ class Update(object):
         # and create a new entry.
 
         try:
+            public_key_hash = \
+                hashlib.sha256(
+                    pybitcointools.encode_pubkey(
+                        txn.originator_public_key,
+                        'hex')).hexdigest()
+
             self.signup_info.check_valid(
-                originator_public_key=txn.originator_public_key,
+                originator_public_key_hash=public_key_hash,
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
         except SignupInfoError as error:
@@ -195,13 +204,12 @@ class Update(object):
                 registration['revoked'] = txn.Identifier
 
                 LOGGER.info(
-                    'Transaction {0} Revoking public key {1} for {2} ({3}) '
-                    'with anti-Sybil ID {4}'.format(
-                        txn.Identifier,
-                        self.signup_info.poet_public_key,
-                        self.validator_name,
-                        self.validator_id,
-                        self.signup_info.anti_sybil_id))
+                    'Transaction %s Revoking public key for %s (%s) '
+                    'with anti-Sybil ID %s',
+                    txn.Identifier,
+                    self.validator_name,
+                    self.validator_id,
+                    self.signup_info.anti_sybil_id)
             except KeyError:
                 pass
 
@@ -263,7 +271,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
             validator_id (str): Bitcoin-style address of the validators
                 public key
             signup_info (SignupInfo): A SignupInfo object that was
-                previoulsy created by a call to SignupInfo.create_signup_info
+                previously created by a call to SignupInfo.create_signup_info
         Returns:
             validator_registry.Update: A transaction containing an update for
                 registering the validator.

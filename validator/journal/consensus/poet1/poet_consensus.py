@@ -16,6 +16,9 @@
 import collections
 import logging
 import importlib
+import hashlib
+
+import pybitcointools
 
 from gossip import common
 from gossip import stats
@@ -79,9 +82,15 @@ class PoetConsensus(Consensus):
                 sealed_signup_data=sealed_signup_data)
         else:
             wait_certificate_id = journal.most_recent_committed_block_id
+            public_key_hash = \
+                hashlib.sha256(
+                    pybitcointools.encode_public_key(
+                        journal.local_node.public_key(),
+                        'hex')).hexdigest()
+
             signup_info = \
                 SignupInfo.create_signup_info(
-                    originator_public_key=journal.local_node.public_key(),
+                    originator_public_key_hash=public_key_hash,
                     validator_network_basename='Intel Validator Network',
                     most_recent_wait_certificate_id=wait_certificate_id)
 

@@ -15,6 +15,7 @@
 
 import unittest
 import time
+import hashlib
 
 import pybitcointools
 import journal.consensus.poet1.wait_timer as wait_timer
@@ -32,6 +33,11 @@ class TestWaitTimer(unittest.TestCase):
         reload(wait_timer)
 
         cls._originator_public_key = cls._create_random_public_key()
+        cls._originator_public_key_hash = \
+            hashlib.sha256(
+                pybitcointools.encode_pubkey(
+                    cls._originator_public_key,
+                    'hex')).hexdigest()
 
     @classmethod
     def _create_random_private_key(cls):
@@ -81,7 +87,7 @@ class TestWaitTimer(unittest.TestCase):
         # Need to create signup information first
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename="America's Most Watched Network",
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -180,7 +186,7 @@ class TestWaitTimer(unittest.TestCase):
     def test_has_expired(self):
         # Need to create signup information first
         SignupInfo.create_signup_info(
-            originator_public_key=self._originator_public_key,
+            originator_public_key_hash=self._originator_public_key_hash,
             validator_network_basename="America's Most Watched Network",
             most_recent_wait_certificate_id=NullIdentifier)
 

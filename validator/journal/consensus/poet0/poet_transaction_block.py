@@ -157,7 +157,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 assert self.PreviousBlockID in journal.block_store
                 self.aggregate_local_mean += \
                     journal.block_store[self.PreviousBlockID].\
-                        aggregate_local_mean
+                    aggregate_local_mean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.

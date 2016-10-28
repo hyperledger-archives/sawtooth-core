@@ -42,7 +42,7 @@ class SignupInfo(object):
 
     @classmethod
     def create_signup_info(cls,
-                           originator_public_key,
+                           originator_public_key_hash,
                            validator_network_basename,
                            most_recent_wait_certificate_id):
         """
@@ -50,7 +50,9 @@ class SignupInfo(object):
         validator network.
 
         Args:
-            originator_public_key: The originator's public key
+            originator_public_key_hash (str): A string representing SHA256
+                hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
+                originator's public key
             validator_network_basename (str): The basename for the validator
                 network.
             most_recent_wait_certificate_id (str): The ID of the
@@ -62,7 +64,7 @@ class SignupInfo(object):
 
         enclave_signup_info = \
             cls.poet_enclave.create_signup_info(
-                originator_public_key,
+                originator_public_key_hash,
                 validator_network_basename,
                 most_recent_wait_certificate_id)
         signup_info = cls(enclave_signup_info)
@@ -156,15 +158,16 @@ class SignupInfo(object):
                 self.proof_data)
 
     def check_valid(self,
-                    originator_public_key,
+                    originator_public_key_hash,
                     validator_network_basename,
                     most_recent_wait_certificate_id):
         """
         Checks the validity of the signup information.
 
         Args:
-            originator_public_key: The public key of the validator that
-                submitted the signup information.
+            originator_public_key_hash (str): A string representing SHA256
+                hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
+                originator's public key
             validator_network_basename (str): The basename for the validator
                 network the validator wishes to be validated against.
             most_recent_wait_certificate_id (str): The ID of the
@@ -175,7 +178,7 @@ class SignupInfo(object):
         """
         self.poet_enclave.verify_signup_info(
             signup_info=self.enclave_signup_info,
-            originator_public_key=originator_public_key,
+            originator_public_key_hash=originator_public_key_hash,
             validator_network_basename=validator_network_basename,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
