@@ -132,6 +132,10 @@ def do_poet0_genesis(args):
     # Make genesis block:
     # ...make sure there is no current chain here, or fail
     # ...create block g_block
+    journal.on_genesis_block.fire(journal)
+    journal.initializing = False
+    for txn in journal.initial_transactions:
+        journal.add_pending_transaction(txn, build_block=False)
     g_block = journal.build_block(genesis=True)
     journal.claim_block(g_block)
     # ...simulate receiving the genesis block msg from reactor to force commit
