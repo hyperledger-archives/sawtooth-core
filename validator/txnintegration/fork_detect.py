@@ -363,7 +363,7 @@ class BlockChainFork(object):
         else there is no intercept
         '''
 
-        for child_fork_branch in child_fork.branches:
+        for child_fork_branch in child_fork._branches:
             if child_fork_branch in self._branches:
                 parent_intercept_block_id, parent_intercept_block_num = \
                     self.get_successor_info(child_fork_branch)
