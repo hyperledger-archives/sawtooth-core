@@ -23,12 +23,11 @@ import pybitcointools
 
 from mktplace import mktplace_state
 from mktintegration.actor import MktActor
+from txnintegration.simcontroller import get_default_sim_controller
 from txnintegration.utils import Progress
 from txnintegration.utils import read_key_file
 from txnintegration.utils import TimeOut
 from txnintegration.utils import write_key_file
-from txnintegration.validator_network_manager import ValidatorNetworkManager
-from txnintegration.validator_network_manager import defaultValidatorConfig
 
 from integration import ENABLE_INTEGRATION_TESTS, \
     SAVE_INTEGRATION_TEST_DATA
@@ -212,41 +211,30 @@ class MktPlaceLoad(object):
 class TestSmoke(unittest.TestCase):
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_mktplace_load(self):
-        vnm = None
+        sim = None
         try:
             print "Launching validator network."
-            vnm_config = defaultValidatorConfig.copy()
-            if 'mktplace.transactions.market_place' not in \
-                    vnm_config['TransactionFamilies']:
-                vnm_config['TransactionFamilies'].append(
-                    'mktplace.transactions.market_place')
-            vnm = ValidatorNetworkManager(
-                http_port=9500, udp_port=9600, cfg=vnm_config)
-            vnm.launch_network(5)
-
+            overrides = {
+                "TransactionFamilies": ['mktplace.transactions.market_place'],
+            }
+            sim = get_default_sim_controller(5, overrides=overrides)
+            sim.do_genesis()
+            sim.launch()
+            data_dir = sim.net_config.provider.currency_home
             print "Testing transaction load."
             test_case = MktPlaceLoad(num_traders=5,
                                      iterations=1,
-                                     urls=vnm.urls(),
-                                     test_dir=vnm.data_dir)
+                                     urls=sim.urls(),
+                                     test_dir=data_dir)
             test_case.setup()
             test_case.run()
             test_case.validate()
 
+        finally:
+            archive_name = None
             if SAVE_INTEGRATION_TEST_DATA:
-                vnm.create_result_archive("TestSmokeResults.tar.gz")
-                print "Validator data and logs preserved in: " \
-                    "TestSmokeResults.tar.gz"
-            vnm.shutdown()
-        except:
-            print "Exception encountered in test case."
-            traceback.print_exc()
-            if vnm:
-                vnm.shutdown()
-                if vnm.create_result_archive("TestSmokeResults.tar.gz"):
-                    print "Validator data and logs preserved in: " \
-                          "TestSmokeResults.tar.gz"
-                else:
-                    print "No Validator data and logs to preserve."
-
-            raise
+                archive_name = "TestMktSmokeResults"
+            if sim is not None:
+                sim.shutdown(archive_name=archive_name)
+            else:
+                print "No Validator data and logs to preserve."

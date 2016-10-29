@@ -18,8 +18,7 @@ import unittest
 
 from mktmain import client_cli
 from mktplace import mktplace_state
-from txnintegration.validator_network_manager import ValidatorNetworkManager
-from txnintegration.validator_network_manager import defaultValidatorConfig
+from txnintegration.simcontroller import get_default_sim_controller
 
 from integration import ENABLE_INTEGRATION_TESTS
 
@@ -35,22 +34,21 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.vnm = None
+        cls.sim = None
         try:
             if 'TEST_VALIDATOR_URLS' in os.environ:
                 urls = (os.environ['TEST_VALIDATOR_URLS']).split(",")
                 cls.url = urls[0]
             else:
-                vnm_config = defaultValidatorConfig.copy()
-                if 'mktplace.transactions.market_place' not in \
-                        vnm_config['TransactionFamilies']:
-                    vnm_config['TransactionFamilies'].append(
-                        'mktplace.transactions.market_place')
-                cls.vnm = ValidatorNetworkManager(
-                    http_port=9500, udp_port=9600, cfg=vnm_config)
-                cls.vnm.launch_network(5)
+                families = ['mktplace.transactions.market_place']
+                overrides = {
+                    "TransactionFamilies": families,
+                }
+                cls.sim = get_default_sim_controller(5, overrides=overrides)
+                cls.sim.do_genesis()
+                cls.sim.launch()
                 # the url of the initial validator
-                cls.url = cls.vnm.urls()[0] + '/'
+                cls.url = cls.sim.urls()[0] + '/'
 
             os.environ['CURRENCYHOME'] = os.path.join(
                 os.path.dirname(__file__), "cp_scenarios")
@@ -95,8 +93,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
             state = mktplace_state.MarketPlaceState(cls.url)
             state.fetch()
         except:
-            if cls.vnm is not None:
-                cls.vnm.shutdown()
+            if cls.sim is not None:
+                cls.sim.shutdown()
             raise
 
     def test_scenario_setup(self):
@@ -462,13 +460,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if cls.vnm is not None:
-            cls.vnm.shutdown()
-            # currently nose2 offers no way to detect test failures here.
-            # so we always save the data.
-            if cls.vnm.create_result_archive(
-                    "TestCommercialPaperScenarios.tar.gz"):
-                print "Validator data and logs preserved in: " \
-                      "TestCommercialPaperScenarios.tar.gz"
-            else:
-                print "No Validator data and logs to preserve."
+        if cls.sim is not None:
+            cls.sim.shutdown(archive_name="TestCommercialPaperScenarios")
+        else:
+            print "No Validator data and logs to preserve."

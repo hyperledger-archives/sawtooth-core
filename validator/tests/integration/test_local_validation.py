@@ -13,16 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import traceback
 import unittest
 import logging
 
-from txnintegration.utils import generate_private_key
-from txnintegration.integer_key_client import IntegerKeyClient
-from txnintegration.validator_network_manager import ValidatorNetworkManager, \
-    defaultValidatorConfig
-
 from sawtooth.exceptions import InvalidTransactionError
+from txnintegration.integer_key_client import IntegerKeyClient
+from txnintegration.simcontroller import get_default_sim_controller
+from txnintegration.utils import generate_private_key
 
 logger = logging.getLogger(__name__)
 
@@ -37,29 +34,21 @@ class TestLocalValidationErrors(unittest.TestCase):
             client.inc("bob", 1)
 
     def test_local_validation_errors(self):
-        cfg = defaultValidatorConfig.copy()
-        cfg['LedgerType'] = 'dev_mode'
-        cfg['BlockWaitTime'] = 0
-        cfg['LocalValidation'] = True
-        vnm = None
+        sim = None
         try:
-            print "Launching validator network."
-            vnm = ValidatorNetworkManager(http_port=9300, udp_port=9350,
-                                          cfg=cfg)
-            vnm.launch_network(1)
-            urls = vnm.urls()
+            print
+            overrides = {
+                'LedgerType': 'dev_mode',
+                'BlockWaitTime': 0,
+                'LocalValidation': True,
+            }
+            sim = get_default_sim_controller(1, overrides=overrides)
+            sim.do_genesis()
+            sim.launch()
+            urls = sim.urls()
             self._generate_invalid_transactions(urls[0])
-
-            if vnm:
-                vnm.shutdown()
-        except Exception:
-            print "Exception encountered in test case."
-            traceback.print_exc()
-            if vnm:
-                vnm.shutdown()
-            raise
         finally:
-            if vnm:
-                vnm.create_result_archive("%s.tar.gz" % self._testMethodName)
+            if sim is not None:
+                sim.shutdown(archive_name=self._testMethodName)
             else:
                 print "No Validator data and logs to preserve"

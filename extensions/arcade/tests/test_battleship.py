@@ -4,49 +4,39 @@ import os
 import random
 import string
 
-from txnintegration.validator_network_manager import defaultValidatorConfig, \
-    ValidatorNetworkManager
-
 from sawtooth_battleship import battleship_cli
+from txnintegration.simcontroller import get_default_sim_controller
 
 
 class TestBattleshipCommands(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.vnm = None
+        cls.sim = None
         try:
             if 'TEST_VALIDATOR_URL' in os.environ:
                 cls.url = os.environ['TEST_VALIDATOR_URL']
             else:
-                vnm_config = defaultValidatorConfig.copy()
-                if 'sawtooth_battleship' not in \
-                        vnm_config['TransactionFamilies']:
-                    vnm_config['TransactionFamilies'].append(
-                        'sawtooth_battleship')
-                cls.vnm = ValidatorNetworkManager(
-                    http_port=8800, udp_port=9600, cfg=vnm_config)
-                cls.vnm.launch_network(5)
+                overrides = {
+                    "TransactionFamilies": ['sawtooth_battleship'],
+                }
+                cls.sim = get_default_sim_controller(5, overrides=overrides)
+                cls.sim.do_genesis()
+                cls.sim.launch()
                 # the url of the initial validator
-                cls.url = cls.vnm.urls()[0] + '/'
+                cls.url = cls.sim.urls()[0] + '/'
         except:
-            if cls.vnm is not None:
-                cls.vnm.shutdown()
-                cls.vnm = None
+            if cls.sim is not None:
+                cls.sim.shutdown()
+                cls.sim = None
             raise Exception("Validators didn't start up correctly.")
 
     @classmethod
     def tearDownClass(cls):
-        if cls.vnm is not None:
-            cls.vnm.shutdown()
-            # currently nose2 offers no way to detect test failure -- so
-            # always save the results
-            if cls.vnm.create_result_archive(
-                    "TestBattleshipCli.tar.gz"):
-                print "Validator data and logs preserved in: " \
-                      "TestBattleshipCli.tar.gz"
-            else:
-                print "No Validator data and logs to preserve."
+        if cls.sim is not None:
+            cls.sim.shutdown(archive_name='TestBattleshipCli')
+        else:
+            print "No Validator data and logs to preserve."
 
     def _clean_data_and_key_files(self, user1, user2):
         home_dir = os.path.expanduser("~")

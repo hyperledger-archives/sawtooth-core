@@ -18,8 +18,7 @@ import unittest
 import os
 
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
-from txnintegration.validator_network_manager import defaultValidatorConfig
-from txnintegration.validator_network_manager import ValidatorNetworkManager
+from txnintegration.simcontroller import get_default_sim_controller
 
 ENABLE_OVERNIGHT_TESTS = False
 if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
@@ -29,59 +28,38 @@ if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
 class TestIntegration(unittest.TestCase):
     @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS, "integration test")
     def test_intkey_load_ext(self):
-        vnm = None
+        sim = None
         try:
             print "Launching validator network."
-            vnm_config = defaultValidatorConfig.copy()
-
-            vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
-                                          cfg=vnm_config)
-
-            vnm.launch_network(5)
-
+            sim = get_default_sim_controller(5)
+            sim.do_genesis()
+            sim.launch()
             print "Testing transaction load."
             test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 10)
+            test.setup(sim.urls(), 10)
             test.run(1)
             test.run_with_missing_dep(1)
             test.validate()
-            vnm.shutdown()
-        except Exception as e:
-            print "Exception encountered in test case."
-            traceback.print_exc()
-            if vnm:
-                vnm.shutdown()
-            vnm.create_result_archive("TestIntegrationResults.tar.gz")
-            print "Validator data and logs preserved in: " \
-                  "TestIntegrationResults.tar.gz"
-            raise e
+        finally:
+            if sim is not None:
+                sim.shutdown(archive_name="TestIntegrationResults_0")
 
     @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS,
                          "limit of missing dependencies test")
     def test_missing_dependencies(self):
-        vnm = None
+        sim = None
         try:
             print "Launching validator network."
-            vnm_config = defaultValidatorConfig.copy()
-
-            vnm = ValidatorNetworkManager(http_port=9000, udp_port=9100,
-                                          cfg=vnm_config)
-
-            vnm.launch_network(5)
+            sim = get_default_sim_controller(5)
+            sim.do_genesis()
+            sim.launch()
 
             print "Testing limit of missing dependencies."
             test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 10)
+            test.setup(sim.urls(), 10)
             test.run(1)
             test.run_with_limit_txn_dependencies(1)
             test.validate()
-            vnm.shutdown()
-        except Exception as e:
-            print "Exception encountered in test case."
-            traceback.print_exc()
-            if vnm:
-                vnm.shutdown()
-            vnm.create_result_archive("TestIntegrationResults.tar.gz")
-            print "Validator data and logs preserved in: " \
-                  "TestIntegrationResults.tar.gz"
-            raise e
+        finally:
+            if sim is not None:
+                sim.shutdown(archive_name="TestIntegrationResults_1")

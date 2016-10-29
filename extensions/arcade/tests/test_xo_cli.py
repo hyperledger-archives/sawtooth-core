@@ -24,12 +24,9 @@ import unittest
 from contextlib import contextmanager
 from StringIO import StringIO
 
-from sawtooth_xo import xo_cli
-
 from sawtooth.exceptions import ClientException
-
-from txnintegration.validator_network_manager import ValidatorNetworkManager
-from txnintegration.validator_network_manager import defaultValidatorConfig
+from sawtooth_xo import xo_cli
+from txnintegration.simcontroller import get_default_sim_controller
 
 ENABLE_INTEGRATION_TESTS = False
 if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
@@ -67,39 +64,31 @@ def std_output():
 class TestXoCli(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.vnm = None
+        cls.sim = None
         try:
             if 'TEST_VALIDATOR_URL' in os.environ:
                 cls.url = os.environ['TEST_VALIDATOR_URL']
             else:
-                vnm_config = defaultValidatorConfig.copy()
-                if 'sawtooth_xo' not in \
-                        vnm_config['TransactionFamilies']:
-                    vnm_config['TransactionFamilies'].append(
-                        'sawtooth_xo')
-                cls.vnm = ValidatorNetworkManager(
-                    http_port=8800, udp_port=9600, cfg=vnm_config)
-                cls.vnm.launch_network(5)
+                overrides = {
+                    "TransactionFamilies": ['sawtooth_xo'],
+                }
+                cls.sim = get_default_sim_controller(5, overrides=overrides)
+                cls.sim.do_genesis()
+                cls.sim.launch()
                 # the url of the initial validator
-                cls.url = cls.vnm.urls()[0] + '/'
+                cls.url = cls.sim.urls()[0] + '/'
         except:
-            if cls.vnm is not None:
-                cls.vnm.shutdown()
-                cls.vnm = None
-            raise
+            if cls.sim is not None:
+                cls.sim.shutdown()
+                cls.sim = None
+            raise Exception("Validators didn't start up correctly.")
 
     @classmethod
     def tearDownClass(cls):
-        if cls.vnm is not None:
-            cls.vnm.shutdown()
-            # currently nose2 offers no way to detect test failure -- so
-            # always save the results
-            if cls.vnm.create_result_archive(
-                    "TestXoCli.tar.gz"):
-                print "Validator data and logs preserved in: " \
-                      "TestXoCli.tar.gz"
-            else:
-                print "No Validator data and logs to preserve."
+        if cls.sim is not None:
+            cls.sim.shutdown(archive_name='TestXoCli')
+        else:
+            print "No Validator data and logs to preserve."
 
     def _game_name(self):
         return 'game' + \
