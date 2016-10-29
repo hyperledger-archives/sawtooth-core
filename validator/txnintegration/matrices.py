@@ -179,6 +179,9 @@ class AdjacencyMatrixAnimationController(object):
         mat[row][col] = 0
         self.__buffer.set_mat(mat)
 
+    def get_mat(self):
+        return self.__animation.get_mat()
+
 
 class NodeController(AdjacencyMatrixAnimationController):
     '''abstract class'''

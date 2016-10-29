@@ -21,7 +21,6 @@ import tempfile
 
 from sawtooth.validator_config import get_validator_configuration
 from txnintegration.matrices import AdjacencyMatrix
-from txnintegration.matrices import AdjacencyMatrixAnimation
 from txnintegration.utils import find_or_create_test_key
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
@@ -190,7 +189,6 @@ class NetworkConfig(object):
         self.peer_mat = None
         self.quorum_mat = None
         self.blacklist_mat = None
-        self.con_mat = AdjacencyMatrixAnimation(n_mag)
 
     def resolve_networking_info(self, host, udp, http, endpoint):
         ret = {}

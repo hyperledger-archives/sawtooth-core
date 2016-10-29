@@ -29,10 +29,25 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SimController(object):
-    def __init__(self, n_mag):
+    def __init__(self, n_mag, same_matrix=True):
+        '''
+        Args:
+            n_mag (int): number of nodes for your node_controller, and,
+                correspondingly, the number of rows and columns in the
+                adjacency matrix for controlling point-to-point network
+                connectivity in your edge_controller.
+            same_matrix (bool): use the same matrix for nodes and edges.  In
+                this case, the diagonal for the edge_matrix can be overloaded
+                to also activate and deactivate nodes.  Quite convenient for
+                testing scenarios, but harder to discuss mathematically.
+                Overloading the diagonal of the edge matrix to 'be' the node
+                matrix is tempting because it's generally uninteresting to
+                prohibit a node from talking to itself on the network.
+        '''
         self.n_mag = n_mag
         self.node_controller = None
         self.edge_controller = None
+        self.overload_matrices = same_matrix
         self._initialized = False
 
     def initialize(self, net_config, node_controller, edge_controller):
@@ -88,7 +103,7 @@ class SimController(object):
         assert self._initialized
         print 'launching network'
         mat = numpy.ones(shape=(self.n_mag, self.n_mag))
-        self.node_controller.animate(mat, **kwargs)
+        self.update(node_mat=mat, edge_mat=mat, **kwargs)
 
     def staged_launch(self, stage_chunk_size=8, **kwargs):
         '''
@@ -111,17 +126,29 @@ class SimController(object):
                 self.net_config.set_ledger_url(i, [idx])
                 for j in range(n):
                     mat[i][j] = 1
-            self.node_controller.animate(mat, **kwargs)
+            self.update(node_mat=mat, edge_mat=mat, **kwargs)
             idx += stage_chunk_size
 
-    def update(self,
-               node_mat=None,
-               edge_mat=None,
-               **kwargs
-               ):
+    def update(self, node_mat=None, edge_mat=None, **kwargs):
         assert self._initialized
-        self.edge_controller.animate(edge_mat, **kwargs)
-        self.node_controller.animate(node_mat, **kwargs)
+        if self.overload_matrices is True:
+            if node_mat is None:
+                node_mat = edge_mat
+            if edge_mat is None:
+                edge_mat = node_mat
+        if edge_mat is not None:
+            self.edge_controller.animate(edge_mat, **kwargs)
+        if node_mat is not None:
+            self.node_controller.animate(node_mat, **kwargs)
+        if self.overload_matrices is True:
+            nm = self.node_controller.get_mat()
+            em = self.edge_controller.get_mat()
+            try:
+                assert nm.all() == em.all()
+            except AssertionError:
+                msg = "You've chose to overrload the edge matrix, but your"
+                msg += " node and edge matrices differ..."
+                print msg
 
     def get_configuration(self, idx):
         assert self._initialized
@@ -145,6 +172,26 @@ class SimController(object):
             self.edge_controller.shutdown(**kwargs)
             if self.net_config.provider is not None:
                 self.net_config.provider.shutdown()
+
+    def activate_node(self, idx, **kwargs):
+        mat = self.node_controller.get_mat()
+        mat[idx][idx] = 1
+        self.update(node_mat=mat, **kwargs)
+
+    def deactivate_node(self, idx, **kwargs):
+        mat = self.node_controller.get_mat()
+        mat[idx][idx] = 0
+        self.update(node_mat=mat, **kwargs)
+
+    def connect_edge(self, src, dst, **kwargs):
+        mat = self.edge_controller.get_mat()
+        mat[src][dst] = 1
+        self.update(edge_mat=mat, **kwargs)
+
+    def sever_edge(self, src, dst, **kwargs):
+        mat = self.edge_controller.get_mat()
+        mat[src][dst] = 0
+        self.update(edge_mat=mat, **kwargs)
 
 
 def get_default_sim_controller(num_nodes,
