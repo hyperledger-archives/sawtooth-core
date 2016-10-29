@@ -22,15 +22,14 @@ import traceback
 import tempfile
 import time
 import logging
-import shutil
 import tarfile
 
 from txnintegration.exceptions import ExitError
-from txnintegration.validator_network_manager import ValidatorNetworkManager
-from txnintegration.utils import parse_configuration_file, \
-    prompt_yes_no, find_txn_validator, load_log_config
-
+from txnintegration.simcontroller import get_default_sim_controller as get_sim
 from txnintegration.stats_client import run_stats
+from txnintegration.utils import find_txn_validator
+from txnintegration.utils import load_log_config
+from txnintegration.utils import parse_configuration_file
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -85,10 +84,10 @@ def parse_args(args):
                              'default None, if binding adapters to 0.0.0.0'
                              ' "localhost" is a good value for this.',
                         default=None)
-    parser.add_argument('-i', '--interactive',
-                        help='Launch in interactive mode (console)',
-                        action='store_true',
-                        default=False)
+    # parser.add_argument('-i', '--interactive',
+    #                     help='Launch in interactive mode (console)',
+    #                     action='store_true',
+    #                     default=False)
 
     return parser.parse_args(args)
 
@@ -301,24 +300,24 @@ def main():
         sys.exit(1)
 
     try:
-        network_manager = ValidatorNetworkManager(
-            txnvalidator=opts['validator'],
-            cfg=opts['validator_config'],
-            log_config=opts['log_config_dict'],
-            data_dir=opts['data_dir'],
-            block_chain_archive=opts['load_blockchain'],
-            http_port=int(opts['http_port']),
-            udp_port=int(opts['port']),
-            host=opts['host'],
-            endpoint_host=opts['endpoint']
-        )
-
-        network_manager.staged_launch_network(opts['count'])
-        if opts['interactive']:
-            console = ValidatorNetworkConsole(network_manager)
-            console.cmdloop("\nWelcome to the sawtooth validator network ")
-        else:
-            run_stats(network_manager.urls()[0])
+        network_manager = get_sim(opts['count'],
+                                  txnvalidator=opts['validator'],
+                                  overrides=opts['validator_config'],
+                                  log_config=opts['log_config_dict'],
+                                  data_dir=opts['data_dir'],
+                                  block_chain_archive=opts['load_blockchain'],
+                                  http_port=int(opts['http_port']),
+                                  udp_port=int(opts['port']),
+                                  host=opts['host'],
+                                  endpoint_host=opts['endpoint'])
+        network_manager.do_genesis()
+        network_manager.staged_launch()
+        # if opts['interactive']:
+        #     console = ValidatorNetworkConsole(network_manager)
+        #     console.cmdloop("\nWelcome to the sawtooth validator network ")
+        # else:
+        #     run_stats(network_manager.urls()[0])
+        run_stats(network_manager.urls()[0])
     except KeyboardInterrupt:
         print "\nExiting"
     except ExitError as e:
@@ -332,29 +331,12 @@ def main():
         traceback.print_exc()
         print "\nFailed!\nExiting: {}".format(sys.exc_info()[0])
 
-    if network_manager:
-        network_manager.shutdown()
-
-    if opts['save_blockchain']:
-        print "Saving blockchain to {}".format(opts['save_blockchain'])
-        network_manager.create_result_archive(opts['save_blockchain'])
-
-    # if dir was auto-generated
-    if opts and "data_dir_is_tmp" in opts \
-            and opts['data_dir_is_tmp'] \
-            and os.path.exists(opts['data_dir']):
-        delete_test_dir = True
-        if error_occurred:
-            delete_test_dir = prompt_yes_no(
-                "Do you want to delete the data dir(logs, configs, etc)")
-        if delete_test_dir:
-            print "Cleaning temp data store {}".format(opts['data_dir'])
-            if os.path.exists(opts['data_dir']):
-                shutil.rmtree(opts['data_dir'])
-        else:
-            print "Data directory {}".format(opts['data_dir'])
-    else:
-        print "Data directory {}".format(opts['data_dir'])
+    finally:
+        archive_name = None
+        if opts['save_blockchain']:
+            archive_name = opts['save_blockchain']
+        if network_manager is not None:
+            network_manager.shutdown(archive_name=archive_name)
 
 
 if __name__ == "__main__":
