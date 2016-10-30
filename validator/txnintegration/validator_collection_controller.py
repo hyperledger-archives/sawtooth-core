@@ -91,11 +91,11 @@ class ValidatorCollectionController(NodeController):
         self.hdls[idx] = v
         return v
 
-    def deactivate(self, idx, **kwargs):
-        v = self.hdls[idx]
-        assert isinstance(v, ValidatorManager)
-        self.hdls[idx] = None
-        v.shutdown(True)
+    def deactivate(self, idx, sig='SIGINT', timeout=4, force=True, **kwargs):
+        if not isinstance(self.hdls[idx], ValidatorManager):
+            raise Exception("node %s does not appear to be runnning" % (idx))
+        self.validator_shutdown(idx, sig, timeout, force)
+        assert self.hdls[idx] is None
 
     def commit(self, reg_seconds=240, **kwargs):
         if reg_seconds > 0:
@@ -119,49 +119,60 @@ class ValidatorCollectionController(NodeController):
                 p.step()
                 time.sleep(1)
 
-    def validator_shutdown(self, validator_id, force=False,
-                           term=False, archive=None):
-        print "shutting down specific validator"
-
-        if len(self._validators) == 0:
-            # no validator to shutdown
-            return
-
-        if archive is not None:
-            self.create_validator_archive(
-                "ValidatorShutdownNoRestore.tar.gz", validator_id)
-
-        v = self._validators[validator_id]
-        with Progress("Sending interrupt signal to specified validator:") as p:
-            if v.is_running():
-                if term is True:
-                    v.shutdown(term=True)
-                    shutdown_type = 'SIGTERM'
-                elif force is False:
-                    v.shutdown()
-                    shutdown_type = 'SIGINT'
-                else:
-                    v.shutdown(force=True)
-                    shutdown_type = 'SIGKILL'
-            p.step()
-
-        to = TimeOut(self.timeout)
-        with Progress("Giving specified validator time to shutdown: ") as p:
-            while True:
-                if to.is_timed_out() or not v.is_running():
+    def validator_shutdown(self, idx, sig, timeout, force):
+        '''
+        Dispose of validator subprocesses by index
+        Args:
+            idx (int): which validator (in self.hdls)
+            sig (str): valid values: SIG{TERM,INT,KILL}.
+            timeout (int): time to wait in seconds
+            force (bool): whether to try SIGKILL if another method has not
+                worked within timeout seconds.
+        Returns: None
+        '''
+        assert isinstance(self.hdls[idx], ValidatorManager)
+        cfg = self.net_config.get_node_cfg(idx)
+        v_name = cfg['NodeName']
+        v = self.hdls[idx]
+        print 'sending %s to %s' % (sig, v_name)
+        if v.is_running():
+            if sig == 'SIGTERM':
+                v.shutdown(term=True)
+            elif sig == 'SIGINT':
+                v.shutdown()
+            elif sig == 'SIGKILL':
+                v.shutdown(force=True)
+            else:
+                raise Exception('unrecognized argument for sig: %s', sig)
+        # Would be ideal to move the waiting here into threads in self.commit.
+        # Then we could shut down several in parallel, and (besides archive
+        # collection, which really should be moved to a provider) self.shutdown
+        # would basically just be a numpy.zeros update (re-using this code)!
+        to = TimeOut(timeout)
+        success = False
+        ini = time.time()
+        with Progress("giving %s %ss to shutdown: " % (v_name, timeout)) as p:
+            while success is False:
+                if not v.is_running():
+                    success = True
+                elif to.is_timed_out():
                     break
                 else:
                     time.sleep(1)
                 p.step()
-
-        if v.is_running():
-            raise Exception("validator {} is still running after {}"
-                            .format(validator_id, shutdown_type))
-        else:
-            print ("validator {} successfully shutdown after {}"
-                   .format(validator_id, shutdown_type))
-
-            self._validators.pop(validator_id)
+        dur = time.time() - ini
+        if success is False:
+            fail_msg = "%s is still running %.2f seconds after %s"
+            fail_msg = fail_msg % (v_name, dur, force)
+            if force is False or sig == 'SIGKILL':
+                raise ValidatorManagerException(fail_msg)
+            else:
+                timeout = max(4, timeout)
+                print '%s; trying SIGKILL, timeout %s...' % (fail_msg, timeout)
+                self.validator_shutdown(idx, 'SIGKILL', timeout, force)
+        if success is True:
+            print "%s shut down %.2f seconds after %s" % (v_name, dur, sig)
+        self.hdls[idx] = None
 
     def wait_for_registration(self, validators, validator, max_time=None):
         """
@@ -209,8 +220,9 @@ class ValidatorCollectionController(NodeController):
                     if v.is_running():
                         v.shutdown()
                     p.step()
+
             running_count = 0
-            to = TimeOut(3)
+            to = TimeOut(5)
             with Progress("Giving validators time to shutdown: ") as p:
                 while True:
                     running_count = 0
