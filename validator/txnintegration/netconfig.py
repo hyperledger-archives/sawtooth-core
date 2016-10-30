@@ -178,6 +178,7 @@ class NetworkConfig(object):
 
             nd["Nodes"] = []
             nd["Peers"] = []
+            nd["Blacklist"] = []
             # ...role information
             nd["LedgerURL"] = []
             nd["GenesisLedger"] = False
