@@ -94,7 +94,8 @@ def do_poet1_genesis(args):
     # Make genesis block:
     # ...make sure there is no current chain here, or fail
     # ...pop VR seed (we'll presently defer resolving VR seed issues)
-    _ = gossiper.IncomingMessageQueue.pop()
+    vr_seed = gossiper.IncomingMessageQueue.pop()
+    journal.initial_transactions.append(vr_seed.Transaction)
     # ...create block g_block (including VR seed txn just popped)
     journal.on_genesis_block.fire(journal)
     journal.initializing = False
@@ -104,6 +105,7 @@ def do_poet1_genesis(args):
     journal.claim_block(g_block)
     # ...simulate receiving the genesis block msg from reactor to force commit
     g_block_msg = gossiper.IncomingMessageQueue.pop()
+    poet_public_key = g_block.poet_public_key
     journal.dispatcher.dispatch(g_block_msg)
     journal.initialization_complete()
     head = journal.most_recent_committed_block_id
@@ -120,9 +122,10 @@ def do_poet1_genesis(args):
     genesis_data = {
         'GenesisId': head,
         'ChainLength': chain_len,
+        'PoetPublicKey': poet_public_key,
     }
     gblock_fname = genesis_info_file_name(cfg['DataDirectory'])
     LOGGER.info('genesis data: %s', genesis_data)
     LOGGER.info('writing genesis data to %s', gblock_fname)
     with open(gblock_fname, 'w') as f:
-        f.write(json.dumps(genesis_data))
+        f.write(json.dumps(genesis_data, indent=4))

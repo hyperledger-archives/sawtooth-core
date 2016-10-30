@@ -226,6 +226,7 @@ class PoetConsensus(Consensus):
 
         # Claim the block
         block.create_wait_certificate()
+        block.poet_public_key = self.poet_public_key
         block.sign_from_node(journal.local_node)
         journal.JournalStats.BlocksClaimed.increment()
 
