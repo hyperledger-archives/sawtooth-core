@@ -211,7 +211,6 @@ class Validator(object):
         self.status = 'stopped'
 
     def initialize_common_configuration(self):
-        self.genesis_ledger = self.config.get('GenesisLedger', False)
 
         # Handle the common configuration variables
         if 'NetworkFlowRate' in self.config:
@@ -271,13 +270,7 @@ class Validator(object):
         # add blacklist before we attempt any peering
         self.gossip.blacklist = self.config.get('Blacklist', [])
 
-        # if this is the genesis ledger then there isn't anything left to do
-        if self.genesis_ledger:
-            self.start_ledger()
-            return
-
-        # if this isn't the genesis ledger then we need to connect
-        # this node into the validator network
+        # connect this node into the validator network
         self.initialize_ledger_connection()
 
     def handle_node_disconnect_event(self, nodeid):

@@ -167,7 +167,6 @@ def configure(args):
         'KeyFile',
         'AdministrationNode',
         'DataDirectory',
-        'GenesisLedger',
         'LedgerURL',
     ]
     if any(k in validator_config for k in keys):

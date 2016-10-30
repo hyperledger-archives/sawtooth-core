@@ -107,7 +107,6 @@ def do_poet1_genesis(args):
     min_txn_per_block = cfg.get("MinimumTransactionsPerBlock")
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
-    genesis_ledger = cfg.get("GenesisLedger")
     stat_domains = {}
     from journal.consensus.poet1.poet_consensus import PoetConsensus
     consensus_obj = PoetConsensus(cfg)
@@ -119,7 +118,6 @@ def do_poet1_genesis(args):
                       minimum_transactions_per_block=min_txn_per_block,
                       max_transactions_per_block=max_txn_per_block,
                       max_txn_age=max_txn_age,
-                      genesis_ledger=genesis_ledger,
                       data_directory=data_directory,
                       store_type=store_type,
                       )
