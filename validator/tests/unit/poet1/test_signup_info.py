@@ -14,8 +14,10 @@
 # ------------------------------------------------------------------------------
 
 import unittest
+import hashlib
 
 import pybitcointools
+
 from gossip.common import NullIdentifier
 from journal.consensus.poet1.signup_info import SignupInfo
 from journal.consensus.poet1.signup_info import SignupInfoError
@@ -26,7 +28,7 @@ from journal.consensus.poet1.poet_enclave_simulator \
 class TestSignupInfo(unittest.TestCase):
 
     _originator_public_key = None
-    _another_originator_public_key = None
+    _another_public_key = None
 
     @classmethod
     def setUpClass(cls):
@@ -35,7 +37,18 @@ class TestSignupInfo(unittest.TestCase):
         SignupInfo.poet_enclave = poet_enclave
 
         cls._originator_public_key = cls._create_random_public_key()
-        cls._another_originator_public_key = cls._create_random_public_key()
+        cls._originator_public_key_hash = \
+            hashlib.sha256(
+                pybitcointools.encode_pubkey(
+                    cls._originator_public_key,
+                    'hex')).hexdigest()
+
+        cls._another_public_key = cls._create_random_public_key()
+        cls._another_public_key_hash = \
+            hashlib.sha256(
+                pybitcointools.encode_pubkey(
+                    cls._another_public_key,
+                    'hex')).hexdigest()
 
     @classmethod
     def _create_random_private_key(cls):
@@ -48,7 +61,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_basic_create_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -59,7 +72,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_serialized_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
         serialized = signup_info.serialize()
@@ -74,27 +87,27 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_unsealing_data(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
-        encoded_poet_public_key = \
+        poet_public_key = \
             SignupInfo.unseal_signup_data(signup_info.sealed_signup_data)
 
         self.assertEqual(
             signup_info.poet_public_key,
-            encoded_poet_public_key,
+            poet_public_key,
             msg="PoET public key in signup info and sealed data don't match")
 
     def test_verify_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         try:
             signup_info.check_valid(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename="This is CNN.",
                 most_recent_wait_certificate_id=NullIdentifier)
         except SignupInfoError as e:
@@ -103,33 +116,33 @@ class TestSignupInfo(unittest.TestCase):
     def test_non_matching_originator_public_key(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         with self.assertRaises(SignupInfoError):
             signup_info.check_valid(
-                originator_public_key=self._another_originator_public_key,
+                originator_public_key_hash=self._another_public_key_hash,
                 validator_network_basename="This is CNN.",
                 most_recent_wait_certificate_id=NullIdentifier)
 
     def test_non_matching_validator_network_basename(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         with self.assertRaises(SignupInfoError):
             signup_info.check_valid(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename="This is Fox News.",
                 most_recent_wait_certificate_id=NullIdentifier)
 
     def test_non_matching_most_recent_wait_certificate_id(self):
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=self._originator_public_key,
+                originator_public_key_hash=self._originator_public_key_hash,
                 validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -141,6 +154,6 @@ class TestSignupInfo(unittest.TestCase):
         #
         # with self.assertRaises(SignupInfoError):
         signup_info.check_valid(
-            originator_public_key=self._originator_public_key,
+            originator_public_key_hash=self._originator_public_key_hash,
             validator_network_basename="This is CNN.",
             most_recent_wait_certificate_id='SomeFunkyCertificateID')

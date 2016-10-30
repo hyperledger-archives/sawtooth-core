@@ -16,6 +16,9 @@
 import collections
 import logging
 import importlib
+import hashlib
+
+import pybitcointools
 
 from gossip import common
 from gossip import stats
@@ -79,9 +82,15 @@ class PoetConsensus(Consensus):
                 sealed_signup_data=sealed_signup_data)
         else:
             wait_certificate_id = journal.most_recent_committed_block_id
+            public_key_hash = \
+                hashlib.sha256(
+                    pybitcointools.encode_pubkey(
+                        journal.local_node.public_key(),
+                        'hex')).hexdigest()
+
             signup_info = \
                 SignupInfo.create_signup_info(
-                    originator_public_key=journal.local_node.public_key(),
+                    originator_public_key_hash=public_key_hash,
                     validator_network_basename='Intel Validator Network',
                     most_recent_wait_certificate_id=wait_certificate_id)
 
@@ -174,26 +183,27 @@ class PoetConsensus(Consensus):
             journal.block_store,
             nblock))
 
-        journal.JournalStats.LocalMeanTime.Value = nblock.WaitTimer.local_mean
+        journal.JournalStats.LocalMeanTime.Value = \
+            nblock.wait_timer.local_mean
         journal.JournalStats.PopulationEstimate.Value = \
-            round(nblock.WaitTimer.local_mean /
-                  nblock.WaitTimer.target_wait_time, 2)
+            round(nblock.wait_timer.local_mean /
+                  nblock.wait_timer.target_wait_time, 2)
 
         if genesis:
-            nblock.AggregateLocalMean = nblock.WaitTimer.local_mean
+            nblock.AggregateLocalMean = nblock.wait_timer.local_mean
 
         journal.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
 
         LOGGER.debug('created new pending block with timer <%s> and '
-                     '%d transactions', nblock.WaitTimer,
+                     '%d transactions', nblock.wait_timer,
                      len(nblock.TransactionIDs))
 
         journal.JournalStats.ExpectedExpirationTime.Value = \
-            round(nblock.WaitTimer.request_time +
-                  nblock.WaitTimer.duration, 2)
+            round(nblock.wait_timer.request_time +
+                  nblock.wait_timer.duration, 2)
 
         journal.JournalStats.Duration.Value = \
-            round(nblock.WaitTimer.duration, 2)
+            round(nblock.wait_timer.duration, 2)
 
         for txnid in nblock.TransactionIDs:
             txn = journal.transaction_store[txnid]
@@ -234,7 +244,7 @@ class PoetConsensus(Consensus):
         while block.PreviousBlockID != common.NullIdentifier \
                 and len(certs) < count:
             block = block_store[block.PreviousBlockID]
-            certs.appendleft(block.WaitCertificate)
+            certs.appendleft(block.wait_certificate)
 
         # drop the root block off the computation
         return list(certs)

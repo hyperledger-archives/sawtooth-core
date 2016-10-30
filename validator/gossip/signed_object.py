@@ -191,7 +191,7 @@ class SignedObject(object):
     def originator_public_key(self):
         """
         Return the originator's public key (i.e., the key used to verify
-        the object' signature)
+        the object's signature)
 
         Returns:
             Originator public key

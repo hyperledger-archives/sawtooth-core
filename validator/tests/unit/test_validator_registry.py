@@ -14,12 +14,12 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-
-from gossip import signed_object
-from journal.global_store_manager import KeyValueStore
+import hashlib
 
 import pybitcointools
 
+from gossip import signed_object
+from journal.object_store import ObjectStore
 from journal.consensus.poet1.validator_registry \
     import ValidatorRegistryTransaction
 from sawtooth.exceptions import InvalidTransactionError
@@ -37,15 +37,20 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
 
     def test_register_validator_valid(self):
         key = signed_object.generate_signing_key()
+        public_key_hash = \
+            hashlib.sha256(
+                pybitcointools.encode_pubkey(
+                    pybitcointools.privtopub(key),
+                    'hex')).hexdigest()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=pybitcointools.privtopub(key),
+                originator_public_key_hash=public_key_hash,
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
-        store = KeyValueStore()
+        store = ObjectStore()
         transaction = \
             ValidatorRegistryTransaction.register_validator(
                 name,
@@ -60,15 +65,20 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
 
     def test_register_validator_re_register(self):
         key = signed_object.generate_signing_key()
+        public_key_hash = \
+            hashlib.sha256(
+                pybitcointools.encode_pubkey(
+                    pybitcointools.privtopub(key),
+                    'hex')).hexdigest()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=pybitcointools.privtopub(key),
+                originator_public_key_hash=public_key_hash,
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
-        store = KeyValueStore()
+        store = ObjectStore()
         transaction = \
             ValidatorRegistryTransaction.register_validator(
                 name,
@@ -87,16 +97,21 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
 
     def test_register_validator_key_mismatch(self):
         key = signed_object.generate_signing_key()
+        public_key_hash = \
+            hashlib.sha256(
+                pybitcointools.encode_pubkey(
+                    pybitcointools.privtopub(key),
+                    'hex')).hexdigest()
         key2 = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
         signup_info = \
             SignupInfo.create_signup_info(
-                originator_public_key=pybitcointools.privtopub(key),
+                originator_public_key_hash=public_key_hash,
                 validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
-        store = KeyValueStore()
+        store = ObjectStore()
         transaction = \
             ValidatorRegistryTransaction.register_validator(
                 name,

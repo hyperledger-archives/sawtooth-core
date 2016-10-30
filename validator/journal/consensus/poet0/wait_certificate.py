@@ -49,8 +49,7 @@ class WaitCertificate(object):
             certificate.
         WaitCertificate.duration (float): The duration of the wait timer.
         WaitCertificate.signature (str): The signature of the certificate.
-        wait_certificate.WaitCertificate.identifier\
-            (str): The identifier of this certificate.
+        WaitCertificate.identifier (str): The identifier of this certificate.
         serialized_cert (str): A serialized version of the certificate.
     """
     poet_enclave = None

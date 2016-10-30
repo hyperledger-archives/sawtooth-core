@@ -87,7 +87,7 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def create_signup_info(cls,
-                           originator_public_key,
+                           originator_public_key_hash,
                            validator_network_basename,
                            most_recent_wait_certificate_id):
         with cls._lock:
@@ -113,12 +113,11 @@ class _PoetEnclaveSimulator(object):
             # Create a fake report
             report_data = {
                 'originator_public_key_hash':
-                    pybitcointools.sha256(
-                        pybitcointools.encode_pubkey(
-                            originator_public_key,
-                            'hex')),
+                    originator_public_key_hash.upper(),
                 'poet_public_key':
-                    pybitcointools.encode_pubkey(cls._poet_public_key, 'hex')
+                    pybitcointools.encode_pubkey(
+                        cls._poet_public_key,
+                        'hex').upper()
             }
             report = {
                 'report_data': pybitcointools.sha256(dict2json(report_data)),
@@ -199,7 +198,7 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def verify_signup_info(cls,
                            signup_info,
-                           originator_public_key,
+                           originator_public_key_hash,
                            validator_network_basename,
                            most_recent_wait_certificate_id):
         # Verify the attestation verification report signature
@@ -254,11 +253,8 @@ class _PoetEnclaveSimulator(object):
 
         target_report_data = {
             'originator_public_key_hash':
-                pybitcointools.sha256(
-                    pybitcointools.encode_pubkey(
-                        originator_public_key,
-                        'hex')),
-            'poet_public_key': signup_info.poet_public_key
+                originator_public_key_hash.upper(),
+            'poet_public_key': signup_info.poet_public_key.upper()
         }
         target_report_data_digest = \
             pybitcointools.sha256(dict2json(target_report_data))
@@ -441,7 +437,7 @@ class _PoetEnclaveSimulator(object):
                 signature=signature)
 
     @classmethod
-    def verify_wait_certificate(cls, certificate, encoded_poet_public_key):
+    def verify_wait_certificate(cls, certificate, poet_public_key):
         # poet_public_key = \
         #     pybitcointools.decode_pubkey(encoded_poet_public_key, 'hex')
         #
@@ -458,12 +454,12 @@ def initialize(**kwargs):
     _PoetEnclaveSimulator.initialize(**kwargs)
 
 
-def create_signup_info(originator_public_key,
+def create_signup_info(originator_public_key_hash,
                        validator_network_basename,
                        most_recent_wait_certificate_id):
     return \
         _PoetEnclaveSimulator.create_signup_info(
-            originator_public_key=originator_public_key,
+            originator_public_key_hash=originator_public_key_hash,
             validator_network_basename=validator_network_basename,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
@@ -478,13 +474,13 @@ def unseal_signup_data(sealed_signup_data):
 
 
 def verify_signup_info(signup_info,
-                       originator_public_key,
+                       originator_public_key_hash,
                        validator_network_basename,
                        most_recent_wait_certificate_id):
     return \
         _PoetEnclaveSimulator.verify_signup_info(
             signup_info=signup_info,
-            originator_public_key=originator_public_key,
+            originator_public_key_hash=originator_public_key_hash,
             validator_network_basename=validator_network_basename,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
@@ -520,8 +516,8 @@ def deserialize_wait_certificate(serialized_certificate, signature):
             signature=signature)
 
 
-def verify_wait_certificate(certificate, encoded_poet_public_key):
+def verify_wait_certificate(certificate, poet_public_key):
     return \
         _PoetEnclaveSimulator.verify_wait_certificate(
             certificate=certificate,
-            encoded_poet_public_key=encoded_poet_public_key)
+            poet_public_key=poet_public_key)
