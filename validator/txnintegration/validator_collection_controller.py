@@ -119,6 +119,50 @@ class ValidatorCollectionController(NodeController):
                 p.step()
                 time.sleep(1)
 
+    def validator_shutdown(self, validator_id, force=False,
+                           term=False, archive=None):
+        print "shutting down specific validator"
+
+        if len(self._validators) == 0:
+            # no validator to shutdown
+            return
+
+        if archive is not None:
+            self.create_validator_archive(
+                "ValidatorShutdownNoRestore.tar.gz", validator_id)
+
+        v = self._validators[validator_id]
+        with Progress("Sending interrupt signal to specified validator:") as p:
+            if v.is_running():
+                if term is True:
+                    v.shutdown(term=True)
+                    shutdown_type = 'SIGTERM'
+                elif force is False:
+                    v.shutdown()
+                    shutdown_type = 'SIGINT'
+                else:
+                    v.shutdown(force=True)
+                    shutdown_type = 'SIGKILL'
+            p.step()
+
+        to = TimeOut(self.timeout)
+        with Progress("Giving specified validator time to shutdown: ") as p:
+            while True:
+                if to.is_timed_out() or not v.is_running():
+                    break
+                else:
+                    time.sleep(1)
+                p.step()
+
+        if v.is_running():
+            raise Exception("validator {} is still running after {}"
+                            .format(validator_id, shutdown_type))
+        else:
+            print ("validator {} successfully shutdown after {}"
+                   .format(validator_id, shutdown_type))
+
+            self._validators.pop(validator_id)
+
     def wait_for_registration(self, validators, validator, max_time=None):
         """
         Wait for newly launched validators to register.
@@ -198,6 +242,28 @@ class ValidatorCollectionController(NodeController):
                     fp = os.path.join(dir_path, f)
                     tar.add(fp, os.path.join(base_name, f))
             tar.close()
+
+    def unpack_blockchain(self, archive_name):
+        ext = ["cb", "cs", "gs", "xn"]
+        dirs = set()
+        tar = tarfile.open(archive_name, "r|gz")
+        for f in tar:
+            e = f.name[-2:]
+            if e in ext or f.name.endswith("wif"):
+                base_name = os.path.basename(f.name)
+                dest_file = os.path.join(self.data_dir, base_name)
+                if os.path.exists(dest_file):
+                    os.remove(dest_file)
+                tar.extract(f, self.data_dir)
+                # extract put the file in a directory below DataDir
+                # move the file from extract location to dest_file
+                ext_file = os.path.join(self.data_dir, f.name)
+                os.rename(ext_file, dest_file)
+                # and remember the extract directory for deletion
+                dirs.add(os.path.dirname(ext_file))
+        tar.close()
+        for d in dirs:
+            os.rmdir(d)
 
     @staticmethod
     def get_archive_base_name(path):
