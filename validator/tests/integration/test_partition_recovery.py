@@ -22,7 +22,7 @@ import unittest
 
 from txnintegration.netconfig import NetworkConfig
 from txnintegration.matrices import NopEdgeController
-from txnintegration.simcontroller import SimController
+from txnintegration.validator_network_manager import ValidatorNetworkManager
 from txnintegration.validator_collection_controller import \
     ValidatorCollectionController
 from txnintegration.integer_key_client import IntegerKeyClient
@@ -58,7 +58,7 @@ class TestPartitionRecovery(unittest.TestCase):
         two_clique_mat = copy.deepcopy(vulnerable_mat)
         two_clique_mat[2][2] = 0
         n = len(vulnerable_mat)
-        top = SimController(n)
+        vnm = ValidatorNetworkManager(n)
         print
         try:
             print 'phase 0: build vulnerably connected 5-net:'
@@ -69,51 +69,51 @@ class TestPartitionRecovery(unittest.TestCase):
             net_cfg.set_peers(vulnerable_mat)
             net_cfg.set_blacklist()
             vcc = ValidatorCollectionController(net_cfg)
-            top.initialize(net_cfg, vcc, NopEdgeController(net_cfg))
+            vnm.initialize(net_cfg, vcc, NopEdgeController(net_cfg))
             print 'phase 1: launch vulnerably connected 5-net:'
-            top.do_genesis(probe_seconds=0)
-            top.launch(probe_seconds=0)
+            vnm.do_genesis(probe_seconds=0)
+            vnm.launch(probe_seconds=0)
             print 'phase 2: validate state across 5-net:'
-            sit_rep(top.urls(), verbosity=2)
+            sit_rep(vnm.urls(), verbosity=2)
             print 'phase 3: morph 5-net into two exclusive 2-net cliques:'
-            top.update(node_mat=two_clique_mat, probe_seconds=0, reg_seconds=0)
+            vnm.update(node_mat=two_clique_mat, probe_seconds=0, reg_seconds=0)
             print 'providing time for convergence (likely partial)...'
             time.sleep(32)
-            sit_rep(top.urls())
+            sit_rep(vnm.urls())
             print 'phase 4: generate chain-ext A on clique {0, 1}:'
-            url = top.urls()[0]
+            url = vnm.urls()[0]
             print 'sending transactions to %s...' % (url)
             ikcA = IntegerKeyClient(baseurl=url, keystring=gen_pk())
             self._do_work(ikcA, 5, 2)
             print 'providing time for partial convergence...'
             time.sleep(8)
-            sit_rep(top.urls())
+            sit_rep(vnm.urls())
             print 'phase 5: generate chain-ext B on clique {3, 4}, |B| = 2|A|:'
-            url = top.urls()[-1]
+            url = vnm.urls()[-1]
             print 'sending transactions to %s...' % (url)
             ikcB = IntegerKeyClient(baseurl=url, keystring=gen_pk())
             self._do_work(ikcB, 1, 4)
             print 'providing time for partial convergence...'
             time.sleep(8)
-            sit_rep(top.urls())
+            sit_rep(vnm.urls())
             print 'TEST 1: asserting network is forked'
-            self.assertEquals(False, is_convergent(top.urls(), standard=3))
+            self.assertEquals(False, is_convergent(vnm.urls(), standard=3))
             print 'phase 6: reconnect 5-net:'
             print 'rezzing validator-2 with InitialConnectivity = |Peers|...'
-            cfg = top.get_configuration(2)
+            cfg = vnm.get_configuration(2)
             cfg['InitialConnectivity'] = 2
-            top.set_configuration(2, cfg)
-            top.update(node_mat=vulnerable_mat, probe_seconds=0, reg_seconds=0)
+            vnm.set_configuration(2, cfg)
+            vnm.update(node_mat=vulnerable_mat, probe_seconds=0, reg_seconds=0)
             print 'phase 7: validate state across 5-net:'
             print 'providing time for global convergence...'
             time.sleep(64)
-            sit_rep(top.urls())
+            sit_rep(vnm.urls())
             print 'TEST 2: asserting network is convergent'
-            self.assertEquals(True, is_convergent(top.urls(), standard=4))
+            self.assertEquals(True, is_convergent(vnm.urls(), standard=4))
         except Exception as e:
             print 'Exception encountered: %s' % (e.message)
             traceback.print_exc()
-            sit_rep(top.urls())
+            sit_rep(vnm.urls())
             raise
         finally:
-            top.shutdown(archive_name="TestPartitionRecoveryResults")
+            vnm.shutdown(archive_name="TestPartitionRecoveryResults")

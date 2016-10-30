@@ -18,8 +18,8 @@ import logging
 
 from sawtooth.exceptions import InvalidTransactionError
 from txnintegration.integer_key_client import IntegerKeyClient
-from txnintegration.simcontroller import get_default_sim_controller
 from txnintegration.utils import generate_private_key
+from txnintegration.validator_network_manager import get_default_vnm
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class TestLocalValidationErrors(unittest.TestCase):
             client.inc("bob", 1)
 
     def test_local_validation_errors(self):
-        sim = None
+        vnm = None
         try:
             print
             overrides = {
@@ -42,13 +42,13 @@ class TestLocalValidationErrors(unittest.TestCase):
                 'BlockWaitTime': 0,
                 'LocalValidation': True,
             }
-            sim = get_default_sim_controller(1, overrides=overrides)
-            sim.do_genesis()
-            sim.launch()
-            urls = sim.urls()
+            vnm = get_default_vnm(1, overrides=overrides)
+            vnm.do_genesis()
+            vnm.launch()
+            urls = vnm.urls()
             self._generate_invalid_transactions(urls[0])
         finally:
-            if sim is not None:
-                sim.shutdown(archive_name=self._testMethodName)
+            if vnm is not None:
+                vnm.shutdown(archive_name=self._testMethodName)
             else:
                 print "No Validator data and logs to preserve"

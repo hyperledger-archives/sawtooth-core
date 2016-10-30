@@ -28,7 +28,7 @@ from txnintegration.utils import find_executable
 LOGGER = logging.getLogger(__name__)
 
 
-class SimController(object):
+class ValidatorNetworkManager(object):
     def __init__(self, n_mag, same_matrix=True):
         '''
         Args:
@@ -194,21 +194,21 @@ class SimController(object):
         self.update(edge_mat=mat, **kwargs)
 
 
-def get_default_sim_controller(num_nodes,
-                               txnvalidator=None,
-                               overrides=None,
-                               log_config=None,
-                               data_dir=None,
-                               block_chain_archive=None,
-                               http_port=None,
-                               udp_port=None,
-                               host=None,
-                               endpoint_host=None):
+def get_default_vnm(num_nodes,
+                    txnvalidator=None,
+                    overrides=None,
+                    log_config=None,
+                    data_dir=None,
+                    block_chain_archive=None,
+                    http_port=None,
+                    udp_port=None,
+                    host=None,
+                    endpoint_host=None):
     from txnintegration.netconfig import gen_dfl_net_cfg
     from txnintegration.matrices import NopEdgeController
     from txnintegration.validator_collection_controller import \
         ValidatorCollectionController
-    ret = SimController(num_nodes)
+    vnm = ValidatorNetworkManager(num_nodes)
     net_cfg = gen_dfl_net_cfg(num_nodes,
                               overrides=overrides,
                               data_dir=data_dir,
@@ -217,7 +217,7 @@ def get_default_sim_controller(num_nodes,
                               udp_port=udp_port,
                               host=host,
                               endpoint_host=endpoint_host)
-    vnm = ValidatorCollectionController(net_cfg, txnvalidator=txnvalidator)
+    vcc = ValidatorCollectionController(net_cfg, txnvalidator=txnvalidator)
     nop = NopEdgeController(net_cfg)
-    ret.initialize(net_cfg, vnm, nop)
-    return ret
+    vnm.initialize(net_cfg, vcc, nop)
+    return vnm

@@ -24,8 +24,7 @@ from txnintegration.utils import get_blocklists
 from txnintegration.utils import is_convergent
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
-
-from txnintegration.simcontroller import get_default_sim_controller
+from txnintegration.validator_network_manager import get_default_vnm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,15 +35,15 @@ DISABLE_POET1_SGX = True \
 class TestGenesisUtil(unittest.TestCase):
     def extend_genesis_util(self, overrides):
         print
-        top = None
+        vnm = None
         try:
-            top = get_default_sim_controller(2, overrides=overrides)
+            vnm = get_default_vnm(2, overrides=overrides)
             # Test genesis util
-            cfg = top.get_configuration(0)
+            cfg = vnm.get_configuration(0)
             ledger_type = cfg['LedgerType']
             gblock_file = genesis_info_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(gblock_file))
-            top.do_genesis()
+            vnm.do_genesis()
             self.assertTrue(os.path.exists(gblock_file))
             genesis_dat = None
             with open(gblock_file, 'r') as f:
@@ -52,7 +51,7 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in genesis_dat.keys())
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
-            top.launch()
+            vnm.launch()
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -76,7 +75,7 @@ class TestGenesisUtil(unittest.TestCase):
             to = TimeOut(32)
             with Progress('testing root convergence') as p:
                 print
-                while (is_convergent(top.urls(), tolerance=1, standard=1)
+                while (is_convergent(vnm.urls(), tolerance=1, standard=1)
                        is False and not to.is_timed_out()):
                     time.sleep(2)
                     p.step()
@@ -86,9 +85,9 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertEqual(head, root)
             print 'network converged on root: %s' % root
         finally:
-            if top is not None:
+            if vnm is not None:
                 archive_name = 'Test%sGenesisResults' % ledger_type.upper()
-                top.shutdown(archive_name=archive_name)
+                vnm.shutdown(archive_name=archive_name)
 
     def test_dev_mode_genesis(self):
         self.extend_genesis_util({'LedgerType': 'dev_mode'})

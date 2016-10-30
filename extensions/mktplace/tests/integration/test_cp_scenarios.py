@@ -18,7 +18,7 @@ import unittest
 
 from mktmain import client_cli
 from mktplace import mktplace_state
-from txnintegration.simcontroller import get_default_sim_controller
+from txnintegration.validator_network_manager import get_default_vnm
 
 from integration import ENABLE_INTEGRATION_TESTS
 
@@ -34,7 +34,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.sim = None
+        cls.vnm = None
         try:
             if 'TEST_VALIDATOR_URLS' in os.environ:
                 urls = (os.environ['TEST_VALIDATOR_URLS']).split(",")
@@ -44,11 +44,11 @@ class TestCommercialPaperScenarios(unittest.TestCase):
                 overrides = {
                     "TransactionFamilies": families,
                 }
-                cls.sim = get_default_sim_controller(5, overrides=overrides)
-                cls.sim.do_genesis()
-                cls.sim.launch()
+                cls.vnm = get_default_vnm(5, overrides=overrides)
+                cls.vnm.do_genesis()
+                cls.vnm.launch()
                 # the url of the initial validator
-                cls.url = cls.sim.urls()[0] + '/'
+                cls.url = cls.vnm.urls()[0] + '/'
 
             os.environ['CURRENCYHOME'] = os.path.join(
                 os.path.dirname(__file__), "cp_scenarios")
@@ -93,8 +93,8 @@ class TestCommercialPaperScenarios(unittest.TestCase):
             state = mktplace_state.MarketPlaceState(cls.url)
             state.fetch()
         except:
-            if cls.sim is not None:
-                cls.sim.shutdown()
+            if cls.vnm is not None:
+                cls.vnm.shutdown()
             raise
 
     def test_scenario_setup(self):
@@ -460,7 +460,7 @@ class TestCommercialPaperScenarios(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if cls.sim is not None:
-            cls.sim.shutdown(archive_name="TestCommercialPaperScenarios")
+        if cls.vnm is not None:
+            cls.vnm.shutdown(archive_name="TestCommercialPaperScenarios")
         else:
             print "No Validator data and logs to preserve."

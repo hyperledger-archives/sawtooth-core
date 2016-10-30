@@ -18,7 +18,7 @@ import unittest
 import os
 
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
-from txnintegration.simcontroller import get_default_sim_controller
+from txnintegration.validator_network_manager import get_default_vnm
 
 ENABLE_OVERNIGHT_TESTS = False
 if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
@@ -28,38 +28,38 @@ if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
 class TestIntegration(unittest.TestCase):
     @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS, "integration test")
     def test_intkey_load_ext(self):
-        sim = None
+        vnm = None
         try:
             print "Launching validator network."
-            sim = get_default_sim_controller(5)
-            sim.do_genesis()
-            sim.launch()
+            vnm = get_default_vnm(5)
+            vnm.do_genesis()
+            vnm.launch()
             print "Testing transaction load."
             test = IntKeyLoadTest()
-            test.setup(sim.urls(), 10)
+            test.setup(vnm.urls(), 10)
             test.run(1)
             test.run_with_missing_dep(1)
             test.validate()
         finally:
-            if sim is not None:
-                sim.shutdown(archive_name="TestIntegrationResults_0")
+            if vnm is not None:
+                vnm.shutdown(archive_name="TestIntegrationResults_0")
 
     @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS,
                          "limit of missing dependencies test")
     def test_missing_dependencies(self):
-        sim = None
+        vnm = None
         try:
             print "Launching validator network."
-            sim = get_default_sim_controller(5)
-            sim.do_genesis()
-            sim.launch()
+            vnm = get_default_vnm(5)
+            vnm.do_genesis()
+            vnm.launch()
 
             print "Testing limit of missing dependencies."
             test = IntKeyLoadTest()
-            test.setup(sim.urls(), 10)
+            test.setup(vnm.urls(), 10)
             test.run(1)
             test.run_with_limit_txn_dependencies(1)
             test.validate()
         finally:
-            if sim is not None:
-                sim.shutdown(archive_name="TestIntegrationResults_1")
+            if vnm is not None:
+                vnm.shutdown(archive_name="TestIntegrationResults_1")

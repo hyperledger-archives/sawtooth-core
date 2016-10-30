@@ -23,11 +23,11 @@ import pybitcointools
 
 from mktplace import mktplace_state
 from mktintegration.actor import MktActor
-from txnintegration.simcontroller import get_default_sim_controller
 from txnintegration.utils import Progress
 from txnintegration.utils import read_key_file
 from txnintegration.utils import TimeOut
 from txnintegration.utils import write_key_file
+from txnintegration.validator_network_manager import get_default_vnm
 
 from integration import ENABLE_INTEGRATION_TESTS, \
     SAVE_INTEGRATION_TEST_DATA
@@ -211,20 +211,20 @@ class MktPlaceLoad(object):
 class TestSmoke(unittest.TestCase):
     @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_mktplace_load(self):
-        sim = None
+        vnm = None
         try:
             print "Launching validator network."
             overrides = {
                 "TransactionFamilies": ['mktplace.transactions.market_place'],
             }
-            sim = get_default_sim_controller(5, overrides=overrides)
-            sim.do_genesis()
-            sim.launch()
-            data_dir = sim.net_config.provider.currency_home
+            vnm = get_default_vnm(5, overrides=overrides)
+            vnm.do_genesis()
+            vnm.launch()
+            data_dir = vnm.net_config.provider.currency_home
             print "Testing transaction load."
             test_case = MktPlaceLoad(num_traders=5,
                                      iterations=1,
-                                     urls=sim.urls(),
+                                     urls=vnm.urls(),
                                      test_dir=data_dir)
             test_case.setup()
             test_case.run()
@@ -234,7 +234,7 @@ class TestSmoke(unittest.TestCase):
             archive_name = None
             if SAVE_INTEGRATION_TEST_DATA:
                 archive_name = "TestMktSmokeResults"
-            if sim is not None:
-                sim.shutdown(archive_name=archive_name)
+            if vnm is not None:
+                vnm.shutdown(archive_name=archive_name)
             else:
                 print "No Validator data and logs to preserve."

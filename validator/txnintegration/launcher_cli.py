@@ -25,11 +25,11 @@ import logging
 import tarfile
 
 from txnintegration.exceptions import ExitError
-from txnintegration.simcontroller import get_default_sim_controller as get_sim
 from txnintegration.utils import find_executable
 from txnintegration.stats_client import run_stats
 from txnintegration.utils import load_log_config
 from txnintegration.utils import parse_configuration_file
+from txnintegration.validator_network_manager import get_default_vnm
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -200,7 +200,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def __init__(self, vnm):
         self.prompt = 'launcher_cli.py> '
         cmd.Cmd.__init__(self)
-        self.network_manager = vnm
+        self.vnm = vnm
 
     def do_config(self, args):
         """
@@ -217,7 +217,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
             options = parser.parse_args(args)
 
             id = options.id
-            v = self.network_manager.validator(id)
+            v = self.vnm.validator(id)
             if v:
                 v.dump_config()
             else:
@@ -231,7 +231,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         """launch
         Launch another validator on the network
         """
-        v = self.network_manager.launch_node()
+        v = self.vnm.launch_node()
         print "Validator {} launched.".format(v.name)
         return False
 
@@ -240,7 +240,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         Give the command to launch another validator on the network. This can
         be used for creating a node to debug on  the validator network.
         """
-        v = self.network_manager.launch_node(False)
+        v = self.vnm.launch_node(False)
         print v.command
         return False
 
@@ -250,7 +250,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         New validators connect to most recent existing validators
         """
         count = int(scount)
-        v = self.network_manager.staged_expand_network(count)
+        v = self.vnm.staged_expand_network(count)
         print "Network expanded with {0} additional validators launched"\
             .format(len(v))
         return False
@@ -258,7 +258,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
     def do_kill(self, args):
         try:
             id = args[0]
-            v = self.network_manager.validator(id)
+            v = self.vnm.validator(id)
             if v:
                 while v.is_running():
                     v.shutdown(True)
@@ -274,7 +274,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
         """status
             Show the status of the running validators
         """
-        for l in self.network_manager.status():
+        for l in self.vnm.status():
             print l
         return False
 
@@ -291,7 +291,7 @@ class ValidatorNetworkConsole(cmd.Cmd):
 
 
 def main():
-    network_manager = None
+    vnm = None
     error_occurred = False
     try:
         opts = configure(sys.argv[1:])
@@ -300,24 +300,24 @@ def main():
         sys.exit(1)
 
     try:
-        network_manager = get_sim(opts['count'],
-                                  txnvalidator=opts['validator'],
-                                  overrides=opts['validator_config'],
-                                  log_config=opts['log_config_dict'],
-                                  data_dir=opts['data_dir'],
-                                  block_chain_archive=opts['load_blockchain'],
-                                  http_port=int(opts['http_port']),
-                                  udp_port=int(opts['port']),
-                                  host=opts['host'],
-                                  endpoint_host=opts['endpoint'])
-        network_manager.do_genesis()
-        network_manager.staged_launch()
+        vnm = get_default_vnm(opts['count'],
+                              txnvalidator=opts['validator'],
+                              overrides=opts['validator_config'],
+                              log_config=opts['log_config_dict'],
+                              data_dir=opts['data_dir'],
+                              block_chain_archive=opts['load_blockchain'],
+                              http_port=int(opts['http_port']),
+                              udp_port=int(opts['port']),
+                              host=opts['host'],
+                              endpoint_host=opts['endpoint'])
+        vnm.do_genesis()
+        vnm.staged_launch()
         # if opts['interactive']:
-        #     console = ValidatorNetworkConsole(network_manager)
+        #     console = ValidatorNetworkConsole(vnm)
         #     console.cmdloop("\nWelcome to the sawtooth validator network ")
         # else:
-        #     run_stats(network_manager.urls()[0])
-        run_stats(network_manager.urls()[0])
+        #     run_stats(vnm.urls()[0])
+        run_stats(vnm.urls()[0])
     except KeyboardInterrupt:
         print "\nExiting"
     except ExitError as e:
@@ -335,8 +335,8 @@ def main():
         archive_name = None
         if opts['save_blockchain']:
             archive_name = opts['save_blockchain']
-        if network_manager is not None:
-            network_manager.shutdown(archive_name=archive_name)
+        if vnm is not None:
+            vnm.shutdown(archive_name=archive_name)
 
 
 if __name__ == "__main__":

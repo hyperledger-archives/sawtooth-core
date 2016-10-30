@@ -19,8 +19,8 @@ import os
 import logging
 
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
-from txnintegration.simcontroller import get_default_sim_controller
 from txnintegration.utils import is_convergent
+from txnintegration.validator_network_manager import get_default_vnm
 
 logger = logging.getLogger(__name__)
 
@@ -35,16 +35,15 @@ class TestSmoke(unittest.TestCase):
             num_nodes (int): Total number of nodes in network simulation
             archive_name (str): Name for tarball summary of test results
         """,
-        sim = None
+        vnm = None
         try:
             test = IntKeyLoadTest()
             if "TEST_VALIDATOR_URLS" not in os.environ:
                 print "Launching validator network."
-                sim = get_default_sim_controller(num_nodes,
-                                                 overrides=overrides)
-                sim.do_genesis()
-                sim.launch()
-                urls = sim.urls()
+                vnm = get_default_vnm(num_nodes, overrides=overrides)
+                vnm.do_genesis()
+                vnm.launch()
+                urls = vnm.urls()
             else:
                 print "Fetching Urls of Running Validators"
                 # TEST_VALIDATORS_RUNNING is a list of validators urls
@@ -57,8 +56,8 @@ class TestSmoke(unittest.TestCase):
             test.validate()
             self.assertTrue(is_convergent(urls, tolerance=2, standard=5))
         finally:
-            if sim is not None:
-                sim.shutdown(archive_name=archive_name)
+            if vnm is not None:
+                vnm.shutdown(archive_name=archive_name)
             else:
                 print "No Validator data and logs to preserve"
 
