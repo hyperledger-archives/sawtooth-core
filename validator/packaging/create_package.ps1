@@ -35,20 +35,20 @@ cd $build_dir\sawtooth-core\core
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
 Git-Version
-if (test-path $build_dir\sawtooth-core\core\deps ) {
-    remove-item -recurse -force $build_dir\sawtooth-core\core\deps
-    if ($lastexitcode -ne 0) { exit 1 }
-}
-mkdir $build_dir\sawtooth-core\core\deps
-copy-item -recurse $build_dir\deps\cryptopp\* $build_dir\sawtooth-core\core\deps
-copy-item -recurse -force $build_dir\deps\json-c\* $build_dir\sawtooth-core\core\deps
-if ($lastexitcode -ne 0) { exit 1 }
 python setup.py build
 if ($lastexitcode -ne 0) { exit 1 }
 iex $build_command
 if ($lastexitcode -ne 0) { exit 1 }
 
 
+if (test-path $build_dir\sawtooth-core\validator\deps ) {
+    remove-item -recurse -force $build_dir\sawtooth-core\validator\deps
+    if ($lastexitcode -ne 0) { exit 1 }
+}
+mkdir $build_dir\sawtooth-core\validator\deps
+copy-item -recurse $build_dir\deps\cryptopp\* $build_dir\sawtooth-core\validator\deps
+copy-item -recurse -force $build_dir\deps\json-c\* $build_dir\sawtooth-core\validator\deps
+if ($lastexitcode -ne 0) { exit 1 }
 cd $build_dir\sawtooth-core\validator
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
