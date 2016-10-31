@@ -21,7 +21,7 @@ cd validator
 nose2 -v unit
 nose2 -v integration
 export RUN_TEST_SUITES=1
-nose2 -v integration.dev_mode_test_suite.DevModeTestSuite.test_suite
+nose2 -v sawtooth_suites.dev_mode.DevModeTestSuite
 unset RUN_TEST_SUITES
 cd ..
 
