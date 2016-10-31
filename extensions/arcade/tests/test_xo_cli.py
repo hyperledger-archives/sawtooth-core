@@ -81,7 +81,7 @@ class TestXoCli(unittest.TestCase):
             if cls.vnm is not None:
                 cls.vnm.shutdown()
                 cls.vnm = None
-            raise Exception("Validators didn't start up correctly.")
+            raise
 
     @classmethod
     def tearDownClass(cls):
