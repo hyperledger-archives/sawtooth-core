@@ -16,11 +16,9 @@
 import os
 import sys
 import argparse
-import cmd
 import pprint
 import traceback
 import tempfile
-import time
 import logging
 import tarfile
 
@@ -84,10 +82,6 @@ def parse_args(args):
                              'default None, if binding adapters to 0.0.0.0'
                              ' "localhost" is a good value for this.',
                         default=None)
-    # parser.add_argument('-i', '--interactive',
-    #                     help='Launch in interactive mode (console)',
-    #                     action='store_true',
-    #                     default=False)
 
     return parser.parse_args(args)
 
@@ -196,100 +190,6 @@ def configure(args):
     return vars(opts)
 
 
-class ValidatorNetworkConsole(cmd.Cmd):
-    def __init__(self, vnm):
-        self.prompt = 'launcher_cli.py> '
-        cmd.Cmd.__init__(self)
-        self.vnm = vnm
-
-    def do_config(self, args):
-        """
-        config
-        :param args: index of the validator
-        :return: Print the  validator configuration file
-        """
-        try:
-            args = args.split()
-            parser = argparse.ArgumentParser()
-            parser.add_argument("id",
-                                help='Validator index or node name',
-                                default='0')
-            options = parser.parse_args(args)
-
-            id = options.id
-            v = self.vnm.validator(id)
-            if v:
-                v.dump_config()
-            else:
-                print "Invalid validator id: {}".format(args[0])
-        except:
-            print sys.exc_info()[0]
-
-        return False
-
-    def do_launch(self, args):
-        """launch
-        Launch another validator on the network
-        """
-        v = self.vnm.launch_node()
-        print "Validator {} launched.".format(v.name)
-        return False
-
-    def do_launch_cmd(self, args):
-        """lcmd
-        Give the command to launch another validator on the network. This can
-        be used for creating a node to debug on  the validator network.
-        """
-        v = self.vnm.launch_node(False)
-        print v.command
-        return False
-
-    def do_expand(self, scount):
-        """expand
-        Launch additional validators on the network
-        New validators connect to most recent existing validators
-        """
-        count = int(scount)
-        v = self.vnm.staged_expand_network(count)
-        print "Network expanded with {0} additional validators launched"\
-            .format(len(v))
-        return False
-
-    def do_kill(self, args):
-        try:
-            id = args[0]
-            v = self.vnm.validator(id)
-            if v:
-                while v.is_running():
-                    v.shutdown(True)
-                    if v.is_running():
-                        time.sleep(1)
-                print "Validator {} killed.".format(v.Name)
-            else:
-                print "Invalid validator id: {}".format(args[0])
-        except:
-            print sys.exc_info()[0]
-
-    def do_status(self, args):
-        """status
-            Show the status of the running validators
-        """
-        for l in self.vnm.status():
-            print l
-        return False
-
-    def do_exit(self, args):
-        """exit
-        Shutdown the simulator and exit the command loop
-        """
-        return True
-
-    def do_EOF(self, args):
-        # pylint: disable=invalid-name
-        print ""
-        return self.do_exit(args)
-
-
 def main():
     vnm = None
     error_occurred = False
@@ -312,11 +212,6 @@ def main():
                               endpoint_host=opts['endpoint'])
         vnm.do_genesis()
         vnm.staged_launch()
-        # if opts['interactive']:
-        #     console = ValidatorNetworkConsole(vnm)
-        #     console.cmdloop("\nWelcome to the sawtooth validator network ")
-        # else:
-        #     run_stats(vnm.urls()[0])
         run_stats(vnm.urls()[0])
     except KeyboardInterrupt:
         print "\nExiting"
