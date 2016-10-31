@@ -77,7 +77,10 @@ class ValidatorNetworkManager(object):
         # validate user input to Popen
         assert ledger_type in ['dev_mode', 'poet0', 'poet1']
         assert os.path.isfile(config_file)
-        cli_args = ' admin %s-genesis --config %s' % (ledger_type, config_file)
+        alg_name = ledger_type
+        if ledger_type == 'dev_mode':
+            alg_name = 'dev-mode'
+        cli_args = ' admin %s-genesis --config %s' % (alg_name, config_file)
         try:
             executable = find_executable('sawtooth')
         except ExitError:

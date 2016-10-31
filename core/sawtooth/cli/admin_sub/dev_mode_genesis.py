@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add_dev_mode_genesis_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('dev_mode-genesis')
+    parser = subparsers.add_parser('dev-mode-genesis')
     parser.add_argument('--config',
                         help='Comma-separated list of config files to '
                              'load. Alternatively, multiple --config '

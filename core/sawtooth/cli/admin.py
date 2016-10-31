@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def do_admin(args):
-    if args.admin_cmd == 'dev_mode-genesis':
+    if args.admin_cmd == 'dev-mode-genesis':
         do_dev_mode_genesis(args)
     elif args.admin_cmd == 'poet0-genesis':
         do_poet0_genesis(args)
