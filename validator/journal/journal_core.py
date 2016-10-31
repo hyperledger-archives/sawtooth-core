@@ -62,8 +62,6 @@ class Journal(object):
         initial_transactions (list): A list of initial transactions to
             process.
         initial_block_list (list): A list of initial blocks to process.
-        genesis_ledger (bool): Whether or not this journal is associated
-            with a genesis node.
         onGenesisBlock (EventHandler): An EventHandler for functions
             to call when processing a genesis block.
         on_pre_build_block (EventHandler): An EventHandler for functions
@@ -115,15 +113,12 @@ class Journal(object):
                  minimum_transactions_per_block=None,
                  max_transactions_per_block=None,
                  max_txn_age=None,
-                 genesis_ledger=None,
                  data_directory=None,
                  store_type=None):
         """Constructor for the Journal class.
 
         Args:
             node (Node): The local node.
-            genesis_ledger (bool): Whether or not this journal is associated
-                with a genesis node.
             DataDirectory (str):
         """
         self.local_node = local_node
@@ -175,11 +170,6 @@ class Journal(object):
             self.max_txn_age = max_txn_age
         else:
             self.max_txn_age = 3
-
-        if genesis_ledger is not None:
-            self.genesis_ledger = genesis_ledger
-        else:
-            self.genesis_ledger = False
 
         self.restored = False
 
@@ -482,19 +472,10 @@ class Journal(object):
             self.commit_transaction_block(block)
         self.initial_block_list = None
 
-        # generate a block, if none exists then generate and commit the root
-        # block
-        if self.genesis_ledger:
-            self.on_genesis_block.fire(self)
-            genesis_block = self.build_block(True)
-            self.claim_block(genesis_block)
-            logger.warn('node %s claims the genesis block: %s',
-                        self.local_node.Name, genesis_block.Identifier)
-            self.genesis_ledger = False
-        else:
-            if self.most_recent_committed_block_id == common.NullIdentifier:
-                logger.critical('no ledger for a new network node')
-                return
+        # verify root block exits
+        if self.most_recent_committed_block_id == common.NullIdentifier:
+            logger.critical('no ledger for a new network node')
+            return
 
         self.initial_load = False
         logger.info('finished processing initial transactions and blocks')

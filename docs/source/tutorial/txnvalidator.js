@@ -15,7 +15,6 @@
 
     ## pick the ledger type
     "LedgerType" : "poet0",
-    "GenesisLedger" : true,
 
     ## configuration of the ledger wait time certificate 
     ## suggested settings for single node dev environment

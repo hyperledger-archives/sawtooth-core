@@ -171,8 +171,10 @@ seconds, kill it by pressing CTRL-C:
 
 .. code-block:: console
 
+    $ /project/sawtooth-core/docs/source/txn_family_tutorial/genesis.sh
     $ cd /project/sawtooth-core
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
+
     ...
     [02:51:45 INFO    validator_cli] adding transaction family: sawtooth_xo
     [02:51:45 ERROR   txn_family] sawtooth_xo register_transaction_types not implemented
@@ -428,14 +430,14 @@ First, startup txnvaldiator inside vagrant (and leave it running):
 
             $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step03/env.sh
 
+Run the following commands to start the validator:
+
 .. code-block:: console
 
+    $ /project/sawtooth-core/docs/source/txn_family_tutorial/genesis.sh
     $ cd /project/sawtooth-core
-    $ rm /home/vagrant/sawtooth/data/*.*
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
-.. note:: The **rm** command above is necessary to clean the validator state
-          of the old blocks from the previous run of the validator.
 
 Next, in a separate vagrant window, use the xo CLI to create a key for player1:
 
@@ -660,9 +662,10 @@ It is now possible to play the game:
 .. code-block:: console
 
     $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step04/env.sh
+    $ /project/sawtooth-core/docs/source/txn_family_tutorial/genesis.sh
     $ cd /project/sawtooth-core
-    $ rm /home/vagrant/sawtooth/data/*.*
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
+
 
 Then, create a game in a separate vagrant window (log in with "vagrant ssh" from the tools directory):
 

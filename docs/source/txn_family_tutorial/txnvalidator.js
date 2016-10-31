@@ -15,7 +15,9 @@
 
     ## pick the ledger type
     "LedgerType" : "poet0",
-    "GenesisLedger" : true,
+
+    ## this setting should only be zero for the initial validator
+    "InitialConnectivity": 0,
 
     ## configuration of the ledger wait time certificate 
     ## suggested settings for a single node dev environment

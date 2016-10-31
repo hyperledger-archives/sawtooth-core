@@ -84,7 +84,6 @@ def local_main(config, windows_service=False, daemonized=False):
         min_txn_per_block = config.get("MinimumTransactionsPerBlock")
         max_txn_per_block = config.get("MaxTransactionsPerBlock")
         max_txn_age = config.get("MaxTxnAge")
-        genesis_ledger = config.get("GenesisLedger")
         data_directory = config.get("DataDirectory")
         store_type = config.get("StoreType")
 
@@ -144,7 +143,6 @@ def local_main(config, windows_service=False, daemonized=False):
             min_txn_per_block,
             max_txn_per_block,
             max_txn_age,
-            genesis_ledger,
             data_directory,
             store_type)
 
@@ -219,9 +217,6 @@ def parse_command_line(args):
                              'Alternatively, multiple --peers options can '
                              'be specified.',
                         action='append')
-    parser.add_argument('--genesis',
-                        help='Start the ledger with the genesis block',
-                        action='store_true')
     parser.add_argument(
         '--url',
         help='Comma-separated list of URLs from which to retrieve peer '
@@ -269,7 +264,6 @@ def parse_command_line(args):
     # if the boolean arguments have not been set to true, remove
     # them to prevent the False value from overriding during aggregation
 
-    remove_false_key(result, "genesis")
     remove_false_key(result, "daemon")
     remove_false_key(result, "check_elevated")
 
@@ -304,7 +298,6 @@ def get_configuration(args, os_name=os.name, config_files_required=None):
             ('keyfile', 'KeyFile'),
             ('node', 'NodeName'),
             ('peers', 'Peers'),
-            ('genesis', 'GenesisLedger'),
             ('url', 'LedgerURL'),
             ('verbose', 'Verbose'),
             ('pidfile', 'PidFile'),

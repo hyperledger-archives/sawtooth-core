@@ -65,7 +65,6 @@ class ValidatorNetworkManager(object):
 
         cfg = self.get_configuration(do_genesis_validator_idx)
         overrides = {
-            "GenesisLedger": False,
             "InitialConnectivity": 0,
             "DevModePublisher": True,
         }

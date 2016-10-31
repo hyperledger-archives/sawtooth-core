@@ -75,8 +75,7 @@ class ValidatorManager(object):
         self._log_file = None
         self._handle = None
 
-    def launch(self, launch=True, genesis=False, daemon=False, delay=False,
-               node=None):
+    def launch(self, launch=True, daemon=False, delay=False, node=None):
         listen_directives = parse_listen_directives(self.config["Listen"])
         http_host = listen_directives['http'].host
         if "Endpoint" in self.config and self.config['Endpoint'] is not None:
@@ -124,9 +123,6 @@ class ValidatorManager(object):
             "--config",
             config_file_name
         ]
-
-        if genesis:
-            args.append("--genesis")
 
         if daemon:
             args.append("--daemon")

@@ -175,12 +175,11 @@ class NetworkConfig(object):
                                                     base_http_port + idx,
                                                     endpoint_host)
             nd.update(net_info)
-
             nd["Nodes"] = []
             nd["Peers"] = []
-            # ...role information
+            nd["Blacklist"] = []
+            # initial athourity
             nd["LedgerURL"] = []
-            nd["GenesisLedger"] = False
             # aux information
             nd["Quorum"] = []
             self.nodes.append(nd)
