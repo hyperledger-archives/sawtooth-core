@@ -27,9 +27,12 @@ logger = logging.getLogger(__name__)
 ENABLE_INTEGRATION_TESTS = True \
     if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1" else False
 
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
+
 
 class TestSmoke(unittest.TestCase):
-    def _run_int_load(self, num_nodes, archive_name, overrides):
+    def _run_int_load(self, num_nodes, archive_name, overrides, urls=None):
         """
         Args:
             num_nodes (int): Total number of nodes in network simulation
@@ -38,18 +41,19 @@ class TestSmoke(unittest.TestCase):
         vnm = None
         try:
             test = IntKeyLoadTest()
-            if "TEST_VALIDATOR_URLS" not in os.environ:
-                print "Launching validator network."
-                vnm = get_default_vnm(num_nodes, overrides=overrides)
-                vnm.do_genesis()
-                vnm.launch()
-                urls = vnm.urls()
-            else:
-                print "Fetching Urls of Running Validators"
-                # TEST_VALIDATORS_RUNNING is a list of validators urls
-                # separated by commas.
-                # e.g. 'http://localhost:8800,http://localhost:8801'
-                urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
+            if urls is None:
+                if "TEST_VALIDATOR_URLS" not in os.environ:
+                    print "Launching validator network."
+                    vnm = get_default_vnm(num_nodes, overrides=overrides)
+                    vnm.do_genesis()
+                    vnm.launch()
+                    urls = vnm.urls()
+                else:
+                    print "Fetching Urls of Running Validators"
+                    # TEST_VALIDATORS_RUNNING is a list of validators urls
+                    # separated by commas.
+                    # e.g. 'http://localhost:8800,http://localhost:8801'
+                    urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
             print "Testing transaction load."
             test.setup(urls, 100)
             test.run(2)
@@ -66,7 +70,7 @@ class TestSmoke(unittest.TestCase):
         overrides = {}
         self._run_int_load(5, "TestSmokeResultsPoet0", overrides)
 
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
     def test_intkey_load_dev_mode(self):
-        overrides = {'LedgerType': 'dev_mode'}
-        self._run_int_load(1, "TestSmokeResultsDevMode", overrides)
+        self._run_int_load(1, "TestSmokeResultsDevMode", None,
+                           urls=["http://localhost:8800"])
