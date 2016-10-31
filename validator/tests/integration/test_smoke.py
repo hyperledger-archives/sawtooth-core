@@ -41,19 +41,19 @@ class TestSmoke(unittest.TestCase):
         vnm = None
         try:
             test = IntKeyLoadTest()
-        if urls is None:
-            if "TEST_VALIDATOR_URLS" not in os.environ:
-                print "Launching validator network."
-                vnm = get_default_vnm(num_nodes, overrides=overrides)
-                vnm.do_genesis()
-                vnm.launch()
-                urls = vnm.urls()
-            else:
-                print "Fetching Urls of Running Validators"
-                # TEST_VALIDATORS_RUNNING is a list of validators urls
-                # separated by commas.
-                # e.g. 'http://localhost:8800,http://localhost:8801'
-                urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
+            if urls is None:
+                if "TEST_VALIDATOR_URLS" not in os.environ:
+                    print "Launching validator network."
+                    vnm = get_default_vnm(num_nodes, overrides=overrides)
+                    vnm.do_genesis()
+                    vnm.launch()
+                    urls = vnm.urls()
+                else:
+                    print "Fetching Urls of Running Validators"
+                    # TEST_VALIDATORS_RUNNING is a list of validators urls
+                    # separated by commas.
+                    # e.g. 'http://localhost:8800,http://localhost:8801'
+                    urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
             print "Testing transaction load."
             test.setup(urls, 100)
             test.run(2)
@@ -72,5 +72,5 @@ class TestSmoke(unittest.TestCase):
 
     @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
     def test_intkey_load_dev_mode(self):
-        self._run_int_load(None, 1, "TestSmokeResultsDevMode", overrides=None,
+        self._run_int_load(1, "TestSmokeResultsDevMode", None,
                            urls=["http://localhost:8800"])

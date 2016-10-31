@@ -17,27 +17,24 @@ import time
 import os
 from integration.test_smoke import TestSmoke
 from integration.test_local_validation import TestLocalValidationErrors
-from txnintegration.simcontroller import get_default_sim_controller
-from txnintegration.validator_network_manager import ValidatorNetworkManager, \
-    defaultValidatorConfig
+from txnintegration.validator_network_manager import get_default_vnm
 
 
 def setUpModule():
     # setUpModule will be the first thing ran. This allows us to start up the
     # validators that we will use for all the following tests in the test suite
     print "Starting Validators for DevModeTestSuite"
-    cfg = defaultValidatorConfig.copy()
+    cfg = {}
     cfg['LedgerType'] = 'dev_mode'
     cfg['LocalValidation'] = True
     cfg['BlockWaitTime'] = 0
-    vnm_config = cfg
-    global sim
-    sim = None
+    global dev_vnm
+    dev_vnm = None
     try:
         # Start up validators using SimController
-        sim = get_default_sim_controller(1, ledger_type='dev_mode')
-        sim.do_genesis()
-        sim.launch()
+        dev_vnm = get_default_vnm(1, overrides=cfg)
+        dev_vnm.do_genesis()
+        dev_vnm.launch()
     except Exception as e:
         print "Something went wrong during setUp. {}".format(e)
 
@@ -46,8 +43,8 @@ def tearDownModule():
     # tearDownModule will be the last thing ran. This allows us to shut down
     # the validators and store the archives.
     print "Shutting Down Validators for DevModeTestSuite"
-    if sim is not None:
-        sim.shutdown(archive_name="DevModeTestSuiteArchive")
+    if dev_vnm is not None:
+        dev_vnm.shutdown(archive_name="DevModeTestSuiteArchive")
     else:
         print "No Validator data and logs to preserve"
 
