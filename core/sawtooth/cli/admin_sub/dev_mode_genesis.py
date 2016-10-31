@@ -28,8 +28,8 @@ from txnserver.validator import parse_networking_info
 LOGGER = logging.getLogger(__name__)
 
 
-def add_poet0_genesis_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('poet0-genesis')
+def add_dev_mode_genesis_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('dev-mode-genesis')
     parser.add_argument('--config',
                         help='Comma-separated list of config files to '
                              'load. Alternatively, multiple --config '
@@ -51,7 +51,7 @@ def add_poet0_genesis_parser(subparsers, parent_parser):
                         action='append')
 
 
-def do_poet0_genesis(args):
+def do_dev_mode_genesis(args):
 
     # Get ledger config:
     # ...set the default value of config because argparse 'default' in
@@ -87,17 +87,6 @@ def do_poet0_genesis(args):
     check_for_chain(data_directory, node_name, store_type)
 
     # Obtain Journal object:
-    # ...set WaitTimer globals
-    target_wait_time = cfg.get("TargetWaitTime")
-    initial_wait_time = cfg.get("InitialWaitTime")
-    certificate_sample_length = cfg.get('CertificateSampleLength')
-    fixed_duration_blocks = cfg.get("FixedDurationBlocks")
-    from journal.consensus.poet0.wait_timer import set_wait_timer_globals
-    set_wait_timer_globals(target_wait_time,
-                           initial_wait_time,
-                           certificate_sample_length,
-                           fixed_duration_blocks,
-                           )
     # ...build Gossip dependency
     (nd, _) = parse_networking_info(cfg)
     minimum_retries = cfg.get("MinimumRetries")
@@ -109,8 +98,9 @@ def do_poet0_genesis(args):
     max_txn_age = cfg.get("MaxTxnAge")
     genesis_ledger = cfg.get("GenesisLedger")
     stat_domains = {}
-    from journal.consensus.poet0.poet_consensus import PoetConsensus
-    consensus_obj = PoetConsensus(cfg)
+    from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
+    consensus_obj = DevModeConsensus(block_publisher=True,
+                                     block_wait_time=cfg.get('BlockWaitTime'))
     journal = Journal(gossiper.LocalNode,
                       gossiper,
                       gossiper.dispatcher,

@@ -23,10 +23,8 @@ from sawtooth.exceptions import MessageException
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import is_convergent
 from txnintegration.utils import Progress
-from txnintegration.utils import sawtooth_cli_intercept
 from txnintegration.utils import TimeOut
-
-from txnintegration.simcontroller import get_default_sim_controller
+from txnintegration.validator_network_manager import get_default_vnm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,25 +33,17 @@ DISABLE_POET1_SGX = True \
 
 
 class TestGenesisUtil(unittest.TestCase):
-    def extend_genesis_util(self, ledger_type, pre_overrides, post_overrides):
+    def extend_genesis_util(self, overrides):
         print
-        top = None
+        vnm = None
         try:
-            # Get configs and resources for a ValidatorManager compliant nodes
-            top = get_default_sim_controller(2, ledger_type=ledger_type)
-            # Set up validator-0
-            cfg = top.get_configuration(0)
-            cfg.update(pre_overrides)
-            top.set_configuration(0, cfg)
-            config_file = top.write_configuration(0)
-            # Test genesis tool
-            print 'testing genesis util...'
+            vnm = get_default_vnm(2, overrides=overrides)
+            # Test genesis util
+            cfg = vnm.get_configuration(0)
+            ledger_type = cfg['LedgerType']
             gblock_file = genesis_info_file_name(cfg['DataDirectory'])
             self.assertFalse(os.path.exists(gblock_file))
-            cli_args = 'admin %s-genesis --config %s' % (ledger_type,
-                                                         config_file)
-            sawtooth_cli_intercept(cli_args)
-            # Get genesis block id
+            vnm.do_genesis()
             self.assertTrue(os.path.exists(gblock_file))
             genesis_dat = None
             with open(gblock_file, 'r') as f:
@@ -61,13 +51,7 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in genesis_dat.keys())
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
-            print 'testing efficacy...'
-            # ...apply validator-related overrides to validator-0
-            cfg = top.get_configuration(0)
-            cfg.update(post_overrides)
-            top.set_configuration(0, cfg)
-            # ...launch entire network
-            top.launch(probe_seconds=0, reg_seconds=0)
+            vnm.launch()
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -91,7 +75,7 @@ class TestGenesisUtil(unittest.TestCase):
             to = TimeOut(32)
             with Progress('testing root convergence') as p:
                 print
-                while (is_convergent(top.urls(), tolerance=1, standard=1)
+                while (is_convergent(vnm.urls(), tolerance=1, standard=1)
                        is False and not to.is_timed_out()):
                     time.sleep(2)
                     p.step()
@@ -101,27 +85,16 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertEqual(head, root)
             print 'network converged on root: %s' % root
         finally:
-            if top is not None:
+            if vnm is not None:
                 archive_name = 'Test%sGenesisResults' % ledger_type.upper()
-                top.shutdown(archive_name=archive_name)
+                vnm.shutdown(archive_name=archive_name)
+
+    def test_dev_mode_genesis(self):
+        self.extend_genesis_util({'LedgerType': 'dev_mode'})
 
     def test_poet0_genesis(self):
-        pre_dict = {
-            'GenesisLedger': False,
-        }
-        post_dict = {
-            'GenesisLedger': False,
-            'InitialConnectivity': 0,
-        }
-        self.extend_genesis_util('poet0', pre_dict, post_dict)
+        self.extend_genesis_util({})
 
     @unittest.skipIf(DISABLE_POET1_SGX, 'SGX currently behind simulator')
     def test_poet1_genesis(self):
-        pre_dict = {
-            'GenesisLedger': False,
-        }
-        post_dict = {
-            'GenesisLedger': False,
-            'InitialConnectivity': 0,
-        }
-        self.extend_genesis_util('poet1', pre_dict, post_dict)
+        self.extend_genesis_util({'LedgerType': 'poet1'})

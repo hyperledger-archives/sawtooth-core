@@ -12,429 +12,215 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-import shutil
-import tarfile
-import tempfile
-import time
+import json
+import logging
+import numpy
 import os
-from os import walk
+import subprocess
 
-import pybitcointools
-
+from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from txnintegration.exceptions import ExitError
-from txnintegration.exceptions import ValidatorManagerException
-from txnintegration.utils import find_txn_validator
-from txnintegration.utils import Progress
-from txnintegration.utils import TimeOut
-from txnintegration.validator_manager import ValidatorManager
+from txnintegration.matrices import NodeController
+from txnintegration.matrices import EdgeController
+from txnintegration.netconfig import NetworkConfig
+from txnintegration.utils import find_executable
 
-defaultValidatorConfig = {u'CertificateSampleLength': 5,
-                          u'InitialWaitTime': 25.0,
-                          u'LedgerType': u'poet0',
-                          u'MaxTransactionsPerBlock': 1000,
-                          u'MinTransactionsPerBlock': 1,
-                          u'MinimumWaitTime': 1.0,
-                          u'NetworkBurstRate': 128000,
-                          u'NetworkDelayRange': [0.0, 0.1],
-                          u'NetworkFlowRate': 96000,
-                          u'TargetConnectivity': 3,
-                          u'TargetWaitTime': 5.0,
-                          u'TopologyAlgorithm': u'RandomWalk',
-                          u'TransactionFamilies': [
-                              u'ledger.transaction.integer_key'],
-                          u'UseFixedDelay': True,
-                          u'Profile': True,
-                          u'Listen': [u'localhost:0/UDP gossip']}
+LOGGER = logging.getLogger(__name__)
 
 
 class ValidatorNetworkManager(object):
-    class AdminNode(object):
-        """
-            This is a stand-in for a node when signing admin messages.
-            Hence the non pep8 names.
-        """
-        def __init__(self):
-            self.SigningKey = pybitcointools.random_key()
-            self.Address = pybitcointools.privtoaddr(self.SigningKey)
+    def __init__(self, n_mag, same_matrix=True):
+        '''
+        Args:
+            n_mag (int): number of nodes for your node_controller, and,
+                correspondingly, the number of rows and columns in the
+                adjacency matrix for controlling point-to-point network
+                connectivity in your edge_controller.
+            same_matrix (bool): use the same matrix for nodes and edges.  In
+                this case, the diagonal for the edge_matrix can be overloaded
+                to also activate and deactivate nodes.  Quite convenient for
+                testing scenarios, but harder to discuss mathematically.
+                Overloading the diagonal of the edge matrix to 'be' the node
+                matrix is tempting because it's generally uninteresting to
+                prohibit a node from talking to itself on the network.
+        '''
+        self.n_mag = n_mag
+        self.node_controller = None
+        self.edge_controller = None
+        self.overload_matrices = same_matrix
+        self._initialized = False
 
-    def __init__(self,
-                 txnvalidator=None,
-                 cfg=None,
-                 data_dir=None,
-                 http_port=8800,
-                 udp_port=5500,
-                 host='localhost',
-                 endpoint_host=None,
-                 block_chain_archive=None,
-                 log_config=None,
-                 static_network=None,
-                 ):
+    def initialize(self, net_config, node_controller, edge_controller):
+        assert isinstance(net_config, NetworkConfig)
+        assert isinstance(node_controller, NodeController)
+        assert isinstance(edge_controller, EdgeController)
+        assert node_controller.get_mag() == edge_controller.get_mag()
+        self.net_config = net_config
+        self.node_controller = node_controller
+        self.edge_controller = edge_controller
+        self._initialized = True
 
-        self.static_network = static_network
-        self._validators = []
-        self._validator_map = {}
-        self.validator_config = None
+    def do_genesis(self, do_genesis_validator_idx=0, **kwargs):
+        assert self._initialized
 
-        self._next_validator_id = 0
-        self._host = host or 'localhost'
-        self._http_port_base = http_port
-        self._udp_port_base = udp_port
-        self._endpoint_host = endpoint_host
-
-        self.validator_config = cfg or defaultValidatorConfig
-        self.validator_log_config = log_config
-
-        self.txnvalidator = txnvalidator or find_txn_validator()
-
-        self.temp_data_dir = False
-        if data_dir is None:
-            self.temp_data_dir = True
-            data_dir = tempfile.mkdtemp()
-        self.data_dir = data_dir
-
-        self.block_chain_archive = block_chain_archive
-        if block_chain_archive is not None:
-            if not os.path.isfile(block_chain_archive):
-                raise ExitError("Block chain archive to load {} does not "
-                                "exist.".format(block_chain_archive))
-            else:
-                self.unpack_blockchain(block_chain_archive)
-
-        self.admin_node = ValidatorNetworkManager.AdminNode()
-
-        self.validator_config['DataDirectory'] = self.data_dir
-        self.validator_config["AdministrationNode"] = self.admin_node.Address
-
-        self.timeout = 3
-
-    def __del__(self):
-        if self.temp_data_dir:
-            if os.path.exists(self.data_dir):
-                shutil.rmtree(self.data_dir)
-
-    def validator(self, idx):
-        v = None
-        if idx in self._validator_map:
-            v = self._validator_map[idx]
-        else:
-            idx = int(idx)
-            if idx in self._validator_map:
-                v = self._validator_map[idx]
-
-        return v
-
-    def staged_launch_network(self, count=1, stage1max=12, increment=12):
-        if count <= stage1max:
-            validators = self.launch_network(count)
-            print "Launch complete with {0} validators launched" \
-                .format(len(self._validators))
-            return validators
-        else:
-            validators = self.launch_network(stage1max)
-            print "Staged launch initiated with {0} validators launched" \
-                .format(len(self._validators))
-            staged_validators = self.staged_expand_network(count - stage1max,
-                                                           increment)
-            validators += staged_validators
-
-            return validators
-
-    def staged_expand_network(self, count=1, increment=12):
-        validators = []
-        remaining_to_launch = count
-        while remaining_to_launch > 0:
-            number_to_launch = \
-                min([remaining_to_launch, increment, len(self._validators)])
-            validators_to_use = \
-                self._validators[len(self._validators) - number_to_launch:]
-            print "Staged launching {0} validators".format(number_to_launch)
-            validators += self.expand_network(validators_to_use, 1)
-            remaining_to_launch -= number_to_launch
-
-        return validators
-
-    def launch_network(self, count=1, max_time=None, others_daemon=False):
-        validators = []
-
-        with Progress("Launching initial validator") as p:
-            cfg = {}
-            validator = self.launch_node(overrides=cfg,
-                                         genesis=True,
-                                         daemon=False)
-            validators.append(validator)
-            probe_func = validator.is_registered
-            if self.validator_config.get('LedgerType', '') == 'quorum':
-                probe_func = validator.is_started
-            while not probe_func():
-                try:
-                    validator.check_error()
-                except ValidatorManagerException as vme:
-                    validator.dump_log()
-                    validator.dump_stderr()
-                    raise ExitError(str(vme))
-                p.step()
-                time.sleep(1)
-
-        if count > 1:
-            with Progress("Launching validator network") as p:
-                cfg = {
-                    'LedgerURL': validator.url,
-                }
-                for _ in range(1, count):
-                    v = self.launch_node(overrides=cfg,
-                                         genesis=False,
-                                         daemon=others_daemon)
-                    validators.append(v)
-                    p.step()
-
-            self.wait_for_registration(validators,
-                                       validator,
-                                       max_time=max_time)
-
-        return validators
-
-    def launch_node(self,
-                    overrides=None,
-                    launch=True,
-                    genesis=False,
-                    daemon=False,
-                    delay=False):
-        validator_id = self._next_validator_id
-        self._next_validator_id += 1
-        cfg = self.validator_config.copy()
-        if overrides:
-            cfg.update(overrides)
-        cfg['NodeName'] = "validator-{}".format(validator_id)
-        if 'LedgerURL' not in cfg and\
-                len(self._validators) != 0:
-            cfg['LedgerURL'] = self._validators[0].url
-
-        cfg['Listen'] = [
-            '{0}:{1}/UDP gossip'.format(self._host, self._udp_port_base +
-                                        validator_id),
-            '{0}:{1}/TCP http'.format(self._host, self._http_port_base +
-                                      validator_id)
-        ]
-        if self._endpoint_host:
-            cfg['Endpoint'] = {
-                "Host": self._endpoint_host,
-                "Port": self._udp_port_base + validator_id,
-                "HttpPort": self._http_port_base + validator_id
-            }
-        static_node = False
-
-        if self.static_network is not None:
-            assert 'Nodes' in cfg.keys()
-            static_node = True
-            nd = self.static_network.get_node(validator_id)
-            q = self.static_network.get_quorum(validator_id,
-                                               dfl=cfg.get('Quorum', []))
-            cfg['NodeName'] = nd['NodeName']
-            cfg['SigningKey'] = self.static_network.get_key(validator_id)
-            cfg['Identifier'] = nd['Identifier']
-            cfg['Quorum'] = q
-        log_config = self.validator_log_config.copy() \
-            if self.validator_log_config \
-            else None
-        v = ValidatorManager(self.txnvalidator, cfg, self.data_dir,
-                             self.admin_node, log_config,
-                             static_node=static_node)
-        v.launch(launch, genesis=genesis, daemon=daemon, delay=delay)
-        self._validators.append(v)
-        self._validator_map[validator_id] = v
-        self._validator_map[cfg['NodeName']] = v
-        return v
-
-    def wait_for_registration(self, validators, validator, max_time=None):
-        """
-        Wait for newly launched validators to register.
-        validators: list of validators on which to wait
-        validator: running validator against which to verify registration
-        """
-        max_time = 120 if max_time is None else max_time
-        unregistered_count = len(validators)
-
-        with Progress("Waiting for registration of {0} validators".format(
-                unregistered_count)) as p:
-            url = validator.url
-            to = TimeOut(max_time)
-
-            while unregistered_count > 0:
-                if to():
-                    raise ExitError(
-                        "{} extended validators failed to register "
-                        "within {}S.".format(
-                            unregistered_count, to.WaitTime))
-
-                p.step()
-                time.sleep(1)
-                unregistered_count = 0
-                for v in validators:
-                    if not v.is_registered(url):
-                        unregistered_count += 1
-                    try:
-                        v.check_error()
-                    except ValidatorManagerException as vme:
-                        v.dump_log()
-                        v.dump_stderr()
-                        raise ExitError(str(vme))
-
-    def expand_network(self, validators, count=1):
-        """
-        expand existing network.
-        validators: running validators against which to launch new nodes
-        count: new validators to launch against each running validator
-        validator: running validator against which to verify registration
-        """
-        ledger_validator = validators[0]
-        new_validators = []
-
-        with Progress("Extending validator network") as p:
-            cfg = {
-                'LedgerURL': ledger_validator.url
-            }
-            for _ in validators:
-                for _ in range(0, count):
-                    v = self.launch_node(overrides=cfg)
-                    new_validators.append(v)
-                    p.step()
-
-        self.wait_for_registration(new_validators,
-                                   ledger_validator,
-                                   max_time=240)
-
-        return new_validators
-
-    def shutdown(self):
-        if len(self._validators) == 0:
-            # no validators to shutdown
+        cfg = self.get_configuration(do_genesis_validator_idx)
+        overrides = {
+            "GenesisLedger": False,
+            "InitialConnectivity": 0,
+            "DevModePublisher": True,
+        }
+        cfg.update(overrides)
+        self.set_configuration(do_genesis_validator_idx, cfg)
+        config_file = self.write_configuration(do_genesis_validator_idx)
+        cfg = self.get_configuration(do_genesis_validator_idx)
+        ledger_type = cfg.get('LedgerType', 'poet0')
+        # validate user input to Popen
+        assert ledger_type in ['dev_mode', 'poet0', 'poet1']
+        assert os.path.isfile(config_file)
+        alg_name = ledger_type
+        if ledger_type == 'dev_mode':
+            alg_name = 'dev-mode'
+        cli_args = ' admin %s-genesis --config %s' % (alg_name, config_file)
+        try:
+            executable = find_executable('sawtooth')
+        except ExitError:
+            path = os.path.dirname(self.node_controller.txnvalidator)
+            executable = os.path.join(path, 'sawtooth')
+        assert os.path.isfile(executable)
+        cmd = executable + cli_args
+        proc = subprocess.Popen(cmd.split())
+        proc.wait()
+        if proc.returncode != 0:
             return
+        # Get genesis block id
+        gblock_file = genesis_info_file_name(cfg['DataDirectory'])
+        assert os.path.exists(gblock_file) is True
+        genesis_dat = None
+        with open(gblock_file, 'r') as f:
+            genesis_dat = json.load(f)
+        assert 'GenesisId' in genesis_dat.keys()
+        head = genesis_dat['GenesisId']
+        print 'created genesis block: %s' % head
 
-        with Progress("Sending interrupt signal to validators: ") as p:
-            for v in self._validators:
-                if v.is_running():
-                    v.shutdown()
-                p.step()
+    def launch(self, **kwargs):
+        assert self._initialized
+        print 'launching network'
+        mat = numpy.ones(shape=(self.n_mag, self.n_mag))
+        self.update(node_mat=mat, edge_mat=mat, **kwargs)
 
-        running_count = 0
-        to = TimeOut(self.timeout)
-        with Progress("Giving validators time to shutdown: ") as p:
-            while True:
-                running_count = 0
-                for v in self._validators:
-                    if v.is_running():
-                        running_count += 1
-                if to.is_timed_out() or running_count == 0:
-                    break
-                else:
-                    time.sleep(1)
-                p.step()
+    def staged_launch(self, stage_chunk_size=8, **kwargs):
+        '''
+        Quick and dirty function to spread out initializations. Most re-draws
+        are effectively NOPs due to the delta matrix. Each round, the ledger
+        url becomes the zeroth index of the round.
+        Args:
+            stage_chunk_size (int): nax number of nodes to launch per round
+        Returns:
+            None
+        '''
+        assert self._initialized
+        if stage_chunk_size < self.n_mag:
+            print 'launching network in segments of %s' % stage_chunk_size
+        mat = numpy.zeros(shape=(self.n_mag, self.n_mag))
+        idx = 0
+        while idx < self.n_mag:
+            n = min(idx + stage_chunk_size, self.n_mag)
+            for i in range(n):
+                self.net_config.set_ledger_url(i, [idx])
+                for j in range(n):
+                    mat[i][j] = 1
+            self.update(node_mat=mat, edge_mat=mat, **kwargs)
+            idx += stage_chunk_size
 
-        if running_count != 0:
-            with Progress("Killing {} intransigent validators: "
-                          .format(running_count)) as p:
-                for v in self._validators:
-                    if v.is_running():
-                        v.shutdown(True)
-                    p.step()
+    def update(self, node_mat=None, edge_mat=None, **kwargs):
+        assert self._initialized
+        if self.overload_matrices is True:
+            if node_mat is None:
+                node_mat = edge_mat
+            if edge_mat is None:
+                edge_mat = node_mat
+        if edge_mat is not None:
+            self.edge_controller.animate(edge_mat, **kwargs)
+        if node_mat is not None:
+            self.node_controller.animate(node_mat, **kwargs)
+        if self.overload_matrices is True:
+            nm = self.node_controller.get_mat()
+            em = self.edge_controller.get_mat()
+            try:
+                assert nm.all() == em.all()
+            except AssertionError:
+                msg = "You've chose to overrload the edge matrix, but your"
+                msg += " node and edge matrices differ..."
+                print msg
 
-    def validator_shutdown(self, validator_id, force=False,
-                           term=False, archive=None):
-        print "shutting down specific validator"
+    def get_configuration(self, idx):
+        assert self._initialized
+        return self.net_config.get_node_cfg(idx)
 
-        if len(self._validators) == 0:
-            # no validator to shutdown
-            return
+    def set_configuration(self, idx, cfg):
+        assert self._initialized
+        return self.net_config.set_node_cfg(idx, cfg)
 
-        if archive is not None:
-            self.create_validator_archive(
-                "ValidatorShutdownNoRestore.tar.gz", validator_id)
-
-        v = self._validators[validator_id]
-        with Progress("Sending interrupt signal to specified validator:") as p:
-            if v.is_running():
-                if term is True:
-                    v.shutdown(term=True)
-                    shutdown_type = 'SIGTERM'
-                elif force is False:
-                    v.shutdown()
-                    shutdown_type = 'SIGINT'
-                else:
-                    v.shutdown(force=True)
-                    shutdown_type = 'SIGKILL'
-            p.step()
-
-        to = TimeOut(self.timeout)
-        with Progress("Giving specified validator time to shutdown: ") as p:
-            while True:
-                if to.is_timed_out() or not v.is_running():
-                    break
-                else:
-                    time.sleep(1)
-                p.step()
-
-        if v.is_running():
-            raise Exception("validator {} is still running after {}"
-                            .format(validator_id, shutdown_type))
-        else:
-            print ("validator {} successfully shutdown after {}"
-                   .format(validator_id, shutdown_type))
-
-            self._validators.pop(validator_id)
-
-    def status(self):
-        out = []
-        for v in self._validators:
-            out.append(v.status())
-        return out
+    def write_configuration(self, idx, path=None):
+        assert self._initialized
+        return self.net_config.write_node_cfg(idx, path)
 
     def urls(self):
-        out = []
-        for v in self._validators:
-            out.append(v.url)
-        return out
+        assert self._initialized
+        return self.node_controller.urls()
 
-    def create_result_archive(self, archive_name):
-        if self.data_dir is not None \
-                and os.path.exists(self.data_dir) \
-                and len(self._validators) != 0:
-            tar = tarfile.open(archive_name, "w|gz")
-            base_name = self.get_archive_base_name(archive_name)
-            for (dir_path, _, filenames) in walk(self.data_dir):
-                for f in filenames:
-                    fp = os.path.join(dir_path, f)
-                    tar.add(fp, os.path.join(base_name, f))
-            tar.close()
-            return True
-        return False
+    def shutdown(self, **kwargs):
+        if self._initialized:
+            self.node_controller.shutdown(**kwargs)
+            self.edge_controller.shutdown(**kwargs)
+            if self.net_config.provider is not None:
+                self.net_config.provider.shutdown()
 
-    def unpack_blockchain(self, archive_name):
-        ext = ["cb", "cs", "gs", "xn"]
-        dirs = set()
-        tar = tarfile.open(archive_name, "r|gz")
-        for f in tar:
-            e = f.name[-2:]
-            if e in ext or f.name.endswith("wif"):
-                base_name = os.path.basename(f.name)
-                dest_file = os.path.join(self.data_dir, base_name)
-                if os.path.exists(dest_file):
-                    os.remove(dest_file)
-                tar.extract(f, self.data_dir)
-                # extract put the file in a directory below DataDir
-                # move the file from extract location to dest_file
-                ext_file = os.path.join(self.data_dir, f.name)
-                os.rename(ext_file, dest_file)
-                # and remember the extract directory for deletion
-                dirs.add(os.path.dirname(ext_file))
-        tar.close()
-        for d in dirs:
-            os.rmdir(d)
+    def activate_node(self, idx, **kwargs):
+        mat = self.node_controller.get_mat()
+        mat[idx][idx] = 1
+        self.update(node_mat=mat, **kwargs)
 
-    @staticmethod
-    def get_archive_base_name(path):
-        file_name = os.path.basename(path)
-        if file_name.endswith(".tar.gz"):
-            return file_name[:len(file_name) - 7]
-        else:
-            return file_name
+    def deactivate_node(self, idx, **kwargs):
+        mat = self.node_controller.get_mat()
+        mat[idx][idx] = 0
+        self.update(node_mat=mat, **kwargs)
+
+    def connect_edge(self, src, dst, **kwargs):
+        mat = self.edge_controller.get_mat()
+        mat[src][dst] = 1
+        self.update(edge_mat=mat, **kwargs)
+
+    def sever_edge(self, src, dst, **kwargs):
+        mat = self.edge_controller.get_mat()
+        mat[src][dst] = 0
+        self.update(edge_mat=mat, **kwargs)
+
+
+def get_default_vnm(num_nodes,
+                    txnvalidator=None,
+                    overrides=None,
+                    log_config=None,
+                    data_dir=None,
+                    block_chain_archive=None,
+                    http_port=None,
+                    udp_port=None,
+                    host=None,
+                    endpoint_host=None):
+    from txnintegration.netconfig import gen_dfl_net_cfg
+    from txnintegration.matrices import NopEdgeController
+    from txnintegration.validator_collection_controller import \
+        ValidatorCollectionController
+    vnm = ValidatorNetworkManager(num_nodes)
+    net_cfg = gen_dfl_net_cfg(num_nodes,
+                              overrides=overrides,
+                              data_dir=data_dir,
+                              block_chain_archive=block_chain_archive,
+                              http_port=http_port,
+                              udp_port=udp_port,
+                              host=host,
+                              endpoint_host=endpoint_host)
+    vcc = ValidatorCollectionController(net_cfg, txnvalidator=txnvalidator)
+    nop = NopEdgeController(net_cfg)
+    vnm.initialize(net_cfg, vcc, nop)
+    return vnm

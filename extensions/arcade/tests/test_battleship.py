@@ -4,10 +4,8 @@ import os
 import random
 import string
 
-from txnintegration.validator_network_manager import defaultValidatorConfig, \
-    ValidatorNetworkManager
-
 from sawtooth_battleship import battleship_cli
+from txnintegration.validator_network_manager import get_default_vnm
 
 
 class TestBattleshipCommands(unittest.TestCase):
@@ -19,14 +17,12 @@ class TestBattleshipCommands(unittest.TestCase):
             if 'TEST_VALIDATOR_URL' in os.environ:
                 cls.url = os.environ['TEST_VALIDATOR_URL']
             else:
-                vnm_config = defaultValidatorConfig.copy()
-                if 'sawtooth_battleship' not in \
-                        vnm_config['TransactionFamilies']:
-                    vnm_config['TransactionFamilies'].append(
-                        'sawtooth_battleship')
-                cls.vnm = ValidatorNetworkManager(
-                    http_port=8800, udp_port=9600, cfg=vnm_config)
-                cls.vnm.launch_network(5)
+                overrides = {
+                    "TransactionFamilies": ['sawtooth_battleship'],
+                }
+                cls.vnm = get_default_vnm(5, overrides=overrides)
+                cls.vnm.do_genesis()
+                cls.vnm.launch()
                 # the url of the initial validator
                 cls.url = cls.vnm.urls()[0] + '/'
         except:
@@ -38,15 +34,9 @@ class TestBattleshipCommands(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         if cls.vnm is not None:
-            cls.vnm.shutdown()
-            # currently nose2 offers no way to detect test failure -- so
-            # always save the results
-            if cls.vnm.create_result_archive(
-                    "TestBattleshipCli.tar.gz"):
-                print "Validator data and logs preserved in: " \
-                      "TestBattleshipCli.tar.gz"
-            else:
-                print "No Validator data and logs to preserve."
+            cls.vnm.shutdown(archive_name='TestBattleshipCli')
+        else:
+            print "No Validator data and logs to preserve."
 
     def _clean_data_and_key_files(self, user1, user2):
         home_dir = os.path.expanduser("~")

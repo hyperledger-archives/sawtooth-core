@@ -227,41 +227,51 @@ class Journal(object):
         journal_transfer.register_message_handlers(self)
         self.consensus.initialization_complete(self)
 
+    @classmethod
+    def get_store_file(cls, node_name, store_name, data_dir,
+                       store_type=None):
+        store_type = 'shelf' if store_type is None else store_type
+        dir = 'db' if data_dir is None else data_dir
+        prefix = os.path.join(dir, str(node_name))
+        postfix = '.shelf'
+        if store_type in ['lmdb', 'cached-lmdb']:
+            postfix = '.lmdb'
+        if store_type in ['dbm']:
+            postfix = '.dbm'
+        return prefix + '_' + store_name + postfix
+
     def open_databases(self, store_type, data_directory):
         # this flag indicates whether we should create a completely new
         # database file or reuse an existing file
         store_type = 'shelf' if store_type is None else store_type
-        dbdir = 'db' if data_directory is None else data_directory
-        dbprefix = dbdir + "/" + str(self.local_node)
-
         if store_type in ['shelf', 'cached-shelf', 'lmdb', 'cached-lmdb']:
             def get_store(db_name, db_type):
-                file_name = db_name
+                file_name = self.get_store_file(self.local_node, db_name,
+                                                data_directory, db_type)
+                db_flag = 'c' if os.path.isfile(file_name) else 'n'
                 db_cls = None
                 if db_type in ['shelf', 'cached-shelf']:
                     from journal.database import shelf_database
                     db_cls = shelf_database.ShelfDatabase
-                    file_name += '.shelf'
                 elif db_type in ['lmdb', 'cached-lmdb']:
                     from journal.database import lmdb_database
                     db_cls = lmdb_database.LMDBDatabase
-                    file_name += '.lmdb'
-                db_flag = 'c' if os.path.isfile(file_name) else 'n'
                 db = db_cls(file_name, db_flag)
                 if db_type in ['cached-shelf', 'cached-lmdb']:
                     from journal.database.database import CachedDatabase
                     db = CachedDatabase(db)
                 return journal_store.JournalStore(db)
 
-            self.transaction_store = get_store(dbprefix + '_txn', store_type)
-            self.block_store = get_store(dbprefix + '_block', store_type)
-            self.chain_store = get_store(dbprefix + '_chain', store_type)
-            self.local_store = get_store(dbprefix + '_local', store_type)
+            self.transaction_store = get_store('txn', store_type)
+            self.block_store = get_store('block', store_type)
+            self.chain_store = get_store('chain', store_type)
+            self.local_store = get_store('local', store_type)
         else:
             raise KeyError("%s is not a supported StoreType", store_type)
 
         # Set up the global store and transaction handlers
-        gsm_fname = dbprefix + "_state" + ".dbm"
+        gsm_fname = self.get_store_file(self.local_node, 'state',
+                                        data_directory, 'dbm')
         db_flag = 'c' if os.path.isfile(gsm_fname) else 'n'
         self.global_store_map = GlobalStoreManager(gsm_fname, db_flag)
 

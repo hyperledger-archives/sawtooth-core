@@ -21,28 +21,9 @@ import tempfile
 
 from sawtooth.validator_config import get_validator_configuration
 from txnintegration.matrices import AdjacencyMatrix
-from txnintegration.matrices import AdjacencyMatrixAnimation
 from txnintegration.utils import find_or_create_test_key
 from txnintegration.utils import generate_private_key
 from txnintegration.utils import get_address_from_private_key_wif
-
-
-def gen_dfl_cfg_poet0():
-    ret = {}
-    return ret
-
-
-def gen_dfl_cfg_quorum(q_mag):
-    ret = OrderedDict()
-    ret['LedgerType'] = 'quorum'
-    ret['TopologyAlgorithm'] = "Quorum"
-    ret["MinimumConnectivity"] = q_mag
-    ret["TargetConnectivity"] = q_mag
-    ret['VotingQuorumTargetSize'] = q_mag
-    ret['Nodes'] = []
-    ret['VoteTimeInterval'] = 48.0
-    ret['BallotTimeInterval'] = 8.0
-    return ret
 
 
 class NetworkConfigProvider(object):
@@ -55,7 +36,7 @@ class NetworkConfigProvider(object):
     def __init__(self, currency_home=None):
         # create space
         self.create_currency_home = False
-        self.currency_home = None
+        self.currency_home = currency_home
         if currency_home is None or not os.path.exists(currency_home):
             self.create_currency_home = True
             self.currency_home = tempfile.mkdtemp()
@@ -155,15 +136,19 @@ class NetworkConfig(object):
         net_cfg.nodes = config_list
         return net_cfg
 
-    def __init__(self, cfg, n_mag,
-                 use_genesis=True,
-                 base_host=None,
+    def __init__(self,
+                 n_mag,
+                 overrides=None,
                  base_name='validator',
-                 base_port=9000,
-                 base_http_port=8800,
+                 base_port=None,
+                 base_http_port=None,
+                 host=None,
+                 endpoint_host=None,
                  provider=None):
+        overrides = {} if overrides is None else overrides
+        base_port = 9000 if base_port is None else base_port
+        base_http_port = 8800 if base_http_port is None else base_http_port
         self.n_mag = n_mag
-        self.use_genesis = use_genesis
         self.provider = None
         if provider is not None:
             self.provider = provider
@@ -182,25 +167,20 @@ class NetworkConfig(object):
             else:
                 nd = self.provider.provision_validator(node_name)
             # update basic configuration
-            nd.update(cfg)
+            nd.update(overrides)
             nd["id"] = idx
             # ...networking information
-            nd['Host'] = "localhost"
-            if base_host is not None:
-                nd['Host'] = "%s-%s" % (base_host, idx)
-            nd["Port"] = base_port + idx
-            nd["HttpPort"] = base_http_port + idx
-            nd['Listen'] = [
-                '%s:%s/UDP gossip' % (nd['Host'], nd['Port']),
-                '%s:%s/TCP http' % (nd['Host'], nd['HttpPort']),
-            ]
+            net_info = self.resolve_networking_info(host,
+                                                    base_port + idx,
+                                                    base_http_port + idx,
+                                                    endpoint_host)
+            nd.update(net_info)
+
             nd["Nodes"] = []
             nd["Peers"] = []
             # ...role information
             nd["LedgerURL"] = []
             nd["GenesisLedger"] = False
-            if idx == 0 and use_genesis is True:
-                nd["GenesisLedger"] = True
             # aux information
             nd["Quorum"] = []
             self.nodes.append(nd)
@@ -209,7 +189,23 @@ class NetworkConfig(object):
         self.peer_mat = None
         self.quorum_mat = None
         self.blacklist_mat = None
-        self.con_mat = AdjacencyMatrixAnimation(n_mag)
+
+    def resolve_networking_info(self, host, udp, http, endpoint):
+        ret = {}
+        ret['Host'] = 'localhost' if host is None else host
+        ret["Port"] = udp
+        ret["HttpPort"] = http
+        ret['Listen'] = [
+            '%s:%s/UDP gossip' % (ret['Host'], udp),
+            '%s:%s/TCP http' % (ret['Host'], http),
+        ]
+        if endpoint is not None:
+            ret['Endpoint'] = {
+                "Host": endpoint,
+                "Port": udp,
+                "HttpPort": http,
+            }
+        return ret
 
     def set_ledger_url(self, node_index, ledger_node_indexes):
         self.nodes[node_index]['LedgerURL'] = [
@@ -301,14 +297,24 @@ class NetworkConfig(object):
         print json.dumps(val, indent=4)
 
 
-def gen_dfl_net_cfg(n, ledger_type=None):
-    if ledger_type is None:
-        ledger_type = 'poet0'
-    ncp = NetworkConfigProvider()
-    overrides = {
-        "LedgerType": ledger_type,
-    }
-    net_cfg = NetworkConfig(overrides, n, provider=ncp)
+def gen_dfl_net_cfg(num_nodes,
+                    overrides=None,
+                    data_dir=None,
+                    block_chain_archive=None,
+                    http_port=None,
+                    udp_port=None,
+                    host=None,
+                    endpoint_host=None):
+    if block_chain_archive is not None:
+        raise NotImplementedError("'RepeatProvider' under construction")
+    ncp = NetworkConfigProvider(currency_home=data_dir)
+    net_cfg = NetworkConfig(num_nodes,
+                            overrides=overrides,
+                            base_http_port=http_port,
+                            base_port=udp_port,
+                            host=host,
+                            endpoint_host=endpoint_host,
+                            provider=ncp)
     for i in range(1, len(net_cfg.nodes)):
         net_cfg.set_ledger_url(i, [0])
     return net_cfg

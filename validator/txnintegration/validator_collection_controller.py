@@ -23,7 +23,7 @@ import pybitcointools
 from txnintegration.exceptions import ExitError
 from txnintegration.exceptions import ValidatorManagerException
 from txnintegration.matrices import NodeController
-from txnintegration.utils import find_txn_validator
+from txnintegration.utils import find_executable
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.validator_manager import ValidatorManager
@@ -39,11 +39,7 @@ class ValidatorCollectionController(NodeController):
             self.SigningKey = pybitcointools.random_key()
             self.Address = pybitcointools.privtoaddr(self.SigningKey)
 
-    def __init__(self,
-                 net_config,
-                 txnvalidator=None,
-                 log_config=None,
-                 ):
+    def __init__(self, net_config, txnvalidator=None, log_config=None):
         super(ValidatorCollectionController, self).__init__(net_config.n_mag)
         self.net_config = net_config
         self.hdls = [None for _ in range(net_config.n_mag)]
@@ -51,9 +47,8 @@ class ValidatorCollectionController(NodeController):
         if self.net_config.provider is not None:
             self.data_dir = self.net_config.provider.currency_home
         if txnvalidator is None:
-            txnvalidator = find_txn_validator()
+            txnvalidator = find_executable('txnvalidator')
         self.txnvalidator = txnvalidator
-
         self.validator_log_config = log_config
         self.admin_node = ValidatorCollectionController.AdminNode()
 
@@ -96,11 +91,11 @@ class ValidatorCollectionController(NodeController):
         self.hdls[idx] = v
         return v
 
-    def deactivate(self, idx, **kwargs):
-        v = self.hdls[idx]
-        assert isinstance(v, ValidatorManager)
-        self.hdls[idx] = None
-        v.shutdown(True)
+    def deactivate(self, idx, sig='SIGINT', timeout=4, force=True, **kwargs):
+        if not isinstance(self.hdls[idx], ValidatorManager):
+            raise Exception("node %s does not appear to be runnning" % (idx))
+        self.validator_shutdown(idx, sig, timeout, force)
+        assert self.hdls[idx] is None
 
     def commit(self, reg_seconds=240, **kwargs):
         if reg_seconds > 0:
@@ -123,6 +118,61 @@ class ValidatorCollectionController(NodeController):
                     print e.message
                 p.step()
                 time.sleep(1)
+
+    def validator_shutdown(self, idx, sig, timeout, force):
+        '''
+        Dispose of validator subprocesses by index
+        Args:
+            idx (int): which validator (in self.hdls)
+            sig (str): valid values: SIG{TERM,INT,KILL}.
+            timeout (int): time to wait in seconds
+            force (bool): whether to try SIGKILL if another method has not
+                worked within timeout seconds.
+        Returns: None
+        '''
+        assert isinstance(self.hdls[idx], ValidatorManager)
+        cfg = self.net_config.get_node_cfg(idx)
+        v_name = cfg['NodeName']
+        v = self.hdls[idx]
+        print 'sending %s to %s' % (sig, v_name)
+        if v.is_running():
+            if sig == 'SIGTERM':
+                v.shutdown(term=True)
+            elif sig == 'SIGINT':
+                v.shutdown()
+            elif sig == 'SIGKILL':
+                v.shutdown(force=True)
+            else:
+                raise Exception('unrecognized argument for sig: %s', sig)
+        # Would be ideal to move the waiting here into threads in self.commit.
+        # Then we could shut down several in parallel, and (besides archive
+        # collection, which really should be moved to a provider) self.shutdown
+        # would basically just be a numpy.zeros update (re-using this code)!
+        to = TimeOut(timeout)
+        success = False
+        ini = time.time()
+        with Progress("giving %s %ss to shutdown: " % (v_name, timeout)) as p:
+            while success is False:
+                if not v.is_running():
+                    success = True
+                elif to.is_timed_out():
+                    break
+                else:
+                    time.sleep(1)
+                p.step()
+        dur = time.time() - ini
+        if success is False:
+            fail_msg = "%s is still running %.2f seconds after %s"
+            fail_msg = fail_msg % (v_name, dur, force)
+            if force is False or sig == 'SIGKILL':
+                raise ValidatorManagerException(fail_msg)
+            else:
+                timeout = max(4, timeout)
+                print '%s; trying SIGKILL, timeout %s...' % (fail_msg, timeout)
+                self.validator_shutdown(idx, 'SIGKILL', timeout, force)
+        if success is True:
+            print "%s shut down %.2f seconds after %s" % (v_name, dur, sig)
+        self.hdls[idx] = None
 
     def wait_for_registration(self, validators, validator, max_time=None):
         """
@@ -170,8 +220,9 @@ class ValidatorCollectionController(NodeController):
                     if v.is_running():
                         v.shutdown()
                     p.step()
+
             running_count = 0
-            to = TimeOut(3)
+            to = TimeOut(5)
             with Progress("Giving validators time to shutdown: ") as p:
                 while True:
                     running_count = 0
@@ -203,6 +254,28 @@ class ValidatorCollectionController(NodeController):
                     fp = os.path.join(dir_path, f)
                     tar.add(fp, os.path.join(base_name, f))
             tar.close()
+
+    def unpack_blockchain(self, archive_name):
+        ext = ["cb", "cs", "gs", "xn"]
+        dirs = set()
+        tar = tarfile.open(archive_name, "r|gz")
+        for f in tar:
+            e = f.name[-2:]
+            if e in ext or f.name.endswith("wif"):
+                base_name = os.path.basename(f.name)
+                dest_file = os.path.join(self.data_dir, base_name)
+                if os.path.exists(dest_file):
+                    os.remove(dest_file)
+                tar.extract(f, self.data_dir)
+                # extract put the file in a directory below DataDir
+                # move the file from extract location to dest_file
+                ext_file = os.path.join(self.data_dir, f.name)
+                os.rename(ext_file, dest_file)
+                # and remember the extract directory for deletion
+                dirs.add(os.path.dirname(ext_file))
+        tar.close()
+        for d in dirs:
+            os.rmdir(d)
 
     @staticmethod
     def get_archive_base_name(path):

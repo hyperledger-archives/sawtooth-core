@@ -18,8 +18,7 @@ import unittest
 
 from mktmain import client_cli
 from mktplace import mktplace_state
-from txnintegration.validator_network_manager import ValidatorNetworkManager
-from txnintegration.validator_network_manager import defaultValidatorConfig
+from txnintegration.validator_network_manager import get_default_vnm
 
 ENABLE_INTEGRATION_TESTS = False
 if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
@@ -43,16 +42,15 @@ class TestAllTransactions(unittest.TestCase):
                 urls = (os.environ['TEST_VALIDATOR_URLS']).split(",")
                 cls.url = urls[0]
             else:
-                vnm_config = defaultValidatorConfig.copy()
-                if 'mktplace.transactions.market_place' not in \
-                        vnm_config['TransactionFamilies']:
-                    vnm_config['TransactionFamilies'].append(
-                        'mktplace.transactions.market_place')
-                vnm_config['InitialWaitTime'] = 1
-                vnm_config['TargetWaitTime'] = 1
-                cls.vnm = ValidatorNetworkManager(
-                    http_port=9500, udp_port=9600, cfg=vnm_config)
-                cls.vnm.launch_network(1)
+                families = ['mktplace.transactions.market_place']
+                overrides = {
+                    'InitialWaitTime': 1,
+                    'TargetWaitTime': 1,
+                    "TransactionFamilies": families,
+                }
+                cls.vnm = get_default_vnm(1, overrides=overrides)
+                cls.vnm.do_genesis()
+                cls.vnm.launch()
                 # the url of the initial validator
                 cls.url = cls.vnm.urls()[0] + '/'
 
@@ -186,12 +184,6 @@ class TestAllTransactions(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         if cls.vnm is not None:
-            cls.vnm.shutdown()
-            # currently nose2 offers no way to detect test failure -- so
-            # always save the results
-            if cls.vnm.create_result_archive(
-                    "TestCommercialPaperScenarios.tar.gz"):
-                print "Validator data and logs preserved in: " \
-                      "TestCommercialPaperScenarios.tar.gz"
-            else:
-                print "No Validator data and logs to preserve."
+            cls.vnm.shutdown(archive_name="TestCommercialPaperScenarios")
+        else:
+            print "No Validator data and logs to preserve."

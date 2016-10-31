@@ -19,6 +19,7 @@ import logging
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
 from ledger.transaction import endpoint_registry
+from sawtooth.cli.admin_sub.genesis_common import check_for_chain
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.validator_config import get_validator_configuration
@@ -79,6 +80,12 @@ def do_poet1_genesis(args):
         ], args)
     cfg = get_validator_configuration(args.config, options_config)
 
+    # check for existing block store
+    node_name = cfg.get("NodeName")
+    data_directory = cfg.get("DataDirectory")
+    store_type = cfg.get("StoreType")
+    check_for_chain(data_directory, node_name, store_type)
+
     # Obtain Journal object:
     # ...set WaitTimer globals
     target_wait_time = cfg.get("TargetWaitTime")
@@ -101,8 +108,6 @@ def do_poet1_genesis(args):
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
     genesis_ledger = cfg.get("GenesisLedger")
-    data_directory = cfg.get("DataDirectory")
-    store_type = cfg.get("StoreType")
     stat_domains = {}
     from journal.consensus.poet1.poet_consensus import PoetConsensus
     consensus_obj = PoetConsensus(cfg)
@@ -134,6 +139,10 @@ def do_poet1_genesis(args):
     # ...pop VR seed (we'll presently defer resolving VR seed issues)
     _ = gossiper.IncomingMessageQueue.pop()
     # ...create block g_block (including VR seed txn just popped)
+    journal.on_genesis_block.fire(journal)
+    journal.initializing = False
+    for txn in journal.initial_transactions:
+        journal.add_pending_transaction(txn, build_block=False)
     g_block = journal.build_block(genesis=True)  # seed later...
     journal.claim_block(g_block)
     # ...simulate receiving the genesis block msg from reactor to force commit
