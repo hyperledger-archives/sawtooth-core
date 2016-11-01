@@ -204,7 +204,6 @@ class ValidatorManager(object):
                             self._handle.terminate()
                         else:
                             self._handle.send_signal(signal.SIGTERM)
-                            print "sending SIGTERM"
                     except OSError:
                         pass
                 elif force:
@@ -213,7 +212,6 @@ class ValidatorManager(object):
                             self._handle.kill()
                         else:
                             self._handle.send_signal(signal.SIGKILL)
-                            print "sending SIGKILL"
                     except OSError:
                         pass  # ignore invalid process and other os type errors
                 else:
@@ -222,7 +220,6 @@ class ValidatorManager(object):
                             self._handle.terminate()
                         else:
                             self._handle.send_signal(signal.SIGINT)
-                            print "sending SIGINT"
                     except OSError:
                         pass
         if self._output and not self._output.closed:
