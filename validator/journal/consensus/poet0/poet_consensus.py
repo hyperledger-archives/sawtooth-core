@@ -63,100 +63,66 @@ class PoetConsensus(Consensus):
         # initialize the block handlers
         poet_transaction_block.register_message_handlers(journal)
 
-    def build_block(self, journal, genesis=False):
-        """Builds a transaction block that is specific to this particular
-        consensus mechanism, in this case we build a block that contains a
-        wait certificate.
+    def create_block(self):
+        """Create candidate transaction block.
 
         Args:
-            genesis (boolean): Whether to force creation of the initial
-                block.
 
         Returns:
-            PoetTransactionBlock: The constructed block with the wait
-                certificate.
+            None
         """
-        logger.debug('attempt to build transaction block extending %s',
-                     journal.most_recent_committed_block_id[:8])
-        # Create a new block from all of our pending transactions
-        nblock = poet_transaction_block.PoetTransactionBlock()
-        nblock.BlockNum = journal.most_recent_committed_block.BlockNum \
-            + 1 if journal.most_recent_committed_block else 0
-        nblock.PreviousBlockID = journal.most_recent_committed_block_id
+        return poet_transaction_block.PoetTransactionBlock()
 
-        journal.on_pre_build_block.fire(journal, nblock)
+    def initialize_block(self, journal, block):
+        """Creates a wait certificate for a candidate transaction block.
 
-        txnlist = journal._prepare_transaction_list(
-            journal.maximum_transactions_per_block)
+        Args:
 
-        if len(txnlist) == 0 and not genesis:
-            return None
-
-        logger.info('build transaction block to extend %s with %s '
-                    'transactions',
-                    journal.most_recent_committed_block_id[:8], len(txnlist))
-
-        # Create a new block from all of our pending transactions
-        nblock = poet_transaction_block.PoetTransactionBlock()
-        nblock.BlockNum = journal.most_recent_committed_block.BlockNum \
-            + 1 if journal.most_recent_committed_block else 0
-        nblock.PreviousBlockID = journal.most_recent_committed_block_id
-        nblock.TransactionIDs = txnlist
-
-        nblock.create_wait_timer(
+        Returns:
+            None
+        """
+        block.create_wait_timer(
             journal.local_node.signing_address(),
-            self._build_certificate_list(journal.block_store, nblock))
+            self._build_certificate_list(journal.block_store, block))
 
         journal.JournalStats.LocalMeanTime.Value = \
-            nblock.wait_timer.local_mean
+            block.wait_timer.local_mean
         journal.JournalStats.PopulationEstimate.Value = \
-            round(nblock.wait_timer.local_mean /
-                  nblock.wait_timer.target_wait_time, 2)
-
-        if genesis:
-            nblock.AggregateLocalMean = nblock.wait_timer.local_mean
-
-        journal.JournalStats.PreviousBlockID.Value = nblock.PreviousBlockID
+            round(block.wait_timer.local_mean /
+                  block.wait_timer.target_wait_time, 2)
 
         logger.debug('created new pending block with timer <%s> and '
-                     '%d transactions', nblock.wait_timer,
-                     len(nblock.TransactionIDs))
+                     '%d transactions', block.wait_timer,
+                     len(block.TransactionIDs))
 
         journal.JournalStats.ExpectedExpirationTime.Value = \
-            round(nblock.wait_timer.request_time +
-                  nblock.wait_timer.duration, 2)
+            round(block.wait_timer.request_time +
+                  block.wait_timer.duration, 2)
 
         journal.JournalStats.Duration.Value = \
-            round(nblock.wait_timer.duration, 2)
-
-        for txnid in nblock.TransactionIDs:
-            txn = journal.transaction_store[txnid]
-            txn.InBlock = "Uncommitted"
-            journal.transaction_store[txnid] = txn
-
-        return nblock
+            round(block.wait_timer.duration, 2)
 
     def claim_block(self, journal, block):
         """Claims the block and transmits a message to the network
         that the local node won.
 
         Args:
+            journal: the journal object.
             block (PoetTransactionBlock): The block to claim.
         Returns:
-            message: the block message to broadcast to the network.
+            None
         """
-        logger.info('node %s validates block with %d transactions',
-                    journal.local_node.Name, len(block.TransactionIDs))
-
-        # Claim the block
         block.create_wait_certificate()
-        block.sign_from_node(journal.local_node)
-        journal.JournalStats.BlocksClaimed.increment()
 
-        # Fire the event handler for block claim
-        journal.on_claim_block.fire(journal, block)
+    def create_block_message(self, block):
+        """Create a message wrapper for a block this validator is claiming.
 
-        # And send out the message that we won
+        :param block:
+         block: the block to wrap in the message.
+
+        :return:
+         the message object to be sent.
+        """
         msg = poet_transaction_block.PoetTransactionBlockMessage()
         msg.TransactionBlock = block
         return msg

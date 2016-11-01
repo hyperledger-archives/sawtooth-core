@@ -135,8 +135,10 @@ class QuorumConsensus(Consensus):
     #
     # GENERAL JOURNAL API
     #
+    def create_block(self):
+        return quorum_transaction_block.QuorumTransactionBlock()
 
-    def build_block(self, journal, force=False):
+    def initialize_block(self, journal, block):
         """Builds the next transaction block for the journal.
 
         Note:
@@ -150,16 +152,8 @@ class QuorumConsensus(Consensus):
         Returns:
             QuorumTransactionBlock: The created transaction block.
         """
-
-        logger.debug('build transaction block')
-
-        if force:
-            block = quorum_transaction_block.QuorumTransactionBlock()
-            block.BlockNumber = 0
-            block.sign_from_node(self.local_node)
-            return block
-
-        return None
+        # initiate a vote...
+        pass
 
     def handle_fork(self, tblock):
         """Handle the case where we are attempting to commit a block
@@ -327,6 +321,9 @@ class QuorumConsensus(Consensus):
 
     def claim_block(self, journal, block):
         """Placeholder for when the block is complete. """
+        pass
+
+    def create_block_message(self, block):
         pass
 
     def quorum_list(self):

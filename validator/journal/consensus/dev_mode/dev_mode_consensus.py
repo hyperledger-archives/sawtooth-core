@@ -51,68 +51,52 @@ class DevModeConsensus(Consensus):
         # initialize the block handlers
         dev_mode_transaction_block.register_message_handlers(journal)
 
-    def build_block(self, journal, force=False):
-        """Builds a transaction block that is specific to this particular
-        consensus mechanism, in this case we build a block that contains a
-        wait certificate.
+    def create_block(self):
+        """Build a new candidate transaction block.
 
-        Args:
-            force (boolean): Whether to force creation of the initial
-                block.
-
-        Returns:
-            DevModeTransactionBlock: candidate transaction block
+        :return:
+            new transaction block.
         """
         if not self._block_publisher:
             return None
-
-        if not force and \
-                len(journal.pending_transactions) == 0:
-            return None
-
-        logger.debug('attempt to build transaction block extending %s',
-                     journal.most_recent_committed_block_id[:8])
-
-        logger.info('build transaction block to extend %s'
-                    'transactions', journal.most_recent_committed_block_id[:8])
-
-        # Create a new block from all of our pending transactions
-        new_block = dev_mode_transaction_block.DevModeTransactionBlock()
-        new_block.BlockNum = journal.most_recent_committed_block.BlockNum \
-            + 1 if journal.most_recent_committed_block else 0
-        new_block.PreviousBlockID = journal.most_recent_committed_block_id
-        journal.on_pre_build_block.fire(journal, new_block)
-
-        logger.debug('created new pending block')
-
         self._next_block_time = time() + self._block_wait_time
-        return new_block
+        return dev_mode_transaction_block.DevModeTransactionBlock()
 
-    def claim_block(self, journal, block):
-        """Claims the block and transmits a message to the network
-        that the local node won.
+    def initialize_block(self, journal, block):
+        """Builds a transaction block that is specific to this particular
+        consensus mechanism, in this case there is nothing to do.
 
         Args:
-            nblock (DevModeTransactionBlock): The block to claim.
+            jounrnal: the journal
+            block: the block to initialize.
+        Returns:
+            None
         """
+        pass
 
-        block.TransactionIDs = journal._prepare_transaction_list(
-            journal.maximum_transactions_per_block)
+    def claim_block(self, journal, block):
+        """ Nop there is no signing operations in devmode consensus.
 
-        logger.info('node %s validates block with %d transactions',
-                    journal.local_node.Name, len(block.TransactionIDs))
+        Args:
+            block (DevModeTransactionBlock): The block to claim.
+        """
+        pass
 
-        # Claim the block
-        block.sign_from_node(journal.local_node)
-        journal.JournalStats.BlocksClaimed.increment()
+    def create_block_message(self, block):
+        """Create a message wrapper for a block this validator is claiming.
 
-        # And send out the message that we won
+        :param block:
+         block: the block to wrap in the message.
+
+        :return:
+         the message object to be sent.
+        """
         msg = dev_mode_transaction_block.DevModeTransactionBlockMessage()
         msg.TransactionBlock = block
         return msg
 
     def verify_block(self, journal, block):
-        return self.is_valid(self, journal)
+        return block.is_valid(self, journal)
 
     def check_claim_block(self, journal, block, now):
         return len(journal.pending_transactions) != 0 and \
