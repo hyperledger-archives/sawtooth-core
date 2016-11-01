@@ -298,14 +298,18 @@ def find_or_create_test_key(key_base_name, key_dir=None, quiet=True):
             cmd += ' -q'
         sawtooth_cli_intercept(cmd)
     assert os.path.exists(key_file)
-    addr_file = '.'.join(key_file.split('.')[:-1]) + '.addr'
-    assert os.path.exists(addr_file)
-    key_str = None
+
     with open(key_file, 'r') as f:
         key_str = f.read()
     signing_key = key_str.split('\n')[0]
     identifier = pybitcointools.privtoaddr(signing_key)
-    return (key_file, signing_key, identifier)
+
+    addr_file = '.'.join(key_file.split('.')[:-1]) + '.addr'
+    if not os.path.exists(addr_file):
+        with open(addr_file, 'w') as f:
+            f.write('{}\n'.format(identifier))
+
+    return key_file, signing_key, identifier
 
 
 def generate_private_key():
