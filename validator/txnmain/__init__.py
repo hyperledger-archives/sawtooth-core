@@ -13,4 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = ['admin_cli', "validator_cli"]
+__all__ = ['admin_cli']
