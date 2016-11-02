@@ -421,6 +421,29 @@ describe('validator', () => {
                     .catch(done);
             });
 
+            it('should respond with an error object if one is in the response', (done) => {
+                _respondWith(fixture, 400, {
+                    error: "invalid signature",
+                    errorType: "InvalidTransactionError",
+                    status: 400
+                });
+
+                fixture.validator
+                       .sendTransaction('/my_txn_family', '{x: 1, y:2}')
+                       .then((e) => {
+                           assert.isNotOk(e);
+                       })
+                       .catch((e) => {
+                           assert.deepEqual({
+                               error: "invalid signature",
+                               errorType: "InvalidTransactionError",
+                               statusCode: 400
+                           }, e);
+                       })
+                       .then(done)
+                       .catch(done);
+            });
+
             it('should throw an exception on a badly formatted request response', (done) => {
                 _respondWith(fixture, 400, 'unable to decode incoming request');
                 fixture.validator

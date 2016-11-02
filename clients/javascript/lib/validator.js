@@ -49,12 +49,19 @@ function _httpRequest(options, data) {
                     p = Promise.resolve(buffer.toString());
                 }
 
-                p.then(function(str) {
-                    resolve({
-                        body: str,
-                        headers: response.headers,
-                        statusCode: response.statusCode,
-                    });
+                p.then(function(body) {
+                    if(response.statusCode !== 200 && _.isObject(body)) {
+                        reject(_.chain(body)
+                                .omit('status')
+                                .extend({statusCode: response.statusCode})
+                                .value());
+                    } else {
+                        resolve({
+                            body: body,
+                            headers: response.headers,
+                            statusCode: response.statusCode,
+                        });
+                    }
                 });
             });
         });
