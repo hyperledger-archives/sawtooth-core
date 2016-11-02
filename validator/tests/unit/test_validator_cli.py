@@ -16,7 +16,7 @@
 import os
 import unittest
 
-from txnmain.validator_cli import get_configuration
+from txnserver.validator_cli import get_configuration
 
 
 class TestValidatorCLI(unittest.TestCase):

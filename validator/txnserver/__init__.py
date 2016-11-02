@@ -13,4 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = ['log_setup', 'web_api', 'validator']
+__all__ = ['log_setup', 'web_api', 'validator', "validator_cli"]
