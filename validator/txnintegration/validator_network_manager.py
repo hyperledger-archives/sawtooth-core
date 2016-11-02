@@ -17,6 +17,7 @@ import logging
 import numpy
 import os
 import subprocess
+import sys
 
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from txnintegration.exceptions import ExitError
@@ -79,14 +80,14 @@ class ValidatorNetworkManager(object):
         alg_name = ledger_type
         if ledger_type == 'dev_mode':
             alg_name = 'dev-mode'
-        cli_args = ' admin %s-genesis --config %s' % (alg_name, config_file)
+        cli_args = 'admin %s-genesis --config %s' % (alg_name, config_file)
         try:
             executable = find_executable('sawtooth')
         except ExitError:
             path = os.path.dirname(self.node_controller.txnvalidator)
             executable = os.path.join(path, 'sawtooth')
         assert os.path.isfile(executable)
-        cmd = executable + cli_args
+        cmd = '%s %s %s' % (sys.executable, executable, cli_args)
         proc = subprocess.Popen(cmd.split())
         proc.wait()
         if proc.returncode != 0:
