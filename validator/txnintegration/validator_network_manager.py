@@ -207,19 +207,20 @@ def get_default_vnm(num_nodes,
                     udp_port=None,
                     host=None,
                     endpoint_host=None):
-    from txnintegration.netconfig import gen_dfl_net_cfg
+    from txnintegration.netconfig import get_default_network_config_obj
     from txnintegration.matrices import NopEdgeController
     from txnintegration.validator_collection_controller import \
         ValidatorCollectionController
     vnm = ValidatorNetworkManager(num_nodes)
-    net_cfg = gen_dfl_net_cfg(num_nodes,
-                              overrides=overrides,
-                              data_dir=data_dir,
-                              block_chain_archive=block_chain_archive,
-                              http_port=http_port,
-                              udp_port=udp_port,
-                              host=host,
-                              endpoint_host=endpoint_host)
+    archive = block_chain_archive
+    net_cfg = get_default_network_config_obj(num_nodes,
+                                             overrides=overrides,
+                                             data_dir=data_dir,
+                                             block_chain_archive=archive,
+                                             http_port=http_port,
+                                             udp_port=udp_port,
+                                             host=host,
+                                             endpoint_host=endpoint_host)
     vcc = ValidatorCollectionController(net_cfg, txnvalidator=txnvalidator)
     nop = NopEdgeController(net_cfg)
     vnm.initialize(net_cfg, vcc, nop)

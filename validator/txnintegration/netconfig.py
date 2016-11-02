@@ -296,14 +296,28 @@ class NetworkConfig(object):
         print json.dumps(val, indent=4)
 
 
-def gen_dfl_net_cfg(num_nodes,
-                    overrides=None,
-                    data_dir=None,
-                    block_chain_archive=None,
-                    http_port=None,
-                    udp_port=None,
-                    host=None,
-                    endpoint_host=None):
+def get_default_network_config_obj(num_nodes,
+                                   overrides=None,
+                                   data_dir=None,
+                                   block_chain_archive=None,
+                                   http_port=None,
+                                   udp_port=None,
+                                   host=None,
+                                   endpoint_host=None):
+    '''
+    Factory to generate NetworkConfig objects for common cases.
+    Args:
+        num_nodes (int): network size
+        overrides (dict): config overrides for network
+        data_dir (str): data directory for validator files/logs etc
+        block_chain_archive (str): previous, saved data directory to unpack
+        http_port (int): base http port for network
+        udp_port (int): base udp port for network
+        host (str): host name or address
+        endpoint_host (str): endpoint host name or address
+    Returns:
+        net_cfg (NetworkConfig)
+    '''
     if block_chain_archive is not None:
         raise NotImplementedError("'RepeatProvider' under construction")
     ncp = NetworkConfigProvider(currency_home=data_dir)
