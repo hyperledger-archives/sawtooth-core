@@ -13,43 +13,43 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import argparse
 import collections
 import sys
 import time
 import signal
+import json
+import psutil
 
 from twisted.internet import reactor
 from twisted.internet import task
 
 from twisted.web.client import Agent
 
-from txnintegration.stats_print import ConsolePrint
-from txnintegration.stats_print import StatsPrintManager
-from txnintegration.stats_utils import PlatformIntervalStats
-from txnintegration.stats_utils import SummaryStatsCsvManager
-from txnintegration.stats_utils import TopologyManager
-from txnintegration.stats_utils import TransactionRate
-from txnintegration.stats_utils import ValidatorStatsCsvManager
-from txnintegration.stats_utils import ValidatorCommunications
-from txnintegration.stats_utils import named_tuple_init
-from txnintegration.stats_utils import StatsSnapshotWriter
+from sawtooth.cli.stats_lib.stats_print import ConsolePrint
+from sawtooth.cli.stats_lib.stats_print import StatsPrintManager
+from sawtooth.cli.stats_lib.stats_utils import PlatformIntervalStats
+from sawtooth.cli.stats_lib.stats_utils import SummaryStatsCsvManager
+from sawtooth.cli.stats_lib.stats_utils import TopologyManager
+from sawtooth.cli.stats_lib.stats_utils import TransactionRate
+from sawtooth.cli.stats_lib.stats_utils import ValidatorStatsCsvManager
+from sawtooth.cli.stats_lib.stats_utils import ValidatorCommunications
+from sawtooth.cli.stats_lib.stats_utils import named_tuple_init
+from sawtooth.cli.stats_lib.stats_utils import StatsSnapshotWriter
 
-from txnintegration.fork_detect import BranchManager
+from sawtooth.cli.stats_lib.fork_detect import BranchManager
+from sawtooth.cli.exceptions import CliException
 
-from txnintegration.utils import PlatformStats
-from txnintegration.utils import StatsCollector
 
-curses_imported = True
+CURSES_IMPORTED = True
 try:
     import curses
 except ImportError:
-    curses_imported = False
+    CURSES_IMPORTED = False
 
 
 class StatsClient(object):
     def __init__(self, val_id, fullurl):
-        self.id = val_id
+        self.val_id = val_id
         self.url = fullurl
         self.name = "validator_{0}".format(val_id)
 
@@ -67,7 +67,7 @@ class StatsClient(object):
         self.request_complete = 0.0
         self.response_time = 0.0
 
-        self.vc = ValidatorCommunications(Agent(reactor))
+        self.validator_comm = ValidatorCommunications(Agent(reactor))
 
         self.path = None
 
@@ -75,9 +75,10 @@ class StatsClient(object):
         # request stats from specified validator url
         self.request_start = time.clock()
         self.path = self.url + "/statistics/all"
-        self.vc.get_request(self.path,
-                            self._stats_completion,
-                            self._stats_error)
+        self.validator_comm.get_request(
+            self.path,
+            self._stats_completion,
+            self._stats_error)
 
     def _stats_completion(self, json_stats, response_code):
         self.request_complete = time.clock()
@@ -202,6 +203,81 @@ PoetStats = collections.namedtuple('poet_stats',
                                    'last_unique_blockID')
 
 
+class StatsCollector(object):
+    def __init__(self):
+        self.statslist = []
+
+    def get_names(self):
+        """
+        Returns: All data element names as list - for csv writer (header)
+        """
+        names = []
+
+        for stat in self.statslist:
+            statname = type(stat).__name__
+            for name in stat._fields:
+                names.append(statname + "_" + name)
+
+        return names
+
+    def get_data(self):
+        """
+        Returns: All data element values in list - for csv writer
+        """
+        values = []
+
+        for stat in self.statslist:
+            for value in stat:
+                values.append(value)
+
+        return values
+
+    def get_data_as_dict(self):
+        """
+        Returns: returns platform stats as dictionary - for stats web interface
+        """
+        p_stats = collections.OrderedDict()
+
+        for stat in self.statslist:
+            statname = type(stat).__name__
+            p_stats[statname] = stat._asdict()
+
+        return p_stats
+
+    def pprint_stats(self):
+        p_stats = self.get_data_as_dict()
+        print json.dumps(p_stats, indent=4)
+
+
+CpuStats = collections.namedtuple("scpu",
+                                  'percent '
+                                  'user_time '
+                                  'system_time '
+                                  'idle_time')
+
+
+class PlatformStats(StatsCollector):
+    def __init__(self):
+        super(PlatformStats, self).__init__()
+
+        self.get_stats()
+
+    def get_stats(self):
+        cpct = psutil.cpu_percent(interval=0)
+        ctimes = psutil.cpu_times_percent()
+        self.cpu_stats = CpuStats(cpct, ctimes.user, ctimes.system,
+                                  ctimes.idle)
+
+        self.vmem_stats = psutil.virtual_memory()
+        self.disk_stats = psutil.disk_io_counters()
+        self.net_stats = psutil.net_io_counters()
+
+        # must create new stats list each time stats are updated
+        # because named tuples are immutable
+        self.statslist = [self.cpu_stats, self.vmem_stats, self.disk_stats,
+                          self.net_stats]
+
+
 class SystemStats(StatsCollector):
     def __init__(self):
         super(SystemStats, self).__init__()
@@ -225,6 +301,7 @@ class SystemStats(StatsCollector):
 
         self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
                           self.sys_packets, self.sys_msgs, self.poet_stats]
+        self.last_unique_block_id = None
 
         # accumulators
         self.response_times = []
@@ -242,6 +319,7 @@ class SystemStats(StatsCollector):
 
         self.local_mean = []
         self.previous_blockid = []
+        self.avg_local_mean = None
 
     def collect_stats(self, stats_clients):
         # must clear the accumulators at start of each sample interval
@@ -344,13 +422,13 @@ class SystemStats(StatsCollector):
                 / len(self.local_mean)
 
             unique_blockid_list = list(set(self.previous_blockid))
-            self.last_unique_blockID = \
+            self.last_unique_block_id = \
                 unique_blockid_list[len(unique_blockid_list) - 1]
             self.poet_stats = PoetStats(
                 self.avg_local_mean,
                 max(self.local_mean),
                 min(self.local_mean),
-                self.last_unique_blockID
+                self.last_unique_block_id
             )
 
             # because named tuples are immutable,
@@ -380,12 +458,12 @@ class SystemStats(StatsCollector):
 class StatsManager(object):
     def __init__(self, endpointmanager):
         self.epm = endpointmanager
-        self.cp = ConsolePrint()
+        self.console_print = ConsolePrint()
 
-        self.ss = SystemStats()
-        self.ps = PlatformStats()
+        self.system_stats = SystemStats()
+        self.platform_stats = PlatformStats()
         self.psis = PlatformIntervalStats()
-        self.ps.psis = self.psis
+        self.platform_stats.psis = self.psis
 
         self.previous_net_bytes_recv = 0
         self.previous_net_bytes_sent = 0
@@ -395,19 +473,20 @@ class StatsManager(object):
         self.endpoints = {}
         self.stats_loop_count = 0
 
-        self.tm = TopologyManager(self.clients)
-        self.bm = BranchManager(self.epm, Agent(reactor))
+        self.topology_mgr = TopologyManager(self.clients)
+        self.branch_manager = BranchManager(self.epm, Agent(reactor))
 
-        stats_providers = [self.ss,
-                           self.ps,
-                           self.tm.topology_stats,
-                           self.bm,
+        stats_providers = [self.system_stats,
+                           self.platform_stats,
+                           self.topology_mgr.topology_stats,
+                           self.branch_manager,
                            self.clients]
 
         self.spm = StatsPrintManager(*stats_providers)
         self.ssw = StatsSnapshotWriter(*stats_providers)
 
-        self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
+        self.sscm = SummaryStatsCsvManager(
+            self.system_stats, self.platform_stats)
         self.vscm = ValidatorStatsCsvManager(self.clients)
 
     def initialize_client_list(self, endpoints):
@@ -416,13 +495,13 @@ class StatsManager(object):
         for val_num, endpoint in enumerate(endpoints.values()):
             url = 'http://{0}:{1}'.format(
                 endpoint["Host"], endpoint["HttpPort"])
-            try:
-                c = StatsClient(val_num, url)
-                c.name = endpoint["Name"]
-                self.known_endpoint_names.append(endpoint["Name"])
-            except:
-                e = sys.exc_info()[0]
-                print ("error creating stats clients: ", e)
+
+            c = StatsClient(val_num, url)
+            c.name = endpoint["Name"]
+            self.known_endpoint_names.append(endpoint["Name"])
+
+            e = sys.exc_info()[0]
+            print ("error creating stats clients: ", e)
             self.clients.append(c)
 
     def update_client_list(self, endpoints):
@@ -455,25 +534,25 @@ class StatsManager(object):
         reactor.stop()
 
     def stats_loop_error(self, failure):
-        self.cp.cpstop()
+        self.console_print.cpstop()
         print failure
         reactor.stop()
 
     def process_stats(self, statsclients):
-        self.ss.known_validators = len(statsclients)
-        self.ss.active_validators = 0
+        self.system_stats.known_validators = len(statsclients)
+        self.system_stats.active_validators = 0
 
-        self.ss.collect_stats(statsclients)
-        self.ss.calculate_stats()
+        self.system_stats.collect_stats(statsclients)
+        self.system_stats.calculate_stats()
 
-        self.ps.get_stats()
-        psr = {"platform": self.ps.get_data_as_dict()}
+        self.platform_stats.get_stats()
+        psr = {"platform": self.platform_stats.get_data_as_dict()}
         self.psis.calculate_interval_stats(psr)
 
-        self.tm.update_topology()
+        self.topology_mgr.update_topology()
 
-        self.bm.update_client_list(self.endpoints)
-        self.bm.update()
+        self.branch_manager.update_client_list(self.endpoints)
+        self.branch_manager.update()
 
     def print_stats(self):
         self.spm.print_stats()
@@ -497,7 +576,7 @@ class StatsManager(object):
 
     def stats_stop(self):
         print "StatsManager is stopping"
-        self.cp.cpstop()
+        self.console_print.cpstop()
         self.csv_stop()
 
 
@@ -508,7 +587,12 @@ class EndpointManager(object):
         self.initial_discovery = True
         self.endpoint_urls = []
         self.endpoints = {}  # None
-        self.vc = ValidatorCommunications(Agent(reactor))
+        self.validator_comm = ValidatorCommunications(Agent(reactor))
+        self.contact_list = None
+        self.endpoint_completion_cb = None
+        self.initial_url = None
+        self.init_path = None
+        self.endpoint_completion_cb_args = None
 
     def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
@@ -517,9 +601,8 @@ class EndpointManager(object):
         self.endpoint_completion_cb_args = init_args or {}
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.init_path = path
-        self.vc.get_request(path,
-                            self.endpoint_discovery_response,
-                            self._init_terminate)
+        self.validator_comm.get_request(
+            path, self.endpoint_discovery_response, self._init_terminate)
 
     def update_endpoint_discovery(self, update_cb):
         # initiates update of endpoint urls
@@ -528,9 +611,9 @@ class EndpointManager(object):
         self.contact_list = list(self.endpoint_urls)
         url = self.contact_list.pop()
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
-        self.vc.get_request(path,
-                            self.endpoint_discovery_response,
-                            self._update_endpoint_continue)
+        self.validator_comm.get_request(
+            path, self.endpoint_discovery_response,
+            self._update_endpoint_continue)
 
     def endpoint_discovery_response(self, results, response_code):
         # response has been received
@@ -564,9 +647,9 @@ class EndpointManager(object):
         if len(self.contact_list) > 0:
             url = self.contact_list.pop()
             path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
-            self.vc.get_request(path,
-                                self.endpoint_discovery_response,
-                                self._update_endpoint_continue)
+            self.validator_comm.get_request(
+                path, self.endpoint_discovery_response,
+                self._update_endpoint_continue)
         else:
             self.no_endpoint_responders = True
 
@@ -589,8 +672,8 @@ class EndpointManager(object):
         return
 
 
-def parse_args(args):
-    parser = argparse.ArgumentParser()
+def add_stats_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('stats', parents=[parent_parser])
 
     parser.add_argument('--url',
                         metavar="",
@@ -621,8 +704,6 @@ def parse_args(args):
                              '(default: %(default)s)',
                         default=False,
                         type=bool)
-
-    return parser.parse_args(args)
 
 
 def startup(urls, loop_times, stats_man, ep_man):
@@ -664,7 +745,7 @@ def run_stats(url,
 
         # prevent curses import from modifying normal terminal operation
         # (suppression of cr-lf) during display of help screen, config settings
-        if curses_imported:
+        if CURSES_IMPORTED:
             curses.endwin()
 
         # discover validator endpoints; if successful, continue with startup()
@@ -683,63 +764,61 @@ def run_stats(url,
 
         sm.stats_stop()
     except Exception as e:
-        if curses_imported:
+        if CURSES_IMPORTED:
             curses.endwin()
         print e
         raise
 
 
-def main():
-    """
-    Synopsis:
-    1) Twisted http Agent
-        a) Handles http communications
-    2) EndpointManager
-        a) Maintains list of validator endpoints and their associated urls
-        b) update_endpoint_urls is called periodically to update the list of
-            registered urls
-    3) StatsManager
-        a) Creates instance of SystemStats and PlatformStats
-        b) Maintains list of validator StatsClient instances
-            using url list maintained by EndpointManager
-        c) StatsManager.stats_loop is called periodically to...
-            i) Call SystemStats.process() to generate summary statistics
-            ii) Call StatsPrintManager.stats_print()
-            iii) Call CsvManager.write() to write stats to CSV file
-            iv) Call each StatsClient instance to initiate a stats request
-    4) StatsClient
-        a) Sends stats requests to its associated validator url
-        b) Handles stats response
-        c) Handles any errors, including unresponsive validator
-    5) Global
-        a) Creates instance of twisted http agent,
-            StatsManager, and EndpointManager
-    6) Main
-        a) calls endpoint manager to initialize url list.
-            i) Program continues at Setup() if request succeeds
-            ii) Program terminates request fails
-        b) sets up looping call for StatsManager.stats_loop
-        c) sets up looping call for EndpointManager.update_validator_urls
-    7) StatsPrintManager
-        a) Handles formatting of console output
-    8) ConsolePrint() manages low-level details of printing to console.
-        When printing to posix (linux)console, curses allows a "top"-like
-        non-scrolling display to be implemented.  When printing to a non-posix
-        console, results simply scroll.
-    9) CsvManager
-        a) Handles file management and timestamped output
-            for csv file generation
-    10) ValidatorCommunications
-        a) Handles low-level details of issuing an http request
-            via twisted http agent async i/o
-     """
-    opts = parse_args(sys.argv[1:])
+def do_stats(opts):
+    # Synopsis:
+    #
+    # 1) Twisted http Agent
+    #     a) Handles http communications
+    # 2) EndpointManager
+    #     a) Maintains list of validator endpoints and their associated urls
+    #     b) update_endpoint_urls is called periodically to update the list of
+    #         registered urls
+    # 3) StatsManager
+    #     a) Creates instance of SystemStats and PlatformStats
+    #     b) Maintains list of validator StatsClient instances
+    #         using url list maintained by EndpointManager
+    #     c) StatsManager.stats_loop is called periodically to...
+    #         i) Call SystemStats.process() to generate summary statistics
+    #         ii) Call StatsPrintManager.stats_print()
+    #         iii) Call CsvManager.write() to write stats to CSV file
+    #         iv) Call each StatsClient instance to initiate a stats request
+    # 4) StatsClient
+    #     a) Sends stats requests to its associated validator url
+    #     b) Handles stats response
+    #     c) Handles any errors, including unresponsive validator
+    # 5) Global
+    #     a) Creates instance of twisted http agent,
+    #         StatsManager, and EndpointManager
+    # 6) Main
+    #     a) calls endpoint manager to initialize url list.
+    #         i) Program continues at Setup() if request succeeds
+    #         ii) Program terminates request fails
+    #     b) sets up looping call for StatsManager.stats_loop
+    #     c) sets up looping call for EndpointManager.update_validator_urls
+    # 7) StatsPrintManager
+    #     a) Handles formatting of console output
+    # 8) ConsolePrint() manages low-level details of printing to console.
+    #     When printing to posix (linux)console, curses allows a "top"-like
+    #     non-scrolling display to be implemented.  When printing to a
+    #     non-posix console, results simply scroll.
+    # 9) CsvManager
+    #     a) Handles file management and timestamped output
+    #         for csv file generation
+    # 10) ValidatorCommunications
+    #     a) Handles low-level details of issuing an http request
+    #         via twisted http agent async i/o
 
-    run_stats(opts.url,
-              csv_enable_summary=opts.csv_enable_summary,
-              csv_enable_validator=opts.csv_enable_validator,
-              stats_update_frequency=opts.stats_time,
-              endpoint_update_frequency=opts.endpoint_time)
-
-if __name__ == "__main__":
-    main()
+    try:
+        run_stats(opts.url,
+                  csv_enable_summary=opts.csv_enable_summary,
+                  csv_enable_validator=opts.csv_enable_validator,
+                  stats_update_frequency=opts.stats_time,
+                  endpoint_update_frequency=opts.endpoint_time)
+    except Exception as e:
+        raise CliException(e)

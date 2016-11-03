@@ -37,6 +37,9 @@ class ValidatorCommunications(object):
         self.error_type = None
         self.error_name = None
         self.error_message = None
+        self.responding = None
+        self.json_stats = None
+        self.response_code = None
 
     def get_request(self, path, ccb=None, ecb=None):
         self.completion_callback = self._completion_default if ccb is None \
@@ -132,8 +135,8 @@ class SummaryStatsCsvManager(object):
         self.csv_enabled = False
         self.csv_mgr = CsvManager()
 
-        self.ss = system_stats
-        self.ps = platform_stats
+        self.system_stats = system_stats
+        self.platform_stats = platform_stats
 
     def initialize(self):
         self.csv_enabled = True
@@ -141,16 +144,16 @@ class SummaryStatsCsvManager(object):
         filename = "summary_stats_" + str(int(time.time())) + ".csv"
         self.csv_mgr.open_csv_file(filename)
 
-        header = self.ss.get_names()
+        header = self.system_stats.get_names()
         self.csv_mgr.csv_append(header)
-        header = self.ps.get_names()
+        header = self.platform_stats.get_names()
         self.csv_mgr.csv_write_header(header)
 
     def write_stats(self):
         if self.csv_enabled:
-            data = self.ss.get_data()
+            data = self.system_stats.get_data()
             self.csv_mgr.csv_append(data)
-            data = self.ps.get_data()
+            data = self.platform_stats.get_data()
             self.csv_mgr.csv_write_data(data)
 
     def stop(self):
@@ -168,7 +171,7 @@ class ValidatorStatsCsvManager(object):
         self.clients = client_list
         self.stat_names = []
 
-        self.dw = DictWalker()
+        self.dict_walker = DictWalker()
 
     def initialize(self):
         self.csv_enabled = True
@@ -185,14 +188,14 @@ class ValidatorStatsCsvManager(object):
         if self.csv_enabled:
             for client in self.clients:
                 if client.responding:
-                    self.dw.walk(client.vsm.val_stats)
+                    self.dict_walker.walk(client.vsm.val_stats)
                     if self.get_header:
-                        names = self.dw.get_names()
+                        names = self.dict_walker.get_names()
                         names.insert(0, "validator_name")
                         names.insert(0, "time")
                         self.csv_mgr.csv_write_header(names, add_time=False)
                         self.get_header = False
-                    data = self.dw.get_data()
+                    data = self.dict_walker.get_data()
                     data.insert(0, client.name)
                     data.insert(0, current_time)
                     self.csv_mgr.csv_write_data(data, add_time=False)
@@ -219,10 +222,10 @@ class StatsSnapshotWriter(object):
                  branch_manager,
                  stats_clients):
 
-        self.ss = system_stats
-        self.ps = platform_stats
-        self.ts = topology_stats
-        self.bm = branch_manager
+        self.system_stats = system_stats
+        self.platform_stats = platform_stats
+        self.topology_stats = topology_stats
+        self.branch_mgr = branch_manager
         self.stats_clients = stats_clients
 
         self.stats = {}
@@ -263,15 +266,15 @@ class StatsSnapshotWriter(object):
             self.file.write("\n")
 
     def _summary_stats(self):
-        stats = {'clients': self.ss.sys_client._asdict(),
-                 'blocks': self.ss.sys_blocks._asdict(),
-                 'transactions': self.ss.sys_txns._asdict(),
-                 'packets': self.ss.sys_packets._asdict(),
-                 'messages': self.ss.sys_msgs._asdict(),
-                 'poet': self.ss.poet_stats._asdict(),
+        stats = {'clients': self.system_stats.sys_client._asdict(),
+                 'blocks': self.system_stats.sys_blocks._asdict(),
+                 'transactions': self.system_stats.sys_txns._asdict(),
+                 'packets': self.system_stats.sys_packets._asdict(),
+                 'messages': self.system_stats.sys_msgs._asdict(),
+                 'poet': self.system_stats.poet_stats._asdict(),
                  'topology': self.ts.get_stats_as_dict(),
-                 'branches': self.bm.bm_stats.get_stats_as_dict(),
-                 'forks': self.bm.f_stats.get_stats_as_dict()}
+                 'branches': self.branch_mgr.bm_stats.get_stats_as_dict(),
+                 'forks': self.branch_mgr.f_stats.get_stats_as_dict()}
 
         self.stats['summary_stats'] = stats
 
@@ -292,13 +295,13 @@ class StatsSnapshotWriter(object):
 
     def _branch_stats(self):
         stats = {}
-        for branch in self.bm.branches:
+        for branch in self.branch_mgr.branches:
             stats[branch.id] = branch.get_stats_as_dict()
         self.stats['branch_stats'] = stats
 
     def _fork_stats(self):
         stats = {}
-        for fork in self.bm.forks:
+        for fork in self.branch_mgr.forks:
             stats[fork.id] = fork.get_stats_as_dict()
         self.stats['fork_stats'] = stats
 
@@ -564,6 +567,24 @@ class TopologyStats(object):
     def __init__(self):
 
         self.clear_stats()
+        self.diameter = None
+        self.maximum_shortest_path_length = None
+        self._graph = None
+        self.edge_count = None
+        self._connected_component_graphs = None
+        self._largest_component_graph = None
+        self.minimum_degree = None
+        self.shortest_path_count = None
+        self.maximum_degree_centrality = None
+        self.minimum_connectivity = None
+        self._degree_histogram = None
+        self.connected_component_count = None
+        self.average_degree = None
+        self.maximum_between_centrality = None
+        self.maximum_degree = None
+        self.node_count = None
+        self.average_shortest_path_length = None
+        self.elapsed_time = None
 
     def clear_stats(self):
         # private attributes must have underscore
