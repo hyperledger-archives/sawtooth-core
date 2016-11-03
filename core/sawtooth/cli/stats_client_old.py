@@ -13,47 +13,42 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import argparse
 import collections
-import sys
-import time
-import signal
 
+import time
 from twisted.internet import reactor
 from twisted.internet import task
 
 from twisted.web.client import Agent
 
-from txnintegration.stats_print import ConsolePrint
-from txnintegration.stats_print import StatsPrintManager
-from txnintegration.stats_utils import PlatformIntervalStats
-from txnintegration.stats_utils import SummaryStatsCsvManager
-from txnintegration.stats_utils import TopologyManager
-from txnintegration.stats_utils import TransactionRate
-from txnintegration.stats_utils import ValidatorStatsCsvManager
-from txnintegration.stats_utils import ValidatorCommunications
-from txnintegration.stats_utils import named_tuple_init
-from txnintegration.stats_utils import StatsSnapshotWriter
+from sawtooth.cli.stats_lib.stats_print import ConsolePrint
+from sawtooth.cli.stats_lib.stats_print import StatsPrintManager
+from sawtooth.cli.stats_lib.stats_utils import PlatformIntervalStats
+from sawtooth.cli.stats_lib.stats_utils import SummaryStatsCsvManager
+from sawtooth.cli.stats_lib.stats_utils import TopologyManager
+from sawtooth.cli.stats_lib.stats_utils import TransactionRate
+from sawtooth.cli.stats_lib.stats_utils import ValidatorStatsCsvManager
+from sawtooth.cli.stats_lib.stats_utils import ValidatorCommunications
+from sawtooth.cli.stats_lib.fork_detect import BranchManager
 
-from txnintegration.fork_detect import BranchManager
+from sawtooth.cli.stats_lib.utils import PlatformStats
+from sawtooth.cli.stats_lib.utils import StatsCollector
+from sawtooth.cli.exceptions import CliException
 
-from txnintegration.utils import PlatformStats
-from txnintegration.utils import StatsCollector
-
-curses_imported = True
+CURSES_IMPORTED = True
 try:
     import curses
 except ImportError:
-    curses_imported = False
+    CURSES_IMPORTED = False
 
 
 class StatsClient(object):
     def __init__(self, val_id, fullurl):
-        self.id = val_id
+        self.val_id = val_id
         self.url = fullurl
         self.name = "validator_{0}".format(val_id)
 
-        self.state = "UNKNWN"
+        self.validator_state = "UNKNWN"
 
         self.ledgerstats = {}
         self.nodestats = {}
@@ -67,25 +62,26 @@ class StatsClient(object):
         self.request_complete = 0.0
         self.response_time = 0.0
 
-        self.vc = ValidatorCommunications(Agent(reactor))
-
-        self.path = None
+        self.validator_comm = ValidatorCommunications(Agent(reactor))
+        self.path = self.url + "/statistics/all"
 
     def stats_request(self):
         # request stats from specified validator url
         self.request_start = time.clock()
-        self.path = self.url + "/statistics/all"
-        self.vc.get_request(self.path,
-                            self._stats_completion,
-                            self._stats_error)
+        # self.path = self.url + "/statistics/all"
+        self.validator_comm.get_request(
+            self.path,
+            self._stats_completion,
+            self._stats_error)
 
     def _stats_completion(self, json_stats, response_code):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
-        self.state = "RESP_{}".format(response_code)
+        self.validator_state = "RESP_{}".format(response_code)
         if response_code is 200:
-            self.vsm.update_stats(json_stats, True, self.request_start,
-                                  self.request_complete)
+            self.vsm.update_stats(
+                json_stats, True, self.request_start,
+                self.request_complete)
             self.responding = True
         else:
             self.responding = False
@@ -94,30 +90,49 @@ class StatsClient(object):
     def _stats_error(self, failure):
         self.vsm.update_stats(self.ledgerstats, False, 0, 0)
         self.responding = False
-        self.state = "NO_RESP"
+        self.validator_state = "NO_RESP"
         self.no_response_reason = failure.type.__name__
         return
 
-ValStats = collections.namedtuple('calculated_validator_stats',
+
+ValStats = collections.namedtuple('validatorstats',
+                                  'blocks_claimed '
+                                  'blocks_committed '
+                                  'blocks_pending '
+                                  'local_mean '
+                                  'expected_expiration '
+                                  'previous_blockid '
+                                  'txns_committed '
+                                  'txns_pending '
+                                  'packets_dropped '
+                                  'packets_duplicates '
+                                  'packets_acks_received '
+                                  'msgs_handled '
+                                  'msgs_acked '
                                   'packet_bytes_received_total '
                                   'pacet_bytes_received_average '
                                   'packet_bytes_sent_total '
-                                  'packet_bytes_sent_average '
-                                  'average_transaction_rate '
-                                  'average_block_time')
+                                  'packet_bytes_sent_average')
+
+
+class ValidatorStats(ValStats, StatsCollector):
+    def __init__(self, *args):
+        super(ValidatorStats, self).__init__()
+        self.statslist = [self]
 
 
 class ValidatorStatsManager(object):
     def __init__(self):
+        self.vstats = ValidatorStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                     0, 0, 0, 0, 0)
 
-        self.calculated_stats = named_tuple_init(ValStats, 0)
-        self.val_stats = None
-
-        # self.val_name = None
-        # self.val_url = None
+        self.val_name = None
+        self.val_url = None
         self.active = False
         self.request_time = 0.0
         self.response_time = 0.0
+
+        self.val_stats = None
 
         self.txn_rate = TransactionRate()
         self.psis = PlatformIntervalStats()
@@ -126,27 +141,37 @@ class ValidatorStatsManager(object):
 
         if active:
 
-            self.val_stats = json_stats.copy()
+            self.val_stats = json_stats
 
-            # unpack stats that are delivered as lists of unnamed values
-            bytes_received_total, bytes_received_average = \
-                json_stats["packet"]["BytesReceived"]
-            bytes_sent_total, bytes_sent_average = \
-                json_stats["packet"]["BytesSent"]
+            try:
+                bytes_received_total, bytes_received_average = \
+                    json_stats["packet"]["BytesReceived"]
+                bytes_sent_total, bytes_sent_average = \
+                    json_stats["packet"]["BytesSent"]
 
-            self.txn_rate.calculate_txn_rate(
-                self.val_stats["journal"]["CommittedBlockCount"],
-                self.val_stats["journal"].get("CommittedTxnCount", 0)
-            )
+                self.vstats = ValStats(
+                    json_stats["journal"]["BlocksClaimed"],
+                    json_stats["journal"]["CommittedBlockCount"],
+                    json_stats["journal"]["PendingBlockCount"],
 
-            self.calculated_stats = ValStats(
-                bytes_received_total,
-                bytes_received_average,
-                bytes_sent_total,
-                bytes_sent_average,
-                self.txn_rate.avg_txn_rate,
-                self.txn_rate.avg_block_time
-            )
+                    json_stats["journal"].get("LocalMeanTime", 0.0),
+                    json_stats["journal"].get("ExpectedExpirationTime", 0.0),
+                    json_stats["journal"].get("PreviousBlockID", 'broken'),
+                    json_stats["journal"].get("CommittedTxnCount", 0),
+                    json_stats["journal"].get("PendingTxnCount", 0),
+
+                    json_stats["packet"]["DroppedPackets"],
+                    json_stats["packet"]["DuplicatePackets"],
+                    json_stats["packet"]["AcksReceived"],
+                    json_stats["packet"]["MessagesHandled"],
+                    json_stats["packet"]["MessagesAcked"],
+                    bytes_received_total,
+                    bytes_received_average,
+                    bytes_sent_total,
+                    bytes_sent_average
+                )
+            except KeyError as ke:
+                print "invalid key in vsm.update_stats()", ke
 
             self.active = True
             self.request_time = starttime
@@ -158,6 +183,10 @@ class ValidatorStatsManager(object):
             self.request_time = starttime
             self.response_time = endtime - starttime
 
+        self.txn_rate.calculate_txn_rate(
+            self.vstats.blocks_committed,
+            self.vstats.txns_committed
+        )
 
 SysClient = collections.namedtuple('sys_client',
                                    'starttime '
@@ -195,6 +224,7 @@ SysMsgs = collections.namedtuple('sys_messages',
                                  'msgs_min_handled '
                                  'msgs_max_acked '
                                  'msgs_min_acked')
+
 PoetStats = collections.namedtuple('poet_stats',
                                    'avg_local_mean '
                                    'max_local_mean '
@@ -214,17 +244,17 @@ class SystemStats(StatsCollector):
         self.max_client_time = 0
         self.txn_rate = 0
 
-        self.sys_client = named_tuple_init(
-            SysClient, 0, {'starttime': self.starttime})
-        self.sys_blocks = named_tuple_init(SysBlocks, 0)
-        self.sys_txns = named_tuple_init(SysTxns, 0)
-        self.sys_packets = named_tuple_init(SysPackets, 0)
-        self.sys_msgs = named_tuple_init(SysMsgs, 0)
-        self.poet_stats = named_tuple_init(
-            PoetStats, 0.0, {'last_unique_blockID': ''})
+        self.sys_client = SysClient(self.starttime, 0, 0, 0, 0, 0)
+        self.sys_blocks = SysBlocks(0, 0, 0, 0, 0, 0, 0, 0)
+        self.sys_txns = SysTxns(0, 0, 0, 0, 0, 0, 0)
+        self.sys_packets = SysPackets(0, 0, 0, 0, 0, 0)
+        self.sys_msgs = SysMsgs(0, 0, 0, 0)
+
+        self.poet_stats = PoetStats(0.0, 0.0, 0.0, '')
 
         self.statslist = [self.sys_client, self.sys_blocks, self.sys_txns,
                           self.sys_packets, self.sys_msgs, self.poet_stats]
+        self.last_unique_block_id = None
 
         # accumulators
         self.response_times = []
@@ -242,6 +272,7 @@ class SystemStats(StatsCollector):
 
         self.local_mean = []
         self.previous_blockid = []
+        self.avg_local_mean = None
 
     def collect_stats(self, stats_clients):
         # must clear the accumulators at start of each sample interval
@@ -253,33 +284,20 @@ class SystemStats(StatsCollector):
 
                 self.response_times.append(c.vsm.response_time)
 
-                self.blocks_claimed.append(
-                    c.vsm.val_stats["journal"]["BlocksClaimed"])
-                self.blocks_committed.append(
-                    c.vsm.val_stats["journal"]["CommittedBlockCount"])
-                self.blocks_pending.append(
-                    c.vsm.val_stats["journal"]["PendingBlockCount"])
-                self.txns_committed.append(
-                    c.vsm.val_stats["journal"].get("CommittedTxnCount", 0))
-                self.txns_pending.append(
-                    c.vsm.val_stats["journal"].get("PendingTxnCount", 0))
-                self.packets_dropped.append(
-                    c.vsm.val_stats["packet"]["DroppedPackets"])
-                self.packets_duplicates.append(
-                    c.vsm.val_stats["packet"]["DuplicatePackets"])
-                self.packets_acks_received.append(
-                    c.vsm.val_stats["packet"]["AcksReceived"])
-                self.msgs_handled.append(
-                    c.vsm.val_stats["packet"]["MessagesHandled"])
-                self.msgs_acked.append(
-                    c.vsm.val_stats["packet"]["MessagesAcked"])
+                self.blocks_claimed.append(c.vsm.vstats.blocks_claimed)
+                self.blocks_committed.append(c.vsm.vstats.blocks_committed)
+                self.blocks_pending.append(c.vsm.vstats.blocks_pending)
+                self.txns_committed.append(c.vsm.vstats.txns_committed)
+                self.txns_pending.append(c.vsm.vstats.txns_pending)
+                self.packets_dropped.append(c.vsm.vstats.packets_dropped)
+                self.packets_duplicates.append(c.vsm.vstats.packets_duplicates)
+                self.packets_acks_received \
+                    .append(c.vsm.vstats.packets_acks_received)
+                self.msgs_handled.append(c.vsm.vstats.msgs_handled)
+                self.msgs_acked.append(c.vsm.vstats.msgs_acked)
 
-                self.local_mean.append(
-                    c.vsm.val_stats["journal"].get(
-                        "LocalMeanTime", 0.0))
-                self.previous_blockid.append(
-                    c.vsm.val_stats["journal"].get(
-                        "PreviousBlockID", 'broken'))
+                self.local_mean.append(c.vsm.vstats.local_mean)
+                self.previous_blockid.append(c.vsm.vstats.previous_blockid)
 
     def calculate_stats(self):
         self.runtime = int(time.time()) - self.starttime
@@ -344,13 +362,13 @@ class SystemStats(StatsCollector):
                 / len(self.local_mean)
 
             unique_blockid_list = list(set(self.previous_blockid))
-            self.last_unique_blockID = \
+            self.last_unique_block_id = \
                 unique_blockid_list[len(unique_blockid_list) - 1]
             self.poet_stats = PoetStats(
                 self.avg_local_mean,
                 max(self.local_mean),
                 min(self.local_mean),
-                self.last_unique_blockID
+                self.last_unique_block_id
             )
 
             # because named tuples are immutable,
@@ -373,19 +391,18 @@ class SystemStats(StatsCollector):
         self.local_mean = []
         self.previous_blockid = []
 
-    def get_stats_as_dict(self):
-        pass
-
 
 class StatsManager(object):
     def __init__(self, endpointmanager):
         self.epm = endpointmanager
-        self.cp = ConsolePrint()
 
-        self.ss = SystemStats()
-        self.ps = PlatformStats()
+        self.console_print = ConsolePrint()
+
+        self.system_stats = SystemStats()
+
+        self.platform_stats = PlatformStats()
         self.psis = PlatformIntervalStats()
-        self.ps.psis = self.psis
+        self.platform_stats.psis = self.psis
 
         self.previous_net_bytes_recv = 0
         self.previous_net_bytes_sent = 0
@@ -395,19 +412,19 @@ class StatsManager(object):
         self.endpoints = {}
         self.stats_loop_count = 0
 
-        self.tm = TopologyManager(self.clients)
-        self.bm = BranchManager(self.epm, Agent(reactor))
+        self.topology_manager = TopologyManager(self.clients)
 
-        stats_providers = [self.ss,
-                           self.ps,
-                           self.tm.topology_stats,
-                           self.bm,
-                           self.clients]
+        self.branch_manager = BranchManager(self.epm, Agent(reactor))
 
-        self.spm = StatsPrintManager(*stats_providers)
-        self.ssw = StatsSnapshotWriter(*stats_providers)
+        self.spm = StatsPrintManager(
+            self.system_stats,
+            self.platform_stats,
+            self.topology_manager.topology_stats,
+            self.branch_manager,
+            self.clients)
 
-        self.sscm = SummaryStatsCsvManager(self.ss, self.ps)
+        self.sscm = SummaryStatsCsvManager(self.system_stats,
+                                           self.platform_stats)
         self.vscm = ValidatorStatsCsvManager(self.clients)
 
     def initialize_client_list(self, endpoints):
@@ -416,13 +433,11 @@ class StatsManager(object):
         for val_num, endpoint in enumerate(endpoints.values()):
             url = 'http://{0}:{1}'.format(
                 endpoint["Host"], endpoint["HttpPort"])
-            try:
-                c = StatsClient(val_num, url)
-                c.name = endpoint["Name"]
-                self.known_endpoint_names.append(endpoint["Name"])
-            except:
-                e = sys.exc_info()[0]
-                print ("error creating stats clients: ", e)
+
+            c = StatsClient(val_num, url)
+            c.name = endpoint["Name"]
+            self.known_endpoint_names.append(endpoint["Name"])
+
             self.clients.append(c)
 
     def update_client_list(self, endpoints):
@@ -442,7 +457,6 @@ class StatsManager(object):
         self.process_stats(self.clients)
         self.print_stats()
         self.csv_write()
-        self.ssw.write_snapshot()
 
         for c in self.clients:
             c.stats_request()
@@ -455,25 +469,25 @@ class StatsManager(object):
         reactor.stop()
 
     def stats_loop_error(self, failure):
-        self.cp.cpstop()
+        self.console_print.cpstop()
         print failure
         reactor.stop()
 
     def process_stats(self, statsclients):
-        self.ss.known_validators = len(statsclients)
-        self.ss.active_validators = 0
+        self.system_stats.known_validators = len(statsclients)
+        self.system_stats.active_validators = 0
 
-        self.ss.collect_stats(statsclients)
-        self.ss.calculate_stats()
+        self.system_stats.collect_stats(statsclients)
+        self.system_stats.calculate_stats()
 
-        self.ps.get_stats()
-        psr = {"platform": self.ps.get_data_as_dict()}
+        self.platform_stats.get_stats()
+        psr = {"platform": self.platform_stats.get_data_as_dict()}
         self.psis.calculate_interval_stats(psr)
 
-        self.tm.update_topology()
+        self.topology_manager.update_topology()
 
-        self.bm.update_client_list(self.endpoints)
-        self.bm.update()
+        self.branch_manager.update_client_list(self.endpoints)
+        self.branch_manager.update()
 
     def print_stats(self):
         self.spm.print_stats()
@@ -492,12 +506,9 @@ class StatsManager(object):
         self.sscm.stop()
         self.vscm.stop()
 
-    def snapshot_write(self, signum, frame):
-        self.ssw.do_snapshot = True
-
     def stats_stop(self):
         print "StatsManager is stopping"
-        self.cp.cpstop()
+        self.console_print.cpstop()
         self.csv_stop()
 
 
@@ -508,7 +519,12 @@ class EndpointManager(object):
         self.initial_discovery = True
         self.endpoint_urls = []
         self.endpoints = {}  # None
-        self.vc = ValidatorCommunications(Agent(reactor))
+        self.validator_comm = ValidatorCommunications(Agent(reactor))
+        self.contact_list = None
+        self.endpoint_completion_cb = None
+        self.initial_url = None
+        self.init_path = None
+        self.endpoint_completion_cb_args = None
 
     def initialize_endpoint_discovery(self, url, init_cb, init_args=None):
         # initialize endpoint urls from specified validator url
@@ -517,9 +533,10 @@ class EndpointManager(object):
         self.endpoint_completion_cb_args = init_args or {}
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
         self.init_path = path
-        self.vc.get_request(path,
-                            self.endpoint_discovery_response,
-                            self._init_terminate)
+        self.validator_comm.get_request(
+            path,
+            self.endpoint_discovery_response,
+            self._init_terminate)
 
     def update_endpoint_discovery(self, update_cb):
         # initiates update of endpoint urls
@@ -528,9 +545,9 @@ class EndpointManager(object):
         self.contact_list = list(self.endpoint_urls)
         url = self.contact_list.pop()
         path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
-        self.vc.get_request(path,
-                            self.endpoint_discovery_response,
-                            self._update_endpoint_continue)
+        self.validator_comm.get_request(
+            path, self.endpoint_discovery_response,
+            self._update_endpoint_continue)
 
     def endpoint_discovery_response(self, results, response_code):
         # response has been received
@@ -564,9 +581,9 @@ class EndpointManager(object):
         if len(self.contact_list) > 0:
             url = self.contact_list.pop()
             path = url + "/store/{0}/*".format('EndpointRegistryTransaction')
-            self.vc.get_request(path,
-                                self.endpoint_discovery_response,
-                                self._update_endpoint_continue)
+            self.validator_comm.get_request(
+                path, self.endpoint_discovery_response,
+                self._update_endpoint_continue)
         else:
             self.no_endpoint_responders = True
 
@@ -589,8 +606,8 @@ class EndpointManager(object):
         return
 
 
-def parse_args(args):
-    parser = argparse.ArgumentParser()
+def add_stats_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('stats', parents=[parent_parser])
 
     parser.add_argument('--url',
                         metavar="",
@@ -621,8 +638,6 @@ def parse_args(args):
                              '(default: %(default)s)',
                         default=False,
                         type=bool)
-
-    return parser.parse_args(args)
 
 
 def startup(urls, loop_times, stats_man, ep_man):
@@ -659,12 +674,9 @@ def run_stats(url,
         print "initializing csv"
         sm.csv_init(csv_enable_summary, csv_enable_validator)
 
-        # set up SIGUSR1 handler for stats snapshots
-        signal.signal(signal.SIGUSR1, sm.snapshot_write)
-
         # prevent curses import from modifying normal terminal operation
         # (suppression of cr-lf) during display of help screen, config settings
-        if curses_imported:
+        if CURSES_IMPORTED:
             curses.endwin()
 
         # discover validator endpoints; if successful, continue with startup()
@@ -683,63 +695,61 @@ def run_stats(url,
 
         sm.stats_stop()
     except Exception as e:
-        if curses_imported:
+        if CURSES_IMPORTED:
             curses.endwin()
         print e
         raise
 
 
-def main():
-    """
-    Synopsis:
-    1) Twisted http Agent
-        a) Handles http communications
-    2) EndpointManager
-        a) Maintains list of validator endpoints and their associated urls
-        b) update_endpoint_urls is called periodically to update the list of
-            registered urls
-    3) StatsManager
-        a) Creates instance of SystemStats and PlatformStats
-        b) Maintains list of validator StatsClient instances
-            using url list maintained by EndpointManager
-        c) StatsManager.stats_loop is called periodically to...
-            i) Call SystemStats.process() to generate summary statistics
-            ii) Call StatsPrintManager.stats_print()
-            iii) Call CsvManager.write() to write stats to CSV file
-            iv) Call each StatsClient instance to initiate a stats request
-    4) StatsClient
-        a) Sends stats requests to its associated validator url
-        b) Handles stats response
-        c) Handles any errors, including unresponsive validator
-    5) Global
-        a) Creates instance of twisted http agent,
-            StatsManager, and EndpointManager
-    6) Main
-        a) calls endpoint manager to initialize url list.
-            i) Program continues at Setup() if request succeeds
-            ii) Program terminates request fails
-        b) sets up looping call for StatsManager.stats_loop
-        c) sets up looping call for EndpointManager.update_validator_urls
-    7) StatsPrintManager
-        a) Handles formatting of console output
-    8) ConsolePrint() manages low-level details of printing to console.
-        When printing to posix (linux)console, curses allows a "top"-like
-        non-scrolling display to be implemented.  When printing to a non-posix
-        console, results simply scroll.
-    9) CsvManager
-        a) Handles file management and timestamped output
-            for csv file generation
-    10) ValidatorCommunications
-        a) Handles low-level details of issuing an http request
-            via twisted http agent async i/o
-     """
-    opts = parse_args(sys.argv[1:])
+def do_stats(opts):
+    # Synopsis:
+    #
+    # 1) Twisted http Agent
+    #     a) Handles http communications
+    # 2) EndpointManager
+    #     a) Maintains list of validator endpoints and their associated urls
+    #     b) update_endpoint_urls is called periodically to update the list of
+    #         registered urls
+    # 3) StatsManager
+    #     a) Creates instance of SystemStats and PlatformStats
+    #     b) Maintains list of validator StatsClient instances
+    #         using url list maintained by EndpointManager
+    #     c) StatsManager.stats_loop is called periodically to...
+    #         i) Call SystemStats.process() to generate summary statistics
+    #         ii) Call StatsPrintManager.stats_print()
+    #         iii) Call CsvManager.write() to write stats to CSV file
+    #         iv) Call each StatsClient instance to initiate a stats request
+    # 4) StatsClient
+    #     a) Sends stats requests to its associated validator url
+    #     b) Handles stats response
+    #     c) Handles any errors, including unresponsive validator
+    # 5) Global
+    #     a) Creates instance of twisted http agent,
+    #         StatsManager, and EndpointManager
+    # 6) Main
+    #     a) calls endpoint manager to initialize url list.
+    #         i) Program continues at Setup() if request succeeds
+    #         ii) Program terminates request fails
+    #     b) sets up looping call for StatsManager.stats_loop
+    #     c) sets up looping call for EndpointManager.update_validator_urls
+    # 7) StatsPrintManager
+    #     a) Handles formatting of console output
+    # 8) ConsolePrint() manages low-level details of printing to console.
+    #     When printing to posix (linux)console, curses allows a "top"-like
+    #     non-scrolling display to be implemented.  When printing to a
+    #     non-posix console, results simply scroll.
+    # 9) CsvManager
+    #     a) Handles file management and timestamped output
+    #         for csv file generation
+    # 10) ValidatorCommunications
+    #     a) Handles low-level details of issuing an http request
+    #         via twisted http agent async i/o
 
-    run_stats(opts.url,
-              csv_enable_summary=opts.csv_enable_summary,
-              csv_enable_validator=opts.csv_enable_validator,
-              stats_update_frequency=opts.stats_time,
-              endpoint_update_frequency=opts.endpoint_time)
-
-if __name__ == "__main__":
-    main()
+    try:
+        run_stats(opts.url,
+                  csv_enable_summary=opts.csv_enable_summary,
+                  csv_enable_validator=opts.csv_enable_validator,
+                  stats_update_frequency=opts.stats_time,
+                  endpoint_update_frequency=opts.endpoint_time)
+    except Exception as e:
+        raise CliException(e)

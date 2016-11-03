@@ -37,9 +37,6 @@ class ValidatorCommunications(object):
         self.error_type = None
         self.error_name = None
         self.error_message = None
-        self.responding = None
-        self.json_stats = None
-        self.response_code = None
 
     def get_request(self, path, ccb=None, ecb=None):
         self.completion_callback = self._completion_default if ccb is None \
@@ -135,8 +132,8 @@ class SummaryStatsCsvManager(object):
         self.csv_enabled = False
         self.csv_mgr = CsvManager()
 
-        self.system_stats = system_stats
-        self.platform_stats = platform_stats
+        self.ss = system_stats
+        self.ps = platform_stats
 
     def initialize(self):
         self.csv_enabled = True
@@ -144,16 +141,16 @@ class SummaryStatsCsvManager(object):
         filename = "summary_stats_" + str(int(time.time())) + ".csv"
         self.csv_mgr.open_csv_file(filename)
 
-        header = self.system_stats.get_names()
+        header = self.ss.get_names()
         self.csv_mgr.csv_append(header)
-        header = self.platform_stats.get_names()
+        header = self.ps.get_names()
         self.csv_mgr.csv_write_header(header)
 
     def write_stats(self):
         if self.csv_enabled:
-            data = self.system_stats.get_data()
+            data = self.ss.get_data()
             self.csv_mgr.csv_append(data)
-            data = self.platform_stats.get_data()
+            data = self.ps.get_data()
             self.csv_mgr.csv_write_data(data)
 
     def stop(self):
@@ -171,7 +168,7 @@ class ValidatorStatsCsvManager(object):
         self.clients = client_list
         self.stat_names = []
 
-        self.dict_walker = DictWalker()
+        self.dw = DictWalker()
 
     def initialize(self):
         self.csv_enabled = True
@@ -188,14 +185,14 @@ class ValidatorStatsCsvManager(object):
         if self.csv_enabled:
             for client in self.clients:
                 if client.responding:
-                    self.dict_walker.walk(client.vsm.val_stats)
+                    self.dw.walk(client.vsm.val_stats)
                     if self.get_header:
-                        names = self.dict_walker.get_names()
+                        names = self.dw.get_names()
                         names.insert(0, "validator_name")
                         names.insert(0, "time")
                         self.csv_mgr.csv_write_header(names, add_time=False)
                         self.get_header = False
-                    data = self.dict_walker.get_data()
+                    data = self.dw.get_data()
                     data.insert(0, client.name)
                     data.insert(0, current_time)
                     self.csv_mgr.csv_write_data(data, add_time=False)
@@ -203,6 +200,132 @@ class ValidatorStatsCsvManager(object):
     def stop(self):
         if self.csv_enabled:
             self.csv_mgr.close_csv_file()
+
+
+class StatsSnapshotWriter(object):
+    '''
+    Writes json-formatted snapshot of stats client statistics to file.
+    Writes file to where stats client is running.
+    Filename includes searchable file name + timestamp
+    Captures the following:
+    - Summary: each of the summary lines displayed by stats client
+    - Per-Validator: Each of the selectable views displayed by stats client
+    '''
+
+    def __init__(self,
+                 system_stats,
+                 platform_stats,
+                 topology_stats,
+                 branch_manager,
+                 stats_clients):
+
+        self.ss = system_stats
+        self.ps = platform_stats
+        self.ts = topology_stats
+        self.bm = branch_manager
+        self.stats_clients = stats_clients
+
+        self.stats = {}
+
+        self.filename = None
+        self.file = None
+
+        self.do_snapshot = False
+
+    def write_snapshot(self):
+        if self.do_snapshot:
+            self.do_snapshot = False  # acts as one-shot
+            self._initialize()
+
+            self._summary_stats()
+            self._per_validator_stats()
+            self._branch_stats()
+            self._fork_stats()
+            self._collector_stats()
+
+            sawtooth_stats = {'sawtooth_stats': self.stats}
+            self._write_snapshot(sawtooth_stats, pretty=True)
+            self._close()
+
+    def _initialize(self):
+        self.filename = "sawtooth_stats_snap_" + str(int(time.time())) + ".js"
+        self.file = open(self.filename, 'wt')
+
+    def _close(self):
+        self.file.close()
+
+    def _write_snapshot(self, data, pretty=False, line_feed=True):
+        if pretty:
+            json.dump(data, self.file, indent=4, sort_keys=True)
+        else:
+            json.dump(data, self.file)
+        if line_feed:
+            self.file.write("\n")
+
+    def _summary_stats(self):
+        stats = {'clients': self.ss.sys_client._asdict(),
+                 'blocks': self.ss.sys_blocks._asdict(),
+                 'transactions': self.ss.sys_txns._asdict(),
+                 'packets': self.ss.sys_packets._asdict(),
+                 'messages': self.ss.sys_msgs._asdict(),
+                 'poet': self.ss.poet_stats._asdict(),
+                 'topology': self.ts.get_stats_as_dict(),
+                 'branches': self.bm.bm_stats.get_stats_as_dict(),
+                 'forks': self.bm.f_stats.get_stats_as_dict()}
+
+        self.stats['summary_stats'] = stats
+
+    def _per_validator_stats(self):
+        stats = {}
+        for client in self.stats_clients:
+            client_stats = self.val_stats_fixup(client.vsm.val_stats.copy())
+            stats[client.name] = client_stats
+            info = {'id': client.id,
+                    'name': client.name,
+                    'url': client.url,
+                    'state': client.state,
+                    'responding': client.responding,
+                    'no_response_reason': client.no_response_reason,
+                    'response_time': client.response_time}
+            stats[client.name]['info'] = info
+        self.stats['per-validator_stats'] = stats
+
+    def _branch_stats(self):
+        stats = {}
+        for branch in self.bm.branches:
+            stats[branch.id] = branch.get_stats_as_dict()
+        self.stats['branch_stats'] = stats
+
+    def _fork_stats(self):
+        stats = {}
+        for fork in self.bm.forks:
+            stats[fork.id] = fork.get_stats_as_dict()
+        self.stats['fork_stats'] = stats
+
+    def _collector_stats(self):
+        stats = {
+            'gmt_time':
+                time.strftime("GMT:%Y:%m:%d:%H:%M:%S", time.gmtime()),
+            'local_time':
+                time.strftime("LOCAL:%Y:%m:%d:%H:%M:%S", time.localtime()),
+            'platform': self.ps.get_data_as_dict()}
+
+        self.stats['stats_collector'] = stats
+
+    def val_stats_fixup(self, val_stats_copy):
+        # this will become a noop when validator stats is fixed so that
+        # it reports nodes under the 'peer_nodes' key
+        val_stats_copy['peer_nodes'] = {}
+        keys_to_remove = []
+        for key, root in val_stats_copy.iteritems():
+            if 'IsPeer' in root:
+                val_stats_copy['peer_nodes'][key] = root
+                keys_to_remove.append(key)
+
+        for key in keys_to_remove:
+            del val_stats_copy[key]
+
+        return val_stats_copy
 
 
 class DictWalker(object):
@@ -329,7 +452,7 @@ class TransactionRate(object):
             self.avg_txn_rate = \
                 float(self.window_txn_count) / self.window_time
             self.avg_block_time = \
-                (self.window_time) / (len(self.txn_history) - 1)
+                self.window_time / (len(self.txn_history) - 1)
             # if more than "window_size" samples, discard oldest
             if len(self.txn_history) > window_size:
                 self.txn_history.popleft()
@@ -440,35 +563,21 @@ class TopologyStats(object):
     """
     def __init__(self):
 
-        self.graph = None
         self.clear_stats()
-        self.diameter = None
-        self.maximum_shortest_path_length = None
-        self.edge_count = None
-        self.shortest_path_count = None
-        self.maximum_between_centrality = None
-        self.maximum_degree = None
-        self.maximum_degree_centrality = None
-        self.minimum_connectivity = None
-        self.elapsed_time = None
-        self.degree_histogram = None
-        self.connected_component_count = None
-        self.average_degree = None
-        self.minimum_degree = None
-        self.largest_component_graph = None
-        self.average_shortest_path_length = None
-        self.node_count = None
-        self.connected_component_graphs = None
 
     def clear_stats(self):
-        self.graph = 0
+        # private attributes must have underscore
+        self._graph = None
+        self._connected_component_graphs = None
+        self._largest_component_graph = None
+        self._degree_histogram = None
+
+        # public stats are attributes with no underscore - follow this
+        # convention to automate stats dict generation below
         self.node_count = 0
         self.edge_count = 0
         self.connected_component_count = 0
-        self.connected_component_graphs = 0
-        self.largest_component_graph = 0
         self.average_degree = 0
-        self.degree_histogram = 0
         self.shortest_path_count = 0
         self.maximum_shortest_path_length = 0
         self.maximum_degree = 0
@@ -484,7 +593,7 @@ class TopologyStats(object):
     def analyze_graph(self, graph):
         start_time = time.time()
         self.clear_stats()
-        self.graph = graph
+        self._graph = graph
 
         self.node_count = nx.number_of_nodes(graph)
         self.edge_count = nx.number_of_edges(graph)
@@ -496,13 +605,13 @@ class TopologyStats(object):
         if self.connected_component_count is 0:
             return
 
-        self.connected_component_graphs = \
+        self._connected_component_graphs = \
             nx.connected_component_subgraphs(graph)
-        self.largest_component_graph = \
+        self._largest_component_graph = \
             max(nx.connected_component_subgraphs(graph), key=len)
 
         self.average_degree = sum(degree_list) / float(len(degree_list))
-        self.degree_histogram = nx.degree_histogram(graph)
+        self._degree_histogram = nx.degree_histogram(graph)
         spc = self.shortest_paths(graph)
         self.shortest_path_count = len(spc)
         self.maximum_shortest_path_length = \
@@ -556,3 +665,44 @@ class TopologyStats(object):
             mspl = max(list(spl.values()))
             max_spl.append(mspl)
         return max(max_spl)
+
+    def get_stats_as_dict(self):
+        return get_public_attrs_as_dict(self)
+
+
+def get_public_attrs_as_dict(class_instance):
+    # walk dictionary of class instance objects
+    # filter out built-in attributes, private attributes, functions
+    # requires private attributes to start with underscore
+    stats = {}
+    for key, value in class_instance.__dict__.items():
+        if not key.startswith('__') and \
+                not key.startswith('_') and \
+                not callable(key):
+            stats[key] = value
+    return stats
+
+
+def named_tuple_init(named_tuple, default=0, defaults=None):
+    '''
+    Initialize the instance rather than the named tuple itself because
+    some values have to be initialized at runtime
+    Args:
+        named_tuple: named tuple instance of which is to be returned
+        default: default value to be applied to all fields
+        defaults: dict of default values to be applied to specified fields
+
+    Returns:
+        an initialized instance of the named_tuple
+    '''
+    nt = named_tuple
+    default_map = {}
+    for field in nt._fields:
+        default_map[field] = default
+
+    if defaults is not None:
+        for k, v in defaults.iteritems():
+            default_map[k] = v
+
+    nti = named_tuple(**default_map)
+    return nti
