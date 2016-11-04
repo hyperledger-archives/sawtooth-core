@@ -20,7 +20,7 @@ from twisted.web import http
 
 from txnserver.web_pages.base_page import BasePage
 
-from txnintegration.utils import PlatformStats
+from sawtooth.cli.stats_client import PlatformStats
 
 LOGGER = logging.getLogger(__name__)
 

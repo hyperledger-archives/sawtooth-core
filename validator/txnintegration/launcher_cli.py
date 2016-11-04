@@ -24,10 +24,11 @@ import tarfile
 
 from txnintegration.exceptions import ExitError
 from txnintegration.utils import find_executable
-from txnintegration.stats_client import run_stats
 from txnintegration.utils import load_log_config
 from txnintegration.utils import parse_configuration_file
 from txnintegration.validator_network_manager import get_default_vnm
+
+from sawtooth.cli.stats_client import run_stats
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
