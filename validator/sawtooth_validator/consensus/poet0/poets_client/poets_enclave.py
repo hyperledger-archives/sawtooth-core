@@ -22,14 +22,14 @@ from sawtooth_validator.consensus.poet0.poets_client.wait_timer \
 from sawtooth_validator.consensus.poet0.poets_client.wait_certificate \
     import WaitCertificate
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 """
 Client for PoET Enclave Server.
 """
 
-
+# pylint: disable=invalid-name
 poets_client = None
 
 NULL_IDENTIFIER = "0000000000000000"
@@ -38,13 +38,12 @@ MINIMUM_WAIT_TIME = 1.0
 
 
 def initialize(**kwargs):
+    # pylint: disable=global-statement
     global poets_client
     poets_client = PoetsClient(**kwargs)
 
 
 def create_wait_timer(validator_address, previous_certificate_id, local_mean):
-    global poets_client
-
     wt = poets_client.create_wait_timer(validator_address,
                                         previous_certificate_id,
                                         local_mean)
@@ -57,7 +56,6 @@ def deserialize_wait_timer(ser, sig):
 
 
 def create_wait_certificate(wait_timer, block_hash):
-    global poets_client
     wtr = {
         "Serialized": wait_timer.serialized,
         "Signature": wait_timer.signature
@@ -74,8 +72,8 @@ def deserialize_wait_certificate(ser, sig):
 
 
 def verify_wait_certificate(wait_certificate):
-    vwcr = {
+    wait_certificate = {
         "Serialized": wait_certificate.serialized,
         "Signature": wait_certificate.signature
     }
-    return poets_client.verify_wait_certificate(vwcr)
+    return poets_client.verify_wait_certificate(wait_certificate)

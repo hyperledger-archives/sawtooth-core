@@ -18,7 +18,7 @@ import json
 import math
 import time
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class WaitTimer(object):

@@ -18,7 +18,7 @@ import logging
 from journal import transaction_block
 from journal.messages import transaction_block_message
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):

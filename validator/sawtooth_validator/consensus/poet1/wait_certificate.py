@@ -29,14 +29,15 @@ class WaitCertificateError(Exception):
 
 
 # This is necessary for float comparisons
-def _is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
+def _is_close(value_a, value_b, rel_tol=1e-09, abs_tol=0.0):
     """Determines whether two floats are within a tolerance.
 
     Returns:
         bool: Returns True if the two floats are within a tolerance,
             False otherwise.
     """
-    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return abs(value_a - value_b) <= \
+        max(rel_tol * max(abs(value_a), abs(value_b)), abs_tol)
 
 
 class WaitCertificate(object):

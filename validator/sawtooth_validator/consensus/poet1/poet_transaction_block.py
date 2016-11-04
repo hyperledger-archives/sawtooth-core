@@ -242,7 +242,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             return \
                 self.wait_certificate.is_valid(
-                    certificates=journal.consensus._build_certificate_list(
+                    certificates=journal.consensus.build_certificate_list(
                         journal.block_store, self),
                     poet_public_key=poet_public_key)
 

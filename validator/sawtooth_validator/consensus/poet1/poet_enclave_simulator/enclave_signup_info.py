@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import logging
 
 from gossip.common import json2dict
 from gossip.common import dict2json
-
-import logging
 
 LOGGER = logging.getLogger(__name__)
 

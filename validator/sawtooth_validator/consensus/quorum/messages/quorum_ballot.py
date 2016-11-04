@@ -17,7 +17,7 @@ import logging
 
 from gossip import message
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
@@ -37,6 +37,7 @@ def register_message_handlers(journal):
 
 
 class QuorumBallotMessage(message.Message):
+    # pylint: disable = invalid-name
     """Quorum ballot message represent the message format for
     exchanging quorum ballots.
 
@@ -107,11 +108,12 @@ def quorum_ballot_handler(msg, journal):
         msg (QuorumBallotMessage): The received quorum ballot message.
         journal (QuorumJournal): The journal which received the message.
     """
-    logger.info("unhandled quorum ballot message received from %s",
-                journal._id2name(msg.OriginatorID))
+    LOGGER.info("unhandled quorum ballot message received from %s",
+                journal.gossip.node_id_to_name(msg.OriginatorID))
 
 
 class QuorumInitiateVoteMessage(message.Message):
+    # pylint: disable=invalid-name
     """Quorum initiate vote messages represent the message format for
     exchanging quorum advertisements.
 
@@ -163,8 +165,8 @@ def quorum_initiate_vote_handler(msg, journal):
         journal (QuorumJournal): The journal which received the
             message.
     """
-    logger.debug("quorum initiation request received from %s",
-                 journal._id2name(msg.OriginatorID))
+    LOGGER.debug("quorum initiation request received from %s",
+                 journal.gossip.node_id_to_name(msg.OriginatorID))
 
     if journal.handle_vote_initiation(msg.BlockNumber):
         journal.forward_message(msg,
@@ -173,6 +175,7 @@ def quorum_initiate_vote_handler(msg, journal):
 
 
 class QuorumCompleteVoteMessage(message.Message):
+    # pylint: disable=invalid-name
     """Quorum complete vote messages represent the message format
     for exchanging information between peers when voting has completed.
 
@@ -236,8 +239,8 @@ def quorum_complete_vote_handler(msg, journal):
     """Function called when the journal receives a
     QuorumCompleteVoteMessage from one of its peers.
     """
-    logger.debug("quorum initiation request received from %s",
-                 journal._id2name(msg.OriginatorID))
+    LOGGER.debug("quorum initiation request received from %s",
+                 journal.gossip.node_id_to_name(msg.OriginatorID))
 
     if journal.complete_vote(msg.BlockNumber, msg.TransactionIDs):
         journal.forward_message(msg,

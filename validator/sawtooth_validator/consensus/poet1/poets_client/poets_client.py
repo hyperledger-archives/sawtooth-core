@@ -20,7 +20,7 @@ import requests
 
 from gossip.common import ascii_encode_dict
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 """
@@ -67,7 +67,7 @@ class PoetsClient(object):
         }
         result = self._post_request("v1/CreateWaitTimer", json)
         if result.status_code != requests.codes.created:
-            logger.error("CreateWaitTimer HTTP Error code : %d",
+            LOGGER.error("CreateWaitTimer HTTP Error code : %d",
                          result.status_code)
             result.raise_for_status()
         return ascii_encode_dict(result.json())
@@ -82,7 +82,7 @@ class PoetsClient(object):
         }
         result = self._post_request("v1/CreateWaitCertificate", json)
         if result.status_code != requests.codes.created:
-            logger.error(
+            LOGGER.error(
                 "CreateWaitCertificate HTTP Error code : %d",
                 result.status_code)
             return None
@@ -98,7 +98,7 @@ class PoetsClient(object):
         }
         result = self._post_request("v1/VerifyWaitCertificate", json)
         if result.status_code != requests.codes.ok:
-            logger.error(
+            LOGGER.error(
                 "VerifyWaitCertificate HTTP Error code : %d",
                 result.status_code)
             result.raise_for_status()

@@ -21,18 +21,19 @@ from requests import Timeout
 from sawtooth.exceptions import NotAvailableException
 from sawtooth_validator.consensus.poet0.wait_timer import WaitTimer
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 # This is necessary for float comparisons
-def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
+def is_close(value_a, value_b, rel_tol=1e-09, abs_tol=0.0):
     """Determines whether two floats are within a tolerance.
 
     Returns:
         bool: Returns True if the two floats are within a tolerance,
             False otherwise.
     """
-    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return abs(value_a - value_b) <= \
+        max(rel_tol * max(abs(value_a), abs(value_b)), abs_tol)
 
 
 class WaitCertificate(object):
@@ -73,18 +74,18 @@ class WaitCertificate(object):
                 timer.enclave_wait_timer,
                 block_hash)
         except ValueError as e:
-            logger.error('Received error create_wait_certificate '
+            LOGGER.error('Received error create_wait_certificate '
                          'from enclave : %s', e.message)
             cert = None
 
         if not cert:
-            logger.warn('invalid timer: %s', timer)
+            LOGGER.warn('invalid timer: %s', timer)
             raise Exception(
                 'create_wait_certificate',
                 'Attempt to create wait certificate from invalid wait timer')
 
         wc = cls(cert)
-        logger.info('wait certificate created; %s', wc)
+        LOGGER.info('wait certificate created; %s', wc)
 
         return wc
 
@@ -132,6 +133,7 @@ class WaitCertificate(object):
 
     @property
     def enclave_wait_certificate(self):
+        # pylint: disable=bare-except
         """Returns the enclave version of the wait certificate.
 
         Returns:
@@ -143,7 +145,7 @@ class WaitCertificate(object):
                 self.serialized_cert,
                 self.signature)
         except:
-            logger.warn('Wait certificate failed to deserialize.')
+            LOGGER.warn('Wait certificate failed to deserialize.')
             return None
 
     def is_valid_wait_certificate(self, originator_id, certs, transactions):
@@ -170,13 +172,13 @@ class WaitCertificate(object):
             return False
 
         if cert.duration < self.poet_enclave.MINIMUM_WAIT_TIME:
-            logger.warn('Wait time less then minimum: %s != %s',
+            LOGGER.warn('Wait time less then minimum: %s != %s',
                         cert.duration, self.poet_enclave.MINIMUM_WAIT_TIME)
             return False
 
         expected_mean = WaitTimer.compute_local_mean(certs)
         if not is_close(cert.local_mean, expected_mean, abs_tol=0.001):
-            logger.warn('mismatch local mean: %s != %s', cert.local_mean,
+            LOGGER.warn('mismatch local mean: %s != %s', cert.local_mean,
                         expected_mean)
             return False
 
@@ -185,7 +187,7 @@ class WaitCertificate(object):
                 return True
 
         if cert.previous_certificate_id != certs[-1].identifier:
-            logger.warn('mismatch previous identifier: %s != %s',
+            LOGGER.warn('mismatch previous identifier: %s != %s',
                         cert.previous_certificate_id, certs[-1].identifier)
             return False
 
@@ -195,12 +197,12 @@ class WaitCertificate(object):
         block_hash = hasher.hexdigest()
 
         if block_hash != self.block_hash:
-            logger.warn('Transaction hash mismatch : %s != %s',
+            LOGGER.warn('Transaction hash mismatch : %s != %s',
                         self.block_hash, block_hash)
             return False
 
         if self.validator_address != originator_id:
-            logger.warn('Originator Id mismatch: %s != %s',
+            LOGGER.warn('Originator Id mismatch: %s != %s',
                         self.validator_address, originator_id)
             return False
 

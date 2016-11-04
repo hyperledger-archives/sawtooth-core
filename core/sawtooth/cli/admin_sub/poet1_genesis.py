@@ -28,7 +28,7 @@ from txnserver.validator import parse_networking_info
 from sawtooth_validator.consensus.poet1.wait_timer \
     import set_wait_timer_globals
 from sawtooth_validator.consensus.poet1.poet_consensus import PoetConsensus
-from journal.consensus.poet1 import validator_registry
+from sawtooth_validator.consensus.poet1 import validator_registry
 
 LOGGER = logging.getLogger(__name__)
 

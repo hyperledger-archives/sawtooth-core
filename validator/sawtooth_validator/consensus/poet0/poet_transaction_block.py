@@ -24,7 +24,7 @@ from sawtooth_validator.consensus.poet0.wait_certificate \
 from gossip.common import NullIdentifier
 
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
@@ -174,12 +174,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 return False
 
             if not self.wait_certificate:
-                logger.info('not a valid block, no wait certificate')
+                LOGGER.info('not a valid block, no wait certificate')
                 return False
 
             return self.wait_certificate.is_valid_wait_certificate(
                 self.OriginatorID,
-                journal.consensus._build_certificate_list(
+                journal.consensus.build_certificate_list(
                     journal.block_store, self),
                 self.TransactionIDs)
 

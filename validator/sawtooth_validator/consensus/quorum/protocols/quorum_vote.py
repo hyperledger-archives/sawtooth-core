@@ -20,32 +20,32 @@ from sawtooth_validator.consensus.quorum.messages import quorum_ballot
 from ledger.transaction.endpoint_registry import \
     EndpointRegistryTransactionMessage
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class QuorumBallot(object):
     """Represents a voting ballot in the quorum consensus mechanism.
 
     Attributes:
-        Votes (dict): An orderd dict of votes.
+        votes (dict): An orderd dict of votes.
     """
     def __init__(self):
         """Constructor for the QuorumBallot class.
         """
-        self.Votes = OrderedDict()
+        self.votes = OrderedDict()
 
-    def vote(self, validatorID, txnID):
+    def vote(self, validator_id, txn_id):
         """Adds a vote.
 
         Args:
-            validatorID (str): The id of a remote node.
-            txnID (str): The id of a transaction that is being voted
+            validator_id (str): The id of a remote node.
+            txn_id (str): The id of a transaction that is being voted
                 for.
         """
-        if txnID not in self.Votes:
-            self.Votes[txnID] = set()
+        if txn_id not in self.votes:
+            self.votes[txn_id] = set()
 
-        self.Votes[txnID].add(validatorID)
+        self.votes[txn_id].add(validator_id)
 
     def count_votes(self, threshhold):
         """Identifies transactions above a voting threshold.
@@ -57,9 +57,9 @@ class QuorumBallot(object):
             list: A list of transaction ids that won the vote.
         """
         txnlist = []
-        for txnID, votes in self.Votes.iteritems():
+        for txn_id, votes in self.votes.iteritems():
             if len(votes) > threshhold:
-                txnlist.append(txnID)
+                txnlist.append(txn_id)
 
         return txnlist
 
@@ -68,19 +68,19 @@ class QuorumVote(object):
     """Represents the voting process in the quorum consensus mechanism.
 
     Attributes:
-        VotingLedger (QuorumJournal): The ledger on which the voting is
+        voting_ledger (QuorumJournal): The ledger on which the voting is
             taking place.
-        ValidatorID (str): The identifier of the local node.
-        VotingQuorum (list): A list of node identifiers participating in
+        validator_id (str): The identifier of the local node.
+        voting_quorum (list): A list of node identifiers participating in
             the vote.
-        Threshholds (list): A list of voting threshholds.
-        BlockNumber (int): The block number.
-        Ballot (int): The ballot number.
-        LastBallot (int): The id of the previous ballot.
-        QuorumVote (list): A list of ballots.
-        OldBallotMessageHandler (EventHandler): The EventHandler tracking
+        threshholds (list): A list of voting threshholds.
+        block_number (int): The block number.
+        ballot (int): The ballot number.
+        last_ballot (int): The id of the previous ballot.
+        quorum_vote (list): A list of ballots.
+        old_ballot_message_handler (EventHandler): The EventHandler tracking
             calls to make when ballot messages are received.
-        OldCompleteMessageHandler (EventHandler): The EventHandler tracking
+        old_complete_message_handler (EventHandler): The EventHandler tracking
             calls to make when quorum complete vote messages are
             received.
     """
@@ -93,39 +93,39 @@ class QuorumVote(object):
             blocknum (int): The block number.
             txnlist (list): A list of transactions to vote on.
         """
-        self.VotingLedger = vledger
-        self.ValidatorID = vledger.LocalNode.Identifier
-        self.VotingQuorum = vledger.VotingQuorum
-        self.Threshholds = vledger.VoteThreshholds
-        self.BlockNumber = blocknum
+        self.voting_ledger = vledger
+        self.validator_id = vledger.LocalNode.Identifier
+        self.voting_quorum = vledger.VotingQuorum
+        self.threshholds = vledger.VoteThreshholds
+        self.block_number = blocknum
 
-        self.Ballot = 0
-        self.LastBallot = len(self.Threshholds)
-        self.QuorumVote = [QuorumBallot() for x in range(self.LastBallot)]
+        self.ballot = 0
+        self.last_ballot = len(self.threshholds)
+        self.quorum_vote = [QuorumBallot() for _ in range(self.last_ballot)]
 
         for txnid in txnlist:
             nd = vledger.LocalNode
             txn = vledger.TransactionStore[txnid]
             if (txn.TransactionTypeName == '/EndpointRegistryTransaction' and
                     nd.Identifier == txn.Update.NodeIdentifier):
-                logger.debug('validator broadcasting self-promotion %s', txnid)
+                LOGGER.debug('validator broadcasting self-promotion %s', txnid)
                 msg = EndpointRegistryTransactionMessage()
                 msg.Transaction = txn
                 msg.SenderID = str(nd.Identifier)
                 msg.sign_from_node(nd)
                 vledger.forward_message(msg)
-            self.QuorumVote[self.Ballot].vote(self.ValidatorID, txnid)
-        logger.debug('txnlist: %s', txnlist)
+            self.quorum_vote[self.ballot].vote(self.validator_id, txnid)
+        LOGGER.debug('txnlist: %s', txnlist)
 
-        self.OldBallotMessageHandler = self.VotingLedger.get_message_handler(
-            quorum_ballot.QuorumBallotMessage)
-        self.VotingLedger.register_message_handler(
+        self.old_ballot_message_handler = self.voting_ledger.\
+            get_message_handler(quorum_ballot.QuorumBallotMessage)
+        self.voting_ledger.register_message_handler(
             quorum_ballot.QuorumBallotMessage,
             self.quorum_ballot_handler)
 
-        self.OldCompleteMessageHandler = self.VotingLedger.get_message_handler(
-            quorum_ballot.QuorumCompleteVoteMessage)
-        self.VotingLedger.register_message_handler(
+        self.old_complete_message_handler = self.voting_ledger.\
+            get_message_handler(quorum_ballot.QuorumCompleteVoteMessage)
+        self.voting_ledger.register_message_handler(
             quorum_ballot.QuorumCompleteVoteMessage,
             self.quorum_complete_vote_handler)
 
@@ -135,49 +135,49 @@ class QuorumVote(object):
 
         If this is the last ballot then close the vote completely.
         """
-        threshhold = self.Threshholds[self.Ballot] * len(self.VotingQuorum)
-        txnlist = self.QuorumVote[self.Ballot].count_votes(threshhold)
+        threshhold = self.threshholds[self.ballot] * len(self.voting_quorum)
+        txnlist = self.quorum_vote[self.ballot].count_votes(threshhold)
 
-        self.Ballot += 1
-        if self.Ballot == self.LastBallot:
+        self.ballot += 1
+        if self.ballot == self.last_ballot:
             self.close_vote(txnlist)
             return
 
         # send our vote
         msg = quorum_ballot.QuorumBallotMessage()
-        msg.Ballot = self.Ballot
-        msg.BlockNumber = self.BlockNumber
+        msg.Ballot = self.ballot
+        msg.BlockNumber = self.block_number
         msg.TransactionIDs = txnlist
-        msg.sign_from_node(self.VotingLedger.LocalNode)
+        msg.sign_from_node(self.voting_ledger.LocalNode)
 
-        self.VotingLedger.broadcast_message(msg)
+        self.voting_ledger.broadcast_message(msg)
 
     def quorum_ballot_handler(self, msg, vledger):
         """Function called when the vledger receives a
         QuorumBallotMessage from one of its peers.
         """
-        sname = self.VotingLedger._id2name(msg.OriginatorID)
+        sname = self.voting_ledger.gossip.node_id_to_name(msg.OriginatorID)
 
-        if msg.OriginatorID not in self.VotingQuorum:
-            logger.debug('received votes from %s, not in our quorum set',
+        if msg.OriginatorID not in self.voting_quorum:
+            LOGGER.debug('received votes from %s, not in our quorum set',
                          sname)
             return
 
-        if msg.BlockNumber != self.BlockNumber:
-            logger.info('received votes from %s for block %d, expecting %d',
-                        sname, msg.BlockNumber, self.BlockNumber)
+        if msg.BlockNumber != self.block_number:
+            LOGGER.info('received votes from %s for block %d, expecting %d',
+                        sname, msg.BlockNumber, self.block_number)
             return
 
-        if msg.Ballot < self.Ballot or self.LastBallot <= msg.Ballot:
-            logger.info(
+        if msg.Ballot < self.ballot or self.last_ballot <= msg.Ballot:
+            LOGGER.info(
                 'received votes from %s for ballot %d, currently '
                 'processing %d',
-                sname, msg.Ballot, self.Ballot)
+                sname, msg.Ballot, self.ballot)
             return
 
-        logger.debug('add votes from %s to ballot %d', sname, self.Ballot)
+        LOGGER.debug('add votes from %s to ballot %d', sname, self.ballot)
         for txnid in msg.TransactionIDs:
-            self.QuorumVote[msg.Ballot].vote(msg.OriginatorID, txnid)
+            self.quorum_vote[msg.Ballot].vote(msg.OriginatorID, txnid)
 
     def quorum_complete_vote_handler(self, msg, vledger):
         pass
@@ -189,11 +189,11 @@ class QuorumVote(object):
         largest value in the threshhold array.
         """
         # don't process any more vote messages
-        self.VotingLedger.register_message_handler(
+        self.voting_ledger.register_message_handler(
             quorum_ballot.QuorumBallotMessage,
-            self.OldBallotMessageHandler)
-        self.VotingLedger.register_message_handler(
+            self.old_ballot_message_handler)
+        self.voting_ledger.register_message_handler(
             quorum_ballot.QuorumCompleteVoteMessage,
-            self.OldCompleteMessageHandler)
+            self.old_complete_message_handler)
 
-        self.VotingLedger.complete_vote(self.BlockNumber, txnlist)
+        self.voting_ledger.complete_vote(self.block_number, txnlist)

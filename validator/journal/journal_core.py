@@ -25,7 +25,6 @@ from gossip.message_dispatcher import MessageDispatcher
 from gossip import stats
 
 from journal import journal_store
-from sawtooth_validator.consensus.consensus_base import Consensus
 from journal import transaction
 from journal import transaction_block
 from journal.global_store_manager import GlobalStoreManager
@@ -35,6 +34,7 @@ from journal.messages import transaction_block_message
 from journal.messages import transaction_message
 
 from sawtooth.exceptions import NotAvailableException
+from sawtooth_validator.consensus.consensus_base import Consensus
 
 logger = logging.getLogger(__name__)
 

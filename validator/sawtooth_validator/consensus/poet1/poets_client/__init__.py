@@ -13,19 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_validator.consensus.poet1.poets_client import poets_enclave
-
-from sawtooth_validator.consensus.poet1.poets_client import wait_timer
-
 __all__ = ['poets_enclave', 'wait_timer', 'wait_certificate']
-
-NULL_IDENTIFIER = poets_enclave.NULL_IDENTIFIER
-IDENTIFIER_LENGTH = poets_enclave.IDENTIFIER_LENGTH
-MINIMUM_WAIT_TIME = poets_enclave.MINIMUM_WAIT_TIME
-
-initialize = poets_enclave.initialize
-create_wait_timer = poets_enclave.create_wait_timer
-deserialize_wait_timer = poets_enclave.deserialize_wait_timer
-create_wait_certificate = poets_enclave.create_wait_certificate
-deserialize_wait_certificate = poets_enclave.deserialize_wait_certificate
-verify_wait_certificate = poets_enclave.verify_wait_certificate

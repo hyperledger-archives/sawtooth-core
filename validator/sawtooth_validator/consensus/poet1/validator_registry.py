@@ -263,6 +263,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
 
     @staticmethod
     def register_validator(validator_name, validator_id, signup_info):
+        # pylint disable=invalid-name
         """Creates a new ValidatorRegistryTransaction object
 
         Args:
@@ -276,7 +277,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
                 registering the validator.
         """
         regtxn = ValidatorRegistryTransaction()
-        regtxn.Update = \
+        regtxn.update = \
             Update.register_validator(
                 validator_name,
                 validator_id,
@@ -289,13 +290,13 @@ class ValidatorRegistryTransaction(transaction.Transaction):
             minfo = {}
         super(ValidatorRegistryTransaction, self).__init__(minfo)
 
-        self.Update = None
+        self.update = None
 
         if 'Update' in minfo:
-            self.Update = Update(minfo=minfo['Update'])
+            self.update = Update(minfo=minfo['Update'])
 
     def __str__(self):
-        return str(self.Update)
+        return str(self.update)
 
     def check_valid(self, store):
         """Determines if the transaction is valid.
@@ -307,8 +308,8 @@ class ValidatorRegistryTransaction(transaction.Transaction):
             bool: Whether or not the transaction is valid.
         """
         super(ValidatorRegistryTransaction, self).check_valid(store)
-        assert self.Update
-        self.Update.check_valid(store, self)
+        assert self.update
+        self.update.check_valid(store, self)
         return True
 
     def apply(self, store):
@@ -318,7 +319,7 @@ class ValidatorRegistryTransaction(transaction.Transaction):
         Args:
             store (dict): Transaction store mapping.
         """
-        self.Update.apply(store, self)
+        self.update.apply(store, self)
 
     def dump(self):
         """Returns a dict with attributes from the transaction object.
@@ -328,6 +329,6 @@ class ValidatorRegistryTransaction(transaction.Transaction):
         """
         result = super(ValidatorRegistryTransaction, self).dump()
 
-        result['Update'] = self.Update.dump()
+        result['Update'] = self.update.dump()
 
         return result

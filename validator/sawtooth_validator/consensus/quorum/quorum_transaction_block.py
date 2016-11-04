@@ -18,7 +18,7 @@ import logging
 from journal import transaction_block
 from journal.messages import transaction_block_message
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
@@ -63,6 +63,7 @@ class QuorumTransactionBlockMessage(
 
 
 class QuorumTransactionBlock(transaction_block.TransactionBlock):
+    # pylint: disable=invalid-name
     """A quorum transaction block is a set of quorum transactions to
     be applied to a ledger.
 

@@ -26,31 +26,31 @@ from sawtooth_validator.consensus.quorum.messages import quorum_debug
 from sawtooth_validator.consensus.quorum.messages import quorum_ballot
 from sawtooth_validator.consensus.quorum.protocols import quorum_vote
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class QuorumConsensus(Consensus):
     """Implements a journal based on participant voting.
 
     Attributes:
-        VoteTimeInterval (float): The minimum time between votes, in
+        vote_time_interval (float): The minimum time between votes, in
             seconds.
-        VoteTimeFudgeFactor (float): The average fudge factor added to
+        vote_time_fudge_factor (float): The average fudge factor added to
             the vote interval, in seconds.  Used in conjunction with
             randomization functions to stagger network initiative.
-        BallotTimeInterval (float): The minimum time between ballots on
+        ballot_time_interval (float): The minimum time between ballots on
             a vote, in seconds.
-        BallotTimeFudgeFactor (float): The average fudge factor added
+        ballot_time_fudge_factor (float): The average fudge factor added
             to the ballot interval, in seconds.  Used in conjunction with
             randomization functions to stagger network initiative.
-        VoteThreshholds (list): The minimum votes required for a
+        vote_threshholds (list): The minimum votes required for a
             transaction to proceed to the next ballot.
-        VotingQuorumTargetSize (int): The target size for the local
+        voting_quorum_target_size (int): The target size for the local
             quorum set (note: this should be a function of network size).
-        VotingQuorum (dict): The nodes in the quorum.
-        CurrentQuorumVote (QuorumVote): The vote in progress.
-        NextVoteTime (float): When the next vote will occur.
-        NextBallotTime (float): When the next ballot will occur.
+        voting_quorum (dict): The nodes in the quorum.
+        current_quorum_vote (QuorumVote): The vote in progress.
+        next_vote_time (float): When the next vote will occur.
+        next_ballot_time (float): When the next ballot will occur.
         onHeartBeatTimer (EventHandler): The EventHandler tracking calls
             to make when the heartbeat timer fires.
     """
@@ -68,41 +68,41 @@ class QuorumConsensus(Consensus):
 
         # minimum time between votes
         if vote_time_interval is not None:
-            self.VoteTimeInterval = vote_time_interval
+            self.vote_time_interval = vote_time_interval
         else:
-            self.VoteTimeInterval = 30.0
+            self.vote_time_interval = 30.0
 
         # average fudge factor added to the vote interval
-        self.VoteTimeFudgeFactor = 1.0
+        self.vote_time_fudge_factor = 1.0
 
         # minimum time between ballots on a vote
         if ballot_time_interval is not None:
-            self.BallotTimeInterval = ballot_time_interval
+            self.ballot_time_interval = ballot_time_interval
         else:
-            self.BallotTimeInterval = 5.0
+            self.ballot_time_interval = 5.0
 
         # average fudge factor added to the time interval
-        self.BallotTimeFudgeFactor = 0.1
+        self.ballot_time_fudge_factor = 0.1
 
         # minimum votes required for a txn to proceed to the next ballot
-        self.VoteThreshholds = [0.0, 0.5, 0.7, 0.9]
+        self.vote_threshholds = [0.0, 0.5, 0.7, 0.9]
 
         # target size for local quorum set, note this should be a function of
         # network size
         if voting_quorum_target_size is not None:
-            self.VotingQuorumTargetSize = voting_quorum_target_size
+            self.voting_quorum_target_size = voting_quorum_target_size
         else:
-            self.VotingQuorumTargetSize = 13
+            self.voting_quorum_target_size = 13
 
-        self.QuorumMap = dict()
-        self.VotingQuorum = dict()
+        self.quorum_map = dict()
+        self.voting_quorum = dict()
         # we are always a member of our own quorum
-        self.VotingQuorum[self.local_node.Identifier] = \
+        self.voting_quorum[self.local_node.Identifier] = \
             self.local_node
 
-        self.CurrentQuorumVote = None
-        self.NextVoteTime = self._nextvotetime()
-        self.NextBallotTime = 0
+        self.current_quorum_vote = None
+        self.next_vote_time = self._nextvotetime()
+        self.next_ballot_time = 0
         self.initialize_quorum_map(quorum, nodes)
 
     def initialization_complete(self, journal):
@@ -114,15 +114,16 @@ class QuorumConsensus(Consensus):
     def initialize_quorum_map(self, quorum, nodes):
         q = quorum
         if self.local_node.Name not in q:
-            logger.fatal("node must be in its own quorum")
+            LOGGER.fatal("node must be in its own quorum")
             self.shutdown()
             return
-        if len(q) < self.VotingQuorumTargetSize:
-            logger.fatal('insufficient quorum configuration; need %s but " \
-                         "specified %s', len(q), self.VotingQuorumTargetSize)
+        if len(q) < self.voting_quorum_target_size:
+            LOGGER.fatal('insufficient quorum configuration; need %s but " \
+                         "specified %s', len(q),
+                         self.voting_quorum_target_size)
             self.shutdown()
             return
-        self.QuorumMap = {}
+        self.quorum_map = {}
         for nd_dict in nodes:
             if nd_dict["NodeName"] in q:
                 addr = (socket.gethostbyname(nd_dict["Host"]), nd_dict["Port"])
@@ -130,7 +131,7 @@ class QuorumConsensus(Consensus):
                                identifier=nd_dict["Identifier"],
                                name=nd_dict["NodeName"])
                 nd.HttpPort = nd_dict["HttpPort"]
-                self.QuorumMap[nd_dict["NodeName"]] = nd
+                self.quorum_map[nd_dict["NodeName"]] = nd
 
     #
     # GENERAL JOURNAL API
@@ -163,7 +164,7 @@ class QuorumConsensus(Consensus):
         Args:
             tblock (QuorumTransactionBlock): The block to commit.
         """
-        logger.info(
+        LOGGER.info(
             'received a forked block %s from %s with previous id %s, '
             'expecting %s',
             tblock.Identifier[:8], self._id2name(tblock.OriginatorID),
@@ -174,22 +175,22 @@ class QuorumConsensus(Consensus):
     # CUSTOM JOURNAL API
     #
 
-    def add_quorum_node(self, nd):
+    def add_quorum_node(self, q_node):
         """Adds a node to this node's quorum set.
 
         Args:
-            nd (Node): The node to add to the quorum set.
+            q_node (Node): The node to add to the quorum set.
         """
-        logger.info('attempt to add quorum voting node %s to %s', str(nd),
+        LOGGER.info('attempt to add quorum voting node %s to %s', str(q_node),
                     str(self.local_node))
 
-        if nd.Identifier in self.VotingQuorum:
-            logger.info('attempt to add duplicate node to quorum')
+        if q_node.Identifier in self.voting_quorum:
+            LOGGER.info('attempt to add duplicate node to quorum')
             return
 
-        logger.info('add node %s to voting quorum as %s', nd.Name,
-                    nd.Identifier)
-        self.VotingQuorum[nd.Identifier] = nd
+        LOGGER.info('add node %s to voting quorum as %s', q_node.Name,
+                    q_node.Identifier)
+        self.voting_quorum[q_node.Identifier] = q_node
 
     def initiate_vote(self):
         """Initiates a new vote.
@@ -197,23 +198,23 @@ class QuorumConsensus(Consensus):
         This method is called when the vote timer expires indicating
         that a new vote should be initiated.
         """
-        logger.info('quorum, initiate, %s',
+        LOGGER.info('quorum, initiate, %s',
                     self.most_recent_committed_block_id[:8])
 
         # check alleged connectivity
         if not self._connected():
-            self.NextVoteTime = self._nextvotetime()
-            self.NextBallotTime = 0
+            self.next_vote_time = self._nextvotetime()
+            self.next_ballot_time = 0
             return
 
         # check that we have enough transactions
         txnlist = self._prepare_transaction_list(
             maxcount=self.maximum_transactions_per_block)
         if len(txnlist) < self.minimum_transactions_per_block:
-            logger.debug('insufficient transactions for vote; %d out of %d',
+            LOGGER.debug('insufficient transactions for vote; %d out of %d',
                          len(txnlist), self.minimum_transactions_per_block)
-            self.NextVoteTime = self._nextvotetime()
-            self.NextBallotTime = 0
+            self.next_vote_time = self._nextvotetime()
+            self.next_ballot_time = 0
             return
 
         # we are initiating the vote, send the message to the world
@@ -237,30 +238,30 @@ class QuorumConsensus(Consensus):
         if not self._connected():
             return False
         if self.most_recent_committed_block_id == common.NullIdentifier:
-            logger.warn('self.MostRecentCommittedBlockID is %s',
+            LOGGER.warn('self.MostRecentCommittedBlockID is %s',
                         self.most_recent_committed_block_id)
             return False
 
         if blocknum != self.most_recent_committed_block.BlockNumber + 1:
-            logger.warn(
+            LOGGER.warn(
                 'attempt initiate vote on block %d, expecting block %d',
                 blocknum, self.most_recent_committed_block.BlockNumber + 1)
             return False
 
-        if self.CurrentQuorumVote:
-            logger.debug(
+        if self.current_quorum_vote:
+            LOGGER.debug(
                 'received request to start a vote already in progress')
             return False
 
-        logger.info('quorum, handle initiate, %s',
+        LOGGER.info('quorum, handle initiate, %s',
                     self.most_recent_committed_block_id[:8])
 
         txnlist = self._prepare_transaction_list(
             maxcount=self.maximum_transactions_per_block)
-        self.CurrentQuorumVote = quorum_vote.QuorumVote(self, blocknum,
-                                                        txnlist)
-        self.NextVoteTime = 0
-        self.NextBallotTime = self._nextballottime()
+        self.current_quorum_vote = quorum_vote.QuorumVote(self, blocknum,
+                                                          txnlist)
+        self.next_vote_time = 0
+        self.next_ballot_time = self._nextballottime()
 
         return True
 
@@ -270,12 +271,12 @@ class QuorumConsensus(Consensus):
         This method is called when the timer indicates that the vote for a
         particular ballot is complete.
         """
-        logger.info('quorum, ballot, %s, %d',
+        LOGGER.info('quorum, ballot, %s, %d',
                     self.most_recent_committed_block_id[:8],
-                    self.CurrentQuorumVote.Ballot)
+                    self.current_quorum_vote.Ballot)
 
-        self.NextBallotTime = self._nextballottime()
-        self.CurrentQuorumVote.close_current_ballot()
+        self.next_ballot_time = self._nextballottime()
+        self.current_quorum_vote.close_current_ballot()
 
     def complete_vote(self, blocknum, txnlist):
         """Close the current vote.
@@ -289,18 +290,18 @@ class QuorumConsensus(Consensus):
                 include in the block.
         """
 
-        logger.debug('complete the vote for block based on %s',
+        LOGGER.debug('complete the vote for block based on %s',
                      self.most_recent_committed_block_id)
 
         if len(txnlist) == 0:
-            logger.warn('no transactions to commit')
-            self.CurrentQuorumVote = None
-            self.NextVoteTime = self._nextvotetime()
-            self.NextBallotTime = 0
+            LOGGER.warn('no transactions to commit')
+            self.current_quorum_vote = None
+            self.next_vote_time = self._nextvotetime()
+            self.next_ballot_time = 0
             return
 
         if blocknum != self.most_recent_committed_block.BlockNumber + 1:
-            logger.warn(
+            LOGGER.warn(
                 'attempt complete vote on block %d, expecting block %d',
                 blocknum, self.most_recent_committed_block.BlockNumber + 1)
             return
@@ -311,13 +312,13 @@ class QuorumConsensus(Consensus):
         nblock.TransactionIDs = txnlist[:]
         nblock.sign_from_node(self.local_node)
 
-        logger.info('commit: %s', nblock.dump())
+        LOGGER.info('commit: %s', nblock.dump())
 
         self.commit_transaction_block(nblock)
 
-        self.CurrentQuorumVote = None
-        self.NextVoteTime = self._nextvotetime()
-        self.NextBallotTime = 0
+        self.current_quorum_vote = None
+        self.next_vote_time = self._nextvotetime()
+        self.next_ballot_time = 0
 
     def claim_block(self, journal, block):
         """Placeholder for when the block is complete. """
@@ -327,28 +328,28 @@ class QuorumConsensus(Consensus):
         pass
 
     def quorum_list(self):
-        return [x for x in self.QuorumMap.itervalues()]
+        return [x for x in self.quorum_map.itervalues()]
 
     #
     # UTILITY FUNCTIONS
     #
 
     def _connected(self):
-        rslt = len(self.VotingQuorum.keys()) >= self.VotingQuorumTargetSize
+        rslt = len(self.voting_quorum.keys()) >= self.voting_quorum_target_size
         if rslt is False:
-            logger.warn('not sufficiently connected')
+            LOGGER.warn('not sufficiently connected')
         return rslt
 
     def check_claim_block(self, journal, block, now):
         """ Check if it is time to vote
         """
 
-        if self.NextVoteTime != 0:
-            if self.NextVoteTime < now:
+        if self.next_vote_time != 0:
+            if self.next_vote_time < now:
                 self.initiate_vote()
 
-        elif self.NextBallotTime != 0:
-            if self.NextBallotTime < now:
+        elif self.next_ballot_time != 0:
+            if self.next_ballot_time < now:
                 self.close_current_ballot()
 
     def _nextvotetime(self, now=0):
@@ -357,8 +358,8 @@ class QuorumConsensus(Consensus):
         """
         if now == 0:
             now = time.time()
-        return now + self.VoteTimeInterval + random.expovariate(
-            1.0 / self.VoteTimeFudgeFactor)
+        return now + self.vote_time_interval + random.expovariate(
+            1.0 / self.vote_time_fudge_factor)
 
     def _nextballottime(self, now=0):
         """
@@ -366,5 +367,5 @@ class QuorumConsensus(Consensus):
         """
         if now == 0:
             now = time.time()
-        return now + self.BallotTimeInterval + random.expovariate(
-            1.0 / self.BallotTimeFudgeFactor)
+        return now + self.ballot_time_interval + random.expovariate(
+            1.0 / self.ballot_time_fudge_factor)

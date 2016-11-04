@@ -18,7 +18,7 @@ import time
 
 from gossip import message
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def register_message_handlers(journal):
@@ -33,13 +33,13 @@ def register_message_handlers(journal):
 
 
 def _dumpquorumhandler(msg, journal):
-    logger.info('dumping quorum for %s', journal.LocalNode)
+    LOGGER.info('dumping quorum for %s', journal.LocalNode)
 
     identifier = "{0}, {1:0.2f}, {2}".format(journal.LocalNode, time.time(),
                                              msg.Identifier[:8])
 
     for node in journal.VotingQuorum.itervalues():
-        logger.info('quorum, %s, %s', identifier, node)
+        LOGGER.info('quorum, %s, %s', identifier, node)
 
 
 class DumpQuorumMessage(message.Message):

@@ -15,7 +15,7 @@
 
 import logging
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class WaitTimer(object):
@@ -74,7 +74,7 @@ class WaitTimer(object):
             local_mean)
 
         wt = cls(timer)
-        logger.info('wait timer created; %s', wt)
+        LOGGER.info('wait timer created; %s', wt)
 
         return wt
 
@@ -128,7 +128,7 @@ class WaitTimer(object):
         if not isinstance(certificates, list):
             raise TypeError
 
-        if(len(certificates) < cls.certificate_sample_length):
+        if len(certificates) < cls.certificate_sample_length:
             raise ValueError
 
         sum_means = 0

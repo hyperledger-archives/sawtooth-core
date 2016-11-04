@@ -18,7 +18,7 @@ from time import time
 from sawtooth_validator.consensus.consensus_base import Consensus
 from sawtooth_validator.consensus.dev_mode import dev_mode_transaction_block
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class DevModeConsensus(Consensus):

@@ -163,7 +163,7 @@ class PoetConsensus(Consensus):
                 certificate.
         """
 
-        block.create_wait_timer(self._build_certificate_list(
+        block.create_wait_timer(self.build_certificate_list(
             journal.block_store,
             block))
 
@@ -203,7 +203,7 @@ class PoetConsensus(Consensus):
         msg.TransactionBlock = block
         return msg
 
-    def _build_certificate_list(self, block_store, block):
+    def build_certificate_list(self, block_store, block):
         # for the moment we just dump all of these into one list,
         # not very efficient but it makes things a lot easier to maintain
         certs = collections.deque()

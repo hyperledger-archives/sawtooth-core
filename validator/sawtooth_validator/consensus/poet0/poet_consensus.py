@@ -23,7 +23,7 @@ from sawtooth_validator.consensus.poet0 import poet_transaction_block
 from sawtooth_validator.consensus.poet0.wait_timer import WaitTimer
 from sawtooth_validator.consensus.poet0.wait_certificate import WaitCertificate
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class PoetConsensus(Consensus):
@@ -84,7 +84,7 @@ class PoetConsensus(Consensus):
         """
         block.create_wait_timer(
             journal.local_node.signing_address(),
-            self._build_certificate_list(journal.block_store, block))
+            self.build_certificate_list(journal.block_store, block))
 
         journal.JournalStats.LocalMeanTime.Value = \
             block.wait_timer.local_mean
@@ -92,7 +92,7 @@ class PoetConsensus(Consensus):
             round(block.wait_timer.local_mean /
                   block.wait_timer.target_wait_time, 2)
 
-        logger.debug('created new pending block with timer <%s> and '
+        LOGGER.debug('created new pending block with timer <%s> and '
                      '%d transactions', block.wait_timer,
                      len(block.TransactionIDs))
 
@@ -128,7 +128,7 @@ class PoetConsensus(Consensus):
         msg.TransactionBlock = block
         return msg
 
-    def _build_certificate_list(self, block_store, block):
+    def build_certificate_list(self, block_store, block):
         # for the moment we just dump all of these into one list,
         # not very efficient but it makes things a lot easier to maintain
         certs = collections.deque()
