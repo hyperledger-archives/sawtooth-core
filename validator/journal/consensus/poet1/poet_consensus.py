@@ -49,6 +49,7 @@ class PoetConsensus(Consensus):
         Args:
             kwargs (dict):
         """
+        self.poet_public_key = None
 
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
@@ -78,7 +79,7 @@ class PoetConsensus(Consensus):
         sealed_signup_data = journal.local_store.get('sealed_signup_data')
 
         if sealed_signup_data is not None:
-            SignupInfo.unseal_signup_data(
+            self.poet_public_key = SignupInfo.unseal_signup_data(
                 sealed_signup_data=sealed_signup_data)
         else:
             wait_certificate_id = journal.most_recent_committed_block_id
@@ -99,6 +100,8 @@ class PoetConsensus(Consensus):
                 'sealed_signup_data',
                 signup_info.sealed_signup_data)
             journal.local_store.sync()
+
+            self.poet_public_key = signup_info.poet_public_key
 
         # propagate the maximum blocks to keep
         journal.maximum_blocks_to_keep = max(
