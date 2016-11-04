@@ -88,6 +88,10 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         self._lock = RLock()
         self.wait_timer = None
         self.wait_certificate = None
+        self.poet_public_key = None
+
+        if 'PoetPublicKey' in minfo:
+            self.poet_public_key = minfo.get('PoetPublicKey')
 
         if 'WaitCertificate' in minfo:
             wc = minfo.get('WaitCertificate')
@@ -280,5 +284,6 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         with self._lock:
             result = super(PoetTransactionBlock, self).dump()
             result['WaitCertificate'] = self.wait_certificate.dump()
+            result['PoetPublicKey'] = self.poet_public_key
 
             return result
