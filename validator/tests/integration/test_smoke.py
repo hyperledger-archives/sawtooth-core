@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import traceback
 import unittest
 import os
 import logging
@@ -37,7 +36,8 @@ class TestSmoke(unittest.TestCase):
         Args:
             num_nodes (int): Total number of nodes in network simulation
             archive_name (str): Name for tarball summary of test results
-        """,
+            overrides (dict): universal config overrides test validators
+        """
         vnm = None
         try:
             test = IntKeyLoadTest()
