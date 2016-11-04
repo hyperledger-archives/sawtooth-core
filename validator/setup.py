@@ -163,7 +163,7 @@ setup(
     data_files=data_files,
     entry_points={
         'console_scripts': [
-            'txnvalidator = txnmain.validator_cli:main_wrapper',
+            'txnvalidator = txnserver.validator_cli:main_wrapper',
             'txnadmin = txnmain.admin_cli:main'
         ]
     })
