@@ -25,6 +25,10 @@ from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.cli.admin_sub.genesis_common import mirror_validator_parsing
 from txnserver.validator import parse_networking_info
 
+from sawtooth_validator.consensus.poet1.wait_timer \
+    import set_wait_timer_globals
+from sawtooth_validator.consensus.poet1.poet_consensus import PoetConsensus
+from journal.consensus.poet1 import validator_registry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +53,6 @@ def do_poet1_genesis(args):
     initial_wait_time = cfg.get("InitialWaitTime")
     certificate_sample_length = cfg.get('CertificateSampleLength')
     fixed_duration_blocks = cfg.get("FixedDurationBlocks")
-    from journal.consensus.poet1.wait_timer import set_wait_timer_globals
     set_wait_timer_globals(target_wait_time,
                            initial_wait_time,
                            certificate_sample_length,
@@ -65,7 +68,6 @@ def do_poet1_genesis(args):
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
     stat_domains = {}
-    from journal.consensus.poet1.poet_consensus import PoetConsensus
     consensus_obj = PoetConsensus(cfg)
     journal = Journal(gossiper.LocalNode,
                       gossiper,
@@ -79,7 +81,6 @@ def do_poet1_genesis(args):
                       store_type=store_type,
                       )
     # ...add 'built in' txn families
-    from journal.consensus.poet1 import validator_registry
     default_transaction_families = [
         endpoint_registry,
         validator_registry,

@@ -13,26 +13,26 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import json
 import tempfile
+import unittest
+
 import yaml
 from twisted.web import http
 from twisted.web.http_headers import Headers
 
-from gossip import common
 import gossip.signed_object as sign_obj
+from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
+    import DevModeConsensus
+from gossip import common
 from gossip.gossip_core import Gossip
-from gossip.node import Node
 from gossip.messages import shutdown_message
-
-from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
+from gossip.node import Node
 from journal.global_store_manager import KeyValueStore, BlockStore
-from journal.transaction_block import TransactionBlock, Status
-from journal.transaction import Transaction
-from journal.transaction import Status as tStatus
 from journal.journal_core import Journal
-
+from journal.transaction import Status as tStatus
+from journal.transaction import Transaction
+from journal.transaction_block import TransactionBlock, Status
 from txnserver.web_pages.block_page import BasePage
 from txnserver.web_pages.block_page import BlockPage
 from txnserver.web_pages.forward_page import ForwardPage

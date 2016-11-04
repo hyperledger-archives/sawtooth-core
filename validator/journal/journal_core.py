@@ -25,7 +25,7 @@ from gossip.message_dispatcher import MessageDispatcher
 from gossip import stats
 
 from journal import journal_store
-from journal.consensus.consensus_base import Consensus
+from sawtooth_validator.consensus.consensus_base import Consensus
 from journal import transaction
 from journal import transaction_block
 from journal.global_store_manager import GlobalStoreManager

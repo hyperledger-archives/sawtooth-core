@@ -156,7 +156,7 @@ setup(
                       'pybitcointools', 'ipaddr'],
     ext_modules=[poet0_enclave_mod, ecdsamod],
     py_modules=[
-        'journal.consensus.poet0.poet_enclave_simulator'
+        'sawtooth_validator.consensus.poet0.poet_enclave_simulator'
         '.poet0_enclave_simulator',
         'gossip.ECDSA.ECDSARecoverModule'
     ],
