@@ -209,7 +209,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             store = \
                 journal.get_transaction_store(
                     family=ValidatorRegistryTransaction,
-                    block_id=self.Identifier)
+                    block_id=self.PreviousBlockID)
             if store is None:
                 return False
 
