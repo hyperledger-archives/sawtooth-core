@@ -204,24 +204,18 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             # we can do an indexed search for the registration entry and
             # therefore the PoET public key.
             poet_public_key = None
+
+            # First we need to get the store for validator signup information
+            store = \
+                journal.get_transaction_store(
+                    family=ValidatorRegistryTransaction,
+                    block_id=self.Identifier)
+            if store is None:
+                return False
+
             try:
-                # First we need to get the store for validator signup
-                # information
-                store = \
-                    journal.get_transaction_store(
-                        family=ValidatorRegistryTransaction,
-                        block_id=self.Identifier)
-
-                if store is None:
-                    return False
-
                 registration = store.get(self.OriginatorID)
-
                 poet_public_key = registration.get('poet-public-key')
-                LOGGER.debug(
-                    'Validator ID %s <==> PoET Public Key %s',
-                    self.OriginatorID,
-                    poet_public_key)
             except KeyError:
                 LOGGER.info(
                     'Cannot validate wait certificate because cannot retrieve '
@@ -233,6 +227,11 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 # fixed, we can re-instate the failure.
                 #
                 # return False
+
+            LOGGER.debug(
+                'Validator ID %s <==> PoET Public Key %s',
+                self.OriginatorID,
+                poet_public_key)
 
             return \
                 self.wait_certificate.is_valid(
