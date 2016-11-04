@@ -119,8 +119,7 @@ class PoetConsensus(Consensus):
         # initialize the block handlers
         poet_transaction_block.register_message_handlers(journal)
 
-        # If we created signup information, then insert ourselves into the
-        # validator registry.
+        # If we created signup information, then advertise self to network
         if signup_info is not None:
             # Create a validator register transaction and sign it.  Wrap
             # the transaction in a message.  Broadcast it to out.
@@ -136,7 +135,7 @@ class PoetConsensus(Consensus):
             message.Transaction = transaction
 
             LOGGER.info(
-                'Register PoET 1 validator with name %s',
+                'Advertise PoET 1 validator with name %s',
                 journal.local_node.Name)
 
             journal.gossip.broadcast_message(message)
