@@ -79,8 +79,10 @@ def do_poet1_genesis(args):
                       store_type=store_type,
                       )
     # ...add 'built in' txn families
+    from journal.consensus.poet1 import validator_registry
     default_transaction_families = [
-        endpoint_registry
+        endpoint_registry,
+        validator_registry,
     ]
     for txn_family in default_transaction_families:
         txn_family.register_transaction_types(journal)

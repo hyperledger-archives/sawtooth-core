@@ -163,6 +163,9 @@ def local_main(config, windows_service=False, daemonized=False):
 
     # go through the list of transaction families that should be initialized in
     # this validator. the endpoint registry is always included
+    if consensus_type == 'poet1':
+        from journal.consensus.poet1 import validator_registry
+        validator_registry.register_transaction_types(journal)
     for txnfamily in config.get('TransactionFamilies'):
         logger.info("adding transaction family: %s", txnfamily)
         try:
