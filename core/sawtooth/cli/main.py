@@ -38,8 +38,8 @@ from sawtooth.cli.docker import add_docker_parser
 from sawtooth.cli.docker import do_docker
 from sawtooth.cli.store import add_store_parser
 from sawtooth.cli.store import do_store
-from sawtooth.cli.stats_client import add_stats_parser
-from sawtooth.cli.stats_client import do_stats
+from sawtooth.cli.stats import add_stats_parser
+from sawtooth.cli.stats import do_stats
 from sawtooth.cli.submit import add_submit_parser
 from sawtooth.cli.submit import do_submit
 from sawtooth.cli.transaction import add_transaction_parser
