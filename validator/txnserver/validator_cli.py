@@ -467,7 +467,7 @@ def main(args, windows_service=False):
             key = read_key_file(keyfile)
             cfg['SigningKey'] = key
         else:
-            logger.warn('unable to find locate key file %s', keyfile)
+            logger.warn('unable to locate key file %s', keyfile)
     else:
         logger.warn('no key file specified')
 
