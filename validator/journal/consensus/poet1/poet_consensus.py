@@ -49,6 +49,7 @@ class PoetConsensus(Consensus):
         Args:
             kwargs (dict):
         """
+        self.poet_public_key = None
 
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
@@ -78,7 +79,7 @@ class PoetConsensus(Consensus):
         sealed_signup_data = journal.local_store.get('sealed_signup_data')
 
         if sealed_signup_data is not None:
-            SignupInfo.unseal_signup_data(
+            self.poet_public_key = SignupInfo.unseal_signup_data(
                 sealed_signup_data=sealed_signup_data)
         else:
             wait_certificate_id = journal.most_recent_committed_block_id
@@ -100,6 +101,8 @@ class PoetConsensus(Consensus):
                 signup_info.sealed_signup_data)
             journal.local_store.sync()
 
+            self.poet_public_key = signup_info.poet_public_key
+
         # propagate the maximum blocks to keep
         journal.maximum_blocks_to_keep = max(
             journal.maximum_blocks_to_keep,
@@ -116,8 +119,7 @@ class PoetConsensus(Consensus):
         # initialize the block handlers
         poet_transaction_block.register_message_handlers(journal)
 
-        # If we created signup information, then insert ourselves into the
-        # validator registry.
+        # If we created signup information, then advertise self to network
         if signup_info is not None:
             # Create a validator register transaction and sign it.  Wrap
             # the transaction in a message.  Broadcast it to out.
@@ -133,7 +135,7 @@ class PoetConsensus(Consensus):
             message.Transaction = transaction
 
             LOGGER.info(
-                'Register PoET 1 validator with name %s',
+                'Advertise PoET 1 validator with name %s',
                 journal.local_node.Name)
 
             journal.gossip.broadcast_message(message)
@@ -224,6 +226,7 @@ class PoetConsensus(Consensus):
 
         # Claim the block
         block.create_wait_certificate()
+        block.poet_public_key = self.poet_public_key
         block.sign_from_node(journal.local_node)
         journal.JournalStats.BlocksClaimed.increment()
 

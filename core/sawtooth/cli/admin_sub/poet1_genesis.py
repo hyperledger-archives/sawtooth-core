@@ -19,68 +19,25 @@ import logging
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
 from ledger.transaction import endpoint_registry
+from sawtooth.cli.admin_sub.genesis_common import add_genesis_parser
 from sawtooth.cli.admin_sub.genesis_common import check_for_chain
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
-from sawtooth.config import ArgparseOptionsConfig
-from sawtooth.validator_config import get_validator_configuration
+from sawtooth.cli.admin_sub.genesis_common import mirror_validator_parsing
 from txnserver.validator import parse_networking_info
+
 
 LOGGER = logging.getLogger(__name__)
 
 
 def add_poet1_genesis_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('poet1-genesis')
-    parser.add_argument('--config',
-                        help='Comma-separated list of config files to '
-                             'load. Alternatively, multiple --config '
-                             'options can be specified.',
-                        action='append')
-    parser.add_argument('--keyfile', help='Name of the key file')
-    parser.add_argument('--conf-dir', help='Name of the config directory')
-    parser.add_argument('--data-dir', help='Name of the data directory')
-    parser.add_argument('--log-config', help='The python logging config file')
-    parser.add_argument('--node', help='Short form name of the node')
-    parser.add_argument('--type', help='Type of ledger to create')
-    parser.add_argument('-v', '--verbose',
-                        action='count',
-                        default=0,
-                        help='Increase output sent to stderr')
-    parser.add_argument('-F', '--family',
-                        help='Specify transaction families to load. Multiple'
-                             ' -F options can be specified.',
-                        action='append')
+    add_genesis_parser(subparsers, parent_parser, 'poet1')
 
 
 def do_poet1_genesis(args):
+    # Get journal config:
+    cfg = mirror_validator_parsing(args)
 
-    # Get ledger config:
-    # ...set the default value of config because argparse 'default' in
-    # ...combination with action='append' does the wrong thing.
-    if args.config is None:
-        args.config = ['txnvalidator.js']
-    # ...convert any comma-delimited argument strings to list elements
-    for arglist in [args.config]:
-        if arglist is not None:
-            for arg in arglist:
-                if ',' in arg:
-                    loc = arglist.index(arg)
-                    arglist.pop(loc)
-                    for element in reversed(arg.split(',')):
-                        arglist.insert(loc, element)
-    options_config = ArgparseOptionsConfig(
-        [
-            ('conf_dir', 'ConfigDirectory'),
-            ('data_dir', 'DataDirectory'),
-            ('type', 'LedgerType'),
-            ('log_config', 'LogConfigFile'),
-            ('keyfile', 'KeyFile'),
-            ('node', 'NodeName'),
-            ('verbose', 'Verbose'),
-            ('family', 'TransactionFamilies')
-        ], args)
-    cfg = get_validator_configuration(args.config, options_config)
-
-    # check for existing block store
+    # Check for existing block store
     node_name = cfg.get("NodeName")
     data_directory = cfg.get("DataDirectory")
     store_type = cfg.get("StoreType")
@@ -122,8 +79,10 @@ def do_poet1_genesis(args):
                       store_type=store_type,
                       )
     # ...add 'built in' txn families
+    from journal.consensus.poet1 import validator_registry
     default_transaction_families = [
-        endpoint_registry
+        endpoint_registry,
+        validator_registry,
     ]
     for txn_family in default_transaction_families:
         txn_family.register_transaction_types(journal)
@@ -135,7 +94,8 @@ def do_poet1_genesis(args):
     # Make genesis block:
     # ...make sure there is no current chain here, or fail
     # ...pop VR seed (we'll presently defer resolving VR seed issues)
-    _ = gossiper.IncomingMessageQueue.pop()
+    vr_seed = gossiper.IncomingMessageQueue.pop()
+    journal.initial_transactions.append(vr_seed.Transaction)
     # ...create block g_block (including VR seed txn just popped)
     journal.on_genesis_block.fire(journal)
     journal.initializing = False
@@ -145,6 +105,7 @@ def do_poet1_genesis(args):
     journal.claim_block(g_block)
     # ...simulate receiving the genesis block msg from reactor to force commit
     g_block_msg = gossiper.IncomingMessageQueue.pop()
+    poet_public_key = g_block.poet_public_key
     journal.dispatcher.dispatch(g_block_msg)
     journal.initialization_complete()
     head = journal.most_recent_committed_block_id
@@ -161,9 +122,10 @@ def do_poet1_genesis(args):
     genesis_data = {
         'GenesisId': head,
         'ChainLength': chain_len,
+        'PoetPublicKey': poet_public_key,
     }
     gblock_fname = genesis_info_file_name(cfg['DataDirectory'])
     LOGGER.info('genesis data: %s', genesis_data)
     LOGGER.info('writing genesis data to %s', gblock_fname)
     with open(gblock_fname, 'w') as f:
-        f.write(json.dumps(genesis_data))
+        f.write(json.dumps(genesis_data, indent=4))
