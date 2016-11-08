@@ -62,6 +62,7 @@ confidence=
 # --disable=W"
 disable=
     design,
+    elif,
     similarities,
     bad-continuation,
     missing-docstring,
