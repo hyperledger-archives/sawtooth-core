@@ -44,7 +44,6 @@ fi
 
 # Run setup-node.sh
 apt-get install -y -q \
-    rlwrap \
     phantomjs \
     nodejs
 $GEM install sass

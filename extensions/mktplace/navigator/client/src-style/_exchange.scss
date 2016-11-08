@@ -1,0 +1,81 @@
+/**
+ * Copyright 2016 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
+.exchange-table {
+    .amount {
+        /*font-size: 16px;*/
+        font-weight: bold;
+    }
+
+    .type {
+        /*font-size: 16px;*/
+    }
+
+    .participant {
+        font-size: 12px;
+    }
+    .for-column {
+        vertical-align: middle;
+    }
+}
+
+.exchange-form {
+    h4 {
+        margin-bottom: 16px;
+    }
+    .row {
+        margin-bottom: 16px;
+    }
+    .final-holding-ctrls {
+        float: right;
+        margin-top: -32px;
+    }
+
+}
+
+
+.exchange-model-table {
+    thead {
+        border-bottom: 1px solid $table-border-color;
+    }
+    tbody tr:first-child td {
+       padding-top: 12px;
+    }
+    tr > td {
+       padding-bottom: 12px;
+       vertical-align: middle;
+    }
+    .holding-entry {
+        width: 100%;
+        margin-top: -10px;
+
+        .holding-name {
+            font-weight: bold;
+        }
+        .holding-type {
+            font-size: 12px;
+        }
+    }
+    .new-holding {
+        min-width: 0;
+        width: auto;
+        display: inline;
+    }
+    .participant-name {
+        font-size: 12px;
+        font-style: italic;
+    }
+}

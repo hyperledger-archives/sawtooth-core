@@ -1,0 +1,10 @@
+{                         
+    "esversion": 6,       
+    "browserify": true,   
+    "globalstrict": true, 
+    "globals": {          
+        "console": true,  
+        "alert": true     
+    }                     
+}                         
+                          

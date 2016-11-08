@@ -1,0 +1,40 @@
+[{:id "dev"
+  :source-paths ["src/main" "src/dev"]
+  :figwheel {:on-jsload "mktplace.main/on-reload"}
+  :compiler {:main mktplace.main
+             :foreign-libs [{:file "lib/deps_library.js"
+                             :module-type :commonjs
+                             :provides ["sawtooth.vendor"]}]
+             :externs ["lib/deps_library.externs.js"]
+             :asset-path "js/compiled/out"
+             :output-to "resources/public/js/compiled/exchange.js"
+             :output-dir "resources/public/js/compiled/out"
+             :source-map-timestamp true}}
+
+ {:id "min"
+  :source-paths ["src/main" "src/prod"]
+  :compiler {:output-to "resources/public/js/compiled/exchange.js"
+             :output-dir "resources/public/js/compiled/out"
+             :foreign-libs [{:file "lib/deps_library.js"
+                             :module-type :commonjs
+                             :provides ["sawtooth.vendor"]}]
+             :externs ["lib/deps_library.externs.js"]
+             :main mktplace.main
+             :asset-path "js/compiled/out"
+             :optimizations :whitespace
+             :pretty-print false
+             :verbose true
+             :source-map "resources/public/js/compiled/exchange.js.map"}}
+
+ {:id "test"
+  :figwheel {}
+  :source-paths ["src/main" "src/prod" "test/main"]
+  :compiler {:main test-suite.all
+             :output-to "resources/public/js/test/test.js"
+             :output-dir "resources/public/js/test/out"
+             :asset-path "js/test/out"
+             :source-map-timestamp true
+             :externs ["lib/deps_library.externs.js"]
+             :foreign-libs [{:file "lib/deps_library.js"
+                             :module-type :commonjs
+                             :provides ["sawtooth.vendor"]}]}}]

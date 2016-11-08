@@ -1,0 +1,11 @@
+{
+    "source": {
+        "include": "lib/sawtooth",
+        "includePattern": ".+\\.js(doc)?$"
+    },
+    "plugins": ["plugins/markdown"],
+    "opts": {
+        "destination": "./docs",
+        "recurse": true
+    }
+} 
