@@ -58,7 +58,7 @@ class StorePage(BasePage):
         if store_name not in storemap.TransactionStores:
             return self._encode_error_response(
                 request,
-                http.BAD_REQUEST,
+                http.NOT_FOUND,
                 'no such store <{0}>'.format(store_name))
 
         store = storemap.get_transaction_store(store_name)
