@@ -58,6 +58,8 @@ RUN pip install sphinx && \
     pip install pylint && \
     pip install setuptools-lint && \
     pip install sphinx_rtd_theme && \
+    pip install ipaddr && \
+    pip install networkx && \
     pip install iso8601
 
 RUN ln -s /usr/bin/swig3.0 /usr/bin/swig

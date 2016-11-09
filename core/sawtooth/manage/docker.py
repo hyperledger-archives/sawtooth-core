@@ -35,6 +35,10 @@ class _StateEntry(object):
 
 
 class DockerNodeController(NodeController):
+    '''
+    Note that, for the present time, only node 0 may serve as the initial
+    validator.
+    '''
 
     def __init__(self, state_dir=None):
         if state_dir is None:
@@ -48,13 +52,15 @@ class DockerNodeController(NodeController):
 
     def _construct_start_args(self, node_name, http_port, gossip_port,
                               genesis):
+        # only create 'genesis' ledger if there is not existing network
+        if len(self.get_node_names()) > 0:
+            genesis = False
         # Check for running the network sawtooth and get the subnet
         subnet_arg = ['docker', 'network', 'inspect', 'sawtooth']
         try:
             output = yaml.load(subprocess.check_output(subnet_arg))
             subnet = unicode(output[0]['IPAM']['Config'][0]['Subnet'])
             subnet_list = list(ipaddr.IPv4Network(subnet))
-            LOGGER.debug(subnet_list)
         except subprocess.CalledProcessError as e:
             raise CliException(str(e))
 
@@ -76,18 +82,26 @@ class DockerNodeController(NodeController):
         args.extend(['-e', 'CURRENCYHOME=/project/sawtooth-core/validator'])
         args.extend(['-v', '{}:/project'.format(local_project_dir)])
         args.append('sawtooth-build-ubuntu-trusty')
+        args.extend(['bash', '-c'])
 
-        args.append('/project/sawtooth-core/bin/txnvalidator')
-        args.extend(['--node', node_name])
+        cmd = []
+        bin_path = '/project/sawtooth-core/bin'
         if genesis:
-            args.append('--genesis')
-        args.append('-vv')
-        args.extend(['--listen',
-                     '{}:{}/UDP gossip'.format(ip_addr, gossip_port)])
-        args.extend(['--listen',
-                     '{}:{}/TCP http'.format(ip_addr, http_port)])
-        # Set Genesis Url
-        args.extend(['--url', 'http://{}:8800'.format(str(subnet_list[3]))])
+            cmd.append('echo "{\\\"InitialConnectivity\\\": 0}"')
+            cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
+            cmd.append('%s/sawtooth keygen %s; ' % (bin_path, node_name))
+            cmd.append('%s/sawtooth admin' % bin_path)
+            cmd.append('poet0-genesis -vv --node %s; exec' % node_name)
+        cmd.append('%s/txnvalidator' % bin_path)
+        cmd.extend(['--node', node_name])
+        cmd.append('-vv')
+        cmd.append("--listen '{}:{}/UDP gossip'".format(ip_addr, gossip_port))
+        cmd.append("--listen '{}:{}/TCP http'".format(ip_addr, http_port))
+        # Set Ledger Url
+        cmd.append("--url 'http://{}:8800'".format(str(subnet_list[3])))
+        if genesis:
+            cmd.append('--config ${CURRENCYHOME}/data/validator-000.json')
+        args.append(' '.join(cmd))
         return args
 
     def _join_args(self, args):
