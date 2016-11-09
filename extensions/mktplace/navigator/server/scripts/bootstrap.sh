@@ -22,6 +22,6 @@ SERVER_HOME="$SCRIPT_HOME/.."
 
 cd $SERVER_HOME
 echo "Installing server dependencies..."
-npm install
+yarn install
 
 cd $START_DIR

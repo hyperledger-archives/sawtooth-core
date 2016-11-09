@@ -11,6 +11,8 @@ Getting up and running with development.
 * [Java 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 * [Leiningen](http://leiningen.org/)
 * [Sass](http://sass-lang.com/)
+* [Node JS 6 or above](https://nodejs.org/en/download/current/)
+* [Yarn](https://yarnpkg.com/)
 
 ### Reading Materials
 

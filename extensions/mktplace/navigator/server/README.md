@@ -19,6 +19,7 @@ How to setup and run the app in development.
 ## Prerequisites
  
 * [Node JS 6 or above](https://nodejs.org/en/download/current/)
+* [Yarn](https://yarnpkg.com/)
 * [RethinkDB](https://www.rethinkdb.com/)
 * [Python 2.7](https://www.python.org/downloads/release/python-2711/)
 * [pip](https://pypi.python.org/pypi/pip)
