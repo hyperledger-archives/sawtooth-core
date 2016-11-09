@@ -615,9 +615,19 @@ class Journal(object):
                     return  # No block to claim
 
             # fire the event handler for claiming the transaction block
-            msg = self.consensus.claim_block(self, block)
+            logger.info('node %s validates block with %d transactions',
+                        self.local_node.Name, len(block.TransactionIDs))
+
+            # Claim the block
+            self.consensus.claim_block(self, block)
+            block.sign_from_node(self.local_node)
+            self.JournalStats.BlocksClaimed.increment()
+
+            # Fire the event handler for block claim
             self.on_claim_block.fire(self, block)
 
+            # And send out the message that we won
+            msg = self.consensus.create_block_message(block)
             self.gossip.broadcast_message(msg)
 
     def request_missing_block(self, block_id, exceptions=None, request=None):
@@ -707,13 +717,54 @@ class Journal(object):
 
         Args:
             genesis (bool): Whether to force the creation of the
-                initial block.
+                initial block. Used during genesis block creation
         """
-        block = self.consensus.build_block(self, genesis)
-        if block is not None:
-            # fire the build block event handlers
-            self.on_build_block.fire(self, block)
-        return block
+        new_block = self.consensus.create_block()
+        # in some cases the consensus will not build candidate blocks.
+        # for example devmode non block publishing nodes.
+        if new_block is None:
+            return
+
+        if not genesis and len(self.pending_transactions) == 0:
+            return None
+
+        logger.debug('attempt to build transaction block extending %s',
+                     self.most_recent_committed_block_id[:8])
+
+        # Create a new block from all of our pending transactions
+        new_block.BlockNum = self.most_recent_committed_block.BlockNum \
+            + 1 if self.most_recent_committed_block is not None else 0
+        new_block.PreviousBlockID = self.most_recent_committed_block_id
+        self.on_pre_build_block.fire(self, new_block)
+
+        logger.debug('created new pending block')
+
+        txn_list = self._prepare_transaction_list(
+            self.maximum_transactions_per_block)
+        logger.info('build transaction block to extend %s with %s '
+                    'transactions',
+                    self.most_recent_committed_block_id[:8], len(txn_list))
+
+        if len(txn_list) == 0 and not genesis:
+            return None
+
+        new_block.TransactionIDs = txn_list
+
+        logger.info('build transaction block to extend %s with %s '
+                    'transactions',
+                    self.most_recent_committed_block_id[:8], len(txn_list))
+
+        self.consensus.initialize_block(self, new_block)
+
+        # fire the build block event handlers
+        self.on_build_block.fire(self, new_block)
+
+        for txn_id in new_block.TransactionIDs:
+            txn = self.transaction_store[txn_id]
+            txn.InBlock = "Uncommitted"
+            self.transaction_store[txn_id] = txn
+
+        return new_block
 
     def handle_advance(self, tblock):
         """Handles the case where we are attempting to commit a block that
@@ -900,7 +951,8 @@ class Journal(object):
             tblock.CommitTime = time.time() - self.start_time
             tblock.update_block_weight(self)
 
-            if hasattr(tblock, 'AggregateLocalMean'):
+            if hasattr(tblock, 'AggregateLocalMean') or \
+                    hasattr(tblock, 'aggregate_local_mean'):
                 self.JournalStats.AggregateLocalMean.Value = \
                     tblock.aggregate_local_mean
 

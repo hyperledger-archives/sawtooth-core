@@ -26,23 +26,52 @@ class Consensus(object):
     """
     def initialization_complete(self, journal):
         """Last call in the journal initialization sequence, giving the
-        consensus object a chance to intitialize and register it's messages
+        consensus object a chance to initialize and register it's messages
         """
         pass
 
     @abstractmethod
-    def build_block(self, journal, genesis=False):
+    def create_block(self):
         """Build a new candidate transaction block. This can be called
         as a result of the previous candidate block being claimed or a new
         block arriving and becoming the current head of the chain after
         validation.
 
-        Args:
-            journal (Journal): the current journal object
-            genesis: flag indicating if this is the genesis block, so
-            creation should be forced.
+        This is really just a factory for the consensus families custom block
+        type. This method is expected to be removed once block types are
+        consolidated.
+
         Returns:
             block: the candidate transaction block
+        """
+        pass
+
+    @abstractmethod
+    def initialize_block(self, journal, block):
+        """Do initialization necessary for the consensus to claim a block,
+        this may include initiating voting activates, starting proof of work
+        hash generation, or create a PoET wait timer.
+
+        Args:
+            journal (Journal): the current journal object
+            block (TransactionBlock): the block to initialize.
+        Returns:
+            none
+        """
+        pass
+
+    @abstractmethod
+    def create_block_message(self, block):
+        """Create a message wrapper for a block this validator is claiming.
+        Factory method for a consensus specific block message.
+
+        This method is expected to be removed as block and message types are
+        consolidated.
+
+        Args:
+            block: the block to wrap in the message
+        Returns:
+            The message wrapping the block passed in.
         """
         pass
 
@@ -67,7 +96,7 @@ class Consensus(object):
 
         Args:
             journal (Journal): the current journal object
-            block: The canidate block that
+            block: The candidate block that
         Returns:
             None
         """

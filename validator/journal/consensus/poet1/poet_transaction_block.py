@@ -174,6 +174,8 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 self.aggregate_local_mean += \
                     journal.block_store[self.PreviousBlockID].\
                     aggregate_local_mean
+            else:
+                self.aggregate_local_mean = self.wait_certificate.local_mean
 
     def is_valid(self, journal):
         """Verifies that the block received is valid.
