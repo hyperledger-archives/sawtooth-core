@@ -155,8 +155,8 @@ def do_cluster_start(args):
         print "Starting: {}".format(node_name)
         node_command_generator.start(
             node_name,
-            http_port=gossip_port,
-            gossip_port=http_port,
+            http_port=http_port,
+            gossip_port=gossip_port,
             genesis=genesis)
 
         state["Nodes"][node_name] = {"Status": "Running", "Index": i}
