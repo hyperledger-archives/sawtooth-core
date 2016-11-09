@@ -26,24 +26,24 @@ class EnclaveSignupInfo(object):
     the authorization data for network enrollment policies
 
     Attributes:
-        poet_public_key (str): Public key corresponding to private key used by
-            PoET to sign wait certificates.
-        proof_data (dict): signed fields proving validity of signup info.  The
-            proof data dictionary contains:
-                'attestation_verification_report' (dict): Another dict
-                    that contains attestation evidence payload and the
-                    anti-Sybil ID
-                'signature': The signature of the attestation verification
-                    report using the report key.
-        sealed_signup_data (array): data that can be persisted and can be
-            presented at a later time to restore the PoET enclave
+        poet_public_key (str): Encoded public key corresponding to private
+            key used by PoET to sign wait certificates.
+        proof_data (str): Information that can be used internally to verify
+            the validity of the signup information.
+        anti_sybil_id (str): A string corresponding to the anti-Sybil ID for
+            the enclave that generated the signup information.
+        sealed_signup_data (str): A base 64 string representing data that can
+            be persisted and presented at a later time to restore the PoET
+            enclave.
     """
     def __init__(self,
                  poet_public_key,
                  proof_data,
+                 anti_sybil_id,
                  sealed_signup_data=None):
         self.poet_public_key = poet_public_key
         self.proof_data = proof_data
+        self.anti_sybil_id = anti_sybil_id
         self.sealed_signup_data = sealed_signup_data
 
     @classmethod
@@ -68,7 +68,9 @@ class EnclaveSignupInfo(object):
                 poet_public_key=deserialized_signup_info.get(
                     'poet_public_key'),
                 proof_data=deserialized_signup_info.get(
-                    'proof_data'))
+                    'proof_data'),
+                anti_sybil_id=deserialized_signup_info.get(
+                    'anti_sybil_id'))
 
     def serialize(self):
         """
@@ -86,7 +88,8 @@ class EnclaveSignupInfo(object):
         # and sent to anyone else.
         signup_info_dict = {
             'poet_public_key': self.poet_public_key,
-            'proof_data': self.proof_data
+            'proof_data': self.proof_data,
+            'anti_sybil_id': self.anti_sybil_id
         }
 
         return dict2json(signup_info_dict)

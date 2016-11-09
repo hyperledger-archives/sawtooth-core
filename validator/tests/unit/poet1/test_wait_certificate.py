@@ -66,7 +66,6 @@ class TestWaitCertificate(unittest.TestCase):
         # Need to create signup information
         SignupInfo.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
-            validator_network_basename="America's Most Watched Network",
             most_recent_wait_certificate_id=NullIdentifier)
 
         with self.assertRaises(WaitCertificateError):
@@ -77,7 +76,6 @@ class TestWaitCertificate(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename="America's Most Watched Network",
                 most_recent_wait_certificate_id=NullIdentifier)
 
         wt = WaitTimer.create_wait_timer([])
@@ -106,7 +104,6 @@ class TestWaitCertificate(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename="America's Most Watched Network",
                 most_recent_wait_certificate_id=NullIdentifier)
 
         wt = WaitTimer.create_wait_timer([])

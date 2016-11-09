@@ -27,12 +27,14 @@ class TestEnclaveSimulatorSignupInfo(unittest.TestCase):
                 poet_public_key='My Fake Key',
                 proof_data='I am Victoria Antoinette Scharleau, and I '
                            'approve of this message.',
+                anti_sybil_id='Sally Field',
                 sealed_signup_data="Signed, Sealed, Delivered, I'm Yours")
         self.assertEqual(signup_info.poet_public_key, 'My Fake Key')
         self.assertEqual(
             signup_info.proof_data,
             'I am Victoria Antoinette Scharleau, and I approve of this '
             'message.')
+        self.assertEqual(signup_info.anti_sybil_id, 'Sally Field')
         self.assertEqual(
             signup_info.sealed_signup_data,
             "Signed, Sealed, Delivered, I'm Yours")
@@ -43,6 +45,7 @@ class TestEnclaveSimulatorSignupInfo(unittest.TestCase):
                 poet_public_key='My Fake Key',
                 proof_data='I am Victoria Antoinette Scharleau, and I '
                            'approve of this message.',
+                anti_sybil_id='Sally Field',
                 sealed_signup_data="Signed, Sealed, Delivered, I'm Yours")
 
         self.assertIsNotNone(signup_info.serialize())
@@ -53,6 +56,7 @@ class TestEnclaveSimulatorSignupInfo(unittest.TestCase):
                 poet_public_key='My Fake Key',
                 proof_data='I am Victoria Antoinette Scharleau, and I '
                            'approve of this message.',
+                anti_sybil_id='Sally Field',
                 sealed_signup_data="Signed, Sealed, Delivered, I'm Yours")
         serialized = signup_info.serialize()
         copy_signup_info = \
@@ -62,5 +66,8 @@ class TestEnclaveSimulatorSignupInfo(unittest.TestCase):
             signup_info.poet_public_key,
             copy_signup_info.poet_public_key)
         self.assertEqual(signup_info.proof_data, copy_signup_info.proof_data)
+        self.assertEqual(
+            signup_info.anti_sybil_id,
+            copy_signup_info.anti_sybil_id)
         self.assertIsNone(copy_signup_info.sealed_signup_data)
         self.assertEqual(serialized, copy_signup_info.serialize())

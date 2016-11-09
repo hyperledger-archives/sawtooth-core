@@ -47,7 +47,6 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=public_key_hash,
-                validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
         store = ObjectStore()
@@ -75,7 +74,6 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=public_key_hash,
-                validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
         store = ObjectStore()
@@ -108,7 +106,6 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=public_key_hash,
-                validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
         store = ObjectStore()
