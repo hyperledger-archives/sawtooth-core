@@ -6,7 +6,7 @@
     "bitcoinjs-lib": "2.2.0",
     "bootstrap-sass": "3.3.6",
     "bs58check": "1.0.8",
-    "cbor": "1.0.1",
+    "cbor": "1.0.4",
     "clipboard": "1.5.12",
     "fraction.js": "3.3.1",
     "socket.io-client": "1.4.5"

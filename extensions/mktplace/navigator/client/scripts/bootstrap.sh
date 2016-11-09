@@ -22,7 +22,7 @@ CLIENT_HOME="$SCRIPT_HOME/.."
 
 cd $CLIENT_HOME
 echo "Installing leiningen dependencies..."
-npm install
+yarn install
 lein deps || exit 1
 
 cd $START_DIR
