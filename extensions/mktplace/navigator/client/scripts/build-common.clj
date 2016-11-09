@@ -15,13 +15,14 @@
 (require '[cljs.build.api :as build-api]
          '[figwheel-sidecar.cljs-utils.exception-parsing :as ex-parse]
          '[clojure.string :refer [join]]
+         '[clojure.pprint :refer [pprint]]
          'cljs.analyzer)
 
-(def escalated-warnings (atom #{}))
-(def warnings (atom #{}))
+(def escalated-warnings (atom []))
+(def warnings (atom []))
 
 (defn warning-escalator [warning-type env & [extra]]
-  (let [warning (ex-parse/extract-warning-data warning-type env extra)]
+  (when-let [warning (ex-parse/extract-warning-data warning-type env extra)]
     (if (warning-type #{:undeclared-var :undeclared-ns :undeclared-ns-form})
       (swap! escalated-warnings conj warning)
       (swap! warnings conj warning))))
