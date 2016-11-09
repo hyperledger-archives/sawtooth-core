@@ -69,5 +69,4 @@ bootstrap(connector)
     .catch(err => console.log("Unable to create database!", err) || false)
     .then((dbWasCreated) =>
             dbWasCreated ? jasmine.execute() : console.error("Tests Aborted"))
-    .catch((err) => console.log("Test Error!
-", err));
+    .catch((err) => console.log("Test Error!", err));

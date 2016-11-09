@@ -45,7 +45,7 @@
                  [com.taoensso/timbre "4.3.1"]
                  [secretary "1.2.3"]]
 
-  :aliases {"install:js" ~(run-shell "npm" "install")
+  :aliases {"install:js" ~(run-shell "yarn" "install")
 
             "build:deps" ~(run-shell "npm" "run" "build:deps" )
 
@@ -70,7 +70,6 @@
                          "run:test"]
 
             "cljs:clean-test" ["do" "clean,"
-                               "install:js,"
                                "build:deps,"
                                "cljs:test"]}
 

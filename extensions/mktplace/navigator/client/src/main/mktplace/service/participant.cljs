@@ -72,8 +72,6 @@
   (set-current-participant! party)
   (when (not (:account party))
     (mktplace.transactions/register-account signing-identity party))
-  (mktplace.transactions/register-participant
-    signing-identity address name desc #(router/push (routes/home-path)))
   (put! state-change-ch {:path [:participant]
                          :value party}))
 
