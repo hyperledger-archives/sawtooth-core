@@ -15,5 +15,6 @@
 
 
 __all__ = [
-    'future'
+    'future',
+    'stream'
 ]
