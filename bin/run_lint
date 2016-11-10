@@ -18,9 +18,11 @@ find_packages() {
         for file in $(find $dir -name \*.py)
         do
             [ $file = "gossip/ECDSA/ECDSARecoverModule.py" ] && continue
-            [ $file = "journal/consensus/poet0/Enclave/EnclaveModule.py" ] && continue
-            [ $file = "journal/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
-            [ $file = "journal/consensus/poet1/poet_enclave_simulator/poet1_enclave_simulator.py" ] && continue
+            [ $file = "sawtooth_validator/consensus/poet0/Enclave/EnclaveModule.py" ] && continue
+            [ $file = "sawtooth_validator/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
+            [ $file = "consensus/poet0/Enclave/EnclaveModule.py" ] && continue
+            [ $file = "consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
+
 
             echo "$topdir/$file"
         done
@@ -63,6 +65,11 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
 
 pylint \
+    --rcfile=.pylintrc-strict \
+    --reports=no \
+    $(find_packages validator/sawtooth_validator)
+
+pylint \
     --rcfile=.pylintrc-validator \
     --reports=no \
     $(find_packages validator)
@@ -91,3 +98,5 @@ pylint \
     --reports=no \
     $(find_packages extensions/arcade)
 
+# check for windows line endings.
+find $top_dir -name \*.py -exec file {} \; | grep CRLF

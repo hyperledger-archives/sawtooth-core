@@ -17,10 +17,10 @@ import time
 import unittest
 
 from utils import generate_certs, generate_txn_ids, random_name
-from journal.consensus.poet0.wait_timer import WaitTimer
-from journal.consensus.poet0.wait_certificate import WaitCertificate
+from sawtooth_validator.consensus.poet0.wait_timer import WaitTimer
+from sawtooth_validator.consensus.poet0.wait_certificate import WaitCertificate
 
-from journal.consensus.poet0.poet_enclave_simulator \
+from sawtooth_validator.consensus.poet0.poet_enclave_simulator \
     import poet0_enclave_simulator as pe_sim
 
 

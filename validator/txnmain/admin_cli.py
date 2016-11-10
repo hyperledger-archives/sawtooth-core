@@ -33,7 +33,7 @@ from gossip.node import Node
 from gossip.signed_object import generate_identifier
 from gossip.signed_object import generate_signing_key
 
-from journal.consensus.quorum.messages import quorum_debug
+from sawtooth_validator.consensus.quorum.messages import quorum_debug
 
 from journal.messages import journal_debug
 

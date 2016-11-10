@@ -84,10 +84,14 @@ else:
 
 poet0_enclave_mod = Extension(
     '_poet0_enclave_simulator',
-    ['journal/consensus/poet0/poet_enclave_simulator/poet_enclave_simulator.i',
-     'journal/consensus/poet0/poet_enclave_simulator/common.cpp',
-     'journal/consensus/poet0/poet_enclave_simulator/wait_certificate.cpp',
-     'journal/consensus/poet0/poet_enclave_simulator/wait_timer.cpp'],
+    ['sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
+     'poet_enclave_simulator.i',
+     'sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
+     'common.cpp',
+     'sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
+     'wait_certificate.cpp',
+     'sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
+     'wait_timer.cpp'],
     swig_opts=['-c++'],
     extra_compile_args=extra_compile_args,
     include_dirs=include_dirs,
@@ -156,7 +160,7 @@ setup(
                       'pybitcointools', 'ipaddr'],
     ext_modules=[poet0_enclave_mod, ecdsamod],
     py_modules=[
-        'journal.consensus.poet0.poet_enclave_simulator'
+        'sawtooth_validator.consensus.poet0.poet_enclave_simulator'
         '.poet0_enclave_simulator',
         'gossip.ECDSA.ECDSARecoverModule'
     ],

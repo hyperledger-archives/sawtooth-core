@@ -25,6 +25,9 @@ from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.cli.admin_sub.genesis_common import mirror_validator_parsing
 from txnserver.validator import parse_networking_info
 
+from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
+    import DevModeConsensus
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -53,7 +56,6 @@ def do_dev_mode_genesis(args):
     max_txn_per_block = cfg.get("MaxTransactionsPerBlock")
     max_txn_age = cfg.get("MaxTxnAge")
     stat_domains = {}
-    from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
     consensus_obj = DevModeConsensus(block_publisher=True,
                                      block_wait_time=cfg.get('BlockWaitTime'))
     journal = Journal(gossiper.LocalNode,
