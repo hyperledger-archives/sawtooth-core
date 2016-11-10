@@ -111,42 +111,45 @@ class _PoetEnclaveSimulator(object):
                 pybitcointools.base64.b64encode(dict2json(signup_data))
 
             # Create a fake report
-            report_data = {
-                'originator_public_key_hash':
-                    originator_public_key_hash.upper(),
-                'poet_public_key':
-                    pybitcointools.encode_pubkey(
-                        cls._poet_public_key,
-                        'hex').upper()
-            }
-            report = {
-                'report_data': pybitcointools.sha256(dict2json(report_data))
+            report_data = '{0}{1}'.format(
+                originator_public_key_hash.upper(),
+                pybitcointools.encode_pubkey(
+                    cls._poet_public_key,
+                    'hex').upper()
+            )
+            quote = {
+                'report_body': pybitcointools.sha256(dict2json(report_data))
             }
 
             # Fake our "proof" data.
             verification_report = {
-                'enclave_quote':
-                    pybitcointools.base64.b64encode(dict2json(report)),
-                'pse_manifest_hash':
+                'id': pybitcointools.base64.b64encode(
+                    pybitcointools.sha256(
+                        datetime.datetime.now().isoformat())),
+                'isvEnclaveQuoteStatus': 'OK',
+                'isvEnclaveQuoteBody':
+                    pybitcointools.base64.b64encode(dict2json(quote)),
+                'pseManifestStatus': 'OK',
+                'pseManifestHash':
                     pybitcointools.base64.b64encode(
                         pybitcointools.sha256(
-                            'manifest destiny')),
+                            'Do you believe in manifest destiny?')),
                 'nonce': most_recent_wait_certificate_id
             }
 
-            proof_data = {
+            proof_data_dict = {
                 'verification_report': dict2json(verification_report),
                 'signature':
                     pybitcointools.ecdsa_sign(
                         dict2json(verification_report),
                         cls._report_private_key)
             }
-            proof_data_dict = dict2json(proof_data)
+            proof_data = dict2json(proof_data_dict)
 
             return \
                 EnclaveSignupInfo(
                     poet_public_key=signup_data['poet_public_key'],
-                    proof_data=proof_data_dict,
+                    proof_data=proof_data,
                     anti_sybil_id=originator_public_key_hash,
                     sealed_signup_data=sealed_signup_data)
 
@@ -196,47 +199,108 @@ class _PoetEnclaveSimulator(object):
                            originator_public_key_hash,
                            most_recent_wait_certificate_id):
         # Verify the attestation verification report signature
-        proof_data = json2dict(signup_info.proof_data)
-        verification_report = proof_data.get('verification_report')
+        proof_data_dict = json2dict(signup_info.proof_data)
+        verification_report = proof_data_dict.get('verification_report')
         if verification_report is None:
             raise \
                 SignupInfoError(
                     'Verification report is missing from proof data')
 
+        signature = proof_data_dict.get('signature')
+        if signature is None:
+            raise \
+                SignupInfoError(
+                    'Signature is missing from proof data')
+
         if not pybitcointools.ecdsa_verify(
                 verification_report,
-                proof_data.get('signature'),
+                signature,
                 cls._report_public_key):
             raise \
                 SignupInfoError('Verification report signature is invalid')
 
-        # Verify that the report data field in the report contains the SHA256
-        # digest of the originator's public key SHA 256 digest and the PoET
-        # public key.
         verification_report_dict = json2dict(verification_report)
 
-        enclave_quote = verification_report_dict.get('enclave_quote')
+        # Verify that the verification report contains a PSE manifest status
+        # and it is OK
+        pse_manifest_status = \
+            verification_report_dict.get('pseManifestStatus')
+        if pse_manifest_status is None:
+            raise \
+                SignupInfoError(
+                    'Verification report does not contain a PSE manifest '
+                    'status')
+        if pse_manifest_status != 'OK':
+            raise \
+                SignupInfoError(
+                    'PSE manifest status is {} (i.e., not OK)'.format(
+                        pse_manifest_status))
+
+        # Verify that the verification report contains a PSE manifest hash
+        # and it is the value we expect
+        pse_manifest_hash = \
+            verification_report_dict.get('pseManifestHash')
+        if pse_manifest_hash is None:
+            raise \
+                SignupInfoError(
+                    'Verification report does not contain a PSE manifest '
+                    'hash')
+
+        expected_pse_manifest_hash = \
+            pybitcointools.base64.b64encode(
+                pybitcointools.sha256(
+                    'Do you believe in manifest destiny?'))
+
+        if pse_manifest_hash != expected_pse_manifest_hash:
+            raise \
+                SignupInfoError(
+                    'PSE manifest hash {0} does not match {1}'.format(
+                        pse_manifest_hash,
+                        expected_pse_manifest_hash))
+
+        # Verify that the verification report contains an enclave quote and
+        # that its status is OK
+        enclave_quote_status = \
+            verification_report_dict.get('isvEnclaveQuoteStatus')
+        if enclave_quote_status is None:
+            raise \
+                SignupInfoError(
+                    'Verification report does not contain an enclave quote '
+                    'status')
+        if enclave_quote_status != 'OK':
+            raise \
+                SignupInfoError(
+                    'Enclave quote status is {} (i.e., not OK)'.format(
+                        enclave_quote_status))
+
+        enclave_quote = verification_report_dict.get('isvEnclaveQuoteBody')
         if enclave_quote is None:
             raise \
                 SignupInfoError(
                     'Verification report does not contain an enclave quote')
 
-        report = json2dict(pybitcointools.base64.b64decode(enclave_quote))
-        report_data = report.get('report_data')
-        if report_data is None:
+        # Verify that the enclave quote contains a report body with the value
+        # we expect (i.e., SHA256(SHA256(OPK)|PPK)
+        report_data = '{0}{1}'.format(
+            originator_public_key_hash.upper(),
+            signup_info.poet_public_key.upper()
+        )
+        expected_report_body = pybitcointools.sha256(dict2json(report_data))
+
+        enclave_quote_dict = \
+            json2dict(pybitcointools.base64.b64decode(enclave_quote))
+        report_body = enclave_quote_dict.get('report_body')
+        if report_body is None:
             raise \
-                SignupInfoError('Enclave quote does not contain report data')
+                SignupInfoError(
+                    'Enclave quote does not contain a report body')
 
-        target_report_data = {
-            'originator_public_key_hash':
-                originator_public_key_hash.upper(),
-            'poet_public_key': signup_info.poet_public_key.upper()
-        }
-        target_report_data_digest = \
-            pybitcointools.sha256(dict2json(target_report_data))
-
-        if report_data != target_report_data_digest:
-            raise SignupInfoError('Enclave quote report data is invalid')
+        if report_body != expected_report_body:
+            raise \
+                SignupInfoError(
+                    'Enclave quote report body {0} does not match {1}'.format(
+                        report_body,
+                        expected_report_body))
 
         # NOTE - this check is currently not performed as a transaction
         #        does not have a good way to obtaining the most recent

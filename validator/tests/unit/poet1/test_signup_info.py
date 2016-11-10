@@ -19,9 +19,9 @@ import hashlib
 import pybitcointools
 
 from gossip.common import NullIdentifier
-from journal.consensus.poet1.signup_info import SignupInfo
-from journal.consensus.poet1.signup_info import SignupInfoError
-from journal.consensus.poet1.poet_enclave_simulator \
+from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.consensus.poet1.signup_info import SignupInfoError
+from sawtooth_validator.consensus.poet1.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
 
 
