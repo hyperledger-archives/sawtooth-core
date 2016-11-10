@@ -62,18 +62,17 @@ class TestSignupInfo(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         self.assertIsNotNone(signup_info.poet_public_key)
         self.assertIsNotNone(signup_info.proof_data)
+        self.assertIsNotNone(signup_info.anti_sybil_id)
         self.assertIsNotNone(signup_info.sealed_signup_data)
 
     def test_verify_serialized_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
         serialized = signup_info.serialize()
         copy_signup_info = SignupInfo.signup_info_from_serialized(serialized)
@@ -82,13 +81,15 @@ class TestSignupInfo(unittest.TestCase):
             signup_info.poet_public_key,
             copy_signup_info.poet_public_key)
         self.assertEqual(signup_info.proof_data, copy_signup_info.proof_data)
+        self.assertEqual(
+            signup_info.anti_sybil_id,
+            copy_signup_info.anti_sybil_id)
         self.assertIsNone(copy_signup_info.sealed_signup_data)
 
     def test_verify_unsealing_data(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
         poet_public_key = \
             SignupInfo.unseal_signup_data(signup_info.sealed_signup_data)
@@ -102,13 +103,11 @@ class TestSignupInfo(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         try:
             signup_info.check_valid(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename="This is CNN.",
                 most_recent_wait_certificate_id=NullIdentifier)
         except SignupInfoError as e:
             self.fail('Error with SignupInfo: {}'.format(e))
@@ -117,33 +116,17 @@ class TestSignupInfo(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         with self.assertRaises(SignupInfoError):
             signup_info.check_valid(
                 originator_public_key_hash=self._another_public_key_hash,
-                validator_network_basename="This is CNN.",
-                most_recent_wait_certificate_id=NullIdentifier)
-
-    def test_non_matching_validator_network_basename(self):
-        signup_info = \
-            SignupInfo.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
-                most_recent_wait_certificate_id=NullIdentifier)
-
-        with self.assertRaises(SignupInfoError):
-            signup_info.check_valid(
-                originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename="This is Fox News.",
                 most_recent_wait_certificate_id=NullIdentifier)
 
     def test_non_matching_most_recent_wait_certificate_id(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename='This is CNN.',
                 most_recent_wait_certificate_id=NullIdentifier)
 
         # NOTE - this requires that the signup information check for validity
@@ -155,5 +138,4 @@ class TestSignupInfo(unittest.TestCase):
         # with self.assertRaises(SignupInfoError):
         signup_info.check_valid(
             originator_public_key_hash=self._originator_public_key_hash,
-            validator_network_basename="This is CNN.",
             most_recent_wait_certificate_id='SomeFunkyCertificateID')

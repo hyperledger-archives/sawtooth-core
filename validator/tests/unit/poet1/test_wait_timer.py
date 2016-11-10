@@ -88,7 +88,6 @@ class TestWaitTimer(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
-                validator_network_basename="America's Most Watched Network",
                 most_recent_wait_certificate_id=NullIdentifier)
 
         stake_in_the_sand = time.time()
@@ -187,7 +186,6 @@ class TestWaitTimer(unittest.TestCase):
         # Need to create signup information first
         SignupInfo.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
-            validator_network_basename="America's Most Watched Network",
             most_recent_wait_certificate_id=NullIdentifier)
 
         # Verify that a timer doesn't expire before its creation time

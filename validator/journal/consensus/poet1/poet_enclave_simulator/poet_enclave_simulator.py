@@ -88,7 +88,6 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def create_signup_info(cls,
                            originator_public_key_hash,
-                           validator_network_basename,
                            most_recent_wait_certificate_id):
         with cls._lock:
             # First we need to create a public/private key pair for the PoET
@@ -108,7 +107,7 @@ class _PoetEnclaveSimulator(object):
                         'hex')
             }
             sealed_signup_data = \
-                pybitcointools.base64.b32encode(dict2json(signup_data))
+                pybitcointools.base64.b64encode(dict2json(signup_data))
 
             # Create a fake report
             report_data = {
@@ -120,39 +119,34 @@ class _PoetEnclaveSimulator(object):
                         'hex').upper()
             }
             report = {
-                'report_data': pybitcointools.sha256(dict2json(report_data)),
-                'validator_network_basename': validator_network_basename
+                'report_data': pybitcointools.sha256(dict2json(report_data))
             }
 
             # Fake our "proof" data.
-            attestation_evidence_payload = {
+            verification_report = {
                 'enclave_quote':
                     pybitcointools.base64.b64encode(dict2json(report)),
-                'pse_manifest':
+                'pse_manifest_hash':
                     pybitcointools.base64.b64encode(
                         pybitcointools.sha256(
                             'manifest destiny')),
                 'nonce': most_recent_wait_certificate_id
             }
 
-            attestation_verification_report = {
-                'attestation_evidence_payload': attestation_evidence_payload,
-                'anti_sybil_id': cls._anti_sybil_id
-            }
-
             proof_data = {
-                'attestation_verification_report':
-                    attestation_verification_report,
+                'verification_report': dict2json(verification_report),
                 'signature':
                     pybitcointools.ecdsa_sign(
-                        dict2json(attestation_verification_report),
+                        dict2json(verification_report),
                         cls._report_private_key)
             }
+            proof_data = dict2json(proof_data)
 
             return \
                 EnclaveSignupInfo(
                     poet_public_key=signup_data['poet_public_key'],
                     proof_data=proof_data,
+                    anti_sybil_id=originator_public_key_hash,
                     sealed_signup_data=sealed_signup_data)
 
     @classmethod
@@ -180,7 +174,7 @@ class _PoetEnclaveSimulator(object):
         # we can convert back to a dictionary we can use to get the
         # data we need
         signup_data = \
-            json2dict(pybitcointools.base64.b32decode(sealed_signup_data))
+            json2dict(pybitcointools.base64.b64decode(sealed_signup_data))
 
         with cls._lock:
             cls._poet_public_key = \
@@ -199,51 +193,32 @@ class _PoetEnclaveSimulator(object):
     def verify_signup_info(cls,
                            signup_info,
                            originator_public_key_hash,
-                           validator_network_basename,
                            most_recent_wait_certificate_id):
         # Verify the attestation verification report signature
-        attestation_verification_report = \
-            signup_info.proof_data.get('attestation_verification_report')
-        if attestation_verification_report is None:
+        proof_data = json2dict(signup_info.proof_data)
+        verification_report = proof_data.get('verification_report')
+        if verification_report is None:
             raise \
                 SignupInfoError(
-                    'Attestation verification report is missing from proof '
-                    'data')
+                    'Verification report is missing from proof data')
 
         if not pybitcointools.ecdsa_verify(
-                dict2json(attestation_verification_report),
-                signup_info.proof_data.get('signature'),
+                verification_report,
+                proof_data.get('signature'),
                 cls._report_public_key):
             raise \
-                SignupInfoError(
-                    'Attestation verification report signature is invalid')
-
-        # Verify the presence of the anti-Sybil ID
-        anti_sybil_id = attestation_verification_report.get('anti_sybil_id')
-        if anti_sybil_id is None:
-            raise \
-                SignupInfoError(
-                    'Attestation verification report does not contain an '
-                    'anti-Sybil ID')
+                SignupInfoError('Verification report signature is invalid')
 
         # Verify that the report data field in the report contains the SHA256
         # digest of the originator's public key SHA 256 digest and the PoET
         # public key.
-        attestation_evidence_payload = \
-            attestation_verification_report.get(
-                'attestation_evidence_payload')
-        if attestation_evidence_payload is None:
-            raise \
-                SignupInfoError(
-                    'Attestation verification report does not contain '
-                    'attestation evidence payload')
+        verification_report = json2dict(verification_report)
 
-        enclave_quote = attestation_evidence_payload.get('enclave_quote')
+        enclave_quote = verification_report.get('enclave_quote')
         if enclave_quote is None:
             raise \
                 SignupInfoError(
-                    'Attestation evidence payload does not contain an '
-                    'enclave quote')
+                    'Verification report does not contain an enclave quote')
 
         report = json2dict(pybitcointools.base64.b64decode(enclave_quote))
         report_data = report.get('report_data')
@@ -261,23 +236,6 @@ class _PoetEnclaveSimulator(object):
 
         if report_data != target_report_data_digest:
             raise SignupInfoError('Enclave quote report data is invalid')
-
-        # Verify that the validator base name in the enclave quote report
-        # matches the provided validator network basename
-        validator_net_basename = report.get('validator_network_basename')
-        if validator_net_basename is None:
-            raise \
-                SignupInfoError(
-                    'Enclave quote report does not have a validator network '
-                    'basename')
-
-        if validator_net_basename != validator_network_basename:
-            raise \
-                SignupInfoError(
-                    'Enclave quote report validator network basename [{0}] '
-                    'does not match [{1}]'.format(
-                        validator_net_basename,
-                        validator_network_basename))
 
         # NOTE - this check is currently not performed as a transaction
         #        does not have a good way to obtaining the most recent
@@ -455,12 +413,10 @@ def initialize(**kwargs):
 
 
 def create_signup_info(originator_public_key_hash,
-                       validator_network_basename,
                        most_recent_wait_certificate_id):
     return \
         _PoetEnclaveSimulator.create_signup_info(
             originator_public_key_hash=originator_public_key_hash,
-            validator_network_basename=validator_network_basename,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
 
@@ -475,13 +431,11 @@ def unseal_signup_data(sealed_signup_data):
 
 def verify_signup_info(signup_info,
                        originator_public_key_hash,
-                       validator_network_basename,
                        most_recent_wait_certificate_id):
     return \
         _PoetEnclaveSimulator.verify_signup_info(
             signup_info=signup_info,
             originator_public_key_hash=originator_public_key_hash,
-            validator_network_basename=validator_network_basename,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
 
