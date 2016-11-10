@@ -14,57 +14,41 @@
 # ------------------------------------------------------------------------------
 
 from threading import RLock
-import os
-import lmdb
-import cPickle as pickle
+from shelve import Shelf
+import anydbm
 
-from journal.database import database
+from sawtooth_validator.database import database
 
 
-class LMDBDatabase(database.Database):
-    """LMDBDatabase is a thread-safe implementation of the
-    journal.database.Database interface which uses LMDB for the
-    underlying persistence.
+class ShelfDatabase(database.Database):
+    """ShelfDatabase is a thread-safe implementation of the
+    sawtooth_validator.database.Database interface which uses python Shelve
+    for the underlying persistence.
 
     Attributes:
        lock (threading.RLock): A reentrant lock to ensure threadsafe access.
-       lmdb (lmdb.Environment): The underlying lmdb database.
+       shelf (shelve.Shelf): The underlying shelf database.
     """
 
     def __init__(self, filename, flag):
-        """Constructor for the LMDBDatabase class.
+        """Constructor for the ShelfDatabase class.
 
         Args:
             filename (str): The filename of the database file.
             flag (str): a flag indicating the mode for opening the database.
                 Refer to the documentation for anydbm.open().
         """
-        super(LMDBDatabase, self).__init__()
+        super(ShelfDatabase, self).__init__()
         self._lock = RLock()
-
-        create = bool(flag == 'c')
-
-        if flag == 'n':
-            if os.path.isfile(filename):
-                os.remove(filename)
-            create = True
-
-        self._lmdb = lmdb.Environment(path=filename,
-                                      map_size=1024**4,
-                                      writemap=True,
-                                      subdir=False,
-                                      create=create,
-                                      lock=False)
+        self._shelf = Shelf(anydbm.open(filename, flag))
 
     def __len__(self):
         with self._lock:
-            with self._lmdb.begin() as txn:
-                return txn.stat()['entries']
+            return len(self._shelf)
 
     def __contains__(self, key):
         with self._lock:
-            with self._lmdb.begin() as txn:
-                return bool(txn.get(key) is not None)
+            return key in self._shelf
 
     def get(self, key):
         """Retrieves a value associated with a key from the database
@@ -73,10 +57,7 @@ class LMDBDatabase(database.Database):
             key (str): The key to retrieve
         """
         with self._lock:
-            with self._lmdb.begin() as txn:
-                pickled = txn.get(key)
-                if pickled is not None:
-                    return pickle.loads(pickled)
+            return self._shelf.get(key, default=None)
 
     def set(self, key, value):
         """Sets a value associated with a key in the database
@@ -85,10 +66,8 @@ class LMDBDatabase(database.Database):
             key (str): The key to set.
             value (str): The value to associate with the key.
         """
-        pickled = pickle.dumps(value)
         with self._lock:
-            with self._lmdb.begin(write=True, buffers=True) as txn:
-                txn.put(key, pickled, overwrite=True)
+            self._shelf[key] = value
 
     def delete(self, key):
         """Removes a key:value from the database
@@ -97,24 +76,22 @@ class LMDBDatabase(database.Database):
             key (str): The key to remove.
         """
         with self._lock:
-            with self._lmdb.begin(write=True, buffers=True) as txn:
-                txn.delete(key)
+            del self._shelf[key]
 
     def sync(self):
         """Ensures that pending writes are flushed to disk
         """
         with self._lock:
-            self._lmdb.sync()
+            self._shelf.sync()
 
     def close(self):
         """Closes the connection to the database
         """
         with self._lock:
-            self._lmdb.close()
+            self._shelf.close()
 
     def keys(self):
         """Returns a list of keys in the database
         """
         with self._lock:
-            with self._lmdb.begin() as txn:
-                return [key for key, _ in txn.cursor()]
+            return self._shelf.keys()
