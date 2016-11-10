@@ -1,0 +1,24 @@
+#!/bin/bash -x
+
+set -e
+
+top_dir=$(dirname $(dirname $0))
+protos_dir=$top_dir/protos
+sdk_dir=$top_dir/sdk/python/sawtooth_protobuf
+validator_dir=$top_dir/validator/sawtooth_validator/protobuf
+
+mkdir -p $sdk_dir
+mkdir -p $validator_dir
+
+
+python -m grpc.tools.protoc \
+    -I$protos_dir \
+    --python_out=$sdk_dir \
+    --grpc_python_out=$sdk_dir \
+    $protos_dir/*.proto
+
+python -m grpc.tools.protoc \
+    -I$protos_dir \
+    --python_out=$validator_dir \
+    --grpc_python_out=$validator_dir \
+    $protos_dir/*.proto
