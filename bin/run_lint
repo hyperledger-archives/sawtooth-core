@@ -98,3 +98,5 @@ pylint \
     --reports=no \
     $(find_packages extensions/arcade)
 
+# check for windows line endings.
+find $top_dir -name \*.py -exec file {} \; | grep CRLF
