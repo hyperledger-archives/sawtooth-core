@@ -13,20 +13,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
-import time
 import tempfile
+import time
+import unittest
+
 import pybitcointools
 
+from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
+    import DevModeConsensus
 from gossip import signed_object
 from gossip.gossip_core import Gossip
 from gossip.node import Node
-from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
-from journal.transaction import Transaction
-from journal.transaction_block import TransactionBlock
-from journal.transaction import Status as tStatus
-from journal.transaction_block import Status as tbStatus
 from journal.journal_core import Journal
+from journal.transaction import Status as tStatus
+from journal.transaction import Transaction
+from journal.transaction_block import Status as tbStatus
+from journal.transaction_block import TransactionBlock
 
 
 class TestingJournalTransaction(unittest.TestCase):

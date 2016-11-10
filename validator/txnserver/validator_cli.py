@@ -88,8 +88,8 @@ def local_main(config, windows_service=False, daemonized=False):
         store_type = config.get("StoreType")
 
         if consensus_type == 'poet0':
-            from journal.consensus.poet0 import poet_consensus
-            from journal.consensus.poet0.wait_timer \
+            from sawtooth_validator.consensus.poet0 import poet_consensus
+            from sawtooth_validator.consensus.poet0.wait_timer \
                 import set_wait_timer_globals
             set_wait_timer_globals(target_wait_time,
                                    initial_wait_time,
@@ -99,8 +99,8 @@ def local_main(config, windows_service=False, daemonized=False):
             # enclave implementations - poet_enclave.initialize
             consensus = poet_consensus.PoetConsensus(config)
         elif consensus_type == 'poet1':
-            from journal.consensus.poet1 import poet_consensus
-            from journal.consensus.poet1.wait_timer \
+            from sawtooth_validator.consensus.poet1 import poet_consensus
+            from sawtooth_validator.consensus.poet1.wait_timer \
                 import set_wait_timer_globals
             set_wait_timer_globals(target_wait_time,
                                    initial_wait_time,
@@ -116,7 +116,7 @@ def local_main(config, windows_service=False, daemonized=False):
             vote_time_interval = config.get("VoteTimeInterval")
             ballot_time_interval = config.get("BallotTimeInterval")
             voting_quorum_target_size = config.get("VotingQuorumTargetSize")
-            from journal.consensus.quorum import quorum_consensus
+            from sawtooth_validator.consensus.quorum import quorum_consensus
             consensus = quorum_consensus.QsuorumConsensus(
                 vote_time_interval,
                 ballot_time_interval,
@@ -126,7 +126,8 @@ def local_main(config, windows_service=False, daemonized=False):
         elif consensus_type == 'dev_mode':
             block_publisher = config.get("DevModePublisher", False)
             block_wait_time = config.get("BlockWaitTime")
-            from journal.consensus.dev_mode import dev_mode_consensus
+            from sawtooth_validator.consensus.dev_mode \
+                import dev_mode_consensus
             consensus = dev_mode_consensus.DevModeConsensus(
                 block_publisher,
                 block_wait_time)
@@ -164,7 +165,7 @@ def local_main(config, windows_service=False, daemonized=False):
     # go through the list of transaction families that should be initialized in
     # this validator. the endpoint registry is always included
     if consensus_type == 'poet1':
-        from journal.consensus.poet1 import validator_registry
+        from sawtooth_validator.consensus.poet1 import validator_registry
         validator_registry.register_transaction_types(journal)
     for txnfamily in config.get('TransactionFamilies'):
         logger.info("adding transaction family: %s", txnfamily)

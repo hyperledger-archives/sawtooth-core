@@ -15,7 +15,7 @@
 import hashlib
 import random
 import string
-from journal.consensus.poet0.poet_enclave_simulator \
+from sawtooth_validator.consensus.poet0.poet_enclave_simulator \
     import poet0_enclave_simulator as pe_sim
 
 

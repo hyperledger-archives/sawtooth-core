@@ -20,16 +20,16 @@ import pybitcointools
 
 from gossip import signed_object
 from journal.object_store import ObjectStore
-from journal.consensus.poet1.validator_registry \
+from sawtooth_validator.consensus.poet1.validator_registry \
     import ValidatorRegistryTransaction
 from sawtooth.exceptions import InvalidTransactionError
-from journal.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
 
 
 class TestValidatorRegistryTransaction(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from journal.consensus.poet1.poet_enclave_simulator \
+        from sawtooth_validator.consensus.poet1.poet_enclave_simulator \
             import poet_enclave_simulator
         SignupInfo.poet_enclave = poet_enclave_simulator
 
@@ -47,7 +47,6 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=public_key_hash,
-                validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
         store = ObjectStore()
@@ -75,7 +74,6 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=public_key_hash,
-                validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
         store = ObjectStore()
@@ -108,7 +106,6 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 originator_public_key_hash=public_key_hash,
-                validator_network_basename='Intel Validator Network',
                 most_recent_wait_certificate_id='0' * 16)
 
         store = ObjectStore()
