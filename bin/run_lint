@@ -98,5 +98,9 @@ pylint \
     --reports=no \
     $(find_packages extensions/arcade)
 
-# check for windows line endings.
-find $top_dir -name \*.py -exec file {} \; | grep CRLF
+# check for windows line endings.  Note that grep returns 0 if it
+# finds something, and 1 if it doesn't.  In our case, finding something
+# is an error, so we want to flip a 0 to a 1 and a 1 to a 0, thus
+# the ! at the beginning of the command.
+
+! find $top_dir -name \*.py -exec file {} \; | grep CRLF
