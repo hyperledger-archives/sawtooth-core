@@ -40,6 +40,7 @@ def add_cluster_parser(subparsers, parent_parser):
     add_cluster_start_parser(cluster_subparsers, parent_parser)
     add_cluster_status_parser(cluster_subparsers, parent_parser)
     add_cluster_stop_parser(cluster_subparsers, parent_parser)
+    add_cluster_extend_parser(cluster_subparsers, parent_parser)
 
 
 def add_cluster_status_parser(subparsers, parent_parser):
@@ -78,6 +79,16 @@ def add_cluster_stop_parser(subparsers, parent_parser):
         nargs='*')
 
 
+def add_cluster_extend_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('extend', parents=[parent_parser])
+
+    parser.add_argument(
+        '--count',
+        help='number of nodes to add to network',
+        type=int,
+        default=1)
+
+
 def do_cluster(args):
     if args.cluster_command == 'start':
         do_cluster_start(args)
@@ -85,6 +96,8 @@ def do_cluster(args):
         do_cluster_status(args)
     elif args.cluster_command == 'stop':
         do_cluster_stop(args)
+    elif args.cluster_command == 'extend':
+        do_cluster_extend(args)
     else:
         raise CliException("invalid cluster command: {}".format(
             args.cluster_command))
@@ -279,3 +292,74 @@ def do_cluster_status(args):
             else:
                 print "{} {} {}".format(node_name, nodes[node_name]["Status"],
                                         status)
+
+
+def do_cluster_extend(args):
+    # pylint: disable=redefined-variable-type
+    file_name = \
+        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
+                     "state.yaml")
+    # Get current state of Nodes
+    if os.path.isfile(file_name):
+        with open(file_name, 'r') as state_file:
+            state = yaml.load(state_file)
+    else:
+        raise CliException("Missing state file")
+
+    if state['Manage'] is None or state['Manage'] == 'docker':
+        node_controller = DockerNodeController()
+    elif state['Manage'] == 'daemon':
+        node_controller = DaemonNodeController()
+    else:
+        raise CliException('invalid management'
+                           ' type: {}'.format(state['Manage']))
+
+    node_command_generator = SimpleNodeCommandGenerator()
+
+    vnm = ValidatorNetworkManager(
+        node_controller=node_controller,
+        node_command_generator=node_command_generator)
+
+    existing_nodes = state["Nodes"]
+
+    desired_stated = state["DesiredState"]
+
+    if desired_stated != "Running":
+        raise CliException(
+            "You must have a running network.\n" +
+            "Use the cluster start command to start a validator network.")
+
+    print "Extending network by {} nodes.".format(args.count)
+
+    index_offset = len(existing_nodes)
+
+    for i in xrange(0, args.count):
+        j = i + index_offset
+        node_name = "validator-{:0>3}".format(j)
+
+        if node_name in existing_nodes and vnm.is_running(node_name):
+            print "Already running: {}".format(node_name)
+            continue
+
+        # genesis is true for the first node
+        genesis = (j == 0)
+        gossip_port = 5500 + j
+        http_port = 8800 + j
+
+        print "Starting: {}".format(node_name)
+        node_command_generator.start(
+            node_name,
+            http_port=http_port,
+            gossip_port=gossip_port,
+            genesis=genesis)
+
+        state["Nodes"][node_name] = {"Status": "Running", "Index": j}
+
+    # Write file to default directory with current state Nodes
+    with open(file_name, 'w') as state_file:
+        yaml.dump(state, state_file, default_flow_style=False)
+
+    try:
+        vnm.update()
+    except ManagementError as e:
+        raise CliException(str(e))
