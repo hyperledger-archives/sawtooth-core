@@ -17,10 +17,10 @@ import unittest
 
 import pybitcointools
 
-from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_timer \
-    import EnclaveWaitTimer
-from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_certificate \
-    import EnclaveWaitCertificate
+from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
+    enclave_wait_timer import EnclaveWaitTimer
+from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
+    enclave_wait_certificate import EnclaveWaitCertificate
 
 
 class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):

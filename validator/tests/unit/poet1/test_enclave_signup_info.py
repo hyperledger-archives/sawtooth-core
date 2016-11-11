@@ -15,8 +15,8 @@
 
 import unittest
 
-from journal.consensus.poet1.poet_enclave_simulator.enclave_signup_info \
-    import EnclaveSignupInfo
+from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
+    enclave_signup_info import EnclaveSignupInfo
 
 
 class TestEnclaveSimulatorSignupInfo(unittest.TestCase):

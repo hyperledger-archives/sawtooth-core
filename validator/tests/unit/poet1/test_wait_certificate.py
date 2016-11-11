@@ -17,13 +17,15 @@ import unittest
 import hashlib
 
 import pybitcointools
-import journal.consensus.poet1.poet_enclave_simulator.poet_enclave_simulator \
-    as poet_enclave
+import sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
+    poet_enclave_simulator as poet_enclave
 
-from journal.consensus.poet1.signup_info import SignupInfo
-from journal.consensus.poet1.wait_timer import WaitTimer
-from journal.consensus.poet1.wait_certificate import WaitCertificate
-from journal.consensus.poet1.wait_certificate import WaitCertificateError
+from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
+from sawtooth_validator.consensus.poet1.wait_certificate \
+    import WaitCertificate
+from sawtooth_validator.consensus.poet1.wait_certificate \
+    import WaitCertificateError
 from gossip.common import NullIdentifier
 
 

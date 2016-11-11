@@ -18,8 +18,8 @@ import time
 
 import pybitcointools
 
-from journal.consensus.poet1.poet_enclave_simulator.enclave_wait_timer \
-    import EnclaveWaitTimer
+from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
+    enclave_wait_timer import EnclaveWaitTimer
 
 
 class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
