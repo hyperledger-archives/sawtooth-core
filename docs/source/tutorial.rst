@@ -122,12 +122,40 @@ This will start txnvalidator and logging output will be printed to the
 terminal window.
 
 .. note::
+  **Note on genesis block creation and clearing validator state**
+  
+    The script *genesis.sh* should be run whenever you want to start a
+    validator as part of the tuturial. The script clears existing data
+    files and keys, which would otherwise be loaded when starting the
+    validator. The script also runs a utility that creates a genesis
+    block, and creates a special configuration file needed by an initial
+    node serving a genesis block (see note below for details). This
+    utility is part of the sawtooth CLI. To view the available
+    subcommands, run the command **sawtooth -h**. The genesis creation
+    utility used in this tutorial is: **sawtooth admin poet0-genesis**
+    (see script *genesis.sh* for the command line options used in the
+    tutorial).
 
-  The script *genesis.sh* should be run whenever you want to start a validator
-  as part of the tuturial. The script clears existing data files and keys,
-  which would otherwise be loaded when starting the validator. The script also
-  runs a command that creates the genesis block, and creates a special
-  configuration file needed by a genesis node on startup.
+
+.. note::
+  **Note on configuration needed for initial node serving genesis block**
+
+    The special configuration file created using the utility *genesis.sh*
+    described in the note above contains the following setting, which is
+    required for the intitial node that serves the genesis block:
+
+    **{"InitialConnectivity": 0}**
+
+    The initial node that serves the genesis block must refrain from
+    establishing initial connectivity until it assumes the role of a
+    validator that can provide ledger transfers to other nodes. The
+    initial validator already has the ledger, including the prefabricated
+    genesis block. However, if the initial connectivity is not set to
+    zero, it might attempt to  obtain the ledger from other nodes, rather
+    than providing the critical genesis block to the rest of the network.
+
+
+
 
 To stop the validator, press CTRL-c.
 
