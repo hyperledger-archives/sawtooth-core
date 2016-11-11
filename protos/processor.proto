@@ -1,0 +1,74 @@
+// Copyright 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+
+
+// The registration request from the transaction processor to the validator/executor
+message TransactionProcessorRegisterRequest {
+
+    // xo, or bond, or identity
+    // a settled upon name for the capabilities of the transaction processor
+    string family = 1;
+
+    // The version supported.  For example:
+    //      1.0  for version 1.0
+    //      2.1  for version 2.1
+    string version = 2;
+
+    // The supported encodings.
+    // 'application/cbor', 'application/protobuf', etc
+    string encoding = 3;
+
+    // The namespaces this transaction processor expects to interact with
+    // when processing transations matching this specification; will be
+    // enforced by the state API on the validator.
+    repeated string namespaces = 4;
+}
+
+// A response sent from the validator to the transaction processor acknowledging the registration
+message Acknowledgement {
+    enum Status {
+        OK = 0;
+        ERROR = 1;
+    }
+
+    Status status = 1;
+}
+
+
+// The request from the validator/executor of the transaction processor
+// to verify a transaction.
+message TransactionProcessRequest {
+    bytes header = 1;
+    bytes payload = 2;
+    string signature = 3;
+    string context_id = 4;
+}
+
+
+// The response from the transaction processor to the validator/executor
+// used to respond about the validity of a transaction
+message TransactionProcessResponse {
+    enum Status {
+        OK = 0;
+        INVALID_TRANSACTION = 1;
+        INTERNAL_ERROR = 2;
+    }
+
+    Status status = 1;
+}
