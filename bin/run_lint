@@ -103,4 +103,6 @@ pylint \
 # is an error, so we want to flip a 0 to a 1 and a 1 to a 0, thus
 # the ! at the beginning of the command.
 
-! find $top_dir -name \*.py -exec file {} \; | grep CRLF
+! find $top_dir -name \*.py -exec file {} \; \
+    | grep -v /build/ \
+    | grep CRLF
