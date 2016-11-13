@@ -14,7 +14,9 @@
 # ------------------------------------------------------------------------------
 
 
-__all__ = [
-    'client',
-    'processor'
-]
+class InvalidTransaction(Exception):
+    pass
+
+
+class InternalError(Exception):
+    pass
