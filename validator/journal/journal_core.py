@@ -109,6 +109,7 @@ class Journal(object):
                  gossip,
                  gossip_dispatcher,
                  consensus,
+                 permissioned_validators=None,
                  stat_domains=None,
                  minimum_transactions_per_block=None,
                  max_transactions_per_block=None,
@@ -216,6 +217,7 @@ class Journal(object):
         transaction_block_message.register_message_handlers(self)
         journal_transfer.register_message_handlers(self)
         self.consensus.initialization_complete(self)
+        self.permissioned_validators = permissioned_validators
 
     @classmethod
     def get_store_file(cls, node_name, store_name, data_dir,
