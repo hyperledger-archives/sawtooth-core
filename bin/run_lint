@@ -22,7 +22,7 @@ find_packages() {
             [ $file = "sawtooth_validator/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
             [ $file = "consensus/poet0/Enclave/EnclaveModule.py" ] && continue
             [ $file = "consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
-
+	    [[ $file =~ ^.*_pb2\.py$ ]] && continue
 
             echo "$topdir/$file"
         done
