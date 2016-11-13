@@ -10,6 +10,12 @@ validator_dir=$top_dir/validator/sawtooth_validator/protobuf
 mkdir -p $sdk_dir
 mkdir -p $validator_dir
 
+if [ ! -e $sdk_dir/__init__.py ]; then
+    touch $sdk_dir/__init__.py
+fi
+if [ ! -e $validator_dir/__init__.py ]; then
+    touch $validator_dir/__init__.py
+fi
 
 python -m grpc.tools.protoc \
     -I$protos_dir \
