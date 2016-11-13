@@ -72,9 +72,7 @@ class StartCommand(NodeCommand):
 class StopCommand(NodeCommand):
     def __init__(self, node_name):
         super(StopCommand, self).__init__()
-
         self._node_name = node_name
 
     def execute(self, controller):
-        controller.stop(
-            node_name=self._node_name)
+        controller.stop(self._node_name)
