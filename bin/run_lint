@@ -58,6 +58,16 @@ pylint \
     --reports=no \
     $(find_packages core)
 
+PYTHONPATH=$top_dir/sdk/python
+PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
+export PYTHONPATH
+
+pylint \
+    --rcfile=.pylintrc-strict \
+    --reports=no \
+    $(find_packages sdk/python) \
+    $(find_packages sdk/examples/intkey_python)
+
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
