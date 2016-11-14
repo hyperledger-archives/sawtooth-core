@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+cd ./sdk/examples/intkey_java
+java -cp target/intkey_java-1.0-SNAPSHOT.jar sawtooth.examples.intkey.IntegerKeyTransactionProcessor
