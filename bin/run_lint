@@ -22,7 +22,7 @@ find_packages() {
             [ $file = "sawtooth_validator/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
             [ $file = "consensus/poet0/Enclave/EnclaveModule.py" ] && continue
             [ $file = "consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
-
+	    [[ $file =~ ^.*_pb2\.py$ ]] && continue
 
             echo "$topdir/$file"
         done
@@ -57,6 +57,16 @@ pylint \
     --rcfile=.pylintrc-core \
     --reports=no \
     $(find_packages core)
+
+PYTHONPATH=$top_dir/sdk/python
+PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
+export PYTHONPATH
+
+pylint \
+    --rcfile=.pylintrc-strict \
+    --reports=no \
+    $(find_packages sdk/python) \
+    $(find_packages sdk/examples/intkey_python)
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -103,4 +113,6 @@ pylint \
 # is an error, so we want to flip a 0 to a 1 and a 1 to a 0, thus
 # the ! at the beginning of the command.
 
-! find $top_dir -name \*.py -exec file {} \; | grep CRLF
+! find $top_dir -name \*.py -exec file {} \; \
+    | grep -v /build/ \
+    | grep CRLF
