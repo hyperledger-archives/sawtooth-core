@@ -92,6 +92,7 @@ public class IntegerKeyHandler implements TransactionHandler {
         address = this.intkeyNameSpace + Utils.hash512(name.getBytes("UTF-8"));
       } catch (UnsupportedEncodingException usee) {
         usee.printStackTrace();
+        throw new InternalError("Internal Error, " + usee.toString());
       }
       if (name.length() == 0) {
         throw new InvalidTransactionException("Name is required");
@@ -127,7 +128,6 @@ public class IntegerKeyHandler implements TransactionHandler {
           throw new InvalidTransactionException("Verb is set but Value is less than 0");
         }
         // 'set' passes checks so store it in the state
-        // Java has a ByteString.copyFrom to make a ByteString out of anything
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
                 ByteString.copyFrom(value.toString().getBytes("UTF-8")));

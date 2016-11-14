@@ -48,7 +48,6 @@ class MessageListener extends ClientCall.Listener<MessageList> {
         future.set(message.getContent());
         this.futureHashMap.put(correlationId, future);
       } else {
-
         this.receiveQueue.add(message);
       }
     }
