@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+cd ./sdk/java
+mvn clean generate-sources package install
