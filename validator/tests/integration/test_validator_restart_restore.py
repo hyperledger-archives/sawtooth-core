@@ -76,17 +76,15 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             valid_dict_value = validator_report['Status']
             validator_blocks_relaunch = valid_dict_value['Blocks']
             print "validator_blocks_relaunch", validator_blocks_relaunch
-            if len(validator_blocks_relaunch) == \
-                    len(validator_blocks_shutdown):
-                if validator_blocks_shutdown == validator_blocks_relaunch:
-                    print "relaunched validator restored from local db"
-            else:
-                for i in range(0, len(validator_blocks_shutdown)):
-                        self.assertEqual(validator_blocks_relaunch[i],
-                                         validator_blocks_shutdown[i],
-                                         "relaunched validator didn't"
-                                         " restore fr local db")
-                        break
+
+            # the length of post-shutdown validator blocks might be bigger
+            # than the length of pre-shutdown validator blocks
+            for i in range(0, len(validator_blocks_shutdown)):
+                self.assertEqual(validator_blocks_relaunch[i],
+                                 validator_blocks_shutdown[i],
+                                 "mismatch in post-shutdown validator blocks. "
+                                 "Validator didn't restore fr local db")
+                break
                 print "relaunched validator restored from local database"
 
         finally:
