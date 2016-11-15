@@ -98,15 +98,6 @@ poet0_enclave_mod = Extension(
     libraries=libraries,
     library_dirs=library_dirs)
 
-ecdsamod = Extension('_ECDSARecoverModule',
-                     ['gossip/ECDSA/ECDSARecoverModule.i',
-                      'gossip/ECDSA/ECDSARecover.cc'],
-                     swig_opts=['-c++'],
-                     extra_compile_args=extra_compile_args,
-                     include_dirs=include_dirs,
-                     libraries=libraries,
-                     library_dirs=library_dirs)
-
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\conf"
     log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\logs"
@@ -155,14 +146,14 @@ setup(
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['sawtooth-core', 'cbor>=0.1.23', 'colorlog', 'twisted',
+    install_requires=['sawtooth-core', 'sawtooth-signing',
+                      'cbor>=0.1.23', 'colorlog', 'twisted',
                       'PyYAML', 'psutil', 'numpy', 'requests',
                       'pybitcointools', 'ipaddr'],
-    ext_modules=[poet0_enclave_mod, ecdsamod],
+    ext_modules=[poet0_enclave_mod],
     py_modules=[
         'sawtooth_validator.consensus.poet0.poet_enclave_simulator'
         '.poet0_enclave_simulator',
-        'gossip.ECDSA.ECDSARecoverModule'
     ],
     data_files=data_files,
     entry_points={
@@ -180,9 +171,6 @@ if "clean" in sys.argv and "--all" in sys.argv:
                 os.remove(os.path.join(root, fn))
     for filename in [
             ".coverage"
-            "_ECDSARecoverModule.so",
-            os.path.join("gossip", "ECDSA", "ECDSARecoverModule.py"),
-            os.path.join("gossip", "ECDSA", "ECDSARecoverModule_wrap.cpp"),
             "_poet0_enclave_simulator.so",
             os.path.join("journal",
                          "consensus",

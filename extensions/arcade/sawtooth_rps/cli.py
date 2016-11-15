@@ -24,10 +24,10 @@ import ConfigParser
 import getpass
 import argparse
 import logging
-import pybitcointools
 
 from colorlog import ColoredFormatter
 
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_rps.client import RPSClient
 from sawtooth_rps.exceptions import RPSException
 from sawtooth.exceptions import ClientException
@@ -164,9 +164,10 @@ def do_init(args, config):
             if not os.path.exists(os.path.dirname(wif_filename)):
                 os.makedirs(os.path.dirname(wif_filename))
 
-            privkey = pybitcointools.random_key()
-            encoded = pybitcointools.encode_privkey(privkey, 'wif')
-            addr = pybitcointools.privtoaddr(privkey)
+            privkey = signing.generate_privkey()
+            encoded = signing.encode_privkey(privkey, 'wif')
+            pubkey = signing.generate_pubkey(privkey)
+            addr = signing.generate_identifier(pubkey)
 
             with open(wif_filename, "w") as wif_fd:
                 print "writing file: {}".format(wif_filename)

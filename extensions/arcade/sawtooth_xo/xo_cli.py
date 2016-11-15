@@ -23,10 +23,10 @@ import logging
 import os
 import traceback
 import sys
-import pybitcointools
 
 from colorlog import ColoredFormatter
 
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 
@@ -200,9 +200,10 @@ def do_init(args, config):
             if not os.path.exists(os.path.dirname(wif_filename)):
                 os.makedirs(os.path.dirname(wif_filename))
 
-            privkey = pybitcointools.random_key()
-            encoded = pybitcointools.encode_privkey(privkey, 'wif')
-            addr = pybitcointools.privtoaddr(privkey)
+            privkey = signing.generate_privkey()
+            encoded = signing.encode_privkey(privkey, 'wif')
+            pubkey = signing.generate_pubkey(privkey)
+            addr = signing.generate_identifier(pubkey)
 
             with open(wif_filename, "w") as wif_fd:
                 print "writing file: {}".format(wif_filename)

@@ -17,7 +17,7 @@ find_packages() {
     do
         for file in $(find $dir -name \*.py)
         do
-            [ $file = "gossip/ECDSA/ECDSARecoverModule.py" ] && continue
+            [ $file = "signing/sawtooth_signing/ECDSA/ECDSARecoverModule.py" ] && continue
             [ $file = "sawtooth_validator/consensus/poet0/Enclave/EnclaveModule.py" ] && continue
             [ $file = "sawtooth_validator/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
             [ $file = "consensus/poet0/Enclave/EnclaveModule.py" ] && continue
@@ -35,6 +35,8 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
@@ -49,6 +51,8 @@ pylint \
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
@@ -60,6 +64,8 @@ pylint \
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
@@ -76,6 +82,8 @@ pylint \
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
@@ -88,6 +96,8 @@ pylint \
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade

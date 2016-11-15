@@ -15,10 +15,10 @@
 
 import unittest
 import time
-import pybitcointools
 
 import gossip.signed_object as SigObj
 
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip.gossip_core import Gossip, GossipException
 from gossip.message import Packet, Message
 from gossip.node import Node
@@ -27,7 +27,7 @@ from gossip.messages import shutdown_message
 
 # from utils.py in txintegration
 def generate_private_key():
-    return pybitcointools.encode_privkey(pybitcointools.random_key(), 'wif')
+    return signing.encode_privkey(signing.generate_privkey(), 'wif')
 
 
 class TestGossipCore(unittest.TestCase):
