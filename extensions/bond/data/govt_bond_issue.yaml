@@ -1,0 +1,52 @@
+Transactions:
+- Updates:
+  - UpdateType: CreateBond
+    AmountOutstanding: '42671000000'
+    CorporateDebtRatings:
+      Fitch: AAA
+      Moodys: AAA
+      S&P: AA+
+    CouponRate: '1.375'
+    CouponType: Fixed
+    CouponFrequency: Quarterly
+    Cusip: 912828R77
+    FaceValue: 1000
+    Isin: US912828R770
+    FirstSettlementDate: 'xx'
+    FirstCouponDate: '07/01/2016'
+    MaturityDate: '05/31/2021'
+    Issuer: T
+    ObjectId: govtbond11111111111111111111111111111111111111111111111111111111
+  - UpdateType: CreateBond
+    AmountOutstanding: '48201000000'
+    CorporateDebtRatings:
+      Fitch: AAA
+      Moodys: AAA
+      S&P: AA+
+    CouponRate: '1.625'
+    CouponType: Fixed
+    CouponFrequency: Quarterly
+    Cusip: 912828R36
+    FaceValue: 1000
+    Isin: US912828R366
+    FirstSettlementDate: 'xx'
+    FirstCouponDate: '07/01/2016'
+    MaturityDate: '05/15/2026'
+    Issuer: T
+    ObjectId: govtbond22222222222222222222222222222222222222222222222222222222
+  - UpdateType: CreateBond
+    AmountOutstanding: '30392000000'
+    CorporateDebtRatings:
+      Fitch: AAA
+      Moodys: AAA
+      S&P: AA+
+    CouponRate: '2.5'
+    CouponType: Fixed
+    CouponFrequency: Quarterly
+    Cusip: 912810RS9
+    FaceValue: 1000
+    Isin: US912810RS96
+    FirstSettlementDate: 'xx'
+    FirstCouponDate: '07/01/2016'
+    MaturityDate: '05/15/2046'
+    Issuer: T
