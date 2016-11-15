@@ -1,0 +1,13 @@
+#!/bin/bash
+
+./bin/btp load -vvv --wait \
+    extensions/bond/data/libor.yaml \
+    extensions/bond/data/participant.yaml \
+    extensions/bond/data/organizations.yaml \
+    extensions/bond/data/bank_organizations.yaml \
+    extensions/bond/data/corp_bond_issue.yaml \
+    extensions/bond/data/govt_bond_issue.yaml \
+    extensions/bond/data/quotes_and_orders.yaml \
+    extensions/bond/data/holdings.yaml \
+    extensions/bond/data/bank_holdings.yaml \
+    extensions/bond/data/settlements.yaml
