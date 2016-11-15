@@ -13,7 +13,25 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import time
+from sawtooth.cli.stats_lib.stats_utils import StatsModule
+
+from sawtooth.cli.stats_lib.validator_stats import ValidatorStatsManager
+from sawtooth.cli.stats_lib.validator_stats import SystemStatsManager
+
+from sawtooth.cli.stats_lib.platform_stats import PlatformStatsManager
+from sawtooth.cli.stats_lib.fork_detect import BranchManager
+from sawtooth.cli.stats_lib.topology_stats import TopologyManager
+
+from sawtooth.cli.stats_lib.print_views import SummaryView
+
+from sawtooth.cli.stats_lib.print_views import GeneralView
+from sawtooth.cli.stats_lib.print_views import PlatformView
+from sawtooth.cli.stats_lib.print_views import ConsensusView
+from sawtooth.cli.stats_lib.print_views import PacketView
+from sawtooth.cli.stats_lib.print_views import NetworkView
+from sawtooth.cli.stats_lib.print_views import TransactionView
+from sawtooth.cli.stats_lib.print_views import BranchView
+from sawtooth.cli.stats_lib.print_views import ForkView
 
 CURSES_IMPORTED = True
 try:
@@ -71,709 +89,86 @@ class ConsolePrint(object):
             self.scrn.keypad(0)
             curses.echo()
             curses.endwin()
+            print "print manager ended curses window"
 
 
-class StatsPrintManager(object):
-    def __init__(self,
-                 system_stats,
-                 platform_stats,
-                 topology_stats,
-                 branch_manager,
-                 stats_clients):
+class StatsPrintManager(StatsModule):
 
-        self.console_print = ConsolePrint()
-        self.system_stats = system_stats
-        self.platform_stats = platform_stats
-        self.topology_stats = topology_stats
-        self.branch_mgr = branch_manager
-        self.stats_clients = stats_clients
+    def __init__(self, epm, config):
+        super(StatsPrintManager, self).__init__()
+        self._console_print = ConsolePrint()
 
-        self.view_mode = "general"
-        self.print_view = self.print_general_view
+        self.platform_stats = None
+        self.branch_manager = None
+        self.system_stats = None
+        self.topology_stats = None
+        self.stats_clients = None
 
-    def print_stats(self):
-        self.check_view()
-        self.print_summary()
-        self.print_view()
-        self.console_print.cpprint("", True)
+        self._summary_view = None
+        self._view_options = None
+        self._view_mode = None
+        self._current_view = None
 
-    def check_view(self):
-        if self.console_print.scrn:
-            char_buffer = self.console_print.scrn.getch()
+    def initialize(self, module_list):
+        self.module_list = module_list
+        system_stats_manager = self.get_module(SystemStatsManager)
+        topology_stats_manager = self.get_module(TopologyManager)
+        validator_stats_manager = self.get_module(ValidatorStatsManager)
+        self.platform_stats = self.get_module(PlatformStatsManager)
+        self.branch_manager = self.get_module(BranchManager)
 
-            view_options = {
-                ord('g'): ["general", self.print_general_view],
-                ord('p'): ["platform", self.print_platform_view],
-                ord('c'): ["consensus", self.print_consensus_view],
-                ord('n'): ["network", self.print_network_view],
-                ord('t'): ["transaction", self.print_transaction_view],
-                ord('k'): ["packet", self.print_packet_view],
-                ord('b'): ["branch", self.print_branch_view],
-                ord('f'): ["fork", self.print_fork_view]
-            }
+        self.system_stats = system_stats_manager.system_stats
+        self.topology_stats = topology_stats_manager.topology_stats
+        self.stats_clients = validator_stats_manager.clients
 
-            vo = view_options.get(char_buffer)
+        self._summary_view = SummaryView(self._console_print, self)
 
-            if vo is not None:
-                self.view_mode = vo[0]
-                self.print_view = vo[1]
+        self._view_options = self._initialize_views()
+        view_option = self._view_options.get(ord('g'))  # general view
+        self._view_mode = view_option[0]  # 'general'
+        self._current_view = view_option[1]  # GeneralView instance
 
-    def print_summary(self):
-        validator_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9.3f} {6:16.16} ' \
-            '{7:9.3f} {8:16.16} {9:9d} {10:19.19}'
-        self.console_print.cpprint(validator_formatter.format(
-            "Validators:",
-            self.system_stats.sys_client.known_validators, "known",
-            self.system_stats.sys_client.active_validators, "responding",
-            self.system_stats.sys_client.avg_client_time, "avg time(s)",
-            self.system_stats.sys_client.max_client_time, "max time(s)",
-            self.system_stats.sys_client.runtime, "run time(s)"))
+    def report(self):
+        self._print_stats()
 
-        blocks_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:19.19}'
-        self.console_print.cpprint(blocks_formatter.format(
-            "Blocks:",
-            self.system_stats.sys_blocks.blocks_max_committed, "max committed",
-            self.system_stats.sys_blocks.blocks_min_committed, "min committed",
-            self.system_stats.sys_blocks.blocks_max_pending, "max pending",
-            self.system_stats.sys_blocks.blocks_min_pending, "min pending",
-            self.system_stats.sys_blocks.blocks_max_claimed, "max claimed",
-            self.system_stats.sys_blocks.blocks_min_claimed, "min claimed"))
+    def stop(self):
+        self._console_print.cpstop()
 
-        txns_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:19.19}'
-        self.console_print.cpprint(txns_formatter.format(
-            "Transactions:",
-            self.system_stats.sys_txns.txns_max_committed, "max committed",
-            self.system_stats.sys_txns.txns_min_committed, "min committed",
-            self.system_stats.sys_txns.txns_max_pending, "max pending",
-            self.system_stats.sys_txns.txns_min_pending, "min pending",
-            0, "rate (t/s)"))
+    def _print_stats(self):
+        self._check_view()
+        self._summary_view.print_summary(self._view_mode)
+        self._current_view.print_view()
+        self._console_print.cpprint("", True)
 
-        pkt_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:19.19} {11:9d} {12:17.17}'
-        self.console_print.cpprint(pkt_formatter.format(
-            "Packet totals:",
-            self.system_stats.sys_packets.packets_max_dropped, "max dropped",
-            self.system_stats.sys_packets.packets_min_dropped, "min dropped",
-            self.system_stats.sys_packets.packets_max_duplicates,
-            "max duplicated",
-            self.system_stats.sys_packets.packets_min_duplicates,
-            "min duplicated",
-            self.system_stats.sys_packets.packets_max_acks_received,
-            "max acks rcvd",
-            self.system_stats.sys_packets.packets_min_acks_received,
-            "min acks rcvd"))
+    def _check_view(self):
+        char_buffer = ''
+        if self._console_print.scrn:
+            char_buffer = self._console_print.scrn.getch()
 
-        msg_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16}'
-        self.console_print.cpprint(msg_formatter.format(
-            "Message totals:",
-            self.system_stats.sys_msgs.msgs_max_handled, "max handled",
-            self.system_stats.sys_msgs.msgs_min_handled, "min handled",
-            self.system_stats.sys_msgs.msgs_max_acked, "max acked",
-            self.system_stats.sys_msgs.msgs_min_acked, "min acked"))
+        view_option = self._view_options.get(char_buffer)
 
-        platform_formatter = \
-            '{0:>16} ' \
-            '{1:9.2f} {2:16.16} {3:9.2f} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16}'
-        self.console_print.cpprint(platform_formatter.format(
-            "Platform:",
-            self.platform_stats.cpu_stats.percent, "cpu pct",
-            self.platform_stats.vmem_stats.percent, "vmem pct",
-            self.platform_stats.psis.intv_net_bytes_sent, "ntwrk bytes tx",
-            self.platform_stats.psis.intv_net_bytes_recv, "ntwrk bytes rx"))
+        if view_option is not None:
+            self._view_mode = view_option[0]
+            self._current_view = view_option[1]
+            # assert self._view_mode == 'general'
 
-        topo_1_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9.2f} {10:19.19}'
-        self.console_print.cpprint(topo_1_formatter.format(
-            "Topology:",
-            self.topology_stats.connected_component_count, "components",
-            self.topology_stats.node_count, "nodes",
-            self.topology_stats.edge_count, "edges",
-            self.topology_stats.maximum_degree, "max peers",
-            self.topology_stats.minimum_degree, "min peers"))
-
-        topo_2_formatter = \
-            '{0:>16} ' \
-            '{1:9.2f} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9.2f} {8:16.16} {9:9.2f} {10:19.19}'
-        self.console_print.cpprint(topo_2_formatter.format(
-            "Topology:",
-            self.topology_stats.average_shortest_path_length,
-            "avg shortest pth",
-            self.topology_stats.maximum_shortest_path_length,
-            "max shortest pth",
-            self.topology_stats.minimum_connectivity,
-            "min connectivity",
-            self.topology_stats.maximum_degree_centrality,
-            "max degree cent",
-            self.topology_stats.maximum_between_centrality,
-            "max between cent"))
-
-        branch_formatter = \
-            '{0:>16} ' \
-            '{1:9d} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:19.19} {11:9d} {12:17.17}'
-        self.console_print.cpprint(branch_formatter.format(
-            "Branch:",
-            self.branch_mgr.bm_stats.identified, "identified",
-            self.branch_mgr.bm_stats.active, "active",
-            self.branch_mgr.bm_stats.longest, "longest",
-            self.branch_mgr.bm_stats.longest_active, "longest active",
-            self.branch_mgr.bm_stats.next_longest_active,
-            "next longest active",
-            # self.bm.bm_stats.validators, "validator count"))
-            self.branch_mgr.bm_stats.blocks_processed, "blocks processed"))
-
-        fork_formatter = \
-            '{0:>16} ' \
-            '{1:9} {2:16.16} {3:9d} {4:16.16} {5:9d} {6:16.16} ' \
-            '{7:9d} {8:16.16} {9:9d} {10:19.19}'
-        self.console_print.cpprint(fork_formatter.format(
-            "Fork:",
-            self.branch_mgr.f_stats.status, "status",
-            self.branch_mgr.f_stats.fork_count, "fork count",
-            self.branch_mgr.f_stats.parent_count, "parent forks",
-            self.branch_mgr.f_stats.child_count, "child forks",
-            self.branch_mgr.f_stats.longest_child_fork_length,
-            "longest child fork"))
-
-        poet_formatter = \
-            '{0:>16} ' \
-            '{1:9.2f} {2:16.16} {3:9.2f} {4:16.16} {5:9.2f} {6:16.16} ' \
-            '{7:>26.16} {8:22.22}'
-        self.console_print.cpprint(poet_formatter.format(
-            "Poet:",
-            self.system_stats.poet_stats.avg_local_mean, "avg local mean",
-            self.system_stats.poet_stats.max_local_mean, "max local mean",
-            self.system_stats.poet_stats.min_local_mean, "min local mean",
-            self.system_stats.poet_stats.last_unique_blockID,
-            "last unique block ID"))
-
-        view_formatter = \
-            '{0:>16} ' \
-            '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
-            '{7:>9} {8:16.16} {9:>9} {10:19.19}'
-        self.console_print.cpprint(view_formatter.format(
-            "View:",
-            "(g)", "general",
-            "(t)", "transaction",
-            "(k)", "packet",
-            "(c)", "consensus",
-            "(o)", "topology"))
-
-        view_formatter_2 = \
-            '{0:>16} ' \
-            '{1:>9} {2:16.16} {3:>9} {4:16.16} {5:>9} {6:16.16} ' \
-            '{7:>9} {8:16.16}'
-        self.console_print.cpprint(view_formatter_2.format(
-            "({})".format(self.view_mode),
-            "(p)", "platform",
-            "(n)", "network",
-            "(b)", "branch",
-            "(f)", "fork"))
-
-    def print_general_view(self):
-        header_formatter = \
-            '{0:>5} {1:>8} ' \
-            '{2:>8} {3:>7} {4:>9} {5:>7} ' \
-            '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
-            '{12:>18.18} {13:>28.28}'
-        resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:8.3f} {3:7d} {4:9d} {5:7d} ' \
-            '{6:11d} {7:7d} {8:9.2f} {9:7.2f} {10:8.2f}  {11:>16.16} ' \
-            '{12:>18.18} {13:>28.28}'
-        no_resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:31} {3} {4} {5} ' \
-            '{6:>11} {7:>7} {8:>9} {9:>7} {10:>8}  {11:>16} ' \
-            '{12:>18.18} {13:>28.28}'
-
-        self.console_print.cpprint(header_formatter.format(
-            'VAL', 'VAL',
-            'RESPONSE', 'BLOCKS', 'BLOCKS', 'BLOCKS',
-            'TXNS', 'TXNS', 'AVG TXN', 'AVG BLK', 'LOCAL', 'PREVIOUS',
-            ' VALIDATOR', 'VALIDATOR'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'STATE',
-            'TIME(S)', 'CLAIMED', 'COMMITTED', 'PENDING',
-            'COMMITTED', 'PENDING', 'RATE(T/S)', 'TIME(S)', 'MEAN', 'BLOCKID',
-            'NAME', 'URL'),
-            reverse=True)
-
-        for c in self.stats_clients:
-            if c.responding:
-                self.console_print.cpprint(resp_formatter.format(
-                    c.val_id,
-                    c.state,
-                    c.response_time,
-                    c.vsm.val_stats["journal"]["BlocksClaimed"],
-                    c.vsm.val_stats["journal"]["CommittedBlockCount"],
-                    c.vsm.val_stats["journal"]["PendingBlockCount"],
-                    c.vsm.val_stats["journal"].get("CommittedTxnCount", 0),
-                    c.vsm.val_stats["journal"].get("PendingTxnCount", 0),
-                    c.vsm.calculated_stats.average_transaction_rate,
-                    c.vsm.calculated_stats.average_block_time,
-                    c.vsm.val_stats["journal"].get("LocalMeanTime", 0.0),
-                    c.vsm.val_stats["journal"].get("PreviousBlockID",
-                                                   'not reported'),
-                    c.name[:16],
-                    c.url),
-                    False)
-            else:
-                self.console_print.cpprint(no_resp_formatter.format(
-                    c.val_id,
-                    c.state,
-                    c.no_response_reason, "", "", "",
-                    "", "", "", "", "", "",
-                    c.name[:16],
-                    c.url),
-                    False)
-
-    def print_platform_view(self):
-        header_formatter = \
-            '{0:>5} {1:>8} ' \
-            '{2:>8} {3:>8} {4:>8} {5:>8} ' \
-            '{6:>8} {7:>8} {8:>8} ' \
-            '{9:>8} {10:>8} {11:>8} {12:>8} ' \
-            '{13:>18.18} {14:>28.28}'
-        resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:8.2f} {3:8.2f} {4:8.2f} {5:8.2f} ' \
-            '{6:8.2f} {7:8d} {8:8d} ' \
-            '{9:8d} {10:8d} {11:8d} {12:8d} ' \
-            '{13:>18.18} {14:>28.28}'
-        no_resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:>8} {3:>8} {4:>8} {5:>8} ' \
-            '{6:>8} {7:>8} {8:>8} ' \
-            '{9:>8} {10:>8} {11:>8} {12:>8}  ' \
-            '{13:>18.18} {14:>28.28}'
-
-        self.console_print.cpprint(header_formatter.format(
-            'VAL', 'VAL',
-            'CPU', 'CPU', 'CPU', 'CPU',
-            'MEM', 'MEM', 'MEM',
-            'DISK', 'DISK', 'DISK', 'DISK',
-            ' VALIDATOR', 'VALIDATOR'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'STATE',
-            'PERCENT', 'USER PCT', 'SYS PCT', 'IDLE PCT',
-            'PERCENT', 'TOTAL MB', 'AVAIL MB',
-            'RD BYTES', 'WR BYTES', 'RD COUNT', 'WR COUNT',
-            'NAME', 'URL'),
-            reverse=True)
-
-        for c in self.stats_clients:
-            if c.responding:
-                self.console_print.cpprint(resp_formatter.format(
-                    c.id,
-                    c.state,
-                    c.vsm.val_stats["platform"]["scpu"]["percent"],
-                    c.vsm.val_stats["platform"]["scpu"]["user_time"],
-                    c.vsm.val_stats["platform"]["scpu"]["system_time"],
-                    c.vsm.val_stats["platform"]["scpu"]["idle_time"],
-                    c.vsm.val_stats["platform"]["svmem"]["percent"],
-                    c.vsm.val_stats["platform"]["svmem"]["total"] / 1000000,
-                    c.vsm.val_stats["platform"]["svmem"]["available"] /
-                    1000000,
-                    c.vsm.psis.intv_disk_bytes_read,
-                    c.vsm.psis.intv_disk_bytes_write,
-                    c.vsm.psis.intv_disk_count_read,
-                    c.vsm.psis.intv_disk_count_write,
-                    c.name[:16],
-                    c.url),
-                    False)
-            else:
-                self.console_print.cpprint(no_resp_formatter.format(
-                    c.id,
-                    c.state,
-                    "", "", "", "", "",
-                    "", "", "",
-                    "", "", "", "",
-                    c.name[:16],
-                    c.url),
-                    False)
-
-    def print_consensus_view(self):
-        header_formatter = \
-            '{0:>5} {1:>8} ' \
-            '{2:>8} {3:>10} {4:>12} {5:>16} ' \
-            '{6:>18.18} {7:>28.28}'
-        resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:8.2f} {3:10.2f} {4:12.2f} {5:16.16} ' \
-            '{6:>18.18} {7:>28.28}'
-        no_resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:>8} {3:>10} {4:>12} {5:>16} ' \
-            '{6:>18.18} {7:>28.28}'
-
-        self.console_print.cpprint(header_formatter.format(
-            'VAL', 'VAL',
-            'LOCAL', 'POPULATION', 'AGGREGATE', 'LAST',
-            ' VALIDATOR', 'VALIDATOR'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'STATE',
-            'MEAN', 'ESTIMATE', 'LOCALMEAN', 'BLOCKID',
-            'NAME', 'URL'),
-            reverse=True)
-
-        for c in self.stats_clients:
-            if c.responding:
-                self.console_print.cpprint(resp_formatter.format(
-                    c.id,
-                    c.state,
-                    c.vsm.val_stats["journal"].get("LocalMeanTime", 0.0),
-                    c.vsm.val_stats["journal"].get("PopulationEstimate", 0.0),
-                    c.vsm.val_stats["journal"].get("AggregateLocalMean", 0.0),
-                    c.vsm.val_stats["journal"].get("PreviousBlockID", 'error'),
-
-                    c.name[:16],
-                    c.url),
-                    False)
-            else:
-                self.console_print.cpprint(no_resp_formatter.format(
-                    c.id,
-                    c.state,
-                    "", "", "", "",
-                    c.name[:16],
-                    c.url),
-                    False)
-
-    def print_packet_view(self):
-        header_formatter = \
-            '{0:>5} {1:>8} ' \
-            '{2:>10} {3:>10} {4:>10} {5:>10} ' \
-            '{6:>12} {7:>12} {8:>12} {9:>12}' \
-            '{10:>18.18} {11:>28.28}'
-        resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:10d} {3:10d} {4:10d} {5:10d} ' \
-            '{6:12d} {7:12d} {8:12d} {9:12d}' \
-            '{10:>18.18} {11:>28.28}'
-        no_resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:>10} {3:>10} {4:>10} {5:>10} ' \
-            '{6:>12} {7:>12} {8:>12} {9:>12}' \
-            '{10:>18.18} {11:>28.28}'
-
-        self.console_print.cpprint(header_formatter.format(
-            'VAL', 'VAL',
-            'ACKS', 'BYTES', 'BYTES', 'PACKETS',
-            'PACKETS', 'UNACKED', 'MESSAGE', 'MESSAGE',
-            ' VALIDATOR', 'VALIDATOR'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'STATE',
-            'RECEIVED', 'RECEIVED', 'SENT', 'DROPPED',
-            'DUPLICATED', 'PACKETCOUNT', 'ACKED', 'HANDLED',
-            'NAME', 'URL'),
-            reverse=True)
-
-        for c in self.stats_clients:
-            if c.responding:
-                self.console_print.cpprint(resp_formatter.format(
-                    c.id,
-                    c.state,
-                    c.vsm.val_stats["packet"]["AcksReceived"],
-                    c.vsm.val_stats["packet"]["BytesReceived"][0],
-                    c.vsm.val_stats["packet"]["BytesSent"][0],
-                    c.vsm.val_stats["packet"]["DroppedPackets"],
-                    c.vsm.val_stats["packet"]["DuplicatePackets"],
-                    c.vsm.val_stats["packet"]["UnackedPacketCount"],
-                    c.vsm.val_stats["packet"]["MessagesAcked"],
-                    c.vsm.val_stats["packet"]["MessagesHandled"],
-
-                    c.name[:16],
-                    c.url),
-                    False)
-            else:
-                self.console_print.cpprint(no_resp_formatter.format(
-                    c.id,
-                    c.state,
-                    "", "", "", "",
-                    "", "", "", "",
-                    c.name[:16],
-                    c.url),
-                    False)
-
-    def print_network_view(self):
-        header_formatter = \
-            '{0:>5} {1:>8} ' \
-            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
-            '{6:>12} {7:>12} {8:>14} {9:>14}' \
-            '{10:>18.18} {11:>28.28}'
-        resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:10d} {3:10d} {4:12d} {5:12d} ' \
-            '{6:12d} {7:12d} {8:14d} {9:14d}' \
-            '{10:>18.18} {11:>28.28}'
-        no_resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
-            '{6:>12} {7:>12} {8:>14} {9:>14}' \
-            '{10:>18.18} {11:>28.28}'
-
-        self.console_print.cpprint(header_formatter.format(
-            'VAL', 'VAL',
-            'SEND', 'RECEIVE', 'SEND', 'RECEIVE',
-            'SEND', 'RECEIVE', 'SEND', 'RECEIVE',
-            ' VALIDATOR', 'VALIDATOR'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'STATE',
-            'BYTES', 'BYTES', 'PCKT BYTES', 'PCKT BYTES',
-            'BYTES ERR', 'BYTES ERR', 'DROPPED PCKTS', 'DROPPED PCKTS',
-            'NAME', 'URL'),
-            reverse=True)
-
-        for c in self.stats_clients:
-            if c.responding:
-                self.console_print.cpprint(resp_formatter.format(
-                    c.val_id,
-                    c.state,
-                    c.vsm.val_stats["platform"]["snetio"]["bytes_recv"],
-                    c.vsm.val_stats["platform"]["snetio"]["bytes_sent"],
-                    c.vsm.val_stats["platform"]["snetio"]["packets_recv"],
-                    c.vsm.val_stats["platform"]["snetio"]["packets_sent"],
-                    c.vsm.val_stats["platform"]["snetio"]["errout"],
-                    c.vsm.val_stats["platform"]["snetio"]["errin"],
-                    c.vsm.val_stats["platform"]["snetio"]["dropout"],
-                    c.vsm.val_stats["platform"]["snetio"]["dropin"],
-
-                    c.name[:16],
-                    c.url),
-                    False)
-            else:
-                self.console_print.cpprint(no_resp_formatter.format(
-                    c.id,
-                    c.state,
-                    "", "", "", "",
-                    "", "", "", "",
-                    c.name[:16],
-                    c.url),
-                    False)
-
-    def print_transaction_view(self):
-        header_formatter = \
-            '{0:>5} {1:>8} ' \
-            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
-            '{6:>16} {7:>14} {8:>14}' \
-            '{9:>18.18} {10:>28.28}'
-        resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:10d} {3:10d} {4:12d} {5:12d} ' \
-            '{6:16d} {7:14d} {8:14d}' \
-            '{9:>18.18} {10:>28.28}'
-        no_resp_formatter = \
-            '{0:5d} {1:>8} ' \
-            '{2:>10} {3:>10} {4:>12} {5:>12} ' \
-            '{6:>16} {7:>14} {8:>14}' \
-            '{9:>18.18} {10:>28.28}'
-
-        self.console_print.cpprint(header_formatter.format(
-            'VAL', 'VAL',
-            'BLOCK', 'BLOCK', 'TXN', 'TXN',
-            'MISSING TXN', 'MISSING TXN', 'INVALID',
-            ' VALIDATOR', 'VALIDATOR'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'STATE',
-            'COMMITTED', 'PENDING', 'COMMITTED', 'PENDING',
-            'DEPENDENCY CNT', 'BLOCK CNT', 'TXN CNT',
-            'NAME', 'URL'),
-            reverse=True)
-
-        for c in self.stats_clients:
-            if c.responding:
-                self.console_print.cpprint(resp_formatter.format(
-                    c.val_id,
-                    c.state,
-                    c.vsm.val_stats["journal"]["CommittedBlockCount"],
-                    c.vsm.val_stats["journal"]["PendingBlockCount"],
-                    c.vsm.val_stats["journal"]["CommittedTxnCount"],
-                    c.vsm.val_stats["journal"]["PendingTxnCount"],
-                    c.vsm.val_stats["journal"]["MissingTxnDepCount"],
-                    c.vsm.val_stats["journal"]["MissingTxnFromBlockCount"],
-                    c.vsm.val_stats["journal"]["InvalidTxnCount"],
-
-                    c.name[:16],
-                    c.url),
-                    False)
-            else:
-                self.console_print.cpprint(no_resp_formatter.format(
-                    c.id,
-                    c.state,
-                    "", "", "", "",
-                    "", "", "",
-                    c.name[:16],
-                    c.url),
-                    False)
-
-    def print_branch_view(self):
-        # determine which branch has the longest active list
-        # and active history list; size columns to match
-        max_active = 0
-        max_active_history = 0
-        for b in self.branch_mgr.branches:
-            als = str(b.is_active_list).replace(" ", "")
-            ahls = str(b.is_active_history).replace(" ", "")
-            if len(als) > max_active:
-                max_active = len(als)
-            if len(ahls) > max_active_history:
-                max_active_history = len(ahls)
-        mastr = str(max_active) + '}'
-        mahstr = str(max_active_history) + '}'
-
-        header_formatter = \
-            '{0:>12} {1:>10} {2:>6} ' \
-            '{3:>16} {4:>10} ' \
-            '{5:>16} {6:>10} ' \
-            '{7:>12} {8:>16} {9:>10} ' \
-            '{10:>14} {11:>14} ' \
-            '{12:>8} ' \
-            '{13:>' + mastr + ' {14:>' + mahstr
-        resp_formatter = \
-            '{0:>12} {1:>10d} {2:>6} ' \
-            '{3:>16} {4:>10} ' \
-            '{5:>16} {6:>10} ' \
-            '{7:>12} {8:>16} {9:>10} ' \
-            '{10:>14} {11:>14} ' \
-            '{12:>8d} ' \
-            '{13:>' + mastr + ' {14:>' + mahstr
-
-        self.console_print.cpprint(header_formatter.format(
-            'BRANCH', 'BRANCH', 'ACTIVE',
-            'TAIL', 'TAIL',
-            'HEAD', 'HEAD',
-            'ANCESTOR', 'ANCESTOR', 'ANCESTOR',
-            'CREATE TIME', 'LAST ACTIVE',
-            'ACTIVE',
-            'ACTIVE', 'ACTIVE'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'LENGTH', 'STATUS',
-            'BLOCK ID', 'BLOCK NUM',
-            'BLOCK ID', 'BLOCK NUM',
-            'BRANCH ID', 'BLOCK ID', 'BLOCK NUM',
-            'MM:DD:HH:MM:SS', 'MM:DD:HH:MM:SS',
-            'COUNT',
-            'LIST', 'HISTORY'),
-            reverse=True)
-
-        for b in self.branch_mgr.branches:
-            branch_create_time = time.strftime(
-                "%m:%d:%H:%M:%S", time.localtime(b.create_time))
-            branch_last_active_time = time.strftime(
-                "%m:%d:%H:%M:%S", time.localtime(b.last_active_time))
-            ancestor_branch_id = \
-                "None" if b.ancestor_branch is None else b.ancestor_branch.id
-            ancestor_block_id = \
-                "None" if b.ancestor_branch is None else b.ancestor_block_id
-            ancestor_block_num = \
-                "None" if \
-                b.ancestor_branch is None else str(b.ancestor_block_num)
-
-            self.console_print.cpprint(resp_formatter.format(
-                b.id,
-                b.block_count,
-                "Active" if b.is_active else "Idle",
-                b.tail_block_id,
-                str(b.tail_block_num),
-                b.head_block_id,
-                str(b.head_block_num),
-                ancestor_branch_id,
-                ancestor_block_id,
-                ancestor_block_num,
-                branch_create_time,
-                branch_last_active_time,
-                b.is_active_count,
-                str(b.is_active_list).replace(" ", ""),
-                str(b.is_active_history).replace(" ", "")),
-                False)
-
-    def print_fork_view(self):
-
-        header_formatter = \
-            '{0:>12} {1:>10} {2:>10} ' \
-            '{3:>16} {4:>10} ' \
-            '{5:>16} {6:>10} ' \
-            '{7:>9} {8:>6} ' \
-            '{9:>10} ' \
-            '{10:>16} {11:>10} '
-
-        resp_formatter = \
-            '{0:>12} {1:>10d} {2:>10d} ' \
-            '{3:>16} {4:>10} ' \
-            '{5:>16} {6:>10} ' \
-            '{7:>9d} {8:>6} ' \
-            '{9:>10} ' \
-            '{10:>16} {11:>10} '
-
-        self.console_print.cpprint(header_formatter.format(
-            'FORK', 'TOTAL', 'BRANCH',
-            'TAIL', 'TAIL',
-            'HEAD', 'HEAD',
-            'VALIDATOR', 'FORK',
-            'FORK',
-            'INTERCEPT', 'INTERCEPT'),
-            reverse=True)
-
-        self.console_print.cpprint(header_formatter.format(
-            'ID', 'LENGTH', 'COUNT',
-            'BLOCK ID', 'BLOCK NUM',
-            'BLOCK ID', 'BLOCK NUM',
-            'COUNT', 'STATUS',
-            'LENGTH',
-            'BLOCK ID', 'BLOCK NUM'),
-            reverse=True)
-
-        for f in self.branch_mgr.forks:
-            status = "parent" if f.is_parent is True else "child"
-            fork_intercept_length = "" if \
-                f.fork_intercept_length is None else \
-                str(f.fork_intercept_length)
-            intercept_block_id = "" if \
-                f.intercept_block_id is None else str(f.intercept_block_id)
-            intercept_block_num = "" if \
-                f.intercept_block_num is None else str(f.intercept_block_num)
-            self.console_print.cpprint(resp_formatter.format(
-                f.id,
-                f.block_count,
-                f.branch_count,
-                f.tail_block_id,
-                f.tail_block_num,
-                f.head_block_id,
-                f.tail_block_num,
-                f.validator_count,
-                status,
-                fork_intercept_length,
-                intercept_block_id,
-                intercept_block_num),
-                False)
+    def _initialize_views(self):
+        view_options = {
+            ord('g'): ["general", GeneralView(
+                self._console_print, self.stats_clients)],
+            ord('p'): ["platform", PlatformView(
+                self._console_print, self.stats_clients)],
+            ord('c'): ["consensus", ConsensusView(
+                self._console_print, self.stats_clients)],
+            ord('n'): ["network", NetworkView(
+                self._console_print, self.stats_clients)],
+            ord('t'): ["transaction", TransactionView(
+                self._console_print, self.stats_clients)],
+            ord('k'): ["packet", PacketView(
+                self._console_print, self.stats_clients)],
+            ord('b'): ["branch", BranchView(
+                self._console_print, self.branch_manager)],
+            ord('f'): ["fork", ForkView(
+                self._console_print, self.branch_manager)]
+        }
+        return view_options
