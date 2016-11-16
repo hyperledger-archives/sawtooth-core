@@ -117,7 +117,6 @@ class BlockChainBranch(object):
         self._is_active_list = []
         self.is_active_history = []
 
-        # public attributes - will be published as stats
         self.head_block_id = None
         self.tail_block_id = None
 
@@ -289,7 +288,6 @@ class BlockChainBranch(object):
         stats['is_active'] = self.is_active
         stats['create_time'] = self.create_time
         stats['last_active_time'] = self.last_active_time
-        stats['ancestor_branch'] = self.ancestor_branch
         stats['ancestor_branch_id'] = self.ancestor_branch_id
         stats['ancestor_block_id'] = self.ancestor_block_id
         stats['ancestor_block_num'] = self.ancestor_block_num
