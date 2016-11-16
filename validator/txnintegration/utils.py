@@ -23,10 +23,10 @@ import sys
 import time
 import warnings
 
-import pybitcointools
 from colorlog import ColoredFormatter
 import yaml
 
+from sawtooth_signing import pbct_nativerecover as signing
 from txnintegration.exceptions import ExitError
 from sawtooth.cli.main import main as sawtooth_cli_entry_point
 from sawtooth.client import SawtoothClient
@@ -300,7 +300,8 @@ def find_or_create_test_key(key_base_name, key_dir=None, quiet=True):
     with open(key_file, 'r') as f:
         key_str = f.read()
     signing_key = key_str.split('\n')[0]
-    identifier = pybitcointools.privtoaddr(signing_key)
+    identifier = signing.generate_identifier(
+        signing.generate_pubkey(signing_key))
 
     addr_file = '.'.join(key_file.split('.')[:-1]) + '.addr'
     if not os.path.exists(addr_file):
@@ -311,11 +312,12 @@ def find_or_create_test_key(key_base_name, key_dir=None, quiet=True):
 
 
 def generate_private_key():
-    return pybitcointools.encode_privkey(pybitcointools.random_key(), 'wif')
+    return signing.encode_privkey(signing.generate_privkey(), 'wif')
 
 
 def get_address_from_private_key_wif(key):
-    return pybitcointools.privtoaddr(pybitcointools.decode_privkey(key, 'wif'))
+    return signing.generate_identifier(
+        signing.generate_pubkey(signing.decode_privkey(key, 'wif')))
 
 
 def read_key_file(keyfile):

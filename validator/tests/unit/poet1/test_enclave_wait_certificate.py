@@ -15,8 +15,7 @@
 
 import unittest
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
     enclave_wait_timer import EnclaveWaitTimer
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
@@ -27,7 +26,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
 
     @classmethod
     def _create_random_key(cls):
-        return pybitcointools.random_key()
+        return signing.generate_privkey()
 
     def test_create_wait_certificate(self):
         wait_timer = \
@@ -120,7 +119,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
         serialized = wait_certificate.serialize()
         signing_key = self._create_random_key()
         wait_certificate.signature = \
-            pybitcointools.ecdsa_sign(serialized, signing_key)
+            signing.sign(serialized, signing_key)
 
         copy_wait_certificate = \
             EnclaveWaitCertificate.wait_certificate_from_serialized(

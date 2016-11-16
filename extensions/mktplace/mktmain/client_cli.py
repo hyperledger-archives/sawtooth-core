@@ -26,8 +26,7 @@ from string import Template
 
 from colorlog import ColoredFormatter
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip.common import pretty_print_dict
 from mktplace import mktplace_client, mktplace_state, mktplace_token_store
 from mktplace.mktplace_config import get_mktplace_configuration
@@ -1399,7 +1398,7 @@ def parse_script_file(filename):
 
 
 def verify_key(creator, key):
-    key_addr = pybitcointools.pubtoaddr(pybitcointools.privtopub(key))
+    key_addr = signing.generate_identifier(signing.generate_pubkey(key))
     if key_addr != creator['address']:
         print "Participant signing key mismatch."
         print "The key loaded does not match the key the participant was " \

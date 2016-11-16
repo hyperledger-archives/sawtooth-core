@@ -25,8 +25,7 @@ from threading import Lock
 
 from heapq import heappop, heappush, heapify
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip import stats
 from gossip import token_bucket
 
@@ -299,10 +298,10 @@ class Node(object):
         return Node(address=self.NetAddress, identifier=self.Identifier)
 
     def public_key(self):
-        return pybitcointools.privtopub(self.SigningKey)
+        return signing.generate_pubkey(self.SigningKey)
 
     def signing_address(self):
-        return pybitcointools.pubtoaddr(self.public_key())
+        return signing.generate_identifier(self.public_key())
 
 
 class RoundTripEstimator(object):

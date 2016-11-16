@@ -16,8 +16,7 @@
 import logging
 import hashlib
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from journal import transaction
 from journal import object_store
 from journal.messages import transaction_message
@@ -169,7 +168,7 @@ class Update(object):
         try:
             public_key_hash = \
                 hashlib.sha256(
-                    pybitcointools.encode_pubkey(
+                    signing.encode_pubkey(
                         txn.originator_public_key,
                         'hex')).hexdigest()
 

@@ -70,8 +70,7 @@ setup(name='sawtooth-core',
       author='Mic Bowman, Intel Labs',
       url='http://www.intel.com',
       packages=find_packages(),
-      install_requires=['colorlog', 'pybitcointools',
-                        'twisted', 'enum34'],
+      install_requires=['colorlog', 'twisted', 'enum34'],
       entry_points={
           'console_scripts': [
               'sawtooth = sawtooth.cli.main:main_wrapper'

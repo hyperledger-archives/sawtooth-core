@@ -70,7 +70,7 @@ setup(
     author='Intel Corporation',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['sawtooth-core', 'colorlog', 'pybitcointools'],
+    install_requires=['sawtooth-core', 'sawtooth-signing', 'colorlog'],
     entry_points={
         'console_scripts': [
             'xo = sawtooth_xo.xo_cli:main_wrapper'

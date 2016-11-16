@@ -22,9 +22,8 @@ from collections import deque
 import hashlib
 import logging
 from threading import Lock
-import pybitcointools
 
-from gossip.ECDSA import ECDSARecoverModule as nativeECDSA
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip.common import dict2cbor
 
 logger = logging.getLogger(__name__)
@@ -72,7 +71,7 @@ def generate_identifier(signingkey):
     Returns:
         str: An encoded 'address' associated with the public key.
     """
-    return pybitcointools.pubtoaddr(pybitcointools.privtopub(signingkey))
+    return signing.generate_identifier(signing.generate_pubkey(signingkey))
 
 
 def generate_signing_key(wifstr=None):
@@ -86,9 +85,9 @@ def generate_signing_key(wifstr=None):
         str: a signing key.
     """
     if wifstr:
-        return pybitcointools.decode_privkey(wifstr, 'wif')
-
-    return pybitcointools.random_key()
+        return signing.wif_to_privkey(wifstr)
+    else:
+        return signing.generate_privkey()
 
 
 def get_verifying_key(serialized_msg, serialized_sig):
@@ -101,27 +100,7 @@ def get_verifying_key(serialized_msg, serialized_sig):
     Returns:
         str: a public key.
     """
-    v, r, s = pybitcointools.decode_sig(serialized_sig)
-    msghash = pybitcointools.electrum_sig_hash(serialized_msg)
-    z = pybitcointools.hash_to_int(msghash)
-    compress = True if v >= 31 else False
-    if compress:
-        rec = v - 31
-    else:
-        rec = v - 27
-    try:
-        pubkey = nativeECDSA.recover_pubkey(
-            str(z), str(r), str(s), int(rec))
-    except Exception as ex:
-        logger.warn('Unable to extract public key from signature' + ex.args[0])
-        return ""
-    pubkey = pubkey.translate(None,
-                              'h')  # strip out hex indicators from opencpp
-    pubkey = '04' + pubkey      # indicate uncompressed pubkey
-    if compress:
-        pubkey = pybitcointools.compress(pubkey)
-
-    return pubkey
+    return signing.recover_pubkey(serialized_msg, serialized_sig)
 
 
 class SignedObject(object):
@@ -184,7 +163,7 @@ class SignedObject(object):
                 self.signature_cache[self.Signature]
             if not self._originator_id:
                 self._originator_id = \
-                    pybitcointools.pubtoaddr(self.originator_public_key)
+                    signing.generate_identifier(self.originator_public_key)
                 self.signature_cache[self.Signature] = self._originator_id
 
     @property
@@ -275,7 +254,7 @@ class SignedObject(object):
 
         self._originator_id = None
         serialized = self.serialize(signable=True)
-        self.Signature = pybitcointools.ecdsa_sign(serialized, signingkey)
+        self.Signature = signing.sign(serialized, signingkey)
 
         self._recover_verifying_address()
         self._identifier = hashlib.sha256(self.Signature).hexdigest()

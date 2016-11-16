@@ -16,8 +16,7 @@
 # pylint: disable=no-self-use
 
 from tempfile import NamedTemporaryFile
-
-import pybitcointools
+from sawtooth_signing import pbct_nativerecover as signing
 
 
 class SawtoothWorkload(object):
@@ -67,8 +66,8 @@ class SawtoothWorkload(object):
             A NamedTemporaryFile object.
         """
         key_file = NamedTemporaryFile()
-        private_key = pybitcointools.random_key()
-        encoded_key = pybitcointools.encode_privkey(private_key, 'wif')
+        private_key = signing.generate_privkey()
+        encoded_key = signing.encode_privkey(private_key)
         key_file.write(encoded_key)
         key_file.write('\n')
         key_file.flush()

@@ -18,10 +18,9 @@ import logging
 import importlib
 import hashlib
 
-import pybitcointools
-
 from gossip import common
 from gossip import stats
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.consensus_base import Consensus
 from sawtooth_validator.consensus.poet1 import poet_transaction_block
 from sawtooth_validator.consensus.poet1 import validator_registry as val_reg
@@ -86,9 +85,8 @@ class PoetConsensus(Consensus):
             wait_certificate_id = journal.most_recent_committed_block_id
             public_key_hash = \
                 hashlib.sha256(
-                    pybitcointools.encode_pubkey(
-                        journal.local_node.public_key(),
-                        'hex')).hexdigest()
+                    signing.encode_pubkey(journal.local_node.public_key(),
+                                          'hex')).hexdigest()
 
             signup_info = \
                 SignupInfo.create_signup_info(

@@ -20,8 +20,7 @@ import threading
 from collections import namedtuple
 from datetime import datetime
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth.simulator_workload import SawtoothWorkload
 from txnintegration.integer_key_client import IntegerKeyClient
 
@@ -67,8 +66,8 @@ class IntegerKeyWorkload(SawtoothWorkload):
         # created, we don't need it any more.  Then create a new client and
         # add it to our cadre of clients to use
 
-        keystring = pybitcointools.encode_privkey(
-            pybitcointools.random_key(), 'wif')
+        keystring = signing.encode_privkey(
+            signing.generate_privkey(), 'wif')
         with self._lock:
             self._clients.append(IntegerKeyClient(
                 baseurl=url,

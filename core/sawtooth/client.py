@@ -26,11 +26,11 @@ except ImportError:
     from enum import Enum
 
 import cbor
-import pybitcointools
 
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
+from sawtooth_signing import pbct_nativerecover as signing
 
 
 LOGGER = logging.getLogger(__name__)
@@ -54,13 +54,9 @@ def _sign_message_with_transaction(transaction, message_type, key):
     of a sha256 hexdigest.
     """
     transaction['Nonce'] = time.time()
-    pub = pybitcointools.encode_pubkey(pybitcointools.privkey_to_pubkey(key),
-                                       "hex")
+    pub = signing.encode_pubkey(signing.generate_pubkey(key), "hex")
     transaction["public_key"] = pub
-    sig = pybitcointools.ecdsa_sign(
-        _dict2cbor(transaction),
-        key
-    )
+    sig = signing.sign(_dict2cbor(transaction), key)
     transaction['Signature'] = sig
 
     txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
@@ -70,10 +66,7 @@ def _sign_message_with_transaction(transaction, message_type, key):
         '__NONCE__': time.time(),
     }
     cbor_serialized_message = _dict2cbor(message)
-    signature = pybitcointools.ecdsa_sign(
-        cbor_serialized_message,
-        key
-    )
+    signature = signing.sign(cbor_serialized_message, key)
     message['__SIGNATURE__'] = signature
     return message, txnid
 
@@ -396,19 +389,19 @@ class SawtoothClient(object):
 
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            self._signing_key = pybitcointools.decode_privkey(keystring, 'wif')
+            self._signing_key = signing.decode_privkey(keystring, 'wif')
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                self._signing_key = pybitcointools.decode_privkey(
+                self._signing_key = signing.decode_privkey(
                     open(keyfile, "r").read().strip(), 'wif')
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))
 
         if self._signing_key is not None:
-            self._identifier = pybitcointools.pubtoaddr(
-                pybitcointools.privtopub(self._signing_key))
+            self._identifier = signing.generate_identifier(
+                signing.generate_pubkey(self._signing_key))
 
     @property
     def base_url(self):

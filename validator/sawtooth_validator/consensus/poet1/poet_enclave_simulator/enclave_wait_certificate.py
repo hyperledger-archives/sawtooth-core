@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import logging
-
-import pybitcointools
+import hashlib
+import base64
 
 from gossip.common import dict2json
 from gossip.common import json2dict
@@ -107,8 +107,8 @@ class EnclaveWaitCertificate(object):
         my_id = NullIdentifier
         if self.signature is not None:
             my_id = \
-                pybitcointools.base64.b32encode(
-                    pybitcointools.sha256(self.signature))
+                base64.b32encode(
+                    hashlib.sha256(self.signature).hexdigest())
 
         return my_id[:16]
 

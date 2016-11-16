@@ -18,11 +18,12 @@ import math
 import logging
 import threading
 import datetime
-
-import pybitcointools
+import hashlib
+import base64
 
 from gossip.common import json2dict
 from gossip.common import dict2json
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
     .enclave_signup_info import EnclaveSignupInfo
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
@@ -55,8 +56,8 @@ class _PoetEnclaveSimulator(object):
         '5KYsbooGBg51Gohakgq45enpXvCXmEBed1JivFfUZskmjLegHBG'
 
     _seal_private_key = \
-        pybitcointools.decode_privkey(__SEAL_PRIVATE_KEY_WIF, 'wif')
-    _seal_public_key = pybitcointools.privtopub(_seal_private_key)
+        signing.decode_privkey(__SEAL_PRIVATE_KEY_WIF, 'wif')
+    _seal_public_key = signing.generate_pubkey(_seal_private_key)
 
     # The WIF-encoded private report key.  From it, we will create private
     # key we can use for signing attestation verification reports.
@@ -64,8 +65,8 @@ class _PoetEnclaveSimulator(object):
         '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
 
     _report_private_key = \
-        pybitcointools.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
-    _report_public_key = pybitcointools.privtopub(_report_private_key)
+        signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
+    _report_public_key = signing.generate_pubkey(_report_private_key)
 
     # Minimum duration for PoET 1 simulator is 30 seconds
     __MINIMUM_DURATTION = 30.0
@@ -84,7 +85,8 @@ class _PoetEnclaveSimulator(object):
     def initialize(cls, **kwargs):
         # Create an anti-Sybil ID that is unique for this validator
         cls._anti_sybil_id = \
-            pybitcointools.sha256(kwargs.get('NodeName', 'validator'))
+            hashlib.sha256(
+                kwargs.get('NodeName', 'validator')).hexdigest()
 
     @classmethod
     def create_signup_info(cls,
@@ -93,54 +95,56 @@ class _PoetEnclaveSimulator(object):
         with cls._lock:
             # First we need to create a public/private key pair for the PoET
             # enclave to use.
-            cls._poet_private_key = pybitcointools.random_key()
+            cls._poet_private_key = signing.generate_privkey()
             cls._poet_public_key = \
-                pybitcointools.privtopub(cls._poet_private_key)
+                signing.generate_pubkey(cls._poet_private_key)
             cls._active_wait_timer = None
 
             # We are going to fake out the sealing the signup data.
             signup_data = {
                 'poet_public_key':
-                    pybitcointools.encode_pubkey(cls._poet_public_key, 'hex'),
+                    signing.encode_pubkey(cls._poet_public_key, 'hex'),
                 'poet_private_key':
-                    pybitcointools.encode_privkey(
+                    signing.encode_privkey(
                         cls._poet_private_key,
                         'hex')
             }
             sealed_signup_data = \
-                pybitcointools.base64.b64encode(dict2json(signup_data))
+                base64.b64encode(dict2json(signup_data))
 
             # Create a fake report
             report_data = '{0}{1}'.format(
                 originator_public_key_hash.upper(),
-                pybitcointools.encode_pubkey(
+                signing.encode_pubkey(
                     cls._poet_public_key,
                     'hex').upper()
             )
             quote = {
-                'report_body': pybitcointools.sha256(dict2json(report_data))
+                'report_body': hashlib.sha256(
+                    dict2json(report_data)).hexdigest()
             }
 
             # Fake our "proof" data.
             verification_report = {
-                'id': pybitcointools.base64.b64encode(
-                    pybitcointools.sha256(
-                        datetime.datetime.now().isoformat())),
+                'id': base64.b64encode(
+                    hashlib.sha256(
+                        datetime.datetime.now().isoformat()).hexdigest()),
                 'isvEnclaveQuoteStatus': 'OK',
                 'isvEnclaveQuoteBody':
-                    pybitcointools.base64.b64encode(dict2json(quote)),
+                    base64.b64encode(dict2json(quote)),
                 'pseManifestStatus': 'OK',
                 'pseManifestHash':
-                    pybitcointools.base64.b64encode(
-                        pybitcointools.sha256(
-                            'Do you believe in manifest destiny?')),
+                    base64.b64encode(
+                        hashlib.sha256(
+                            b'Do you believe in '
+                            'manifest destiny?').hexdigest()),
                 'nonce': most_recent_wait_certificate_id
             }
 
             proof_data_dict = {
                 'verification_report': dict2json(verification_report),
                 'signature':
-                    pybitcointools.ecdsa_sign(
+                    signing.sign(
                         dict2json(verification_report),
                         cls._report_private_key)
             }
@@ -178,15 +182,15 @@ class _PoetEnclaveSimulator(object):
         # we can convert back to a dictionary we can use to get the
         # data we need
         signup_data = \
-            json2dict(pybitcointools.base64.b64decode(sealed_signup_data))
+            json2dict(base64.b64decode(sealed_signup_data))
 
         with cls._lock:
             cls._poet_public_key = \
-                pybitcointools.decode_pubkey(
+                signing.decode_pubkey(
                     signup_data.get('poet_public_key'),
                     'hex')
             cls._poet_private_key = \
-                pybitcointools.decode_privkey(
+                signing.decode_privkey(
                     signup_data.get('poet_public_key'),
                     'hex')
             cls._active_wait_timer = None
@@ -212,7 +216,7 @@ class _PoetEnclaveSimulator(object):
                 SignupInfoError(
                     'Signature is missing from proof data')
 
-        if not pybitcointools.ecdsa_verify(
+        if not signing.verify(
                 verification_report,
                 signature,
                 cls._report_public_key):
@@ -247,9 +251,9 @@ class _PoetEnclaveSimulator(object):
                     'hash')
 
         expected_pse_manifest_hash = \
-            pybitcointools.base64.b64encode(
-                pybitcointools.sha256(
-                    'Do you believe in manifest destiny?'))
+            base64.b64encode(
+                hashlib.sha256(
+                    b'Do you believe in manifest destiny?').hexdigest())
 
         if pse_manifest_hash != expected_pse_manifest_hash:
             raise \
@@ -285,10 +289,11 @@ class _PoetEnclaveSimulator(object):
             originator_public_key_hash.upper(),
             signup_info.poet_public_key.upper()
         )
-        expected_report_body = pybitcointools.sha256(dict2json(report_data))
+        expected_report_body = hashlib.sha256(
+            dict2json(report_data)).hexdigest()
 
         enclave_quote_dict = \
-            json2dict(pybitcointools.base64.b64decode(enclave_quote))
+            json2dict(base64.b64decode(enclave_quote))
         report_body = enclave_quote_dict.get('report_body')
         if report_body is None:
             raise \
@@ -339,8 +344,8 @@ class _PoetEnclaveSimulator(object):
             # the seal key to sign the cert ID.  We will then use the
             # low-order 64 bits to change that to a number [0, 1]
             tag = \
-                pybitcointools.base64.b64decode(
-                    pybitcointools.ecdsa_sign(
+                base64.b64decode(
+                    signing.sign(
                         previous_certificate_id,
                         cls._seal_private_key))
 
@@ -356,7 +361,7 @@ class _PoetEnclaveSimulator(object):
                     previous_certificate_id=previous_certificate_id,
                     local_mean=local_mean)
             wait_timer.signature = \
-                pybitcointools.ecdsa_sign(
+                signing.sign(
                     wait_timer.serialize(),
                     cls._poet_private_key)
 
@@ -369,7 +374,7 @@ class _PoetEnclaveSimulator(object):
     def deserialize_wait_timer(cls, serialized_timer, signature):
         with cls._lock:
             # Verify the signature before trying to deserialize
-            if not pybitcointools.ecdsa_verify(
+            if not signing.verify(
                     serialized_timer,
                     signature,
                     cls._poet_public_key):
@@ -432,7 +437,7 @@ class _PoetEnclaveSimulator(object):
                     'wait_timer_signature': cls._active_wait_timer.signature,
                     'now': datetime.datetime.utcnow().isoformat()
                 })
-            nonce = pybitcointools.sha256(random_string)
+            nonce = hashlib.sha256(random_string).hexdigest()
 
             # First create a new enclave wait certificate using the data
             # provided and then sign the certificate with the PoET private key
@@ -442,7 +447,7 @@ class _PoetEnclaveSimulator(object):
                     nonce=nonce,
                     block_digest=block_digest)
             wait_certificate.signature = \
-                pybitcointools.ecdsa_sign(
+                signing.sign(
                     wait_certificate.serialize(),
                     cls._poet_private_key)
 
@@ -462,10 +467,10 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def verify_wait_certificate(cls, certificate, poet_public_key):
         # poet_public_key = \
-        #     pybitcointools.decode_pubkey(encoded_poet_public_key, 'hex')
+        #     signing.decode_pubkey(encoded_poet_public_key, 'hex')
         #
         # return \
-        #     pybitcointools.ecdsa_verify(
+        #     signing.verify(
         #         certificate.serialize(),
         #         certificate.signature,
         #         poet_public_key)

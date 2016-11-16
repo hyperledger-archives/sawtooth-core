@@ -18,8 +18,7 @@ import time
 import os
 from os import walk
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from txnintegration.exceptions import ExitError
 from txnintegration.exceptions import ValidatorManagerException
 from txnintegration.matrices import NodeController
@@ -36,8 +35,9 @@ class ValidatorCollectionController(NodeController):
             Hence the non pep8 names.
         """
         def __init__(self):
-            self.SigningKey = pybitcointools.random_key()
-            self.Address = pybitcointools.privtoaddr(self.SigningKey)
+            self.SigningKey = signing.generate_privkey()
+            self.Address = signing.generate_identifier(
+                signing.generate_pubkey(self.SigningKey))
 
     def __init__(self, net_config, txnvalidator=None, log_config=None):
         super(ValidatorCollectionController, self).__init__(net_config.n_mag)
