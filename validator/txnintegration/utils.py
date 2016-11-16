@@ -46,17 +46,13 @@ def sawtooth_cli_intercept(cmd_string):
 
 def get_blocklists(urls):
     ret = None
-    try:
-        ret = [(SawtoothClient(base_url=u)).get_block_list() for u in urls]
-    except Exception as e:
-        print e.message
-        raise
+    ret = [(SawtoothClient(base_url=u)).get_block_list() for u in urls]
     for arr in ret:
         arr.reverse()
     return ret
 
 
-def is_convergent(urls, tolerance=2, standard=5):
+def is_convergent(urls, tolerance=2, standard=5, verbose=False):
     '''
     Args:
         urls (list<str>):   List of validator urls whose chains are expected
@@ -82,21 +78,25 @@ def is_convergent(urls, tolerance=2, standard=5):
     '''
     # check for block id convergence across network:
     sample_size = max(1, tolerance) * standard
-    print "testing block-level convergence with min sample size:",
-    print " %s (after tolerance: %s)" % (sample_size, tolerance)
+    if verbose is True:
+        print "testing block-level convergence with min sample size:",
+        print " %s (after tolerance: %s)" % (sample_size, tolerance)
     # ...get all blockids from each server, newest last
     block_lists = get_blocklists(urls)
     # ...establish preconditions
     max_mag = len(max(block_lists, key=len))
     min_mag = len(min(block_lists, key=len))
     if max_mag - min_mag > tolerance:
-        print 'block list magnitude differences (%s) ' \
-              'exceed tolerance (%s)' % (max_mag - min_mag, tolerance)
+        if verbose is True:
+            print 'block list magnitude differences (%s) ' \
+                  'exceed tolerance (%s)' % (max_mag - min_mag, tolerance)
         return False
     effective_sample_size = max_mag - tolerance
-    print 'effective sample size: %s' % effective_sample_size
+    if verbose is True:
+        print 'effective sample size: %s' % effective_sample_size
     if effective_sample_size < sample_size:
-        print 'not enough target samples to determine convergence'
+        if verbose is True:
+            print 'not enough target samples to determine convergence'
         return False
     # ...(optionally) permit reasonable forks by normalizing lists
     if tolerance > 0:
@@ -107,10 +107,12 @@ def is_convergent(urls, tolerance=2, standard=5):
     # ...id-check (possibly normalized) cross-server block chains
     for (i, block_list) in enumerate(block_lists):
         if block_lists[0] != block_list:
-            print '%s is divergent:\n\t%s vs.\n\t%s' % (
-                urls[i], block_lists[0], block_list)
+            if verbose is True:
+                print '%s is divergent:\n\t%s vs.\n\t%s' % (
+                    urls[i], block_lists[0], block_list)
             return False
-    print 'network exhibits tolerable convergence'
+    if verbose is True:
+        print 'network exhibits tolerable convergence'
     return True
 
 
