@@ -91,18 +91,12 @@ class WaitCertificate(object):
     @classmethod
     def wait_certificate_from_serialized(cls,
                                          serialized,
-                                         signature,
-                                         poet_public_key):
+                                         signature):
         """Converts a serialized wait certificate into an object.
 
         Args:
             serialized (str): The serialized wait certificate.
             signature (str): The signature.
-            poet_public_key (str): The PoET public key that corresponds to
-                the private key used to sign the certificate.  This is
-                obtained from the signup information for the validator
-                that is the originator of the block for which the wait
-                certificate is associated.
 
         Returns:
             journal.consensus.poet1.wait_certificate.WaitCertificate: A wait
@@ -114,10 +108,7 @@ class WaitCertificate(object):
                 serialized_certificate=serialized,
                 signature=signature)
 
-        if not enclave_certificate or \
-                not cls.poet_enclave.verify_wait_certificate(
-                    certificate=enclave_certificate,
-                    poet_public_key=poet_public_key):
+        if not enclave_certificate:
             raise \
                 Exception(
                     'Attempt to deserialize an invalid wait certificate')
