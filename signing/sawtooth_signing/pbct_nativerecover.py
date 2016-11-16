@@ -13,13 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import pybitcointools
-import random
-import string
 import logging
-from ECDSA import ECDSARecoverModule as nativeECDSA
 
-logger = logging.getLogger(__name__)
+import pybitcointools
+
+from sawtooth_signing.ECDSA import ECDSARecoverModule as nativeECDSA
+
+LOGGER = logging.getLogger(__name__)
 
 
 def wif_to_privkey(wifstr):
@@ -30,24 +30,24 @@ def generate_privkey():
     return pybitcointools.random_key()
 
 
-def encode_privkey(privkey, format='wif'):
-    return pybitcointools.encode_privkey(privkey, format)
+def encode_privkey(privkey, encoding_format='wif'):
+    return pybitcointools.encode_privkey(privkey, encoding_format)
 
 
-def decode_privkey(privkey, format='wif'):
-    return pybitcointools.decode_privkey(privkey, format)
+def decode_privkey(privkey, encoding_format='wif'):
+    return pybitcointools.decode_privkey(privkey, encoding_format)
 
 
 def generate_pubkey(privkey):
     return pybitcointools.privtopub(privkey)
 
 
-def encode_pubkey(pubkey, format):
-    return pybitcointools.encode_pubkey(pubkey, format)
+def encode_pubkey(pubkey, encoding_format):
+    return pybitcointools.encode_pubkey(pubkey, encoding_format)
 
 
-def decode_pubkey(pubkey, format):
-    return pybitcointools.decode_pubkey(pubkey, format)
+def decode_pubkey(pubkey, encoding_format):
+    return pybitcointools.decode_pubkey(pubkey, encoding_format)
 
 
 def generate_identifier(pubkey):
@@ -77,8 +77,8 @@ def recover_pubkey(message, signature):
     try:
         pubkey = nativeECDSA.recover_pubkey(
             str(z), str(r), str(s), int(rec))
-    except Exception as ex:
-        logger.warn('Unable to extract public key from signature' + ex.args[0])
+    except ValueError as ex:
+        LOGGER.warn('Unable to extract public key from signature' + ex.args[0])
         return ""
 
     pubkey = pubkey.translate(None, 'h')
