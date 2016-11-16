@@ -1,53 +1,148 @@
 #!/bin/bash
-
-set -e
+#
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
 
 find_packages() {
     topdir=$1
+    since=$2
 
-    pushd $1 1>/dev/null
-
-    directories=$(find . -maxdepth 2 -name __init__.py | awk -F/ '{print $2}')
-
-    if [ -d "$topdir/tests" ]; then
-        directories="$directories tests"
+    (
+    if [ "$since" != "" ]; then
+        git ls-files -mo "$topdir/*.py" -x build
+        git diff --name-only $since "$topdir/*.py"
+    else
+        find $topdir -name \*.py
     fi
-
-    for dir in $directories
-    do
-        for file in $(find $dir -name \*.py)
-        do
-            [ $file = "signing/sawtooth_signing/ECDSA/ECDSARecoverModule.py" ] && continue
-            [ $file = "sawtooth_validator/consensus/poet0/Enclave/EnclaveModule.py" ] && continue
-            [ $file = "sawtooth_validator/consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
-            [ $file = "consensus/poet0/Enclave/EnclaveModule.py" ] && continue
-            [ $file = "consensus/poet0/poet_enclave_simulator/poet0_enclave_simulator.py" ] && continue
-
-
-            echo "$topdir/$file"
-        done
-    done
-
-    popd 1>/dev/null
+    ) \
+        | sort \
+        | uniq \
+        | git check-ignore --stdin --non-matching --verbose \
+        | grep ^:: \
+        | sed -e 's/^::\s//' \
+        | grep -v /setup.py$ \
+        | grep -v /integration/ \
+        | grep -v /unit/ \
+        | grep -v /sawtooth_suites/ \
+        | grep -v /navigator/
 }
 
+lint() {
+    topdir=$(pwd)
+    subdir=$1
+    since=$2
+    pylintrc=$3
+    run_pep8=$4
+
+    error=0
+
+    packages=$(find_packages "$subdir" "$since")
+
+    if [ "$packages" != "" ]; then
+        if [ "$run_pep8" = "1" ]; then
+            [ $VERBOSE = 1 ] && (
+                echo "------------------------------------------------------------------------------"
+                echo "-- Running pep8 in $subdir..."
+            )
+            pep8 --config=$topdir/.pep8 $packages || error=1
+        fi
+
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Running pylint $pylintrc in $subdir..."
+        )
+        pylint \
+            --rcfile=$pylintrc \
+            --reports=no \
+            $packages || error=1
+
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Checking for CRLF in $subdir..."
+        )
+        file $packages | grep CRLF && error=1
+    else
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Skipping pep8 and pylint $pylintrc in $subdir. (Nothing to do.)"
+        )
+    fi
+
+    return $error
+}
+
+usage() {
+    echo "Usage:"
+    echo "  $0 [-s BRANCH] [-n] [-h]"
+    echo
+    echo "Options:"
+    echo "  -h          print usage and exit"
+    echo "  -n          dry-run, only prints files that would be linted"
+    echo "  -s BRANCH   only lint files changed since BRANCH"
+    echo "  -v          increase verbosity"
+}
+
+
+DRY_RUN=0
+VERBOSE=0
+SINCE=""
+while getopts :s:nhv opt
+do
+    case $opt in
+      h)
+        usage
+        exit 0
+        ;;
+      n)
+        DRY_RUN=1
+        ;;
+      s)
+        SINCE=$OPTARG
+        ;;
+      v)
+        if [ "$VERBOSE" = "1" ]; then
+            set -x
+        fi
+        VERBOSE=1
+        ;;
+      \?)
+        echo "Invalid option: -$OPTARG" >&2
+        exit 2
+        ;;
+    esac
+done
+
+if [ "$DRY_RUN" = "1" ]; then
+    for dir in core validator extensions/mktplace extensions/arcade
+    do
+        for package in $(find_packages "$dir" "$SINCE")
+        do
+            echo $package
+        done
+    done
+    exit 0
+fi
+
+
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+retval=0
 
-PYTHONPATH=$top_dir/core
-PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
-PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
 export PYTHONPATH
-pep8 --config=.pep8
-
-pylint \
-    --rcfile=.pylintrc-strict \
-    --reports=no \
-    $(find_packages core/sawtooth)
+lint signing "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -56,11 +151,8 @@ PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
-
-pylint \
-    --rcfile=.pylintrc-core \
-    --reports=no \
-    $(find_packages core)
+lint core "$SINCE" .pylintrc-core 1 || retval=1
+lint core/sawtooth "$SINCE" .pylintrc-strict 0 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -69,16 +161,8 @@ PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
-
-pylint \
-    --rcfile=.pylintrc-strict \
-    --reports=no \
-    $(find_packages validator/sawtooth_validator)
-
-pylint \
-    --rcfile=.pylintrc-validator \
-    --reports=no \
-    $(find_packages validator)
+lint validator "$SINCE" .pylintrc-validator 1 || retval=1
+lint validator/sawtooth_validator "$SINCE" .pylintrc-strict 0 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -88,11 +172,7 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
 export PYTHONPATH
-
-pylint \
-    --rcfile=.pylintrc-mktplace \
-    --reports=no \
-    $(find_packages extensions/mktplace)
+lint extensions/mktplace "$SINCE" .pylintrc-mktplace 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -102,15 +182,6 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
 export PYTHONPATH
+lint extensions/arcade "$SINCE" .pylintrc-arcade 1 || retval=1
 
-pylint \
-    --rcfile=.pylintrc-arcade \
-    --reports=no \
-    $(find_packages extensions/arcade)
-
-# check for windows line endings.  Note that grep returns 0 if it
-# finds something, and 1 if it doesn't.  In our case, finding something
-# is an error, so we want to flip a 0 to a 1 and a 1 to a 0, thus
-# the ! at the beginning of the command.
-
-! find $top_dir -name \*.py -exec file {} \; | grep CRLF
+exit $retval
