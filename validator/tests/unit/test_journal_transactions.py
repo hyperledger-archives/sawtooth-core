@@ -17,8 +17,7 @@ import tempfile
 import time
 import unittest
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
     import DevModeConsensus
 from gossip import signed_object
@@ -88,12 +87,12 @@ class TestingJournalTransaction(unittest.TestCase):
         self.assertEquals(t_dict["TransactionType"], '/Transaction')
 
     def test_is_valid_pub_key(self):
-        pubkey = pybitcointools.privkey_to_pubkey("5KQ4iQQGgbQX9MmfiPUwwHBL1R"
-                                                  "GPa86NwFbqrWoodjuzruqFVDd")
-        pub = pybitcointools.encode_pubkey(pubkey, "hex")
+        pubkey = signing.generate_pubkey("5KQ4iQQGgbQX9MmfiPUwwHBL1R"
+                                         "GPa86NwFbqrWoodjuzruqFVDd")
+        pub = signing.encode_pubkey(pubkey, "hex")
         minfo = {'Nonce': 100, 'public_key': pub,
                  'TransactionType': '/Transaction', 'Dependencies': []}
-        sig = pybitcointools.ecdsa_sign(
+        sig = signing.sign(
             signed_object.dict2cbor(minfo),
             "5KQ4iQQGgbQX9MmfiPUwwHBL1RGPa86NwFbqrWoodjuzruqFVDd"
         )

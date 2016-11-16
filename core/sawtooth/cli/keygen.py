@@ -17,9 +17,9 @@
 import getpass
 import os
 import sys
-import pybitcointools
 
 from sawtooth.exceptions import ClientException
+from sawtooth_signing import pbct_nativerecover as signing
 
 
 def add_keygen_parser(subparsers, parent_parser):
@@ -79,9 +79,10 @@ def do_keygen(args):
             raise ClientException(
                 'files exist, rerun with --force to overwrite existing files')
 
-    privkey = pybitcointools.random_key()
-    encoded = pybitcointools.encode_privkey(privkey, 'wif')
-    addr = pybitcointools.privtoaddr(privkey)
+    privkey = signing.generate_privkey()
+    encoded = signing.encode_privkey(privkey)
+    pubkey = signing.generate_pubkey(privkey)
+    addr = signing.generate_identifier(pubkey)
 
     try:
         wif_exists = os.path.exists(wif_filename)

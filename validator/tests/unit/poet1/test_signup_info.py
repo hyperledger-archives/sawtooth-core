@@ -16,12 +16,11 @@
 import unittest
 import hashlib
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip.common import NullIdentifier
-from journal.consensus.poet1.signup_info import SignupInfo
-from journal.consensus.poet1.signup_info import SignupInfoError
-from journal.consensus.poet1.poet_enclave_simulator \
+from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.consensus.poet1.signup_info import SignupInfoError
+from sawtooth_validator.consensus.poet1.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
 
 
@@ -39,24 +38,24 @@ class TestSignupInfo(unittest.TestCase):
         cls._originator_public_key = cls._create_random_public_key()
         cls._originator_public_key_hash = \
             hashlib.sha256(
-                pybitcointools.encode_pubkey(
+                signing.encode_pubkey(
                     cls._originator_public_key,
                     'hex')).hexdigest()
 
         cls._another_public_key = cls._create_random_public_key()
         cls._another_public_key_hash = \
             hashlib.sha256(
-                pybitcointools.encode_pubkey(
+                signing.encode_pubkey(
                     cls._another_public_key,
                     'hex')).hexdigest()
 
     @classmethod
     def _create_random_private_key(cls):
-        return pybitcointools.random_key()
+        return signing.generate_privkey()
 
     @classmethod
     def _create_random_public_key(cls):
-        return pybitcointools.privtopub(cls._create_random_private_key())
+        return signing.generate_pubkey(cls._create_random_private_key())
 
     def test_basic_create_signup_info(self):
         signup_info = \

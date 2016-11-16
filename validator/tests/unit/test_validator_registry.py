@@ -16,8 +16,7 @@
 import unittest
 import hashlib
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip import signed_object
 from journal.object_store import ObjectStore
 from sawtooth_validator.consensus.poet1.validator_registry \
@@ -39,8 +38,8 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         key = signed_object.generate_signing_key()
         public_key_hash = \
             hashlib.sha256(
-                pybitcointools.encode_pubkey(
-                    pybitcointools.privtopub(key),
+                signing.encode_pubkey(
+                    signing.generate_pubkey(key),
                     'hex')).hexdigest()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
@@ -66,8 +65,8 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         key = signed_object.generate_signing_key()
         public_key_hash = \
             hashlib.sha256(
-                pybitcointools.encode_pubkey(
-                    pybitcointools.privtopub(key),
+                signing.encode_pubkey(
+                    signing.generate_pubkey(key),
                     'hex')).hexdigest()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
@@ -97,8 +96,8 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         key = signed_object.generate_signing_key()
         public_key_hash = \
             hashlib.sha256(
-                pybitcointools.encode_pubkey(
-                    pybitcointools.privtopub(key),
+                signing.encode_pubkey(
+                    signing.generate_pubkey(key),
                     'hex')).hexdigest()
         key2 = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)

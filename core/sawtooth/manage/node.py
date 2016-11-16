@@ -17,11 +17,24 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
+class NodeConfig(object):
+    def __init__(self, node_name, http_port=None, gossip_port=None,
+                 genesis=False):
+        self.node_name = node_name
+        self.http_port = http_port
+        self.gossip_port = gossip_port
+        self.genesis = genesis
+
+
 class NodeController(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def start(self, node_name, http_port, gossip_port, genesis=False):
+    def start(self, node_config):
+        '''
+        Args:
+            node_config (NodeConfig):
+        '''
         raise NotImplementedError
 
     @abstractmethod
@@ -53,28 +66,22 @@ class NodeCommand(object):
 
 
 class StartCommand(NodeCommand):
-    def __init__(self, node_name, http_port, gossip_port, genesis=False):
+    def __init__(self, node_config):
+        '''
+        Args:
+            node_config (NodeConfig):
+        '''
         super(StartCommand, self).__init__()
-
-        self._node_name = node_name
-        self._genesis = genesis
-        self._http_port = http_port
-        self._gossip_port = gossip_port
+        self._node_config = node_config
 
     def execute(self, controller):
-        controller.start(
-            node_name=self._node_name,
-            http_port=self._http_port,
-            gossip_port=self._gossip_port,
-            genesis=self._genesis)
+        controller.start(self._node_config)
 
 
 class StopCommand(NodeCommand):
     def __init__(self, node_name):
         super(StopCommand, self).__init__()
-
         self._node_name = node_name
 
     def execute(self, controller):
-        controller.stop(
-            node_name=self._node_name)
+        controller.stop(self._node_name)

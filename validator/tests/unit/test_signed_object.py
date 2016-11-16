@@ -14,10 +14,10 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-import pybitcointools
 
 import gossip.signed_object as SigObj
 
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip.common import cbor2dict
 from gossip.signed_object import SignedObject
 from gossip.node import Node
@@ -25,7 +25,7 @@ from gossip.node import Node
 
 # from utils.py in txintegration
 def generate_private_key():
-    return pybitcointools.encode_privkey(pybitcointools.random_key(), 'wif')
+    return signing.encode_privkey(signing.generate_privkey(), 'wif')
 
 
 # get_verifying_key always raises a warning

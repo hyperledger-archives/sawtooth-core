@@ -18,7 +18,7 @@ import unittest
 import pybitcointools as pbt
 
 import gossip.signed_object
-import gossip.ECDSA.ECDSARecoverModule as ecnative
+import sawtooth_signing.ECDSA.ECDSARecoverModule as ecnative
 
 
 class TestPKRecover(unittest.TestCase):

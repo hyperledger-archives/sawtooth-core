@@ -12,24 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-
-from sawtooth.manage.node import NodeCommandGenerator
-from sawtooth.manage.node import StartCommand
-from sawtooth.manage.node import StopCommand
-
-
-class SimpleNodeCommandGenerator(NodeCommandGenerator):
-    def __init__(self):
-        self._commands = []
-
-    def get_commands(self):
-        retval = self._commands
-        self._commands = []
-        return retval
-
-    def start(self, node_config):
-        self._commands.append(StartCommand(node_config))
-
-    def stop(self, node_name):
-        self._commands.append(StopCommand(node_name))
+__all__ = [
+    'pbct_nativerecover']

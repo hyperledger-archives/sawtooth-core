@@ -19,8 +19,7 @@ import unittest
 import random
 import time
 
-import pybitcointools
-
+from sawtooth_signing import pbct_nativerecover as signing
 from mktplace import mktplace_state
 from mktintegration.actor import MktActor
 from txnintegration.utils import Progress
@@ -71,8 +70,8 @@ class MktPlaceLoad(object):
                 if os.path.exists(keyfile):
                     key = read_key_file(keyfile)
                 else:
-                    key = pybitcointools.encode_privkey(
-                        pybitcointools.random_key(), 'wif')
+                    key = signing.encode_privkey(
+                        signing.generate_privkey(), 'wif')
                     write_key_file(keyfile, key)
 
                 url = self.urls[random.randint(0, len(self.urls) - 1)]

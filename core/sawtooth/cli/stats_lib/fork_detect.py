@@ -1,8 +1,25 @@
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
 import time
 from operator import itemgetter
 
 from sawtooth.cli.stats_lib.stats_utils import ValidatorCommunications
 from sawtooth.cli.stats_lib.stats_utils import get_public_attrs_as_dict
+
+from sawtooth.cli.stats_lib.stats_utils import StatsModule
 
 # Reference value in gossip.common - NullIdentifier
 # Not imported here to avoid needless ECDSARecoveryModule dependency
@@ -11,18 +28,16 @@ GENESIS_PREVIOUS_BLOCK_ID = "0000000000000000"
 
 
 class BlockClient(object):
-    def __init__(self, bc_id, full_url, agent,
+    def __init__(self, bc_id, full_url,
                  look_back_count=5, validator=None):
         self.validator = validator
         self.bc_id = bc_id
         self.url = full_url
-        self.agent = agent
         self.name = "block_client_{0}".format(bc_id)
         self.bc_state = "UNKNWN"
         self.responding = None
 
-        self.validator_comm = ValidatorCommunications(self.agent) \
-            if agent is not None else None
+        self.validator_comm = ValidatorCommunications()
 
         self.new_blocks = []
         self.last_block_id = GENESIS_PREVIOUS_BLOCK_ID
@@ -266,7 +281,19 @@ class BlockChainBranch(object):
         return info_list
 
     def get_stats_as_dict(self):
-        stats = get_public_attrs_as_dict(self)
+        stats = {}
+        stats['head_block_id'] = self.head_block_id
+        stats['tail_block_id'] = self.tail_block_id
+        stats['head_block_num'] = self.head_block_num
+        stats['tail_block_num'] = self.tail_block_num
+        stats['is_active'] = self.is_active
+        stats['create_time'] = self.create_time
+        stats['last_active_time'] = self.last_active_time
+        stats['ancestor_branch'] = self.ancestor_branch
+        stats['ancestor_branch_id'] = self.ancestor_branch_id
+        stats['ancestor_block_id'] = self.ancestor_block_id
+        stats['ancestor_block_num'] = self.ancestor_block_num
+        stats['ancestor_found'] = self.ancestor_found
         stats['block_count'] = self.block_count
         stats['is_active_count'] = self.is_active_count
         return stats
@@ -384,10 +411,9 @@ class BlockChainFork(object):
                 else:
                     child_fork.intercept_where = "error"
                     assert False, "should never get here"
-                    return False
 
                 child_fork.intercept_branch = child_fork_branch
-                child_fork.intercept_branch_id = child_fork_branch.id
+                child_fork.intercept_branch_id = child_fork_branch.bcb_id
                 child_fork.fork_intercept_length = \
                     child_fork.head_block_num - child_fork.intercept_block_num
                 return True
@@ -396,7 +422,20 @@ class BlockChainFork(object):
         return False
 
     def get_stats_as_dict(self):
-        stats = get_public_attrs_as_dict(self)
+        stats = {}
+        stats['validator_count'] = self.validator_count
+        stats['head_block_id'] = self.head_block_id
+        stats['head_block_num'] = self.head_block_num
+        stats['tail_block_id'] = self.tail_block_id
+        stats['tail_block_num'] = self.tail_block_num
+        stats['block_count'] = self.block_count
+        stats['intercept_branch_id'] = self.intercept_branch_id
+        stats['intercept_block_id'] = self.intercept_block_id
+        stats['intercept_block_num'] = self.intercept_block_num
+        stats['intercept_where'] = self.intercept_where
+        stats['fork_intercept_length'] = self.fork_intercept_length
+        stats['is_parent'] = self.is_parent
+        stats['parent_fork_id'] = self.parent_fork_id
         stats['branch_count'] = self.branch_count
         return stats
 
@@ -450,13 +489,14 @@ class BranchManagerStats(object):
         return get_public_attrs_as_dict(self)
 
 
-class BranchManager(object):
-    def __init__(self, endpointmanager, reactoragent):
+class BranchManager(StatsModule):
+    def __init__(self, endpoint_manager, config):
+
+        super(BranchManager, self).__init__()
         self.branches = []
 
-        self.epm = endpointmanager
+        self.epm = endpoint_manager
         self.known_endpoint_names = []
-        self.agent = reactoragent
         self.block_clients = []
 
         self.bm_stats = BranchManagerStats()
@@ -473,14 +513,21 @@ class BranchManager(object):
     def fork_count(self):
         return len(self.forks)
 
-    def update_client_list(self, endpoints):
+    def connect(self):
+        self.update_client_list()
+
+    def collect(self):
+        self.update()
+
+    def update_client_list(self):
         # add validator stats client for each endpoint name
+        endpoints = self.epm.endpoints
         for val_num, endpoint in enumerate(endpoints.values()):
             if endpoint["Name"] not in self.known_endpoint_names:
                 val_num = len(self.known_endpoint_names)
                 url = 'http://{0}:{1}'.format(
                     endpoint["Host"], endpoint["HttpPort"])
-                bc = BlockClient(val_num, url, self.agent)
+                bc = BlockClient(val_num, url)
                 bc.name = endpoint["Name"]
                 self.block_clients.append(bc)
                 self.known_endpoint_names.append(endpoint["Name"])
@@ -590,7 +637,7 @@ class BranchManager(object):
                         if ancestor_block is not None:
                             ancestor_branches.append(peer_branch)
                             branch.ancestor_branch = peer_branch
-                            branch.ancestor_branch_id = peer_branch.id
+                            branch.ancestor_branch_id = peer_branch.bcb_id
                             branch.ancestor_block_id = \
                                 ancestor_block["Identifier"]
                             branch.ancestor_block_num = \

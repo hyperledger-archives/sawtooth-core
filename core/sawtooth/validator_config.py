@@ -56,24 +56,7 @@ def parse_configuration_files(cfiles, search_path):
         sys.exit(-1)
 
     for filename in files_found:
-        try:
-            cfg.update(parse_configuration_file(filename))
-        except IOError as detail:
-            warnings.warn("Error parsing configuration file %s; IO error %s" %
-                          (filename, str(detail)))
-            sys.exit(-1)
-        except ValueError as detail:
-            warnings.warn("Error parsing configuration file %s; value error %s"
-                          % (filename, str(detail)))
-            sys.exit(-1)
-        except NameError as detail:
-            warnings.warn("Error parsing configuration file %s; name error %s"
-                          % (filename, str(detail)))
-            sys.exit(-1)
-        except:
-            warnings.warn('Error parsing configuration file %s; %s' %
-                          (filename, sys.exc_info()[0]))
-            sys.exit(-1)
+        cfg.update(parse_configuration_file(filename))
 
     return cfg
 

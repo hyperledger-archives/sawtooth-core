@@ -20,10 +20,9 @@ import logging
 import os
 import time
 
-import pybitcointools
-
 from twisted.web import http
 
+from sawtooth_signing import pbct_nativerecover as signing
 from gossip import node, signed_object
 from gossip.common import dict2cbor
 from mktplace.mktplace_communication import MarketPlaceCommunication
@@ -73,13 +72,9 @@ def sign_message_with_transaction(transaction, key):
     of a sha256 hexdigest.
     """
     transaction['Nonce'] = time.time()
-    pub = pybitcointools.encode_pubkey(pybitcointools.privkey_to_pubkey(key),
-                                       "hex")
+    pub = signing.encode_pubkey(signing.generate_pubkey(key), "hex")
     transaction["public_key"] = pub
-    sig = pybitcointools.ecdsa_sign(
-        dict2cbor(transaction),
-        key
-    )
+    sig = signing.sign(dict2cbor(transaction), key)
     transaction['Signature'] = sig
 
     txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
@@ -89,10 +84,7 @@ def sign_message_with_transaction(transaction, key):
         '__NONCE__': time.time(),
     }
     cbor_serialized_mess = dict2cbor(message)
-    signature = pybitcointools.ecdsa_sign(
-        cbor_serialized_mess,
-        key
-    )
+    signature = signing.sign(cbor_serialized_mess, key)
     message['__SIGNATURE__'] = signature
     return message, txnid
 

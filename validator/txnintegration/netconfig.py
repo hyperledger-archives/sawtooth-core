@@ -116,8 +116,15 @@ class NetworkConfigProvider(object):
         # don't delete if we did not create
         if self.create_currency_home is True:
             dir = self.currency_home
-            if dir is not None and os.path.exists(dir):
-                shutil.rmtree(dir)
+            if dir is not None:
+                exists = False
+                try:
+                    if os.path.exists(dir):
+                        exists = True
+                except AttributeError:
+                    pass
+                if exists is True:
+                    shutil.rmtree(dir)
 
 
 class NetworkConfig(object):
