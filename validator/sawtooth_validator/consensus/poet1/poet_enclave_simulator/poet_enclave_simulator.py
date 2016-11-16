@@ -24,9 +24,8 @@ import time
 
 from gossip.common import json2dict
 from gossip.common import dict2json
-from sawtooth_signing import pbct_nativerecover as signing
-
 from gossip.common import NullIdentifier
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
     .enclave_signup_info import EnclaveSignupInfo
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\

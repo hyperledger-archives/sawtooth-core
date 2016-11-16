@@ -15,15 +15,14 @@
 
 import unittest
 import time
-import hashlib
 
-from sawtooth_signing import pbct_nativerecover as signing
 import sawtooth_validator.consensus.poet1.wait_timer as wait_timer
 import sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
     poet_enclave_simulator as poet_enclave
 
 from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
 from gossip.common import NullIdentifier
+from utils import create_random_public_key_hash
 
 
 class TestWaitTimer(unittest.TestCase):
@@ -32,20 +31,7 @@ class TestWaitTimer(unittest.TestCase):
         # Reload the wait timer module to clear any changed global state
         reload(wait_timer)
 
-        cls._originator_public_key = cls._create_random_public_key()
-        cls._originator_public_key_hash = \
-            hashlib.sha256(
-                signing.encode_pubkey(
-                    cls._originator_public_key,
-                    'hex')).hexdigest()
-
-    @classmethod
-    def _create_random_private_key(cls):
-        return signing.generate_privkey()
-
-    @classmethod
-    def _create_random_public_key(cls):
-        return signing.generate_pubkey(cls._create_random_private_key())
+        cls._originator_public_key_hash = create_random_public_key_hash()
 
     def setUp(self):
         # This is a little ham-handed, but we need to ensure that the

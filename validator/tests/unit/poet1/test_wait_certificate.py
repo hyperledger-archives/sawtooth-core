@@ -14,10 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-import hashlib
 import time
 
-from sawtooth_signing import pbct_nativerecover as signing
 import sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
     poet_enclave_simulator as poet_enclave
 
@@ -27,27 +25,14 @@ from sawtooth_validator.consensus.poet1.wait_certificate \
     import WaitCertificate
 from sawtooth_validator.consensus.poet1.wait_certificate \
     import WaitCertificateError
-
 from gossip.common import NullIdentifier
+from utils import create_random_public_key_hash
 
 
 class TestWaitCertificate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._originator_public_key = cls._create_random_public_key()
-        cls._originator_public_key_hash = \
-            hashlib.sha256(
-                signing.encode_pubkey(
-                    cls._originator_public_key,
-                    'hex')).hexdigest()
-
-    @classmethod
-    def _create_random_private_key(cls):
-        return signing.generate_privkey()
-
-    @classmethod
-    def _create_random_public_key(cls):
-        return signing.generate_pubkey(cls._create_random_private_key())
+        cls._originator_public_key_hash = create_random_public_key_hash()
 
     def setUp(self):
         # This is a little ham-handed, but we need to ensure that the

@@ -14,20 +14,16 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-import hashlib
 
-from sawtooth_signing import pbct_nativerecover as signing
 from gossip.common import NullIdentifier
 from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
 from sawtooth_validator.consensus.poet1.signup_info import SignupInfoError
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
+from utils import create_random_public_key_hash
 
 
 class TestSignupInfo(unittest.TestCase):
-
-    _originator_public_key = None
-    _another_public_key = None
 
     @classmethod
     def setUpClass(cls):
@@ -35,19 +31,8 @@ class TestSignupInfo(unittest.TestCase):
         poet_enclave.initialize(**args)
         SignupInfo.poet_enclave = poet_enclave
 
-        cls._originator_public_key = cls._create_random_public_key()
-        cls._originator_public_key_hash = \
-            hashlib.sha256(
-                signing.encode_pubkey(
-                    cls._originator_public_key,
-                    'hex')).hexdigest()
-
-        cls._another_public_key = cls._create_random_public_key()
-        cls._another_public_key_hash = \
-            hashlib.sha256(
-                signing.encode_pubkey(
-                    cls._another_public_key,
-                    'hex')).hexdigest()
+        cls._originator_public_key_hash = create_random_public_key_hash()
+        cls._another_public_key_hash = create_random_public_key_hash()
 
     @classmethod
     def _create_random_private_key(cls):
