@@ -15,6 +15,7 @@
 
 import unittest
 import hashlib
+import time
 
 from sawtooth_signing import pbct_nativerecover as signing
 import sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
@@ -74,6 +75,40 @@ class TestWaitCertificate(unittest.TestCase):
         with self.assertRaises(WaitCertificateError):
             WaitCertificate.create_wait_certificate("Reader's Digest")
 
+    def test_create_wait_certificate_before_wait_timer_expires(self):
+        # Need to create signup information
+        SignupInfo.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            most_recent_wait_certificate_id=NullIdentifier)
+
+        # Create a wait certificate for the genesis block so that we can
+        # create another wait certificate that has to play by the rules.
+        wt = WaitTimer.create_wait_timer([])
+        wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+
+        wt = WaitTimer.create_wait_timer([wc])
+        with self.assertRaises(WaitCertificateError):
+            wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+
+    def test_create_wait_certificate_after_wait_timer_timed_out(self):
+        # Need to create signup information
+        SignupInfo.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            most_recent_wait_certificate_id=NullIdentifier)
+
+        # Create a wait certificate for the genesis block so that we can
+        # create another wait certificate that has to play by the rules.
+        wt = WaitTimer.create_wait_timer([])
+        wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+
+        wt = WaitTimer.create_wait_timer([wc])
+        while not wt.has_expired(time.time()):
+            time.sleep(1)
+        time.sleep(10)
+
+        with self.assertRaises(WaitCertificateError):
+            wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+
     def test_create_wait_certificate(self):
         # Need to create signup information and wait timer first
         signup_info = \
@@ -82,6 +117,8 @@ class TestWaitCertificate(unittest.TestCase):
                 most_recent_wait_certificate_id=NullIdentifier)
 
         wt = WaitTimer.create_wait_timer([])
+        while not wt.has_expired(time.time()):
+            time.sleep(1)
 
         # Now we can create a wait certificate and verify that it correlates
         # to the wait timer we just created
@@ -92,15 +129,27 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertEquals(
             wc.previous_certificate_id,
             wt.previous_certificate_id)
-        self.assertEqual(wc.local_mean, wt.local_mean)
-        self.assertEqual(wc.request_time, wt.request_time)
-        self.assertEqual(wc.duration, wt.duration)
+        self.assertAlmostEquals(wc.local_mean, wt.local_mean)
+        self.assertAlmostEquals(wc.request_time, wt.request_time)
+        self.assertAlmostEquals(wc.duration, wt.duration)
         self.assertEqual(wc.block_digest, "Reader's Digest")
         self.assertIsNotNone(wc.signature)
         self.assertIsNotNone(wc.identifier)
 
         # A newly-created wait certificate should be valid
         self.assertTrue(wc.is_valid([], signup_info.poet_public_key))
+
+        # Create another wait certificate and verify it is valid also
+        wt = WaitTimer.create_wait_timer([wc])
+        while not wt.has_expired(time.time()):
+            time.sleep(1)
+
+        # Now we can create a wait certificate and verify that it correlates
+        # to the wait timer we just created
+        another_wc = WaitCertificate.create_wait_certificate("Pepto Bismol")
+
+        self.assertTrue(
+            another_wc.is_valid([wc], signup_info.poet_public_key))
 
     def test_wait_certificate_serialization(self):
         # Need to create signup information and wait timer first
@@ -110,6 +159,8 @@ class TestWaitCertificate(unittest.TestCase):
                 most_recent_wait_certificate_id=NullIdentifier)
 
         wt = WaitTimer.create_wait_timer([])
+        while not wt.has_expired(time.time()):
+            time.sleep(1)
 
         # Now we can create a wait certificate and serialize
         wc = WaitCertificate.create_wait_certificate("Reader's Digest")
@@ -130,11 +181,22 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertEquals(
             wc.previous_certificate_id,
             wc_copy.previous_certificate_id)
-        self.assertEqual(wc.local_mean, wc_copy.local_mean)
-        self.assertEqual(wc.request_time, wc_copy.request_time)
-        self.assertEqual(wc.duration, wc_copy.duration)
+        self.assertAlmostEquals(wc.local_mean, wc_copy.local_mean)
+        self.assertAlmostEquals(wc.request_time, wc_copy.request_time)
+        self.assertAlmostEquals(wc.duration, wc_copy.duration)
         self.assertEqual(wc.block_digest, wc_copy.block_digest)
         self.assertEqual(wc.signature, wc_copy.signature)
         self.assertEqual(wc.identifier, wc_copy.identifier)
+
+        # Serialize the copy and verify that its serialization and
+        # signature are the same
+        dumped_copy = wc_copy.dump()
+
+        self.assertTrue(
+            dumped.get('SerializedCertificate'),
+            dumped_copy.get('SerializedCertificate'))
+        self.assertTrue(
+            dumped.get('Signature'),
+            dumped_copy.get('Signature'))
 
         self.assertTrue(wc_copy.is_valid([], signup_info.poet_public_key))

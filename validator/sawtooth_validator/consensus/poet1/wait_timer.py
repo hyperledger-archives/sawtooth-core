@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import time
 
 from gossip.common import NullIdentifier
 
@@ -156,7 +155,7 @@ class WaitTimer(object):
         self.duration = float(enclave_timer.duration)
 
         self._enclave_wait_timer = enclave_timer
-        self._expires = time.time() + self.duration + 0.1
+        self._expires = self.request_time + self.duration + 0.1
 
     def __str__(self):
         return \
@@ -177,7 +176,7 @@ class WaitTimer(object):
         if now < self._expires:
             return False
 
-        return self.poet_enclave.verify_wait_timer(self._enclave_wait_timer)
+        return self._enclave_wait_timer.has_expired()
 
 
 def set_wait_timer_globals(target_wait_time=None,

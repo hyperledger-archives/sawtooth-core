@@ -20,10 +20,13 @@ import threading
 import datetime
 import hashlib
 import base64
+import time
 
 from gossip.common import json2dict
 from gossip.common import dict2json
 from sawtooth_signing import pbct_nativerecover as signing
+
+from gossip.common import NullIdentifier
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
     .enclave_signup_info import EnclaveSignupInfo
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
@@ -37,8 +40,8 @@ from sawtooth_validator.consensus.poet1.wait_certificate \
 
 LOGGER = logging.getLogger(__name__)
 
-
 MINIMUM_WAIT_TIME = 1.0
+TIMER_TIMEOUT_PERIOD = 3.0
 
 
 class _PoetEnclaveError(Exception):
@@ -191,7 +194,7 @@ class _PoetEnclaveSimulator(object):
                     'hex')
             cls._poet_private_key = \
                 signing.decode_privkey(
-                    signup_data.get('poet_public_key'),
+                    signup_data.get('poet_private_key'),
                     'hex')
             cls._active_wait_timer = None
 
@@ -307,18 +310,18 @@ class _PoetEnclaveSimulator(object):
                         report_body,
                         expected_report_body))
 
+        # Verify that the wait certificate ID in the verification report
+        # matches the provided wait certificate ID.  The wait certificate ID
+        # is stored in the nonce field.
+        nonce = verification_report_dict.get('nonce')
+        if nonce is None:
+            raise \
+                SignupInfoError(
+                    'Verification report does not have a nonce')
+
         # NOTE - this check is currently not performed as a transaction
         #        does not have a good way to obtaining the most recent
         #        wait certificate ID.
-        #
-        # Verify that the wait certificate ID in the attestation evidence
-        # payload matches the provided wait certificate ID.  The wait
-        # certificate ID is stored in the AEP nonce field.
-        # nonce = attestation_evidence_payload.get('nonce')
-        # if nonce is None:
-        #     raise \
-        #         SignupInfoError(
-        #             'Attestation evidence payload does not have a nonce')
         #
         # if nonce != most_recent_wait_certificate_id:
         #     raise \
@@ -397,35 +400,46 @@ class _PoetEnclaveSimulator(object):
                         'Enclave must be initialized before attempting to '
                         'create a wait certificate')
 
-            # Several criteria we need to be met before we can create a wait
+            # Several criteria need to be met before we can create a wait
             # certificate:
             # 1. We have an active timer
             # 2. The active timer has expired
             # 3. The active timer has not timed out
+            #
+            # Note - we make a concession for the genesis block (i.e., a wait
+            # timer for which the previous certificate ID is the Null
+            # identifier) in that we don't require the timer to have expired
+            # and we don't worry about the timer having timed out.
             if cls._active_wait_timer is None:
                 raise \
                     WaitCertificateError(
                         'Enclave active wait timer has not been initialized')
 
-            # HACK ALERT!!  HACK ALERT!!  HACK ALERT!!  HACK ALERT!!
-            #
-            # Today, without the genesis utility we cannot make these checks.
-            # Once we have the genesis utility, this code needs to change to
-            # Depend upon the timer not being expired or timed out.  The
-            # Original specification requires this check.
-            #
-            # HACK ALERT!!  HACK ALERT!!  HACK ALERT!!  HACK ALERT!!
-            #
-            # if not cls._active_wait_timer.has_expired():
-            #     raise \
-            #         WaitCertificateError(
-            #             'Cannot create wait certificate because timer has '
-            #             'not expired')
-            # if wait_timer.has_timed_out():
-            #     raise \
-            #         WaitCertificateError(
-            #             'Cannot create wait certificate because timer '
-            #             'has timed out')
+            is_not_genesis_block = \
+                (cls._active_wait_timer.previous_certificate_id !=
+                 NullIdentifier)
+
+            now = time.time()
+            expire_time = \
+                cls._active_wait_timer.request_time + \
+                cls._active_wait_timer.duration
+
+            if is_not_genesis_block and now < expire_time:
+                raise \
+                    WaitCertificateError(
+                        'Cannot create wait certificate because timer has '
+                        'not expired')
+
+            time_out_time = \
+                cls._active_wait_timer.request_time + \
+                cls._active_wait_timer.duration + \
+                TIMER_TIMEOUT_PERIOD
+
+            if is_not_genesis_block and time_out_time < now:
+                raise \
+                    WaitCertificateError(
+                        'Cannot create wait certificate because timer '
+                        'has timed out')
 
             # Create a random nonce for the certificate.  For our "random"
             # nonce we will take the timer signature, concat that with the
@@ -466,16 +480,16 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def verify_wait_certificate(cls, certificate, poet_public_key):
-        # poet_public_key = \
-        #     signing.decode_pubkey(encoded_poet_public_key, 'hex')
-        #
-        # return \
-        #     signing.verify(
-        #         certificate.serialize(),
-        #         certificate.signature,
-        #         poet_public_key)
+        # Reconstitute the PoET public key and check the signature over the
+        # serialized wait certificate.
+        decoded_poet_public_key = \
+            signing.decode_pubkey(poet_public_key, 'hex')
 
-        return True
+        return \
+            signing.verify(
+                certificate.serialize(),
+                certificate.signature,
+                decoded_poet_public_key)
 
 
 def initialize(**kwargs):
@@ -521,10 +535,6 @@ def deserialize_wait_timer(serialized_timer, signature):
         _PoetEnclaveSimulator.deserialize_wait_timer(
             serialized_timer=serialized_timer,
             signature=signature)
-
-
-def verify_wait_timer(timer):
-    return timer.has_expired()
 
 
 def create_wait_certificate(block_digest):
