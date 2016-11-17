@@ -4,12 +4,17 @@ set -e
 
 function install_requires {
     cat $1 \
+        | grep -v "sawtooth-signing" \
         | grep -v "sawtooth-core" \
         | pip install -r /dev/stdin
 }
 
 # Packages for testing
 pip install -r /project/sawtooth-core/tools/requirements-testing.txt
+
+# sawtooth-core/signing
+(cd /project/sawtooth-core/signing/ && python setup.py egg_info)
+pip install -r /project/sawtooth-core/signing/sawtooth_signing.egg-info/requires.txt
 
 # sawtooth-core/core
 (cd /project/sawtooth-core/core/ && python setup.py egg_info)
