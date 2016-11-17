@@ -36,7 +36,8 @@ find_packages() {
         | grep -v /integration/ \
         | grep -v /unit/ \
         | grep -v /sawtooth_suites/ \
-        | grep -v /navigator/
+        | grep -v /navigator/ \
+        | grep -v _pb2\.py$
 }
 
 lint() {
