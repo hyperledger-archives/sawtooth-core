@@ -22,10 +22,6 @@ from sawtooth_signing.ECDSA import ECDSARecoverModule as nativeECDSA
 LOGGER = logging.getLogger(__name__)
 
 
-def wif_to_privkey(wifstr):
-    return pybitcointools.decode_privkey(wifstr, 'wif')
-
-
 def generate_privkey():
     return pybitcointools.random_key()
 

@@ -85,7 +85,7 @@ def generate_signing_key(wifstr=None):
         str: a signing key.
     """
     if wifstr:
-        return signing.wif_to_privkey(wifstr)
+        return signing.decode_privkey(wifstr)
     else:
         return signing.generate_privkey()
 
