@@ -18,7 +18,7 @@ import logging
 import hashlib
 import cbor
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 INIT_ROOT_KEY = ''
 
@@ -39,8 +39,8 @@ class MerkleDatabase(object):
         for item in self._yield_iter('', self._root_hash):
             yield item
 
-    def _yield_iter(self, path, hash):
-        node = self._get_by_hash(hash)
+    def _yield_iter(self, path, hash_key):
+        node = self._get_by_hash(hash_key)
 
         if node["v"] is not None:
             yield (path, self._decode(node["v"]))
@@ -64,11 +64,11 @@ class MerkleDatabase(object):
     def hash(cls, stuff):
         return hashlib.sha512(stuff).hexdigest()[:64]
 
-    def _get_by_hash(self, hash):
-        if hash in self._database:
-            return self._decode(self._database.get(hash))
+    def _get_by_hash(self, key_hash):
+        if key_hash in self._database:
+            return self._decode(self._database.get(key_hash))
         else:
-            raise KeyError("hash {} not found in database".format(hash))
+            raise KeyError("hash {} not found in database".format(key_hash))
 
     def __getitem__(self, address):
         return self.get(address)
@@ -151,17 +151,17 @@ class MerkleDatabase(object):
                 leaf_branch = False
 
             if not leaf_branch:
-                (hash, packed) = self._encode_and_hash(path_map[path])
-                batch.append((hash, packed))
+                (hash_key, packed) = self._encode_and_hash(path_map[path])
+                batch.append((hash_key, packed))
                 if path != '':
-                    path_map[parent_address]['c'][path_branch] = hash
+                    path_map[parent_address]['c'][path_branch] = hash_key
             else:
                 if path != '':
                     del path_map[parent_address]['c'][path_branch]
 
         self._database.set_batch(batch)
 
-        return hash
+        return hash_key
 
     def update(self, set_items):
         """
@@ -182,16 +182,16 @@ class MerkleDatabase(object):
 
         # Rebuild the hashes to the new root
         for path in sorted(path_map, key=len, reverse=True):
-            (hash, packed) = self._encode_and_hash(path_map[path])
-            batch.append((hash, packed))
+            (key_hash, packed) = self._encode_and_hash(path_map[path])
+            batch.append((key_hash, packed))
             if path != '':
                 parent_address = path[:-TOKEN_SIZE]
                 path_branch = path[-TOKEN_SIZE:]
-                path_map[parent_address]['c'][path_branch] = hash
+                path_map[parent_address]['c'][path_branch] = key_hash
 
         # Apply all new hash, value pairs to the database
         self._database.set_batch(batch)
-        return hash
+        return key_hash
 
     def _set_by_addr(self, address, value):
         tokens = self._tokenize_address(address)
@@ -208,16 +208,16 @@ class MerkleDatabase(object):
 
         batch = []
         for path_address in path_addresses:
-            (hash, packed) = self._encode_and_hash(child)
+            (key_hash, packed) = self._encode_and_hash(child)
             parent_address = path_address[:-TOKEN_SIZE]
             path_branch = path_address[-TOKEN_SIZE:]
-            path_map[parent_address]["c"][path_branch] = hash
-            batch.append((hash, packed))
+            path_map[parent_address]["c"][path_branch] = key_hash
+            batch.append((key_hash, packed))
             child = path_map[parent_address]
 
         # Update the child of the root node to the prior hash
         root_node = copy.deepcopy(self._root_node)
-        root_node["c"][tokens[0]] = hash
+        root_node["c"][tokens[0]] = key_hash
         (root_hash, packed) = self._encode_and_hash(root_node)
 
         batch.append((root_hash, packed))
