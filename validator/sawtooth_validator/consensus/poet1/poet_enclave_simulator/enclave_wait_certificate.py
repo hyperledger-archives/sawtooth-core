@@ -96,9 +96,9 @@ class EnclaveWaitCertificate(object):
                     deserialized_certificate.get('request_time')),
                 nonce=str(deserialized_certificate.get('nonce')),
                 block_digest=str(deserialized_certificate.get(
-                    'block_digest')))
-
-        certificate.signature = signature
+                    'block_digest')),
+                signature=signature,
+                serialized_certificate=serialized_certificate)
 
         return certificate
 
@@ -118,14 +118,17 @@ class EnclaveWaitCertificate(object):
                  local_mean,
                  request_time,
                  nonce,
-                 block_digest):
+                 block_digest,
+                 signature=None,
+                 serialized_certificate=None):
         self.duration = float(duration)
         self.previous_certificate_id = str(previous_certificate_id)
         self.local_mean = float(local_mean)
         self.request_time = float(request_time)
         self.nonce = str(nonce)
         self.block_digest = str(block_digest)
-        self.signature = None
+        self.signature = signature
+        self._serialized = serialized_certificate
 
     def __str__(self):
         return \
@@ -143,13 +146,16 @@ class EnclaveWaitCertificate(object):
         Returns:
             A JSON string representing the serialized version of the object
         """
-        certificate_dict = {
-            'duration': self.duration,
-            'previous_certificate_id': self.previous_certificate_id,
-            'local_mean': self.local_mean,
-            'request_time': self.request_time,
-            'nonce': self.nonce,
-            'block_digest': self.block_digest
-        }
+        if self._serialized is None:
+            certificate_dict = {
+                'duration': self.duration,
+                'previous_certificate_id': self.previous_certificate_id,
+                'local_mean': self.local_mean,
+                'request_time': self.request_time,
+                'nonce': self.nonce,
+                'block_digest': self.block_digest
+            }
 
-        return dict2json(certificate_dict)
+            self._serialized = dict2json(certificate_dict)
+
+        return self._serialized

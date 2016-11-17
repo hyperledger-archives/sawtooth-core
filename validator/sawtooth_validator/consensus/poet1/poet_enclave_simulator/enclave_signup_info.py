@@ -35,15 +35,6 @@ class EnclaveSignupInfo(object):
             be persisted and presented at a later time to restore the PoET
             enclave.
     """
-    def __init__(self,
-                 poet_public_key,
-                 proof_data,
-                 anti_sybil_id,
-                 sealed_signup_data=None):
-        self.poet_public_key = poet_public_key
-        self.proof_data = proof_data
-        self.anti_sybil_id = anti_sybil_id
-        self.sealed_signup_data = sealed_signup_data
 
     @classmethod
     def signup_info_from_serialized(cls, serialized_signup_info):
@@ -62,14 +53,29 @@ class EnclaveSignupInfo(object):
 
         # Note - serialized signup info shouldn't have sealed signup
         # data.
-        return \
+        signup_info = \
             EnclaveSignupInfo(
                 poet_public_key=deserialized_signup_info.get(
                     'poet_public_key'),
                 proof_data=deserialized_signup_info.get(
                     'proof_data'),
                 anti_sybil_id=deserialized_signup_info.get(
-                    'anti_sybil_id'))
+                    'anti_sybil_id'),
+                serialized_signup_info=serialized_signup_info)
+
+        return signup_info
+
+    def __init__(self,
+                 poet_public_key,
+                 proof_data,
+                 anti_sybil_id,
+                 sealed_signup_data=None,
+                 serialized_signup_info=None):
+        self.poet_public_key = poet_public_key
+        self.proof_data = proof_data
+        self.anti_sybil_id = anti_sybil_id
+        self.sealed_signup_data = sealed_signup_data
+        self._serialized = serialized_signup_info
 
     def serialize(self):
         """
@@ -82,13 +88,16 @@ class EnclaveSignupInfo(object):
             data.
         """
 
-        # Note - we are not serializing the sealed signup data.  Sealed signup
-        # data is meant to be used locally on the system and not serialized
-        # and sent to anyone else.
-        signup_info_dict = {
-            'poet_public_key': self.poet_public_key,
-            'proof_data': self.proof_data,
-            'anti_sybil_id': self.anti_sybil_id
-        }
+        if self._serialized is None:
+            # Note - we are not serializing the sealed signup data.  Sealed
+            # signup data is meant to be used locally on the system and not
+            # serialized and sent to anyone else.
+            signup_info_dict = {
+                'poet_public_key': self.poet_public_key,
+                'proof_data': self.proof_data,
+                'anti_sybil_id': self.anti_sybil_id
+            }
 
-        return dict2json(signup_info_dict)
+            self._serialized = dict2json(signup_info_dict)
+
+        return self._serialized

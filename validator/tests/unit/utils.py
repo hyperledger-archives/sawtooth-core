@@ -15,6 +15,8 @@
 import hashlib
 import random
 import string
+
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.poet0.poet_enclave_simulator \
     import poet0_enclave_simulator as pe_sim
 
@@ -54,3 +56,19 @@ def generate_txn_ids(count):
         hasher.update(name)
         out.append(name)
     return out, hasher.hexdigest()
+
+
+def create_random_private_key():
+    return signing.generate_privkey()
+
+
+def create_random_public_key():
+    return signing.generate_pubkey(create_random_private_key())
+
+
+def create_random_public_key_hash():
+    return \
+        hashlib.sha256(
+            signing.encode_pubkey(
+                create_random_public_key(),
+                'hex')).hexdigest()

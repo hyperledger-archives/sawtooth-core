@@ -23,7 +23,6 @@ from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
 
 
 class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
-
     @classmethod
     def _create_random_key(cls):
         return signing.generate_privkey()
@@ -41,14 +40,18 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 nonce='Eeny, meeny, miny, moe.',
                 block_digest='Indigestion. Pepto Bismol.')
 
-        self.assertEqual(
+        self.assertAlmostEquals(
             wait_timer.request_time,
             wait_certificate.request_time)
-        self.assertEqual(wait_timer.duration, wait_certificate.duration)
+        self.assertAlmostEquals(
+            wait_timer.duration,
+            wait_certificate.duration)
         self.assertEqual(
             wait_timer.previous_certificate_id,
             wait_certificate.previous_certificate_id)
-        self.assertEqual(wait_timer.local_mean, wait_certificate.local_mean)
+        self.assertAlmostEquals(
+            wait_timer.local_mean,
+            wait_certificate.local_mean)
         self.assertEqual(wait_certificate.nonce, 'Eeny, meeny, miny, moe.')
         self.assertEqual(
             wait_certificate.block_digest,
@@ -70,16 +73,16 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 nonce='Eeny, meeny, miny, moe.',
                 block_digest=wait_certificate.block_digest)
 
-        self.assertEqual(
+        self.assertAlmostEquals(
             wait_certificate.request_time,
             other_wait_certificate.request_time)
-        self.assertEqual(
+        self.assertAlmostEquals(
             wait_certificate.duration,
             other_wait_certificate.duration)
         self.assertEqual(
             wait_certificate.previous_certificate_id,
             other_wait_certificate.previous_certificate_id)
-        self.assertEqual(
+        self.assertAlmostEquals(
             wait_certificate.local_mean,
             other_wait_certificate.local_mean)
         self.assertEqual(wait_certificate.nonce, other_wait_certificate.nonce)

@@ -59,22 +59,27 @@ class EnclaveWaitTimer(object):
                 previous_certificate_id=str(deserialized_timer.get(
                     'previous_certificate_id')),
                 local_mean=float(deserialized_timer.get(
-                    'local_mean')))
+                    'local_mean')),
+                signature=signature,
+                serialized_timer=serialized_timer)
 
         timer.request_time = float(deserialized_timer.get('request_time'))
-        timer.signature = signature
 
         return timer
 
     def __init__(self,
                  duration,
                  previous_certificate_id,
-                 local_mean):
+                 local_mean,
+                 signature=None,
+                 serialized_timer=None):
         self.request_time = time.time()
         self.duration = duration
         self.previous_certificate_id = previous_certificate_id
         self.local_mean = local_mean
-        self.signature = None
+        self.signature = signature
+        self._serialized = serialized_timer
+        self._expires = self.request_time + self.duration + 0.1
 
     def __str__(self):
         return \
@@ -91,14 +96,17 @@ class EnclaveWaitTimer(object):
         Returns:
             A JSON string representing the serialized version of the object
         """
-        timer_dict = {
-            'request_time': self.request_time,
-            'duration': self.duration,
-            'previous_certificate_id': self.previous_certificate_id,
-            'local_mean': self.local_mean
-        }
+        if self._serialized is None:
+            timer_dict = {
+                'request_time': self.request_time,
+                'duration': self.duration,
+                'previous_certificate_id': self.previous_certificate_id,
+                'local_mean': self.local_mean
+            }
 
-        return dict2json(timer_dict)
+            self._serialized = dict2json(timer_dict)
+
+        return self._serialized
 
     def has_expired(self):
         """
@@ -107,4 +115,4 @@ class EnclaveWaitTimer(object):
         Returns:
             True if expired, False otherwise
         """
-        return (self.request_time + self.duration) < time.time()
+        return self._expires < time.time()

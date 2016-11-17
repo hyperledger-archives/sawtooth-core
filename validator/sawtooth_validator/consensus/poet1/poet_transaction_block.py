@@ -87,27 +87,17 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         self._lock = RLock()
         self.wait_timer = None
         self.wait_certificate = None
-        self.poet_public_key = None
-
-        if 'PoetPublicKey' in minfo:
-            self.poet_public_key = minfo.get('PoetPublicKey')
+        self.poet_public_key = minfo.get('PoetPublicKey')
 
         if 'WaitCertificate' in minfo:
             wc = minfo.get('WaitCertificate')
             serialized_certificate = wc.get('SerializedCertificate')
             signature = wc.get('Signature')
-            #
-            # To make this work properly we need to be able to take an
-            # Originator ID and translate that to the
-            # Disguised PoET public key that corresponds to the
-            # Originator which was placed in the validator registry.
-            #
-            poet_public_key = None
+
             self.wait_certificate = \
                 WaitCertificate.wait_certificate_from_serialized(
                     serialized=serialized_certificate,
-                    signature=signature,
-                    poet_public_key=poet_public_key)
+                    signature=signature)
 
         self.aggregate_local_mean = 0.0
 
@@ -193,13 +183,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 LOGGER.info('not a valid block, no wait certificate')
                 return False
 
-            #
-            # To make this work properly we need to be able to take an
-            # Originator ID and translate that to the
-            # Disguised PoET public key that corresponds to the
-            # Originator which was placed in the validator registry.
-            #
-            # We need to get the PoET public key that for the originator
+            # We need to get the PoET public key for the originator
             # of the transaction block.  To do that, we first need to get
             # the store for validator signup information.  Then from that
             # we can do an indexed search for the registration entry and
