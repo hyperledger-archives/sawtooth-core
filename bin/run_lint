@@ -159,7 +159,7 @@ PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
 export PYTHONPATH
 lint sdk/python "$SINCE" .pylintrc-strict 1 || retval=1
-lint sdk/examples/intkey_ptyhon "$SINCE" .pylintrc-strict 1 || retval=1
+lint sdk/examples/intkey_python "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
