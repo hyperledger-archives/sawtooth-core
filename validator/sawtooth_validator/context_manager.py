@@ -67,11 +67,11 @@ class StateContext(object):
                                   str(time.time())).hexdigest()
 
     @property
-    def sessionID(self):
+    def session_id(self):
         return self._id
 
     @property
-    def merkleRoot(self):
+    def merkle_root(self):
         return self._state_hash
 
     def initialize_futures(self, address_list):
@@ -176,11 +176,12 @@ class ContextManager(object):
         context = StateContext(state_hash, inputs, outputs)
         with self._shared_lock:
             context.initialize_futures(inputs + outputs)
-            self._contexts[context.sessionID] = context
+            self._contexts[context.session_id] = context
 
-        self._address_queue.put_nowait((context.sessionID, state_hash, inputs))
-        LOGGER.info("CREATE_CONTEXT: %s", context.sessionID)
-        return context.sessionID
+        self._address_queue.put_nowait(
+            (context.session_id, state_hash, inputs))
+        LOGGER.info("CREATE_CONTEXT: %s", context.session_id)
+        return context.session_id
 
     def commit_context(self, context_id_list):
         """
@@ -198,13 +199,13 @@ class ContextManager(object):
             raise CommitException("Context Id not in contexts")
         first_id = context_id_list[0]
 
-        if not all([self._contexts[first_id].merkleRoot ==
-                    self._contexts[c_id].merkleRoot
+        if not all([self._contexts[first_id].merkle_root ==
+                    self._contexts[c_id].merkle_root
                     for c_id in context_id_list]):
             raise CommitException(
                 "MerkleRoots not all equal, yet asking to merge")
 
-        merkle_root = self._contexts[first_id].merkleRoot
+        merkle_root = self._contexts[first_id].merkle_root
         tree = MerkleDatabase(self._database, merkle_root)
 
         merged_updates = {}
