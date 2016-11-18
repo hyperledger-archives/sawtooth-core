@@ -73,12 +73,12 @@ class TestWaitTimer(unittest.TestCase):
     def test_create_wait_timer_before_create_signup_info(self):
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
-        with self.assertRaises(wait_timer.WaitTimerError):
+        with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
-        with self.assertRaises(wait_timer.WaitTimerError):
+        with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
                 validator_address='1060 W Addison Street',
                 certificates=tuple())
@@ -129,12 +129,12 @@ class TestWaitTimer(unittest.TestCase):
 
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
-        with self.assertRaises(wait_timer.WaitTimerError):
+        with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
-        with self.assertRaises(wait_timer.WaitTimerError):
+        with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
                 validator_address='1060 W Addison Street',
                 certificates=tuple())

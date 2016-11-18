@@ -20,10 +20,6 @@ from gossip.common import NullIdentifier
 LOGGER = logging.getLogger(__name__)
 
 
-class WaitTimerError(Exception):
-    pass
-
-
 class WaitTimer(object):
     """Wait timers represent a random duration incorporated into a wait
     certificate.

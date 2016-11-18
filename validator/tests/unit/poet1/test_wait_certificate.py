@@ -23,8 +23,6 @@ from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
 from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
 from sawtooth_validator.consensus.poet1.wait_certificate \
     import WaitCertificate
-from sawtooth_validator.consensus.poet1.wait_certificate \
-    import WaitCertificateError
 from gossip.common import NullIdentifier
 from utils import create_random_public_key_hash
 
@@ -48,7 +46,7 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_before_create_signup_info(self):
         # Make sure that trying to create a wait certificate before signup
         # information is provided causes an error
-        with self.assertRaises(WaitCertificateError):
+        with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 wait_timer=None,
                 block_digest="Reader's Digest")
@@ -60,7 +58,7 @@ class TestWaitCertificate(unittest.TestCase):
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NullIdentifier)
 
-        with self.assertRaises(WaitCertificateError):
+        with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 wait_timer=None,
                 block_digest="Reader's Digest")
@@ -87,7 +85,7 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[wc])
-        with self.assertRaises(WaitCertificateError):
+        with self.assertRaises(ValueError):
             wc = \
                 WaitCertificate.create_wait_certificate(
                     wait_timer=None,
@@ -119,7 +117,7 @@ class TestWaitCertificate(unittest.TestCase):
             time.sleep(1)
         time.sleep(10)
 
-        with self.assertRaises(WaitCertificateError):
+        with self.assertRaises(ValueError):
             wc = \
                 WaitCertificate.create_wait_certificate(
                     wait_timer=None,

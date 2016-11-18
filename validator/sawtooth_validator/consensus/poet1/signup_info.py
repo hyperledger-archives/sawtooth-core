@@ -18,10 +18,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-class SignupInfoError(Exception):
-    pass
-
-
 class SignupInfo(object):
     """Encapsulates authorization data for network enrollment policies
 

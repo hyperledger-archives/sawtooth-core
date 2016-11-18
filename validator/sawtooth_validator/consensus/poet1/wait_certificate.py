@@ -24,10 +24,6 @@ from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
 LOGGER = logging.getLogger(__name__)
 
 
-class WaitCertificateError(Exception):
-    pass
-
-
 # This is necessary for float comparisons
 def _is_close(value_a, value_b, rel_tol=1e-09, abs_tol=0.0):
     """Determines whether two floats are within a tolerance.
@@ -87,7 +83,7 @@ class WaitCertificate(object):
 
         if not enclave_certificate:
             raise \
-                WaitCertificateError(
+                ValueError(
                     'Failed to create an enclave wait certificate')
 
         certificate = cls(enclave_certificate)
