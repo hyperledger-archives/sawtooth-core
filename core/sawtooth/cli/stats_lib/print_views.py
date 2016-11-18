@@ -284,7 +284,7 @@ class GeneralView(ValidatorBaseView):
         self._console_print.cpprint(self.no_resp_formatter.format(
             client.val_id,
             client.state,
-            client.no_response_reason, "", "", "",
+            client.response_status, "", "", "",
             "", "", "", "", "", "",
             client.name[:16],
             client.url),

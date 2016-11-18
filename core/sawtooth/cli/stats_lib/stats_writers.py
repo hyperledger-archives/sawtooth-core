@@ -289,7 +289,7 @@ class StatsSnapshotWriter(StatsModule):
                     'url': client.url,
                     'state': client.state,
                     'responding': client.responding,
-                    'no_response_reason': client.no_response_reason,
+                    'no_response_reason': client.response_status,
                     'response_time': client.response_time}
             stats[client.name]['info'] = info
         self.stats['per-validator_stats'] = stats

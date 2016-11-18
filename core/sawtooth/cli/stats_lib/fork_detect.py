@@ -34,8 +34,10 @@ class BlockClient(object):
         self.bc_id = bc_id
         self.url = full_url
         self.name = "block_client_{0}".format(bc_id)
-        self.bc_state = "UNKNWN"
-        self.responding = None
+
+        self.responding = False
+        self.bc_state = "WAITING"
+        self.bc_response_status = " - First Contact"
 
         self.validator_comm = ValidatorCommunications()
 
@@ -45,7 +47,7 @@ class BlockClient(object):
         self.last_block_previous_block_id = None
         self.lb_count = look_back_count
         self.current_branch = None
-        self.no_response_reason = None
+
         self.path = None
 
     def blocks_request(self):
@@ -61,15 +63,16 @@ class BlockClient(object):
         self.bc_state = "RESP_{}".format(response_code)
         if response_code is 200:
             self.responding = True
+            self.bc_response_status = "Response code = 200"
             self.update(block_response)
         else:
             self.responding = False
-            self.no_response_reason = ""
+            self.bc_response_status = "Response code not 200"
 
     def _blocks_error(self, failure):
         self.responding = False
         self.bc_state = "NO_RESP"
-        self.no_response_reason = failure.type.__name__
+        self.bc_response_status = failure.type.__name__
         return
 
     def update(self, block_response):

@@ -32,15 +32,14 @@ class StatsClient(object):
         self.url = fullurl
         self.name = "validator_{0}".format(val_id)
 
-        self.state = "UNKNWN"
-
         self.ledgerstats = {}
         self.nodestats = {}
 
         self.validator_stats = ValidatorStats()
 
         self.responding = False
-        self.no_response_reason = ""
+        self.state = "WAITING"
+        self.response_status = "- First Contact"
 
         self.request_start = 0.0
         self.request_complete = 0.0
@@ -63,20 +62,41 @@ class StatsClient(object):
         self.request_complete = time.clock()
         self.response_time = self.request_complete - self.request_start
         self.state = "RESP_{}".format(response_code)
+        self._update_status(response_code)
+
         if response_code is 200:
-            self.validator_stats.update_stats(json_stats, self.request_start,
-                                              self.request_complete)
             self.responding = True
+            self.validator_stats.update_stats(self.responding, json_stats,
+                                              self.request_start,
+                                              self.request_complete)
         else:
             self.responding = False
-            self.no_response_reason = ""
+            self.validator_stats.update_stats(self.responding, None,
+                                              self.request_start,
+                                              self.request_complete)
 
     def _stats_error(self, failure):
-        self.validator_stats.update_stats(self.ledgerstats, 0, 0)
-        self.responding = False
+        self.request_complete = time.clock()
+        self.response_time = self.request_complete - self.request_start
         self.state = "NO_RESP"
-        self.no_response_reason = failure.type.__name__
+        self.responding = False
+        self.response_status = failure.type.__name__
+        self.validator_stats.update_stats(self.responding, None,
+                                          self.request_start,
+                                          self.request_complete)
+
         return
+
+    def _update_status(self, response_code):
+        response_codes = ["Informational", "Successful but not expected 200",
+                          "Redirection", "Client Error", "Server Error"]
+        if response_code is 200:
+            self.response_status = "Successful"
+        elif response_code in range(100, 600):
+            index = response_code / 100 - 1
+            self.response_status = response_codes[index]
+        else:
+            self.response_status = "Response Code Unknown"
 
 
 ValStatsEx = collections.namedtuple('calculated_validator_stats',
@@ -106,13 +126,14 @@ class ValidatorStats(object):
         self.txn_rate = TransactionRate()
         self.psis = PlatformIntervalStats()
 
-    def update_stats(self, json_stats, start_time, end_time):
-        self._new_data = True
-        self.update_lock.acquire()
-        self._stats = json_stats.copy()
-        self._request_time = start_time
-        self._end_time = end_time
-        self.update_lock.release()
+    def update_stats(self, responding, json_stats, start_time, end_time):
+        if responding is True:
+            self._new_data = True
+            self.update_lock.acquire()
+            self._stats = json_stats.copy()
+            self._request_time = start_time
+            self._end_time = end_time
+            self.update_lock.release()
 
     def collect(self):
         if self._new_data:
