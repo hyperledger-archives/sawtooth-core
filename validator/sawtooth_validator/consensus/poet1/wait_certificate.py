@@ -53,6 +53,8 @@ class WaitCertificate(object):
         request_time (float): The request time of the
             certificate.
         duration (float): The duration of the wait timer.
+        validator_address (str): The address of the validator that created
+            the wait certificate.
         block_digest (str): The block digest of the block for which this
             wait certificate was created.
         signature (str): The signature of the certificate.
@@ -61,11 +63,15 @@ class WaitCertificate(object):
     poet_enclave = None
 
     @classmethod
-    def create_wait_certificate(cls, block_digest):
+    def create_wait_certificate(cls,
+                                wait_timer,
+                                block_digest):
         """Creates a wait certificate in the enclave and then constructs
         a WaitCertificate object from it.
 
         Args:
+            wait_timer (WaitTimer): The wait timer for which the wait
+                certificate is being requested.
             block_digest (str): The block digest of the block for which
                 this certificate is being created.
 
@@ -76,6 +82,7 @@ class WaitCertificate(object):
 
         enclave_certificate = \
             cls.poet_enclave.create_wait_certificate(
+                wait_timer=wait_timer,
                 block_digest=block_digest)
 
         if not enclave_certificate:
@@ -134,6 +141,7 @@ class WaitCertificate(object):
         self.local_mean = enclave_certificate.local_mean
         self.request_time = enclave_certificate.request_time
         self.duration = enclave_certificate.duration
+        self.validator_address = enclave_certificate.validator_address
         self.block_digest = enclave_certificate.block_digest
         self.signature = enclave_certificate.signature
         self.identifier = enclave_certificate.identifier

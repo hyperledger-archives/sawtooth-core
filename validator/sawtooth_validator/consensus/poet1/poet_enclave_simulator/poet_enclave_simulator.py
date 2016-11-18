@@ -331,7 +331,10 @@ class _PoetEnclaveSimulator(object):
         #                 most_recent_wait_certificate_id))
 
     @classmethod
-    def create_wait_timer(cls, previous_certificate_id, local_mean):
+    def create_wait_timer(cls,
+                          validator_address,
+                          previous_certificate_id,
+                          local_mean):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
@@ -359,6 +362,7 @@ class _PoetEnclaveSimulator(object):
             # Create and sign the wait timer
             wait_timer = \
                 EnclaveWaitTimer(
+                    validator_address=validator_address,
                     duration=duration,
                     previous_certificate_id=previous_certificate_id,
                     local_mean=local_mean)
@@ -388,7 +392,9 @@ class _PoetEnclaveSimulator(object):
                 signature=signature)
 
     @classmethod
-    def create_wait_certificate(cls, block_digest):
+    def create_wait_certificate(cls,
+                                wait_timer,
+                                block_digest):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
@@ -495,7 +501,8 @@ def initialize(**kwargs):
     _PoetEnclaveSimulator.initialize(**kwargs)
 
 
-def create_signup_info(originator_public_key_hash,
+def create_signup_info(validator_address,
+                       originator_public_key_hash,
                        most_recent_wait_certificate_id):
     return \
         _PoetEnclaveSimulator.create_signup_info(
@@ -508,7 +515,7 @@ def deserialize_signup_info(serialized_signup_info):
         serialized_signup_info=serialized_signup_info)
 
 
-def unseal_signup_data(sealed_signup_data):
+def unseal_signup_data(validator_address, sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
 
 
@@ -522,9 +529,10 @@ def verify_signup_info(signup_info,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
 
-def create_wait_timer(previous_certificate_id, local_mean):
+def create_wait_timer(validator_address, previous_certificate_id, local_mean):
     return \
         _PoetEnclaveSimulator.create_wait_timer(
+            validator_address=validator_address,
             previous_certificate_id=previous_certificate_id,
             local_mean=local_mean)
 
@@ -536,9 +544,10 @@ def deserialize_wait_timer(serialized_timer, signature):
             signature=signature)
 
 
-def create_wait_certificate(block_digest):
+def create_wait_certificate(wait_timer, block_digest):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
+            wait_timer=wait_timer,
             block_digest=block_digest)
 
 

@@ -230,15 +230,20 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                         journal.block_store, self),
                     poet_public_key=poet_public_key)
 
-    def create_wait_timer(self, certlist):
+    def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list
         of wait certificates.
 
         Args:
+            validator_address (str): The address of the validator that is
+                creating the wait timer.
             certlist (list): A list of wait certificates.
         """
         with self._lock:
-            self.wait_timer = WaitTimer.create_wait_timer(certlist)
+            self.wait_timer = \
+                WaitTimer.create_wait_timer(
+                    validator_address=validator_address,
+                    certificates=certlist)
 
     def create_wait_certificate(self):
         """Create a wait certificate for the journal based on the wait timer.
@@ -248,11 +253,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
                 hasher.update(tid)
-            block_hash = hasher.hexdigest()
+            block_digest = hasher.hexdigest()
 
             self.wait_certificate = \
                 WaitCertificate.create_wait_certificate(
-                    block_digest=block_hash)
+                    wait_timer=self.wait_timer,
+                    block_digest=block_digest)
             if self.wait_certificate:
                 self.wait_timer = None
 

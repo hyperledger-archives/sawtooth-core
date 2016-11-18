@@ -79,8 +79,10 @@ class PoetConsensus(Consensus):
         sealed_signup_data = journal.local_store.get('sealed_signup_data')
 
         if sealed_signup_data is not None:
-            self.poet_public_key = SignupInfo.unseal_signup_data(
-                sealed_signup_data=sealed_signup_data)
+            self.poet_public_key = \
+                SignupInfo.unseal_signup_data(
+                    validator_address=journal.local_node.signing_address(),
+                    sealed_signup_data=sealed_signup_data)
         else:
             wait_certificate_id = journal.most_recent_committed_block_id
             public_key_hash = \
@@ -90,6 +92,7 @@ class PoetConsensus(Consensus):
 
             signup_info = \
                 SignupInfo.create_signup_info(
+                    validator_address=journal.local_node.signing_address(),
                     originator_public_key_hash=public_key_hash,
                     most_recent_wait_certificate_id=wait_certificate_id)
 
@@ -161,9 +164,9 @@ class PoetConsensus(Consensus):
                 certificate.
         """
 
-        block.create_wait_timer(self.build_certificate_list(
-            journal.block_store,
-            block))
+        block.create_wait_timer(
+            journal.local_node.signing_address(),
+            self.build_certificate_list(journal.block_store, block))
 
         journal.JournalStats.LocalMeanTime.Value = \
             block.wait_timer.local_mean

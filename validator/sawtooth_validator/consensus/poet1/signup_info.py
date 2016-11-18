@@ -40,6 +40,7 @@ class SignupInfo(object):
 
     @classmethod
     def create_signup_info(cls,
+                           validator_address,
                            originator_public_key_hash,
                            most_recent_wait_certificate_id):
         """
@@ -47,6 +48,8 @@ class SignupInfo(object):
         validator network.
 
         Args:
+            validator_address (str): A string representing the address of the
+                validator requesting signup info.
             originator_public_key_hash (str): A string representing SHA256
                 hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
                 originator's public key
@@ -59,6 +62,7 @@ class SignupInfo(object):
 
         enclave_signup_info = \
             cls.poet_enclave.create_signup_info(
+                validator_address,
                 originator_public_key_hash,
                 most_recent_wait_certificate_id)
         signup_info = cls(enclave_signup_info)
@@ -95,12 +99,16 @@ class SignupInfo(object):
         return self._enclave_signup_info
 
     @classmethod
-    def unseal_signup_data(cls, sealed_signup_data):
+    def unseal_signup_data(cls,
+                           validator_address,
+                           sealed_signup_data):
         """
         Takes sealed data from a previous call to create_signup_info and
         re-establishes the PoET 1 enclave state.
 
         Args:
+            validator_address (str): A string representing the address of the
+                validator that is requesting signup data be unsealed.
             sealed_signup_data: The sealed signup data that was previously
                 returned as part of the signup info returned from
                 create_signup_info.
@@ -111,6 +119,7 @@ class SignupInfo(object):
         """
         return \
             cls.poet_enclave.unseal_signup_data(
+                validator_address=validator_address,
                 sealed_signup_data=sealed_signup_data)
 
     def __init__(self, enclave_signup_info):

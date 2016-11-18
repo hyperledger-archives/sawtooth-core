@@ -45,6 +45,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_basic_create_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -56,6 +57,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_serialized_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
         serialized = signup_info.serialize()
@@ -73,10 +75,13 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_unsealing_data(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
         poet_public_key = \
-            SignupInfo.unseal_signup_data(signup_info.sealed_signup_data)
+            SignupInfo.unseal_signup_data(
+                validator_address='1660 Pennsylvania Avenue NW',
+                sealed_signup_data=signup_info.sealed_signup_data)
 
         self.assertEqual(
             signup_info.poet_public_key,
@@ -86,6 +91,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -99,6 +105,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_non_matching_originator_public_key(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -110,6 +117,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_non_matching_most_recent_wait_certificate_id(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 

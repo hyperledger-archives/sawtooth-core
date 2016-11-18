@@ -45,6 +45,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         name = 'DasValidator'
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=public_key_hash,
                 most_recent_wait_certificate_id='0' * 16)
 
@@ -72,6 +73,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         name = 'DasValidator'
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=public_key_hash,
                 most_recent_wait_certificate_id='0' * 16)
 
@@ -104,6 +106,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
         name = 'DasValidator'
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=public_key_hash,
                 most_recent_wait_certificate_id='0' * 16)
 
