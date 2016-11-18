@@ -7,7 +7,12 @@ import string
 from sawtooth_battleship import battleship_cli
 from txnintegration.validator_network_manager import get_default_vnm
 
+ENABLE_INTEGRATION_TESTS = False
+if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
+    ENABLE_INTEGRATION_TESTS = True
 
+
+@unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
 class TestBattleshipCommands(unittest.TestCase):
 
     @classmethod
