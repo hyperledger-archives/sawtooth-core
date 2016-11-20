@@ -28,6 +28,8 @@ from txnintegration.validator_network_manager import get_default_vnm
 
 LOGGER = logging.getLogger(__name__)
 
+ENABLE_INTEGRATION_TESTS = True \
+    if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1" else False
 DISABLE_POET1_SGX = True \
     if os.environ.get("DISABLE_POET1_SGX", False) == "1" else False
 
@@ -89,12 +91,15 @@ class TestGenesisUtil(unittest.TestCase):
                 archive_name = 'Test%sGenesisResults' % ledger_type.upper()
                 vnm.shutdown(archive_name=archive_name)
 
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_dev_mode_genesis(self):
         self.extend_genesis_util({'LedgerType': 'dev_mode'})
 
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_poet0_genesis(self):
         self.extend_genesis_util({})
 
+    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     @unittest.skipIf(DISABLE_POET1_SGX, 'SGX currently behind simulator')
     def test_poet1_genesis(self):
         self.extend_genesis_util({'LedgerType': 'poet1'})
