@@ -44,6 +44,11 @@ def add_transaction_parser(subparsers, parent_parser):
 
     list_parser = grand_parsers.add_parser('list', epilog=epilog)
     list_parser.add_argument(
+        '--type',
+        type=str,
+        required=False,
+        help='the name of the transaction type')
+    list_parser.add_argument(
         '--url',
         type=str,
         help='the URL to the validator')
@@ -149,6 +154,7 @@ def do_transaction(args):
 
 
 def print_trans_info(args, web_client, tsctids):
+    txn_type = args.type
     info_fields_mapping = {
         # These map the names of the keys in the returned ordered dict
         # to the field names that will be displayed.
@@ -156,25 +162,39 @@ def print_trans_info(args, web_client, tsctids):
         "InBlock": "BLOCK",
         "Status": "STATUS",
         "TransactionType": "TXNTYPE",
-        "Update": {
-            "HttpPort": "HTTPPORT",
-            "NetHost": "HOST",
-            "NetPort": "UDPPORT",
-            "Name": "NAME",
-            "NodeIdentifier": "NODE",
-            "Verb": "VERB"
-        }
     }
     format_mapping = {"TRANS": '20',
                       "BLOCK": '20',
                       "STATUS": '8',
-                      "TXNTYPE": '30',
-                      "HTTPPORT": '8',
-                      "HOST": '15',
-                      "UDPPORT": '8',
-                      "NAME": '15',
-                      "NODE": '35',
-                      "VERB": '5'}
+                      "TXNTYPE": '30'}
+
+    if txn_type == "/EndpointRegistryTransaction":
+        info_fields_mapping = {
+            # These map the names of the keys in the returned ordered dict
+            # to the field names that will be displayed.
+            "Identifier": "TRANS",
+            "InBlock": "BLOCK",
+            "Status": "STATUS",
+            "TransactionType": "TXNTYPE",
+            "Update": {
+                "HttpPort": "HTTPPORT",
+                "NetHost": "HOST",
+                "NetPort": "UDPPORT",
+                "Name": "NAME",
+                "NodeIdentifier": "NODE",
+                "Verb": "VERB"
+            }
+        }
+        format_mapping = {"TRANS": '20',
+                          "BLOCK": '20',
+                          "STATUS": '8',
+                          "TXNTYPE": '30',
+                          "HTTPPORT": '8',
+                          "HOST": '15',
+                          "UDPPORT": '8',
+                          "NAME": '15',
+                          "NODE": '35',
+                          "VERB": '5'}
 
     fields = [f for f in format_mapping.iterkeys()]
     if args.format == 'default':
@@ -182,22 +202,26 @@ def print_trans_info(args, web_client, tsctids):
             "{:^" + f_length + "}" for f_length
             in format_mapping.itervalues()
         ])
-
         print format_string.format(*fields)
         for txn_id in tsctids:
             trans_dict = get_trans_info(web_client,
                                         txn_id,
+                                        txn_type,
                                         info_fields_mapping)
-            print format_string.format(*[trans_dict[f] for f in fields])
+            if trans_dict is not None:
+                print format_string.format(*[trans_dict[f] for f in fields])
 
     elif args.format == 'csv':
         try:
             writer = csv.writer(sys.stdout)
             writer.writerow(fields)
             for txn_id in tsctids:
-                trans_dict = get_trans_info(web_client, txn_id,
+                trans_dict = get_trans_info(web_client,
+                                            txn_id,
+                                            txn_type,
                                             info_fields_mapping)
-                field_values = [trans_dict[f] for f in fields]
+                if trans_dict is not None:
+                    field_values = [trans_dict[f] for f in fields]
                 writer.writerow(field_values)
         except csv.Error as e:
             raise CliException(e)
@@ -205,9 +229,12 @@ def print_trans_info(args, web_client, tsctids):
     elif args.format == 'json' or args.format == 'yaml':
         json_dict = []
         for txn_id in tsctids:
-            trans_dict = get_trans_info(web_client, txn_id,
+            trans_dict = get_trans_info(web_client,
+                                        txn_id,
+                                        txn_type,
                                         info_fields_mapping)
-            json_dict.append(trans_dict)
+            if trans_dict is not None:
+                json_dict.append(trans_dict)
         if args.format == 'json':
             print json.dumps(json_dict)
         else:
@@ -218,8 +245,12 @@ def print_trans_info(args, web_client, tsctids):
             "unknown format option: {}".format(args.format))
 
 
-def get_trans_info(web_client, txn_id, info_fields_mapping=None):
+def get_trans_info(web_client, txn_id, txn_type, info_fields_mapping=None):
     trans_info = web_client.get_transaction(txn_id)
+    if txn_type is not None:
+        if trans_info['TransactionType'] != txn_type:
+            return None
+
     trans_info_specified = {}
     if info_fields_mapping is not None:
         for input_key, output_field in info_fields_mapping.iteritems():
