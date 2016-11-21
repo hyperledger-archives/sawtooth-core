@@ -21,7 +21,7 @@ import time
 import argparse
 import cbor
 import sawtooth_protobuf.batch_pb2 as batch_pb2
-from sawtooth.client.stream import Stream
+from sawtooth_sdk.client.stream import Stream
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(

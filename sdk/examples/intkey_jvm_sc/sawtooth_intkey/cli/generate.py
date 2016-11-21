@@ -24,8 +24,6 @@ import cProfile
 import argparse
 import sawtooth_protobuf.transaction_pb2 as transaction_pb2
 import sawtooth_protobuf.batch_pb2 as batch_pb2
-from sawtooth.client.transaction import Transaction
-from sawtooth.client.transaction import TransactionHeader
 from sawtooth_protobuf import jvm_sc_pb2
 
 sys.path.insert(0, os.path.join(
@@ -123,11 +121,23 @@ def get_address(namespace, data):
     addr = jvm_sc_prefix + hashlib.sha512(data).hexdigest()
     return addr
 
+def generate_word():
+    return ''.join([random.choice(string.ascii_letters) for _ in xrange(0, 6)])
+
+def generate_word_list(count):
+    if os.path.isfile('/usr/share/dict/words'):
+        with open('/usr/share/dict/words', 'r') as fd:
+            return [x.strip() for x in fd.readlines()[0:count]]
+    else:
+        return [generate_word() for _ in xrange(0, count)]
+
 
 def do_generate(args):
     private_key = pybitcointools.random_key()
     public_key = pybitcointools.encode_pubkey(
         pybitcointools.privkey_to_pubkey(private_key), "hex")
+
+    words = generate_word_list(args.pool_size)
 
     txns = []
     batches = []
@@ -152,7 +162,7 @@ def do_generate(args):
     addresses = []
     for i in range(20):
         if len(txns) < 10:
-            key = str(random.randint(0, 1000))
+            key = random.choice(words)
             keys.append(key)
             value = str(random.randint(0, 1000))
             key_addr = get_address("intkey", key)
