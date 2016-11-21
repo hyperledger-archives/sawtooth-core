@@ -87,7 +87,7 @@ class CachedDatabase(object):
     Takes Database subclasses as argument to constructor
     and implements a caching mechanism
     Attributes:
-        _database: journal.database.database.Database instance of subclass
+        _database: instance of subclass
         _cache: dict
         _rlock: Threading.Rlock
     """
