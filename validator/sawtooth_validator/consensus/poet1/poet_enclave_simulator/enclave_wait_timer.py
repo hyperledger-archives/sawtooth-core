@@ -27,6 +27,8 @@ class EnclaveWaitTimer(object):
 
     Attributes:
         request_time (float): The request time
+        validator_address (str): The address of validator that created
+            the wait timer.
         duration (float): The amount of time from request_time when timer
             expires
         previous_certificate_id (str): The id of the previous
@@ -54,6 +56,8 @@ class EnclaveWaitTimer(object):
 
         timer = \
             EnclaveWaitTimer(
+                validator_address=str(deserialized_timer.get(
+                    'validator_address')),
                 duration=float(deserialized_timer.get(
                     'duration')),
                 previous_certificate_id=str(deserialized_timer.get(
@@ -68,12 +72,14 @@ class EnclaveWaitTimer(object):
         return timer
 
     def __init__(self,
+                 validator_address,
                  duration,
                  previous_certificate_id,
                  local_mean,
                  signature=None,
                  serialized_timer=None):
         self.request_time = time.time()
+        self.validator_address = validator_address
         self.duration = duration
         self.previous_certificate_id = previous_certificate_id
         self.local_mean = local_mean
@@ -99,6 +105,7 @@ class EnclaveWaitTimer(object):
         if self._serialized is None:
             timer_dict = {
                 'request_time': self.request_time,
+                'validator_address': self.validator_address,
                 'duration': self.duration,
                 'previous_certificate_id': self.previous_certificate_id,
                 'local_mean': self.local_mean

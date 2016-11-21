@@ -35,6 +35,8 @@ class EnclaveWaitCertificate(object):
             certificate.
         local_mean (float): The local mean wait time based on the
             history of certs
+        validator_address (str): The address of the validator that created the
+            wait certificate.
         block_digest (str): The digest of the block for which this wait
             certificate was generated
         signature (str): Signature of the certificate using PoET private key
@@ -66,6 +68,7 @@ class EnclaveWaitCertificate(object):
                 previous_certificate_id=wait_timer.previous_certificate_id,
                 local_mean=wait_timer.local_mean,
                 request_time=wait_timer.request_time,
+                validator_address=wait_timer.validator_address,
                 nonce=nonce,
                 block_digest=block_digest)
 
@@ -94,6 +97,8 @@ class EnclaveWaitCertificate(object):
                 local_mean=float(deserialized_certificate.get('local_mean')),
                 request_time=float(
                     deserialized_certificate.get('request_time')),
+                validator_address=str(
+                    deserialized_certificate.get('validator_address')),
                 nonce=str(deserialized_certificate.get('nonce')),
                 block_digest=str(deserialized_certificate.get(
                     'block_digest')),
@@ -117,6 +122,7 @@ class EnclaveWaitCertificate(object):
                  previous_certificate_id,
                  local_mean,
                  request_time,
+                 validator_address,
                  nonce,
                  block_digest,
                  signature=None,
@@ -125,6 +131,7 @@ class EnclaveWaitCertificate(object):
         self.previous_certificate_id = str(previous_certificate_id)
         self.local_mean = float(local_mean)
         self.request_time = float(request_time)
+        self.validator_address = str(validator_address)
         self.nonce = str(nonce)
         self.block_digest = str(block_digest)
         self.signature = signature
@@ -152,6 +159,7 @@ class EnclaveWaitCertificate(object):
                 'previous_certificate_id': self.previous_certificate_id,
                 'local_mean': self.local_mean,
                 'request_time': self.request_time,
+                'validator_address': self.validator_address,
                 'nonce': self.nonce,
                 'block_digest': self.block_digest
             }

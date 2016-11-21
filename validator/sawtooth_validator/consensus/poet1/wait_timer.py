@@ -20,10 +20,6 @@ from gossip.common import NullIdentifier
 LOGGER = logging.getLogger(__name__)
 
 
-class WaitTimerError(Exception):
-    pass
-
-
 class WaitTimer(object):
     """Wait timers represent a random duration incorporated into a wait
     certificate.
@@ -44,6 +40,8 @@ class WaitTimer(object):
             certs.
         request_time (float): The request time.
         duration (float): The duration of the wait timer.
+        validator_address (str): The address of the validator that created the
+            wait timer
     """
     minimum_wait_time = 1.0
     target_wait_time = 30.0
@@ -94,11 +92,15 @@ class WaitTimer(object):
         return avg_mean / avg_wait
 
     @classmethod
-    def create_wait_timer(cls, certificates):
+    def create_wait_timer(cls,
+                          validator_address,
+                          certificates):
         """Creates a wait timer in the enclave and then constructs
         a WaitTimer object.
 
         Args:
+            validator_address (str): A string representing the address of the
+                validator creating the wait timer.
             certificates (list or tuple): A historical list of certificates.
 
         Returns:
@@ -113,6 +115,7 @@ class WaitTimer(object):
         # WaitTimer object
         enclave_timer = \
             cls.poet_enclave.create_wait_timer(
+                validator_address,
                 previous_certificate_id,
                 local_mean)
         timer = cls(enclave_timer)
@@ -153,6 +156,7 @@ class WaitTimer(object):
         self.local_mean = float(enclave_timer.local_mean)
         self.request_time = float(enclave_timer.request_time)
         self.duration = float(enclave_timer.duration)
+        self.validator_address = str(enclave_timer.validator_address)
 
         self._enclave_wait_timer = enclave_timer
         self._expires = self.request_time + self.duration + 0.1

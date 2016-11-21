@@ -32,10 +32,6 @@ from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
     .enclave_wait_timer import EnclaveWaitTimer
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
     .enclave_wait_certificate import EnclaveWaitCertificate
-from sawtooth_validator.consensus.poet1.signup_info import SignupInfoError
-from sawtooth_validator.consensus.poet1.wait_timer import WaitTimerError
-from sawtooth_validator.consensus.poet1.wait_certificate \
-    import WaitCertificateError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -208,22 +204,17 @@ class _PoetEnclaveSimulator(object):
         proof_data_dict = json2dict(signup_info.proof_data)
         verification_report = proof_data_dict.get('verification_report')
         if verification_report is None:
-            raise \
-                SignupInfoError(
-                    'Verification report is missing from proof data')
+            raise ValueError('Verification report is missing from proof data')
 
         signature = proof_data_dict.get('signature')
         if signature is None:
-            raise \
-                SignupInfoError(
-                    'Signature is missing from proof data')
+            raise ValueError('Signature is missing from proof data')
 
         if not signing.verify(
                 verification_report,
                 signature,
                 cls._report_public_key):
-            raise \
-                SignupInfoError('Verification report signature is invalid')
+            raise ValueError('Verification report signature is invalid')
 
         verification_report_dict = json2dict(verification_report)
 
@@ -233,12 +224,12 @@ class _PoetEnclaveSimulator(object):
             verification_report_dict.get('pseManifestStatus')
         if pse_manifest_status is None:
             raise \
-                SignupInfoError(
+                ValueError(
                     'Verification report does not contain a PSE manifest '
                     'status')
         if pse_manifest_status != 'OK':
             raise \
-                SignupInfoError(
+                ValueError(
                     'PSE manifest status is {} (i.e., not OK)'.format(
                         pse_manifest_status))
 
@@ -248,7 +239,7 @@ class _PoetEnclaveSimulator(object):
             verification_report_dict.get('pseManifestHash')
         if pse_manifest_hash is None:
             raise \
-                SignupInfoError(
+                ValueError(
                     'Verification report does not contain a PSE manifest '
                     'hash')
 
@@ -259,7 +250,7 @@ class _PoetEnclaveSimulator(object):
 
         if pse_manifest_hash != expected_pse_manifest_hash:
             raise \
-                SignupInfoError(
+                ValueError(
                     'PSE manifest hash {0} does not match {1}'.format(
                         pse_manifest_hash,
                         expected_pse_manifest_hash))
@@ -270,19 +261,19 @@ class _PoetEnclaveSimulator(object):
             verification_report_dict.get('isvEnclaveQuoteStatus')
         if enclave_quote_status is None:
             raise \
-                SignupInfoError(
+                ValueError(
                     'Verification report does not contain an enclave quote '
                     'status')
         if enclave_quote_status != 'OK':
             raise \
-                SignupInfoError(
+                ValueError(
                     'Enclave quote status is {} (i.e., not OK)'.format(
                         enclave_quote_status))
 
         enclave_quote = verification_report_dict.get('isvEnclaveQuoteBody')
         if enclave_quote is None:
             raise \
-                SignupInfoError(
+                ValueError(
                     'Verification report does not contain an enclave quote')
 
         # Verify that the enclave quote contains a report body with the value
@@ -298,13 +289,11 @@ class _PoetEnclaveSimulator(object):
             json2dict(base64.b64decode(enclave_quote))
         report_body = enclave_quote_dict.get('report_body')
         if report_body is None:
-            raise \
-                SignupInfoError(
-                    'Enclave quote does not contain a report body')
+            raise ValueError('Enclave quote does not contain a report body')
 
         if report_body != expected_report_body:
             raise \
-                SignupInfoError(
+                ValueError(
                     'Enclave quote report body {0} does not match {1}'.format(
                         report_body,
                         expected_report_body))
@@ -315,7 +304,7 @@ class _PoetEnclaveSimulator(object):
         nonce = verification_report_dict.get('nonce')
         if nonce is None:
             raise \
-                SignupInfoError(
+                ValueError(
                     'Verification report does not have a nonce')
 
         # NOTE - this check is currently not performed as a transaction
@@ -324,21 +313,24 @@ class _PoetEnclaveSimulator(object):
         #
         # if nonce != most_recent_wait_certificate_id:
         #     raise \
-        #         SignupInfoError(
+        #         ValueError(
         #             'Attestation evidence payload nonce {0} does not match '
         #             'most-recently-committed wait certificate ID {1}'.format(
         #                 nonce,
         #                 most_recent_wait_certificate_id))
 
     @classmethod
-    def create_wait_timer(cls, previous_certificate_id, local_mean):
+    def create_wait_timer(cls,
+                          validator_address,
+                          previous_certificate_id,
+                          local_mean):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
             # or unseal_signup_data)
             if cls._poet_private_key is None:
                 raise \
-                    WaitTimerError(
+                    ValueError(
                         'Enclave must be initialized before attempting to '
                         'create a wait timer')
 
@@ -359,6 +351,7 @@ class _PoetEnclaveSimulator(object):
             # Create and sign the wait timer
             wait_timer = \
                 EnclaveWaitTimer(
+                    validator_address=validator_address,
                     duration=duration,
                     previous_certificate_id=previous_certificate_id,
                     local_mean=local_mean)
@@ -388,14 +381,16 @@ class _PoetEnclaveSimulator(object):
                 signature=signature)
 
     @classmethod
-    def create_wait_certificate(cls, block_digest):
+    def create_wait_certificate(cls,
+                                wait_timer,
+                                block_digest):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
             # or unseal_signup_data)
             if cls._poet_private_key is None:
                 raise \
-                    WaitCertificateError(
+                    ValueError(
                         'Enclave must be initialized before attempting to '
                         'create a wait certificate')
 
@@ -411,7 +406,7 @@ class _PoetEnclaveSimulator(object):
             # and we don't worry about the timer having timed out.
             if cls._active_wait_timer is None:
                 raise \
-                    WaitCertificateError(
+                    ValueError(
                         'Enclave active wait timer has not been initialized')
 
             is_not_genesis_block = \
@@ -425,7 +420,7 @@ class _PoetEnclaveSimulator(object):
 
             if is_not_genesis_block and now < expire_time:
                 raise \
-                    WaitCertificateError(
+                    ValueError(
                         'Cannot create wait certificate because timer has '
                         'not expired')
 
@@ -436,7 +431,7 @@ class _PoetEnclaveSimulator(object):
 
             if is_not_genesis_block and time_out_time < now:
                 raise \
-                    WaitCertificateError(
+                    ValueError(
                         'Cannot create wait certificate because timer '
                         'has timed out')
 
@@ -495,7 +490,8 @@ def initialize(**kwargs):
     _PoetEnclaveSimulator.initialize(**kwargs)
 
 
-def create_signup_info(originator_public_key_hash,
+def create_signup_info(validator_address,
+                       originator_public_key_hash,
                        most_recent_wait_certificate_id):
     return \
         _PoetEnclaveSimulator.create_signup_info(
@@ -508,7 +504,7 @@ def deserialize_signup_info(serialized_signup_info):
         serialized_signup_info=serialized_signup_info)
 
 
-def unseal_signup_data(sealed_signup_data):
+def unseal_signup_data(validator_address, sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
 
 
@@ -522,9 +518,10 @@ def verify_signup_info(signup_info,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
 
-def create_wait_timer(previous_certificate_id, local_mean):
+def create_wait_timer(validator_address, previous_certificate_id, local_mean):
     return \
         _PoetEnclaveSimulator.create_wait_timer(
+            validator_address=validator_address,
             previous_certificate_id=previous_certificate_id,
             local_mean=local_mean)
 
@@ -536,9 +533,10 @@ def deserialize_wait_timer(serialized_timer, signature):
             signature=signature)
 
 
-def create_wait_certificate(block_digest):
+def create_wait_certificate(wait_timer, block_digest):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
+            wait_timer=wait_timer,
             block_digest=block_digest)
 
 

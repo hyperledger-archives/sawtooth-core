@@ -17,7 +17,6 @@ import unittest
 
 from gossip.common import NullIdentifier
 from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
-from sawtooth_validator.consensus.poet1.signup_info import SignupInfoError
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
 from utils import create_random_public_key_hash
@@ -45,6 +44,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_basic_create_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -56,6 +56,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_serialized_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
         serialized = signup_info.serialize()
@@ -73,10 +74,13 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_unsealing_data(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
         poet_public_key = \
-            SignupInfo.unseal_signup_data(signup_info.sealed_signup_data)
+            SignupInfo.unseal_signup_data(
+                validator_address='1660 Pennsylvania Avenue NW',
+                sealed_signup_data=signup_info.sealed_signup_data)
 
         self.assertEqual(
             signup_info.poet_public_key,
@@ -86,6 +90,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -93,16 +98,17 @@ class TestSignupInfo(unittest.TestCase):
             signup_info.check_valid(
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
-        except SignupInfoError as e:
+        except ValueError as e:
             self.fail('Error with SignupInfo: {}'.format(e))
 
     def test_non_matching_originator_public_key(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
-        with self.assertRaises(SignupInfoError):
+        with self.assertRaises(ValueError):
             signup_info.check_valid(
                 originator_public_key_hash=self._another_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
@@ -110,16 +116,17 @@ class TestSignupInfo(unittest.TestCase):
     def test_non_matching_most_recent_wait_certificate_id(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
         # NOTE - this requires that the signup information check for validity
         #        actually make this check.  Currently the check is not done.
         #        Once the check is added back, it should raise a
-        #        SignupInfoError exception and this test will fail, alerting
+        #        ValueError exception and this test will fail, alerting
         #        you that you need to wrap the call in self.assertRaises
         #
-        # with self.assertRaises(SignupInfoError):
+        # with self.assertRaises(ValueError):
         signup_info.check_valid(
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id='SomeFunkyCertificateID')

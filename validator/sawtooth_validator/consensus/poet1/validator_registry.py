@@ -21,7 +21,6 @@ from journal import transaction
 from journal import object_store
 from journal.messages import transaction_message
 from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
-from sawtooth_validator.consensus.poet1.signup_info import SignupInfoError
 
 from gossip.common import NullIdentifier
 from sawtooth.exceptions import InvalidTransactionError
@@ -175,7 +174,7 @@ class Update(object):
             self.signup_info.check_valid(
                 originator_public_key_hash=public_key_hash,
                 most_recent_wait_certificate_id='0' * 16)
-        except SignupInfoError as error:
+        except ValueError as error:
             raise InvalidTransactionError(
                 'Invalid Signup Info: {0}, Reason: {1}'.format(
                     self.signup_info,

@@ -23,8 +23,6 @@ from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
 from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
 from sawtooth_validator.consensus.poet1.wait_certificate \
     import WaitCertificate
-from sawtooth_validator.consensus.poet1.wait_certificate \
-    import WaitCertificateError
 from gossip.common import NullIdentifier
 from utils import create_random_public_key_hash
 
@@ -48,66 +46,104 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_before_create_signup_info(self):
         # Make sure that trying to create a wait certificate before signup
         # information is provided causes an error
-        with self.assertRaises(WaitCertificateError):
-            WaitCertificate.create_wait_certificate("Reader's Digest")
+        with self.assertRaises(ValueError):
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Reader's Digest")
 
     def test_create_wait_certificate_before_create_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NullIdentifier)
 
-        with self.assertRaises(WaitCertificateError):
-            WaitCertificate.create_wait_certificate("Reader's Digest")
+        with self.assertRaises(ValueError):
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Reader's Digest")
 
     def test_create_wait_certificate_before_wait_timer_expires(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NullIdentifier)
 
         # Create a wait certificate for the genesis block so that we can
         # create another wait certificate that has to play by the rules.
-        wt = WaitTimer.create_wait_timer([])
-        wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
+        wc = \
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Reader's Digest")
 
-        wt = WaitTimer.create_wait_timer([wc])
-        with self.assertRaises(WaitCertificateError):
-            wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[wc])
+        with self.assertRaises(ValueError):
+            wc = \
+                WaitCertificate.create_wait_certificate(
+                    wait_timer=None,
+                    block_digest="Reader's Digest")
 
     def test_create_wait_certificate_after_wait_timer_timed_out(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NullIdentifier)
 
         # Create a wait certificate for the genesis block so that we can
         # create another wait certificate that has to play by the rules.
-        wt = WaitTimer.create_wait_timer([])
-        wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
+        wc = \
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Reader's Digest")
 
-        wt = WaitTimer.create_wait_timer([wc])
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[wc])
         while not wt.has_expired(time.time()):
             time.sleep(1)
         time.sleep(10)
 
-        with self.assertRaises(WaitCertificateError):
-            wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+        with self.assertRaises(ValueError):
+            wc = \
+                WaitCertificate.create_wait_certificate(
+                    wait_timer=None,
+                    block_digest="Reader's Digest")
 
     def test_create_wait_certificate(self):
         # Need to create signup information and wait timer first
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
-        wt = WaitTimer.create_wait_timer([])
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
         while not wt.has_expired(time.time()):
             time.sleep(1)
 
         # Now we can create a wait certificate and verify that it correlates
         # to the wait timer we just created
-        wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+        wc = \
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Reader's Digest")
 
         self.assertIsNotNone(wc)
 
@@ -117,6 +153,7 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertAlmostEquals(wc.local_mean, wt.local_mean)
         self.assertAlmostEquals(wc.request_time, wt.request_time)
         self.assertAlmostEquals(wc.duration, wt.duration)
+        self.assertEqual(wc.validator_address, wt.validator_address)
         self.assertEqual(wc.block_digest, "Reader's Digest")
         self.assertIsNotNone(wc.signature)
         self.assertIsNotNone(wc.identifier)
@@ -125,13 +162,19 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertTrue(wc.is_valid([], signup_info.poet_public_key))
 
         # Create another wait certificate and verify it is valid also
-        wt = WaitTimer.create_wait_timer([wc])
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[wc])
         while not wt.has_expired(time.time()):
             time.sleep(1)
 
         # Now we can create a wait certificate and verify that it correlates
         # to the wait timer we just created
-        another_wc = WaitCertificate.create_wait_certificate("Pepto Bismol")
+        another_wc = \
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Pepto Bismol")
 
         self.assertTrue(
             another_wc.is_valid([wc], signup_info.poet_public_key))
@@ -140,15 +183,22 @@ class TestWaitCertificate(unittest.TestCase):
         # Need to create signup information and wait timer first
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
-        wt = WaitTimer.create_wait_timer([])
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
         while not wt.has_expired(time.time()):
             time.sleep(1)
 
         # Now we can create a wait certificate and serialize
-        wc = WaitCertificate.create_wait_certificate("Reader's Digest")
+        wc = \
+            WaitCertificate.create_wait_certificate(
+                wait_timer=None,
+                block_digest="Reader's Digest")
 
         dumped = wc.dump()
 
@@ -160,8 +210,7 @@ class TestWaitCertificate(unittest.TestCase):
         wc_copy = \
             WaitCertificate.wait_certificate_from_serialized(
                 dumped.get('SerializedCertificate'),
-                dumped.get('Signature'),
-                signup_info.poet_public_key)
+                dumped.get('Signature'))
 
         self.assertEquals(
             wc.previous_certificate_id,
@@ -169,6 +218,7 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertAlmostEquals(wc.local_mean, wc_copy.local_mean)
         self.assertAlmostEquals(wc.request_time, wc_copy.request_time)
         self.assertAlmostEquals(wc.duration, wc_copy.duration)
+        self.assertEqual(wc.validator_address, wc_copy.validator_address)
         self.assertEqual(wc.block_digest, wc_copy.block_digest)
         self.assertEqual(wc.signature, wc_copy.signature)
         self.assertEqual(wc.identifier, wc_copy.identifier)

@@ -46,33 +46,48 @@ class TestWaitTimer(unittest.TestCase):
     def test_create_wait_timer_with_invalid_certificate_list(self):
         # Make sure that invalid certificate lists cause error
         with self.assertRaises(TypeError):
-            wait_timer.WaitTimer.create_wait_timer(None)
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=None)
 
         with self.assertRaises(TypeError):
-            wait_timer.WaitTimer.create_wait_timer(dict())
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=dict())
 
         with self.assertRaises(TypeError):
-            wait_timer.WaitTimer.create_wait_timer(1)
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=1)
 
         with self.assertRaises(TypeError):
-            wait_timer.WaitTimer.create_wait_timer(1.0)
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=1.0)
 
         with self.assertRaises(TypeError):
-            wait_timer.WaitTimer.create_wait_timer('Not a valid list')
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates='Not a valid list')
 
     def test_create_wait_timer_before_create_signup_info(self):
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
-        with self.assertRaises(wait_timer.WaitTimerError):
-            wait_timer.WaitTimer.create_wait_timer([])
+        with self.assertRaises(ValueError):
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
 
-        with self.assertRaises(wait_timer.WaitTimerError):
-            wait_timer.WaitTimer.create_wait_timer(tuple())
+        with self.assertRaises(ValueError):
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=tuple())
 
     def test_create_wait_timer(self):
         # Need to create signup information first
         signup_info = \
             SignupInfo.create_signup_info(
+                validator_address='1060 W Addison Street',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NullIdentifier)
 
@@ -80,7 +95,9 @@ class TestWaitTimer(unittest.TestCase):
 
         # An empty certificate list should result in a local mean that is
         # the target wait time
-        wt = wait_timer.WaitTimer.create_wait_timer([])
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
@@ -90,8 +107,11 @@ class TestWaitTimer(unittest.TestCase):
         self.assertGreaterEqual(
             wt.duration,
             wait_timer.WaitTimer.minimum_wait_time)
+        self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
-        wt = wait_timer.WaitTimer.create_wait_timer(tuple())
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=tuple())
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
@@ -101,6 +121,7 @@ class TestWaitTimer(unittest.TestCase):
         self.assertGreaterEqual(
             wt.duration,
             wait_timer.WaitTimer.minimum_wait_time)
+        self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
         # Ensure that the enclave is set back to initial state
         SignupInfo.poet_enclave = reload(poet_enclave)
@@ -108,20 +129,28 @@ class TestWaitTimer(unittest.TestCase):
 
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
-        with self.assertRaises(wait_timer.WaitTimerError):
-            wait_timer.WaitTimer.create_wait_timer([])
+        with self.assertRaises(ValueError):
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
 
-        with self.assertRaises(wait_timer.WaitTimerError):
-            wait_timer.WaitTimer.create_wait_timer(tuple())
+        with self.assertRaises(ValueError):
+            wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=tuple())
 
         # Initialize the enclave with sealed signup data
-        SignupInfo.unseal_signup_data(signup_info.sealed_signup_data)
+        SignupInfo.unseal_signup_data(
+            validator_address='1660 Pennsylvania Avenue NW',
+            sealed_signup_data=signup_info.sealed_signup_data)
 
         stake_in_the_sand = time.time()
 
         # An empty certificate list should result in a local mean that is
         # the target wait time
-        wt = wait_timer.WaitTimer.create_wait_timer([])
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
@@ -131,8 +160,11 @@ class TestWaitTimer(unittest.TestCase):
         self.assertGreaterEqual(
             wt.duration,
             wait_timer.WaitTimer.minimum_wait_time)
+        self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
-        wt = wait_timer.WaitTimer.create_wait_timer(tuple())
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1600 Pennsylvania Avenue NW',
+                certificates=tuple())
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
@@ -142,6 +174,7 @@ class TestWaitTimer(unittest.TestCase):
         self.assertGreaterEqual(
             wt.duration,
             wait_timer.WaitTimer.minimum_wait_time)
+        self.assertEqual(wt.validator_address, '1600 Pennsylvania Avenue NW')
 
     def test_compute_local_mean(self):
         # Make sure that invalid certificate lists cause error
@@ -171,16 +204,21 @@ class TestWaitTimer(unittest.TestCase):
     def test_has_expired(self):
         # Need to create signup information first
         SignupInfo.create_signup_info(
+            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NullIdentifier)
 
         # Verify that a timer doesn't expire before its creation time
-        wt = wait_timer.WaitTimer.create_wait_timer([])
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
         self.assertFalse(wt.has_expired(wt.request_time - 1))
 
         # Create a timer and when it has expired, verify that the duration is
         # not greater than actual elapsed time.
-        wt = wait_timer.WaitTimer.create_wait_timer([])
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
 
         while not wt.has_expired(time.time()):
             time.sleep(1)
@@ -188,7 +226,9 @@ class TestWaitTimer(unittest.TestCase):
         self.assertLessEqual(wt.duration, time.time() - wt.request_time)
 
         # Tampering with the duration should not affect wait timer expiration
-        wt = wait_timer.WaitTimer.create_wait_timer([])
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
 
         assigned_duration = wt.duration
         wt.duration = 0
@@ -200,7 +240,9 @@ class TestWaitTimer(unittest.TestCase):
 
         # Tampering with the request time should not affect wait timer
         # expiration
-        wt = wait_timer.WaitTimer.create_wait_timer([])
+        wt = wait_timer.WaitTimer.create_wait_timer(
+                validator_address='1060 W Addison Street',
+                certificates=[])
         assigned_request_time = wt.request_time
         wt.request_time -= wt.duration
 

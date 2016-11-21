@@ -30,6 +30,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate(self):
         wait_timer = \
             EnclaveWaitTimer(
+                validator_address='1600 Pennsylvania Avenue NW',
                 duration=3.14159,
                 previous_certificate_id='Smart, Maxwell Smart',
                 local_mean=2.71828)
@@ -52,6 +53,9 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
         self.assertAlmostEquals(
             wait_timer.local_mean,
             wait_certificate.local_mean)
+        self.assertEqual(
+            wait_timer.validator_address,
+            wait_certificate.validator_address)
         self.assertEqual(wait_certificate.nonce, 'Eeny, meeny, miny, moe.')
         self.assertEqual(
             wait_certificate.block_digest,
@@ -66,16 +70,14 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
         previous_certificate_id = wait_certificate.previous_certificate_id
         other_wait_certificate = \
             EnclaveWaitCertificate(
-                request_time=wait_certificate.request_time,
                 duration=wait_certificate.duration,
                 previous_certificate_id=previous_certificate_id,
                 local_mean=wait_certificate.local_mean,
+                request_time=wait_certificate.request_time,
+                validator_address='1600 Pennsylvania Avenue NW',
                 nonce='Eeny, meeny, miny, moe.',
                 block_digest=wait_certificate.block_digest)
 
-        self.assertAlmostEquals(
-            wait_certificate.request_time,
-            other_wait_certificate.request_time)
         self.assertAlmostEquals(
             wait_certificate.duration,
             other_wait_certificate.duration)
@@ -85,6 +87,12 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
         self.assertAlmostEquals(
             wait_certificate.local_mean,
             other_wait_certificate.local_mean)
+        self.assertAlmostEquals(
+            wait_certificate.request_time,
+            other_wait_certificate.request_time)
+        self.assertEqual(
+            wait_certificate.validator_address,
+            other_wait_certificate.validator_address)
         self.assertEqual(wait_certificate.nonce, other_wait_certificate.nonce)
         self.assertEqual(
             wait_certificate.block_digest,
@@ -94,6 +102,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
     def test_serialize_wait_certificate(self):
         wait_timer = \
             EnclaveWaitTimer(
+                validator_address='1600 Pennsylvania Avenue NW',
                 duration=3.14159,
                 previous_certificate_id='Smart, Maxwell Smart',
                 local_mean=2.71828)
@@ -109,6 +118,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
     def test_deserialized_wait_certificate(self):
         wait_timer = \
             EnclaveWaitTimer(
+                validator_address='1600 Pennsylvania Avenue NW',
                 duration=3.14159,
                 previous_certificate_id='Smart, Maxwell Smart',
                 local_mean=2.71828)
@@ -141,6 +151,9 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
         self.assertAlmostEquals(
             wait_certificate.local_mean,
             copy_wait_certificate.local_mean)
+        self.assertEqual(
+            wait_certificate.validator_address,
+            copy_wait_certificate.validator_address)
         self.assertEqual(
             wait_certificate.nonce,
             copy_wait_certificate.nonce)
