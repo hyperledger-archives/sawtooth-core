@@ -83,6 +83,12 @@ public class IntegerKeyHandler implements TransactionHandler {
   @Override
   public void apply(TransactionProcessRequest transactionRequest,
                     State state) throws InvalidTransactionException, InternalError {
+    /*
+     * Integer Key state will be stored at an address of the name
+     * with the key being the name and the value an Integer. so { "foo": 20, "bar": 26}
+     * would be a possibility if the hashing algorithm hashes foo and bar to the
+     * same address
+     */
     try {
       HashMap updateMap = this.mapper.readValue(
               transactionRequest.getPayload().toByteArray(), HashMap.class);
@@ -111,61 +117,75 @@ public class IntegerKeyHandler implements TransactionHandler {
       }
       Collection<String> addresses = new ArrayList<String>(0);
       if (verb.equals("set")) {
-        // if it is a 'set', get the address and see if there is a value there
+        // The ByteString is cbor encoded dict/hashmap
         Map<String, ByteString> possibleAddressValues = state.get(Arrays.asList(address));
-        // The String representation of the state 'value'
-        String stateValue = Utils.stringByteArrayToString(
-                possibleAddressValues.get(address).toByteArray());
-
-        if (!(stateValue.length() == 0)) {
-          throw new InvalidTransactionException(
-                  "Verb is 'set' but Name already in state, Name: "
-                          + name + " Value: "
-                          + Utils.stringByteArrayToString(
-                                  possibleAddressValues.get(address).toByteArray()));
+        byte[] stateValueRep = possibleAddressValues.get(address).toByteArray();
+        HashMap stateValue = null;
+        if (stateValueRep.length > 0) {
+          stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
+          if (stateValue.containsKey(name)) {
+            throw new InvalidTransactionException("Verb is set but Name already in state, "
+                    + "Name: " + name + " Value: " + stateValue.get(name).toString());
+          }
         }
+
         if (value < 0) {
           throw new InvalidTransactionException("Verb is set but Value is less than 0");
         }
         // 'set' passes checks so store it in the state
+        if (stateValue == null) {
+          stateValue = new HashMap();
+        }
+        HashMap setValue = stateValue;
+        setValue.put(name, value);
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
-                ByteString.copyFrom(value.toString().getBytes("UTF-8")));
+                ByteString.copyFrom(this.mapper.writeValueAsBytes(setValue)));
 
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
         addresses = state.set(addressValues);
       }
       if (verb.equals("inc")) {
-        Map<String, ByteString> possibleValue = state.get(Arrays.asList(address));
-        String stateValue = Utils.stringByteArrayToString(possibleValue.get(address).toByteArray());
-        if (stateValue.length() == 0) {
+        Map<String, ByteString> possibleValues = state.get(Arrays.asList(address));
+        byte[] stateValueRep = possibleValues.get(address).toByteArray();
+        if (stateValueRep.length == 0) {
+          throw new InvalidTransactionException("Verb is inc but Name is not in state");
+        }
+        HashMap stateValue = this.mapper.readValue(
+                stateValueRep, HashMap.class);
+        if (!stateValue.containsKey(name)) {
           throw new InvalidTransactionException("Verb is inc but Name is not in state");
         }
 
         // Increment the value in state by value
-        Integer newValue = Integer.decode(stateValue) + value;
+        HashMap incValue = stateValue;
+        incValue.put(name, Integer.decode(stateValue.get(name).toString()) + value);
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
-                ByteString.copyFrom(Integer.toString(newValue).getBytes("UTF-8")));
+                ByteString.copyFrom(this.mapper.writeValueAsBytes(incValue)));
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
         addresses = state.set(addressValues);
       }
       if (verb.equals("dec")) {
         Map<String, ByteString> possibleAddressResult = state.get(Arrays.asList(address));
-        String stateValue = Utils.stringByteArrayToString(
-                possibleAddressResult.get(address).toByteArray());
+        byte[] stateValueRep = possibleAddressResult.get(address).toByteArray();
 
-        if (stateValue.length() == 0) {
+        if (stateValueRep.length == 0) {
           throw new InvalidTransactionException("Verb is dec but Name is not in state");
         }
-        if (Integer.decode(stateValue) - value < 0) {
+        HashMap stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
+        if (!stateValue.containsKey(name)) {
+          throw new InvalidTransactionException("Verb is dec but Name is not in state");
+        }
+        if (Integer.decode(stateValue.get(name).toString()) - value < 0) {
           throw new InvalidTransactionException("Dec would set Value to less than 0");
         }
+        HashMap decValue = stateValue;
         // Decrement the value in state by value
-        Integer newValue = Integer.decode(stateValue) - value;
+        decValue.put(name, Integer.decode(stateValue.get(name).toString()) - value);
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
-                ByteString.copyFrom(Integer.toString(newValue).getBytes("UTF-8")));
+                ByteString.copyFrom(this.mapper.writeValueAsBytes(decValue)));
 
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
         addresses = state.set(addressValues);
@@ -178,7 +198,7 @@ public class IntegerKeyHandler implements TransactionHandler {
 
     } catch (IOException ioe) {
       ioe.printStackTrace();
-      throw new InternalError("State error");
+      throw new InternalError("State error" + ioe.toString());
     }
 
   }
