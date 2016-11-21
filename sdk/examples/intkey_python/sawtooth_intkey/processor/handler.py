@@ -68,33 +68,62 @@ class IntkeyTransactionHandler(object):
         address = self._namespace_prefix + hashlib.sha512(name).hexdigest()
 
         entries_list = state.get([address])
-        state_value = entries_list[0].data if len(entries_list) != 0 else None
-        LOGGER.info("STATE VALUE %s", state_value)
-        if verb in ['inc', 'dec'] and (state_value is None):
+        state_value_rep = entries_list[0].data \
+            if len(entries_list) != 0 else None
+        LOGGER.info("STATE VALUE %s", state_value_rep)
+        if verb in ['inc', 'dec'] and (state_value_rep is None):
             raise InvalidTransaction("inc/dec require existing value")
 
         if verb == 'set':
-            if state_value is not None:
-                raise InvalidTransaction(
-                    "Verb was 'set', but already exists: "
-                    "Name: {0}, Value {1}".format(name, state_value))
+            state_value = None
+            if state_value_rep is not None:
+                state_value = cbor.loads(state_value_rep)
+                if name in state_value:
+                    raise InvalidTransaction(
+                        "Verb was 'set', but already exists: "
+                        "Name: {}, Value {}".format(name,
+                                                    state_value.get(name))
+                    )
+
+            if state_value is None:
+                data = {}
+            else:
+                data = {k: v for k, v in state_value.iteritems()}
+
+            data[name] = value
             addresses = list(state.set(
-                [StateEntry(address=address, data=str(value))]))
+                [StateEntry(address=address, data=cbor.dumps(data))]
+            ))
         elif verb == 'inc':
+            state_value = cbor.loads(state_value_rep)
+            if name not in state_value:
+                raise InvalidTransaction(
+                    "Verb was 'inc' but Name, {}, not in state.".format(name)
+                )
             if int(value) < 0:
                 raise InvalidTransaction(
                     "Verb was 'inc', but Value was negative: {}".format(value))
+            state_value[name] = int(state_value[name]) + int(value)
             addresses = list(state.set(
                 [StateEntry(address=address,
-                            data=str(int(state_value) + int(value)))]))
+                            data=cbor.dumps(state_value))]
+            ))
         elif verb == 'dec':
-            if int(state_value) - int(value) < 0:
+            state_value = cbor.loads(state_value_rep)
+            if name not in state_value:
                 raise InvalidTransaction(
-                    "Verb was 'dec', but Value would give gone negative")
+                    "Verb was 'dec', but Name, {}, not in state.".format(name)
+                )
+
+            if int(state_value[name]) - int(value) < 0:
+                raise InvalidTransaction(
+                    "Verb was 'dec', but resulting value would be negative")
+            state_value[name] = int(state_value[name]) - int(value)
             addresses = list(state.set(
                 [StateEntry(
                     address=address,
-                    data=str(int(state_value) - int(value)))]).result())
+                    data=cbor.dumps(state_value))]
+            ))
         else:
             # This would be a programming error.
             raise InternalError('unhandled Verb')
