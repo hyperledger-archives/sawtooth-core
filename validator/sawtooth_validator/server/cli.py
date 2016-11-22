@@ -20,7 +20,7 @@ from sawtooth_validator.server.core import Validator
 
 
 def main(args=sys.argv[1:]):
-    validator = Validator()
+    validator = Validator('0.0.0.0:40000')
     validator.start()
 
     try:

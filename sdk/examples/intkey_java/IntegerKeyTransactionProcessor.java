@@ -24,7 +24,7 @@ public class IntegerKeyTransactionProcessor {
    */
   public static void main(String[] args) {
 
-    TransactionProcessor transactionProcessor = new TransactionProcessor("localhost", 40000);
+    TransactionProcessor transactionProcessor = new TransactionProcessor(args[0], 40000);
     transactionProcessor.addHandler(new IntegerKeyHandler());
     Thread thread = new Thread(transactionProcessor);
     thread.start();
