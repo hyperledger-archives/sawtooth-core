@@ -70,7 +70,8 @@ setup(
     author='Intel Corporation',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['sawtooth-core', 'colorlog', 'pybitcointools'],
+    install_requires=['sawtooth-core', 'colorlog', 'pybitcointools',
+                      'beautifulsoup4'],
     entry_points={
         'console_scripts': [
             'btp = sawtooth_bond.btp_cli:main_wrapper',
