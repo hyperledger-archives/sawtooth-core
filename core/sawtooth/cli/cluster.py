@@ -31,6 +31,10 @@ from sawtooth.manage.subproc import SubprocessNodeController
 from sawtooth.manage.wrap import WrappedNodeController
 from sawtooth.manage.vnm import ValidatorNetworkManager
 
+
+from sawtooth.cli.stats import run_stats
+
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -46,6 +50,7 @@ def add_cluster_parser(subparsers, parent_parser):
     add_cluster_stop_parser(cluster_subparsers, parent_parser)
     add_cluster_extend_parser(cluster_subparsers, parent_parser)
     add_cluster_logs_parser(cluster_subparsers, parent_parser)
+    add_cluster_stats_parser(cluster_subparsers, parent_parser)
 
 
 def add_cluster_status_parser(subparsers, parent_parser):
@@ -103,6 +108,13 @@ def add_cluster_extend_parser(subparsers, parent_parser):
         type=int,
         default=1)
 
+def add_cluster_stats_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('stats', parents=[parent_parser])
+
+    parser.add_argument(
+        '--node_name',
+        help='node to connect to'
+    )
 
 def add_cluster_logs_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('logs', parents=[parent_parser])
@@ -126,6 +138,8 @@ def do_cluster(args):
         do_cluster_extend(args)
     elif args.cluster_command == 'logs':
         do_cluster_logs(args)
+    elif args.cluster_command == 'stats':
+        do_cluster_stats(args)
     else:
         raise CliException("invalid cluster command: {}".format(
             args.cluster_command))
@@ -234,12 +248,20 @@ def do_cluster_start(args):
     except ManagementError as e:
         raise CliException(str(e))
 
+    # Check for runnings nodes. If found, raise exception with message to use
+    # sawtooth cluster extend command to add nodes to running network.
+    for i in xrange(0, args.count):
+        node_name = "validator-{:0>3}".format(i)
+        if node_name in existing_nodes and vnm.is_running(node_name):
+            print "Already running: {}".format(node_name)
+            raise CliException ("Please use 'sawtooth cluster extend' to add more nodes.")
+
     for i in xrange(0, args.count):
         node_name = "validator-{:0>3}".format(i)
 
-        if node_name in existing_nodes and vnm.is_running(node_name):
-            print "Already running: {}".format(node_name)
-            continue
+        # if node_name in existing_nodes and vnm.is_running(node_name):
+        #     print "Already running: {}".format(node_name)
+        #     continue
 
         # genesis is true for the first node
         genesis = (i == 0)
@@ -253,7 +275,7 @@ def do_cluster_start(args):
         print "Starting: {}".format(node_name)
         node_command_generator.start(node_args)
 
-        state["Nodes"][node_name] = {"Status": "Running", "Index": i}
+        state["Nodes"][node_name] = {"Status": "Running", "Index": i, "HttpPort": str(http_port), "GossipPort": str(gossip_port) }
 
     save_state(state)
 
@@ -403,7 +425,9 @@ def do_cluster_extend(args):
                                   gossip_port=gossip_port, genesis=genesis)
         node_command_generator.start(node_args)
 
-        state["Nodes"][node_name] = {"Status": "Running", "Index": j}
+        # state["Nodes"][node_name] = {"Status": "Running", "Index": j}
+        # state["Nodes"][node_name] = {"Status": "Running", "Index": i, "Url": "test_URL"}
+        state["Nodes"][node_name] = {"Status": "Running", "Index": i, "HttpPort": str(http_port), "GossipPort": str(gossip_port) }
 
     save_state(state)
 
@@ -438,3 +462,42 @@ def do_cluster_logs(args):
                 raise CliException(str(cpe))
     else:
         print "logs not implemented for {}".format(state['Manage'])
+
+
+def do_cluster_stats(args):
+    # pylint: disable=redefined-variable-type
+    file_name = \
+        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
+                     "state.yaml")
+    # Get current expected state
+    if os.path.isfile(file_name):
+        with open(file_name, 'r') as state_file:
+            state = yaml.load(state_file)
+    else:
+        raise CliException("Missing state file")
+
+    if state['Manage'] is None or state['Manage'] == 'docker':
+        node_controller = DockerNodeController()
+    elif state['Manage'] == 'daemon':
+        node_controller = DaemonNodeController()
+    else:
+        raise CliException('invalid management'
+                           ' type: {}'.format(state['Manage']))
+
+    node_command_generator = SimpleNodeCommandGenerator()
+
+    vnm = ValidatorNetworkManager(
+        node_controller=node_controller,
+        node_command_generator=node_command_generator)
+
+    nodes = state["Nodes"]
+    for node_name in nodes:
+        try:
+            node_ip = vnm.get_ip(node_name)
+            break
+        except ManagementError as e:
+            raise CliException(str(e))
+
+    node_url = "http://" + node_ip.strip(' \t\n\r') + ":" + nodes[node_name]["HttpPort"]
+
+    run_stats(node_url)
