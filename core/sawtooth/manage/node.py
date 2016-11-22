@@ -22,17 +22,21 @@ class NodeArguments(object):
     Structure to house arguments exposed by our validator cli
     '''
     def __init__(self, node_name, http_port=None, gossip_port=None,
-                 genesis=False):
+                 currency_home=None, config_files=None, genesis=False):
         '''
         Args:
             node_name (str):
             http_port (int):
             gossip_port (int):
+            currency_home (str):
+            config_files (list<str>):
             genesis (bool):
         '''
         self.node_name = node_name
         self.http_port = http_port
         self.gossip_port = gossip_port
+        self.currency_home = currency_home
+        self.config_files = [] if config_files is None else config_files
         self.genesis = genesis
 
 

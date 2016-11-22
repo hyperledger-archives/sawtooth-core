@@ -26,6 +26,7 @@ from sawtooth.manage.docker import DockerNodeController
 from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.wrap import WrappedNodeController
 from sawtooth.manage.vnm import ValidatorNetworkManager
 
 LOGGER = logging.getLogger(__name__)
@@ -68,6 +69,10 @@ def add_cluster_start_parser(subparsers, parent_parser):
         help='style of validator management',
         choices=['subprocess', 'daemon', 'docker'],
         default='subprocess')
+
+    parser.add_argument('--wrap', nargs='?', const=None, default=False,
+                        help='use WRAP as CURRENCYHOME (create/use a temp '
+                             'directory if WRAP is unspecified)')
 
 
 def add_cluster_stop_parser(subparsers, parent_parser):
@@ -128,8 +133,10 @@ def save_state(state):
         yaml.dump(state, state_file, default_flow_style=False)
 
 
-def get_node_controller(state):
+def get_node_controller(state, args):
     # pylint: disable=redefined-variable-type
+
+    # Get base controller:
     node_controller = None
     if state['Manage'] == 'subprocess':
         node_controller = SubprocessNodeController()
@@ -140,6 +147,29 @@ def get_node_controller(state):
     else:
         raise CliException('invalid management type:'
                            ' {}'.format(state['Manage']))
+
+    # Optionally decorate with WrappedNodeController
+    args_wrap = False if not hasattr(args, 'wrap') else args.wrap
+    if 'Wrap' not in state.keys():
+        # if wrap has not been set in state, set it
+        state['Wrap'] = args_wrap
+    else:
+        # state already knows about a wrapper
+        if args_wrap is not False and args_wrap != state['Wrap']:
+            raise CliException("Already wrapped to %s." % state["Wrap"])
+    if state['Wrap'] is not False:
+        # either args or state have indicated a WrappedNodeController
+        if 'ManageWrap' not in state.keys():
+            state['ManageWrap'] = None
+        node_controller = WrappedNodeController(
+            node_controller, data_dir=state['Wrap'],
+            clean_data_dir=state['ManageWrap'])
+        if state['Wrap'] is None:
+            state['Wrap'] = node_controller.get_data_dir()
+            state['ManageWrap'] = True
+        print '{} wrapped to {}'.format(args.cluster_command, state['Wrap'])
+
+    # Return out construction:
     return node_controller
 
 
@@ -164,7 +194,7 @@ def do_cluster_start(args):
 
     state["DesiredState"] = "Running"
 
-    node_controller = get_node_controller(state)
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
@@ -217,7 +247,7 @@ def do_cluster_start(args):
 def do_cluster_stop(args):
     state = load_state()
 
-    node_controller = get_node_controller(state)
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
@@ -273,7 +303,7 @@ def do_cluster_stop(args):
 def do_cluster_status(args):
     state = load_state()
 
-    node_controller = get_node_controller(state)
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
@@ -307,7 +337,7 @@ def do_cluster_status(args):
 def do_cluster_extend(args):
     state = load_state()
 
-    node_controller = get_node_controller(state)
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
