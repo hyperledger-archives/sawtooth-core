@@ -37,7 +37,7 @@ public class Intkey {
     }
     if (!(getString(args.get(2)).equals("Not found"))) {
 
-      HashMap<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(2));
+      Map<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(2));
       if (check.containsKey(getString(args.get(0)))) {
         throw new Exception("Cannot reset a key.");
       }
@@ -61,7 +61,7 @@ public class Intkey {
     if (args.size() < 3) {
       throw new Exception("Wrong number of args. Should have 3.");
     }
-    HashMap<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(1));
+    Map<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(1));
     if (!check.containsKey(getString(args.get(0)))) {
       throw new Exception("Cannot reset a key.");
     }
@@ -91,7 +91,7 @@ public class Intkey {
       throw new Exception("Wrong number of args. Should have 3.");
     }
 
-    HashMap<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(1));
+    Map<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(1));
     if (!check.containsKey(getString(args.get(0)))) {
       throw new Exception("Key does not exist");
     }

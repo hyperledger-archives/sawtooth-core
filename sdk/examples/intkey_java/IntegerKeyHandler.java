@@ -120,7 +120,7 @@ public class IntegerKeyHandler implements TransactionHandler {
         // The ByteString is cbor encoded dict/hashmap
         Map<String, ByteString> possibleAddressValues = state.get(Arrays.asList(address));
         byte[] stateValueRep = possibleAddressValues.get(address).toByteArray();
-        HashMap stateValue = null;
+        Map<String, Integer> stateValue = null;
         if (stateValueRep.length > 0) {
           stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
           if (stateValue.containsKey(name)) {
@@ -134,9 +134,9 @@ public class IntegerKeyHandler implements TransactionHandler {
         }
         // 'set' passes checks so store it in the state
         if (stateValue == null) {
-          stateValue = new HashMap();
+          stateValue = new HashMap<String, Integer>();
         }
-        HashMap setValue = stateValue;
+        Map<String,Integer> setValue = stateValue;
         setValue.put(name, value);
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
@@ -151,15 +151,15 @@ public class IntegerKeyHandler implements TransactionHandler {
         if (stateValueRep.length == 0) {
           throw new InvalidTransactionException("Verb is inc but Name is not in state");
         }
-        HashMap stateValue = this.mapper.readValue(
+        Map<String, Integer> stateValue = this.mapper.readValue(
                 stateValueRep, HashMap.class);
         if (!stateValue.containsKey(name)) {
           throw new InvalidTransactionException("Verb is inc but Name is not in state");
         }
 
         // Increment the value in state by value
-        HashMap incValue = stateValue;
-        incValue.put(name, Integer.decode(stateValue.get(name).toString()) + value);
+        Map<String, Integer> incValue = stateValue;
+        incValue.put(name, stateValue.get(name) + value);
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
                 ByteString.copyFrom(this.mapper.writeValueAsBytes(incValue)));
@@ -173,16 +173,16 @@ public class IntegerKeyHandler implements TransactionHandler {
         if (stateValueRep.length == 0) {
           throw new InvalidTransactionException("Verb is dec but Name is not in state");
         }
-        HashMap stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
+        Map<String, Integer> stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
         if (!stateValue.containsKey(name)) {
           throw new InvalidTransactionException("Verb is dec but Name is not in state");
         }
-        if (Integer.decode(stateValue.get(name).toString()) - value < 0) {
+        if (stateValue.get(name) - value < 0) {
           throw new InvalidTransactionException("Dec would set Value to less than 0");
         }
-        HashMap decValue = stateValue;
+        Map<String, Integer> decValue = stateValue;
         // Decrement the value in state by value
-        decValue.put(name, Integer.decode(stateValue.get(name).toString()) - value);
+        decValue.put(name, stateValue.get(name) - value);
         Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
                 address,
                 ByteString.copyFrom(this.mapper.writeValueAsBytes(decValue)));
@@ -200,7 +200,5 @@ public class IntegerKeyHandler implements TransactionHandler {
       ioe.printStackTrace();
       throw new InternalError("State error" + ioe.toString());
     }
-
   }
-
 }

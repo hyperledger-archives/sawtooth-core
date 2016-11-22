@@ -20,7 +20,7 @@ import sawtooth.sdk.processor.TransactionProcessor;
 public class JvmScTransactionProcessor{
 
   /**
-   * the method that returnsa byte[] from an object.
+   * the method that runs a Thread with a TransactionProcessor in it.
    */
   public static void main(String[] args) {
 
