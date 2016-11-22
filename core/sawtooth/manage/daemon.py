@@ -43,9 +43,25 @@ class DaemonNodeController(NodeController):
 
     def _construct_args(self, node_name, http_port, gossip_port, genesis):
         validator_path = find_txnvalidator()
-
+        cmds = []   # Array to store multiple commands
         args = []
 
+        # Build the command to create genesis blocks if necessary
+        if genesis:
+            bin_path = '/project/sawtooth-core/bin'
+
+            args = ['echo "{\\\"InitialConnectivity\\\": 0}" > ${CURRENCYHOME}/data/%s.json;' % node_name, 'ShellTrue']
+            cmds.append(args)
+            args = []
+            args = ['%s/sawtooth keygen %s; ' % (bin_path, node_name), 'ShellTrue']
+            cmds.append(args)
+            args = []
+            subarg = '%s/sawtooth admin poet0-genesis -vv --node %s; exec' % (bin_path, node_name)
+            args = [subarg, 'ShellTrue']
+            cmds.append(args)
+            args = []
+
+        # Build command to start validator
         # Fix for windows, where script are not executable
         if os.name == 'nt' and not validator_path.endswith('.exe'):
             args.append(sys.executable)
@@ -63,12 +79,17 @@ class DaemonNodeController(NodeController):
 
         args.extend(['--pidfile', pid_file])
 
-        if genesis:
-            args.append('--genesis')
+        # if genesis:
+        #     args.append('--genesis')
 
         args.append('--daemon')
-
-        return args
+        args.extend(['--keyfile', '/home/vagrant/.sawtooth/keys/validator-000.wif'])  # Get keyfile properly
+        if genesis:
+            currency_home = os.environ['CURRENCYHOME']
+            args.extend(['--config', '{}/data/validator-000.json'.format(currency_home)])
+        args.append('ShellFalse')   # Last value in array tells popen whether or  not to use boolean arg "shell=True"
+        cmds.append(args)
+        return cmds
 
     def _join_args(self, args):
         formatted_args = []
@@ -87,15 +108,22 @@ class DaemonNodeController(NodeController):
         http_port = node_args.http_port
         gossip_port = node_args.gossip_port
         genesis = node_args.genesis
-        args = self._construct_args(node_name, http_port, gossip_port,
+        cmds = self._construct_args(node_name, http_port, gossip_port,
                                     genesis)
-        LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
+        LOGGER.debug('starting %s: %s', node_name, self._join_args(cmds[0]))
 
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
 
-        handle = subprocess.Popen(args, env=env)
-        handle.communicate()
+        for cmd in cmds:
+            print "command: " + str(cmd)
+            if cmd.pop() == "ShellTrue":
+                shell_true = True
+            else:
+                shell_true = False
+
+            handle = subprocess.Popen(cmd, env=env, shell=shell_true)
+            handle.communicate()
 
     def stop(self, node_name):
         pid = self._get_validator_pid(node_name)
