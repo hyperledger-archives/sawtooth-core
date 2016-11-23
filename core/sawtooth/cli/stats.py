@@ -57,6 +57,10 @@ class SawtoothStats(object):
         self.signal_handler = SignalHandler()
         self.stats_modules.append(self.signal_handler)
 
+        sawtooth_stats_config = config['SawtoothStats']
+        self.max_loop_count = sawtooth_stats_config.get('max_loop_count', 0)
+        self.loop_count = 0
+
         modules = [
             ValidatorStatsManager,
             SystemStatsManager,
@@ -91,6 +95,12 @@ class SawtoothStats(object):
         # report
         for module in self.stats_modules:
             module.report()
+
+        # loop_counter
+        if self.max_loop_count > 0:
+            self.loop_count += 1
+            if self.loop_count > self.max_loop_count:
+                reactor.stop()
 
     def signal_snapshot_write(self, signum, frame):
         self.signal_handler.sig_user1 = True
@@ -182,6 +192,9 @@ def default_config():
     config['EndpointManager']['interval'] = 10
     config['SawtoothStats'] = {}
     config['SawtoothStats']['interval'] = 3
+    config['SawtoothStats']['max_loop_count'] = 0
+    config['StatsPrint'] = {}
+    config['StatsPrint']['print_all'] = False
     return config
 
 
@@ -194,7 +207,13 @@ def update_config(config, opts):
     return config
 
 
-def run_stats(url, config_opts=None):
+def update_config_dict(new_conf, default_conf):
+    for key1 in set(new_conf) & set(default_conf):
+        for key2 in set(new_conf[key1]) & set(default_conf[key1]):
+            default_conf[key1][key2] = new_conf[key1][key2]
+
+
+def run_stats(url, config_opts=None, config_dict=None):
     try:
         config = default_config()
 
@@ -203,6 +222,9 @@ def run_stats(url, config_opts=None):
             config['EndpointManager']['urls'] = [url]
         else:
             update_config(config, config_opts)
+
+        if config_dict is not None:
+            update_config_dict(config_dict, config)
 
         epm = EndpointManager(config['EndpointManager']['urls'])
         ss = SawtoothStats(epm, config)
