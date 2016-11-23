@@ -35,18 +35,18 @@ class SubprocessNodeController(NodeController):
         }
         self._nodes = {}
 
-    def _construct_start_command(self, node_config):
+    def _construct_start_command(self, node_args):
         host = self._host_name
-        node_name = node_config.node_name
-        http_port = node_config.http_port
-        gossip_port = node_config.gossip_port
+        node_name = node_args.node_name
+        http_port = node_args.http_port
+        gossip_port = node_args.gossip_port
         cmd = get_executable_script('txnvalidator')
         if self._verbose is True:
             cmd += ['-vv']
         cmd += ['--node', node_name]
         cmd += ['--listen', "{}:{}/TCP http".format(host, http_port)]
         cmd += ['--listen', "{}:{}/UDP gossip".format(host, gossip_port)]
-        if node_config.genesis:
+        if node_args.genesis:
             # Create and indicate special config file
             config_dir = self._base_config['ConfigDirectory']
             config_file = 'initial_node.json'
@@ -57,7 +57,7 @@ class SubprocessNodeController(NodeController):
             cmd += ['--conf-dir', config_dir, '--config', config_file]
         return cmd
 
-    def _get_out_err(self, node_config):
+    def _get_out_err(self, node_args):
         return [sys.stdout, sys.stderr]
 
     def is_running(self, node_name):
@@ -87,15 +87,15 @@ class SubprocessNodeController(NodeController):
             self._nodes.pop(node_name, None)
         return ret_val
 
-    def do_genesis(self, node_config):
+    def do_genesis(self, node_args):
         '''
         Creates a key, then uses this key to author a genesis block.  The node
-        corresponding to node_config must be initially available on the network
+        corresponding to node_args must be initially available on the network
         in order to serve this genesis block.
         Args:
-            node_config (NodeConfig):
+            node_args (NodeArguments):
         '''
-        node_name = node_config.node_name
+        node_name = node_args.node_name
         if self.is_running(node_name) is False:
             # Create key for initial validator
             key_dir = self._base_config['KeyDirectory']
@@ -116,19 +116,19 @@ class SubprocessNodeController(NodeController):
             proc = subprocess.Popen(cmd)
             proc.wait()
 
-    def start(self, node_config):
+    def start(self, node_args):
         '''
         Start a node if it is not already running.
         Args:
-            node_config (NodeConfig):
+            node_args (NodeArguments):
         '''
-        node_name = node_config.node_name
+        node_name = node_args.node_name
         if self.is_running(node_name) is False:
-            cmd = self._construct_start_command(node_config)
+            cmd = self._construct_start_command(node_args)
             # Execute popen and store the process handle
             env = os.environ.copy()
             env['PYTHONPATH'] = os.pathsep.join(sys.path)
-            [out, err] = self._get_out_err(node_config)
+            [out, err] = self._get_out_err(node_args)
             handle = subprocess.Popen(cmd, stdout=out, stderr=err, env=env)
             handle.poll()
             if handle.returncode is None:

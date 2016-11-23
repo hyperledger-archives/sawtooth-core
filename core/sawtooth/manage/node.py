@@ -17,9 +17,19 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
-class NodeConfig(object):
+class NodeArguments(object):
+    '''
+    Structure to house arguments exposed by our validator cli
+    '''
     def __init__(self, node_name, http_port=None, gossip_port=None,
                  genesis=False):
+        '''
+        Args:
+            node_name (str):
+            http_port (int):
+            gossip_port (int):
+            genesis (bool):
+        '''
         self.node_name = node_name
         self.http_port = http_port
         self.gossip_port = gossip_port
@@ -30,10 +40,10 @@ class NodeController(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def start(self, node_config):
+    def start(self, node_args):
         '''
         Args:
-            node_config (NodeConfig):
+            node_args (NodeArguments):
         '''
         raise NotImplementedError
 
@@ -66,16 +76,16 @@ class NodeCommand(object):
 
 
 class StartCommand(NodeCommand):
-    def __init__(self, node_config):
+    def __init__(self, node_args):
         '''
         Args:
-            node_config (NodeConfig):
+            node_args (NodeArguments):
         '''
         super(StartCommand, self).__init__()
-        self._node_config = node_config
+        self._node_args = node_args
 
     def execute(self, controller):
-        controller.start(self._node_config)
+        controller.start(self._node_args)
 
 
 class StopCommand(NodeCommand):
