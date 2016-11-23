@@ -135,11 +135,15 @@ def local_main(config, windows_service=False, daemonized=False):
             warnings.warn('Unknown consensus type %s' % consensus_type)
             sys.exit(1)
 
+        permissioned_validators =\
+            config.get("WhitelistOfPermissionedValidators")
+
         journal = Journal(
             gossip.LocalNode,
             gossip,
             gossip.dispatcher,
             consensus,
+            permissioned_validators,
             stat_domains,
             min_txn_per_block,
             max_txn_per_block,

@@ -83,7 +83,7 @@ class TestWebApi(unittest.TestCase):
             gossip,
             gossip.dispatcher,
             DevModeConsensus(),
-            stat_domains,
+            stat_domains=stat_domains,
             data_directory=path)
         return (gossip, journal, stat_domains)
 
