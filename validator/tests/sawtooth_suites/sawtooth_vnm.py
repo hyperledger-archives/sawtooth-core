@@ -22,7 +22,7 @@ import traceback
 import unittest
 
 from integration.test_convergence import TestConvergence
-from sawtooth.manage.node import NodeConfig
+from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.subproc import SubprocessNodeController
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
@@ -77,7 +77,7 @@ class SawtoothVnmTestSuite(unittest.TestCase):
         os.environ['CURRENCYHOME'] = self._currency_home
         # set up our nodes (suite-internal interface)
         self._nodes = [
-            NodeConfig('v%s' % i, 8800 + i, 9000 + i) for i in range(2)
+            NodeArguments('v%s' % i, 8800 + i, 9000 + i) for i in range(2)
         ]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]

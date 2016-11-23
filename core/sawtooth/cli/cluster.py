@@ -23,7 +23,7 @@ from sawtooth.exceptions import ManagementError
 from sawtooth.manage.daemon import DaemonNodeController
 from sawtooth.manage.docker import DockerNodeController
 from sawtooth.manage.docker_tng import DockerTNGNodeController
-from sawtooth.manage.node import NodeConfig
+from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.vnm import ValidatorNetworkManager
 
@@ -191,9 +191,9 @@ def do_cluster_start(args):
         http_port = 8800 + i
 
         print "Starting: {}".format(node_name)
-        node_config = NodeConfig(node_name, http_port=http_port,
-                                 gossip_port=gossip_port, genesis=genesis)
-        node_command_generator.start(node_config)
+        node_args = NodeArguments(node_name, http_port=http_port,
+                                  gossip_port=gossip_port, genesis=genesis)
+        node_command_generator.start(node_args)
 
         state["Nodes"][node_name] = {"Status": "Running", "Index": i}
 
@@ -376,9 +376,9 @@ def do_cluster_extend(args):
         http_port = 8800 + j
 
         print "Starting: {}".format(node_name)
-        node_config = NodeConfig(node_name, http_port=http_port,
-                                 gossip_port=gossip_port, genesis=genesis)
-        node_command_generator.start(node_config)
+        node_args = NodeArguments(node_name, http_port=http_port,
+                                  gossip_port=gossip_port, genesis=genesis)
+        node_command_generator.start(node_args)
 
         state["Nodes"][node_name] = {"Status": "Running", "Index": j}
 
