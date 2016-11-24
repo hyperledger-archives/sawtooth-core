@@ -79,6 +79,11 @@ class PrevalidationPage(BasePage):
 
         data = request.content.getvalue()
         msg = self._get_message(request)
+
+        # if it is an error response message, returns it immediately
+        if isinstance(msg, dict) and 'status' in msg:
+            return msg
+
         mymsg = copy.deepcopy(msg)
 
         if hasattr(mymsg, 'Transaction') and mymsg.Transaction is not None:

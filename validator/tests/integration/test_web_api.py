@@ -25,6 +25,7 @@ import gossip.signed_object as sign_obj
 from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
     import DevModeConsensus
 from gossip import common
+from gossip import message
 from gossip.gossip_core import Gossip
 from gossip.messages import shutdown_message
 from gossip.node import Node
@@ -56,6 +57,35 @@ class TestThreadPool(object):
 
     def start(self):
         pass
+
+class ErrorMessage(message.Message):
+    """Error messages are sent to a peer node to test unknown error messages.
+    MessageType = "/validator.tests.integration/ErrorMessage"
+    """
+
+    def __init__(self, minfo=None):
+        """Constructor for the ErrorMessage class.
+
+        Args:
+            minfo (dict): Dictionary of values for message fields.
+        """
+        if minfo is None:
+            minfo = {}
+        super(ErrorMessage, self).__init__(minfo)
+
+        # We are not going to hang around waiting for acks to come back
+        self.Error = minfo.get('error', "error")
+
+    def dump(self):
+        """Dumps a dict containing object attributes.
+
+        Returns:
+            dict: A mapping of object attribute names to values.
+        """
+        result = super(ErrorMessage, self).dump()
+        result['error'] = self.Error
+
+        return result
 
 
 class TestWebApi(unittest.TestCase):
@@ -150,6 +180,16 @@ class TestWebApi(unittest.TestCase):
         self.assertEquals(r, data)
         self.assertIn(msg.Identifier, node1.MessageQ.Messages)
         self.assertIn(msg.Identifier, node2.MessageQ.Messages)
+
+        # Create an unknown error message to use
+        msg = ErrorMessage({'error': "an unknown error message"})
+        msg.sign_from_node(validator.gossip.LocalNode)
+        data = msg.dump()
+
+        # Post an unknown error messsage
+        request = self._create_post_request("forward", data)
+        r = yaml.load(forward_page.do_post(request))
+        self.assertEquals(r['status'], http.NOT_FOUND)
 
     def test_web_api_store(self):
         # Test _handlestorerequest
