@@ -15,6 +15,7 @@
 
 
 from sawtooth.manage.node import NodeCommandGenerator
+from sawtooth.manage.node import GenesisCommand
 from sawtooth.manage.node import StartCommand
 from sawtooth.manage.node import StopCommand
 from sawtooth.manage.node import KillCommand
@@ -28,6 +29,9 @@ class SimpleNodeCommandGenerator(NodeCommandGenerator):
         retval = self._commands
         self._commands = []
         return retval
+
+    def genesis(self, node_args):
+        self._commands.append(GenesisCommand(node_args))
 
     def start(self, node_args):
         self._commands.append(StartCommand(node_args))

@@ -87,7 +87,7 @@ class SubprocessNodeController(NodeController):
             self._nodes.pop(node_name, None)
         return ret_val
 
-    def do_genesis(self, node_args):
+    def create_genesis_block(self, node_args):
         '''
         Creates a key, then uses this key to author a genesis block.  The node
         corresponding to node_args must be initially available on the network
