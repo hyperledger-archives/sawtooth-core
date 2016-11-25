@@ -98,6 +98,9 @@ class DaemonNodeController(NodeController):
         pid = self._get_validator_pid(node_name)
         os.kill(pid, signal.SIGKILL)
 
+    def kill(self, node_name):
+        self.stop(node_name)
+
     def _get_validator_pid(self, node_name):
         pid_file = os.path.join(self._state_dir, "{}.pid".format(node_name))
 

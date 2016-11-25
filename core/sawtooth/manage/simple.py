@@ -17,6 +17,7 @@
 from sawtooth.manage.node import NodeCommandGenerator
 from sawtooth.manage.node import StartCommand
 from sawtooth.manage.node import StopCommand
+from sawtooth.manage.node import KillCommand
 
 
 class SimpleNodeCommandGenerator(NodeCommandGenerator):
@@ -33,3 +34,6 @@ class SimpleNodeCommandGenerator(NodeCommandGenerator):
 
     def stop(self, node_name):
         self._commands.append(StopCommand(node_name))
+
+    def kill(self, node_name):
+        self._commands.append(KillCommand(node_name))
