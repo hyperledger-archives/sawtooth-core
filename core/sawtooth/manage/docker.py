@@ -158,6 +158,9 @@ class DockerNodeController(NodeController):
                 continue
             LOGGER.debug("command output: %s", str(line))
 
+    def kill(self, node_name):
+        self.stop(node_name)
+
     def _get_state(self):
         args = [
             'docker',

@@ -52,6 +52,10 @@ class NodeController(object):
         raise NotImplementedError
 
     @abstractmethod
+    def kill(self, node_name):
+        raise NotImplementedError
+
+    @abstractmethod
     def get_node_names(self):
         raise NotImplementedError
 
@@ -95,3 +99,12 @@ class StopCommand(NodeCommand):
 
     def execute(self, controller):
         controller.stop(self._node_name)
+
+
+class KillCommand(NodeCommand):
+    def __init__(self, node_name):
+        super(KillCommand, self).__init__()
+        self._node_name = node_name
+
+    def execute(self, controller):
+        controller.kill(self._node_name)
