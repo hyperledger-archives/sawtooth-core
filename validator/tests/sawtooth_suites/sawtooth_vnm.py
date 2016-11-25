@@ -85,7 +85,7 @@ class SawtoothVnmTestSuite(unittest.TestCase):
         print 'creating genesis block...'
         self._nodes[0].genesis = True
         self._node_ctrl = SubprocessNodeController()
-        self._node_ctrl.do_genesis(self._nodes[0])
+        self._node_ctrl.create_genesis_block(self._nodes[0])
         # Launch network (node zero will trigger bootstrapping)
         print 'launching network...'
         for x in self._nodes:

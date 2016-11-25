@@ -79,6 +79,9 @@ class DaemonNodeController(NodeController):
                 formatted_args.append(arg)
         return ' '.join(formatted_args)
 
+    def create_genesis_block(self, node_args):
+        pass
+
     def start(self, node_args):
         node_name = node_args.node_name
         http_port = node_args.http_port

@@ -40,6 +40,14 @@ class NodeController(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def create_genesis_block(self, node_args):
+        '''
+        Args:
+            node_args (NodeArguments):
+        '''
+        raise NotImplementedError
+
+    @abstractmethod
     def start(self, node_args):
         '''
         Args:
@@ -77,6 +85,19 @@ class NodeCommand(object):
 
     def execute(self, controller):
         raise NotImplementedError
+
+
+class GenesisCommand(NodeCommand):
+    def __init__(self, node_args):
+        '''
+        Args:
+            node_args (NodeArguments):
+        '''
+        super(GenesisCommand, self).__init__()
+        self._node_args = node_args
+
+    def execute(self, controller):
+        controller.create_genesis_block(self._node_args)
 
 
 class StartCommand(NodeCommand):
