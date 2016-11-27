@@ -243,14 +243,15 @@ class Journal(object):
                 db_flag = 'c' if os.path.isfile(file_name) else 'n'
                 db_cls = None
                 if db_type in ['shelf', 'cached-shelf']:
-                    from journal.database import shelf_database
+                    from sawtooth_validator.database import shelf_database
                     db_cls = shelf_database.ShelfDatabase
                 elif db_type in ['lmdb', 'cached-lmdb']:
-                    from journal.database import lmdb_database
+                    from sawtooth_validator.database import lmdb_database
                     db_cls = lmdb_database.LMDBDatabase
                 db = db_cls(file_name, db_flag)
                 if db_type in ['cached-shelf', 'cached-lmdb']:
-                    from journal.database.database import CachedDatabase
+                    from sawtooth_validator.database.database \
+                        import CachedDatabase
                     db = CachedDatabase(db)
                 return journal_store.JournalStore(db)
 

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+
+cd ./sdk/examples/intkey_java
+
+mvn clean compile package
