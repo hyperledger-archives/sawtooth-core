@@ -142,7 +142,7 @@ def do_generate(args):
         txns = []
         for _ in xrange(0, random.randint(1, args.batch_max_size)):
             txn = create_intkey_transaction(
-                verb='set',
+                verb=random.choice(['set', 'inc', 'dec']),
                 name=random.choice(words),
                 value=random.randint(0, 100000),
                 private_key=private_key,

@@ -18,6 +18,9 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+
 import sawtooth.examples.jvmsc.JVMEntry;
 import sawtooth.examples.jvmsc.JVMPayload;
 
@@ -33,8 +36,12 @@ import sawtooth.sdk.protobuf.Entry;
 import sawtooth.sdk.protobuf.TransactionProcessRequest;
 import sawtooth.sdk.protobuf.TransactionProcessorRegisterRequest;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import java.lang.ClassLoader;
 import java.lang.reflect.InvocationTargetException;
@@ -57,13 +64,20 @@ import java.util.logging.Logger;
 
 
 public class JvmScHandler implements TransactionHandler{
+
   private final Logger logger = Logger.getLogger(JvmScHandler.class.getName());
   Map<String, ByteString> cachedBytecode = new HashMap<String,ByteString>();
+  private ObjectMapper mapper;
 
   class JvmClassLoader extends ClassLoader{
     public Class loadClassFromBytes(String name, byte[] bytes) {
       return defineClass(name, bytes, 0, bytes.length);
     }
+  }
+
+  public JvmScHandler() {
+    CBORFactory factory = new CBORFactory();
+    this.mapper = new ObjectMapper(factory);
   }
 
   @Override
@@ -86,6 +100,25 @@ public class JvmScHandler implements TransactionHandler{
     ArrayList<String> namespaces = new ArrayList<String>();
     namespaces.add(Utils.hash512(this.transactionFamilyName().getBytes()).substring(0, 6));
     return namespaces;
+  }
+
+  /**
+   * the method that returns an object from a byte[].
+   */
+  public static Object dataFromByteArray(byte[] data) throws IOException, ClassNotFoundException {
+    ByteArrayInputStream input =  new ByteArrayInputStream(data);
+    ObjectInputStream output = new ObjectInputStream(input);
+    return output.readObject();
+  }
+
+  /**
+   * the method that returnsa byte[] from an object.
+   */
+  public static byte[] dataToByteArray(Object data) throws IOException, ClassNotFoundException {
+    ByteArrayOutputStream input =  new ByteArrayOutputStream();
+    ObjectOutputStream output = new ObjectOutputStream(input);
+    output.writeObject(data);
+    return input.toByteArray();
   }
 
   /**
@@ -154,6 +187,9 @@ public class JvmScHandler implements TransactionHandler{
           getResponse = state.get(address);
           byte[] output = getResponse.get(temp[1]).toByteArray();
           if (output.length > 0) {
+            HashMap updateMap = this.mapper.readValue(
+                    getResponse.get(temp[1]).toByteArray(), HashMap.class);
+            output = dataToByteArray(updateMap);
             args.add(output);
           } else {
             args.add("Not found".getBytes());
@@ -184,7 +220,8 @@ public class JvmScHandler implements TransactionHandler{
       String[] keys = output.keySet().toArray(new String[0]);
 
       for (int i = 0; i < keys.length; i++) {
-        convertedOutput.put(keys[i], ByteString.copyFrom(output.get(keys[i])));
+        Object  toCbor = dataFromByteArray(output.get(keys[i]));
+        convertedOutput.put(keys[i], ByteString.copyFrom(this.mapper.writeValueAsBytes(toCbor)));
       }
 
       //update context --set [{addr, value}, ....]
@@ -202,6 +239,12 @@ public class JvmScHandler implements TransactionHandler{
     } catch (IllegalAccessException ioe) {
       ioe.printStackTrace();
     } catch (NoSuchMethodException ioe) {
+      ioe.printStackTrace();
+    } catch (com.fasterxml.jackson.core.JsonProcessingException ioe) {
+      ioe.printStackTrace();
+    } catch (ClassNotFoundException ioe) {
+      ioe.printStackTrace();
+    } catch (IOException ioe) {
       ioe.printStackTrace();
     }
 
