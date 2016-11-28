@@ -10,4 +10,5 @@ apt-get remove -y \
 
 pip install \
     enum34 \
+    twisted \
     grpcio-tools
