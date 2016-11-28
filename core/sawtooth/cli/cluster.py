@@ -18,17 +18,14 @@ import os
 import subprocess
 import yaml
 
+from sawtooth.cli.exceptions import CliException
 from sawtooth.exceptions import ManagementError
-
 from sawtooth.manage.daemon import DaemonNodeController
 from sawtooth.manage.docker import DockerNodeController
 from sawtooth.manage.docker_tng import DockerTNGNodeController
 from sawtooth.manage.node import NodeConfig
 from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.vnm import ValidatorNetworkManager
-
-from sawtooth.cli.exceptions import CliException
-
 
 LOGGER = logging.getLogger(__name__)
 
