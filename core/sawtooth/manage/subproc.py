@@ -50,7 +50,8 @@ class SubprocessNodeController(NodeController):
             # Create and indicate special config file
             config_dir = self._base_config['ConfigDirectory']
             config_file = 'initial_node.json'
-            os.makedirs(config_dir)
+            if not os.path.isdir(config_dir):
+                os.makedirs(config_dir)
             with open(os.path.join(config_dir, config_file), 'w') as f:
                 f.write(json.dumps(self._v0_cfg, indent=4))
             cmd += ['--conf-dir', config_dir, '--config', config_file]
