@@ -15,12 +15,14 @@
 
 import logging
 import os
+import subprocess
 import yaml
 
 from sawtooth.exceptions import ManagementError
 
 from sawtooth.manage.daemon import DaemonNodeController
 from sawtooth.manage.docker import DockerNodeController
+from sawtooth.manage.docker_tng import DockerTNGNodeController
 from sawtooth.manage.node import NodeConfig
 from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.vnm import ValidatorNetworkManager
@@ -42,6 +44,7 @@ def add_cluster_parser(subparsers, parent_parser):
     add_cluster_status_parser(cluster_subparsers, parent_parser)
     add_cluster_stop_parser(cluster_subparsers, parent_parser)
     add_cluster_extend_parser(cluster_subparsers, parent_parser)
+    add_cluster_logs_parser(cluster_subparsers, parent_parser)
 
 
 def add_cluster_status_parser(subparsers, parent_parser):
@@ -66,8 +69,14 @@ def add_cluster_start_parser(subparsers, parent_parser):
     parser.add_argument(
         '-m', '--manage',
         help='style of validator management',
-        choices=['daemon', 'docker'],
+        choices=['daemon', 'docker', 'docker-tng'],
         default='docker')
+
+    parser.add_argument(
+        '--processors',
+        '-P',
+        help='the transaction processors that are part of node',
+        nargs='*')
 
 
 def add_cluster_stop_parser(subparsers, parent_parser):
@@ -90,6 +99,17 @@ def add_cluster_extend_parser(subparsers, parent_parser):
         default=1)
 
 
+def add_cluster_logs_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('logs', parents=[parent_parser])
+
+    parser.add_argument(
+        'node_names',
+        metavar='NODE_NAME',
+        help='get logs from specific validator nodes. implemented for '
+             'docker-tng',
+        nargs='*')
+
+
 def do_cluster(args):
     if args.cluster_command == 'start':
         do_cluster_start(args)
@@ -99,6 +119,8 @@ def do_cluster(args):
         do_cluster_stop(args)
     elif args.cluster_command == 'extend':
         do_cluster_extend(args)
+    elif args.cluster_command == 'logs':
+        do_cluster_logs(args)
     else:
         raise CliException("invalid cluster command: {}".format(
             args.cluster_command))
@@ -127,6 +149,8 @@ def do_cluster_start(args):
             state["Manage"] = "docker"
         elif args.manage == "daemon":
             state["Manage"] = "daemon"
+        elif args.manage == "docker-tng":
+            state["Manage"] = "docker-tng"
     elif args.manage is not None and state['Manage'] != args.manage\
             and state["DesiredState"] == "Running":
         raise CliException('Cannot use two different Manage types.'
@@ -139,6 +163,9 @@ def do_cluster_start(args):
 
     elif state["Manage"] == 'daemon':
         node_controller = DaemonNodeController()
+    elif state["Manage"] == 'docker-tng':
+        node_controller = DockerTNGNodeController()
+        state['Processors'] = args.processors
     else:
         raise CliException('invalid management type:'
                            ' {}'.format(state["Manage"]))
@@ -199,6 +226,8 @@ def do_cluster_stop(args):
         node_controller = DockerNodeController()
     elif state['Manage'] == 'daemon':
         node_controller = DaemonNodeController()
+    elif state['Manage'] == 'docker-tng':
+        node_controller = DockerTNGNodeController()
     else:
         raise CliException('invalid management'
                            ' type: {}'.format(state['Manage']))
@@ -258,6 +287,8 @@ def do_cluster_status(args):
         node_controller = DockerNodeController()
     elif state['Manage'] == 'daemon':
         node_controller = DaemonNodeController()
+    elif state['Manage'] == 'docker-tng':
+        node_controller = DockerTNGNodeController()
     else:
         raise CliException('invalid management'
                            ' type: {}'.format(state['Manage']))
@@ -309,6 +340,8 @@ def do_cluster_extend(args):
         node_controller = DockerNodeController()
     elif state['Manage'] == 'daemon':
         node_controller = DaemonNodeController()
+    elif state['Manage'] == 'docker-tng':
+        node_controller = DockerTNGNodeController()
     else:
         raise CliException('invalid management'
                            ' type: {}'.format(state['Manage']))
@@ -360,3 +393,30 @@ def do_cluster_extend(args):
         vnm.update()
     except ManagementError as e:
         raise CliException(str(e))
+
+
+def do_cluster_logs(args):
+    state_file = os.path.join(os.path.expanduser('~'),
+                              '.sawtooth',
+                              'cluster',
+                              'state.yaml')
+    state = yaml.load(file(state_file))
+    if state['Manage'] == 'docker-tng':
+        for node_name in args.node_names:
+            try:
+                node_num = node_name[len('validator-'):]
+                processors = [p[len('sawtooth-'):]
+                              for p in state['Processors']]
+                containers = ['sawtooth-tng-cluster-0-' + p + node_num
+                              for p in processors]
+                containers += ['sawtooth-tng-cluster-0-validator-' + node_num]
+                for c in containers:
+                    print "Logs for container: " + c + "of node: " + node_name
+                    cmd = ['docker', 'logs', c]
+                    handle = subprocess.Popen(cmd)
+                    while handle.returncode is None:
+                        handle.poll()
+            except subprocess.CalledProcessError as cpe:
+                raise CliException(str(cpe))
+    else:
+        print "logs not implemented for {}".format(state['Manage'])

@@ -13,20 +13,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
-import time
+FROM ubuntu:xenial
 
-from sawtooth_validator.server.core import Validator
+RUN apt-get update && \
+    apt-get install -y -q \
+        openjdk-8-jdk maven
 
 
-def main(args=sys.argv[1:]):
-    validator = Validator('0.0.0.0:40000')
-    validator.start()
+ARG PROJECT_DIR="/project/sawtooth-core"
 
-    try:
-        while True:
-            time.sleep(1000)
-    except KeyboardInterrupt:
-        print >>sys.stderr, "Interrupted!"
-    finally:
-        validator.stop()
+RUN mkdir -p $PROJECT_DIR/sdk/examples/intkey_java
+
+WORKDIR $PROJECT_DIR/sdk/examples/intkey_java
+
+ENTRYPOINT ["java", "-cp", "target/intkey_java-1.0-SNAPSHOT.jar", "sawtooth.examples.intkey.IntegerKeyTransactionProcessor", "validator"]

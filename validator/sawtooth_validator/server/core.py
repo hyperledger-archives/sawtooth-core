@@ -174,7 +174,7 @@ class ResponseHandler(object):
 
 
 class Validator(object):
-    def __init__(self):
+    def __init__(self, url):
         db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
         LOGGER.debug('database file is %s', db_filename)
 
@@ -201,7 +201,7 @@ class Validator(object):
 
         validator_pb2.add_ValidatorServicer_to_server(service, self._server)
 
-        port_spec = '[::]:40000'
+        port_spec = url
         LOGGER.debug('listening on port %s', port_spec)
         self._server.add_insecure_port(port_spec)
 

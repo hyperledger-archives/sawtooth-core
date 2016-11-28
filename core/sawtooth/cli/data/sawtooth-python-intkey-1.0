@@ -13,20 +13,21 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
-import time
+FROM ubuntu:xenial
 
-from sawtooth_validator.server.core import Validator
+RUN apt-get update && apt-get install -y -q \
+    python \
+    cython \
+    python-pip \
+    python-cbor
 
+RUN pip install \
+        grpcio-tools
 
-def main(args=sys.argv[1:]):
-    validator = Validator('0.0.0.0:40000')
-    validator.start()
+RUN mkdir -p /project/sawtooth-core
 
-    try:
-        while True:
-            time.sleep(1000)
-    except KeyboardInterrupt:
-        print >>sys.stderr, "Interrupted!"
-    finally:
-        validator.stop()
+ARG PROJECT_DIR="/project/sawtooth-core"
+
+WORKDIR $PROJECT_DIR
+
+ENTRYPOINT ./bin/tp_intkey validator
