@@ -43,7 +43,8 @@ RUN apt-get update && apt-get install -y -q \
     python-yaml \
     swig3.0 \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install psutil
 
 RUN ln -s /usr/bin/swig3.0 /usr/bin/swig
 

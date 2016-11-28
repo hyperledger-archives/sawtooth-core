@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install -y -q \
     python-dev \
     python-enum34 \
     python-numpy \
-    python-psutil \
     python-setuptools \
     python-stdeb \
     python-twisted \
@@ -60,7 +59,8 @@ RUN pip install sphinx && \
     pip install sphinx_rtd_theme && \
     pip install ipaddr && \
     pip install networkx && \
-    pip install iso8601
+    pip install iso8601 && \
+    pip install psutil
 
 RUN ln -s /usr/bin/swig3.0 /usr/bin/swig
 
