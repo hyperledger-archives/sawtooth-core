@@ -9,7 +9,7 @@ function package_group_install() {
         pkgs=$(cat $filename \
             | sed -e "s/@KERNEL_RELEASE@/$(uname -r)/")
         if [ "$dist_name" = "ubuntu" ]; then
-            apt-get install -y $pkgs
+            apt-get install -y $pkgs || return 1
         else
             echo "Unsupported distribution: $dist_name" 1>&2
             return 1
