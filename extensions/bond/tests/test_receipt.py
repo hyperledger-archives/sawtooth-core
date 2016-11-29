@@ -18,12 +18,14 @@ import time
 import tempfile
 import datetime
 
+from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
+    import DevModeConsensus
+
 from gossip import signed_object
 from gossip.node import Node
 from gossip.gossip_core import Gossip
 from journal.journal_core import Journal
 from journal.object_store import ObjectStore
-from journal.consensus.dev_mode.dev_mode_consensus import DevModeConsensus
 from sawtooth_bond.txn_family import BondTransaction
 import sawtooth_bond.txn_family as Family
 from sawtooth_bond.updates.identity import CreateParticipantUpdate
