@@ -18,34 +18,23 @@
 module.exports = {
     UpdateTypes : {
         //register updates
-        REGISTER_PARTICIPANT: "/mktplace.transactions.ParticipantUpdate/Register",
-        REGISTER_WALLET: "/mktplace.transactions.AccountUpdate/Register",
-        REGISTER_ASSET_TYPE: "/mktplace.transactions.AssetTypeUpdate/Register",
-        REGISTER_ASSET: "/mktplace.transactions.AssetUpdate/Register",
-        REGISTER_HOLDING: "/mktplace.transactions.HoldingUpdate/Register",
-        REGISTER_SELL_OFFER: "/mktplace.transactions.SellOfferUpdate/Register",
+        REGISTER_PARTICIPANT: "RegisterParticipant",
+        REGISTER_ACCOUNT: "RegisterAccount",
+        REGISTER_ASSET_TYPE: "RegisterAssetType",
+        REGISTER_ASSET: "RegisterAsset",
+        REGISTER_HOLDING: "RegisterHolding",
+        REGISTER_SELL_OFFER: "RegisterSellOffer",
 
         //unregister updates
-        UNREGISTER_PARTICIPANT: "/mktplace.transactions.ParticipantUpdate/Unregister",
-        UNREGISTER_WALLET: "/mktplace.transactions.AccountUpdate/Unregister",
-        UNREGISTER_ASSET_TYPE: "/mktplace.transactions.AssetTypeUpdate/Unregister",
-        UNREGISTER_ASSET: "/mktplace.transactions.AssetUpdate/Unregister",
-        UNREGISTER_HOLDING: "/mktplace.transactions.HoldingUpdate/Unregister",
-        UNREGISTER_SELL_OFFER: "/mktplace.transactions.SellOfferUpdate/Unregister",
-        UNREGISTER_EXCHANGE: "/mktplace.transactions.ExchangeUpdate/Exchange",
+        UNREGISTER_PARTICIPANT: "UnregisterParticipant",
+        UNREGISTER_ACCOUNT: "UnregisterAccount",
+        UNREGISTER_ASSET_TYPE: "UnregisterAssetType",
+        UNREGISTER_ASSET: "UnregisterAsset",
+        UNREGISTER_HOLDING: "UnregisterHolding",
+        UNREGISTER_SELL_OFFER: "UnregisterSellOffer",
 
         //exchange
-        EXCHANGE: "/mktplace.transactions.ExchangeUpdate/Exchange"
-    },
-
-    DescriptionTypes : {
-        PARTICIPANT : "MarketPlace Participant",
-        ASSET_TYPE : "Currency asset type"
-    },
-
-    SignatureFieldNames :{
-        TRANSACTION_SIGNATURE : "Signature",
-        UPDATE_SIGNATURE:"__SIGNATURE__"
+        EXCHANGE: "Exchange"
     },
 
     TRANSACTION_TYPE : "/MarketPlaceTransaction",

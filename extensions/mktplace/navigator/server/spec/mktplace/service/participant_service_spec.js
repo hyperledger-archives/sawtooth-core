@@ -84,36 +84,34 @@ describe('ParticipantService', () => {
                     "id" : "0048b49467ce69f1",
                     "Status": 1,
                     "created": 1461965880000,
-                    'ledgerID': '0048b49467ce69f1',
-                    'updateType': 'ParticipantUpdate/Register',
+                    'ledgerId': '0048b49467ce69f1',
                     'creator': null,
                     'blockid': 'c347a340c65b8fec',
                     'Dependencies':  [],
                     'Nonce': 1461965000,
-                    "Update": {
+                    "Updates": [{
                         "Name" : "participant76",
                         "Description": "",
-                        "UpdateType": "/mktplace.transactions.ParticipantUpdate/Register",
-                    },
+                        "UpdateType": "RegisterParticipant",
+                    }],
                     "address" : "1Fn7MGHMQMjLRgMCqmQXdmRfGXDYSyMfJh",
                 },
                 {
                     "id" : "483598d6336eea3f",
                     "Status" : 1,
                     "created" : 1461965881519,
-                    "ledgerID" : "483598d6336eea3f",
-                    "updateType" : "ParticipantUpdate/Register",
+                    "ledgerId" : "483598d6336eea3f",
                     "creator" : null,
                     "blockid" : "c347a340c65b8fec",
                     "Dependencies" : [ ],
                     "Nonce" : 1461965881,
                     "Signature" : "MEQCIHIZuiFnbHNaEQRrz4pe0UnELpbRY/xXWlx9bIgJlSijAiAEbFZzTYmbAZ8O1VFSC+tKPz3NQmErsjKhd8RIeMwwNg==",
                     "TransactionType" : "/MarketPlaceTransaction",
-                    "Update" : {
+                    "Updates" : [{
                         "Description" : "The Man in Charge",
                         "Name" : "george",
-                        "UpdateType" : "/mktplace.transactions.ParticipantUpdate/Register"
-                    },
+                        "UpdateType" : "RegisterParticipant"
+                    }],
                     "address" : "1CzvqLhi85sSAuxgHQ8aQJjEwBJqbyS7ak"
                 }
             ])))
