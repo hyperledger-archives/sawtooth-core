@@ -32,22 +32,21 @@ describe("ExchangeService", () => {
                     {
                         // annotated transaction fields
                         id: '10dadf6340a1fb14',
-                        ledgerID: '10dadf6340a1fb14',
+                        ledgerId: '10dadf6340a1fb14',
                         blockid: '123456',
                         Status: consts.TransactionStatuses.PENDING,
                         creator: '61b4746fd90b7cb2',
-                        updateType: 'ExchangeUpdate/Exchange',
                         created: Date.now(),
 
                         // Original transaction fields
                         TransactionType: '/MarketPlaceTransaction',
                         Signature: 'some_long_signature_string',
                         Nonce: 59568591313305.586,
-                        Update: {
-                            CreatorID: '61b4746fd90b7cb2',
-                             "UpdateType" : "/mktplace.transactions.ExchangeUpdate/Exchange",
-                             OfferIDList: ['63fab542a3415ce'],
-                        },
+                        Updates: [{
+                            CreatorId: '61b4746fd90b7cb2',
+                             "UpdateType" : "Exchange",
+                             OfferIdList: ['63fab542a3415ce'],
+                        }],
                         sellOffer: {
                             ratio: 1
                         }
@@ -55,22 +54,21 @@ describe("ExchangeService", () => {
                     {
                         // annotated transaction fields
                         id: '873ae7a00c767a57',
-                        ledgerID: '873ae7a00c767a57',
+                        ledgerId: '873ae7a00c767a57',
                         blockid: '123456',
                         Status: consts.TransactionStatuses.COMMITTED,
                         creator: '61b4746fd90b7cb2',
-                        updateType: 'ExchangeUpdate/Exchange',
                         created: Date.now(),
 
                         // Original transaction fields
                         TransactionType: '/MarketPlaceTransaction',
                         Signature: 'some_long_signature_string',
                         Nonce: 59568591313305.586,
-                        Update: {
-                            CreatorID: '61b4746fd90b7cb2',
-                             "UpdateType" : "/mktplace.transactions.ExchangeUpdate/Exchange",
-                             OfferIDList: ['63fab542a3415ce'],
-                        },
+                        Updates: [{
+                            CreatorId: '61b4746fd90b7cb2',
+                             "UpdateType" : "Exchange",
+                             OfferIdList: ['63fab542a3415ce'],
+                        }],
                         sellOffer: {
                             ratio: 1
                         }
@@ -79,22 +77,21 @@ describe("ExchangeService", () => {
                     {
                         // annotated transaction fields
                         id: '7f61dag340a1fb14',
-                        ledgerID: '7f61dag340a1fb14',
+                        ledgerId: '7f61dag340a1fb14',
                         blockid: '123456',
                         Status: consts.TransactionStatuses.PENDING,
                         creator: '61b4746fd90b7cb2',
-                        updateType: 'SellOfferUpdate/Unregister',
                         created: Date.now(),
 
                         // Original transaction fields
                         TransactionType: '/MarketPlaceTransaction',
                         Signature: 'some_long_signature_string',
                         Nonce: 59568591313305.586,
-                        Update: {
-                            CreatorID: '61b4746fd90b7cb2',
-                            ObjectID: '01f4e11442867022',
-                            UpdateType: '/mktplace.transactions.SellOfferUpdate/Unregister',
-                        },
+                        Update: [{
+                            CreatorId: '61b4746fd90b7cb2',
+                            ObjectId: '01f4e11442867022',
+                            UpdateType: 'UnregisterSellOffer',
+                        }],
                         sellOffer: {
                             ratio: 1
                         }
@@ -102,19 +99,18 @@ describe("ExchangeService", () => {
 
                     {
                         id: '63fab542a3415ce',
-                        ledgerID: '63fab542a3415ce',
+                        ledgerId: '63fab542a3415ce',
                         blockid: '111222',
                         Status: consts.TransactionStatuses.PENDING,
                         creator: '3e9c534c01340ee7',
-                        updateType: 'SellOfferUpdate/Register',
                         created: Date.now(),
 
                         TransactionType: '/MarketPlaceTransaction',
                         Signature: 'some_other_long_signature_string',
                         Nonce: 452743709641932.7,
                         Update: {
-                            CreatorID: '3e9c534c01340ee7',
-                            UpdateType: '/mktplace.transactions.SellOfferUpdate/Register'
+                            CreatorId: '3e9c534c01340ee7',
+                            UpdateType: 'RegisterSellOffer'
                         },
                         sellOffer: {
                             ratio: 1
@@ -126,7 +122,6 @@ describe("ExchangeService", () => {
                         "Nonce" : 1457974424.326741,
                         "blockid" : "24624d20478b630d",
                         "creator" : "2fc42f27eaac00e8",
-                        "updateType" : "ExchangeUpdate/Exchange",
                         "sellOffer" : {
                             "object-type" : "SellOffer",
                              "id" : "2d0d68428c4340fb",
@@ -146,18 +141,18 @@ describe("ExchangeService", () => {
                              "name" : "/offer/buyback/east4"
                          },
                          "created" : 1457974424734,
-                         "Update" : {
-                             "UpdateType" : "/mktplace.transactions.ExchangeUpdate/Exchange",
-                             "FinalLiabilityID" : "40e76b0d69027978",
-                             "InitialLiabilityID" : "ea3206b95cc91663",
+                         "Updates" : [{
+                             "UpdateType" : "Exchange",
+                             "FinalLiabilityId" : "40e76b0d69027978",
+                             "InitialLiabilityId" : "ea3206b95cc91663",
                              "InitialCount" : 1,
-                             "OfferIDList" : [
+                             "OfferIdList" : [
                                  "2d0d68428c4340fb"
                              ]
-                         },
+                         }],
                          "InBlock" : "failed",
                          "Dependencies" : [ ],
-                         "ledgerID" : "597d9ca0aad8446d",
+                         "ledgerId" : "597d9ca0aad8446d",
                          "Signature" : "G4LmBOauo+qwvBnCxSwSdgRwki6OZZ+TFB3xHOHUVK7H0aJPkhXCUYnNZhL7aP40MDdY3VzkjxHz1QFjVdPsFws=",
                          "TransactionType" : "/MarketPlaceTransaction"
                     },
@@ -171,13 +166,13 @@ describe("ExchangeService", () => {
                         "Signature":  "IIj0ieIGJJdQ5YATEY6dhzkyPe3DZC1W1hSXNIKpWyLyRbTGDz5qKO5OhAMVssF8F7SKaZ+4R1ufpoCVO3xqgI0=",
                         "Status": consts.TransactionStatuses.COMMITTED,
                         "TransactionType":  "/MarketPlaceTransaction",
-                        "Update": {
-                            "FinalLiabilityID":  "976b0b4fba8ad430",
+                        "Updates": [{
+                            "FinalLiabilityId":  "976b0b4fba8ad430",
                             "InitialCount": 15,
-                            "InitialLiabilityID":  "deb3b939f5230e95",
-                            "OfferIDList": [ ],
-                            "UpdateType":  "/mktplace.transactions.ExchangeUpdate/Exchange"
-                        },
+                            "InitialLiabilityId":  "deb3b939f5230e95",
+                            "OfferIdList": [ ],
+                            "UpdateType":  "Exchange"
+                        }],
                         "blockid":  "55cb01eb05ae3b38",
                         "created": 1466702572323,
                         "creator":  "61b4746fd90b7cb2",

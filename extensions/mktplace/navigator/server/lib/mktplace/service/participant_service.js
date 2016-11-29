@@ -49,15 +49,15 @@ module.exports = {
                 }
 
                 return transaction.findExact(
-                        r.and(r.row('Update')('UpdateType').eq(UpdateTypes.REGISTER_PARTICIPANT),
+                        r.and(r.row('Updates').nth(0)('UpdateType').eq(UpdateTypes.REGISTER_PARTICIPANT),
                               r.row('Status').eq(TransactionStatuses.PENDING),
                               r.row('address').eq(address)),
                         {asArray: true})
                     .then(txns => _.map(txns, (t) => ({
                                                 id: t.id,
-                                                displayName: t.Update.Name,
-                                                name: t.Update.Name,
-                                                description: t.Update.Description,
+                                                displayName: t.Updates[0].Name,
+                                                name: t.Updates[0].Name,
+                                                description: t.Updates[0].Description,
                                                 pending: true
                                               })))
                     .then(_.first);
@@ -78,15 +78,14 @@ module.exports = {
                 var accountsPromise;
                 if(_.isEmpty(party.accounts)) {
                     accountsPromise = transaction.findExact(
-                            {
-                                updateType: "AccountUpdate/Register",
-                                creator: id
-                            },
-                            {asArray: true})
+                        r.and(r.row('Updates').nth(0)('UpdateType').eq(UpdateTypes.REGISTER_ACCOUNT),
+                              r.row.hasFields('creator'),
+                              r.row('creator').eq(id)),
+                        {asArray: true})
                     .then(txns => _.map(txns, t => ({
                         id: t.id,
-                        name: t.Update.Name,
-                        description: t.Update.Description,
+                        name: t.Updates[0].Name,
+                        description: t.Updates[0].Description,
                         pending: true
                     })));
                 } else {

@@ -34,7 +34,10 @@
   msg/Signee
 
   (do-sign [_ m field]
-    (async/to-chan [(direct-sign ec-pair m field)])))
+    (async/to-chan [(direct-sign ec-pair m field)]))
+
+  (public-key [_]
+    (.publicKeyHex bitcoin ec-pair)))
 
 (defn random-key-pair
   "Creates a random key pair."

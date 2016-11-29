@@ -42,10 +42,10 @@ describe('Transaction', () => {
                     "Status": 2 ,
                     "TransactionType":  "/MarketPlaceTransaction" ,
                     "Update": {
-                        "FinalLiabilityID":  "268ab792e3bba9a8" ,
+                        "FinalLiabilityId":  "268ab792e3bba9a8" ,
                         "InitialCount": 1 ,
-                        "InitialLiabilityID":  "6a31fcb038352f6c" ,
-                        "OfferIDList": [
+                        "InitialLiabilityId":  "6a31fcb038352f6c" ,
+                        "OfferIdList": [
                             "847a85055a35873b"
                         ] ,
                         "UpdateType":  "/mktplace.transactions.ExchangeUpdate/Exchange"
@@ -65,14 +65,14 @@ describe('Transaction', () => {
                     "Status":1,
                     "TransactionType":"/MarketPlaceTransaction",
                     "Update": {
-                        "CreatorID":"434c2b48b90e7547",
+                        "CreatorId":"434c2b48b90e7547",
                         "Description":"",
                         "Execution":"ExecuteOncePerParticipant",
-                        "InputID":"e42d9104b6d8839c",
+                        "InputId":"e42d9104b6d8839c",
                         "Maximum":1,
                         "Minimum":1,
                         "Name":"/offer/provision/USD",
-                        "OutputID":"0d731a6ec5c8f1f7",
+                        "OutputId":"0d731a6ec5c8f1f7",
                         "Ratio":1000,
                         "UpdateType":"/mktplace.transactions.SellOfferUpdate/Register"
                     },

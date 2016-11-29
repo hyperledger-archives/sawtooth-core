@@ -63,10 +63,10 @@ module.exports = {
                 TransactionType: '/MarketPlaceTransaction',
                 Signature: 'some_long_signature_string',
                 Nonce: Date.now(),
-                Update: {
-                    UpdateType: "/mktplace.transactions.ExchangeUpdate/Exchange",
-                    OfferIDList: ['some_offer_id'],
-                },
+                Updates: [{
+                    UpdateType: "Exchange",
+                    OfferIdList: ['some_offer_id'],
+                }],
          }))
          .value(),
 

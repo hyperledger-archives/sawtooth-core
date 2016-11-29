@@ -30,6 +30,8 @@ var queries = require('../../sawtooth/model/queries');
 
 const {getHolding} = require('./service_common');
 
+var _update = txn => txn('Updates').nth(0);
+
 var _executeQuery = (participantId, subquery, opts) =>
     block.current().info().then(info => connector.exec(db => {
         var currentBlock = db.table('blk' + info.blockid);
@@ -42,21 +44,21 @@ var _executeQuery = (participantId, subquery, opts) =>
         var _txnsAsOffers = 
                 db.table('transactions')
                   .filter(
-                    r.and(r.row('Update')('UpdateType').eq(UpdateTypes.REGISTER_SELL_OFFER),
+                    r.and(_update(r.row)('UpdateType').eq(UpdateTypes.REGISTER_SELL_OFFER),
                           r.row('Status').eq(TransactionStatuses.PENDING),
                           r.row('creator').eq(participantId)))
             .map((txn) => ({
                 id: txn('id'),
                 pending: true,
                 creator: r.branch(txn.hasFields('creator'), txn('creator'), null),
-                name: txn('Update')('Name'),
-                description: txn('Update')('Description'),
-                input: txn('Update')('InputID'),
-                output: txn('Update')('OutputID'),
-                ratio: txn('Update')('Ratio'),
-                minimum: txn('Update')('Minimum'),
-                maximum: txn('Update')('Maximum'),
-                execution: txn('Update')('Execution'),
+                name: _update(txn)('Name'),
+                description: _update(txn)('Description'),
+                input: _update(txn)('InputId'),
+                output: _update(txn)('OutputId'),
+                ratio: _update(txn)('Ratio'),
+                minimum: _update(txn)('Minimum'),
+                maximum: _update(txn)('Maximum'),
+                execution: _update(txn)('Execution'),
                 'execution-state': {
                     'ParticipantList': []
                 },
@@ -67,17 +69,17 @@ var _executeQuery = (participantId, subquery, opts) =>
                 db.table('transactions')
                   .filter(t => r.and(t('Status').eq(TransactionStatuses.PENDING),
                                      t('creator').eq(participantId),
-                                     t('Update')('UpdateType').eq(UpdateTypes.EXCHANGE),
-                                     t('Update')('OfferIDList').contains(offer('id'))))
+                                     _update(t)('UpdateType').eq(UpdateTypes.EXCHANGE),
+                                     _update(t)('OfferIdList').contains(offer('id'))))
                   .count().gt(0);
                         
 
         var _isUnregistering = (offer) =>
                 db.table('transactions')
                   .filter(t => r.and(t('Status').eq(TransactionStatuses.PENDING),
-                                     t('Update')('CreatorID').eq(participantId),
-                                     t('Update')('UpdateType').eq(UpdateTypes.UNREGISTER_SELL_OFFER),
-                                     t('Update')('ObjectID').eq(offer('id'))))
+                                     _update(t)('CreatorId').eq(participantId),
+                                     _update(t)('UpdateType').eq(UpdateTypes.UNREGISTER_SELL_OFFER),
+                                     _update(t)('ObjectId').eq(offer('id'))))
                   .count().gt(0);
 
         var filter = subquery;
