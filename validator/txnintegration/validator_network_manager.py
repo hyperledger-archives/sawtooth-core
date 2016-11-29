@@ -126,7 +126,6 @@ class ValidatorNetworkManager(object):
         while idx < self.n_mag:
             n = min(idx + stage_chunk_size, self.n_mag)
             for i in range(n):
-                self.net_config.set_ledger_url(i, [idx])
                 for j in range(n):
                     mat[i][j] = 1
             self.update(node_mat=mat, edge_mat=mat, **kwargs)
