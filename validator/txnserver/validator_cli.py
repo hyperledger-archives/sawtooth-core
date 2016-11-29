@@ -24,8 +24,6 @@ import traceback
 import warnings
 import ctypes
 
-from journal.journal_core import Journal
-
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
 from sawtooth.config import InvalidSubstitutionKey
@@ -59,6 +57,7 @@ def local_main(config, windows_service=False, daemonized=False):
     from txnserver import web_api
     from gossip.gossip_core import GossipException
     from gossip.gossip_core import Gossip
+    from journal.journal_core import Journal
 
     logger.warn('validator pid is %s', os.getpid())
 
