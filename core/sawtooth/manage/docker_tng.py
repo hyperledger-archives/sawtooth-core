@@ -183,6 +183,12 @@ class DockerTNGNodeController(NodeController):
                         continue
                     LOGGER.debug("command output: %s", str(line))
 
+    def create_genesis_block(self, node_args):
+        pass
+
+    def kill(self, node_name):
+        self.stop(node_name)
+
     def _get_state(self):
         args = [
             'docker',

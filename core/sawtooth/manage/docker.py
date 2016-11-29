@@ -113,11 +113,14 @@ class DockerNodeController(NodeController):
                 formatted_args.append(arg)
         return ' '.join(formatted_args)
 
-    def start(self, node_config):
-        node_name = node_config.node_name
-        http_port = node_config.http_port
-        gossip_port = node_config.gossip_port
-        genesis = node_config.genesis
+    def create_genesis_block(self, node_args):
+        pass
+
+    def start(self, node_args):
+        node_name = node_args.node_name
+        http_port = node_args.http_port
+        gossip_port = node_args.gossip_port
+        genesis = node_args.genesis
         args = self._construct_start_args(node_name, http_port, gossip_port,
                                           genesis)
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
@@ -157,6 +160,9 @@ class DockerNodeController(NodeController):
             if len(line) < 1:
                 continue
             LOGGER.debug("command output: %s", str(line))
+
+    def kill(self, node_name):
+        self.stop(node_name)
 
     def _get_state(self):
         args = [

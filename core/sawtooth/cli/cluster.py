@@ -13,22 +13,23 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from argparse import Namespace
 import logging
 import os
 import subprocess
+import time
 import yaml
 
+from sawtooth.cli.exceptions import CliException
 from sawtooth.exceptions import ManagementError
-
 from sawtooth.manage.daemon import DaemonNodeController
 from sawtooth.manage.docker import DockerNodeController
 from sawtooth.manage.docker_tng import DockerTNGNodeController
-from sawtooth.manage.node import NodeConfig
+from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.simple import SimpleNodeCommandGenerator
+from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.wrap import WrappedNodeController
 from sawtooth.manage.vnm import ValidatorNetworkManager
-
-from sawtooth.cli.exceptions import CliException
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,14 +70,18 @@ def add_cluster_start_parser(subparsers, parent_parser):
     parser.add_argument(
         '-m', '--manage',
         help='style of validator management',
-        choices=['daemon', 'docker', 'docker-tng'],
-        default='docker')
+        choices=['subprocess', 'daemon', 'docker', 'docker-tng'],
+        default='subprocess')
 
     parser.add_argument(
         '--processors',
         '-P',
         help='the transaction processors that are part of node',
         nargs='*')
+
+    parser.add_argument('--wrap', nargs='?', const=None, default=False,
+                        help='use WRAP as CURRENCYHOME (create/use a temp '
+                             'directory if WRAP is unspecified)')
 
 
 def add_cluster_stop_parser(subparsers, parent_parser):
@@ -126,26 +131,83 @@ def do_cluster(args):
             args.cluster_command))
 
 
-def do_cluster_start(args):
-    # pylint: disable=redefined-variable-type
-    file_name = \
-        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
-                     "state.yaml")
+def get_state_file_name():
+    home = os.path.expanduser("~")
+    return os.path.join(home, '.sawtooth', 'cluster', "state.yaml")
 
-    # Check for existing state.yaml and get state. If not create state dict.
+
+def load_state(start=False):
+    file_name = get_state_file_name()
     if os.path.isfile(file_name):
         with open(file_name, 'r') as state_file:
             state = yaml.load(state_file)
-    else:
+    elif start is True:
         state = dict()
         state["DesiredState"] = "Stopped"
+    else:
+        raise CliException("Missing state file")
+    return state
+
+
+def save_state(state):
+    file_name = get_state_file_name()
+    with open(file_name, 'w') as state_file:
+        yaml.dump(state, state_file, default_flow_style=False)
+
+
+def get_node_controller(state, args):
+    # pylint: disable=redefined-variable-type
+
+    # Get base controller:
+    node_controller = None
+    if state['Manage'] == 'subprocess':
+        node_controller = SubprocessNodeController()
+    elif state['Manage'] == 'docker':
+        node_controller = DockerNodeController()
+    elif state['Manage'] == 'daemon':
+        node_controller = DaemonNodeController()
+    elif state['Manage'] == 'docker-tng':
+        node_controller = DockerTNGNodeController()
+    else:
+        raise CliException('invalid management type:'
+                           ' {}'.format(state['Manage']))
+
+    # Optionally decorate with WrappedNodeController
+    args_wrap = False if not hasattr(args, 'wrap') else args.wrap
+    if 'Wrap' not in state.keys():
+        # if wrap has not been set in state, set it
+        state['Wrap'] = args_wrap
+    else:
+        # state already knows about a wrapper
+        if args_wrap is not False and args_wrap != state['Wrap']:
+            raise CliException("Already wrapped to %s." % state["Wrap"])
+    if state['Wrap'] is not False:
+        # either args or state have indicated a WrappedNodeController
+        if 'ManageWrap' not in state.keys():
+            state['ManageWrap'] = None
+        node_controller = WrappedNodeController(
+            node_controller, data_dir=state['Wrap'],
+            clean_data_dir=state['ManageWrap'])
+        if state['Wrap'] is None:
+            state['Wrap'] = node_controller.get_data_dir()
+            state['ManageWrap'] = True
+        print '{} wrapped to {}'.format(args.cluster_command, state['Wrap'])
+
+    # Return out construction:
+    return node_controller
+
+
+def do_cluster_start(args):
+    state = load_state(start=True)
 
     # Check State for Running validators, if stopped clear out nodes.
     if state["DesiredState"] == "Stopped":
         state["Nodes"] = {}
 
     if "Manage" not in state or state["DesiredState"] == "Stopped":
-        if args.manage == "docker" or args.manage is None:
+        if args.manage == "subprocess" or args.manage is None:
+            state["Manage"] = "subprocess"
+        elif args.manage == "docker":
             state["Manage"] = "docker"
         elif args.manage == "daemon":
             state["Manage"] = "daemon"
@@ -158,20 +220,11 @@ def do_cluster_start(args):
 
     state["DesiredState"] = "Running"
 
-    if state["Manage"] == 'docker':
-        node_controller = DockerNodeController()
-
-    elif state["Manage"] == 'daemon':
-        node_controller = DaemonNodeController()
-    elif state["Manage"] == 'docker-tng':
-        node_controller = DockerTNGNodeController()
+    if state["Manage"] == 'docker-tng':
         state['Processors'] = args.processors
-    else:
-        raise CliException('invalid management type:'
-                           ' {}'.format(state["Manage"]))
 
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
-
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
         node_command_generator=node_command_generator)
@@ -193,47 +246,38 @@ def do_cluster_start(args):
         gossip_port = 5500 + i
         http_port = 8800 + i
 
+        node_args = NodeArguments(node_name, http_port=http_port,
+                                  gossip_port=gossip_port, genesis=genesis)
+        if node_args.genesis is True:
+            node_controller.create_genesis_block(node_args)
         print "Starting: {}".format(node_name)
-        node_config = NodeConfig(node_name, http_port=http_port,
-                                 gossip_port=gossip_port, genesis=genesis)
-        node_command_generator.start(node_config)
+        node_command_generator.start(node_args)
 
         state["Nodes"][node_name] = {"Status": "Running", "Index": i}
 
-    # Write file to default directory with current state Nodes
-    with open(file_name, 'w') as state_file:
-        yaml.dump(state, state_file, default_flow_style=False)
+    save_state(state)
 
     try:
         vnm.update()
     except ManagementError as e:
         raise CliException(str(e))
 
+    if state["Manage"] == 'subprocess':
+        try:
+            while True:
+                time.sleep(128)
+        except KeyboardInterrupt:
+            print
+            ns = Namespace(cluster_command='stop', command='cluster',
+                           node_names=[], verbose=None)
+            do_cluster_stop(ns)
+
 
 def do_cluster_stop(args):
-    # pylint: disable=redefined-variable-type
-    file_name = \
-        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
-                     "state.yaml")
-    # Get current state of Nodes
-    if os.path.isfile(file_name):
-        with open(file_name, 'r') as state_file:
-            state = yaml.load(state_file)
-    else:
-        raise CliException("Missing state file")
+    state = load_state()
 
-    if state['Manage'] is None or state['Manage'] == 'docker':
-        node_controller = DockerNodeController()
-    elif state['Manage'] == 'daemon':
-        node_controller = DaemonNodeController()
-    elif state['Manage'] == 'docker-tng':
-        node_controller = DockerTNGNodeController()
-    else:
-        raise CliException('invalid management'
-                           ' type: {}'.format(state['Manage']))
-
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
-
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
         node_command_generator=node_command_generator)
@@ -265,36 +309,31 @@ def do_cluster_stop(args):
 
     # Update state of nodes
     state["Nodes"] = nodes
-    with open(file_name, 'w') as state_file:
-        yaml.dump(state, state_file, default_flow_style=False)
+    save_state(state)
 
     vnm.update()
 
+    # Wait up to 16 seconds for our targeted nodes to gracefully shut down
+    def find_still_up(targeted_nodes):
+        return set(vnm.get_node_names()).intersection(set(targeted_nodes))
+
+    timeout = 16
+    mark = time.time()
+    while len(find_still_up(node_names)) > 0:
+        if time.time() - mark > timeout:
+            break
+        time.sleep(1)
+
+    # Force kill any targeted nodes that are still up
+    for node_name in find_still_up(node_names):
+        node_controller.kill(node_name)
+
 
 def do_cluster_status(args):
-    # pylint: disable=redefined-variable-type
-    file_name = \
-        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
-                     "state.yaml")
-    # Get current expected state
-    if os.path.isfile(file_name):
-        with open(file_name, 'r') as state_file:
-            state = yaml.load(state_file)
-    else:
-        raise CliException("Missing state file")
+    state = load_state()
 
-    if state['Manage'] is None or state['Manage'] == 'docker':
-        node_controller = DockerNodeController()
-    elif state['Manage'] == 'daemon':
-        node_controller = DaemonNodeController()
-    elif state['Manage'] == 'docker-tng':
-        node_controller = DockerTNGNodeController()
-    else:
-        raise CliException('invalid management'
-                           ' type: {}'.format(state['Manage']))
-
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
-
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
         node_command_generator=node_command_generator)
@@ -325,29 +364,10 @@ def do_cluster_status(args):
 
 
 def do_cluster_extend(args):
-    # pylint: disable=redefined-variable-type
-    file_name = \
-        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
-                     "state.yaml")
-    # Get current state of Nodes
-    if os.path.isfile(file_name):
-        with open(file_name, 'r') as state_file:
-            state = yaml.load(state_file)
-    else:
-        raise CliException("Missing state file")
+    state = load_state()
 
-    if state['Manage'] is None or state['Manage'] == 'docker':
-        node_controller = DockerNodeController()
-    elif state['Manage'] == 'daemon':
-        node_controller = DaemonNodeController()
-    elif state['Manage'] == 'docker-tng':
-        node_controller = DockerTNGNodeController()
-    else:
-        raise CliException('invalid management'
-                           ' type: {}'.format(state['Manage']))
-
+    node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
-
     vnm = ValidatorNetworkManager(
         node_controller=node_controller,
         node_command_generator=node_command_generator)
@@ -379,15 +399,13 @@ def do_cluster_extend(args):
         http_port = 8800 + j
 
         print "Starting: {}".format(node_name)
-        node_config = NodeConfig(node_name, http_port=http_port,
-                                 gossip_port=gossip_port, genesis=genesis)
-        node_command_generator.start(node_config)
+        node_args = NodeArguments(node_name, http_port=http_port,
+                                  gossip_port=gossip_port, genesis=genesis)
+        node_command_generator.start(node_args)
 
         state["Nodes"][node_name] = {"Status": "Running", "Index": j}
 
-    # Write file to default directory with current state Nodes
-    with open(file_name, 'w') as state_file:
-        yaml.dump(state, state_file, default_flow_style=False)
+    save_state(state)
 
     try:
         vnm.update()
