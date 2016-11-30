@@ -38,6 +38,11 @@ class ForwardPage(BasePage):
         """
         data = request.content.getvalue()
         msg = self._get_message(request)
+
+        # if it is an error response message, returns it immediately
+        if isinstance(msg, dict) and 'status' in msg:
+            return msg
+
         if self.validator.config.get("LocalValidation", True):
             # determine if the message contains a valid transaction before
             # we send the message to the network
