@@ -396,8 +396,6 @@ def do_cluster_extend(args):
                                   gossip_port=gossip_port, genesis=genesis)
         node_command_generator.start(node_args)
 
-        # state["Nodes"][node_name] = {"Status": "Running", "Index": j}
-        # state["Nodes"][node_name] = {"Status": "Running", "Index": i, "Url": "test_URL"}
         state["Nodes"][node_name] = {"Status": "Running", "Index": i, "HttpPort": str(http_port), "GossipPort": str(gossip_port) }
 
     save_state(state)
