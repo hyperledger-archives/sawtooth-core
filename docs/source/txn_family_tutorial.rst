@@ -112,7 +112,8 @@ sawtooth_xo in the "TransactionFamilies" list:
         "sawtooth_xo"
     ],
 
-This will load the sawtooth_xo python module and run
+Observe that in txnvalidator.js, sawtooth_xo is listed as the only transaction
+family. This will load the sawtooth_xo python module and run 
 sawtooth_xo.register_transaction_types.
 
 You can also have more than one transaction family configured at once:
@@ -135,16 +136,12 @@ directory, then source the **env.sh** script:
     % cd /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step01
     % source env.sh
 
-Three new files have been added for this step:
+Two new files have been added for this step:
 
 .. code-block:: console
     
-    xo-tutorial-step01/sawtooth_xo/txnvalidator.js
     xo-tutorial-step01/sawtooth_xo/__init__.py
     xo-tutorial-step01/sawtooth_xo/txn_family.py
-
-Observe that in txnvalidator.js, sawtooth_xo is listed as the only transaction
-family.
 
 In sawtooth_xo/__init__.py, register_transaction_types is defined as:
 
@@ -154,8 +151,8 @@ In sawtooth_xo/__init__.py, register_transaction_types is defined as:
 
     from sawtooth_xo.txn_family import _register_transaction_types
 
-    def register_transaction_types(ledger):
-        _register_transaction_types(ledger)
+    def register_transaction_types(journal):
+        _register_transaction_types(journal)
 
 Thus, although the starting point is the sawtooth_xo module's __init__.py, we
 have chosen to keep the implementation in the sawtooth_xo.txn_family module.
@@ -171,8 +168,8 @@ seconds, kill it by pressing CTRL-C:
 
 .. code-block:: console
 
-    $ /project/sawtooth-core/docs/source/txn_family_tutorial/genesis.sh
     $ cd /project/sawtooth-core
+    $ ./docs/source/txn_family_tutorial/genesis.sh
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
     ...
@@ -214,13 +211,13 @@ looks like this:
 
     from journal.messages import transaction_message
 
-    def _register_transaction_types(ledger):
-        ledger.register_message_handler(
+    def _register_transaction_types(journal):
+        journal.register_message_handler(
             XoTransactionMessage,
             transaction_message.transaction_message_handler)
-        ledger.add_transaction_store(XoTransaction)
+        journal.add_transaction_store(XoTransaction)
 
-The ledger object being passed into this function is a type derived from
+The journal object being passed into this function is a type derived from
 journal.journal_core.Journal from `sawtooth-core <http://github.com/HyperLedger/sawtooth-core>`__
 (such as PoetJournal or QuorumJournal).  We
 register the standard transaction message handler to
@@ -434,8 +431,8 @@ Run the following commands to start the validator:
 
 .. code-block:: console
 
-    $ /project/sawtooth-core/docs/source/txn_family_tutorial/genesis.sh
     $ cd /project/sawtooth-core
+    $ ./docs/source/txn_family_tutorial/genesis.sh
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
 
@@ -662,8 +659,8 @@ It is now possible to play the game:
 .. code-block:: console
 
     $ source /project/sawtooth-core/docs/source/txn_family_tutorial/xo-tutorial-step04/env.sh
-    $ /project/sawtooth-core/docs/source/txn_family_tutorial/genesis.sh
     $ cd /project/sawtooth-core
+    $ ./docs/source/txn_family_tutorial/genesis.sh
     $ ./bin/txnvalidator -v --config /project/sawtooth-core/docs/source/txn_family_tutorial/txnvalidator.js
 
 
