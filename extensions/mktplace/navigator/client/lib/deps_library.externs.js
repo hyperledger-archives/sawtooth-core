@@ -44,6 +44,7 @@ Ratio.prototype.encodeCBOR = function(encoder) {};
 var bitcoin = {};
 bitcoin.hash = function(obj) {};
 bitcoin.addressFromPublicKey = function(publicKey) {};
+bitcoin.publicKeyHex = function(keyPair) {};
 bitcoin.hexToBase64 = function(str) {};
 
 var Clipboard = function(selector) {};

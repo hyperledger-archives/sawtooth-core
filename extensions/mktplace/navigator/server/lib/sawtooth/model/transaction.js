@@ -74,6 +74,8 @@ var _search = (node, r) => {
     return null;
 };
 
+const _mergePattern = (keys) => new RegExp(keys.join('|'));
+
 var _transactionFilter = (db, f, currentBlock) => {
     return f(db.table("transactions"), currentBlock);
 };
@@ -91,7 +93,7 @@ var _onTransactions = (opts, f) =>
             let query = f(txns);
 
             query = MERGE_FNS.valueSeq()
-                .map(mergeFnSpec => [_search(query, mergeFnSpec.get('transactionFamilyPattern')),
+                .map(mergeFnSpec => [_search(query, _mergePattern(mergeFnSpec.get('functions').keySeq())),
                                      mergeFnSpec.get('functions')])
                 .map(([updateType, functions]) => functions.get(updateType))
                 .filter(f => !_.isNull(f) && _.isFunction(f))
@@ -127,7 +129,6 @@ var _transactionQuery = (query, opts) => {
 var _applyDefaults = (transaction) =>
     _.extend({
         'Status': TransactionStatuses.PENDING,
-        'creator': null,
         'created': Date.now()
     }, transaction);
 

@@ -52,7 +52,11 @@
   (do-sign
     [self m k]
     "Signs the given map and assoc's the resulting signature at the given key.
-    Returns the signed map on a channel"))
+    Returns the signed map on a channel")
+
+  (public-key
+    [self]
+    "Returns the public key associated with the with the Signee"))
 
 (defn- sign-transaction [signee txn]
   (do-sign signee txn :Signature))
@@ -61,8 +65,11 @@
   (do-sign signee msg :__SIGNATURE__))
 
 (defn sign [signee msg-type txn]
-  (let [txn (cond-> txn
-              (not (:Nonce txn)) (assoc :Nonce (seconds-since-epoch)))]
+  {:pre [(satisfies? Signee signee)]}
+  (let [pub-key (public-key signee)
+        txn (cond-> txn
+              (not (:Nonce txn)) (assoc :Nonce (seconds-since-epoch))
+              (not (:public_key txn)) (assoc :public_key pub-key))]
     (go
       (let [signed-txn (<! (sign-transaction signee txn))
             msg {:Transaction signed-txn
