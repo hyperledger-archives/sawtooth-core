@@ -319,6 +319,7 @@ def do_cluster_stop(args):
 
     # Force kill any targeted nodes that are still up
     for node_name in find_still_up(node_names):
+        print "Node name still up: killling {}".format(node_name)
         node_controller.kill(node_name)
 
 
@@ -391,7 +392,6 @@ def do_cluster_extend(args):
         gossip_port = 5500 + j
         http_port = 8800 + j
 
-        print "Starting: {}".format(node_name)
         node_args = NodeArguments(node_name, http_port=http_port,
                                   gossip_port=gossip_port, genesis=genesis)
         node_command_generator.start(node_args)
@@ -420,13 +420,7 @@ def do_cluster_stats(args):
     else:
         raise CliException("Missing state file")
 
-    if state['Manage'] is None or state['Manage'] == 'docker':
-        node_controller = DockerNodeController()
-    elif state['Manage'] == 'daemon':
-        node_controller = DaemonNodeController()
-    else:
-        raise CliException('invalid management'
-                           ' type: {}'.format(state['Manage']))
+    node_controller = get_node_controller(state, args)
 
     node_command_generator = SimpleNodeCommandGenerator()
 
