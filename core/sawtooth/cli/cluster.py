@@ -221,6 +221,8 @@ def do_cluster_start(args):
     state["DesiredState"] = "Running"
 
     if state["Manage"] == 'docker-tng':
+        if args.processors is None:
+            raise CliException("Use -P to specify one or more processors")
         state['Processors'] = args.processors
 
     node_controller = get_node_controller(state, args)

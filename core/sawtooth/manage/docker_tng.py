@@ -129,7 +129,13 @@ class DockerTNGNodeController(NodeController):
             os.chdir(compose_dir)
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
+            raise CliException(str(e)
+                               + "\nPossibly misspelled processor name")
+        except OSError as e:
+            if e.errno == 2:
+                raise CliException("{}:{}".format(str(e), args[0]))
+            else:
+                raise e
 
         for line in output.split('\n'):
             if len(line) < 1:
@@ -205,6 +211,10 @@ class DockerTNGNodeController(NodeController):
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
             raise CliException(str(e))
+        except OSError as e:
+            if e.errno == 2:
+                raise CliException("{}:{}".format(str(e),
+                                                  args[0]))
 
         entries = []
         for line in output.split('\n'):
