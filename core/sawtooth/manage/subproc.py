@@ -187,5 +187,5 @@ class SubprocessNodeController(NodeController):
 
     def get_ip(self, node_name):
 
-        hostname = 'localhost'
+        hostname = self._host_name
         return hostname
