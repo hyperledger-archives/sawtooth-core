@@ -210,7 +210,8 @@ class DockerNodeController(NodeController):
         args = [
             'docker',
             'inspect',
-            "--format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'",
+            "--format='{{range .NetworkSettings.Networks}}\
+            {{.IPAddress}}{{end}}'",
             node_name
         ]
 

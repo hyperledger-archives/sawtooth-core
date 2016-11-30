@@ -99,6 +99,7 @@ def add_cluster_extend_parser(subparsers, parent_parser):
         type=int,
         default=1)
 
+
 def add_cluster_stats_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('stats', parents=[parent_parser])
 
@@ -106,6 +107,7 @@ def add_cluster_stats_parser(subparsers, parent_parser):
         '--node_name',
         help='node to connect to'
     )
+
 
 def do_cluster(args):
     if args.cluster_command == 'start':
@@ -225,7 +227,8 @@ def do_cluster_start(args):
         node_name = "validator-{:0>3}".format(i)
         if node_name in existing_nodes and vnm.is_running(node_name):
             print "Already running: {}".format(node_name)
-            raise CliException ("Please use 'sawtooth cluster extend' to add more nodes.")
+            raise CliException("Please use 'sawtooth cluster extend'\
+             to add more nodes.")
 
     for i in xrange(0, args.count):
         node_name = "validator-{:0>3}".format(i)
@@ -246,7 +249,9 @@ def do_cluster_start(args):
         print "Starting: {}".format(node_name)
         node_command_generator.start(node_args)
 
-        state["Nodes"][node_name] = {"Status": "Running", "Index": i, "HttpPort": str(http_port), "GossipPort": str(gossip_port) }
+        state["Nodes"][node_name] = {
+            "Status": "Running", "Index": i,
+            "HttpPort": str(http_port), "GossipPort": str(gossip_port)}
 
     save_state(state)
 
@@ -396,7 +401,9 @@ def do_cluster_extend(args):
                                   gossip_port=gossip_port, genesis=genesis)
         node_command_generator.start(node_args)
 
-        state["Nodes"][node_name] = {"Status": "Running", "Index": i, "HttpPort": str(http_port), "GossipPort": str(gossip_port) }
+        state["Nodes"][node_name] = {
+            "Status": "Running", "Index": i,
+            "HttpPort": str(http_port), "GossipPort": str(gossip_port)}
 
     save_state(state)
 
@@ -430,10 +437,12 @@ def do_cluster_stats(args):
     for node_name in nodes:
         try:
             node_ip = vnm.get_ip(node_name)
+            node_name_stats = node_name
             break
         except ManagementError as e:
             raise CliException(str(e))
 
-    node_url = "http://" + node_ip.strip(' \t\n\r') + ":" + nodes[node_name]["HttpPort"]
+    node_url = "http://" + node_ip.strip(' \t\n\r') + ":" + \
+               nodes[node_name_stats]["HttpPort"]
 
     run_stats(node_url)
