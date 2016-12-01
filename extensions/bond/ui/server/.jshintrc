@@ -1,0 +1,6 @@
+{
+    "node": true,
+    "globalstrict": true,
+    "esversion": 6,
+    "jasmine": true
+}
