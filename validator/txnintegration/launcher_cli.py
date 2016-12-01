@@ -14,18 +14,27 @@
 # ------------------------------------------------------------------------------
 
 import argparse
+import json
 import logging
 import os
 import pprint
 import sys
+import time
 import traceback
 
+from sawtooth.cli.exceptions import CliException
+from sawtooth.cli.stats import run_stats
+from sawtooth.exceptions import MessageException
+from sawtooth.manage.node import NodeArguments
+from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.exceptions import ExitError
+from txnintegration.utils import is_convergent
 from txnintegration.utils import load_log_config
 from txnintegration.utils import parse_configuration_file
-from txnintegration.validator_network_manager import get_default_vnm
+from txnintegration.utils import Progress
+from txnintegration.utils import TimeOut
 
-from sawtooth.cli.stats import run_stats
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -107,8 +116,24 @@ def configure(args):
     return vars(opts)
 
 
+def _poll_for_convergence(urls):
+    to = TimeOut(256)
+    convergent = False
+    task_str = 'checking for minimal convergence on: {}'.format(urls)
+    with Progress(task_str) as p:
+        while convergent is False:
+            try:
+                convergent = is_convergent(urls, standard=2, tolerance=0)
+            except MessageException:
+                if to.is_timed_out():
+                    raise CliException('timed out {}'.format(task_str))
+                else:
+                    p.step()
+                    time.sleep(4)
+
+
 def main():
-    vnm = None
+    node_ctrl = None
     try:
         opts = configure(sys.argv[1:])
     except Exception as e:
@@ -116,15 +141,51 @@ def main():
         sys.exit(1)
 
     try:
-        vnm = get_default_vnm(opts['count'],
-                              overrides=opts['validator_config'],
-                              log_config=opts['log_config_dict'],
-                              data_dir=opts['data_dir'],
-                              http_port=int(opts['http_port']),
-                              udp_port=int(opts['port']))
-        vnm.do_genesis()
-        vnm.staged_launch()
-        run_stats(vnm.urls()[0])
+        count = opts['count']
+
+        # log_config = NEED
+        currency_home = opts['data_dir']
+        http_port = int(opts['http_port'])
+        gossip_port = int(opts['port'])
+        node_ctrl = WrappedNodeController(SubprocessNodeController(),
+                                          data_dir=currency_home)
+        nodes = []
+        for idx in range(count):
+            node = NodeArguments("validator-{:0>3}".format(idx),
+                                 http_port=http_port + idx,
+                                 gossip_port=gossip_port + idx)
+            nodes.append(node)
+        currency_home = node_ctrl.get_data_dir()
+        if opts['log_config_dict']:
+            file_name = 'launcher_cli_global_log_config.js'
+            full_name = '{}/etc/{}'.format(currency_home, file_name)
+            with open(full_name, 'w') as f:
+                f.write(json.dumps(opts['log_config_dict'], indent=4))
+            opts['validator_config']['LogConfigFile'] = full_name
+        if opts['validator_config']:
+            file_name = 'launcher_cli_global_validator_config.js'
+            with open('{}/etc/{}'.format(currency_home, file_name), 'w') as f:
+                f.write(json.dumps(opts['validator_config'], indent=4))
+            for nd in nodes:
+                nd.config_files.append(file_name)
+        # set up our urls (external interface)
+        urls = ['http://localhost:%s' % x.http_port for x in nodes]
+        # Make genesis block
+        print 'creating genesis block...'
+        nodes[0].genesis = True
+        node_ctrl.create_genesis_block(nodes[0])
+        # Launch network (node zero will trigger bootstrapping)
+        batch_size = 8
+        print 'staged-launching network (batch_size: {})...'.format(batch_size)
+        lower_bound = 0
+        while lower_bound < count:
+            upper_bound = lower_bound + min(count - lower_bound, batch_size)
+            for idx in range(lower_bound, upper_bound):
+                print "launching {}".format(nodes[idx].node_name)
+                node_ctrl.start(nodes[idx])
+            _poll_for_convergence(urls[lower_bound:upper_bound])
+            lower_bound = upper_bound
+        run_stats(urls[0])
     except KeyboardInterrupt:
         print "\nExiting"
     except ExitError as e:
@@ -137,8 +198,22 @@ def main():
         print "\nFailed!\nExiting: {}".format(sys.exc_info()[0])
 
     finally:
-        if vnm is not None:
-            vnm.shutdown()
+        if node_ctrl is not None:
+            # stop all nodes
+            for node_name in node_ctrl.get_node_names():
+                node_ctrl.stop(node_name)
+            with Progress("terminating network") as p:
+                to = TimeOut(16)
+                while len(node_ctrl.get_node_names()) > 0:
+                    if to.is_timed_out():
+                        break
+                    time.sleep(1)
+                    p.step()
+            # force kill anything left over
+            for node_name in node_ctrl.get_node_names():
+                print "%s still 'up'; sending kill..." % node_name
+                node_ctrl.kill(node_name)
+            node_ctrl.clean()
 
 
 if __name__ == "__main__":
