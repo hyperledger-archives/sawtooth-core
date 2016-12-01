@@ -53,6 +53,8 @@ class SubprocessNodeController(NodeController):
             config_dir = self._base_config['ConfigDirectory']
             if node_args.currency_home is not None:
                 config_dir = os.path.join(node_args.currency_home, 'etc')
+            if not os.path.exists(config_dir):
+                os.makedirs(config_dir)
             config_file = '{}_bootstrap.json'.format(node_name)
             with open(os.path.join(config_dir, config_file), 'w') as f:
                 f.write(json.dumps(self._v0_cfg, indent=4))
@@ -182,3 +184,8 @@ class SubprocessNodeController(NodeController):
     def get_node_names(self):
         names = self._nodes.keys()
         return [x for x in names if self.is_running(x)]
+
+    def get_ip(self, node_name):
+
+        hostname = self._host_name
+        return hostname

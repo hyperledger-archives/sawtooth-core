@@ -205,3 +205,19 @@ class DockerNodeController(NodeController):
             if node_name == entry.name:
                 return entry.status.startswith("Up")
         return False
+
+    def get_ip(self, node_name):
+        args = [
+            'docker',
+            'inspect',
+            "--format='{{range .NetworkSettings.Networks}}\
+            {{.IPAddress}}{{end}}'",
+            node_name
+        ]
+
+        try:
+            output = subprocess.check_output(args)
+        except subprocess.CalledProcessError as e:
+            raise CliException(str(e))
+
+        return output
