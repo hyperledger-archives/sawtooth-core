@@ -37,7 +37,8 @@ find_packages() {
         | grep -v /unit/ \
         | grep -v /sawtooth_suites/ \
         | grep -v /navigator/ \
-        | grep -v _pb2\.py$
+        | grep -v _pb2\.py$ \
+        | grep -v /bond/tests/
 }
 
 lint() {
@@ -180,6 +181,16 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
 export PYTHONPATH
 lint extensions/mktplace "$SINCE" .pylintrc-mktplace 1 || retval=1
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/bond
+export PYTHONPATH
+lint extensions/bond "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7

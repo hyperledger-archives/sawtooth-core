@@ -48,6 +48,15 @@ PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$top_dir/extensions/bond
+export PYTHONPATH
+cd extensions/bond
+nose2 -v
+cd ../..
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
 export PYTHONPATH
 cd extensions/arcade
