@@ -76,7 +76,8 @@ def add_cluster_start_parser(subparsers, parent_parser):
     parser.add_argument(
         '--processors',
         '-P',
-        help='the transaction processors that are part of node',
+        help='the transaction processors that are part of node,'
+             'e.g. sawtooth-java-intkey-1.0, sawtooth-python-intkey-1.0',
         nargs='*')
 
     parser.add_argument('--wrap', nargs='?', const=None, default=False,
@@ -112,7 +113,7 @@ def add_cluster_logs_parser(subparsers, parent_parser):
         metavar='NODE_NAME',
         help='get logs from specific validator nodes. implemented for '
              'docker-tng',
-        nargs='*')
+        nargs='+')
 
 
 def do_cluster(args):
@@ -221,6 +222,8 @@ def do_cluster_start(args):
     state["DesiredState"] = "Running"
 
     if state["Manage"] == 'docker-tng':
+        if args.processors is None:
+            raise CliException("Use -P to specify one or more processors")
         state['Processors'] = args.processors
 
     node_controller = get_node_controller(state, args)
@@ -340,12 +343,20 @@ def do_cluster_status(args):
 
     if len(args.node_names) > 0:
         node_names = args.node_names
+        node_superset = state['Nodes']
+        nodes = {}
+        for node_name in args.node_names:
+            try:
+                nodes[node_name] = node_superset[node_name]
+            except KeyError:
+                raise CliException(
+                    "{} is not a known node name".format(node_name))
     else:
         node_names = vnm.get_node_names()
+        nodes = state['Nodes']
 
     # Check expected status of nodes vs what is returned from vnm
     print "NodeName Expected Current"
-    nodes = state["Nodes"]
     for node_name in nodes:
         if node_name not in node_names and \
                 (nodes[node_name]["Status"] == "Running" or
