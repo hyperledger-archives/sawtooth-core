@@ -199,6 +199,9 @@ def get_node_controller(state, args):
         if args_wrap is not False and args_wrap != state['Wrap']:
             raise CliException("Already wrapped to %s." % state["Wrap"])
     if state['Wrap'] is not False:
+        if not isinstance(node_controller, SubprocessNodeController):
+            raise CliException("--wrap currently only implemented for "
+                               "'subprocess' management type")
         # either args or state have indicated a WrappedNodeController
         if 'ManageWrap' not in state.keys():
             state['ManageWrap'] = None
