@@ -20,7 +20,6 @@ import pprint
 import traceback
 import tempfile
 import logging
-import tarfile
 
 from txnintegration.exceptions import ExitError
 from txnintegration.utils import load_log_config
@@ -43,18 +42,6 @@ def parse_args(args):
                         help='Number of validators to launch',
                         default=1,
                         type=int)
-    parser.add_argument('--save-blockchain',
-                        help='Save the blockchain to a file when the '
-                             'network is shutdown. This is the name of the '
-                             'tar.gz file that the blockchain will be saved '
-                             'in. ',
-                        default=None)
-    parser.add_argument('--load-blockchain',
-                        help='load an existing blockchain from file. This '
-                             'is a file name that points to a tar.gz that '
-                             'was generated from a previous run using the '
-                             '--save-blockchain option.',
-                        default=None)
     parser.add_argument('--data-dir',
                         help='Where to store the logs, data, etc for the '
                              'network',
@@ -73,21 +60,6 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def get_archive_config(data_dir, archive_name):
-    tar = tarfile.open(archive_name, "r|gz")
-    for f in tar:
-        if os.path.basename(f.name) == 'validator-0.json':
-            config = os.path.join(data_dir, "config.json")
-            if os.path.exists(config):
-                os.remove(config)
-            tar.extract(f, data_dir)
-            os.rename(os.path.join(data_dir, f.name), config)
-            os.rmdir(os.path.join(data_dir, os.path.dirname(f.name)))
-            break
-    tar.close()
-    return config
-
-
 def configure(args):
     opts = parse_args(args)
 
@@ -101,17 +73,6 @@ def configure(args):
         opts.data_dir = os.path.abspath(opts.data_dir)
         if not os.path.exists(opts.data_dir):
             os.makedirs(opts.data_dir)
-
-    if opts.load_blockchain is not None:
-        if not os.path.isfile(opts.load_blockchain):
-            raise ExitError("Blockchain archive to load {} does not "
-                            "exist.".format(opts.load_blockchain))
-        else:
-            opts.config = get_archive_config(opts.data_dir,
-                                             opts.load_blockchain)
-            if opts.config is None:
-                raise ExitError("Could not read config from Blockchain "
-                                "archive: {}".format(opts.load_blockchain))
 
     if opts.config is not None:
         if os.path.exists(opts.config):
@@ -179,7 +140,6 @@ def main():
                               overrides=opts['validator_config'],
                               log_config=opts['log_config_dict'],
                               data_dir=opts['data_dir'],
-                              block_chain_archive=opts['load_blockchain'],
                               http_port=int(opts['http_port']),
                               udp_port=int(opts['port']))
         vnm.do_genesis()
@@ -199,11 +159,8 @@ def main():
         print "\nFailed!\nExiting: {}".format(sys.exc_info()[0])
 
     finally:
-        archive_name = None
-        if opts['save_blockchain']:
-            archive_name = opts['save_blockchain']
         if vnm is not None:
-            vnm.shutdown(archive_name=archive_name)
+            vnm.shutdown()
 
 
 if __name__ == "__main__":
