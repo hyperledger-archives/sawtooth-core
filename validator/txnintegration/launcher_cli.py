@@ -74,21 +74,13 @@ def configure(args):
         if not os.path.exists(opts.data_dir):
             os.makedirs(opts.data_dir)
 
+    validator_config = {}
     if opts.config is not None:
         if os.path.exists(opts.config):
             validator_config = parse_configuration_file(opts.config)
         else:
             raise ExitError("Config file does not exist: {}".format(
                 opts.config))
-    else:
-        opts.config = os.path.realpath(os.path.join(script_dir, "..", "etc",
-                                                    "txnvalidator.js"))
-        print "No config file specified, loading  {}".format(opts.config)
-        if os.path.exists(opts.config):
-            validator_config = parse_configuration_file(opts.config)
-        else:
-            raise ExitError(
-                "Default config file does not exist: {}".format(opts.config))
 
     opts.log_config_dict = None
     if opts.log_config is not None:
