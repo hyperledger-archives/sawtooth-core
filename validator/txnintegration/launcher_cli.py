@@ -18,7 +18,6 @@ import sys
 import argparse
 import pprint
 import traceback
-import tempfile
 import logging
 
 from txnintegration.exceptions import ExitError
@@ -44,7 +43,8 @@ def parse_args(args):
                         type=int)
     parser.add_argument('--data-dir',
                         help='Where to store the logs, data, etc for the '
-                             'network',
+                             'network.  If omitted, a temp directory will be'
+                             'used, and discarded on exit.',
                         default=None)
     parser.add_argument('--log-config',
                         help='The python logging config file to be passed '
@@ -64,15 +64,6 @@ def configure(args):
     opts = parse_args(args)
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # Create directory -- after the params have been validated
-    if opts.data_dir is None:
-        opts.data_dir_is_tmp = True  # did we make up a directory
-        opts.data_dir = tempfile.mkdtemp()
-    else:
-        opts.data_dir = os.path.abspath(opts.data_dir)
-        if not os.path.exists(opts.data_dir):
-            os.makedirs(opts.data_dir)
 
     validator_config = {}
     if opts.config is not None:
