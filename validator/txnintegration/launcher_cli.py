@@ -13,12 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import os
-import sys
 import argparse
-import pprint
-import traceback
 import logging
+import os
+import pprint
+import sys
+import traceback
 
 from txnintegration.exceptions import ExitError
 from txnintegration.utils import load_log_config
@@ -62,8 +62,6 @@ def parse_args(args):
 
 def configure(args):
     opts = parse_args(args)
-
-    script_dir = os.path.dirname(os.path.realpath(__file__))
 
     validator_config = {}
     if opts.config is not None:
@@ -111,7 +109,6 @@ def configure(args):
 
 def main():
     vnm = None
-    error_occurred = False
     try:
         opts = configure(sys.argv[1:])
     except Exception as e:
@@ -134,10 +131,8 @@ def main():
         # this is an expected error/exit, don't print stack trace -
         # the code raising this exception is expected to have printed the error
         # details
-        error_occurred = True
         print "\nFailed!\nExiting: {}".format(e)
     except:
-        error_occurred = True
         traceback.print_exc()
         print "\nFailed!\nExiting: {}".format(sys.exc_info()[0])
 
