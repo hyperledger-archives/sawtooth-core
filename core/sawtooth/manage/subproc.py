@@ -44,7 +44,7 @@ class SubprocessNodeController(NodeController):
         if self._verbose is True:
             cmd += ['-vv']
         cmd += ['--node', node_name]
-        cmd += ['--listen', "{}:{}/TCP http".format(host, http_port)]
+        cmd += ['--listen', "0.0.0.0:{}/TCP http".format(http_port)]
         cmd += ['--listen', "{}:{}/UDP gossip".format(host, gossip_port)]
         for x in node_args.config_files:
             cmd += ['--config', x]
