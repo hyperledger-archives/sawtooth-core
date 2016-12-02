@@ -74,15 +74,6 @@ def parse_args(args):
     parser.add_argument('--http-port',
                         help='The base HTTP port to use',
                         default=8800)
-    parser.add_argument('--host',
-                        help='host/ip to bind the ports to defaults to '
-                             'localhost, use 0.0.0.0 for all adapters',
-                        default='localhost')
-    parser.add_argument('--endpoint',
-                        help='Name of host/ip to register in the endpoint '
-                             'default None, if binding adapters to 0.0.0.0'
-                             ' "localhost" is a good value for this.',
-                        default=None)
 
     return parser.parse_args(args)
 
@@ -207,9 +198,7 @@ def main():
                               data_dir=opts['data_dir'],
                               block_chain_archive=opts['load_blockchain'],
                               http_port=int(opts['http_port']),
-                              udp_port=int(opts['port']),
-                              host=opts['host'],
-                              endpoint_host=opts['endpoint'])
+                              udp_port=int(opts['port']))
         vnm.do_genesis()
         vnm.staged_launch()
         run_stats(vnm.urls()[0])
