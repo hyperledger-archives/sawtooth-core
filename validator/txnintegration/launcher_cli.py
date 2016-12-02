@@ -23,7 +23,6 @@ import logging
 import tarfile
 
 from txnintegration.exceptions import ExitError
-from txnintegration.utils import find_executable
 from txnintegration.utils import load_log_config
 from txnintegration.utils import parse_configuration_file
 from txnintegration.validator_network_manager import get_default_vnm
@@ -37,10 +36,6 @@ pp = pprint.PrettyPrinter(indent=4)
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    # use system or dev paths...
-    parser.add_argument('--validator',
-                        help='Fully qualified path to the txnvalidator to run',
-                        default=None)
     parser.add_argument('--config',
                         help='Base validator config file',
                         default=None)
@@ -97,17 +92,6 @@ def configure(args):
     opts = parse_args(args)
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # Find the validator to use
-    if opts.validator is None:
-        opts.validator = find_executable('txnvalidator')
-        if not os.path.isfile(opts.validator):
-            print "txnvalidator: {}".format(opts.validator)
-            raise ExitError("Could not find txnvalidator.")
-    else:
-        if not os.path.isfile(opts.validator):
-            print "txnvalidator: {}".format(opts.validator)
-            raise ExitError("txnvalidator script does not exist.")
 
     # Create directory -- after the params have been validated
     if opts.data_dir is None:
@@ -192,7 +176,6 @@ def main():
 
     try:
         vnm = get_default_vnm(opts['count'],
-                              txnvalidator=opts['validator'],
                               overrides=opts['validator_config'],
                               log_config=opts['log_config_dict'],
                               data_dir=opts['data_dir'],
