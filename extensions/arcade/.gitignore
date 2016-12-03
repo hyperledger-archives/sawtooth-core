@@ -1,4 +1,3 @@
-*.pyc
 *.tar.gz
 /build
 /dist
