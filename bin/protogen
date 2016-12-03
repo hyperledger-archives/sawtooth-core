@@ -16,15 +16,36 @@ fi
 if [ ! -e $validator_dir/__init__.py ]; then
     touch $validator_dir/__init__.py
 fi
-
-python -m grpc.tools.protoc \
-    -I$protos_dir \
-    --python_out=$sdk_dir \
-    --grpc_python_out=$sdk_dir \
-    $protos_dir/*.proto
-
-python -m grpc.tools.protoc \
-    -I$protos_dir \
-    --python_out=$validator_dir \
-    --grpc_python_out=$validator_dir \
-    $protos_dir/*.proto
+counter=0
+for pkg in sawtooth_protobuf protobuf
+do
+    tmp_dir=/tmp/protogen-$$
+    mkdir -p $tmp_dir
+    mkdir -p $tmp_dir/$pkg
+    for file in $(cd $protos_dir && /bin/ls -1 *.proto)
+    do
+        if [[ $file = [!t]*.proto ]];
+        then
+            cat $protos_dir/$file \
+            | sed -e "s/@PACKAGE@/$pkg/" \
+            > $tmp_dir/$file
+        else
+            cat $protos_dir/$file > $tmp_dir/$pkg/$file
+        fi
+    done
+    if [ $counter = 0 ];
+    then
+        out_dir=$sdk_dir
+    else
+        out_dir=$validator_dir
+    fi
+    counter=$(($counter+1))
+    python3 -m grpc.tools.protoc \
+        -I$tmp_dir \
+        --python_out=$out_dir \
+        $tmp_dir/*.proto \
+        $tmp_dir/$pkg/*.proto
+    rm -rf $tmp_dir
+    mv $out_dir/$pkg/*_pb2.py $out_dir
+    rm -rf $out_dir/$pkg
+done
