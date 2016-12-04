@@ -26,7 +26,7 @@ from sawtooth_validator.server.message import Message
 def _generate_id():
     return hashlib.sha512(''.join(
         [random.choice(string.ascii_letters)
-            for _ in xrange(0, 1024)])).hexdigest()
+            for _ in range(0, 1024)]).encode()).hexdigest()
 
 
 class TransactionExecutor(object):
@@ -66,7 +66,7 @@ class TransactionExecutor(object):
             else:
                 self._context_manager.delete_context(
                     context_id_list=[context_id])
-            print "Last Root ", self._last_state_root
+            print("Last Root ", self._last_state_root)
             assert self._last_state_root is not None
 
         return []

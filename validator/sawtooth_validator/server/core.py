@@ -15,7 +15,7 @@
 import logging
 import os
 import random
-import Queue
+import queue
 
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
@@ -83,13 +83,13 @@ class ValidatorService(validator_pb2.ValidatorServicer):
         self._handlers[message_type] = handler
 
     def send_txn(self, header, message):
-        print repr(header)
+        print(repr(header))
         family_name = header.family_name
         family_version = header.family_version
         encoding = header.payload_encoding
         key = (family_name, family_version, encoding)
-        print repr(key)
-        print repr(self._processors.keys())
+        print(repr(key))
+        print(repr(self._processors.keys()))
         if key not in self._processors.keys():
             raise Exception("internal error, no processor available")
 
@@ -122,7 +122,7 @@ class ValidatorService(validator_pb2.ValidatorServicer):
         peer = context.peer()
         LOGGER.info("connections from peer %s", peer)
 
-        send_queue = Queue.Queue()
+        send_queue = queue.Queue()
 
         self._send_queues[context.peer()] = send_queue
 
@@ -139,8 +139,8 @@ class ValidatorService(validator_pb2.ValidatorServicer):
             while message is None and not recv_thread.disconnect:
                 try:
                     message = send_queue.get(True, 1)
-                    print "sending {}".format(message.message_type)
-                except Queue.Empty:
+                    print("sending {}".format(message.message_type))
+                except queue.Empty:
                     message = None
             if recv_thread.disconnect:
                 break
@@ -159,7 +159,7 @@ class Responder(object):
 
 class DefaultHandler(object):
     def handle(self, message, responder):
-        print "invalid message {}".format(message.message_type)
+        print("invalid message {}".format(message.message_type))
 
 
 class ResponseHandler(object):
