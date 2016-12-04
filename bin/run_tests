@@ -16,6 +16,14 @@ cd ..
 PYTHONPATH=$top_dir
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
+export PYTHONPATH
+cd signing
+nose2 -v
+cd ..
+
+PYTHONPATH=$top_dir
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7

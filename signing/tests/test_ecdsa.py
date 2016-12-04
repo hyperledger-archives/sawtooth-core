@@ -17,8 +17,8 @@ import unittest
 
 import pybitcointools as pbt
 
-import gossip.signed_object
 import sawtooth_signing.ECDSA.ECDSARecoverModule as ecnative
+from sawtooth_signing import pbct_nativerecover
 
 
 class TestPKRecover(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestPKRecover(unittest.TestCase):
         priv = pbt.decode_privkey(wifstr, 'wif')
         msg = 'foo'
         sig = pbt.ecdsa_sign(msg, priv)
-        native_recovered = gossip.signed_object.get_verifying_key(msg, sig)
+        native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
         py_recovered = pbt.ecdsa_recover(msg, sig)
         self.assertEquals(native_recovered, py_recovered)
 
@@ -41,11 +41,10 @@ class TestPKRecover(unittest.TestCase):
         Tests key recovery over several keys
         """
         msg = 'foo'
-        self.longMessage = True
-        for x in range(0, 20):
+        for _ in range(0, 20):
             priv = pbt.random_key()
             sig = pbt.ecdsa_sign(msg, priv)
-            native_recovered = gossip.signed_object.get_verifying_key(msg, sig)
+            native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
             py_recovered = pbt.ecdsa_recover(msg, sig)
             self.assertEquals(native_recovered, py_recovered,
                               "Priv Key that failed: {}".format(priv))
@@ -55,7 +54,6 @@ class TestPKRecover(unittest.TestCase):
         Tests compressed key
         """
         msg = 'foo'
-        self.longMessage = True
         priv = pbt.encode_privkey(pbt.random_key(), 'hex_compressed')
         sig = pbt.ecdsa_sign(msg, priv)
         # Force old pybitcointools to behave
@@ -64,7 +62,7 @@ class TestPKRecover(unittest.TestCase):
             v += 4
         sig = pbt.encode_sig(v, r, s)
         pub = pbt.compress(pbt.privtopub(priv))
-        native_recovered = gossip.signed_object.get_verifying_key(msg, sig)
+        native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
         self.assertEquals(native_recovered, pub,
                           "Priv Key that failed: {}".format(priv))
 
@@ -76,12 +74,12 @@ class TestPKRecover(unittest.TestCase):
         d = pbt.sha256('private key')
         msghash = pbt.electrum_sig_hash('test message')
         z = pbt.hash_to_int(msghash)
-        v, r, s = pbt.ecdsa_raw_sign(msghash, d)
-        yBit = v - 27
+        v, _, s = pbt.ecdsa_raw_sign(msghash, d)
+        y_bit = v - 27
         with self.assertRaises(ValueError) as context:
-            result = ecnative.recover_pubkey(
+            _ = ecnative.recover_pubkey(
                 str(z), str(""), str(s),
-                int(yBit))
+                int(y_bit))
 
         self.assertTrue('Empty string' in str(context.exception))
 
@@ -93,14 +91,14 @@ class TestPKRecover(unittest.TestCase):
         d = pbt.sha256('private key')
         msghash = pbt.electrum_sig_hash('test message')
         z = pbt.hash_to_int(msghash)
-        v, r, s = pbt.ecdsa_raw_sign(msghash, d)
-        yBit = v - 27
+        v, _, s = pbt.ecdsa_raw_sign(msghash, d)
+        y_bit = v - 27
         badval = "58995174607243353628346858794753620798088291196940745194" \
             "58148184192713284575299999999999999h"
         with self.assertRaises(ValueError) as context:
-            result = ecnative.recover_pubkey(
+            _ = ecnative.recover_pubkey(
                 str(z), str(badval), str(s),
-                int(yBit))
+                int(y_bit))
 
         self.assertTrue('Invalid signature' in str(context.exception))
 
@@ -113,11 +111,11 @@ class TestPKRecover(unittest.TestCase):
         msghash = pbt.electrum_sig_hash('test message')
         z = -pbt.hash_to_int(msghash)
         v, r, s = pbt.ecdsa_raw_sign(msghash, d)
-        yBit = v - 27
+        y_bit = v - 27
         with self.assertRaises(ValueError) as context:
-            result = ecnative.recover_pubkey(
+            _ = ecnative.recover_pubkey(
                 str(z), str(r), str(s),
-                int(yBit))
+                int(y_bit))
 
         self.assertTrue('hash' in str(context.exception))
 
