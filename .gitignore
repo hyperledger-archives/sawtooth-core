@@ -1,2 +1,4 @@
 *.pyc
 tools/ubuntu-xenial-16.04-cloudimg-console.log
+sdk/python/sawtooth_protobuf
+validator/sawtooth_validator/protobuf
