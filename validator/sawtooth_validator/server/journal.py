@@ -15,12 +15,19 @@
 
 # import bitcoin
 
-from sawtooth_validator.server.plan import SerialExecutionPlanGenerator
+from sawtooth_validator.scheduler.serial import SerialScheduler
 
 
 class FauxJournal(object):
     def __init__(self, executor):
         self._executor = executor
+
+        # In a full implementation, there would be one scheduler
+        # for each chain the Journal wanted to process but only
+        # a single executor.  We create a single scheduler for now
+        # and hook it to the executor.
+        self._scheduler = SerialScheduler()
+        self._executor.execute(self._scheduler)
 
     def get_on_batch_received_handler(self):
         def _handler(batch):
@@ -28,8 +35,4 @@ class FauxJournal(object):
         return _handler
 
     def on_batch_received(self, batch):
-        generator = SerialExecutionPlanGenerator()
-        plan = generator.generate_plan(batch.transactions)
-
-        results = self._executor.execute(plan, batch.transactions)
-        print "processed {}".format(len(results))
+        self._scheduler.add_batch(batch)
