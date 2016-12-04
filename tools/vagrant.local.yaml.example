@@ -4,7 +4,7 @@
 # VAGRANT_BOX: "bento/opensuse-13.2"
 # VAGRANT_BOX: "boxcutter/ubuntu1604"
 # VAGRANT_BOX: "ubuntu/xenial64"
-VAGRANT_BOX: "ubuntu/trusty64"
+VAGRANT_BOX: "ubuntu/xenial64"
 
 # Whether to enable or disable forwarding of the vagrant ports to host. These
 # commonly conflict if vagrant is started more than once.
