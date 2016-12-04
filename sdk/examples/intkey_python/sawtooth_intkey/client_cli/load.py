@@ -33,7 +33,7 @@ def _split_batch_list(batch_list):
 
 
 def do_load(args):
-    with open(args.filename) as fd:
+    with open(args.filename, mode='rb') as fd:
         batches = batch_pb2.BatchList()
         batches.ParseFromString(fd.read())
 
@@ -54,9 +54,9 @@ def do_load(args):
         assert result.message_type == 'system/load-response'
 
     stop = time.time()
-    print "batches: {} batch/sec: {}".format(
+    print("batches: {} batch/sec: {}".format(
         str(len(batches.batches)),
-        len(batches.batches) / (stop - start))
+        len(batches.batches) / (stop - start)))
 
     stream.close()
 
