@@ -13,30 +13,31 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import asyncio
 import logging
 import os
 import socket
 import random
-from threading import Thread
 from threading import Condition
+from threading import Thread
 
+import asyncio
 import zmq
 import zmq.asyncio
 
-from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.context_manager import ContextManager
+from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
+from sawtooth_validator.journal.journal import Journal
+from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.server import future
+from sawtooth_validator.server import state
 from sawtooth_validator.server.dispatch import Dispatcher
 from sawtooth_validator.server.executor import TransactionExecutor
-from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server.loader import SystemLoadHandler
-from sawtooth_validator.server.journal import FauxJournal
 from sawtooth_validator.server.network import FauxNetwork
 from sawtooth_validator.server.network import Network
 from sawtooth_validator.server import state
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
-from sawtooth_validator.server import future
-
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
@@ -212,15 +213,18 @@ class Validator(object):
         db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
         LOGGER.debug('database file is %s', db_filename)
 
-        lmdb = LMDBNoLockDatabase(db_filename, 'n')
+        lmdb = LMDBNoLockDatabase(merkle_filename, 'n')
         context_manager = ContextManager(lmdb)
+
+        block_db_filename = os.path.join(os.path.expanduser('~'), 'block.lmdb')
+        LOGGER.debug('block store file is %s', block_db_filename)
+        block_store = LMDBNoLockDatabase(block_db_filename, 'n')
+
         self._service = ValidatorService(component_endpoint)
-        executor = TransactionExecutor(self._service, context_manager)
-        journal = FauxJournal(executor, context_manager.get_squash_handler(),
-                              context_manager.get_first_root())
+
+        # setup network
         dispatcher = Dispatcher()
-        dispatcher.on_batch_received = journal.get_on_batch_received_handler()
-        faux_network = FauxNetwork(dispatcher=dispatcher)
+        network = FauxNetwork(dispatcher=dispatcher)
 
         identity = "{}-{}".format(socket.gethostname(),
                                   os.getpid()).encode('ascii')
@@ -228,6 +232,22 @@ class Validator(object):
                                 network_endpoint,
                                 peer_list,
                                 dispatcher=dispatcher)
+
+        # Create and configure journal
+        executor = TransactionExecutor(self._service, context_manager)
+        self._journal = Journal(
+            consensus=dev_mode_consensus,
+            block_store={},  # FIXME - block_store=block_store
+            # -- need to serialize blocks to dicts
+            send_message=network.send_message,
+            transaction_executor=executor)
+
+        dispatcher.on_batch_received = \
+            self._journal.on_batch_received
+        dispatcher.on_block_received = \
+            self._journal.on_block_received
+        dispatcher.on_block_request = \
+            self._journal.on_block_request
 
         self._service.add_handler('default', DefaultHandler())
         self._service.add_handler('state/getrequest',
@@ -241,6 +261,8 @@ class Validator(object):
 
     def start(self):
         self._service.start()
+        self._journal.start()
 
     def stop(self):
         self._service.stop()
+        self._journal.stop()

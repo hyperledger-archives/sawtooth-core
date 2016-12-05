@@ -22,6 +22,8 @@ from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
+from sawtooth_validator.scheduler.serial import SerialScheduler
+
 
 def _generate_id():
     return hashlib.sha512(''.join(
@@ -74,7 +76,12 @@ class TransactionExecutor(object):
         self._service = service
         self._context_manager = context_manager
 
-    def execute(self, scheduler):
+    def create_scheduler(self):
+        return SerialScheduler()
+
+    def execute(self, scheduler, state_hash=None):
+        if state_hash is not None:
+            self._last_state_root = state_hash
         t = TransactionExecutorThread(self._service,
                                       self._context_manager,
                                       scheduler)

@@ -14,8 +14,23 @@
 # ------------------------------------------------------------------------------
 
 
-class Dispatcher(object):
-    def __init__(self):
-        self.on_batch_received = None
-        self.on_block_received = None
-        self.on_block_requested = None
+# expect all of these to be replace with protobuffers.
+
+
+class BlockRequestMessage(object):
+    """
+    Place holder for requests for missing block
+    """
+
+    def __init__(self, block_id):
+        self.block_id = block_id
+
+
+class BlockMessage(object):
+    def __init__(self, block):
+        self.block = block
+
+
+class BatchMessage(object):
+    def __init__(self, batch):
+        self.block = batch

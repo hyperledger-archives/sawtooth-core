@@ -14,8 +14,23 @@
 # ------------------------------------------------------------------------------
 
 
-class Dispatcher(object):
+class SchedulerMock(object):
+    def add_batch(self, batch, state_hash=None):
+        pass
+
+    def finalize(self):
+        pass
+
+    def complete(self):
+        pass
+
+
+class TransactionExecutorMock(object):
     def __init__(self):
-        self.on_batch_received = None
-        self.on_block_received = None
-        self.on_block_requested = None
+        self.messages = []
+
+    def create_scheduler(self):
+        return SchedulerMock()
+
+    def execute(self, scheduler, state_hash=None):
+        pass
