@@ -83,7 +83,7 @@ def add_init_parser(subparsers, parent_parser):
         parents=[parent_parser],
         help='configure the cli client',
         epilog="""Example:
-        btp init --username johndoe --url http://150.27.95.47:18404
+        btp init --username johndoe --url http://192.168.5.1:8800
         """
     )
 
@@ -169,13 +169,13 @@ def add_org_parser(subparsers, parent_parser):
         help='create an organization',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Example:
-    btp org create --ticker APPl --industry Technology 'Apple Corp.'""",
+    btp org create --ticker CMP10 --industry Technology 'Company 10'""",
         parents=[parent_parser]
     )
     c_parser.add_argument(
         'name',
         type=str,
-        help='the name of the organization. e.g. "Apple Corp."'
+        help='the name of the organization. e.g. "Company 10"'
     )
     c_parser.add_argument(
         '--object-id',
@@ -254,7 +254,7 @@ def add_quote_parser(subparsers, parent_parser):
         help='create a quote',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Example:
-btp quote create --cusip 22160KAF2 APPL '101-13+' 100000 '99-12 1/8' 100000""",
+btp quote create --cusip 22160KAF2 CMP2 '101-13+' 100000 '99-12 1/8' 100000""",
         parents=[parent_parser]
     )
     c_parser.add_argument(
@@ -350,8 +350,8 @@ def add_holding_parser(subparsers, parent_parser):
         help="create a holding",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Example:
-                    btp holding create ABIBB Currency USD 1000000000
-                    btp holding create APPL Bond US2847D48509 100000""",
+                    btp holding create CMP3 Currency USD 1000000000
+                    btp holding create CMP1 Bond US2847D48509 100000""",
         parents=[parent_parser],
     )
     c_parser.add_argument(
