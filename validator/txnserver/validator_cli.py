@@ -109,19 +109,7 @@ def local_main(config, windows_service=False, daemonized=False):
             # Continue to pass config to PoetConsensus for possible other
             # enclave implementations - poet_enclave.initialize
             consensus = poet_consensus.PoetConsensus(config)
-        elif consensus_type == 'quorum':
-            quorum = config.get("Quorum")
-            nodes = config.get("Nodes")
-            vote_time_interval = config.get("VoteTimeInterval")
-            ballot_time_interval = config.get("BallotTimeInterval")
-            voting_quorum_target_size = config.get("VotingQuorumTargetSize")
-            from sawtooth_validator.consensus.quorum import quorum_consensus
-            consensus = quorum_consensus.QsuorumConsensus(
-                vote_time_interval,
-                ballot_time_interval,
-                voting_quorum_target_size,
-                quorum,
-                nodes)
+
         elif consensus_type == 'dev_mode':
             block_publisher = config.get("DevModePublisher", False)
             block_wait_time = config.get("BlockWaitTime")
