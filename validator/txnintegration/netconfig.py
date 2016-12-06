@@ -188,12 +188,10 @@ class NetworkConfig(object):
             # initial athourity
             nd["LedgerURL"] = []
             # aux information
-            nd["Quorum"] = []
             self.nodes.append(nd)
 
         self.node_mat = None
         self.peer_mat = None
-        self.quorum_mat = None
         self.blacklist_mat = None
 
     def resolve_networking_info(self, host, udp, http, endpoint):
@@ -251,17 +249,6 @@ class NetworkConfig(object):
             for (peer_idx, is_peer) in enumerate(mat[nd_idx]):
                 if is_peer == 1 and peer_idx != nd_idx:
                     nd['Peers'].append(self.nodes[peer_idx]['NodeName'])
-
-    def set_quorum(self, quorum_mat):
-        if self.quorum_mat is not None:
-            raise Exception('validator configuration is static')
-        self.quorum_mat = AdjacencyMatrix(self.n_mag, quorum_mat)
-        mat = self.quorum_mat.get_mat()
-        for (nd_idx, nd) in enumerate(self.nodes):
-            nd['Quorum'] = []
-            for (quorum_idx, in_quorum) in enumerate(mat[nd_idx]):
-                if in_quorum == 1:
-                    nd['Quorum'].append(self.nodes[quorum_idx]['NodeName'])
 
     def set_blacklist(self, blacklist_mat=None):
         if self.blacklist_mat is not None:

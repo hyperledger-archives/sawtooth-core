@@ -33,8 +33,6 @@ from gossip.node import Node
 from gossip.signed_object import generate_identifier
 from gossip.signed_object import generate_signing_key
 
-from sawtooth_validator.consensus.quorum.messages import quorum_debug
-
 from journal.messages import journal_debug
 
 from ledger.transaction import integer_key
@@ -331,13 +329,6 @@ class ClientController(cmd.Cmd):
         msg.Address = options.address
         msg.Count = options.count
         self.sign_and_post(msg)
-
-    def do_dumpquorum(self, args):
-        """
-        dumpquorum -- Command to request quorum consensus node to dump quorum
-            list
-        """
-        self.sign_and_post(quorum_debug.DumpQuorumMessage({}))
 
     def do_dumpcnxs(self, args):
         """

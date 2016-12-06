@@ -148,7 +148,7 @@ def sit_rep(urls, verbosity=1):
 
 class StaticNetworkConfig(object):
     def __init__(self, n, q=None, base_name='validator', base_port=9000,
-                 base_http_port=8000, use_quorum=False):
+                 base_http_port=8000):
         self.n_mag = n
         assert self.n_mag >= 1
         self.q_mag = n if q is None else q
@@ -165,50 +165,15 @@ class StaticNetworkConfig(object):
             }
             for (idx, wif) in enumerate(self.keys)
         ]
-        self.use_quorum = use_quorum
 
     def get_nodes(self):
         return self.nodes
-
-    def get_quorum(self, tgt, dfl=None):
-        '''
-        This is a hack 'wrapping' function intended to ensure that all nodes
-        enjoy quorum intersection.
-        Args:
-            tgt: node index for which we need a peer list
-            dfl: Q override if not self.use_quorum
-        Returns:
-            peers: a list of q node NodeNames (including the requestor)
-            gathered by modulating around the nodelist
-        '''
-        dfl = [] if dfl is None else dfl
-        peers = dfl
-        if self.use_quorum:
-            peers = [x['NodeName'] for x in self.nodes]
-            assert len(peers) == len(set(peers))
-            return [peers[(tgt + i) % (self.n_mag)] for i in range(self.q_mag)]
 
     def get_node(self, idx):
         return self.nodes[idx]
 
     def get_key(self, idx):
         return self.keys[idx]
-
-    def print_quorum_schema(self):
-        '''
-        A dev-only utility to assist in manually crafting hardcoded config
-        files when manually testing/pogramming.  Includes the SigningKey as
-        part of each node, as well as the list of its possible quorum members.
-        Obviously, you'd never want to include the SigningKey in a shared
-        configuation file.
-        '''
-        ret = []
-        for (i, nd) in enumerate(self.nodes):
-            x = nd.copy()
-            x["SigningKey"] = self.keys[i]
-            x["Quorum"] = self.get_quorum(i)
-            ret.append(x)
-        print json.dumps(ret, indent=4)
 
 
 class Progress(object):
