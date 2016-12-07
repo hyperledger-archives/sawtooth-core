@@ -26,10 +26,9 @@ from txnintegration.utils import Progress
 from txnintegration.utils import read_key_file
 from txnintegration.utils import TimeOut
 from txnintegration.utils import write_key_file
-from txnintegration.validator_network_manager import get_default_vnm
 
-from integration import ENABLE_INTEGRATION_TESTS, \
-    SAVE_INTEGRATION_TEST_DATA
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
 class MktPlaceLoad(object):
@@ -207,33 +206,23 @@ class MktPlaceLoad(object):
             assert holding['count'] == expected_count
 
 
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestSmoke(unittest.TestCase):
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+    def __init__(self, test_name, urls=None, data_dir=None):
+        super(TestSmoke, self).__init__(test_name)
+        self.urls = urls
+        self.data_dir = data_dir
+
     def test_mktplace_load(self):
-        vnm = None
         try:
-            print "Launching validator network."
-            overrides = {
-                "TransactionFamilies": ['mktplace.transactions.market_place'],
-            }
-            vnm = get_default_vnm(5, overrides=overrides)
-            vnm.do_genesis()
-            vnm.launch()
-            data_dir = vnm.net_config.provider.currency_home
             print "Testing transaction load."
             test_case = MktPlaceLoad(num_traders=5,
                                      iterations=1,
-                                     urls=vnm.urls(),
-                                     test_dir=data_dir)
+                                     urls=self.urls,
+                                     test_dir=self.data_dir)
             test_case.setup()
             test_case.run()
             test_case.validate()
 
         finally:
-            archive_name = None
-            if SAVE_INTEGRATION_TEST_DATA:
-                archive_name = "TestMktSmokeResults"
-            if vnm is not None:
-                vnm.shutdown(archive_name=archive_name)
-            else:
-                print "No Validator data and logs to preserve."
+            print "No Validator data and logs to preserve."

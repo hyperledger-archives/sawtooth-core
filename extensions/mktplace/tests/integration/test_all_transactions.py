@@ -18,56 +18,37 @@ import unittest
 
 from mktmain import client_cli
 from mktplace import mktplace_state
-from txnintegration.validator_network_manager import get_default_vnm
 
-ENABLE_INTEGRATION_TESTS = False
-if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
-    ENABLE_INTEGRATION_TESTS = True
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
-@unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestAllTransactions(unittest.TestCase):
+    def __init__(self, test_name, urls=None):
+        super(TestAllTransactions, self).__init__(test_name)
+        self.urls = urls
+        try:
+            self.url = self.urls[0] + '/'
+        except:
+            raise
+
     def setUp(self):
         self.save_environ = os.environ.copy()
+        os.environ['CURRENCYHOME'] = os.path.join(
+            os.path.dirname(__file__), "all_transactions")
+
+        self.script_path = os.path.join(os.path.dirname(__file__),
+                                        'all_transactions')
+        state = mktplace_state.MarketPlaceState(self.url)
+        state.fetch()
 
     def tearDown(self):
         os.environ.clear()
         os.environ.update(self.save_environ)
 
-    @classmethod
-    def setUpClass(cls):
-        cls.vnm = None
-        try:
-            if 'TEST_VALIDATOR_URLS' in os.environ:
-                urls = (os.environ['TEST_VALIDATOR_URLS']).split(",")
-                cls.url = urls[0]
-            else:
-                families = ['mktplace.transactions.market_place']
-                overrides = {
-                    'InitialWaitTime': 1,
-                    'TargetWaitTime': 1,
-                    "TransactionFamilies": families,
-                }
-                cls.vnm = get_default_vnm(1, overrides=overrides)
-                cls.vnm.do_genesis()
-                cls.vnm.launch()
-                # the url of the initial validator
-                cls.url = cls.vnm.urls()[0] + '/'
-
-            os.environ['CURRENCYHOME'] = os.path.join(
-                os.path.dirname(__file__), "all_transactions")
-
-            cls.script_path = os.path.join(os.path.dirname(__file__),
-                                           'all_transactions')
-            state = mktplace_state.MarketPlaceState(cls.url)
-            state.fetch()
-        except:
-            if cls.vnm is not None:
-                cls.vnm.shutdown()
-            raise
-
     def transactions_reg(self):
-        client_cli.main(args=['--name', 'mkt',
+        client_cli.main(args=['--name', 'mkt_all',
                               '--script',
                               os.path.join(self.script_path,
                                            'reg_mkt_transactions'),
@@ -93,15 +74,15 @@ class TestAllTransactions(unittest.TestCase):
         state = mktplace_state.MarketPlaceState(self.url)
         state.fetch()
         self.assertIsNotNone(state.n2i("//alice", 'Participant'))
-        self.assertIsNotNone(state.n2i("//mkt", 'Participant'))
+        self.assertIsNotNone(state.n2i("//mkt_all", 'Participant'))
         self.assertIsNotNone(state.n2i("//bob", 'Participant'))
         self.assertIsNotNone(state.n2i("//alice/account",
                                        'Account'))
-        self.assertIsNotNone(state.n2i("//mkt/asset-type/currency",
+        self.assertIsNotNone(state.n2i("//mkt_all/asset-type/currency",
                                        'AssetType'))
-        self.assertIsNotNone(state.n2i("//mkt/asset-type/cookie",
+        self.assertIsNotNone(state.n2i("//mkt_all/asset-type/cookie",
                                        'AssetType'))
-        self.assertIsNotNone(state.n2i("//mkt/asset/currency/USD",
+        self.assertIsNotNone(state.n2i("//mkt_all/asset/currency/USD",
                                        'Asset'))
 
         self.assertIsNotNone(state.n2i("//alice/USD",
@@ -180,10 +161,3 @@ class TestAllTransactions(unittest.TestCase):
         self.transactions_reg()
         self.transactions_exchange()
         self.transactions_unr()
-
-    @classmethod
-    def tearDownClass(cls):
-        if cls.vnm is not None:
-            cls.vnm.shutdown(archive_name="TestCommercialPaperScenarios")
-        else:
-            print "No Validator data and logs to preserve."
