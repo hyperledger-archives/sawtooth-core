@@ -122,7 +122,13 @@ class SubprocessNodeController(NodeController):
             proc.wait()
             # Create genesis block
             cmd = get_executable_script('sawtooth')
-            cmd += ['admin', 'poet0-genesis']
+            if node_args.ledger_type is None or \
+                    node_args.ledger_type == "poet0":
+                cmd += ['admin', 'poet0-genesis']
+            elif node_args.ledger_type == "poet1":
+                cmd += ['admin', 'poet1-genesis']
+            else:
+                cmd += ['admin', 'dev-mode-genesis']
             if self._verbose is True:
                 cmd += ['-vv']
             cmd += ['--node', node_args.node_name]
