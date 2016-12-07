@@ -21,7 +21,7 @@ Prerequisites
 
 The following tools are required:
 
-* `Vagrant <https://www.vagrantup.com/downloads.html>`_ (1.7.4 or later)
+* `Vagrant <https://www.vagrantup.com/downloads.html>`_ (1.9.0 or later)
 * `VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_ (5.0.10 r104061
   or later)
 
@@ -103,8 +103,7 @@ build, run the following inside vagrant:
 
 .. code-block:: console
 
-  $ cd /project/sawtooth-core/validator
-  $ python setup.py build
+  $ /project/sawtooth-core/bin/build_all
 
 Running txnvalidator
 ====================
