@@ -44,7 +44,7 @@ class SubprocessNodeController(NodeController):
         if self._verbose is True:
             cmd += ['-vv']
         cmd += ['--node', node_name]
-        cmd += ['--listen', "{}:{}/TCP http".format(host, http_port)]
+        cmd += ['--listen', "0.0.0.0:{}/TCP http".format(http_port)]
         cmd += ['--listen', "{}:{}/UDP gossip".format(host, gossip_port)]
         for x in node_args.config_files:
             cmd += ['--config', x]
@@ -61,16 +61,14 @@ class SubprocessNodeController(NodeController):
             cmd += ['--config', config_file]
         return cmd
 
-    def _get_out_err(self, node_args):
-        return [sys.stdout, sys.stderr]
-
     def is_running(self, node_name):
         '''
         Authority on whether a node is in fact running.  On discovering that a
         node no longer exists, it removes the node from _nodes.  We do this
         here rather than in stop/kill in order to allow stop/kill to be
         non-blocking.  Thus, our internal model of nodes (_nodes) will always
-        be correct the next time someone checks.
+        be correct for a particular node the next time someone asks if it
+        'is_running'.
         Args:
             node_name (str):
         Returns:
@@ -131,23 +129,24 @@ class SubprocessNodeController(NodeController):
             proc = subprocess.Popen(cmd, env=self._build_env(node_args))
             proc.wait()
 
+    def do_start(self, node_args, stdout, stderr):
+        cmd = self._construct_start_command(node_args)
+        # Execute popen and store the process handle
+        handle = subprocess.Popen(cmd, stdout=stdout, stderr=stderr,
+                                  env=self._build_env(node_args))
+        handle.poll()
+        if handle.returncode is None:
+            # process is known to be running; save handle
+            self._nodes[node_args.node_name] = {"Handle": handle}
+
     def start(self, node_args):
         '''
         Start a node if it is not already running.
         Args:
             node_args (NodeArguments):
         '''
-        node_name = node_args.node_name
-        if self.is_running(node_name) is False:
-            cmd = self._construct_start_command(node_args)
-            # Execute popen and store the process handle
-            [out, err] = self._get_out_err(node_args)
-            handle = subprocess.Popen(cmd, stdout=out, stderr=err,
-                                      env=self._build_env(node_args))
-            handle.poll()
-            if handle.returncode is None:
-                # process is known to be running; save handle
-                self._nodes[node_name] = {"Handle": handle}
+        if self.is_running(node_args.node_name) is False:
+            self._do_start(node_args, sys.stdout, sys.stderr)
 
     def stop(self, node_name):
         '''
