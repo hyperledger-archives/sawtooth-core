@@ -126,7 +126,8 @@ do
 done
 
 if [ "$DRY_RUN" = "1" ]; then
-    for dir in core validator extensions/mktplace extensions/arcade
+    for dir in core signing validator extensions/bond extensions/mktplace \
+        extensions/arcade
     do
         for package in $(find_packages "$dir" "$SINCE")
         do
