@@ -93,7 +93,7 @@ ecdsamod = Extension('_ECDSARecoverModule',
 
 setup(
     name='sawtooth-signing',
-    version=version('0.7.1'),
+    version=version('0.7.2'),
     description='Validator service for Sawtooth Lake distributed ledger from ',
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',

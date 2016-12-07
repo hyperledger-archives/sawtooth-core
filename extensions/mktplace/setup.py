@@ -71,7 +71,7 @@ else:
 
 setup(
     name='sawtooth-mktplace',
-    version=version('0.7.1'),
+    version=version('0.7.2'),
     description='Intel Labs Distributed Market transaction modules for '
                 'the Sawtooth Lake ledger',
     author='Mic Bowman, Intel Labs',
