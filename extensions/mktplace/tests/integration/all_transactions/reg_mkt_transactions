@@ -1,6 +1,6 @@
-echo Running: Register mkt
+echo Running: Register mkt_all
 
-participant reg --name mkt --description "The mkt participant"
+participant reg --name mkt_all --description "The mkt_all participant"
 account reg --name /market/account
 waitforcommit
 holding reg --name /market/holding/token --count 1 --account /market/account --asset //marketplace/asset/token

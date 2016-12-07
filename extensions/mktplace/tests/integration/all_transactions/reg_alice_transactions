@@ -2,10 +2,10 @@ echo Running: Register alice
 participant reg --name alice
 account reg --name /account
 waitforcommit
-holding reg --name /USD --account /account --asset //mkt/asset/currency/USD
+holding reg --name /USD --account /account --asset //mkt_all/asset/currency/USD
 holding reg --name /holding/token --count 1 --account /account --asset //marketplace/asset/token
 waitforcommit
-exchange --type SellOffer --src /holding/token --dst /USD --offers //mkt/offer/provision/USD --count 1
-holding reg --name /jars/choc_chip --account /account --asset //mkt/asset/cookie/choc_chip
+exchange --type SellOffer --src /holding/token --dst /USD --offers //mkt_all/offer/provision/USD --count 1
+holding reg --name /jars/choc_chip --account /account --asset //mkt_all/asset/cookie/choc_chip
 waitforcommit
 exit
