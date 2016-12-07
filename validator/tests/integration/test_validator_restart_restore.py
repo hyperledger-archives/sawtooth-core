@@ -58,24 +58,27 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             print "validator_blocks", validator_blocks_shutdown
 
             print "turn off entire validator network"
-            # vnm.update(node_mat=numpy.zeros(shape=(5, 5)), timeout=8)
             nodes_names = self.node_controller.get_node_names()
             for node in nodes_names:
                 self.node_controller.stop(node)
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) > 0:
-                pass
-
+                if to.is_timed_out():
+                    self.fail("Timed Out")
             print "relaunch validator 0"
             self.node_controller.start(self.nodes[0])
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) < 1:
-                pass
+                if to.is_timed_out():
+                    self.fail("Timed Out")
             report_after_relaunch = None
             while report_after_relaunch is None:
                 try:
                     report_after_relaunch = \
                         sit_rep([self.urls[0]], verbosity=1)
                 except MessageException:
-                    pass
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
                 time.sleep(4)
 
             report_after_relaunch = sit_rep([self.urls[0]], verbosity=1)
@@ -98,6 +101,7 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             print "restart validators "
             for node in self.nodes:
                 self.node_controller.start(node)
+            to = TimedOut(120)
             while len(self.node_controller.get_node_names()) < 5:
                 pass
             report_after_relaunch = None
@@ -106,5 +110,6 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
                     report_after_relaunch = \
                         sit_rep(self.urls, verbosity=1)
                 except MessageException:
-                    pass
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
                 time.sleep(4)

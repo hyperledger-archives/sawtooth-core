@@ -32,7 +32,7 @@ class TestSmoke(unittest.TestCase):
         super(TestSmoke, self).__init__(test_name)
         self.urls = urls
 
-    def _run_int_load(self, num_nodes, archive_name, overrides, urls=None):
+    def _run_int_load(self):
         """
         Args:
             num_nodes (int): Total number of nodes in network simulation
@@ -51,9 +51,7 @@ class TestSmoke(unittest.TestCase):
             print "No Validator data and logs to preserve"
 
     def test_intkey_load_poet0(self):
-        overrides = {}
-        self._run_int_load(5, "TestSmokeResultsPoet0", overrides)
+        self._run_int_load()
 
     def test_intkey_load_dev_mode(self):
-        self._run_int_load(1, "TestSmokeResultsDevMode", None,
-                           urls=["http://localhost:8800"])
+        self._run_int_load()

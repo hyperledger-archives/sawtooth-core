@@ -92,11 +92,12 @@ class Poet0NightlyTestSuite(unittest.TestCase):
             self._do_setup()
             urls = self.urls
             suite = unittest.TestSuite()
-            test_bootstrap will allow the validators to all come on line
-            before others tries to connect to the validators.
+            # test_bootstrap will allow the validators to all come on line
+            # before others tries to connect to the validators.
             suite.addTest(TestConvergence('test_bootstrap', urls))
             suite.addTest(TestIntegration('test_intkey_load_ext', urls))
             suite.addTest(TestIntegration('test_missing_dependencies', urls))
+            suite.addTest(TestSawtoothStats('test_sawtooth_stats', urls))
             suite.addTest(TestValidatorShutdownRestart(
                 'test_validator_shutdown_restart_ext',
                 urls, self._node_ctrl, self._nodes))
@@ -108,8 +109,6 @@ class Poet0NightlyTestSuite(unittest.TestCase):
             suite.addTest(TestValidatorShutdownRestartRestore(
                 'test_validator_shutdown_restart_restore_ext',
                 urls, self._node_ctrl, self._nodes))
-            suite.addTest(TestConvergence('test_bootstrap', urls))
-            suite.addTest(TestSawtoothStats('test_sawtooth_stats', urls))
             runner = unittest.TextTestRunner(verbosity=2)
             result = runner.run(suite)
             if len(result.failures) == 0 and len(result.errors) == 0:

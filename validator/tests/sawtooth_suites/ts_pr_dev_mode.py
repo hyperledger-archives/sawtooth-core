@@ -69,9 +69,8 @@ class DevModeTestSuite(unittest.TestCase):
             config.write(json.dumps(cfg))
 
         self._nodes = [
-            NodeArguments('v%s' % i, 8800 + i, 9000 + i,
-            config_files=[file_name], ledger_type="dev_mode")
-            for i in range(1)]
+            NodeArguments('v0', 8800, 9000 ,config_files=[file_name],
+                          ledger_type="dev_mode")]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
