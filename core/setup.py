@@ -65,7 +65,7 @@ def version(default):
 
 
 setup(name='sawtooth-core',
-      version=version('0.7.1'),
+      version=version('0.8.0'),
       description='Intel Labs Distributed ledger testbed',
       author='Mic Bowman, Intel Labs',
       url='http://www.intel.com',

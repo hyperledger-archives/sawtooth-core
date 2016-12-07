@@ -65,7 +65,7 @@ def version(default):
 
 setup(
     name='sawtooth-arcade',
-    version=version('0.7.1'),
+    version=version('0.8.0'),
     description='Example game implementations for Sawtooth Lake',
     author='Intel Corporation',
     url='http://www.intel.com',
