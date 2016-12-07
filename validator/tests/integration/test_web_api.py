@@ -22,14 +22,14 @@ from twisted.web import http
 from twisted.web.http_headers import Headers
 
 import gossip.signed_object as sign_obj
-from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
-    import DevModeConsensus
 from gossip import common
 from gossip import message
 from gossip.gossip_core import Gossip
 from gossip.messages import shutdown_message
 from gossip.node import Node
 from journal.global_store_manager import KeyValueStore, BlockStore
+from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
+    import DevModeConsensus
 from journal.journal_core import Journal
 from journal.transaction import Status as tStatus
 from journal.transaction import Transaction
@@ -57,6 +57,7 @@ class TestThreadPool(object):
 
     def start(self):
         pass
+
 
 class ErrorMessage(message.Message):
     """Error messages are sent to a peer node to test unknown error messages.

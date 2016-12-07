@@ -51,7 +51,7 @@ class TestConvergence(unittest.TestCase):
         sit_rep(self.urls, verbosity=1)
         return convergent
 
-    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
+    @unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
     def test_bootstrap(self):
         '''
         Ensures that the network (self.urls) is convergent on at least 2
@@ -65,7 +65,7 @@ class TestConvergence(unittest.TestCase):
                                                 standard=2)
         self.assertTrue(convergent, 'network divergent')
 
-    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
+    @unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
     def test_convergence(self):
         '''
         Ensures that the network (self.urls) is convergent on at least 10
