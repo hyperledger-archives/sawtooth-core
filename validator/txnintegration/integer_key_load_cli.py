@@ -108,11 +108,11 @@ class IntKeyLoadTest(object):
                   "were committed in {0}s".format(to.WaitTime)
 
     def _wait_for_limit_pending_transactions(self):
-        result = self.is_registered('http://localhost:9000/statistics/ledger')
+        result = self.is_registered('http://localhost:8800/statistics/journal')
         json_data = json.loads(result)
-        self.committedBlckCount = json_data['ledger']['CommittedBlockCount']
+        self.committedBlckCount = json_data['journal']['CommittedBlockCount']
         print ("committedBlckCount: ", self.committedBlckCount)
-        self.pendingTxnCount = json_data['ledger']['PendingTxnCount']
+        self.pendingTxnCount = json_data['journal']['PendingTxnCount']
         print ("PendingTxnCount: ", self.pendingTxnCount)
 
         if (self.committedBlckCount > 3 & self.pendingTxnCount != 0):
@@ -237,7 +237,7 @@ class IntKeyLoadTest(object):
                     k, v, self.localState[k])
             assert self.localState[k] == v
 
-    def ledgerstate(self):
+    def journalstate(self):
         self.state.fetch()
 
         print "state: "
@@ -266,7 +266,6 @@ class IntKeyLoadTest(object):
     def run_with_limit_txn_dependencies(self, numkeys, rounds=1, txintv=0):
         if len(self.clients) == 0:
             return
-
         self.state.fetch()
         keys = self.state.State.keys()
 
@@ -277,9 +276,6 @@ class IntKeyLoadTest(object):
 
         for r in range(1, rounds + 1):
             with Progress("Updating clients state") as p:
-                for c in self.clients:
-                    c.fetch_state()
-                    p.step()
 
                 print "Round {}".format(r)
                 for k in range(1, numkeys + 1):
@@ -299,10 +295,10 @@ class IntKeyLoadTest(object):
                                  " invalid transactions NOT submitted")
 
                     result = self.is_registered(
-                        'http://localhost:9000/statistics/ledger')
+                        'http://localhost:8800/statistics/journal')
                     json_data = json.loads(result)
                     self.pendingTxnCount = \
-                        json_data['ledger']['PendingTxnCount']
+                        json_data['journal']['PendingTxnCount']
                     print ("PendingTxnCount: ", self.pendingTxnCount)
 
                     for loop_ind in range(0, 4):
@@ -343,8 +339,6 @@ class IntKeyLoadTest(object):
 
         starttime = time.time()
         for r in range(1, rounds + 1):
-            for c in self.clients:
-                c.fetch_state()
             print "Round {}".format(r)
             for k in range(1, numkeys + 1):
                 k = str(k)
