@@ -58,9 +58,11 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
             print "shutdown validator 4 w/ SIGKILL"
             node_names = self.node_controller.get_node_names()
             node_names.sort()
-            self.node_controller.stop(node_names[4])
+            self.node_controller.kill(node_names[4])
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) > 4:
-                pass
+                if to.is_timed_out():
+                    self.fail("Timed Out")
             print 'check state of validators:'
             sit_rep(self.urls[:-1], verbosity=2)
 
@@ -74,18 +76,22 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
             print "turn off entire validator network"
             for node in node_names:
                 self.node_controller.stop(node)
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) > 0:
-                pass
+                if to.is_timed_out():
+                    self.fail("Timed Out")
 
             print "relaunch validator 4"
             self.node_controller.start(self.nodes[4])
             report_after_relaunch = None
+            to = TimeOut(120)
             while report_after_relaunch is None:
                 try:
                     report_after_relaunch = \
                         sit_rep([self.urls[4]], verbosity=1)
                 except MessageException:
-                    pass
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
                 time.sleep(4)
             validator_report = report_after_relaunch[0]
             valid_dict_value = validator_report['Status']
@@ -109,14 +115,17 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
             print "restart validators "
             for node in self.nodes:
                 self.node_controller.start(node)
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) < 5:
-                pass
+                if to.is_timed_out():
+                    self.fail("Timed Out")
             report_after_relaunch = None
             while report_after_relaunch is None:
                 try:
                     report_after_relaunch = \
                         sit_rep(self.urls, verbosity=1)
                 except MessageException:
-                    pass
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
                 time.sleep(4)
             print "No validators"

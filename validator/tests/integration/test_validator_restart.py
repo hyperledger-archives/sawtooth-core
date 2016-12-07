@@ -5,6 +5,7 @@ import time
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
 from txnintegration.utils import sit_rep
 from txnintegration.utils import is_convergent
+from txnintegration.utils import TimeOut
 from sawtooth.exceptions import MessageException
 
 RUN_TEST_SUITES = True \
@@ -37,8 +38,10 @@ class TestValidatorShutdownRestart(unittest.TestCase):
             node_names = self.node_controller.get_node_names()
             node_names.sort()
             self.node_controller.stop(node_names[4])
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) > 4:
-                pass
+                if to.is_timed_out():
+                    self.fail("Timed Out")
             print 'check state of validators:'
             sit_rep(self.urls[:-1], verbosity=2)
 
@@ -51,15 +54,18 @@ class TestValidatorShutdownRestart(unittest.TestCase):
 
             print ("relaunching removed_validator", 4)
             self.node_controller.start(self.nodes[4])
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) < 1:
-                pass
+                if to.is_timed_out():
+                    self.fail("Timed Out")
             report_after_relaunch = None
             while report_after_relaunch is None:
                 try:
                     report_after_relaunch = \
                         sit_rep([self.urls[4]], verbosity=1)
                 except MessageException:
-                    pass
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
                 time.sleep(4)
             print 'check state of validators:'
             sit_rep(self.urls, verbosity=2)
