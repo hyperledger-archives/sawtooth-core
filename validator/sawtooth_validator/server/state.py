@@ -55,7 +55,6 @@ class SetHandler(object):
         self._context_manager = context_manager
 
     def handle(self, message, responder):
-        LOGGER.info("We've got a set message")
         set_request = state_context_pb2.SetRequest()
         set_request.ParseFromString(message.content)
         set_values_list = [{e.address: e.data} for e in set_request.entries]
