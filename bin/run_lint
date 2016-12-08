@@ -18,13 +18,18 @@
 find_packages() {
     topdir=$1
     since=$2
+    exclude_dir=$3
 
     (
     if [ "$since" != "" ]; then
         git ls-files -mo "$topdir/*.py" -x build
         git diff --name-only $since "$topdir/*.py"
     else
-        find $topdir -name \*.py
+        if [ "$exclude_dir" != "" ]; then
+            find $topdir -name \*.py -not -path "*/$exclude_dir/*"
+        else
+            find $topdir -name \*.py
+        fi
     fi
     ) \
         | sort \
@@ -44,14 +49,17 @@ find_packages() {
 
 lint() {
     topdir=$(pwd)
-    subdir=$1
-    since=$2
-    pylintrc=$3
-    run_pep8=$4
+    pylint_bin=$1
+    subdir=$2
+    since=$3
+    pylintrc=$4
+    run_pep8=$5
+    exclude_dir=$6
+
 
     error=0
 
-    packages=$(find_packages "$subdir" "$since")
+    packages=$(find_packages "$subdir" "$since" "$exclude_dir")
 
     if [ "$packages" != "" ]; then
         if [ "$run_pep8" = "1" ]; then
@@ -64,12 +72,14 @@ lint() {
 
         [ $VERBOSE = 1 ] && (
             echo "------------------------------------------------------------------------------"
-            echo "-- Running pylint $pylintrc in $subdir..."
+            echo "-- Running $pylint_bin $pylintrc in $subdir..."
         )
-        pylint \
-            --rcfile=$pylintrc \
-            --reports=no \
-            $packages || error=1
+        if [ -x "$(command -v $pylint_bin)" ]; then
+            $pylint_bin \
+                --rcfile=$pylintrc \
+                --reports=no \
+                $packages || error=1
+        fi
 
         [ $VERBOSE = 1 ] && (
             echo "------------------------------------------------------------------------------"
@@ -145,7 +155,7 @@ retval=0
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 export PYTHONPATH
-lint signing "$SINCE" .pylintrc-strict 1 || retval=1
+lint pylint signing "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -154,14 +164,14 @@ PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
-lint core "$SINCE" .pylintrc-core 1 || retval=1
-lint core/sawtooth "$SINCE" .pylintrc-strict 0 || retval=1
+lint pylint core "$SINCE" .pylintrc-core 1 || retval=1
+lint pylint core/sawtooth "$SINCE" .pylintrc-strict 0 || retval=1
 
 PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
 export PYTHONPATH
-lint sdk/python "$SINCE" .pylintrc-strict 1 || retval=1
-lint sdk/examples/intkey_python "$SINCE" .pylintrc-strict 1 || retval=1
+lint pylint3 sdk/python "$SINCE" .pylintrc-strict 1 || retval=1
+lint pylint3 sdk/examples/intkey_python "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -170,8 +180,10 @@ PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 export PYTHONPATH
-lint validator "$SINCE" .pylintrc-validator 1 || retval=1
-lint validator/sawtooth_validator "$SINCE" .pylintrc-strict 0 || retval=1
+lint pylint validator "$SINCE" .pylintrc-validator 1 sawtooth_validator || retval=1
+lint pylint validator/sawtooth_validator/consensus "$SINCE" .pylintrc-validator 1 || retval=1
+lint pylint3 validator/sawtooth_validator "$SINCE" .pylintrc-strict 1 consensus || retval=1
+
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -181,7 +193,7 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
 export PYTHONPATH
-lint extensions/mktplace "$SINCE" .pylintrc-mktplace 1 || retval=1
+lint pylint extensions/mktplace "$SINCE" .pylintrc-mktplace 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -191,7 +203,7 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/bond
 export PYTHONPATH
-lint extensions/bond "$SINCE" .pylintrc-strict 1 || retval=1
+lint pylint extensions/bond "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
@@ -201,6 +213,6 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
 export PYTHONPATH
-lint extensions/arcade "$SINCE" .pylintrc-arcade 1 || retval=1
+lint pylint extensions/arcade "$SINCE" .pylintrc-arcade 1 || retval=1
 
 exit $retval
