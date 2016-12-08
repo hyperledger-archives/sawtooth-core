@@ -31,7 +31,7 @@ class LIBORObject(signed_object.SignedObject):
     LIBOR data to make verifying signatures more convenient.
     """
 
-    def __init__(self, date, rates, signature=None):
+    def __init__(self, date, rates, public_key, signature=None):
         """
 
         Args:
@@ -45,9 +45,12 @@ class LIBORObject(signed_object.SignedObject):
                 ThreeMonth: The three-month LIBOR
                 SixMonth: The six-month LIBOR
                 OneYear: The one-month LIBOR
+            public_key: Public key corresponding to private key used to
+                        sign the LIBOR data.
             signature: A signature over the LIBOR data (date and rates)
         """
-        super(LIBORObject, self).__init__(minfo={'Signature': signature})
+        super(LIBORObject, self).__init__(minfo={'PublicKey': public_key,
+                                                 'Signature': signature})
 
         self._date = date
 
@@ -112,9 +115,15 @@ class CreateLIBORUpdate(Update):
     # get LIBOR data signed by a trusted publisher we will replace this with
     # said publisher's public key and will then verify that the data has been
     # signed with the corresponding private key.
-    __LIBOR_PUBLISHER_ADDR__ = '1UrR1WTfkMaWmY8z6DxwEE2MYFXA6rdzZ'
+    __LIBOR_PUBLISHER_ADDR__ = None
 
-    def __init__(self, update_type, date, rates, signature, object_id=None):
+    def __init__(self,
+                 update_type,
+                 date,
+                 rates,
+                 libor_public_key=None,
+                 signature=None,
+                 object_id=None):
         """
         Create a LIBOR update object.
 
@@ -130,6 +139,8 @@ class CreateLIBORUpdate(Update):
                 ThreeMonth: The three-month LIBOR
                 SixMonth: The six-month LIBOR
                 OneYear: The one-month LIBOR
+            libor_public_key: Public key corresponding to private key
+                used to sign the LIBOR data.
             signature: A signature over the LIBOR data (date and rates)
             object_id: An optional object ID for the update.  Much like a
                 lawyer when you are arrested, if you don't provide one,
@@ -141,7 +152,10 @@ class CreateLIBORUpdate(Update):
             self._object_id = 'libor.{}'.format(self.date_to_isoformat(date))
         else:
             self._object_id = object_id
-        self.__libor_object__ = LIBORObject(date, rates, signature)
+        self.__libor_object__ = LIBORObject(date,
+                                            rates,
+                                            libor_public_key,
+                                            signature)
         self._rates = self.__libor_object__.rates
 
     @property
@@ -151,6 +165,15 @@ class CreateLIBORUpdate(Update):
     @property
     def _signature(self):
         return self.__libor_object__.Signature
+
+    def sign_update_object(self, signingkey):
+        """Generates a string signature for the LIBOR data using the signing
+        key.
+
+        Args:
+            signingkey (str): hex encoded private key
+        """
+        self.__libor_object__.sign_object(signingkey)
 
     @staticmethod
     def date_to_isoformat(date):

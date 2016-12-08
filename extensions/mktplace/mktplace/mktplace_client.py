@@ -73,7 +73,7 @@ def sign_message_with_transaction(transaction, key):
     """
     transaction['Nonce'] = time.time()
     pub = signing.encode_pubkey(signing.generate_pubkey(key), "hex")
-    transaction["public_key"] = pub
+    transaction["PublicKey"] = pub
     sig = signing.sign(dict2cbor(transaction), key)
     transaction['Signature'] = sig
 
