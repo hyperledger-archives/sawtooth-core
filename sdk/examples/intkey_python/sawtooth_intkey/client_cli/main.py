@@ -110,7 +110,7 @@ def main_wrapper():
     try:
         main()
     except IntKeyCliException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print(sys.stderr, "Error: {}".format(e))
         sys.exit(1)
     except KeyboardInterrupt:
         pass

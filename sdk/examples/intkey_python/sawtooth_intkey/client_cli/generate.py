@@ -26,8 +26,8 @@ import time
 import cbor
 import bitcoin
 
-import sawtooth_protobuf.batch_pb2 as batch_pb2
-import sawtooth_protobuf.transaction_pb2 as transaction_pb2
+from sawtooth_protobuf import transaction_pb2
+from sawtooth_protobuf import batch_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -66,9 +66,9 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
-    intkey_prefix = hashlib.sha512('intkey'.encode()).hexdigest()[0:6]
+    intkey_prefix = hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
-    addr = intkey_prefix + hashlib.sha512(name.encode()).hexdigest()
+    addr = intkey_prefix + hashlib.sha512(name.encode('utf-8')).hexdigest()
 
     header = transaction_pb2.TransactionHeader(
         signer=public_key,

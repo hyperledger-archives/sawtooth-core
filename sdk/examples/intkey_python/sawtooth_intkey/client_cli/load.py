@@ -14,11 +14,15 @@
 # ------------------------------------------------------------------------------
 
 import argparse
+import logging
 import time
 
 from sawtooth_sdk.client.stream import Stream
 
 import sawtooth_protobuf.batch_pb2 as batch_pb2
+
+
+LOGGER = logging.getLogger(__file__)
 
 
 def _split_batch_list(batch_list):
