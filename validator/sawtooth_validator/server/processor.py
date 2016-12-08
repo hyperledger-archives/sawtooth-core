@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_validator.server.message import Message
+from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_validator.protobuf.processor_pb2 import Acknowledgement
 
@@ -46,7 +46,8 @@ class ProcessorRegisterHandler(object):
         ack = Acknowledgement()
         ack.status = ack.OK
 
-        responder.send(Message(
+        responder.send(validator_pb2.Message(
+            sender=message.sender,
             message_type='common/ack',
             correlation_id=message.correlation_id,
             content=ack.SerializeToString()))

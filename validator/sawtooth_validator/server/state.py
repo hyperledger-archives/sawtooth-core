@@ -14,8 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 from sawtooth_validator.protobuf import state_context_pb2
-from sawtooth_validator.server.message import Message
-
+from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
@@ -36,7 +35,8 @@ class GetHandler(object):
         LOGGER.info("GET: %s", return_list)
         entry_list = [state_context_pb2.Entry(address=a,
                                               data=d) for a, d in return_list]
-        responder.send(message=Message(
+        responder.send(message=validator_pb2.Message(
+            sender=message.sender,
             correlation_id=message.correlation_id,
             message_type='state/getresponse',
             content=state_context_pb2.GetResponse(
@@ -64,16 +64,17 @@ class SetHandler(object):
         response = state_context_pb2.SetResponse()
         if return_value is True:
             address_list = [e.address for e in set_request.entries]
-            LOGGER.info("SET: %s", address_list)
             response.addresses.extend(address_list)
-            responder.send(message=Message(
+            responder.send(message=validator_pb2.Message(
+                sender=message.sender,
                 correlation_id=message.correlation_id,
                 message_type='state/setresponse',
                 content=response.SerializeToString()
             ))
         else:
             response.addresses.extend([])
-            responder.send(message=Message(
+            responder.send(message=validator_pb2.Message(
+                sender=message.sender,
                 correlation_id=message.correlation_id,
                 message_type='state/setresponse',
                 content=response.SerializeToString()
