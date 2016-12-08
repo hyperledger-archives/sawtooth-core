@@ -42,8 +42,6 @@ def do_load(args):
         batches.ParseFromString(fd.read())
 
     stream = Stream(args.url)
-    stream.connect()
-
     futures = []
     start = time.time()
 

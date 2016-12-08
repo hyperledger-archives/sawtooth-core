@@ -13,16 +13,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import queue
-
-from threading import Thread
-
+import asyncio
 import hashlib
+import logging
+import os
 import random
 import string
-import time
+from threading import Thread
+from threading import Condition
 
-import grpc
+import zmq
+import zmq.asyncio
 
 import sawtooth_protobuf.validator_pb2 as validator_pb2
 
@@ -32,35 +33,13 @@ from sawtooth_sdk.client.future import FutureCollectionKeyError
 from sawtooth_sdk.client.future import FutureResult
 
 
+LOGGER = logging.getLogger(__file__)
+
+
 def _generate_id():
     return hashlib.sha512(''.join(
         [random.choice(string.ascii_letters)
-            for _ in range(0, 1024)]).encode()).hexdigest()
-
-
-class RecvThread(Thread):
-    def __init__(self, handle, futures, recv_queue):
-        super(RecvThread, self).__init__()
-        self._handle = handle
-        self._futures = futures
-        self._recv_queue = recv_queue
-
-    def run(self):
-        try:
-            for message_list in self._handle:
-                for message in message_list.messages:
-                    try:
-                        self._futures.set_result(
-                            message.correlation_id,
-                            FutureResult(message_type=message.message_type,
-                                         content=message.content))
-                        self._futures.remove(message.correlation_id)
-                    except FutureCollectionKeyError:
-                        self._recv_queue.put(message)
-        except grpc.RpcError:
-            # Ignore RpcError here, as handling an RpcError is handled in
-            # the call's done_callback.
-            pass
+            for _ in range(0, 1024)]).encode('ascii')).hexdigest()
 
 
 class MessageType(object):
@@ -75,83 +54,151 @@ class MessageType(object):
     TP_RESPONSE = 'tp/response'
 
 
+class _SendReceiveThread(Thread):
+    """
+    Internal thread to Stream class that runs the asyncio event loop.
+    """
+
+    def __init__(self, url, futures):
+        super(_SendReceiveThread, self).__init__()
+        self._futures = futures
+        self._url = url
+
+        self._event_loop = None
+        self._sock = None
+        self._recv_queue = None
+        self._send_queue = None
+        self._context = None
+
+        self._condition = Condition()
+
+    @asyncio.coroutine
+    def _receive_message(self):
+        """
+        internal coroutine that receives messages and puts
+        them on the recv_queue
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._sock is not None)
+        while True:
+            msg_bytes = yield from self._sock.recv()
+            message_list = validator_pb2.MessageList()
+            message_list.ParseFromString(msg_bytes)
+            for message in message_list.messages:
+                try:
+                    self._futures.set_result(
+                        message.correlation_id,
+                        FutureResult(message_type=message.message_type,
+                                     content=message.content))
+                except FutureCollectionKeyError:
+                    # if we are getting an initial message, not a response
+                    self._recv_queue.put_nowait(message)
+
+    @asyncio.coroutine
+    def _send_message(self):
+        """
+        internal coroutine that sends messages from the send_queue
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._send_queue is not None
+                                     and self._sock is not None)
+        while True:
+            msg = yield from self._send_queue.get()
+            yield from self._sock.send_multipart([msg.SerializeToString()])
+
+    @asyncio.coroutine
+    def _put_message(self, message):
+        """
+        puts a message on the send_queue. Not to be accessed directly.
+        :param message: protobuf generated validator_pb2.Message
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._send_queue is not None)
+        self._send_queue.put_nowait(message)
+
+    @asyncio.coroutine
+    def _get_message(self):
+        """
+        get a message from the recv_queue. Not to be accessed directly.
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._recv_queue is not None)
+        msg = yield from self._recv_queue.get()
+
+        return msg
+
+    def put_message(self, message):
+        """
+        :param message: protobuf generated validator_pb2.Message
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._event_loop is not None)
+        asyncio.run_coroutine_threadsafe(self._put_message(message),
+                                         self._event_loop)
+
+    def get_message(self):
+        """
+        :return message: protobuf generated validator_pb2.Message
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._event_loop is not None)
+        return asyncio.run_coroutine_threadsafe(self._get_message(),
+                                                self._event_loop).result()
+
+    def run(self):
+        self._event_loop = zmq.asyncio.ZMQEventLoop()
+        asyncio.set_event_loop(self._event_loop)
+        self._context = zmq.asyncio.Context()
+        self._sock = self._context.socket(zmq.DEALER)
+        self._sock.identity = "{}-{}".format(self.__class__.__name__,
+                                             os.getpid()).encode('ascii')
+        self._sock.connect('tcp://' + self._url)
+        self._send_queue = asyncio.Queue()
+        self._recv_queue = asyncio.Queue()
+        with self._condition:
+            self._condition.notify_all()
+        asyncio.ensure_future(self._send_message(), loop=self._event_loop)
+        asyncio.ensure_future(self._receive_message(), loop=self._event_loop)
+        self._event_loop.run_forever()
+
+
 class Stream(object):
     def __init__(self, url):
         self._url = url
-        self._send_queue = queue.Queue()
-        self._recv_queue = queue.Queue()
-
         self._futures = FutureCollection()
-
-        self._channel = None
-        self._stub = None
-        self._handle = None
-
-        def send_generator():
-            disconnect = False
-            while not disconnect:
-                message = None
-                while message is None and not disconnect:
-                    try:
-                        message = self._send_queue.get(True, 1)
-                        if message.message_type == 'system/disconnect':
-                            disconnect = True
-                    except queue.Empty:
-                        message = None
-
-                yield validator_pb2.MessageList(messages=[message])
-
-                if disconnect:
-                    break
-        self._send_generator = send_generator()
-
-    def connect(self):
-        self._channel = grpc.insecure_channel(self._url)
-        self._stub = validator_pb2.ValidatorStub(self._channel)
-        self._handle = self._stub.Connect(self._send_generator)
-
-        def done_callback(call):
-            if call.code() != grpc.StatusCode.OK:
-                print("ERROR: Connect() failed with status code: "
-                      "{}: {}".format(str(call.code()), call.details()))
-
-        self._handle.add_done_callback(done_callback)
-
-        recv_thread = RecvThread(
-            self._handle,
-            self._futures,
-            self._recv_queue)
-        recv_thread.start()
+        self._send_recieve_thread = _SendReceiveThread(url, self._futures)
+        self._send_recieve_thread.start()
 
     def send(self, message_type, content):
         message = validator_pb2.Message(
             message_type=message_type,
             correlation_id=_generate_id(),
             content=content)
-
         future = Future(message.correlation_id)
         self._futures.put(future)
 
-        self._send_queue.put(message)
-
+        self._send_recieve_thread.put_message(message)
         return future
 
     def send_back(self, message_type, correlation_id, content):
+        """
+        Return a response to a message.
+        :param message_type: one of the strs on MessageType
+        :param correlation_id: a random str internal to the validator
+        :param content: protobuf bytes
+        """
         message = validator_pb2.Message(
             message_type=message_type,
             correlation_id=correlation_id,
             content=content)
-        self._send_queue.put(message)
+        self._send_recieve_thread.put_message(message)
 
     def receive(self):
-        return self._recv_queue.get()
+        """
+        Used for receiving messages that are not responses
+
+        """
+        return self._send_recieve_thread.get_message()
 
     def close(self):
-        message = validator_pb2.Message(
-            message_type='system/disconnect',
-            correlation_id=_generate_id(),
-            content=''.encode())
-        self._send_queue.put(message)
-
-        while not self._handle.done():
-            time.sleep(1)
+        self._send_recieve_thread.join()
