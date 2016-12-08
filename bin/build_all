@@ -54,4 +54,8 @@ do
     echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
     cd $top_dir/$pkg
     python setup.py build
+    if [ $pkg = "signing" ] || [ $pkg = "validator" ]; then
+        # Workaround for swig ordering bug.
+        python setup.py build
+    fi
 done
