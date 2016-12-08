@@ -20,9 +20,18 @@ from journal.object_store import ObjectStore
 from sawtooth_bond.txn_family import BondTransaction
 from sawtooth_bond.updates.libor import CreateLIBORUpdate
 from sawtooth.exceptions import InvalidTransactionError
+from sawtooth_signing import pbct_nativerecover as signing
 
 
 class TestCreateLIBORUpdate(unittest.TestCase):
+
+    libor_key = None
+
+    @classmethod
+    def setUpClass(cls):
+        TestCreateLIBORUpdate.libor_key = \
+            signed_object.generate_signing_key()
+
     def test_libor_update_not_signed(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
@@ -54,6 +63,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_signature_does_not_match(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_invalid_public_key = signing.generate_pubkey(key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -67,8 +78,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': '0.1',
                     'OneYear': '0.1',
                 },
-                signature='hjoq7knkzlxo4qubsjslfarl1ej/qso0ar4zsucd5xguniuvqjv'
-                          'zj5lrqhayi5tqvniqxai0lkt31zqsztgojxw=')
+                libor_public_key=libor_invalid_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -83,6 +94,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_date(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -96,9 +109,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature="G78QicusrNO9l8Yxt/qJGX0TxkVh0ftSiW9dYkQPL5qYctd"
-                          "pb4Cq3GR15gT6DeHj0ujFcf4CK+Pu0Sqe77Zi92Y=")
-
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
         transaction = BondTransaction()
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -112,6 +124,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_overnight(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -124,8 +138,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HLwpLLCM0TdAOdyj/zpR4LUNp7QQosVTBBTqEq71zZkjKZ3a5yS'
-                          'qRqFAC8Wgv9VQHyRbScLXJxFOG7xH83SxLYc=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
         transaction = BondTransaction()
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -139,6 +153,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_one_week(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -151,9 +167,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature="HBYQ8UxaSl6tTv2Ab3Hctki7kl+G8qBthr+4vVXRvJhMrppcEA"
-                          "3CMtm3OitDoYsqmB6MC0WiFqqgSzOEiqJmPUg=")
-
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
         transaction = BondTransaction()
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -167,6 +182,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_one_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -179,8 +196,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G+eKJzXQBJCEgIj3ZZ46mfp73WqECskUBh4JPjFIMy9D2EAW02'
-                          'ry7VN1NA6r4ZPf2dGtRY50yHSLrRwf/3Yn0gs=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -195,6 +212,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_two_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -207,8 +226,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HCi5tDerqxHZ8han4SmTqMsbKN1JscETRCqYDU3gNQSofpt8fm2'
-                          '5i5xyo7EwBXDlxpcOyU5em8DVQOGsdyx8jXk=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -223,6 +242,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_three_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -235,8 +256,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HO+xNW91CfhWVrvBKyk2P0rak82TPG8ZSsBucI3QhSXT7SegQd'
-                          'y/Sq0dTZC+31rGQgMVdylbXLSO++aIb9OP0y8=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -251,6 +272,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_six_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -263,8 +286,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'ThreeMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HHlwEyzhFYP53vg2tE44snVyAD4UUIzElBiaiNUPZLKrkGmO'
-                          '5TLHHmRJ8RvTAkxL5elIicRiNwOKc7JI0Zjkn5o=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -279,6 +302,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_missing_one_year(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -291,8 +316,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'ThreeMonth': 0.1,
                     'SixMonth': 0.1
                 },
-                signature="HDRqSWSJN8wCPMGITZLx0pW/ccqsMDYnnG9mbRUL3x1O8bztf"
-                          "GmgkD9n+6OQgb/glO52zuJdFIFV5ehCdr4L0Ug=")
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -307,6 +332,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_date_in_the_future(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -320,8 +347,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G/gl8XhptfXUGih7X4g4s8EeXNXpX+qz7yEHd6ah1xXyrica2p'
-                          'pdePFikWb9wbR5rOnvKC8FDAIg8CadhAaizt0=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -336,6 +363,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_date_format(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -349,8 +378,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G9AKVsz3JlT/apjOieVwFc8PYkIXu787S0JkIYNY59GTI7h'
-                          '0pLP5SVqxycXkXJg+xtR8lK5vT0JeNAoYxpg3bzI=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -400,8 +429,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HOV3d7ESaywjUB3c3qPcV4DBKKpZR0tokeILinSEVdapNi2y7m'
-                          'NYrhAXjdgzbPzTGFmp0btjAPVFFUvzYKgOYvo=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -425,8 +454,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HEnC3vEdBhBcHAndjgouHj4T+ILyOX2PTCveiShIb8VK0woyM'
-                          '4UheSM4f2ucv8Xj/ySMhAl16JQYaDk6mZ7fARI=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -450,8 +479,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature="G9tsTDOQG/dG1f1rrduq7/rBxYqmWujbM7iMUuJc94pe1Ue7kt"
-                          "gbxlIqzND/+sxWR+PjtCKlzcN/AmW1MyBSAfs=")
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -475,8 +504,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HAjOWJgM9yP20fJ4pqD3x3dCrutwIYs0u3PepaWqNZXYC8L13'
-                          'xbqaCJ3/6vNX6BZRi9BD03t9VXxkmKHI6m/SOM=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -500,8 +529,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1,
                 },
-                signature='HM6jsivVl3OUszzyh8cjo68fLHlPsIj3kyxJ0u0CiwVDzXyKF'
-                          '0K8cpS3FvoYX9xOfG1i8jtxiMt0+EkAjJHxvP8=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -515,6 +544,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_date(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -528,9 +559,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature="G+9NKjqnXnEtMbYWbuUeiQqk3dcCdEKi1lf0V3W5/XwTnp5UwA"
-                          "eRcyeLALzsDhdnC3/qX2dBjewrA8vLFBOBNMw=")
-
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
         transaction = BondTransaction()
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -579,8 +609,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G9+MiYwYtErSOAd7FsWhda3pP9/iuNt+XWmHWdHk8Qs0qzCC'
-                          'ZxCjoM8onOalFwP9a0QtIQOnCOuhU8XpUOez6qk=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -604,8 +634,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G48nBn9dGbSDsN5NlEXVo30AE8AoAda5s9YzgSC1IO81GiB32'
-                          'O9kSPts+z7PGsdAhAOnv5OvTzsUVIntPBQwJ44=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -654,8 +684,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HE6eRRqetDR2hFYxUf9dY/H9LmN13yWL5FKnx+g9ME1WF/oB52'
-                          'OZlq0dIBwRemFA7tlN0jWgFgpBHrIG5E0avzk=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -679,8 +709,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HC29Ih92jlFIj/C5zD8ulPpvkEsNKXfXOk6I4FTqsdAyq+H8igh'
-                          '76evTLbgpF5AQ956I7gGt4ACNUXdjMdH19QQ=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction._updates = [update]
         transaction.sign_object(key)
@@ -694,6 +724,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_duplicate_date(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -707,8 +739,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G38pbExUmKqKzdC07QJS1OJSglnpLKGr+PMu4muigey37CdT2P'
-                          '7d0PBQxmaWNjtsADdPxQAS5FhtHOQbtD41fkU=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -730,6 +762,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_overnight(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -743,8 +777,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HLwpLLCM0TdAOdyj/zpR4LUNp7QQosVTBBTqEq71zZkjKZ3a5y'
-                          'SqRqFAC8Wgv9VQHyRbScLXJxFOG7xH83SxLYc=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -759,6 +793,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_one_week(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -772,8 +808,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HBYQ8UxaSl6tTv2Ab3Hctki7kl+G8qBthr+4vVXRvJhMrppcEA3'
-                          'CMtm3OitDoYsqmB6MC0WiFqqgSzOEiqJmPUg=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -788,6 +824,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_one_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -801,8 +839,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G+eKJzXQBJCEgIj3ZZ46mfp73WqECskUBh4JPjFIMy9D2EAW0'
-                          '2ry7VN1NA6r4ZPf2dGtRY50yHSLrRwf/3Yn0gs=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -817,6 +855,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_two_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -830,8 +870,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HCi5tDerqxHZ8han4SmTqMsbKN1JscETRCqYDU3gNQSofp'
-                          't8fm25i5xyo7EwBXDlxpcOyU5em8DVQOGsdyx8jXk=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -846,6 +886,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_three_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -859,8 +901,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='HO+xNW91CfhWVrvBKyk2P0rak82TPG8ZSsBucI3QhSXT7SegQd'
-                          'y/Sq0dTZC+31rGQgMVdylbXLSO++aIb9OP0y8=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -875,6 +917,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_six_month(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -888,8 +932,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 'invalid rate',
                     'OneYear': 0.1
                 },
-                signature='HHlwEyzhFYP53vg2tE44snVyAD4UUIzElBiaiNUPZLKrkGmO'
-                          '5TLHHmRJ8RvTAkxL5elIicRiNwOKc7JI0Zjkn5o=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -904,6 +948,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update_invalid_value_one_year(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -917,8 +963,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 'invalid rate'
                 },
-                signature='HDRqSWSJN8wCPMGITZLx0pW/ccqsMDYnnG9mbRUL3x1O8bz'
-                          'tfGmgkD9n+6OQgb/glO52zuJdFIFV5ehCdr4L0Ug=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
 
         transaction = BondTransaction()
         transaction._updates = [update]
@@ -933,6 +979,8 @@ class TestCreateLIBORUpdate(unittest.TestCase):
     def test_libor_update(self):
         key = signed_object.generate_signing_key()
         store = ObjectStore()
+        libor_key = TestCreateLIBORUpdate.libor_key
+        libor_public_key = signing.generate_pubkey(libor_key)
         update = \
             CreateLIBORUpdate(
                 update_type='CreateLIBOR',
@@ -946,17 +994,16 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0.1,
                     'OneYear': 0.1
                 },
-                signature='G38pbExUmKqKzdC07QJS1OJSglnpLKGr+PMu4muigey37CdT2P7'
-                          'd0PBQxmaWNjtsADdPxQAS5FhtHOQbtD41fkU=')
-
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
         transaction = BondTransaction()
         transaction._updates = [update]
         transaction.sign_object(key)
 
         try:
             transaction.check_valid(store)
-        except InvalidTransactionError:
-            self.fail('This transaction should be valid')
+        except InvalidTransactionError as e:
+            self.fail('This transaction should be valid\n error:' + str(e))
 
         try:
             store.lookup('libor:date', '2016-05-24')
@@ -981,15 +1028,16 @@ class TestCreateLIBORUpdate(unittest.TestCase):
                     'SixMonth': 0,
                     'OneYear': 1
                 },
-                signature='GzcrWBTv180bCZcKkluVOSPcqNbNrcLCj3FocJH9uliKkl+3yNR'
-                          'yhj5DAIsTWOY2ZwrcDVEMOp1P1jJpfctst6I=')
+                libor_public_key=libor_public_key)
+        update.sign_update_object(libor_key)
+
         transaction._updates = [update]
         transaction.sign_object(key)
 
         try:
             transaction.check_valid(store)
-        except InvalidTransactionError:
-            self.fail('This transaction should be valid')
+        except InvalidTransactionError as e:
+            self.fail('This transaction should be valid\n error: ' + str(e))
 
         try:
             store.lookup('libor:date', '2016-05-25')

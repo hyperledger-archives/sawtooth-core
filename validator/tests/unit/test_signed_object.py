@@ -39,7 +39,7 @@ class TestSignedObject(unittest.TestCase):
         signkey = SigObj.generate_signing_key()
         temp = SignedObject({signkey: "test"}, signkey)
         self.assertEquals(temp.SignatureKey, signkey)
-        self.assertEquals(temp.dump(), {signkey: "test", "public_key": None})
+        self.assertEquals(temp.dump(), {signkey: "test", "PublicKey": None})
         self.assertEquals(temp.__repr__(), temp.serialize())
         self.assertIsNotNone(temp.Identifier)
         temp._identifier = None
