@@ -22,6 +22,7 @@ from sawtooth_validator.scheduler.serial import SerialScheduler
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
+
 def create_transaction(name, private_key, public_key):
     payload = name
     addr = '000000' + hashlib.sha512(name.encode()).hexdigest()

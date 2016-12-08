@@ -71,7 +71,7 @@ class SerialScheduler(Scheduler):
         if (self._in_progress_transaction is None or
                 self._in_progress_transaction != transaction_signature):
             raise ValueError("transaction not in progress: {}",
-                transaction_signature)
+                             transaction_signature)
         self._in_progress_transaction = None
 
     def finalize(self):
