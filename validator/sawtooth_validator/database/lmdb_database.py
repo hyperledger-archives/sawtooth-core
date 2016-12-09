@@ -16,6 +16,10 @@
 from threading import RLock
 import os
 import pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    pass
 
 import lmdb
 
