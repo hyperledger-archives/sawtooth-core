@@ -112,8 +112,8 @@ class Stream(object):
 
         def done_callback(call):
             if call.code() != grpc.StatusCode.OK:
-                print("ERROR: Connect() failed with status code: {}: {}".\
-                    format(str(call.code()), call.details()))
+                print("ERROR: Connect() failed with status code: "
+                      "{}: {}".format(str(call.code()), call.details()))
 
         self._handle.add_done_callback(done_callback)
 
