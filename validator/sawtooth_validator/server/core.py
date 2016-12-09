@@ -15,7 +15,8 @@
 import logging
 import os
 import random
-import queue
+from queue import Empty
+from queue import Queue
 
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
@@ -122,7 +123,7 @@ class ValidatorService(validator_pb2.ValidatorServicer):
         peer = context.peer()
         LOGGER.info("connections from peer %s", peer)
 
-        send_queue = queue.Queue()
+        send_queue = Queue()
 
         self._send_queues[context.peer()] = send_queue
 
@@ -140,7 +141,7 @@ class ValidatorService(validator_pb2.ValidatorServicer):
                 try:
                     message = send_queue.get(True, 1)
                     print("sending {}".format(message.message_type))
-                except queue.Empty:
+                except Empty:
                     message = None
             if recv_thread.disconnect:
                 break

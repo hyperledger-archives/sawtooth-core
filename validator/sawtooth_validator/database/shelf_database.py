@@ -17,6 +17,11 @@ from threading import RLock
 from shelve import Shelf
 import dbm
 
+try:
+    import anydbm as dbm
+except ImportError:
+    pass
+
 from sawtooth_validator.database import database
 
 
