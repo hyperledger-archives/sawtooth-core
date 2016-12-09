@@ -22,7 +22,8 @@ class NodeArguments(object):
     Structure to house arguments exposed by our validator cli
     '''
     def __init__(self, node_name, http_port=None, gossip_port=None,
-                 currency_home=None, config_files=None, genesis=False):
+                 currency_home=None, config_files=None, genesis=False,
+                 ledger_type=None):
         '''
         Args:
             node_name (str):
@@ -38,6 +39,7 @@ class NodeArguments(object):
         self.currency_home = currency_home
         self.config_files = [] if config_files is None else config_files
         self.genesis = genesis
+        self.ledger_type = ledger_type
 
 
 class NodeController(object):

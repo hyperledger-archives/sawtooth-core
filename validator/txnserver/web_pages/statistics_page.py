@@ -71,7 +71,7 @@ class StatisticsPage(BasePage):
         if 'platform' in args:
             self.ps.get_stats()
             result['platform'] = self.ps.get_data_as_dict()
-        elif ('ledger' not in args) & ('node' not in args) \
+        elif ('journal' not in args) & ('node' not in args) \
                 & ('platform' not in args):
             return self._encode_error_response(
                 request,

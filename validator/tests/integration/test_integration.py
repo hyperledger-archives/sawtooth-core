@@ -13,53 +13,33 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import traceback
 import unittest
 import os
 
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
-from txnintegration.validator_network_manager import get_default_vnm
 
-ENABLE_OVERNIGHT_TESTS = False
-if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
-    ENABLE_OVERNIGHT_TESTS = True
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestIntegration(unittest.TestCase):
-    @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS, "integration test")
+    def __init__(self, test_name, urls=None):
+        super(TestIntegration, self).__init__(test_name)
+        self.urls = urls
+
     def test_intkey_load_ext(self):
-        vnm = None
-        try:
-            print "Launching validator network."
-            vnm = get_default_vnm(5)
-            vnm.do_genesis()
-            vnm.launch()
-            print "Testing transaction load."
-            test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 10)
-            test.run(1)
-            test.run_with_missing_dep(1)
-            test.validate()
-        finally:
-            if vnm is not None:
-                vnm.shutdown(archive_name="TestIntegrationResults_0")
+        print "Testing transaction load."
+        test = IntKeyLoadTest()
+        test.setup(self.urls, 10)
+        test.run(1)
+        test.run_with_missing_dep(1)
+        test.validate()
 
-    @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS,
-                         "limit of missing dependencies test")
     def test_missing_dependencies(self):
-        vnm = None
-        try:
-            print "Launching validator network."
-            vnm = get_default_vnm(5)
-            vnm.do_genesis()
-            vnm.launch()
-
-            print "Testing limit of missing dependencies."
-            test = IntKeyLoadTest()
-            test.setup(vnm.urls(), 10)
-            test.run(1)
-            test.run_with_limit_txn_dependencies(1)
-            test.validate()
-        finally:
-            if vnm is not None:
-                vnm.shutdown(archive_name="TestIntegrationResults_1")
+        print "Testing limit of missing dependencies."
+        test = IntKeyLoadTest()
+        test.setup(self.urls, 10)
+        test.run(1)
+        test.run_with_limit_txn_dependencies(1)
+        test.validate()

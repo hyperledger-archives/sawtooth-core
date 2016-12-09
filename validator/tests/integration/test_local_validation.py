@@ -20,7 +20,6 @@ import logging
 from sawtooth.exceptions import InvalidTransactionError
 from txnintegration.integer_key_client import IntegerKeyClient
 from txnintegration.utils import generate_private_key
-from txnintegration.validator_network_manager import get_default_vnm
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +27,14 @@ RUN_TEST_SUITES = True \
     if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestLocalValidationErrors(unittest.TestCase):
-    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
+    def __init__(self, test_name, urls=None):
+        super(TestLocalValidationErrors, self).__init__(test_name)
+        self.urls = urls
+
     def test_local_validation_errors(self):
-        url = "http://localhost:8800"
-        client = IntegerKeyClient(url,
+        client = IntegerKeyClient(self.urls[0],
                                   keystring=generate_private_key(),
                                   disable_client_validation=True)
 

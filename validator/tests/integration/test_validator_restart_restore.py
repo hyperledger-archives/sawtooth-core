@@ -1,45 +1,40 @@
 import traceback
 import unittest
 import os
-
-import numpy
-import unittest
 import time
 
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
-from txnintegration.validator_network_manager import get_default_vnm
 from txnintegration.utils import sit_rep
 from txnintegration.utils import is_convergent
 from txnintegration.utils import TimeOut
 from txnintegration.utils import Progress
+from sawtooth.exceptions import MessageException
 
 
-ENABLE_OVERNIGHT_TESTS = False
-if os.environ.get("ENABLE_OVERNIGHT_TESTS", False) == "1":
-    ENABLE_OVERNIGHT_TESTS = True
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestValidatorShutdownRestartRestore(unittest.TestCase):
-    @unittest.skipUnless(ENABLE_OVERNIGHT_TESTS,
-                         "validator shutdown and restart with restore")
-    def test_validator_shutdown_restart_restore_ext(self):
-        print
-        try:
-            print "launching a validator network of 5"
-            vnm = get_default_vnm(5)
-            vnm.do_genesis()
-            vnm.launch()
+    def __init__(self, test_name, urls=None, node_controller=None, nodes=None):
+        super(TestValidatorShutdownRestartRestore, self).__init__(test_name)
+        self.urls = urls
+        self.node_controller = node_controller
+        self.nodes = nodes
 
+    def test_validator_shutdown_restart_restore_ext(self):
+        try:
             keys = 10
             rounds = 2
             txn_intv = 0
-            timeout = 5
+            timeout = 20
 
             print "Testing transaction load."
             test = IntKeyLoadTest()
-            urls = vnm.urls()
+            urls = self.urls
             self.assertEqual(5, len(urls))
-            test.setup(vnm.urls(), keys)
+            test.setup(self.urls, keys)
             test.run(keys, rounds, txn_intv)
             test.validate()
 
@@ -47,31 +42,46 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             convergent = False
             with Progress("Checking for validators convergence") as p:
                 while convergent is False or not to.is_timed_out():
-                    time.sleep(timeout)
+                    time.sleep(5)
                     p.step()
-                    convergent = is_convergent(vnm.urls(),
+                    convergent = is_convergent(self.urls,
                                                tolerance=2,
                                                standard=5)
             self.assertTrue(convergent, "All validators are "
                                         "not on the same chain.")
             print "all validators are on the same chain"
-            sit_rep(vnm.urls(), verbosity=1)
-            report_before_shutdown = sit_rep(vnm.urls(), verbosity=1)
+            sit_rep(self.urls, verbosity=1)
+            report_before_shutdown = sit_rep(self.urls, verbosity=1)
             validator_report = report_before_shutdown[2]
             valid_dict_value = validator_report['Status']
             validator_blocks_shutdown = valid_dict_value['Blocks']
             print "validator_blocks", validator_blocks_shutdown
 
             print "turn off entire validator network"
-            vnm.update(node_mat=numpy.zeros(shape=(5, 5)), timeout=8)
-            # set InitialConnectivity of individual
-            # node to zero before relaunching
-            cfg = vnm.get_configuration(2)
-            cfg['InitialConnectivity'] = 0
-            vnm.set_configuration(2, cfg)
-            print "relaunch validator 2"
-            vnm.activate_node(2)
-            report_after_relaunch = sit_rep(vnm.urls(), verbosity=1)
+            nodes_names = self.node_controller.get_node_names()
+            for node in nodes_names:
+                self.node_controller.stop(node)
+            to = TimeOut(120)
+            while len(self.node_controller.get_node_names()) > 0:
+                if to.is_timed_out():
+                    self.fail("Timed Out")
+            print "relaunch validator 0"
+            self.node_controller.start(self.nodes[0])
+            to = TimeOut(120)
+            while len(self.node_controller.get_node_names()) < 1:
+                if to.is_timed_out():
+                    self.fail("Timed Out")
+            report_after_relaunch = None
+            while report_after_relaunch is None:
+                try:
+                    report_after_relaunch = \
+                        sit_rep([self.urls[0]], verbosity=1)
+                except MessageException:
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
+                time.sleep(4)
+
+            report_after_relaunch = sit_rep([self.urls[0]], verbosity=1)
             validator_report = report_after_relaunch[0]
             valid_dict_value = validator_report['Status']
             validator_blocks_relaunch = valid_dict_value['Blocks']
@@ -85,9 +95,21 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
                                  "mismatch in post-shutdown validator blocks. "
                                  "Validator didn't restore fr local db")
                 break
-                print "relaunched validator restored from local database"
+            print "relaunched validator restored from local database"
 
         finally:
-            if vnm is not None:
-                # Validator network shutting down
-                vnm.shutdown(archive_name='TestValidatorShutdownRestore')
+            print "restart validators "
+            for node in self.nodes:
+                self.node_controller.start(node)
+            to = TimedOut(120)
+            while len(self.node_controller.get_node_names()) < 5:
+                pass
+            report_after_relaunch = None
+            while report_after_relaunch is None:
+                try:
+                    report_after_relaunch = \
+                        sit_rep(self.urls, verbosity=1)
+                except MessageException:
+                    if to.is_timed_out():
+                        self.fail("Timed Out")
+                time.sleep(4)

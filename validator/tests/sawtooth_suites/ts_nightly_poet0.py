@@ -14,19 +14,29 @@
 # ------------------------------------------------------------------------------
 import logging
 import time
+import os
+import json
 import traceback
 import unittest
 
-from integration.test_convergence import TestConvergence
 from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.subproc import SubprocessNodeController
 from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
+from integration.test_integration import TestIntegration
+from integration.test_convergence import TestConvergence
+from integration.test_validator_restart_restore \
+    import TestValidatorShutdownRestartRestore
+from integration.test_validator_restart import TestValidatorShutdownRestart
+from integration.test_validator_shutdown_sigkill_restart \
+    import TestValidatorShutdownSigKillRestart
+from integration.test_sawtooth_stats import TestSawtoothStats
 
 LOGGER = logging.getLogger(__name__)
 
-class SawtoothVnmTestSuite(unittest.TestCase):
+
+class Poet0NightlyTestSuite(unittest.TestCase):
     def _do_teardown(self):
         print 'destroying', str(self.__class__.__name__)
         if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
@@ -54,15 +64,22 @@ class SawtoothVnmTestSuite(unittest.TestCase):
         self._node_ctrl = None
         print 'creating', str(self.__class__.__name__)
         # set up our nodes (suite-internal interface)
+        self._node_ctrl = WrappedNodeController(SubprocessNodeController())
+        cfg = {"LedgerType": "poet0"}
+        temp_dir = self._node_ctrl.get_data_dir()
+        file_name = os.path.join(temp_dir, "config.js")
+        with open(file_name, 'w') as config:
+            config.write(json.dumps(cfg))
+
         self._nodes = [
-            NodeArguments('v%s' % i, 8800 + i, 9000 + i) for i in range(2)
-        ]
+            NodeArguments('v%s' % i, 8800 + i, 9000 + i,
+                          config_files=[file_name]) for i in range(5)]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
         print 'creating genesis block...'
         self._nodes[0].genesis = True
-        self._node_ctrl = WrappedNodeController(SubprocessNodeController())
+
         self._node_ctrl.create_genesis_block(self._nodes[0])
         # Launch network (node zero will trigger bootstrapping)
         print 'launching network...'
@@ -72,12 +89,27 @@ class SawtoothVnmTestSuite(unittest.TestCase):
     def test_suite(self):
         success = False
         try:
-            print
             self._do_setup()
             urls = self.urls
             suite = unittest.TestSuite()
+            # test_bootstrap will allow the validators to all come on line
+            # before others tries to connect to the validators.
             suite.addTest(TestConvergence('test_bootstrap', urls))
-            runner = unittest.TextTestRunner()
+            suite.addTest(TestIntegration('test_intkey_load_ext', urls))
+            suite.addTest(TestIntegration('test_missing_dependencies', urls))
+            suite.addTest(TestSawtoothStats('test_sawtooth_stats', urls))
+            suite.addTest(TestValidatorShutdownRestart(
+                'test_validator_shutdown_restart_ext',
+                urls, self._node_ctrl, self._nodes))
+            suite.addTest(TestConvergence('test_bootstrap', urls))
+            suite.addTest(TestValidatorShutdownSigKillRestart(
+                'test_validator_shutdown_sigkill_restart_ext',
+                urls, self._node_ctrl, self._nodes))
+            suite.addTest(TestConvergence('test_bootstrap', urls))
+            suite.addTest(TestValidatorShutdownRestartRestore(
+                'test_validator_shutdown_restart_restore_ext',
+                urls, self._node_ctrl, self._nodes))
+            runner = unittest.TextTestRunner(verbosity=2)
             result = runner.run(suite)
             if len(result.failures) == 0 and len(result.errors) == 0:
                 success = True

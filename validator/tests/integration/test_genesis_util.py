@@ -20,32 +20,56 @@ import unittest
 
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.exceptions import MessageException
+from sawtooth.manage.node import NodeArguments
+from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import is_convergent
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
-from txnintegration.validator_network_manager import get_default_vnm
 
 LOGGER = logging.getLogger(__name__)
 
-ENABLE_INTEGRATION_TESTS = True \
-    if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1" else False
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
+
 DISABLE_POET1_SGX = True \
     if os.environ.get("DISABLE_POET1_SGX", False) == "1" else False
 
 
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestGenesisUtil(unittest.TestCase):
     def extend_genesis_util(self, overrides):
         print
         vnm = None
         try:
-            vnm = get_default_vnm(2, overrides=overrides)
-            # Test genesis util
-            cfg = vnm.get_configuration(0)
-            ledger_type = cfg['LedgerType']
-            gblock_file = genesis_info_file_name(cfg['DataDirectory'])
+            self._node_ctrl = None
+            print 'creating', str(self.__class__.__name__)
+            # set up our nodes (suite-internal interface)
+            self._node_ctrl = WrappedNodeController(SubprocessNodeController())
+            cfg = overrides
+            temp_dir = self._node_ctrl.get_data_dir()
+            file_name = os.path.join(temp_dir, "config.js")
+            with open(file_name, 'w') as config:
+                config.write(json.dumps(cfg))
+            data_dir = os.path.join(temp_dir, "data")
+            gblock_file = genesis_info_file_name(data_dir)
+
+            self._nodes = [
+                NodeArguments('v%s' % i, 8800 + i, 9000 + i,
+                              config_files=[file_name],
+                              ledger_type=overrides["LedgerType"])
+                for i in range(2)]
+            # set up our urls (external interface)
+            self.urls = [
+                'http://localhost:%s' % x.http_port for x in self._nodes]
+            # Make genesis block
+            print 'creating genesis block...'
             self.assertFalse(os.path.exists(gblock_file))
-            vnm.do_genesis()
+            self._nodes[0].genesis = True
+            self._node_ctrl.create_genesis_block(self._nodes[0])
+
+            # Test genesis util
             self.assertTrue(os.path.exists(gblock_file))
             genesis_dat = None
             with open(gblock_file, 'r') as f:
@@ -53,7 +77,11 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertTrue('GenesisId' in genesis_dat.keys())
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
-            vnm.launch()
+            # Launch network (node zero will trigger bootstrapping)
+            print 'launching network...'
+            for x in self._nodes:
+                self._node_ctrl.start(x)
+
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -77,7 +105,7 @@ class TestGenesisUtil(unittest.TestCase):
             to = TimeOut(32)
             with Progress('testing root convergence') as p:
                 print
-                while (is_convergent(vnm.urls(), tolerance=1, standard=1)
+                while (is_convergent(self.urls, tolerance=1, standard=1)
                        is False and not to.is_timed_out()):
                     time.sleep(2)
                     p.step()
@@ -87,19 +115,34 @@ class TestGenesisUtil(unittest.TestCase):
             self.assertEqual(head, root)
             print 'network converged on root: %s' % root
         finally:
-            if vnm is not None:
-                archive_name = 'Test%sGenesisResults' % ledger_type.upper()
-                vnm.shutdown(archive_name=archive_name)
+            print 'destroying', str(self.__class__.__name__)
+            if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
+                # Shut down the network
+                with Progress("terminating network") as p:
+                    for node_name in self._node_ctrl.get_node_names():
+                        self._node_ctrl.stop(node_name)
+                    to = TimeOut(16)
+                    while len(self._node_ctrl.get_node_names()) > 0:
+                        if to.is_timed_out():
+                            break
+                        time.sleep(1)
+                        p.step()
+                # force kill anything left over
+                for node_name in self._node_ctrl.get_node_names():
+                    try:
+                        print "%s still 'up'; sending kill..." % node_name
+                        self._node_ctrl.kill(node_name)
+                    except Exception as e:
+                        print e.message
+                self._node_ctrl.clean()
 
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_dev_mode_genesis(self):
-        self.extend_genesis_util({'LedgerType': 'dev_mode'})
+        self.extend_genesis_util({'LedgerType': 'dev_mode',
+                                  'DevModePublisher': True})
 
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     def test_poet0_genesis(self):
-        self.extend_genesis_util({})
+        self.extend_genesis_util({'LedgerType': 'poet0'})
 
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
     @unittest.skipIf(DISABLE_POET1_SGX, 'SGX currently behind simulator')
     def test_poet1_genesis(self):
         self.extend_genesis_util({'LedgerType': 'poet1'})
