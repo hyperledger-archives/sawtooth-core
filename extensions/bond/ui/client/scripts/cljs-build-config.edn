@@ -1,0 +1,40 @@
+[{:id "dev"
+  :source-paths ["src/main" "src/dev"]
+  :figwheel {:on-jsload "bond.main/on-reload"}
+  :compiler {:main bond.main
+             :foreign-libs [{:file "lib/deps_library.js"
+                             :module-type :commonjs
+                             :provides ["sawtooth.vendor"]}]
+             :externs ["lib/deps_library.externs.js"]
+             :asset-path "js/compiled/out"
+             :output-to "resources/public/js/compiled/bond.js"
+             :output-dir "resources/public/js/compiled/out"
+             :source-map-timestamp true}}
+
+ {:id "min"
+  :source-paths ["src/main" "src/prod"]
+  :compiler {:output-to "resources/public/js/compiled/bond.js"
+             :output-dir "resources/public/js/compiled/out"
+             :foreign-libs [{:file "lib/deps_library.js"
+                             :module-type :commonjs
+                             :provides ["sawtooth.vendor"]}]
+             :externs ["lib/deps_library.externs.js"]
+             :main bond.main
+             :asset-path "js/compiled/out"
+             :optimizations :whitespace
+             :verbose true
+             :pretty-print false}}
+
+ {:id "test"
+  :figwheel {}
+  :source-paths ["src/main" "src/prod" "test/main"]
+  :compiler {:main test-suite.all
+             :output-to "resources/public/js/test/test.js"
+             :output-dir "resources/public/js/test/out"
+             :asset-path "js/test/out"
+             :source-map-timestamp true
+             :language-in :ecmascript5
+             :externs ["lib/deps_library.externs.js"]
+             :foreign-libs [{:file "lib/deps_library.js"
+                             :module-type :commonjs
+                             :provides ["sawtooth.vendor"]}]}}]

@@ -38,7 +38,8 @@ find_packages() {
         | grep -v /sawtooth_suites/ \
         | grep -v /navigator/ \
         | grep -v _pb2\.py$ \
-        | grep -v /bond/tests/
+        | grep -v /bond/tests/ \
+        | grep -v /bond/ui/
 }
 
 lint() {
