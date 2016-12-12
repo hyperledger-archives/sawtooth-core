@@ -147,13 +147,19 @@ def main():
         currency_home = opts['data_dir']
         http_port = int(opts['http_port'])
         gossip_port = int(opts['port'])
+        try:
+            ledger_type = opts["validator_config"]["LedgerType"]
+        except KeyError:
+            # None defaults to poet0
+            ledger_type = None
         node_ctrl = WrappedNodeController(SubprocessNodeController(),
                                           data_dir=currency_home)
         nodes = []
         for idx in range(count):
             node = NodeArguments("validator-{:0>3}".format(idx),
                                  http_port=http_port + idx,
-                                 gossip_port=gossip_port + idx)
+                                 gossip_port=gossip_port + idx,
+                                 ledger_type=ledger_type)
             nodes.append(node)
         currency_home = node_ctrl.get_data_dir()
         if opts['log_config_dict']:
