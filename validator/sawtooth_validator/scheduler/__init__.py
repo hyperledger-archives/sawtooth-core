@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-import os
-import sys
-import sysconfig
-
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'sdk', 'examples', 'intkey_python'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'sdk', 'python'))
-
-from sawtooth_intkey.client_cli.main import main_wrapper
-
-if __name__ == '__main__':
-    main_wrapper()

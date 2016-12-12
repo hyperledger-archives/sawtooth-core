@@ -1,5 +1,4 @@
 *.so
-*.pyc
 *.egg-info
 dist
 build

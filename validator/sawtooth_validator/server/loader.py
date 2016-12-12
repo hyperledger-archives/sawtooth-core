@@ -27,4 +27,4 @@ class SystemLoadHandler(object):
             message=Message(
                 message_type="system/load-response",
                 correlation_id=message.correlation_id,
-                content="{ 'status': 'SUCCESS' }"))
+                content="{ 'status': 'SUCCESS' }".encode()))

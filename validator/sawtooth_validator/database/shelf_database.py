@@ -15,7 +15,12 @@
 
 from threading import RLock
 from shelve import Shelf
-import anydbm
+import dbm
+
+try:
+    import anydbm as dbm
+except ImportError:
+    pass
 
 from sawtooth_validator.database import database
 
@@ -40,7 +45,7 @@ class ShelfDatabase(database.Database):
         """
         super(ShelfDatabase, self).__init__()
         self._lock = RLock()
-        self._shelf = Shelf(anydbm.open(filename, flag))
+        self._shelf = Shelf(dbm.open(filename, flag))
 
     def __len__(self):
         with self._lock:

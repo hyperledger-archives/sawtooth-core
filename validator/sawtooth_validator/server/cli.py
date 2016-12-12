@@ -14,19 +14,21 @@
 # ------------------------------------------------------------------------------
 
 import sys
-import time
 
 from sawtooth_validator.server.core import Validator
 
 
 def main(args=sys.argv[1:]):
-    validator = Validator('0.0.0.0:40000')
-    validator.start()
-
+    if len(args) == 0:
+        url = '0.0.0.0:40000'
+    elif len(args) == 1:
+        url = args[0]
+    else:
+        print("Too many arguments. try ./bin/validator 0.0.0.0:40000")
+    validator = Validator(url)
     try:
-        while True:
-            time.sleep(1000)
+        validator.start()
     except KeyboardInterrupt:
-        print >>sys.stderr, "Interrupted!"
+        print(sys.stderr, "Interrupted!")
     finally:
         validator.stop()

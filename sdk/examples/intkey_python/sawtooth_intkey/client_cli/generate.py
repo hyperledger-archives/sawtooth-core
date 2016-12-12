@@ -24,10 +24,10 @@ import string
 import time
 
 import cbor
-import pybitcointools
+import bitcoin
 
-import sawtooth_protobuf.batch_pb2 as batch_pb2
-import sawtooth_protobuf.transaction_pb2 as transaction_pb2
+from sawtooth_protobuf import transaction_pb2
+from sawtooth_protobuf import batch_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -66,9 +66,9 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
-    intkey_prefix = hashlib.sha512('intkey').hexdigest()[0:6]
+    intkey_prefix = hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
-    addr = intkey_prefix + hashlib.sha512(name).hexdigest()
+    addr = intkey_prefix + hashlib.sha512(name.encode('utf-8')).hexdigest()
 
     header = transaction_pb2.TransactionHeader(
         signer=public_key,
@@ -83,7 +83,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
 
     header_bytes = header.SerializeToString()
 
-    signature = pybitcointools.ecdsa_sign(
+    signature = bitcoin.ecdsa_sign(
         header_bytes,
         private_key)
 
@@ -104,7 +104,7 @@ def create_batch(transactions, private_key, public_key):
 
     header_bytes = header.SerializeToString()
 
-    signature = pybitcointools.ecdsa_sign(
+    signature = bitcoin.ecdsa_sign(
         header_bytes,
         private_key)
 
@@ -117,7 +117,7 @@ def create_batch(transactions, private_key, public_key):
 
 
 def generate_word():
-    return ''.join([random.choice(string.ascii_letters) for _ in xrange(0, 6)])
+    return ''.join([random.choice(string.ascii_letters) for _ in range(0, 6)])
 
 
 def generate_word_list(count):
@@ -125,22 +125,22 @@ def generate_word_list(count):
         with open('/usr/share/dict/words', 'r') as fd:
             return [x.strip() for x in fd.readlines()[0:count]]
     else:
-        return [generate_word() for _ in xrange(0, count)]
+        return [generate_word() for _ in range(0, count)]
 
 
 def do_generate(args):
-    private_key = pybitcointools.random_key()
-    public_key = pybitcointools.encode_pubkey(
-        pybitcointools.privkey_to_pubkey(private_key), "hex")
+    private_key = bitcoin.random_key()
+    public_key = bitcoin.encode_pubkey(
+        bitcoin.privkey_to_pubkey(private_key), "hex")
 
     words = generate_word_list(args.pool_size)
 
     batches = []
     start = time.time()
     total_txn_count = 0
-    for i in xrange(0, args.count):
+    for i in range(0, args.count):
         txns = []
-        for _ in xrange(0, random.randint(1, args.batch_max_size)):
+        for _ in range(0, random.randint(1, args.batch_max_size)):
             txn = create_intkey_transaction(
                 verb=random.choice(['set', 'inc', 'dec']),
                 name=random.choice(words),
@@ -165,17 +165,17 @@ def do_generate(args):
                 txn_count += len(batch.transactions)
 
             fmt = 'batches {}, batch/sec: {:.2f}, txns: {}, txns/sec: {:.2f}'
-            print fmt.format(
+            print(fmt.format(
                 str(i),
                 100 / (stop - start),
                 str(total_txn_count),
-                txn_count / (stop - start))
+                txn_count / (stop - start)))
             start = stop
 
     batch_list = batch_pb2.BatchList(batches=batches)
 
-    print "Writing to {}...".format(args.output)
-    with open(args.output, "w") as fd:
+    print("Writing to {}...".format(args.output))
+    with open(args.output, "wb") as fd:
         fd.write(batch_list.SerializeToString())
 
 

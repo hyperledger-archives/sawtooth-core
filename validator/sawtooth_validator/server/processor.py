@@ -29,12 +29,12 @@ class ProcessorRegisterHandler(object):
         request = TransactionProcessorRegisterRequest()
         request.ParseFromString(message.content)
 
-        print "transaction processor {} {} {} {} {}".format(
+        print("transaction processor {} {} {} {} {}".format(
             request.family,
             request.version,
             request.encoding,
             request.namespaces,
-            message.sender)
+            message.sender))
 
         self._service.register_transaction_processor(
             message.sender,

@@ -60,7 +60,7 @@ class LMDBNoLockDatabase(database.Database):
 
     def __contains__(self, key):
         with self._lmdb.begin() as txn:
-            return bool(txn.get(key) is not None)
+            return bool(txn.get(key.encode()) is not None)
 
     def get(self, key):
         """Retrieves a value associated with a key from the database
@@ -69,7 +69,7 @@ class LMDBNoLockDatabase(database.Database):
             key (str): The key to retrieve
         """
         with self._lmdb.begin() as txn:
-            packed = txn.get(key)
+            packed = txn.get(key.encode())
             if packed is not None:
                 return cbor.loads(packed)
 
@@ -77,7 +77,7 @@ class LMDBNoLockDatabase(database.Database):
         with self._lmdb.begin() as txn:
             result = []
             for key in keys:
-                packed = txn.get(key)
+                packed = txn.get(key.encode())
                 if packed is not None:
                     result.append((key, cbor.loads(packed)))
         return result
@@ -91,14 +91,14 @@ class LMDBNoLockDatabase(database.Database):
         """
         packed = cbor.dumps(value)
         with self._lmdb.begin(write=True, buffers=True) as txn:
-            txn.put(key, packed, overwrite=True)
+            txn.put(key.encode(), packed, overwrite=True)
         self.sync()
 
     def set_batch(self, kvpairs):
         with self._lmdb.begin(write=True, buffers=True) as txn:
             for k, v in kvpairs:
                 packed = cbor.dumps(v)
-                txn.put(k, packed, overwrite=True)
+                txn.put(k.encode(), packed, overwrite=True)
         self.sync()
 
     def delete(self, key):
@@ -108,7 +108,7 @@ class LMDBNoLockDatabase(database.Database):
             key (str): The key to remove.
         """
         with self._lmdb.begin(write=True, buffers=True) as txn:
-            txn.delete(key)
+            txn.delete(key.encode())
 
     def sync(self):
         """Ensures that pending writes are flushed to disk
@@ -124,4 +124,4 @@ class LMDBNoLockDatabase(database.Database):
         """Returns a list of keys in the database
         """
         with self._lmdb.begin() as txn:
-            return [key for key, _ in txn.cursor()]
+            return [key.decode() for key, _ in txn.cursor()]

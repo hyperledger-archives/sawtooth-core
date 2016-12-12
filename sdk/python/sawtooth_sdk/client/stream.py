@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import Queue
+import queue
 
 from threading import Thread
 
@@ -35,7 +35,7 @@ from sawtooth_sdk.client.future import FutureResult
 def _generate_id():
     return hashlib.sha512(''.join(
         [random.choice(string.ascii_letters)
-            for _ in xrange(0, 1024)])).hexdigest()
+            for _ in range(0, 1024)]).encode()).hexdigest()
 
 
 class RecvThread(Thread):
@@ -78,8 +78,8 @@ class MessageType(object):
 class Stream(object):
     def __init__(self, url):
         self._url = url
-        self._send_queue = Queue.Queue()
-        self._recv_queue = Queue.Queue()
+        self._send_queue = queue.Queue()
+        self._recv_queue = queue.Queue()
 
         self._futures = FutureCollection()
 
@@ -96,7 +96,7 @@ class Stream(object):
                         message = self._send_queue.get(True, 1)
                         if message.message_type == 'system/disconnect':
                             disconnect = True
-                    except Queue.Empty:
+                    except queue.Empty:
                         message = None
 
                 yield validator_pb2.MessageList(messages=[message])
@@ -112,8 +112,8 @@ class Stream(object):
 
         def done_callback(call):
             if call.code() != grpc.StatusCode.OK:
-                print "ERROR: Connect() failed with status code: {}: {}".\
-                    format(str(call.code()), call.details())
+                print("ERROR: Connect() failed with status code: "
+                      "{}: {}".format(str(call.code()), call.details()))
 
         self._handle.add_done_callback(done_callback)
 
@@ -150,7 +150,7 @@ class Stream(object):
         message = validator_pb2.Message(
             message_type='system/disconnect',
             correlation_id=_generate_id(),
-            content='')
+            content=''.encode())
         self._send_queue.put(message)
 
         while not self._handle.done():

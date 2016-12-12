@@ -13,3 +13,6 @@ python-twisted
 python-twisted-core
 python-twisted-web
 python-yaml
+python3-cbor
+python3-colorlog
+python3-lmdb

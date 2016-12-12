@@ -5,4 +5,9 @@ python-dev
 python-pip
 python-setuptools
 python-stdeb
+python3-all-dev
+python3-pip
+python3-nose2
+python3-nose2-cov
+python3-stdeb
 swig3.0

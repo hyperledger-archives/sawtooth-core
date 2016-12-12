@@ -50,7 +50,7 @@ class IntkeyTransactionHandler(object):
 
     def apply(self, transaction, state):
         content = cbor.loads(transaction.payload)
-        print repr(content)
+        print(repr(content))
 
         (verb, name, value) = \
             (content['Verb'], content['Name'], content['Value'])
@@ -65,7 +65,8 @@ class IntkeyTransactionHandler(object):
         if verb not in ['set', 'inc', 'dec']:
             raise InvalidTransaction("invalid Verb: '{}'".format(verb))
 
-        address = self._namespace_prefix + hashlib.sha512(name).hexdigest()
+        address = self._namespace_prefix + hashlib.sha512(
+            name.encode()).hexdigest()
 
         entries_list = state.get([address])
         state_value_rep = entries_list[0].data \

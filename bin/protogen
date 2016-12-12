@@ -1,30 +1,59 @@
-#!/bin/bash -x
+#!/bin/bash
+#
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+function run_protoc() {
+    base_dir=$1
+    pkg=$2
+    subdir=$base_dir/$pkg
+    tmp_dir=/tmp/protogen-$$
+
+    mkdir -p $subdir
+    if [ ! -e $subdir/__init__.py ]; then
+        touch $subdir/__init__.py
+    fi
+
+    mkdir -p $tmp_dir/$pkg
+
+    for file in $(cd $protos_dir && /bin/ls -1 *.proto)
+    do
+        cat $protos_dir/$file \
+            | sed -e "s#@PACKAGE@#$pkg#" \
+            > $tmp_dir/$pkg/$file
+    done
+
+    python3 -m grpc.tools.protoc \
+        -I$tmp_dir \
+        --python_out=$base_dir \
+	--grpc_python_out=$base_dir \
+        $tmp_dir/$pkg/*.proto
+
+    rm -rf $tmp_dir
+}
 
 set -e
 
 top_dir=$(dirname $(dirname $0))
 protos_dir=$top_dir/protos
-sdk_dir=$top_dir/sdk/python/sawtooth_protobuf
-validator_dir=$top_dir/validator/sawtooth_validator/protobuf
 
-mkdir -p $sdk_dir
-mkdir -p $validator_dir
+sdk_dir=$top_dir/sdk/python
+sdk_pkg=sawtooth_protobuf
 
-if [ ! -e $sdk_dir/__init__.py ]; then
-    touch $sdk_dir/__init__.py
-fi
-if [ ! -e $validator_dir/__init__.py ]; then
-    touch $validator_dir/__init__.py
-fi
+validator_dir=$top_dir/validator
+validator_pkg=sawtooth_validator/protobuf
 
-python -m grpc.tools.protoc \
-    -I$protos_dir \
-    --python_out=$sdk_dir \
-    --grpc_python_out=$sdk_dir \
-    $protos_dir/*.proto
-
-python -m grpc.tools.protoc \
-    -I$protos_dir \
-    --python_out=$validator_dir \
-    --grpc_python_out=$validator_dir \
-    $protos_dir/*.proto
+run_protoc $sdk_dir $sdk_pkg
+run_protoc $validator_dir $validator_pkg

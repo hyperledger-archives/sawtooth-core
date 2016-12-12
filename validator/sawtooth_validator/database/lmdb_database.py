@@ -14,8 +14,13 @@
 # ------------------------------------------------------------------------------
 
 from threading import RLock
-import cPickle as pickle
 import os
+import pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    pass
+
 import lmdb
 
 from sawtooth_validator.database import database

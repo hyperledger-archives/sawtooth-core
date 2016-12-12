@@ -16,6 +16,7 @@
 import hashlib
 import random
 import string
+import threading
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
@@ -26,19 +27,21 @@ from sawtooth_validator.server.message import Message
 def _generate_id():
     return hashlib.sha512(''.join(
         [random.choice(string.ascii_letters)
-            for _ in xrange(0, 1024)])).hexdigest()
+            for _ in range(0, 1024)]).encode()).hexdigest()
 
 
-class TransactionExecutor(object):
-    def __init__(self, service, context_manager):
+class TransactionExecutorThread(threading.Thread):
+    def __init__(self, service, context_manager, scheduler):
+        super(TransactionExecutorThread, self).__init__()
+
         self._service = service
         self._context_manager = context_manager
+        self._scheduler = scheduler
+
         self._last_state_root = context_manager.get_first_root()
 
-    def execute(self, plan, txns):
-        print repr(plan)
-
-        for txn in txns:
+    def run(self):
+        for txn in self._scheduler:
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(txn.header)
 
@@ -66,7 +69,21 @@ class TransactionExecutor(object):
             else:
                 self._context_manager.delete_context(
                     context_id_list=[context_id])
-            print "Last Root ", self._last_state_root
+            print("Last Root ", self._last_state_root)
             assert self._last_state_root is not None
 
+            self._scheduler.mark_as_applied(txn.signature)
+
         return []
+
+
+class TransactionExecutor(object):
+    def __init__(self, service, context_manager):
+        self._service = service
+        self._context_manager = context_manager
+
+    def execute(self, scheduler):
+        t = TransactionExecutorThread(self._service,
+                                      self._context_manager,
+                                      scheduler)
+        t.start()

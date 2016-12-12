@@ -19,7 +19,7 @@ import time
 from threading import Thread
 from threading import Lock
 from threading import Condition
-from Queue import Queue
+from queue import Queue
 
 from sawtooth_validator.merkle import MerkleDatabase
 
@@ -62,9 +62,9 @@ class StateContext(object):
 
         self._address_value_dict = {}
 
-        self._id = hashlib.sha256(str(state_hash) + ":" +
+        self._id = hashlib.sha256((str(state_hash) + ":" +
                                   str(read_list + write_list) + ":" +
-                                  str(time.time())).hexdigest()
+                                  str(time.time())).encode()).hexdigest()
 
     @property
     def session_id(self):
@@ -87,13 +87,13 @@ class StateContext(object):
             self._address_value_dict[add] = _ContextFuture(add)
 
     def set_futures(self, address_value_dict):
-        for add, val in address_value_dict.iteritems():
+        for add, val in address_value_dict.items():
             context_future = self._address_value_dict.get(add)
             context_future.set_result(val)
 
     def get_writable_address_value_dict(self):
         add_value_dict = {}
-        for add, val in self._address_value_dict.iteritems():
+        for add, val in self._address_value_dict.items():
             if add in self._write_list:
                 add_value_dict[add] = val
         return add_value_dict
@@ -213,7 +213,7 @@ class ContextManager(object):
             with self._shared_lock:
                 context = self._contexts[c_id]
                 del self._contexts[c_id]
-            for k in context.get_writable_address_value_dict().iterkeys():
+            for k in context.get_writable_address_value_dict().keys():
                 if k in merged_updates:
                     raise CommitException(
                         "Duplicate address {} in context {}".format(k, c_id))
@@ -221,7 +221,7 @@ class ContextManager(object):
 
         new_root = merkle_root
         add_value_dict = {address: value.result()
-                          for address, value in merged_updates.iteritems()}
+                          for address, value in merged_updates.items()}
         new_root = tree.update(set_items=add_value_dict)
 
         return new_root
@@ -280,7 +280,7 @@ class ContextManager(object):
             context.can_set(address_value_list)
             add_value_dict = {}
             for d in address_value_list:
-                for add, val in d.iteritems():
+                for add, val in d.items():
                     add_value_dict[add] = val
             context.set_futures(add_value_dict)
         return True
@@ -294,9 +294,9 @@ class _ContextReader(Thread):
     """
     Attributes:
         _in_condition (threading.Condition): threading object for notification
-        _addresses (Queue.Queue): each item is a tuple
+        _addresses (queue.Queue): each item is a tuple
                                   (context_id, state_hash, address_list)
-        _inflated_addresses (Queue.Queue): each item is a tuple
+        _inflated_addresses (queue.Queue): each item is a tuple
                                           (context_id, [(address, value), ...
     """
     def __init__(self, database, address_queue, inflated_addresses):
@@ -325,7 +325,7 @@ class _ContextWriter(Thread):
     """
     Attributes:
         _condition (threading.Condition): threading object for notification
-        _inflated_addresses (Queue.Queue): each item is a tuple
+        _inflated_addresses (queue.Queue): each item is a tuple
                                            (context_id, [(address, value), ...
     """
 

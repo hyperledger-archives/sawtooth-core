@@ -8,7 +8,7 @@ VAGRANTFILE_API_VERSION = "2"
 
 def load_conf()
     config = {
-        'VAGRANT_BOX' => 'ubuntu/trusty64',
+        'VAGRANT_BOX' => 'ubuntu/xenial64',
         'VAGRANT_FORWARD_PORTS' => true,
         'VAGRANT_MEMORY' => 2048,
         'VAGRANT_CPUS' => 2
