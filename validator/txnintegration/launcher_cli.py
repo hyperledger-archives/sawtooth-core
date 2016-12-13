@@ -219,6 +219,7 @@ def main():
             for node_name in node_ctrl.get_node_names():
                 print "%s still 'up'; sending kill..." % node_name
                 node_ctrl.kill(node_name)
+            node_ctrl.archive('launcher')
             node_ctrl.clean()
 
 

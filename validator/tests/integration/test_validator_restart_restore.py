@@ -101,7 +101,7 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             print "restart validators "
             for node in self.nodes:
                 self.node_controller.start(node)
-            to = TimedOut(120)
+            to = TimeOut(120)
             while len(self.node_controller.get_node_names()) < 5:
                 pass
             report_after_relaunch = None
