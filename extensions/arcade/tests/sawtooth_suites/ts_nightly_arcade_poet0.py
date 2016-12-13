@@ -72,6 +72,7 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
                     self._node_ctrl.kill(node_name)
                 except Exception as e:
                     print e.message
+            self._node_ctrl.archive(self.__class__.__name__)
             self._node_ctrl.clean()
 
     def _do_setup(self):

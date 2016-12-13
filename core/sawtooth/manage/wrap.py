@@ -16,6 +16,7 @@ import logging
 import os
 import shutil
 import tempfile
+import tarfile
 
 from sawtooth.manage.node import NodeController
 
@@ -38,6 +39,15 @@ class WrappedNodeController(NodeController):
             if not os.path.isdir(sub_dir):
                 os.makedirs(sub_dir)
         self._files = {}
+
+    def archive(self, archive_name):
+        with tarfile.open(archive_name + '.tar', 'w') as archive:
+            temps = (self._data_dir + '/' + sub + '/'
+                     for sub in ['keys', 'data', 'logs'])
+            for temp in temps:
+                for filename in os.listdir(temp):
+                    target = temp + filename
+                    archive.add(target, arcname=filename)
 
     def clean(self):
         # get a count of nodes still up (and free resources for those now down)
