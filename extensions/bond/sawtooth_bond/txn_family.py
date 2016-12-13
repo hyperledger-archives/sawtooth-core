@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import json
 import time
 import copy
 from datetime import datetime
@@ -49,6 +50,19 @@ from sawtooth_bond.updates.libor import CreateLIBORUpdate
 LOGGER = logging.getLogger(__name__)
 
 
+def _load_config(journal):
+    try:
+        with open('./etc/sawtooth-bond.json') \
+                as bond_fd:
+            bond_config = json.load(bond_fd)
+    except IOError, ex:
+        LOGGER.exception('IOError: %s', str(ex))
+        return
+
+    libor_publisher_addr = bond_config["LiborPublisherAddr"]
+    CreateLIBORUpdate.LIBOR_PUBLISHER_ADDR(libor_publisher_addr)
+
+
 def _register_transaction_types(journal):
     """Registers the Bond transaction types on the journal.
 
@@ -62,6 +76,7 @@ def _register_transaction_types(journal):
     journal.add_transaction_store(BondTransaction)
     journal.on_pre_build_block += _pre_build_block
     journal.on_claim_block += _claim_block
+    _load_config(journal)
 
 
 def _pre_build_block(journal, block):

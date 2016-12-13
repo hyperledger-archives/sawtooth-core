@@ -105,14 +105,15 @@ class LIBORObject(signed_object.SignedObject):
 
         return result
 
+# For now, we are going to use the address that corresponds to the key
+# generated a priori for LIBOR data.  At some date in the future, if we
+# get LIBOR data signed by a trusted publisher we will replace this with
+# said publisher's public key and will then verify that the data has been
+# signed with the corresponding private key.
+LIBOR_PUBLISHER_ADDR = '1UrR1WTfkMaWmY8z6DxwEE2MYFXA6rdzZ'
+
 
 class CreateLIBORUpdate(Update):
-    # For now, we are going to use the address that corresponds to the key
-    # generated a priori for LIBOR data.  At some date in the future, if we
-    # get LIBOR data signed by a trusted publisher we will replace this with
-    # said publisher's public key and will then verify that the data has been
-    # signed with the corresponding private key.
-    __LIBOR_PUBLISHER_ADDR__ = '1UrR1WTfkMaWmY8z6DxwEE2MYFXA6rdzZ'
 
     def __init__(self, update_type, date, rates, signature, object_id=None):
         """
@@ -198,8 +199,7 @@ class CreateLIBORUpdate(Update):
         #    that provides the LIBORs.
         if self.__libor_object__.Signature is None:
             raise InvalidTransactionError('LIBOR data has not been signed')
-        if not self.__libor_object__.verify_signature(
-                self.__LIBOR_PUBLISHER_ADDR__):
+        if not self.__libor_object__.verify_signature(LIBOR_PUBLISHER_ADDR):
             raise InvalidTransactionError(
                 'Key used to sign LIBOR data does not match publisher')
 
