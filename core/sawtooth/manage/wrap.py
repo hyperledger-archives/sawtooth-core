@@ -42,11 +42,11 @@ class WrappedNodeController(NodeController):
 
     def archive(self, archive_name):
         with tarfile.open(archive_name + '.tar', 'w') as archive:
-            temps = (self._data_dir + '/' + sub + '/'
-                     for sub in ['keys', 'data', 'logs'])
-            for temp in temps:
-                for filename in os.listdir(temp):
-                    target = temp + filename
+            tempdirs = (os.path.join(self._data_dir, sub)
+                        for sub in ['keys', 'data', 'logs'])
+            for tempdir in tempdirs:
+                for filename in os.listdir(tempdir):
+                    target = os.path.join(tempdir, filename)
                     archive.add(target, arcname=filename)
 
     def clean(self):
