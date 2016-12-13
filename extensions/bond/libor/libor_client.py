@@ -21,6 +21,7 @@ from gossip import signed_object
 
 from sawtooth_bond.updates.libor import LIBORObject
 from sawtooth_bond.txn_family import BondTransaction
+from sawtooth_signing import pbct_nativerecover as signing
 
 from libor.libor_exceptions import LIBORClientException
 
@@ -59,12 +60,15 @@ class LIBORClient(SawtoothClient):
         elif isinstance(effective_date, date):
             effective_date = effective_date.isoformat()
 
-        # Add a signature to the actual update to simulate having a verified
-        # source of information
-        signed_update = LIBORObject(date=effective_date, rates=rates)
         signing_key = \
             signed_object.generate_signing_key(
                 wifstr=open(self._libor_key_file, "r").read().strip())
+        libor_public_key = signing.generate_pubkey(signing_key)
+        # Add a signature to the actual update to simulate having a verified
+        # source of information
+        signed_update = LIBORObject(date=effective_date,
+                                    rates=rates,
+                                    public_key=libor_public_key)
         signed_update.sign_object(signing_key)
 
         # Create the update and the submit the transaction
