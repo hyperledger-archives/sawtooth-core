@@ -20,8 +20,7 @@ import threading
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
-
-from sawtooth_validator.server.message import Message
+from sawtooth_validator.protobuf import validator_pb2
 
 
 def _generate_id():
@@ -55,7 +54,7 @@ class TransactionExecutorThread(threading.Thread):
                 signature=txn.signature,
                 context_id=context_id).SerializeToString()
 
-            message = Message(
+            message = validator_pb2.Message(
                 message_type='tp/process',
                 correlation_id=_generate_id(),
                 content=content)

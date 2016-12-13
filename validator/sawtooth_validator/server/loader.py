@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_validator.server.message import Message
+from sawtooth_validator.protobuf import validator_pb2
 
 
 class SystemLoadHandler(object):
@@ -23,8 +23,8 @@ class SystemLoadHandler(object):
     def handle(self, message, responder):
         self._network.load(message.content)
 
-        responder.send(
-            message=Message(
-                message_type="system/load-response",
-                correlation_id=message.correlation_id,
-                content="{ 'status': 'SUCCESS' }".encode()))
+        responder.send(validator_pb2.Message(
+            sender=message.sender,
+            message_type="system/load-response",
+            correlation_id=message.correlation_id,
+            content="{ 'status': 'SUCCESS' }".encode()))

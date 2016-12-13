@@ -18,13 +18,6 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 
-// The service implemented by the validator node.
-service Validator {
-    // Provides bi-direction asynchronous messaging between a client and the
-    // validator.  Messages can be batched into MessageLists for performance.
-    rpc Connect(stream MessageList) returns (stream MessageList);
-}
-
 // A list of messages to be transmitted together.
 message MessageList {
     repeated Message messages = 1;
@@ -49,4 +42,8 @@ message Message {
     // cases, this data which has been serialized with Protocol Buffers or
     // CBOR.
     bytes content = 3;
+
+    // the zmq identity internal to Stream, _SendReceiveThread, and
+    // ValidatorServicer classes
+    string sender = 4;
 }

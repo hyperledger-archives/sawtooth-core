@@ -41,8 +41,6 @@ class TransactionProcessor(object):
         self._handlers.append(handler)
 
     def start(self):
-        self._stream.connect()
-
         futures = []
         for handler in self._handlers:
             for version in handler.family_versions:

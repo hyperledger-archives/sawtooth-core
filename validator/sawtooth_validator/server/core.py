@@ -12,22 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+import asyncio
 import logging
 import os
 import random
-from queue import Empty
-from queue import Queue
-
 from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
+from threading import Condition
 
-import grpc
+import zmq
+import zmq.asyncio
 
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.context_manager import ContextManager
 from sawtooth_validator.server.dispatch import Dispatcher
 from sawtooth_validator.server.executor import TransactionExecutor
-from sawtooth_validator.server.message import Message
+from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server.loader import SystemLoadHandler
 from sawtooth_validator.server.journal import FauxJournal
 from sawtooth_validator.server.network import FauxNetwork
@@ -35,50 +35,114 @@ from sawtooth_validator.server import state
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
 from sawtooth_validator.server import future
 
-import sawtooth_validator.protobuf.validator_pb2 as validator_pb2
-
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
 LOGGER.setLevel(logging.DEBUG)
 
 
-class RecvThread(Thread):
-    def __init__(self, response_iterator, handlers, responder, context):
-        super(RecvThread, self).__init__()
-        self._response_iterator = response_iterator
+class _SendReceiveThread(Thread):
+    """
+    A background thread for zmq communication with asyncio.Queues
+    To interact with the queues in a threadsafe manner call send_message()
+    """
+    def __init__(self, url, handlers, futures):
+        super(_SendReceiveThread, self).__init__()
         self._handlers = handlers
-        self._responder = responder
-        self._disconnect = False
-        self._context = context
+        self._futures = futures
+        self._url = url
+        self._event_loop = None
+        self._send_queue = None
+        self._proc_sock = None
+        self._condition = Condition()
 
-    @property
-    def disconnect(self):
-        return self._disconnect
-
-    def run(self):
-        for response_list in self._response_iterator:
-            for response_message in response_list.messages:
-                message = Message.from_pb2(response_message)
-                message.sender = self._context.peer()
-
-                if message.message_type == 'system/disconnect':
-                    self._disconnect = True
-                    break
-                elif message.message_type in self._handlers:
+    @asyncio.coroutine
+    def _receive_message(self):
+        """
+        Internal coroutine for receiving messages from the
+        zmq processor ROUTER interface
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._proc_sock is not None)
+        while True:
+            ident, result = yield from self._proc_sock.recv_multipart()
+            message = validator_pb2.Message()
+            message.ParseFromString(result)
+            message.sender = ident
+            try:
+                # if there is a future, then we are getting a response
+                self._futures.set_result(
+                    message.correlation_id,
+                    future.FutureResult(content=message.content,
+                                        message_type=message.message_type))
+            except future.FutureCollectionKeyError:
+                # if there isn't a future, we are getting an initial message
+                if message.message_type in self._handlers:
                     handler = self._handlers[message.message_type]
                 else:
                     handler = self._handlers['default']
 
-                handler.handle(message, self._responder)
+                handler.handle(message, _Responder(self.send_message))
+
+    @asyncio.coroutine
+    def _send_message(self):
+        """
+        internal coroutine for sending messages through the
+        zmq Router interface
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._send_queue is not None
+                                     and self._proc_sock is not None)
+        while True:
+            msg = yield from self._send_queue.get()
+            yield from self._proc_sock.send_multipart(
+                [bytes(msg.sender, 'UTF-8'),
+                 validator_pb2.MessageList(messages=[msg]
+                                           ).SerializeToString()])
+
+    @asyncio.coroutine
+    def _put_message(self, message):
+        """
+        put a message on the send_queue. Not to be accessed directly.
+        :param message:
+        :return:
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._send_queue is not None)
+        self._send_queue.put_nowait(message)
+
+    def send_message(self, msg):
+        """
+        :param msg: protobuf validator_pb2.Message
+        """
+        with self._condition:
+            self._condition.wait_for(lambda: self._event_loop is not None)
+
+        asyncio.run_coroutine_threadsafe(self._put_message(msg),
+                                         self._event_loop)
+
+    def run(self):
+        self._event_loop = zmq.asyncio.ZMQEventLoop()
+        asyncio.set_event_loop(self._event_loop)
+        context = zmq.asyncio.Context()
+        self._proc_sock = context.socket(zmq.ROUTER)
+        self._proc_sock.bind('tcp://' + self._url)
+        self._send_queue = asyncio.Queue()
+        with self._condition:
+            self._condition.notify_all()
+        asyncio.ensure_future(self._receive_message(), loop=self._event_loop)
+        asyncio.ensure_future(self._send_message(), loop=self._event_loop)
+        self._event_loop.run_forever()
 
 
-class ValidatorService(validator_pb2.ValidatorServicer):
-    def __init__(self):
+class ValidatorService(object):
+    def __init__(self, url):
         self._handlers = {}
-        self._send_queues = {}
         self._processors = {}
         self._futures = future.FutureCollection()
+        self._send_receive_thread = _SendReceiveThread(url,
+                                                       self._handlers,
+                                                       self._futures)
 
     def add_handler(self, message_type, handler):
         self._handlers[message_type] = handler
@@ -97,18 +161,12 @@ class ValidatorService(validator_pb2.ValidatorServicer):
         # Choose a random processor of the type
         processor = random.choice(self._processors[key])
         peer = processor[0]
+        message.sender = peer
+        self._send_receive_thread.send_message(message)
 
-        if peer not in self._send_queues:
-            raise Exception("internal error, no send queue available")
-
-        self._send_queues[peer].put(message)
         fut = future.Future(message.correlation_id)
         self._futures.put(fut)
         return fut
-
-    def set_future(self, correlation_id, result):
-        self._futures.set_result(correlation_id=correlation_id,
-                                 result=result)
 
     def register_transaction_processor(self, sender, family, version,
                                        encoding, namespaces):
@@ -119,59 +177,32 @@ class ValidatorService(validator_pb2.ValidatorServicer):
             self._processors[key] = []
         self._processors[key].append(data)
 
-    def Connect(self, response_iterator, context):
-        peer = context.peer()
-        LOGGER.info("connections from peer %s", peer)
+    def start(self):
+        self._send_receive_thread.start()
 
-        send_queue = Queue()
-
-        self._send_queues[context.peer()] = send_queue
-
-        responder = Responder(send_queue)
-        recv_thread = RecvThread(
-            response_iterator,
-            self._handlers.copy(),
-            responder,
-            context)
-        recv_thread.start()
-
-        while not recv_thread.disconnect:
-            message = None
-            while message is None and not recv_thread.disconnect:
-                try:
-                    message = send_queue.get(True, 1)
-                    print("sending {}".format(message.message_type))
-                except Empty:
-                    message = None
-            if recv_thread.disconnect:
-                break
-            yield validator_pb2.MessageList(messages=[message.to_pb2()])
-
-        recv_thread.join()
+    def stop(self):
+        self._send_receive_thread.join()
 
 
-class Responder(object):
-    def __init__(self, queue):
-        self._queue = queue
+class _Responder(object):
+    def __init__(self, func):
+        """
+        :param func: a function,
+                    specifically _SendReceiveThread.send_message
+        """
+        self._func = func
 
     def send(self, message):
-        self._queue.put(message)
+        """
+        Send a response
+        :param message: protobuf validator_pb2.Message
+        """
+        self._func(message)
 
 
 class DefaultHandler(object):
     def handle(self, message, responder):
         print("invalid message {}".format(message.message_type))
-
-
-class ResponseHandler(object):
-    def __init__(self, service):
-        self._service = service
-
-    def handle(self, message, responder):
-        self._service.set_future(message.correlation_id,
-                                 future.FutureResult(
-                                     content=message.content,
-                                     message_type=message.message_type))
 
 
 class Validator(object):
@@ -181,33 +212,24 @@ class Validator(object):
 
         lmdb = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(lmdb)
-        service = ValidatorService()
-
-        executor = TransactionExecutor(service, context_manager)
+        self._service = ValidatorService(url)
+        executor = TransactionExecutor(self._service, context_manager)
         journal = FauxJournal(executor)
         dispatcher = Dispatcher()
         dispatcher.on_batch_received = journal.get_on_batch_received_handler()
         network = FauxNetwork(dispatcher=dispatcher)
 
-        service.add_handler('default', DefaultHandler())
-        service.add_handler('state/getrequest',
-                            state.GetHandler(context_manager))
-        service.add_handler('state/setrequest',
-                            state.SetHandler(context_manager))
-        service.add_handler('tp/register', ProcessorRegisterHandler(service))
-        service.add_handler('tp/response', ResponseHandler(service))
-        service.add_handler('system/load', SystemLoadHandler(network))
-
-        self._server = grpc.server(ThreadPoolExecutor(max_workers=10))
-
-        validator_pb2.add_ValidatorServicer_to_server(service, self._server)
-
-        port_spec = url
-        LOGGER.debug('listening on port %s', port_spec)
-        self._server.add_insecure_port(port_spec)
+        self._service.add_handler('default', DefaultHandler())
+        self._service.add_handler('state/getrequest',
+                                  state.GetHandler(context_manager))
+        self._service.add_handler('state/setrequest',
+                                  state.SetHandler(context_manager))
+        self._service.add_handler('tp/register',
+                                  ProcessorRegisterHandler(self._service))
+        self._service.add_handler('system/load', SystemLoadHandler(network))
 
     def start(self):
-        self._server.start()
+        self._service.start()
 
     def stop(self):
-        self._server.stop(0)
+        self._service.stop()
