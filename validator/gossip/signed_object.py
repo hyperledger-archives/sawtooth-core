@@ -126,7 +126,7 @@ class SignedObject(object):
             minfo = {}
         self.Signature = minfo.get(signkey)
         self.SignatureKey = signkey
-        self.public_key = minfo.get("public_key")
+        self.public_key = minfo.get("PublicKey")
         self._identifier = hashlib.sha256(
             self.Signature).hexdigest() if self.Signature else None
         self._originator_id = None
@@ -285,5 +285,5 @@ class SignedObject(object):
             dict: a map containing SignatureKey:Signature.
         """
         result = {self.SignatureKey: self.Signature}
-        result["public_key"] = self.public_key
+        result["PublicKey"] = self.public_key
         return result

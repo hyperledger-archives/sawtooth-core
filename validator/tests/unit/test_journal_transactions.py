@@ -90,7 +90,7 @@ class TestingJournalTransaction(unittest.TestCase):
         pubkey = signing.generate_pubkey("5KQ4iQQGgbQX9MmfiPUwwHBL1R"
                                          "GPa86NwFbqrWoodjuzruqFVDd")
         pub = signing.encode_pubkey(pubkey, "hex")
-        minfo = {'Nonce': 100, 'public_key': pub,
+        minfo = {'Nonce': 100, 'PublicKey': pub,
                  'TransactionType': '/Transaction', 'Dependencies': []}
         sig = signing.sign(
             signed_object.dict2cbor(minfo),
