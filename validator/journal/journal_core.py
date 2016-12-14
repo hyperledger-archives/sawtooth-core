@@ -10,7 +10,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License.S
 # ------------------------------------------------------------------------------
 
 import logging
@@ -62,10 +62,10 @@ class Journal(object):
         initial_transactions (list): A list of initial transactions to
             process.
         initial_block_list (list): A list of initial blocks to process.
-        onGenesisBlock (EventHandler): An EventHandler for functions
+        on_genesis_block (EventHandler): An EventHandler for functions
             to call when processing a genesis block.
         on_pre_build_block (EventHandler): An EventHandler for functions
-            to call when before processing a build block.
+            to call before processing a build block.
         on_build_block (EventHandler): An EventHandler for functions
             to call when processing a build block.
         on_claim_block (EventHandler): An EventHandler for functions
@@ -76,6 +76,8 @@ class Journal(object):
             to call when processing a decommit block.
         on_block_test (EventHandler): An EventHandler for functions
             to call when processing a block test.
+        on_journal_restored (EventHandler): An EventHandler for functions
+            to call when restoring the journal.
         pending_transactions (dict): A dict of pending, unprocessed
             transactions.
         transaction_store (JournalStore): A dict-like object representing
@@ -98,8 +100,6 @@ class Journal(object):
             candidate transaction block to claim.
         pending_block_ids (builtin set): A set of pending block identifiers.
         invalid_block_ids (builtin set): A set of invalid block identifiers.
-        FrontierBlockIDs (builtin set): A set of block identifiers for blocks
-            which still need to be processed.
         global_store_map (GlobalStoreManager): Manages access to the
             various persistence stores.
     """
@@ -182,6 +182,8 @@ class Journal(object):
         self.on_commit_block = event_handler.EventHandler('onCommitBlock')
         self.on_decommit_block = event_handler.EventHandler('onDecommitBlock')
         self.on_block_test = event_handler.EventHandler('onBlockTest')
+        self.on_journal_restored = \
+            event_handler.EventHandler('onJournalRestored')
 
         self._txn_lock = RLock()
         self.pending_transactions = OrderedDict()
@@ -365,6 +367,44 @@ class Journal(object):
         """
         return self.block_store.get(self.most_recent_committed_block_id)
 
+    def iter_committed_block_ids(self, count=0):
+        """
+        Iterates through block IDs for committed blocks, starting with the
+        most-recently committed block.
+
+        Args:
+            count (int): The maximum number of block IDs to return,
+                with 0 meaning all.
+
+        Returns:
+            An iterator
+        """
+        if count == 0:
+            count = len(self.block_store)
+
+        block_id = self.most_recent_committed_block_id
+        for _ in range(count):
+            if block_id == common.NullIdentifier:
+                break
+
+            yield block_id
+            block_id = self.block_store[block_id].PreviousBlockID
+
+    def iter_committed_blocks(self, count=0):
+        """
+        Iterates through committed blocks, starting with the most-recently
+        committed block.
+
+        Args:
+            count (int): The maximum number of block to return, with 0 meaning
+                all.
+
+        Returns:
+            An iterator
+        """
+        for block_id in self.iter_committed_block_ids(count):
+            yield self.block_store[block_id]
+
     def committed_block_ids(self, count=0):
         """Returns the list of block identifiers starting from the
         most recently committed block.
@@ -375,17 +415,7 @@ class Journal(object):
         Returns:
             list: A list of committed block ids.
         """
-        if count == 0:
-            count = len(self.block_store)
-
-        block_ids = []
-
-        blkid = self.most_recent_committed_block_id
-        while blkid != common.NullIdentifier and len(block_ids) < count:
-            block_ids.append(blkid)
-            blkid = self.block_store[blkid].PreviousBlockID
-
-        return block_ids
+        return [block_id for block_id in self.iter_committed_block_ids(count)]
 
     def compute_chain_root(self):
         """
@@ -439,6 +469,7 @@ class Journal(object):
             self.global_store_map.get_block_store(head)
             logger.info('commit head: %s', head)
             self.restored = True
+            self.on_journal_restored.fire(self)
         else:
             logger.warn('unable to restore ledger state')
 
@@ -614,6 +645,7 @@ class Journal(object):
             if block is None:
                 if self.pending_block is not None:
                     block = self.pending_block
+                    self.pending_block = None
                 else:
                     return  # No block to claim
 
@@ -744,9 +776,6 @@ class Journal(object):
 
         txn_list = self._prepare_transaction_list(
             self.maximum_transactions_per_block)
-        logger.info('build transaction block to extend %s with %s '
-                    'transactions',
-                    self.most_recent_committed_block_id[:8], len(txn_list))
 
         if len(txn_list) == 0 and not genesis:
             return None
@@ -1137,7 +1166,7 @@ class Journal(object):
 
             # update stats
             self.JournalStats.CommittedBlockCount.Value = \
-                self.committed_block_count + 1
+                self.committed_block_count - 1
             self.JournalStats.CommittedTxnCount.increment(-len(
                 block.TransactionIDs))
 
@@ -1336,6 +1365,7 @@ class Journal(object):
                              txn.Identifier[:8])
                 addtxns.append(txn.Identifier)
                 txn.apply(txnstore)
+
                 return True
 
             # because we have all of the dependencies but the transaction is
@@ -1418,7 +1448,7 @@ class Journal(object):
                 txn_list = self._prepare_transaction_list()
                 txn_count = len(txn_list)
                 build_block = (
-                    txn_count > self.minimum_transactions_per_block or
+                    txn_count >= self.minimum_transactions_per_block or
                     (txn_count > 0 and
                         transaction_time_waiting >
                         self._maximum_transaction_wait_time))
