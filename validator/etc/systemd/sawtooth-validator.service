@@ -3,6 +3,8 @@ Description=Start txnvalidator
 After=network.target
 
 [Service]
+User=sawtooth
+Group=sawtooth
 EnvironmentFile=-/etc/sysconfig/sawtooth-validator
 ExecStart=/usr/bin/txnvalidator $TXNVALIDATOR_OPTIONS
 
