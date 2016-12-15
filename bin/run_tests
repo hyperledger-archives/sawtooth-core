@@ -39,6 +39,17 @@ test_core() {
 	cd ..
 }
 
+test_sdk_examples() {
+	PYTHONPATH=$top_dir
+	PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
+	PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
+  export PYTHONPATH
+  cd sdk/examples/processor_tests/intkey
+  nose2-3 -v ts_intkey.TestSuiteIntkeyPython
+  #nose2-3 -v ts_intkey.TestSuiteIntkeyJava
+  cd ../../../../
+}
+
 test_signing() {
 	PYTHONPATH=$top_dir
 	PYTHONPATH=$PYTHONPATH:$top_dir/signing
@@ -137,6 +148,7 @@ case $MODULE in
         test_validator
         test_mktplace
         test_bond
+        test_sdk_examples
         ;;
     core)
         test_core
@@ -152,6 +164,9 @@ case $MODULE in
         ;;
     bond)
         test_bond
+        ;;
+    sdk_examples)
+        test_sdk_examples
         ;;
 
 esac
