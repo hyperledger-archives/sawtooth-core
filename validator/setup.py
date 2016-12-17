@@ -130,14 +130,12 @@ data_files = [
     (static_content_dir, static_content_files),
 ]
 
-if os.path.exists("/etc/debian_version"):
-    data_files.append(('/etc/init', ['etc/init/sawtooth-validator.conf']))
+if os.path.exists("/etc/default"):
     data_files.append(('/etc/default', ['etc/default/sawtooth-validator']))
 
-if os.path.exists("/etc/SuSE-release"):
-    data_files.append(('/usr/lib/systemd/system',
+if os.path.exists("/lib/systemd/system"):
+    data_files.append(('/lib/systemd/system',
                        ['etc/systemd/sawtooth-validator.service']))
-    data_files.append(('/etc/sysconfig', ['etc/default/sawtooth-validator']))
 
 setup(
     name='sawtooth-validator',
