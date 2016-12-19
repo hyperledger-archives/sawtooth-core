@@ -137,7 +137,8 @@ class PoetConsensus(Consensus):
         # A guard to keep our statistics in the reasonable range
         if statistics['committed_block_count'] < 0:
             statistics['committed_block_count'] = 0
-        elif statistics['committed_block_count'] > self._block_commit_threshold:
+        elif statistics['committed_block_count'] > \
+                self._block_commit_threshold:
             statistics['committed_block_count'] = self._block_commit_threshold
 
         # Update the in-memory local store and if requested, also sync the
@@ -195,6 +196,47 @@ class PoetConsensus(Consensus):
             'validator_statistics',
             self._validator_statistics)
         journal.local_store.sync()
+
+        return True
+
+    def _on_journal_initialization_complete(self, journal):
+        """
+        Callback journal makes after the journal has completed initialization
+
+        Args:
+            journal (Journal): The journal object that has completed
+                initialization.
+
+        Returns:
+            True
+        """
+        # If we have sealed signup data (meaning that we have previously
+        # created signup info), we can request that the enclave unseal it,
+        # in the process restoring the enclave to its previous state.  If
+        # we don't have sealed signup data.  If we don't have sealed signup
+        # data, we need to create and register it.
+        #
+        # Note - this MUST be done AFTER the journal has completed
+        # initialization so that there is at least one peer node to which
+        # we can send the validator registry transaction to.  Otherwise,
+        # we will never, ever be able to be added to the validator registry
+        # and, to paraphrase Martha Stewart, that is a bad thing.
+
+        sealed_signup_data = journal.local_store.get('sealed_signup_data')
+
+        if sealed_signup_data is not None:
+            self.poet_public_key = \
+                SignupInfo.unseal_signup_data(
+                    validator_address=journal.local_node.signing_address(),
+                    sealed_signup_data=sealed_signup_data)
+
+            LOGGER.info(
+                'Restore signup info for %s (ID = %s, PoET public key = %s)',
+                journal.local_node.Name,
+                journal.local_node.Identifier,
+                self.poet_public_key)
+        else:
+            self._register_signup_information(journal)
 
         return True
 
@@ -422,7 +464,15 @@ class PoetConsensus(Consensus):
 
         # If the journal is restored from local store, we want to know so
         # that we can build up or stats from the restored blocks
-        journal.on_journal_restored += self._on_journal_restored
+        journal.on_restored += self._on_journal_restored
+
+        # We want to know when the journal has completed initialization.  This
+        # turns out to be very important - up until that point, we are not
+        # able to send out any transactions (such as validator registry
+        # transactions), which is really important because that will keep us
+        # from ever joining a validator network for the first time.
+        journal.on_initialization_complete += \
+            self._on_journal_initialization_complete
 
         # We want the ability to test a block before it gets committed so that
         # we can enforce PoET 1 policies
@@ -432,30 +482,6 @@ class PoetConsensus(Consensus):
         # we can keep track of validator statistics
         journal.on_commit_block += self._on_commit_block
         journal.on_decommit_block += self._on_decommit_block
-
-        # Before we allow the base journal to do anything that might result
-        # in a wait timer or wait certificate being created, we have to ensure
-        # the PoET enclave has been initialized.  This can be done in one of
-        # two ways:
-        # 1. If we have sealed signup data (meaning that we have previously
-        #    created signup info), we can request that the enclave unseal it,
-        #    in the process restoring the enclave to its previous state.
-        # 2. Create new signup information.
-        sealed_signup_data = journal.local_store.get('sealed_signup_data')
-
-        if sealed_signup_data is not None:
-            self.poet_public_key = \
-                SignupInfo.unseal_signup_data(
-                    validator_address=journal.local_node.signing_address(),
-                    sealed_signup_data=sealed_signup_data)
-
-            LOGGER.debug(
-                'Restore signup info for %s (ID = %s, PoET public key = %s)',
-                journal.local_node.Name,
-                journal.local_node.Identifier,
-                self.poet_public_key)
-        else:
-            self._register_signup_information(journal)
 
     def create_block(self):
         """Creates a candidate transaction block.
@@ -545,58 +571,59 @@ class PoetConsensus(Consensus):
                         journal=journal,
                         block_id=journal.most_recent_committed_block_id,
                         originator_id=journal.local_node.Identifier)
+
+                # Make sure we will sign the wait certificate with the secret
+                # key corresponding to the public key that the other
+                # validators know about.
+                if registration['poet-public-key'] != self.poet_public_key:
+                    raise \
+                        ValueError(
+                            "Our current PoET public key does not match the "
+                            "globally-visible one.  We cannot in good "
+                            "conscience waste the other validators' time, "
+                            "only to have them reject the block when trying "
+                            "to commit it.  Our fragile ego would not be "
+                            "able to handle that kind of rejection.")
+
+                # Get our statistics, creating them if they don't already
+                # exist (we create them as this may be the first block we can
+                # claim).
+                statistics = \
+                    self._validator_statistics.setdefault(
+                        journal.local_node.Identifier,
+                        {
+                            'poet_public_key': self.poet_public_key,
+                            'committed_block_count': 0
+                        })
+
+                # If the validator has already reached commit the limit for
+                # its current public key, then we reject the block as the
+                # validator should be getting new validator registration
+                # information.
+                #
+                # As an aside, this third check should be completely
+                # unnecessary as we _should_ have detected this in the
+                # _on_commit_block callback.  However, when in doubt, choose
+                # the belt and suspenders approach.
+                if (registration['poet-public-key'] ==
+                        statistics['poet_public_key']) and \
+                    (statistics['committed_block_count'] >=
+                        self._block_commit_threshold):
+                    raise \
+                        ValueError(
+                            'Validator {0} has reached block commit limit '
+                            '({1} >= {2}) with current signup info'.format(
+                                journal.local_node.Identifier,
+                                statistics['committed_block_count'],
+                                self._block_commit_threshold))
+
+                    # Note - we don't update our block commit statistics here.
+                    # We wait until the _on_commit_block callback.  Claiming
+                    # and actually getting the block committed are two
+                    # different things.
             except ValueError, error:
-                LOGGER.error(
-                    'Could not retrieve our validator registry information')
+                LOGGER.error('Could not claim block: %s', error)
                 raise
-
-            # Make sure we will sign the wait certificate with the secret key
-            # corresponding to the public key that the other validators know
-            # about.
-            if registration['poet-public-key'] != self.poet_public_key:
-                raise \
-                    ValueError(
-                        "Our current PoET public key does not match the "
-                        "globally-visible one.  We cannot in good conscience "
-                        "waste the other validators' time, only to have them "
-                        "reject the block when trying to commit it.  Our "
-                        "fragile ego would not be able to handle that kind of "
-                        "rejection.")
-
-            # Get our statistics, creating them if they don't already exist (we
-            # create them as this may be the first block we can claim).
-            statistics = \
-                self._validator_statistics.setdefault(
-                    journal.local_node.Identifier,
-                    {
-                        'poet_public_key': self.poet_public_key,
-                        'committed_block_count': 0
-                    })
-
-            # If the validator has already reached commit the limit for its
-            # current public key, then we reject the block as the validator
-            # should be getting new validator registration information.
-            #
-            # As an aside, this third check should be completely unnecessary
-            # as we _should_ have detected this in the _on_commit_block
-            # callback.  However, when in doubt, choose the belt and
-            # suspenders approach.
-            if (registration['poet-public-key'] ==
-                    statistics['poet_public_key']) and \
-                (statistics['committed_block_count'] >=
-                    self._block_commit_threshold):
-                self._register_signup_information(journal)
-                raise \
-                    ValueError(
-                        'Validator %s has reached block commit limit '
-                        '(%d >= %d) with current signup information'.format(
-                            journal.local_node.Identifier,
-                            statistics['committed_block_count'],
-                            self._block_commit_threshold))
-
-            # Note - we don't update our block commit statistics here.  We
-            # wait until the _on_block_commit callback.  Claiming and actually
-            # getting the block committed are two different things.
 
         # If we got this far, we are fairly confident in creating a wait
         # certificate for the block and embedding our public key.

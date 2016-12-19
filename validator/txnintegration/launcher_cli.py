@@ -132,6 +132,9 @@ def _poll_for_convergence(urls):
                 else:
                     p.step()
                     time.sleep(4)
+            if convergent is False:
+                p.step()
+                time.sleep(4)
 
 
 def main():

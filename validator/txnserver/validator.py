@@ -375,7 +375,6 @@ class Validator(object):
                     logger.info('add peer %s with identifier %s', peername,
                                 peer.Identifier)
                     connect_message.send_connection_request(self.gossip, peer)
-                    self.gossip.add_node(peer)
                 else:
                     logger.info('requested connection to unknown peer %s',
                                 peername)

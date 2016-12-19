@@ -76,8 +76,10 @@ class Journal(object):
             to call when processing a decommit block.
         on_block_test (EventHandler): An EventHandler for functions
             to call when processing a block test.
-        on_journal_restored (EventHandler): An EventHandler for functions
-            to call when restoring the journal.
+        on_restored (EventHandler): An EventHandler that is called when the
+            journal has been restored from local storage.
+        on_initialization_complete (EventHandler): An EventHandler that is
+            called when the journal has completed initialization.
         pending_transactions (dict): A dict of pending, unprocessed
             transactions.
         transaction_store (JournalStore): A dict-like object representing
@@ -182,8 +184,9 @@ class Journal(object):
         self.on_commit_block = event_handler.EventHandler('onCommitBlock')
         self.on_decommit_block = event_handler.EventHandler('onDecommitBlock')
         self.on_block_test = event_handler.EventHandler('onBlockTest')
-        self.on_journal_restored = \
-            event_handler.EventHandler('onJournalRestored')
+        self.on_restored = event_handler.EventHandler('onRestored')
+        self.on_initialization_complete = \
+            event_handler.EventHandler('onInitializationComplete')
 
         self._txn_lock = RLock()
         self.pending_transactions = OrderedDict()
@@ -469,7 +472,7 @@ class Journal(object):
             self.global_store_map.get_block_store(head)
             logger.info('commit head: %s', head)
             self.restored = True
-            self.on_journal_restored.fire(self)
+            self.on_restored.fire(self)
         else:
             logger.warn('unable to restore ledger state')
 
@@ -483,6 +486,7 @@ class Journal(object):
         self.initial_load = True
 
         if self.restored is True:
+            self.on_initialization_complete.fire(self)
             return
 
         for txn in self.initial_transactions:
@@ -513,6 +517,8 @@ class Journal(object):
 
         self.initial_load = False
         logger.info('finished processing initial transactions and blocks')
+
+        self.on_initialization_complete.fire(self)
 
     def add_pending_transaction(self, txn, prepend=False, build_block=True):
         """Adds a transaction to the list of candidates for commit.
