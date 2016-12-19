@@ -44,6 +44,8 @@ from sawtooth.cli.submit import add_submit_parser
 from sawtooth.cli.submit import do_submit
 from sawtooth.cli.transaction import add_transaction_parser
 from sawtooth.cli.transaction import do_transaction
+from sawtooth.cli.monitor import add_monitor_parser
+from sawtooth.cli.monitor import do_monitor
 
 
 def create_console_handler(verbose_level):
@@ -107,6 +109,7 @@ def create_parser(prog_name):
     add_store_parser(subparsers, parent_parser)
     add_admin_parser(subparsers, parent_parser)
     add_stats_parser(subparsers, parent_parser)
+    add_monitor_parser(subparsers, parent_parser)
 
     return parser
 
@@ -141,6 +144,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_admin(args)
     elif args.command == 'stats':
         do_stats(args)
+    elif args.command == 'monitor':
+        do_monitor(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
