@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 from threading import Condition
 from threading import RLock
+import time
 
 
 class FutureResult(object):
@@ -27,6 +28,7 @@ class Future(object):
         self.correlation_id = correlation_id
         self._result = None
         self._condition = Condition()
+        self._create_time = time.time()
 
     def done(self):
         return self._result is not None
@@ -39,8 +41,12 @@ class Future(object):
 
     def set_result(self, result):
         with self._condition:
+            self._reconcile_time = time.time()
             self._result = result
             self._condition.notify()
+
+    def get_duration(self):
+        return self._reconcile_time - self._create_time
 
 
 class FutureCollectionKeyError(Exception):
