@@ -30,17 +30,20 @@ def _generate_id():
 
 
 class TransactionExecutorThread(threading.Thread):
-    def __init__(self, service, context_manager, scheduler):
+    def __init__(self, service, context_manager, last_state_root, scheduler):
         super(TransactionExecutorThread, self).__init__()
 
         self._service = service
         self._context_manager = context_manager
         self._scheduler = scheduler
 
-        self._last_state_root = context_manager.get_first_root()
+        self._last_state_root = last_state_root
+        self._context_id = None
 
     def run(self):
-        for txn in self._scheduler:
+        txns_valid = []
+        for txn_info in self._scheduler:
+            txn = txn_info.txn
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(txn.header)
 
@@ -63,26 +66,42 @@ class TransactionExecutorThread(threading.Thread):
             response = processor_pb2.TransactionProcessResponse()
             response.ParseFromString(future.result().content)
             if response.status == processor_pb2.TransactionProcessResponse.OK:
-                self._last_state_root = self._context_manager.commit_context(
-                    context_id_list=[context_id])
+                txns_valid.append(True)
+                if txn_info.new_state_hash:
+                    self._last_state_root = self._context_manager.\
+                        commit_context(context_id_list=[context_id],
+                                       virtual=False)
             else:
+                txns_valid.append(False)
                 self._context_manager.delete_context(
                     context_id_list=[context_id])
+            if txn_info.inform:
+                valid = all(txns_valid)
+                if valid:
+                    self._scheduler.set_status(
+                        txn.signature,
+                        valid,
+                        self._last_state_root)
+                else:
+                    self._scheduler.set_status(txn.signature, valid)
+                txns_valid = []
             print("Last Root ", self._last_state_root)
             assert self._last_state_root is not None
 
             self._scheduler.mark_as_applied(txn.signature)
-
-        return []
 
 
 class TransactionExecutor(object):
     def __init__(self, service, context_manager):
         self._service = service
         self._context_manager = context_manager
+        self._last_state_root = context_manager.get_first_root()
 
-    def execute(self, scheduler):
+    def execute(self, scheduler, state_hash=None):
+        if state_hash is not None:
+            self._last_state_root = state_hash
         t = TransactionExecutorThread(self._service,
                                       self._context_manager,
+                                      self._last_state_root,
                                       scheduler)
         t.start()
