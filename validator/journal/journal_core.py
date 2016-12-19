@@ -753,10 +753,6 @@ class Journal(object):
 
         new_block.TransactionIDs = txn_list
 
-        logger.info('build transaction block to extend %s with %s '
-                    'transactions',
-                    self.most_recent_committed_block_id[:8], len(txn_list))
-
         self.consensus.initialize_block(self, new_block)
 
         # fire the build block event handlers
