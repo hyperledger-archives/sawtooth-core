@@ -14,18 +14,39 @@
 # ------------------------------------------------------------------------------
 
 import sys
+import argparse
 
 from sawtooth_validator.server.core import Validator
 
 
+def parse_args(args):
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('--url',
+                        help='Network endpoint URL',
+                        default='tcp://*:8800',
+                        type=str)
+    parser.add_argument('--service',
+                        help='Validator component service endpoint',
+                        default='0.0.0.0:40000',
+                        type=str)
+    parser.add_argument('--peers',
+                        help='A list of peers to attempt to connect to '
+                             'in the format tcp://hostname:port',
+                        nargs='+')
+
+    return parser.parse_args(args)
+
+
 def main(args=sys.argv[1:]):
-    if len(args) == 0:
-        url = '0.0.0.0:40000'
-    elif len(args) == 1:
-        url = args[0]
-    else:
-        print("Too many arguments. try ./bin/validator 0.0.0.0:40000")
-    validator = Validator(url)
+    try:
+        opts = parse_args(args)
+    except:
+        sys.exit(1)
+
+    validator = Validator(opts.url, opts.service, opts.peers)
+
     try:
         validator.start()
     except KeyboardInterrupt:
