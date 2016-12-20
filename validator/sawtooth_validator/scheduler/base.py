@@ -40,6 +40,30 @@ class Scheduler(object):
         raise NotImplementedError
 
     @abstractmethod
+    def batch_status(self, batch_signature):
+        """Signifies whether a particular batch is valid, returns
+           None if the batch hasn't fully been processed.
+
+        Args:
+            batch_signature (str): The batch signature
+
+        Returns:
+            BatchStatus: the status of the batch, see BatchStatus below
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_status(self, txn_signature, status, state_hash=None):
+        """Called by the executor after inform txn has been validated.
+
+        Args:
+            txn_signature (str): the signature of the last txn
+            status (Boolean): whether the batch passed or failed
+            state_hash (str): the state hash (may be virtual)
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def next_transaction(self):
         """Returns the next transaction, if any, that can be processed.
 
@@ -134,3 +158,33 @@ class SchedulerIterator(object):
                     return txn
 
                 self._condition.wait()
+
+
+class BatchStatus(object):
+    """BatchStatus to send to journal to inform about the
+    status of a batch
+    attributes:
+        valid (boolean): whether the batch is valid
+        state_hash (str): the state hash after the batch
+                          and will be None if the batch is invalid.
+                         Could be a virtual state hash
+    """
+    def __init__(self, valid, state_hash):
+        self.valid = valid
+        self.state_hash = state_hash
+
+
+class TxnInformation(object):
+    """Information about a transaction from the
+     scheduler to the executor.
+    Attributes:
+        txn transaction_pb2.Transaction protobuf class
+        new_state_hash (Boolean): whether a new state
+            hash needs to be generated.
+        inform (Boolean): Whether a batch has been
+              processed
+    """
+    def __init__(self, txn, new_state_hash, inform):
+        self.txn = txn
+        self.new_state_hash = new_state_hash
+        self.inform = inform

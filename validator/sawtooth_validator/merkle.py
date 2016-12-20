@@ -163,12 +163,13 @@ class MerkleDatabase(object):
 
         return hash_key
 
-    def update(self, set_items):
+    def update(self, set_items, virtual=True):
         """
 
         Args:
             set_items (dict): dict key, values where keys are addresses
-
+            virtual (boolean): True if not committing to disk
+                               eg speculative root hash
         Returns:
             the state root after the operations
         """
@@ -189,8 +190,9 @@ class MerkleDatabase(object):
                 path_branch = path[-TOKEN_SIZE:]
                 path_map[parent_address]['c'][path_branch] = key_hash
 
-        # Apply all new hash, value pairs to the database
-        self._database.set_batch(batch)
+        if not virtual:
+            # Apply all new hash, value pairs to the database
+            self._database.set_batch(batch)
         return key_hash
 
     def _set_by_addr(self, address, value):

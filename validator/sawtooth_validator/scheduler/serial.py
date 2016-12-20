@@ -16,6 +16,8 @@
 import queue
 from threading import Condition
 
+from sawtooth_validator.scheduler.base import BatchStatus
+from sawtooth_validator.scheduler.base import TxnInformation
 from sawtooth_validator.scheduler.base import Scheduler
 from sawtooth_validator.scheduler.base import SchedulerIterator
 
@@ -33,6 +35,8 @@ class SerialScheduler(Scheduler):
     def __init__(self):
         self._txn_queue = queue.Queue()
         self._scheduled_transactions = []
+        self._batch_statuses = {}
+        self._txn_to_batch = {}
         self._in_progress_transaction = None
         self._final = False
         self._condition = Condition()
@@ -40,11 +44,31 @@ class SerialScheduler(Scheduler):
     def __iter__(self):
         return SchedulerIterator(self, self._condition)
 
+    def set_status(self, txn_signature, status, state_hash=None):
+        with self._condition:
+            if txn_signature not in self._txn_to_batch:
+                raise ValueError("transaction not in any batches: {}".format(
+                    txn_signature))
+            batch_signature = self._txn_to_batch[txn_signature]
+            batch_status = BatchStatus(status, state_hash)
+            self._batch_statuses[batch_signature] = batch_status
+
     def add_batch(self, batch, state_hash=None):
         with self._condition:
-            for txn in batch.transactions:
-                self._txn_queue.put(txn)
+            batch_signature = batch.signature
+            batch_length = len(batch.transactions)
+            for idx, txn in enumerate(batch.transactions):
+                self._txn_to_batch[txn.signature] = batch_signature
+                if idx == batch_length - 1:
+                    txn_info = TxnInformation(txn, True, True)
+                else:
+                    txn_info = TxnInformation(txn, True, False)
+                self._txn_queue.put(txn_info)
             self._condition.notify_all()
+
+    def batch_status(self, batch_signature):
+        with self._condition:
+            return self._batch_statuses.get(batch_signature)
 
     def count(self):
         with self._condition:
@@ -59,13 +83,13 @@ class SerialScheduler(Scheduler):
             if self._in_progress_transaction is not None:
                 return None
             try:
-                txn = self._txn_queue.get(block=False)
+                txn_info = self._txn_queue.get(block=False)
             except queue.Empty:
                 return None
 
-            self._in_progress_transaction = txn.signature
-            self._scheduled_transactions.append(txn)
-            return txn
+            self._in_progress_transaction = txn_info.txn.signature
+            self._scheduled_transactions.append(txn_info)
+            return txn_info
 
     def mark_as_applied(self, transaction_signature):
         if (self._in_progress_transaction is None or

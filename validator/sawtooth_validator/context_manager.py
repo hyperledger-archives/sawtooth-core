@@ -183,7 +183,7 @@ class ContextManager(object):
         LOGGER.info("CREATE_CONTEXT: %s", context.session_id)
         return context.session_id
 
-    def commit_context(self, context_id_list):
+    def commit_context(self, context_id_list, virtual):
         """
         Part of the interface to the Executor
         Args:
@@ -222,7 +222,7 @@ class ContextManager(object):
         new_root = merkle_root
         add_value_dict = {address: value.result()
                           for address, value in merged_updates.items()}
-        new_root = tree.update(set_items=add_value_dict)
+        new_root = tree.update(set_items=add_value_dict, virtual=virtual)
 
         return new_root
 
