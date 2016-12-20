@@ -16,12 +16,12 @@
 FROM ubuntu:xenial
 
 RUN apt-get update && apt-get install -y -q \
-    python \
-    cython \
-    python-pip \
-    python-cbor
+    python3 \
+    python3-zmq \
+    python3-pip \
+    python3-cbor
 
-RUN pip install \
+RUN pip3 install \
         grpcio-tools \
         lmdb
 
