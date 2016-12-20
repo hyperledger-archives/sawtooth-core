@@ -47,7 +47,6 @@ public class TransactionProcessor implements Runnable {
   public TransactionProcessor(String host, int port) {
     this.stream = new Stream(host, port);
     this.handlers = new ArrayList<TransactionHandler>();
-    this.stream.connect();
     this.isRunning = true;
   }
 
