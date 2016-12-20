@@ -203,7 +203,7 @@ class Message(SignedObject):
         """
         if minfo is None:
             minfo = {}
-        super(Message, self).__init__(minfo, signkey='__SIGNATURE__')
+        super(Message, self).__init__(minfo, sig_dict_key='__SIGNATURE__')
 
         self.Nonce = minfo.get('__NONCE__', time.time())
 
