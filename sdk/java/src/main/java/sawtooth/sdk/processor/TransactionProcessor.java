@@ -41,11 +41,10 @@ public class TransactionProcessor implements Runnable {
 
   /**
    * constructor.
-   * @param host the String representing the host of the validator, e.g. "localhost"
-   * @param port the port that the Validator is on, e.g. 40000
+   * @param address the zmq address
    */
-  public TransactionProcessor(String host, int port) {
-    this.stream = new Stream(host, port);
+  public TransactionProcessor(String address) {
+    this.stream = new Stream(address);
     this.handlers = new ArrayList<TransactionHandler>();
     this.isRunning = true;
   }

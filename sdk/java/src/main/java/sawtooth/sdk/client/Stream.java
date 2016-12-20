@@ -44,13 +44,13 @@ public class Stream {
   /**
    * The constructor.
    *
-   * @param host a String representing the host, e.g. "localhost"
-   * @param port the port, e.g. 40000
+   * @param address the zmq address.
+   *
    */
-  public Stream(String host, int port) {
+  public Stream(String address) {
     this.futureHashMap = new ConcurrentHashMap<String, FutureByteString>();
     this.receiveQueue = new LinkedBlockingQueue<Message>();
-    this.sendReceiveThread = new SendReceiveThread(host + ":" + String.valueOf(port),
+    this.sendReceiveThread = new SendReceiveThread(address,
         futureHashMap, this.receiveQueue);
     this.thread = new Thread(sendReceiveThread);
     this.thread.start();
