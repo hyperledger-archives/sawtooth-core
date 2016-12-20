@@ -14,8 +14,6 @@
 
 package sawtooth.sdk.client;
 
-
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -30,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
@@ -61,20 +57,18 @@ public class State {
     GetRequest getRequest = GetRequest.newBuilder()
             .addAllAddresses(addresses)
             .setContextId(this.contextId).build();
-    SettableFuture<ByteString> future = stream.send(Stream.GET_REQUEST, getRequest.toByteString());
+    FutureByteString future = stream.send(Stream.GET_REQUEST, getRequest.toByteString());
     GetResponse getResponse = null;
     try {
-      getResponse = GetResponse.parseFrom(future.get(2, TimeUnit.SECONDS));
+      getResponse = GetResponse.parseFrom(future.getResult());
     } catch (TimeoutException toe) {
       try {
-        getResponse = GetResponse.parseFrom(future.get(2, TimeUnit.SECONDS));
+        getResponse = GetResponse.parseFrom(future.getResult());
       } catch (Exception e) {
         throw new InternalError(e.toString());
       }
     } catch (InterruptedException iee) {
       throw new InternalError(iee.toString());
-    } catch (ExecutionException ee) {
-      throw new InternalError(ee.toString());
     } catch (InvalidProtocolBufferException ipbe) {
       // server didn't respond with a GetResponse
       throw new InternalError(ipbe.toString());
@@ -108,22 +102,21 @@ public class State {
     SetRequest setRequest = SetRequest.newBuilder()
             .addAllEntries(entryArrayList)
             .setContextId(this.contextId).build();
-    SettableFuture<ByteString> future = stream.send(Stream.SET_REQUEST, setRequest.toByteString());
+    FutureByteString future = stream.send(Stream.SET_REQUEST, setRequest.toByteString());
     SetResponse setResponse = null;
     try {
-      setResponse = SetResponse.parseFrom(future.get(2, TimeUnit.SECONDS));
+      setResponse = SetResponse.parseFrom(future.getResult());
     } catch (TimeoutException toe) {
       try {
-        setResponse = SetResponse.parseFrom(future.get(2, TimeUnit.SECONDS));
+        setResponse = SetResponse.parseFrom(future.getResult());
       } catch (Exception e) {
         throw new InternalError(e.toString());
       }
     } catch (InterruptedException iee) {
       throw new InternalError(iee.toString());
-    } catch (ExecutionException ee) {
-      throw new InternalError(ee.toString());
+
     } catch (InvalidProtocolBufferException ipbe) {
-      // server didn't respond with a GetResponse
+      // server didn't respond with a SetResponse
       throw new InternalError(ipbe.toString());
     }
     ArrayList<String> addressesThatWereSet = new ArrayList<String>();
