@@ -288,7 +288,7 @@ MarketPlace Transaction Updates available for the data model objects:
 * ``reg``  Registers a data model object.
 * ``unr``  Unregisters a data model object.
 
-All of the register sub-commands support the a common subset of command-line options:
+All of the register sub-commands support the common subset of command-line options:
 
 * ``--help`` or ``-h``  Provides additional sub-command-specific help information.
 * ``--name NAME``  The name of the data model object.
