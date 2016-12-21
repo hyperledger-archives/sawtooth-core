@@ -39,34 +39,34 @@ def add_monitor_parser(subparsers, parent_parser):
 
     parser.add_argument('--url',
                         metavar="",
-                        help='Base validator url '
+                        help='base validator url '
                              '(default: %(default)s)',
                         default="http://localhost:8800")
     parser.add_argument('--log-config',
                         metavar="",
-                        help='Log config file')
+                        help='log config file')
     parser.add_argument('--event-script',
                         metavar="",
-                        help='Event script to run')
+                        help='event script to run')
 
     parser.add_argument(
         '--module',
         metavar="",
         action='append',
-        help='Module to load for event detection. '
-             'Options: platform-cpu, validator-fail, sigusr1. '
-             'Add multiple modules by specifying one module '
+        help='module to load for event detection. '
+             'options: platform-cpu, validator-fail, sigusr1. '
+             'add multiple modules by specifying one module '
              'per flag.')
 
     parser.add_argument('--endpoint-time',
                         metavar="",
-                        help='Interval between endpoint updates (s) '
+                        help='interval between endpoint updates (s) '
                              '(default: %(default)s)',
                         default=5,
                         type=int)
     parser.add_argument('--quit',
                         action='store_true',
-                        help='Quite monitor after script execution')
+                        help='quit monitor after script execution')
 
 
 def default_config():
