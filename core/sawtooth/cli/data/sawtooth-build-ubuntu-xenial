@@ -14,6 +14,8 @@
 # ------------------------------------------------------------------------------
 
 FROM ubuntu:xenial
+# added sudo for xenial
+# changed to openjdk-8-jdk for xenial
 
 RUN sh -c "echo deb http://archive.ubuntu.com/ubuntu xenial-backports main restricted universe multiverse >> /etc/apt/sources.list"
 RUN sh -c "echo deb-src http://archive.ubuntu.com/ubuntu xenial-backports main restricted universe multiverse >> /etc/apt/sources.list"
@@ -21,8 +23,9 @@ RUN sh -c "echo deb-src http://archive.ubuntu.com/ubuntu xenial-backports main r
 RUN apt-get update && apt-get install -y -q \
     git \
     make \ 
+    sudo \
     openssh-server \
-    openjdk-7-jdk \
+    openjdk-8-jdk \ 
     python-pip \
     wget \
     zip \
