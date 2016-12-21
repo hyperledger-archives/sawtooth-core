@@ -26,4 +26,4 @@ RUN mkdir -p $PROJECT_DIR/sdk/examples/intkey_java
 
 WORKDIR $PROJECT_DIR/sdk/examples/intkey_java
 
-ENTRYPOINT ["java", "-cp", "target/intkey_java-1.0-SNAPSHOT.jar", "sawtooth.examples.intkey.IntegerKeyTransactionProcessor", "validator"]
+ENTRYPOINT ["java", "-cp", "target/intkey_java-1.0-SNAPSHOT.jar", "sawtooth.examples.intkey.IntegerKeyTransactionProcessor", "validator:40000"]

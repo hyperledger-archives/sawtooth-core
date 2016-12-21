@@ -31,14 +31,13 @@ function run_protoc() {
     for file in $(cd $protos_dir && /bin/ls -1 *.proto)
     do
         cat $protos_dir/$file \
-            | sed -e "s#@PACKAGE@#$pkg#" \
+            | sed -e "s#import \"\(.*\).proto\";#import \"$pkg/\1.proto\";#" \
             > $tmp_dir/$pkg/$file
     done
 
     python3 -m grpc.tools.protoc \
         -I$tmp_dir \
         --python_out=$base_dir \
-	--grpc_python_out=$base_dir \
         $tmp_dir/$pkg/*.proto
 
     rm -rf $tmp_dir

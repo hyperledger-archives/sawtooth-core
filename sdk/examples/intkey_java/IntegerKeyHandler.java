@@ -92,7 +92,7 @@ public class IntegerKeyHandler implements TransactionHandler {
     try {
       HashMap updateMap = this.mapper.readValue(
               transactionRequest.getPayload().toByteArray(), HashMap.class);
-      String name = Utils.stringByteArrayToString((byte[]) updateMap.get("Name"));
+      String name = updateMap.get("Name").toString();
       String address = null;
       try {
         address = this.intkeyNameSpace + Utils.hash512(name.getBytes("UTF-8"));
@@ -103,7 +103,7 @@ public class IntegerKeyHandler implements TransactionHandler {
       if (name.length() == 0) {
         throw new InvalidTransactionException("Name is required");
       }
-      String verb = Utils.stringByteArrayToString((byte[]) updateMap.get("Verb"));
+      String verb = updateMap.get("Verb").toString();
       if (verb.length() == 0) {
         throw new InvalidTransactionException("Verb is required");
       }

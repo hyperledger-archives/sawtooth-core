@@ -14,46 +14,26 @@
 
 package sawtooth.sdk.client;
 
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
 
-import io.grpc.CallOptions;
-import io.grpc.ClientCall;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.Metadata;
-
 import sawtooth.sdk.protobuf.Message;
-import sawtooth.sdk.protobuf.MessageList;
-import sawtooth.sdk.protobuf.ValidatorGrpc;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.String;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The client networking class.
  */
 public class Stream {
-  private ManagedChannel channel;
-
-  private ClientCall<MessageList, MessageList> call;
-  private ConcurrentHashMap<String, SettableFuture<ByteString>> futureHashMap;
-  //This listener is for listening for MessageLists received
-  private MessageListener messageListener;
-  //This ExecutorService is for sending MessageLists
-  private ExecutorService executorService;
-  private LinkedBlockingQueue<Message> sendQueue;
+  private ConcurrentHashMap<String, FutureByteString> futureHashMap;
   private LinkedBlockingQueue<Message> receiveQueue;
-  private MessageListSender messageListSender;
+  private SendReceiveThread sendReceiveThread;
+  private Thread thread;
 
   public static final String REGISTER = "tp/register";
   public static final String GET_REQUEST = "state/getrequest";
@@ -64,61 +44,33 @@ public class Stream {
   /**
    * The constructor.
    *
-   * @param host a String representing the host, e.g. "localhost"
-   * @param port the port, e.g. 40000
+   * @param address the zmq address.
+   *
    */
-
-  public Stream(String host, int port) {
-    this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext(true).build();
-    this.sendQueue = new LinkedBlockingQueue<Message>();
-  }
-
-  /**
-   * Make the initial connection with the Validator.
-   */
-  public void connect() {
-    this.call = this.channel.newCall(ValidatorGrpc.METHOD_CONNECT, CallOptions.DEFAULT);
-    this.futureHashMap = new ConcurrentHashMap<String, SettableFuture<ByteString>>();
+  public Stream(String address) {
+    this.futureHashMap = new ConcurrentHashMap<String, FutureByteString>();
     this.receiveQueue = new LinkedBlockingQueue<Message>();
-    this.messageListener = new MessageListener(this.futureHashMap, this.receiveQueue);
-    this.call.start(this.messageListener, new Metadata());
-    this.call.request(Integer.MAX_VALUE);
-    this.messageListSender = new MessageListSender(this.sendQueue, this.call);
-    this.executorService = Executors.newFixedThreadPool(3);
-    this.executorService.submit(this.messageListSender);
+    this.sendReceiveThread = new SendReceiveThread(address,
+        futureHashMap, this.receiveQueue);
+    this.thread = new Thread(sendReceiveThread);
+    this.thread.start();
   }
 
   /**
-   * Stop the Stream threads from running.
-   */
-  public void stop() {
-    this.close();
-    try {
-      this.channel.awaitTermination(1, TimeUnit.SECONDS);
-      this.executorService.shutdown();
-      this.messageListSender.stopRunning();
-
-    } catch (InterruptedException ie) {
-      ie.printStackTrace();
-    }
-  }
-
-  /**
-   * Send a message and return a Future that will later have the Bytstring.
+   * Send a message and return a Future that will later have the Bytestring.
    * @param destination one of the static Strings in this class
    * @param contents the ByteString that has been serialized from a Protobuf class
    * @return future a future that will have ByteString that can be deserialized into a,
    *         for example, GetResponse
    */
-  public SettableFuture<ByteString> send(String destination, ByteString contents) {
+  public FutureByteString send(String destination, ByteString contents) {
+
     Message message = Message.newBuilder()
             .setCorrelationId(this.generateId())
             .setMessageType(destination).setContent(contents).build();
 
-
-    this.sendQueue.add(message);
-
-    SettableFuture<ByteString> future = SettableFuture.create();
+    this.sendReceiveThread.sendMessage(message);
+    FutureByteString future = new FutureByteString(message.getCorrelationId());
     this.futureHashMap.put(message.getCorrelationId(), future);
 
     return future;
@@ -136,24 +88,19 @@ public class Stream {
             .setCorrelationId(correlationId)
             .setMessageType(destination).setContent(contents).build();
 
-
-    this.sendQueue.add(message);
+    this.sendReceiveThread.sendMessage(message);
   }
 
   /**
-   * Close the ClientCall, and tell the server that the client is disconnecting.
+   * close the Stream.
    */
   public void close() {
-    Message message = Message.newBuilder()
-            .setCorrelationId(this.generateId())
-            .setMessageType("system/disconnect")
-            .build();
-    ArrayList<Message> messageArrayList = new ArrayList<Message>();
-    messageArrayList.add(message);
-    MessageList messageList = MessageList.newBuilder().addAllMessages(messageArrayList).build();
-    this.call.sendMessage(messageList);
-    this.call.halfClose();
-
+    try {
+      this.sendReceiveThread.stop();
+      this.thread.join();
+    } catch (InterruptedException ie) {
+      ie.printStackTrace();
+    }
   }
 
   /**
