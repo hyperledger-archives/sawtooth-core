@@ -19,39 +19,22 @@ import json
 import traceback
 import unittest
 
+from integration.test_smoke import TestSmoke
+from integration.test_convergence import TestConvergence
+from integration.test_local_validation import TestLocalValidationErrors
+from integration.test_web_api import TestWebApi
+from integration.test_genesis_util import TestGenesisUtil
 from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.subproc import SubprocessNodeController
 from sawtooth.manage.wrap import WrappedNodeController
-from sawtooth.exceptions import MessageException
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
-from txnintegration.utils import is_convergent
-from txnintegration.utils import sit_rep
-from test_battleship import TestBattleshipCommands
-from test_xo_cli import TestXoCli
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class Poet0ArcadeTestSuite(unittest.TestCase):
-    def _poll_for_convergence(self, timeout=256, tolerance=2, standard=5):
-        convergent = False
-        with Progress('awaiting convergence') as p:
-            to = TimeOut(timeout)
-            while convergent is False:
-                self.assertFalse(to.is_timed_out(),
-                                 'timed out awaiting convergence')
-                p.step()
-                time.sleep(4)
-                try:
-                    convergent = is_convergent(self.urls, standard=standard,
-                                               tolerance=tolerance)
-                except MessageException:
-                    pass
-        sit_rep(self.urls, verbosity=1)
-        return convergent
-
+class Poet1TestSuite(unittest.TestCase):
     def _do_teardown(self):
         print 'destroying', str(self.__class__.__name__)
         if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
@@ -81,9 +64,8 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         print 'creating', str(self.__class__.__name__)
         # set up our nodes (suite-internal interface)
         self._node_ctrl = WrappedNodeController(SubprocessNodeController())
-        cfg = {"LedgerType": "poet0",
-               "TransactionFamilies": ["sawtooth_xo",
-                                       "sawtooth_battleship"]}
+        cfg = {"LedgerType": "poet1",
+               "TransactionFamilies": ["ledger.transaction.integer_key"]}
         temp_dir = self._node_ctrl.get_data_dir()
         file_name = os.path.join(temp_dir, "config.js")
         with open(file_name, 'w') as config:
@@ -91,8 +73,8 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
 
         self._nodes = [
             NodeArguments('v%s' % i, 8800 + i, 9000 + i,
-                          config_files=[file_name],
-                          ledger_type="poet0")for i in range(5)]
+                          config_files=[file_name], ledger_type="poet1")
+                          for i in range(5)]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
@@ -104,21 +86,28 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         print 'launching network...'
         for x in self._nodes:
             self._node_ctrl.start(x)
-        self._poll_for_convergence(timeout=128, tolerance=1, standard=2)
 
     def test_suite(self):
         success = False
         try:
-            self._do_setup()
-            urls = self.urls
-            suite = unittest.TestSuite()
-            suite.addTest(TestBattleshipCommands('test_all_commands'))
-            suite.addTest(TestXoCli('test_xo_create_no_keyfile'))
-            suite.addTest(TestXoCli('test_xo_create'))
-            suite.addTest(TestXoCli('test_xo_p1_win'))
+            suite = unittest.TestSuite(unittest.makeSuite(TestGenesisUtil))
             runner = unittest.TextTestRunner(verbosity=2)
             result = runner.run(suite)
             if len(result.failures) == 0 and len(result.errors) == 0:
+                success = True
+            self._do_setup()
+            urls = self.urls
+            suite = unittest.TestSuite(unittest.makeSuite(TestWebApi))
+            # test_bootstrap will allow the validators to all come on line
+            # before other tries to connect to the validators.
+            suite.addTest(TestConvergence('test_bootstrap', urls))
+            suite.addTest(TestSmoke('test_intkey_load', urls))
+            suite.addTest(
+                TestLocalValidationErrors('test_local_validation_errors',
+                                          urls))
+            result = runner.run(suite)
+            if len(result.failures) == 0 and len(result.errors) == 0 and \
+                success == True:
                 success = True
         except:
             traceback.print_exc()

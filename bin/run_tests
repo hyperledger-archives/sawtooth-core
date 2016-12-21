@@ -61,8 +61,8 @@ test_validator() {
 	nose2 -v unit
 
 	export RUN_TEST_SUITES=1
-	nose2 -v sawtooth_suites.ts_pr_dev_mode.DevModeTestSuite
-	nose2 -v sawtooth_suites.ts_pr_poet0.Poet0TestSuite
+       nose2 -v sawtooth_suites.ts_pr_dev_mode.DevModeTestSuite
+       nose2 -v sawtooth_suites.ts_pr_poet1.Poet1TestSuite
 	unset RUN_TEST_SUITES
 	cd ..
 }
@@ -79,7 +79,7 @@ test_mktplace() {
 	cd extensions/mktplace
 	nose2 -v unit
 	export RUN_TEST_SUITES=1
-	nose2 -v sawtooth_suites.ts_pr_mkt_poet0.Poet0MktTestSuite
+       nose2 -v sawtooth_suites.ts_pr_mkt_dev_mode.DevModeMktTestSuite
 	unset RUN_TEST_SUITES
 	cd ../..
 }
@@ -98,16 +98,6 @@ test_bond() {
 	cd ../..
 }
 
-test_arcade() { 
-	PYTHONPATH=$top_dir/core
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
-	export PYTHONPATH
-	cd extensions/arcade
-	nose2 -v
-	cd ../..
-}
 
 MODULE="all"
 while getopts :m:h opt
@@ -134,7 +124,6 @@ case $MODULE in
         test_validator
         test_mktplace
         test_bond
-        test_arcade
         ;;
     core)
         test_core
@@ -151,7 +140,5 @@ case $MODULE in
     bond)
         test_bond
         ;;
-    arcade)
-        test_arcade
-        ;;
+
 esac

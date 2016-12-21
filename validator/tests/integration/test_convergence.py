@@ -61,7 +61,7 @@ class TestConvergence(unittest.TestCase):
         block on the network is the 'intended' block.  To do so, it would need
         to have additional, internal knowledge about the validator subsystem.
         '''
-        convergent = self._poll_for_convergence(timeout=128, tolerance=1,
+        convergent = self._poll_for_convergence(timeout=240, tolerance=1,
                                                 standard=2)
         self.assertTrue(convergent, 'network divergent')
 

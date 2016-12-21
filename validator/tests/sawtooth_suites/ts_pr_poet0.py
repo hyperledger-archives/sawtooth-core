@@ -101,7 +101,7 @@ class Poet0TestSuite(unittest.TestCase):
             # test_bootstrap will allow the validators to all come on line
             # before other tries to connect to the validators.
             suite.addTest(TestConvergence('test_bootstrap', urls))
-            suite.addTest(TestSmoke('test_intkey_load_poet0', urls))
+            suite.addTest(TestSmoke('test_intkey_load', urls))
             suite.addTest(
                 TestLocalValidationErrors('test_local_validation_errors',
                                           urls))
