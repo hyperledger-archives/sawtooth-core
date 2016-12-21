@@ -14,7 +14,7 @@
     "LedgerURL" : ["http://localhost:8800/"],
 
     ## pick the ledger type
-    "LedgerType" : "poet0",
+    "LedgerType" : "poet1",
 
     ## configuration of the ledger wait time certificate 
     ## suggested settings for single node dev environment

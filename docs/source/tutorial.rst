@@ -131,7 +131,7 @@ terminal window.
     node serving a genesis block (see note below for details). This
     utility is part of the sawtooth CLI. To view the available
     subcommands, run the command **sawtooth -h**. The genesis creation
-    utility used in this tutorial is: **sawtooth admin poet0-genesis**
+    utility used in this tutorial is: **sawtooth admin poet1-genesis**
     (see script *genesis.sh* for the command line options used in the
     tutorial).
 

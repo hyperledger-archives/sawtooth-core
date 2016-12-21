@@ -91,7 +91,7 @@ class DockerNodeController(NodeController):
             cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
             cmd.append('%s/sawtooth keygen %s; ' % (bin_path, node_name))
             cmd.append('%s/sawtooth admin' % bin_path)
-            cmd.append('poet0-genesis -vv --node %s; exec' % node_name)
+            cmd.append('poet1-genesis -vv --node %s; exec' % node_name)
         cmd.append('%s/txnvalidator' % bin_path)
         cmd.extend(['--node', node_name])
         cmd.append('-vv')
