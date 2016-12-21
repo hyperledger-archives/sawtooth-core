@@ -115,14 +115,14 @@ and run the following commands:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/vagrant/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/ubuntu/sawtooth/v0.json
 
 This will start txnvalidator and logging output will be printed to the
 terminal window.
 
 .. note::
   **Note on genesis block creation and clearing validator state**
-  
+
     The script *genesis.sh* should be run whenever you want to start a
     validator as part of the tuturial. The script clears existing data
     files and keys, which would otherwise be loaded when starting the
@@ -199,7 +199,7 @@ the following command:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place --config /home/vagrant/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place --config /home/ubuntu/sawtooth/v0.json
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
