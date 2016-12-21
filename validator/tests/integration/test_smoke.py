@@ -46,12 +46,9 @@ class TestSmoke(unittest.TestCase):
             test.setup(self.urls, 100)
             test.run(2)
             test.validate()
-            self.assertTrue(is_convergent(self.urls, tolerance=2, standard=5))
+            self.assertTrue(is_convergent(self.urls, tolerance=2, standard=3))
         finally:
             print "No Validator data and logs to preserve"
 
-    def test_intkey_load_poet0(self):
-        self._run_int_load()
-
-    def test_intkey_load_dev_mode(self):
+    def test_intkey_load(self):
         self._run_int_load()

@@ -34,7 +34,7 @@ from integration.test_smoke import TestSmoke
 LOGGER = logging.getLogger(__name__)
 
 
-class Poet0MktTestSuite(unittest.TestCase):
+class Poet1MktTestSuite(unittest.TestCase):
     def _poll_for_convergence(self, timeout=256, tolerance=2, standard=5):
         convergent = False
         with Progress('awaiting convergence') as p:
@@ -81,7 +81,7 @@ class Poet0MktTestSuite(unittest.TestCase):
         print 'creating', str(self.__class__.__name__)
         # set up our nodes (suite-internal interface)
         self._node_ctrl = WrappedNodeController(SubprocessNodeController())
-        cfg = {"LedgerType": "poet0",
+        cfg = {"LedgerType": "poet1",
                'InitialWaitTime': 1,
                'TargetWaitTime': 1,
                "TransactionFamilies": ["ledger.transaction.integer_key",
@@ -93,7 +93,8 @@ class Poet0MktTestSuite(unittest.TestCase):
 
         self._nodes = [
             NodeArguments('v%s' % i, 8800 + i, 9000 + i,
-                          config_files=[file_name]) for i in range(5)]
+                          config_files=[file_name],
+                          ledger_type="poet1") for i in range(5)]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
@@ -105,7 +106,7 @@ class Poet0MktTestSuite(unittest.TestCase):
         print 'launching network...'
         for x in self._nodes:
             self._node_ctrl.start(x)
-        self._poll_for_convergence(timeout=128, tolerance=1, standard=2)
+        self._poll_for_convergence(timeout=240, tolerance=1, standard=2)
 
     def test_suite(self):
         success = False

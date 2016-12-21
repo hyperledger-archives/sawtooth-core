@@ -27,14 +27,14 @@ from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
 from txnintegration.utils import is_convergent
 from txnintegration.utils import sit_rep
-from test_battleship import TestBattleshipCommands
-from test_xo_cli import TestXoCli
-
+from integration.test_all_transactions import TestAllTransactions
+from integration.test_cp_scenarios import TestCommercialPaperScenarios
+from integration.test_smoke import TestSmoke
 
 LOGGER = logging.getLogger(__name__)
 
 
-class Poet0ArcadeTestSuite(unittest.TestCase):
+class Poet0MktTestSuite(unittest.TestCase):
     def _poll_for_convergence(self, timeout=256, tolerance=2, standard=5):
         convergent = False
         with Progress('awaiting convergence') as p:
@@ -82,8 +82,10 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         # set up our nodes (suite-internal interface)
         self._node_ctrl = WrappedNodeController(SubprocessNodeController())
         cfg = {"LedgerType": "poet0",
-               "TransactionFamilies": ["sawtooth_xo",
-                                       "sawtooth_battleship"]}
+               'InitialWaitTime': 1,
+               'TargetWaitTime': 1,
+               "TransactionFamilies": ["ledger.transaction.integer_key",
+                                       "mktplace.transactions.market_place"]}
         temp_dir = self._node_ctrl.get_data_dir()
         file_name = os.path.join(temp_dir, "config.js")
         with open(file_name, 'w') as config:
@@ -92,7 +94,7 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         self._nodes = [
             NodeArguments('v%s' % i, 8800 + i, 9000 + i,
                           config_files=[file_name],
-                          ledger_type="poet0")for i in range(5)]
+                          ledger_type="poet0") for i in range(5)]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
@@ -104,7 +106,7 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         print 'launching network...'
         for x in self._nodes:
             self._node_ctrl.start(x)
-        self._poll_for_convergence(timeout=128, tolerance=1, standard=2)
+        self._poll_for_convergence(timeout=240, tolerance=1, standard=2)
 
     def test_suite(self):
         success = False
@@ -112,10 +114,14 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
             self._do_setup()
             urls = self.urls
             suite = unittest.TestSuite()
-            suite.addTest(TestBattleshipCommands('test_all_commands'))
-            suite.addTest(TestXoCli('test_xo_create_no_keyfile'))
-            suite.addTest(TestXoCli('test_xo_create'))
-            suite.addTest(TestXoCli('test_xo_p1_win'))
+            suite.addTest(TestSmoke('test_mktplace_load', urls,
+                                    self._node_ctrl.get_data_dir()))
+            suite.addTest(TestCommercialPaperScenarios('test_scenario_setup'))
+            suite.addTest(TestCommercialPaperScenarios('test_scenario_a'))
+            suite.addTest(TestCommercialPaperScenarios('test_scenario_b'))
+            suite.addTest(TestCommercialPaperScenarios('test_scenario_c'))
+            suite.addTest(TestCommercialPaperScenarios('test_scenario_d'))
+            suite.addTest(TestAllTransactions('test_all_transactions', urls))
             runner = unittest.TextTestRunner(verbosity=2)
             result = runner.run(suite)
             if len(result.failures) == 0 and len(result.errors) == 0:
