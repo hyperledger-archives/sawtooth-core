@@ -81,7 +81,7 @@ class DockerNodeController(NodeController):
         args.extend(['-p', '{}/udp'.format(gossip_port)])
         args.extend(['-e', 'CURRENCYHOME=/project/sawtooth-core/validator'])
         args.extend(['-v', '{}:/project'.format(local_project_dir)])
-        args.append('sawtooth-build-ubuntu-trusty')
+        args.append('sawtooth-build-ubuntu-xenial')
         args.extend(['bash', '-c'])
 
         cmd = []

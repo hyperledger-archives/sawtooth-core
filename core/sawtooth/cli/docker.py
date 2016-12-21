@@ -79,8 +79,8 @@ def _build_docker_image(image):
 
 def do_docker_build(args):
     if args.all:
-        for image in ['sawtooth-build-ubuntu-trusty',
-                      'sawtooth-dev-ubuntu-trusty',
+        for image in ['sawtooth-build-ubuntu-xenial',
+                      'sawtooth-dev-ubuntu-xenial',
                       'sawtooth-validator',
                       'sawtooth-python-intkey-1.0',
                       'sawtooth-java-intkey-1.0']:
