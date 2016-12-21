@@ -93,8 +93,7 @@ class DevModeTestSuite(unittest.TestCase):
             suite = unittest.TestSuite()
             # test_bootstrap will allow the validators to all come on line
             # before other tries to connect to the validators.
-            suite.addTest(TestSmoke('test_intkey_load_dev_mode', urls))
-            suite.addTest(TestSmoke('test_intkey_load_poet0', urls))
+            suite.addTest(TestSmoke('test_intkey_load', urls))
             suite.addTest(
                 TestLocalValidationErrors('test_local_validation_errors',
                                           urls))

@@ -74,7 +74,8 @@ class Poet0NightlyTestSuite(unittest.TestCase):
 
         self._nodes = [
             NodeArguments('v%s' % i, 8800 + i, 9000 + i,
-                          config_files=[file_name]) for i in range(5)]
+                          config_files=[file_name],
+                           ledger_type="poet0") for i in range(5)]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block

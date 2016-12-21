@@ -14,7 +14,7 @@
     "LedgerURL" : "http://localhost:8800/",
 
     ## pick the ledger type
-    "LedgerType" : "poet0",
+    "LedgerType" : "poet1",
 
     ## this setting should only be zero for the initial validator
     "InitialConnectivity": 0,

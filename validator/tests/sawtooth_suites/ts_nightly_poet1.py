@@ -22,36 +22,21 @@ import unittest
 from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.subproc import SubprocessNodeController
 from sawtooth.manage.wrap import WrappedNodeController
-from sawtooth.exceptions import MessageException
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
-from txnintegration.utils import is_convergent
-from txnintegration.utils import sit_rep
-from test_battleship import TestBattleshipCommands
-from test_xo_cli import TestXoCli
-
+from integration.test_integration import TestIntegration
+from integration.test_convergence import TestConvergence
+from integration.test_validator_restart_restore \
+    import TestValidatorShutdownRestartRestore
+from integration.test_validator_restart import TestValidatorShutdownRestart
+from integration.test_validator_shutdown_sigkill_restart \
+    import TestValidatorShutdownSigKillRestart
+from integration.test_sawtooth_stats import TestSawtoothStats
 
 LOGGER = logging.getLogger(__name__)
 
 
-class Poet0ArcadeTestSuite(unittest.TestCase):
-    def _poll_for_convergence(self, timeout=256, tolerance=2, standard=5):
-        convergent = False
-        with Progress('awaiting convergence') as p:
-            to = TimeOut(timeout)
-            while convergent is False:
-                self.assertFalse(to.is_timed_out(),
-                                 'timed out awaiting convergence')
-                p.step()
-                time.sleep(4)
-                try:
-                    convergent = is_convergent(self.urls, standard=standard,
-                                               tolerance=tolerance)
-                except MessageException:
-                    pass
-        sit_rep(self.urls, verbosity=1)
-        return convergent
-
+class Poet1NightlyTestSuite(unittest.TestCase):
     def _do_teardown(self):
         print 'destroying', str(self.__class__.__name__)
         if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
@@ -81,9 +66,7 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         print 'creating', str(self.__class__.__name__)
         # set up our nodes (suite-internal interface)
         self._node_ctrl = WrappedNodeController(SubprocessNodeController())
-        cfg = {"LedgerType": "poet0",
-               "TransactionFamilies": ["sawtooth_xo",
-                                       "sawtooth_battleship"]}
+        cfg = {"LedgerType": "poet1"}
         temp_dir = self._node_ctrl.get_data_dir()
         file_name = os.path.join(temp_dir, "config.js")
         with open(file_name, 'w') as config:
@@ -91,8 +74,7 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
 
         self._nodes = [
             NodeArguments('v%s' % i, 8800 + i, 9000 + i,
-                          config_files=[file_name],
-                          ledger_type="poet0")for i in range(5)]
+                          config_files=[file_name]) for i in range(5)]
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
@@ -104,7 +86,6 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
         print 'launching network...'
         for x in self._nodes:
             self._node_ctrl.start(x)
-        self._poll_for_convergence(timeout=128, tolerance=1, standard=2)
 
     def test_suite(self):
         success = False
@@ -112,10 +93,23 @@ class Poet0ArcadeTestSuite(unittest.TestCase):
             self._do_setup()
             urls = self.urls
             suite = unittest.TestSuite()
-            suite.addTest(TestBattleshipCommands('test_all_commands'))
-            suite.addTest(TestXoCli('test_xo_create_no_keyfile'))
-            suite.addTest(TestXoCli('test_xo_create'))
-            suite.addTest(TestXoCli('test_xo_p1_win'))
+            # test_bootstrap will allow the validators to all come on line
+            # before others tries to connect to the validators.
+            suite.addTest(TestConvergence('test_bootstrap', urls))
+            suite.addTest(TestIntegration('test_intkey_load_ext', urls))
+            suite.addTest(TestIntegration('test_missing_dependencies', urls))
+            suite.addTest(TestSawtoothStats('test_sawtooth_stats', urls))
+            suite.addTest(TestValidatorShutdownRestart(
+                'test_validator_shutdown_restart_ext',
+                urls, self._node_ctrl, self._nodes))
+            suite.addTest(TestConvergence('test_bootstrap', urls))
+            suite.addTest(TestValidatorShutdownSigKillRestart(
+                'test_validator_shutdown_sigkill_restart_ext',
+                urls, self._node_ctrl, self._nodes))
+            suite.addTest(TestConvergence('test_bootstrap', urls))
+            suite.addTest(TestValidatorShutdownRestartRestore(
+                'test_validator_shutdown_restart_restore_ext',
+                urls, self._node_ctrl, self._nodes))
             runner = unittest.TextTestRunner(verbosity=2)
             result = runner.run(suite)
             if len(result.failures) == 0 and len(result.errors) == 0:

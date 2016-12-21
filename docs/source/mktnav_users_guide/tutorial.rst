@@ -206,7 +206,7 @@ In order to accept an offer made by another participant, you must have *Holdings
 #. Click **Accept**.
 
 Chaining Offers (Arbitrage)
---------------------------
+---------------------------
 
 It is possible to chain together multiple offers using the **+ Offer** buttons next to the *initial holding* and *final holding* dropdowns. This allows you to build a chain of exchanges which can include assets you have no *Holdings* in. For example, it is possible to trade US Dollars for Euros for some authentic Italian biscotti, even though you have no holding of Euros.
 

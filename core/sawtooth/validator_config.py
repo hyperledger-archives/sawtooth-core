@@ -326,7 +326,7 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
         self['InitialWaitTime'] = 5.0
 
         # ledger type (PoET default)
-        self['LedgerType'] = 'poet0'
+        self['LedgerType'] = 'poet1'
 
         # block-chain transaction limits
         self['MinTransactionsPerBlock'] = 1

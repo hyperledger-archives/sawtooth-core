@@ -126,7 +126,7 @@ Finally we will create Ben, a discerning cookiehead looking for the absolute bes
    .. image:: images/get_cookies.*
 
 International Cookie Arbitrage
-=============================
+==============================
 
 Let's build off our previous scenario to showcase one of the more powerful features of of the Navigator UI: *arbitrage*. Say we have a new baker cooking some authentic Italian biscotti, but they only accept Euros. So long as a *USD -> Euro* exchange exists, there is no need to force American buyers to tediously create new holdings and manually execute a long series of exchanges.
 

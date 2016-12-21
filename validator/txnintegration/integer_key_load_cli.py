@@ -88,7 +88,7 @@ class IntKeyLoadTest(object):
 
     def _wait_for_no_transaction_commits(self):
         # for the case where no transactions are expected to commit
-        to = TimeOut(120)
+        to = TimeOut(240)
         starting_txn_count = len(self.transactions)
 
         remaining_txn_cnt = len(self.transactions)

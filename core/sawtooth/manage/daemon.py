@@ -125,7 +125,7 @@ class DaemonNodeController(NodeController):
             proc.wait()
             # Create genesis block
             cmd = get_executable_script('sawtooth')
-            cmd += ['admin', 'poet0-genesis']
+            cmd += ['admin', 'poet1-genesis']
             if self._verbose is True:
                 cmd += ['-vv']
             cmd += ['--node', node_args.node_name]

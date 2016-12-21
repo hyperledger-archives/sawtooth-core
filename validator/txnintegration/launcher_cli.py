@@ -150,7 +150,7 @@ def main():
         try:
             ledger_type = opts["validator_config"]["LedgerType"]
         except KeyError:
-            # None defaults to poet0
+            # None defaults to poet1
             ledger_type = None
         node_ctrl = WrappedNodeController(SubprocessNodeController(),
                                           data_dir=currency_home)
