@@ -34,7 +34,7 @@ class PoetConsensus(Consensus):
         """Constructor for the PoetJournal class.
 
         Args:
-            node (Node): The local node.
+            kwargs (dict):
         """
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
