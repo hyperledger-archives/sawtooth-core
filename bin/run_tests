@@ -47,6 +47,7 @@ test_sdk_examples() {
   cd sdk/examples/processor_tests/intkey
   nose2-3 -v ts_intkey.TestSuiteIntkeyPython
   #nose2-3 -v ts_intkey.TestSuiteIntkeyJava
+  #nose2-3 -v ts_intkey.TestSuiteIntkeyJavascript
   cd ../../../../
 }
 
