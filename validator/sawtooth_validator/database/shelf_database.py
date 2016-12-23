@@ -15,9 +15,15 @@
 
 from threading import RLock
 from shelve import Shelf
-import dbm
-
 try:
+    # On python2 windows this will fail
+    # On python2 linux this will import the wrong module
+    # On python3 Linux this will pass
+    import dbm
+except ImportError:
+    pass
+try:
+    # On python2 linux + windows this will pass
     import anydbm as dbm
 except ImportError:
     pass
