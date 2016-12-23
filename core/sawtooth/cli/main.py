@@ -24,6 +24,7 @@ import sys
 from colorlog import ColoredFormatter
 
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import ManagementError
 from sawtooth.exceptions import InvalidTransactionError
 
 from sawtooth.cli.block import add_block_parser
@@ -162,6 +163,9 @@ def main_wrapper():
         print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except ClientException as e:
+        print("Error: {}".format(e), file=sys.stderr)
+        sys.exit(1)
+    except ManagementError as e:
         print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:

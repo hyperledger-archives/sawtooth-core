@@ -292,6 +292,12 @@ def do_cluster_stop(args):
 
     nodes = state["Nodes"]
     for node_name in node_names:
+        if node_name not in nodes:
+            raise CliException(
+                "{} is not a known node name".format(node_name))
+        if nodes[node_name]['Status'] == 'Stopped':
+            raise CliException('{} already stopped'.format(node_name))
+
         print("Stopping: {}".format(node_name))
         node_command_generator.stop(node_name)
         # Update status of Nodes
