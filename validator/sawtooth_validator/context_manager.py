@@ -350,18 +350,20 @@ class _ContextFuture(object):
     def __init__(self, address):
         self.address = address
         self._result = None
+        self._result_is_set = False
         self._condition = Condition()
 
     def done(self):
-        return self._result is not None
+        return self._result_is_set
 
     def result(self):
         with self._condition:
-            if self._result is None:
-                self._condition.wait(1)
+            if not self._result_is_set:
+                self._condition.wait(2)
         return self._result
 
     def set_result(self, result):
         with self._condition:
             self._result = result
+            self._result_is_set = True
             self._condition.notify()

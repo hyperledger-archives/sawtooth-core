@@ -115,11 +115,11 @@ class TestSerialScheduler(unittest.TestCase):
         iterable1 = iter(scheduler)
         iterable2 = iter(scheduler)
         for txn in txns:
-            scheduled_txn = next(iterable1)
-            self.assertEqual(scheduled_txn, next(iterable2))
-            self.assertIsNotNone(scheduled_txn)
-            self.assertEquals(txn.payload, scheduled_txn.payload)
-            scheduler.mark_as_applied(scheduled_txn.signature)
+            scheduled_txn_info = next(iterable1)
+            self.assertEqual(scheduled_txn_info, next(iterable2))
+            self.assertIsNotNone(scheduled_txn_info)
+            self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
+            scheduler.mark_as_applied(scheduled_txn_info.txn.signature)
 
         scheduler.finalize()
         with self.assertRaises(StopIteration):
@@ -166,14 +166,14 @@ class TestSerialScheduler(unittest.TestCase):
 
         scheduler.add_batch(batch)
 
-        scheduled_txn = scheduler.next_transaction()
-        self.assertIsNotNone(scheduled_txn)
-        self.assertEquals('a', scheduled_txn.payload.decode())
+        scheduled_txn_info = scheduler.next_transaction()
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEquals('a', scheduled_txn_info.txn.payload.decode())
 
         self.assertIsNone(scheduler.next_transaction())
 
-        scheduler.mark_as_applied(scheduled_txn.signature)
+        scheduler.mark_as_applied(scheduled_txn_info.txn.signature)
 
-        scheduled_txn = scheduler.next_transaction()
-        self.assertIsNotNone(scheduled_txn)
-        self.assertEquals('b', scheduled_txn.payload.decode())
+        scheduled_txn_info = scheduler.next_transaction()
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEquals('b', scheduled_txn_info.txn.payload.decode())
