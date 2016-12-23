@@ -132,8 +132,22 @@ class DockerTNGNodeController(NodeController):
             os.chdir(compose_dir)
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
-            raise CliException(str(e)
-                               + "\nPossibly misspelled processor name")
+            processors = state['Processors']
+            # check if the docker image is built
+            unbuilt = self._get_unbuilt_images(processors)
+            if unbuilt:
+                raise CliException(
+                    'Docker images not built: {}. Try running '
+                    '"sawtooth docker build {}"'.format(
+                        ', '.join(unbuilt), ' '.join(unbuilt)))
+
+            invalid = self._check_invalid_processors(processors)
+            if invalid:
+                raise CliException(
+                    'No such processor: {}'.format(', '.join(invalid)))
+
+            raise CliException(str(e))
+
         except OSError as e:
             if e.errno == 2:
                 raise CliException("{}:{}".format(str(e), args[0]))
@@ -144,6 +158,35 @@ class DockerTNGNodeController(NodeController):
             if len(line) < 1:
                 continue
             LOGGER.debug("command output: %s", str(line))
+
+    def _get_unbuilt_images(self, processors):
+        processors += ['sawtooth-validator']
+        built_ins = self._built_in_processor_types()
+        built_images = self._get_built_images()
+
+        unbuilt = [image for image in processors
+                   if image not in built_images and image in built_ins]
+
+        return unbuilt
+
+    def _check_invalid_processors(self, processors):
+        built_ins = self._built_in_processor_types()
+        built_images = self._get_built_images()
+
+        invalid = [image for image in processors
+                   if image not in built_images and image not in built_ins]
+
+        return invalid
+
+    def _get_built_images(self):
+        docker_img_cmd = ['docker', 'images', '--format', '{{.Repository}}']
+        return subprocess.check_output(docker_img_cmd).split('\n')
+
+    def _built_in_processor_types(self):
+        image_data_dir = os.path.join(os.path.dirname(__file__),
+                                      os.path.pardir,
+                                      'cli', 'data')
+        return os.listdir(image_data_dir)
 
     def stop(self, node_name):
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
