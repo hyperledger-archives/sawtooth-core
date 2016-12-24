@@ -44,7 +44,6 @@ DISABLE_POET1_SGX = True \
 class TestGenesisUtil(unittest.TestCase):
     def extend_genesis_util(self, overrides):
         print()
-        vnm = None
         try:
             self._node_ctrl = None
             print('creating', str(self.__class__.__name__))
@@ -85,6 +84,9 @@ class TestGenesisUtil(unittest.TestCase):
             for x in self._nodes:
                 self._node_ctrl.start(x)
 
+            # wait a second for the node start the listening service to avoid
+            # client operation failed: connection refused
+            time.sleep(1)
             # ...verify validator is extending tgt_block
             to = TimeOut(64)
             blk_lists = None
@@ -92,6 +94,7 @@ class TestGenesisUtil(unittest.TestCase):
             with Progress(prog_str) as p:
                 print()
                 while not to.is_timed_out() and blk_lists is None:
+                    p.step()
                     try:
                         blk_lists = get_blocklists(['http://localhost:8800'])
                         print('block_lists: %s' % blk_lists)
@@ -100,7 +103,6 @@ class TestGenesisUtil(unittest.TestCase):
                     except MessageException as e:
                         pass
                     time.sleep(2)
-                    p.step()
             self.assertIsNotNone(blk_lists)
             root = blk_lists[0][0]
             self.assertEqual(head, root)

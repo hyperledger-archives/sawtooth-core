@@ -47,7 +47,6 @@ def sawtooth_cli_intercept(cmd_string):
 
 
 def get_blocklists(urls):
-    ret = None
     ret = [(SawtoothClient(base_url=u)).get_block_list() for u in urls]
     for arr in ret:
         arr.reverse()
