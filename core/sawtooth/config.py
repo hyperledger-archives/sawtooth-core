@@ -68,7 +68,7 @@ class Config(dict):
         self.substitution_max_iterations = 10
 
     def get_source(self, key):
-        """Returns a the source of the key."""
+        """Returns the source of the key."""
 
         return self._source
 
