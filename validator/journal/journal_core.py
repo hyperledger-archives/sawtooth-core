@@ -520,6 +520,14 @@ class Journal(object):
 
         self.on_initialization_complete.fire(self)
 
+    def get_transaction_from_transaction_store(self, txn_idenifier):
+        with self._txn_lock:
+            return self.transaction_store.get(txn_idenifier)
+
+    def get_transaction_from_pending_transactions(self, txn_idenifier):
+        with self._txn_lock:
+            return self.pending_transactions.get(txn_idenifier)
+
     def add_pending_transaction(self, txn, prepend=False, build_block=True):
         """Adds a transaction to the list of candidates for commit.
 
