@@ -22,6 +22,9 @@ from sawtooth.manage.subproc import SubprocessNodeController
 from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
+from txnintegration.utils import sit_rep
+from txnintegration.utils import is_convergent
+from sawtooth.exceptions import MessageException
 
 
 class SawtoothTestSuite(unittest.TestCase):
@@ -51,7 +54,6 @@ class SawtoothTestSuite(unittest.TestCase):
         for x in self._nodes:
             self._node_ctrl.start(x)
 
-
     def _do_teardown(self):
         print 'destroying', str(self.__class__.__name__)
         if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
@@ -75,3 +77,19 @@ class SawtoothTestSuite(unittest.TestCase):
             self._node_ctrl.archive(self.__class__.__name__)
             self._node_ctrl.clean()
 
+    def _poll_for_convergence(self, timeout=256, tolerance=2, standard=5):
+        convergent = False
+        with Progress('awaiting convergence') as p:
+            to = TimeOut(timeout)
+            while convergent is False:
+                self.assertFalse(to.is_timed_out(),
+                                 'timed out awaiting convergence')
+                p.step()
+                time.sleep(4)
+                try:
+                    convergent = is_convergent(self.urls, standard=standard,
+                                               tolerance=tolerance)
+                except MessageException:
+                    pass
+        sit_rep(self.urls, verbosity=1)
+        return convergent
