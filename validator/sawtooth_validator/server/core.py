@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import os
+import socket
 import random
 from threading import Thread
 from threading import Condition
@@ -31,6 +32,7 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server.loader import SystemLoadHandler
 from sawtooth_validator.server.journal import FauxJournal
 from sawtooth_validator.server.network import FauxNetwork
+from sawtooth_validator.server.network import Network
 from sawtooth_validator.server import state
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
 from sawtooth_validator.server import future
@@ -206,18 +208,25 @@ class DefaultHandler(object):
 
 
 class Validator(object):
-    def __init__(self, url):
+    def __init__(self, network_endpoint, component_endpoint, peer_list):
         db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
         LOGGER.debug('database file is %s', db_filename)
 
         lmdb = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(lmdb)
-        self._service = ValidatorService(url)
+        self._service = ValidatorService(component_endpoint)
         executor = TransactionExecutor(self._service, context_manager)
         journal = FauxJournal(executor)
         dispatcher = Dispatcher()
         dispatcher.on_batch_received = journal.get_on_batch_received_handler()
-        network = FauxNetwork(dispatcher=dispatcher)
+        faux_network = FauxNetwork(dispatcher=dispatcher)
+
+        identity = "{}-{}".format(socket.gethostname(),
+                                  os.getpid()).encode('ascii')
+        self._network = Network(identity,
+                                network_endpoint,
+                                peer_list,
+                                dispatcher=dispatcher)
 
         self._service.add_handler('default', DefaultHandler())
         self._service.add_handler('state/getrequest',
@@ -226,7 +235,8 @@ class Validator(object):
                                   state.SetHandler(context_manager))
         self._service.add_handler('tp/register',
                                   ProcessorRegisterHandler(self._service))
-        self._service.add_handler('system/load', SystemLoadHandler(network))
+        self._service.add_handler('system/load',
+                                  SystemLoadHandler(faux_network))
 
     def start(self):
         self._service.start()
