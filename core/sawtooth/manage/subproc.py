@@ -145,6 +145,9 @@ class SubprocessNodeController(NodeController):
             # process is known to be running; save handle
             self._nodes[node_args.node_name] = {"Handle": handle}
 
+    def _do_start(self, node_args, stdout, stderr):
+        self.do_start(node_args, stdout, stderr)
+
     def start(self, node_args):
         '''
         Start a node if it is not already running.
