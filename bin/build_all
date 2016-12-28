@@ -29,12 +29,16 @@ export PYTHONPATH
 set -e
 
 pkgs="
-    signing
     core
     validator
     extensions/arcade
     extensions/mktplace
 "
+
+pkg="signing"
+echo -e "\033[0;32m--- Running clean in $pkg ---\n\033[0m"
+cd $top_dir/$pkg
+python setup.py clean --all
 
 for pkg in $pkgs
 do
@@ -42,6 +46,15 @@ do
     cd $top_dir/$pkg
     python setup.py clean --all
 done
+
+pkg=signing
+echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
+cd $top_dir/$pkg
+python setup.py build
+if [ $pkg = "signing" ] || [ $pkg = "validator" ]; then
+    # Workaround for swig ordering bug.
+    python setup.py build
+fi
 
 for pkg in $pkgs
 do
