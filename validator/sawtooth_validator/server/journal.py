@@ -19,15 +19,19 @@ from sawtooth_validator.scheduler.serial import SerialScheduler
 
 
 class FauxJournal(object):
-    def __init__(self, executor):
+    def __init__(self, executor, squash_handler, first_state_root):
         self._executor = executor
 
         # In a full implementation, there would be one scheduler
         # for each chain the Journal wanted to process but only
         # a single executor.  We create a single scheduler for now
         # and hook it to the executor.
-        self._scheduler = SerialScheduler()
+        self._scheduler = SerialScheduler(
+            squash_handler,
+            first_state_root)
         self._executor.execute(self._scheduler)
+
+        self._squash_handler = squash_handler
 
     def get_on_batch_received_handler(self):
         def _handler(batch):
