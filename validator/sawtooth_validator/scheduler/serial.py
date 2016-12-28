@@ -32,38 +32,49 @@ class SerialScheduler(Scheduler):
     This scheduler is intended to be used for comparison to more complex
     schedulers - for tests related to performance, correctness, etc.
     """
-    def __init__(self):
+    def __init__(self, squash_handler, first_state_hash):
         self._txn_queue = queue.Queue()
         self._scheduled_transactions = []
         self._batch_statuses = {}
         self._txn_to_batch = {}
         self._in_progress_transaction = None
         self._final = False
+        self._squash = squash_handler
         self._condition = Condition()
+        self._last_in_batch = []
+        self._last_state_hash = first_state_hash
 
     def __iter__(self):
         return SchedulerIterator(self, self._condition)
 
-    def set_status(self, txn_signature, status, state_hash=None):
+    def set_status(self, txn_signature, status, context_id):
+        self.mark_as_applied(txn_signature)
         with self._condition:
             if txn_signature not in self._txn_to_batch:
                 raise ValueError("transaction not in any batches: {}".format(
                     txn_signature))
-            batch_signature = self._txn_to_batch[txn_signature]
-            batch_status = BatchStatus(status, state_hash)
-            self._batch_statuses[batch_signature] = batch_status
+            if status is True:
+                state_hash = self._squash(self._last_state_hash, [context_id])
+                self._last_state_hash = state_hash
+            if txn_signature not in self._last_in_batch and not status:
+                batch_signature = self._txn_to_batch[txn_signature]
+                batch_status = BatchStatus(status, None)
+                self._batch_statuses[batch_signature] = batch_status
+            elif txn_signature in self._last_in_batch:
+                batch_signature = self._txn_to_batch[txn_signature]
+                if batch_signature not in self._batch_statuses:
+                    batch_status = BatchStatus(status, self._last_state_hash)
+                    self._batch_statuses[batch_signature] = batch_status
 
     def add_batch(self, batch, state_hash=None):
         with self._condition:
             batch_signature = batch.signature
             batch_length = len(batch.transactions)
             for idx, txn in enumerate(batch.transactions):
-                self._txn_to_batch[txn.signature] = batch_signature
                 if idx == batch_length - 1:
-                    txn_info = TxnInformation(txn, True, True)
-                else:
-                    txn_info = TxnInformation(txn, True, False)
-                self._txn_queue.put(txn_info)
+                    self._last_in_batch.append(txn.signature)
+                self._txn_to_batch[txn.signature] = batch_signature
+                self._txn_queue.put(txn)
             self._condition.notify_all()
 
     def batch_status(self, batch_signature):
@@ -83,11 +94,12 @@ class SerialScheduler(Scheduler):
             if self._in_progress_transaction is not None:
                 return None
             try:
-                txn_info = self._txn_queue.get(block=False)
+                txn = self._txn_queue.get(block=False)
             except queue.Empty:
                 return None
 
-            self._in_progress_transaction = txn_info.txn.signature
+            self._in_progress_transaction = txn.signature
+            txn_info = TxnInformation(txn, self._last_state_hash)
             self._scheduled_transactions.append(txn_info)
             return txn_info
 
