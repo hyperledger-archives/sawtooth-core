@@ -208,13 +208,13 @@ class DefaultHandler(object):
 
 
 class Validator(object):
-    def __init__(self, gossip_endpoint, service_endpoint, peer_list):
+    def __init__(self, network_endpoint, component_endpoint, peer_list):
         db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
         LOGGER.debug('database file is %s', db_filename)
 
         lmdb = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(lmdb)
-        self._service = ValidatorService(service_endpoint)
+        self._service = ValidatorService(component_endpoint)
         executor = TransactionExecutor(self._service, context_manager)
         journal = FauxJournal(executor)
         dispatcher = Dispatcher()
@@ -224,7 +224,7 @@ class Validator(object):
         identity = "{}-{}".format(socket.gethostname(),
                                   os.getpid()).encode('ascii')
         self._network = Network(identity,
-                                gossip_endpoint,
+                                network_endpoint,
                                 peer_list,
                                 dispatcher=dispatcher)
 

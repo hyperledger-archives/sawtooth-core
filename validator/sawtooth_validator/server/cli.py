@@ -23,11 +23,11 @@ def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('--url',
+    parser.add_argument('--network-endpoint',
                         help='Network endpoint URL',
                         default='tcp://*:8800',
                         type=str)
-    parser.add_argument('--service',
+    parser.add_argument('--component-endpoint',
                         help='Validator component service endpoint',
                         default='0.0.0.0:40000',
                         type=str)
@@ -45,7 +45,9 @@ def main(args=sys.argv[1:]):
     except:
         sys.exit(1)
 
-    validator = Validator(opts.url, opts.service, opts.peers)
+    validator = Validator(opts.network_endpoint,
+                          opts.component_endpoint,
+                          opts.peers)
 
     try:
         validator.start()
