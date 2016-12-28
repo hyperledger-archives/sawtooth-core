@@ -111,8 +111,7 @@ sawtooth-core repository.
 Consensus Mechanisms
 ~~~~~~~~~~~~~~~~~~~~
 
-Sawtooth Lake contains two consensus implementations: PoET and Quorum
-Voting.
+Sawtooth Lake implements PoET as a consensus mechanism.
 
 PoET and SGX
 ::::::::::::
@@ -136,16 +135,6 @@ be used as the consensus mechanism in any 'production' environment.
 The PoET implementation is located in sawtooth_validator.consensus.poet1 in
 sawtooth-core.
 
-Quorum Voting
-:::::::::::::
-
-The Quorum Voting consensus implementation is an adaptation of the
-Ripple [#]_ and Stellar [#]_ consensus protocols.
-
-.. [#] The Ripple Consensus Protocol -
-   https://ripple.com/files/ripple_consensus_whitepaper.pdf
-.. [#] The Stellar Consensus Protocol -
-   https://www.stellar.org/papers/stellar-consensus-protocol.pdf
 
 Transactions
 ~~~~~~~~~~~~

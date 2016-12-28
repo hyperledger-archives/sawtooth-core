@@ -219,7 +219,7 @@ looks like this:
 
 The journal object being passed into this function is a type derived from
 journal.journal_core.Journal from `sawtooth-core <http://github.com/HyperLedger/sawtooth-core>`__
-(such as PoetJournal or QuorumJournal).  We
+(such as PoetJournal).  We
 register the standard transaction message handler to
 specify the message type of XoTransactionMessage, which is derived from
 transaction_message.TransactionMessage.
