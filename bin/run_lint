@@ -157,6 +157,7 @@ PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 export PYTHONPATH
 lint pylint signing "$SINCE" .pylintrc-strict 1 || retval=1
+lint pylint3 signing "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7

@@ -15,7 +15,12 @@
 
 import unittest
 
-import pybitcointools as pbt
+try:
+    # Python 2
+    import pybitcointools as pbt
+except ImportError:
+    # Python 3
+    import bitcoin as pbt
 
 import sawtooth_signing.ECDSA.ECDSARecoverModule as ecnative
 from sawtooth_signing import pbct_nativerecover
