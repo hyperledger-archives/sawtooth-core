@@ -40,10 +40,7 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
-    try:
-        opts = parse_args(args)
-    except:
-        sys.exit(1)
+    opts = parse_args(args)
 
     validator = Validator(opts.network_endpoint,
                           opts.component_endpoint,
