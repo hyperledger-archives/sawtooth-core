@@ -29,7 +29,7 @@ class TestPKRecover(unittest.TestCase):
         """
         # This key has a small public key value which tests padding
         wifstr = '5JtMb6tmM9vT6QHyM7RR8pjMViqccukgMFNCPvG5xhLVf6CMoGx'
-        priv = pbt.decode_privkey(wifstr, 'wif')
+        priv = pbt.encode_privkey(pbt.decode_privkey(wifstr, 'wif'), 'hex')
         msg = 'foo'
         sig = pbt.ecdsa_sign(msg, priv)
         native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
