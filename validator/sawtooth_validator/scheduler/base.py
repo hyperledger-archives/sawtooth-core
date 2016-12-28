@@ -51,13 +51,13 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def set_status(self, txn_signature, status, state_hash=None):
-        """Called by the executor after inform txn has been validated.
+    def set_status(self, txn_signature, status, context_id):
+        """Called by the executor after a txn has been processed
 
         Args:
             txn_signature (str): the signature of the last txn
-            status (Boolean): whether the batch passed or failed
-            state_hash (str): the state hash (may be virtual)
+            status (bool): whether the txn passed or failed
+            context_id (str): the context_id for the txn
         """
         raise NotImplementedError
 
@@ -162,7 +162,7 @@ class BatchStatus(object):
     """BatchStatus to send to journal to inform about the
     status of a batch
     attributes:
-        valid (boolean): whether the batch is valid
+        valid (bool): whether the batch is valid
         state_hash (str): the state hash after the batch
                           and will be None if the batch is invalid.
                          Could be a virtual state hash
@@ -177,12 +177,9 @@ class TxnInformation(object):
      scheduler to the executor.
     Attributes:
         txn transaction_pb2.Transaction protobuf class
-        new_state_hash (Boolean): whether a new state
-            hash needs to be generated.
-        inform (Boolean): Whether a batch has been
-              processed
+        state_hash (str): the state hash that
+                                 this txn should be applied against
     """
-    def __init__(self, txn, new_state_hash, inform):
+    def __init__(self, txn, state_hash):
         self.txn = txn
-        self.new_state_hash = new_state_hash
-        self.inform = inform
+        self.state_hash = state_hash
