@@ -17,13 +17,11 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
-class Scheduler(object):
+class Scheduler(object, metaclass=ABCMeta):
     """Abstract class for scheduling transaction execution.
 
     Implementations of this class are expected to be thread-safe.
     """
-
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def add_batch(self, batch, state_hash=None):
