@@ -39,6 +39,10 @@ class CommitException(Exception):
     pass
 
 
+class SquashException(Exception):
+    pass
+
+
 class StateContext(object):
     """
     Attributes:
@@ -97,6 +101,9 @@ class StateContext(object):
             if add in self._write_list:
                 add_value_dict[add] = val
         return add_value_dict
+
+    def get_address_value_dict(self):
+        return self._address_value_dict
 
     def get_from_prefetched(self, address_list):
         """
@@ -284,6 +291,22 @@ class ContextManager(object):
                     add_value_dict[add] = val
             context.set_futures(add_value_dict)
         return True
+
+    def get_squash_handler(self):
+        def _squash(state_root, context_ids):
+            tree = MerkleDatabase(self._database, state_root)
+            updates = dict()
+            for c_id in context_ids:
+                context = self._contexts[c_id]
+                if any([add in updates for add in
+                        context.get_address_value_dict().keys()]):
+                    raise SquashException(
+                        "Address already in a context to be written to.")
+                updates.update({k: v.result() for k, v in
+                                context.get_address_value_dict().items()})
+            state_hash = tree.update(updates, virtual=False)
+            return state_hash
+        return _squash
 
     def stop(self):
         self._context_writer.join(1)
