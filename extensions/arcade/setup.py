@@ -29,7 +29,7 @@ def bump_version(version):
 
 def auto_version(default, strict):
     output = subprocess.check_output(['git', 'describe', '--dirty'])
-    parts = output.strip().split('-', 1)
+    parts = output.decode('utf-8').strip().split('-', 1)
     parts[0] = parts[0][1:]  # strip the leading 'v'
     if len(parts) == 2:
         parts[0] = bump_version(parts[0])

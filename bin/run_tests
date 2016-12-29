@@ -47,6 +47,14 @@ test_signing() {
 	cd signing
 	nose2 -v
 	cd ..
+
+	PYTHONPATH=$top_dir
+	PYTHONPATH=$PYTHONPATH:$top_dir/signing
+	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
+	export PYTHONPATH
+	cd signing
+	nose2-3 -v
+	cd ..
 }
 
 test_validator() {
