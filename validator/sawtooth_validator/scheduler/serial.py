@@ -41,6 +41,8 @@ class SerialScheduler(Scheduler):
         self._final = False
         self._squash = squash_handler
         self._condition = Condition()
+        # contains all txn.signatures where txn is
+        # last in it's associated batch
         self._last_in_batch = []
         self._last_state_hash = first_state_hash
 
@@ -48,21 +50,30 @@ class SerialScheduler(Scheduler):
         return SchedulerIterator(self, self._condition)
 
     def set_status(self, txn_signature, status, context_id):
+        """the control flow is that on every valid txn a new state root is
+        generated. If the txn is invalid the batch status is set,
+        if the txn is the last txn in the batch, is valid, and no
+         prior txn failed the batch, the
+        batch is valid
+        """
         self.mark_as_applied(txn_signature)
         with self._condition:
             if txn_signature not in self._txn_to_batch:
                 raise ValueError("transaction not in any batches: {}".format(
                     txn_signature))
             if status is True:
+                # txn is valid, get a new state hash
                 state_hash = self._squash(self._last_state_hash, [context_id])
                 self._last_state_hash = state_hash
-            if txn_signature not in self._last_in_batch and not status:
+            else:
+                # txn is invalid, pre-emptively fail the batch
                 batch_signature = self._txn_to_batch[txn_signature]
                 batch_status = BatchStatus(status, None)
                 self._batch_statuses[batch_signature] = batch_status
-            elif txn_signature in self._last_in_batch:
+            if txn_signature in self._last_in_batch:
                 batch_signature = self._txn_to_batch[txn_signature]
                 if batch_signature not in self._batch_statuses:
+                    # because of the else clause above, txn is valid here
                     batch_status = BatchStatus(status, self._last_state_hash)
                     self._batch_statuses[batch_signature] = batch_status
 
