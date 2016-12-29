@@ -91,17 +91,17 @@ class EnclaveWaitCertificate(object):
 
         certificate = \
             EnclaveWaitCertificate(
-                duration=float(deserialized_certificate.get('duration')),
+                duration=float(deserialized_certificate.get('Duration')),
                 previous_certificate_id=str(
-                    deserialized_certificate.get('previous_certificate_id')),
-                local_mean=float(deserialized_certificate.get('local_mean')),
+                    deserialized_certificate.get('PreviousCertificateID')),
+                local_mean=float(deserialized_certificate.get('LocalMean')),
                 request_time=float(
-                    deserialized_certificate.get('request_time')),
+                    deserialized_certificate.get('RequestTime')),
                 validator_address=str(
-                    deserialized_certificate.get('validator_address')),
-                nonce=str(deserialized_certificate.get('nonce')),
+                    deserialized_certificate.get('ValidatorAddress')),
+                nonce=str(deserialized_certificate.get('Nonce')),
                 block_digest=str(deserialized_certificate.get(
-                    'block_digest')),
+                    'BlockDigest')),
                 signature=signature,
                 serialized_certificate=serialized_certificate)
 
@@ -155,13 +155,13 @@ class EnclaveWaitCertificate(object):
         """
         if self._serialized is None:
             certificate_dict = {
-                'duration': self.duration,
-                'previous_certificate_id': self.previous_certificate_id,
-                'local_mean': self.local_mean,
-                'request_time': self.request_time,
-                'validator_address': self.validator_address,
-                'nonce': self.nonce,
-                'block_digest': self.block_digest
+                'Duration': self.duration,
+                'PreviousCertificateID': self.previous_certificate_id,
+                'LocalMean': self.local_mean,
+                'RequestTime': self.request_time,
+                'ValidatorAddress': self.validator_address,
+                'Nonce': self.nonce,
+                'BlockDigest': self.block_digest
             }
 
             self._serialized = dict2json(certificate_dict)

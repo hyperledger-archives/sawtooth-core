@@ -214,7 +214,7 @@ class WaitCertificate(object):
             dict: A dict containing info about the wait certificate.
         """
         result = {
-            'SerializedCertificate': self._serialized_certificate,
+            'SerializedCert': self._serialized_certificate,
             'Signature': self.signature
         }
 
