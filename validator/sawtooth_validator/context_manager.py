@@ -298,10 +298,11 @@ class ContextManager(object):
             updates = dict()
             for c_id in context_ids:
                 context = self._contexts[c_id]
-                if any([add in updates for add in
-                        context.get_address_value_dict().keys()]):
-                    raise SquashException(
-                        "Address already in a context to be written to.")
+                for add in context.get_address_value_dict().keys():
+                    if add in updates:
+                        raise SquashException(
+                            "Duplicate address {} in context {}".format(
+                                add, c_id))
                 updates.update({k: v.result() for k, v in
                                 context.get_address_value_dict().items()})
             state_hash = tree.update(updates, virtual=False)
