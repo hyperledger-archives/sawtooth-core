@@ -216,7 +216,8 @@ class Validator(object):
         context_manager = ContextManager(lmdb)
         self._service = ValidatorService(component_endpoint)
         executor = TransactionExecutor(self._service, context_manager)
-        journal = FauxJournal(executor)
+        journal = FauxJournal(executor, context_manager.get_squash_handler(),
+                              context_manager.get_first_root())
         dispatcher = Dispatcher()
         dispatcher.on_batch_received = journal.get_on_batch_received_handler()
         faux_network = FauxNetwork(dispatcher=dispatcher)
