@@ -18,46 +18,12 @@ import unittest
 import bitcoin
 
 from sawtooth_validator.context_manager import ContextManager
-from sawtooth_validator.database import database
+from sawtooth_validator.database import dict_database
 
 from sawtooth_validator.scheduler.serial import SerialScheduler
 
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
-
-
-class TestDatabase(database.Database):
-    def __init__(self):
-        super(TestDatabase, self).__init__()
-        self._data = dict()
-
-    def get(self, key):
-        return self._data.get(key)
-
-    def __contains__(self, item):
-        return item in self._data
-
-    def set(self, key, value):
-        self._data[key] = value
-
-    def set_batch(self, kvpairs):
-        for k, v in kvpairs:
-            self._data[k] = v
-
-    def close(self):
-        pass
-
-    def delete(self, key):
-        pass
-
-    def __len__(self):
-        pass
-
-    def keys(self):
-        pass
-
-    def sync(self):
-        pass
 
 
 def create_transaction(name, private_key, public_key):
@@ -126,7 +92,7 @@ class TestSerialScheduler(unittest.TestCase):
         private_key = bitcoin.random_key()
         public_key = bitcoin.encode_pubkey(
             bitcoin.privkey_to_pubkey(private_key), "hex")
-        context_manager = ContextManager(TestDatabase())
+        context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = SerialScheduler(squash_handler, first_state_root)
@@ -186,7 +152,7 @@ class TestSerialScheduler(unittest.TestCase):
         public_key = bitcoin.encode_pubkey(
             bitcoin.privkey_to_pubkey(private_key), "hex")
 
-        context_manager = ContextManager(TestDatabase())
+        context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = SerialScheduler(squash_handler, first_state_root)
@@ -237,7 +203,7 @@ class TestSerialScheduler(unittest.TestCase):
         public_key = bitcoin.encode_pubkey(
             bitcoin.privkey_to_pubkey(private_key), "hex")
 
-        context_manager = ContextManager(TestDatabase())
+        context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = SerialScheduler(squash_handler, first_state_root)
