@@ -248,38 +248,38 @@ class TestSerialScheduler(unittest.TestCase):
 
         sched2 = iter(scheduler)
         # 3)
-        txn_infoA = next(sched2)
-        self.assertEquals(first_state_root, txn_infoA.state_hash)
+        txn_info_a = next(sched2)
+        self.assertEquals(first_state_root, txn_info_a.state_hash)
 
-        txnA_header = transaction_pb2.TransactionHeader()
-        txnA_header.ParseFromString(txn_infoA.txn.header)
-        inputs_or_outputs = list(txnA_header.inputs)
-        addressA = inputs_or_outputs[0]
-        c_idA = context_manager.create_context(first_state_root,
-                                               inputs_or_outputs,
-                                               inputs_or_outputs)
-        context_manager.set(c_idA, [{addressA: 1}])
-        state_root2 = context_manager.commit_context([c_idA], virtual=False)
-        txn_infoB = next(sched2)
+        txn_a_header = transaction_pb2.TransactionHeader()
+        txn_a_header.ParseFromString(txn_info_a.txn.header)
+        inputs_or_outputs = list(txn_a_header.inputs)
+        address_a = inputs_or_outputs[0]
+        c_id_a = context_manager.create_context(first_state_root,
+                                                inputs_or_outputs,
+                                                inputs_or_outputs)
+        context_manager.set(c_id_a, [{address_a: 1}])
+        state_root2 = context_manager.commit_context([c_id_a], virtual=False)
+        txn_info_b = next(sched2)
 
-        self.assertEquals(txn_infoB.state_hash, state_root2)
+        self.assertEquals(txn_info_b.state_hash, state_root2)
 
-        txnB_header = transaction_pb2.TransactionHeader()
-        txnB_header.ParseFromString(txn_infoB.txn.header)
-        inputs_or_outputs = list(txnB_header.inputs)
-        addressB = inputs_or_outputs[0]
-        c_idB = context_manager.create_context(state_root2,
-                                               inputs_or_outputs,
-                                               inputs_or_outputs)
-        context_manager.set(c_idB, [{addressB: 1}])
-        state_root3 = context_manager.commit_context([c_idB], virtual=False)
+        txn_b_header = transaction_pb2.TransactionHeader()
+        txn_b_header.ParseFromString(txn_info_b.txn.header)
+        inputs_or_outputs = list(txn_b_header.inputs)
+        address_b = inputs_or_outputs[0]
+        c_id_b = context_manager.create_context(state_root2,
+                                                inputs_or_outputs,
+                                                inputs_or_outputs)
+        context_manager.set(c_id_b, [{address_b: 1}])
+        state_root3 = context_manager.commit_context([c_id_b], virtual=False)
         txn_infoInvalid = next(sched2)
 
         self.assertEquals(txn_infoInvalid.state_hash, state_root3)
 
-        txn_infoC = next(sched2)
-        self.assertEquals(txn_infoC.state_hash, state_root3)
-
+        txn_info_c = next(sched2)
+        self.assertEquals(txn_info_c.state_hash, state_root3)
+        # 4)
         batch1_status = scheduler.batch_status(batch_signatures[0])
         self.assertTrue(batch1_status.valid)
         self.assertEquals(batch1_status.state_hash, state_root3)
