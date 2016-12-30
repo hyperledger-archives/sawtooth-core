@@ -84,7 +84,7 @@ def do_docker_build(args):
     if args.all:
         data_dir = _get_data_dir()
         for image in os.listdir(data_dir):
-            print "Building docker image: {}".format(image)
+            print("Building docker image: {}".format(image))
             _build_docker_image(image)
     elif args.filename is not None:
         for image in args.filename:

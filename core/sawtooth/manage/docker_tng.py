@@ -41,8 +41,8 @@ class DockerTNGNodeController(NodeController):
         :param state_dir (str): optionally path to state directory
         """
         if state_dir is None:
-            state_dir = \
-                os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster')
+            state_dir = os.path.join(os.path.expanduser("~"),
+                                     '.sawtooth', 'cluster')
 
         if not os.path.exists(state_dir):
             os.makedirs(state_dir)
@@ -150,7 +150,6 @@ class DockerTNGNodeController(NodeController):
         state = yaml.load(file(state_file_path))
 
         node_num = node_name[len('validator-'):]
-        prefix_len = len(self._prefix + '-')
 
         processes = state['Processors'] + ['validator']
 

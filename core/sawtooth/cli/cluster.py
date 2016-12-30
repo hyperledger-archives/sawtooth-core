@@ -460,11 +460,8 @@ def do_cluster_extend(args):
 
 
 def do_cluster_logs(args):
-    state_file = os.path.join(os.path.expanduser('~'),
-                              '.sawtooth',
-                              'cluster',
-                              'state.yaml')
-    state = yaml.load(file(state_file))
+    state = load_state()
+
     if state['Manage'] == 'docker-tng':
         prefix = 'sawtooth-tng-cluster-0'
 
@@ -489,19 +486,9 @@ def do_cluster_logs(args):
 
 
 def do_cluster_stats(args):
-    # pylint: disable=redefined-variable-type
-    file_name = \
-        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
-                     "state.yaml")
-    # Get current expected state
-    if os.path.isfile(file_name):
-        with open(file_name, 'r') as state_file:
-            state = yaml.load(state_file)
-    else:
-        raise CliException("Missing state file")
+    state = load_state()
 
     node_controller = get_node_controller(state, args)
-
     node_command_generator = SimpleNodeCommandGenerator()
 
     vnm = ValidatorNetworkManager(
