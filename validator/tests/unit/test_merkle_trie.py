@@ -49,8 +49,8 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
 
         self.trie.set_merkle_root(new_root)
 
-        self.assertEquals(self.trie.get(MerkleDatabase.hash("foo")),
-                          value)
+        self.assertEqual(self.trie.get(MerkleDatabase.hash("foo")),
+                         value)
 
     def test_merkle_trie_delete(self):
         value = {"name": "bar", "value": 1}
@@ -59,8 +59,8 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
 
         self.trie.set_merkle_root(new_root)
 
-        self.assertEquals(self.trie.get(MerkleDatabase.hash("bar")),
-                          value)
+        self.assertEqual(self.trie.get(MerkleDatabase.hash("bar")),
+                         value)
 
         del_root = self.trie.delete(MerkleDatabase.hash("bar"))
 
@@ -91,5 +91,5 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.trie.set_merkle_root(update_root)
 
         for address in set_items:
-            self.assertEquals(self.trie.get(address),
-                              set_items[address])
+            self.assertEqual(self.trie.get(address),
+                             set_items[address])

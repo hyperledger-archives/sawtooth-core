@@ -67,15 +67,15 @@ class TestPoetWaitCertificate(unittest.TestCase):
             wait_cert.serialized_cert,
             wait_cert.signature
         )
-        self.assertEquals(wait_cert.previous_certificate_id,
-                          swc.previous_certificate_id)
-        self.assertEquals(wait_cert.local_mean, swc.local_mean)
-        self.assertEquals(wait_cert.request_time, swc.request_time)
-        self.assertEquals(wait_cert.duration, swc.duration)
-        self.assertEquals(wait_cert.signature, swc.signature)
-        self.assertEquals(wait_cert.identifier, swc.identifier)
-        self.assertEquals(wait_cert.validator_address, swc.validator_address)
-        self.assertEquals(wait_cert.block_hash, swc.block_hash)
+        self.assertEqual(wait_cert.previous_certificate_id,
+                         swc.previous_certificate_id)
+        self.assertEqual(wait_cert.local_mean, swc.local_mean)
+        self.assertEqual(wait_cert.request_time, swc.request_time)
+        self.assertEqual(wait_cert.duration, swc.duration)
+        self.assertEqual(wait_cert.signature, swc.signature)
+        self.assertEqual(wait_cert.identifier, swc.identifier)
+        self.assertEqual(wait_cert.validator_address, swc.validator_address)
+        self.assertEqual(wait_cert.block_hash, swc.block_hash)
 
         swc.is_valid_wait_certificate(addr, certs, txn_ids)
         dwc = wait_cert.dump()
@@ -85,15 +85,15 @@ class TestPoetWaitCertificate(unittest.TestCase):
         )
         swc.is_valid_wait_certificate(addr, certs, txn_ids)
 
-        self.assertEquals(wait_cert.previous_certificate_id,
-                          swc.previous_certificate_id)
-        self.assertEquals(wait_cert.local_mean, swc.local_mean)
-        self.assertEquals(wait_cert.request_time, swc.request_time)
-        self.assertEquals(wait_cert.duration, swc.duration)
-        self.assertEquals(wait_cert.signature, swc.signature)
-        self.assertEquals(wait_cert.identifier, swc.identifier)
-        self.assertEquals(wait_cert.validator_address, swc.validator_address)
-        self.assertEquals(wait_cert.block_hash, swc.block_hash)
+        self.assertEqual(wait_cert.previous_certificate_id,
+                         swc.previous_certificate_id)
+        self.assertEqual(wait_cert.local_mean, swc.local_mean)
+        self.assertEqual(wait_cert.request_time, swc.request_time)
+        self.assertEqual(wait_cert.duration, swc.duration)
+        self.assertEqual(wait_cert.signature, swc.signature)
+        self.assertEqual(wait_cert.identifier, swc.identifier)
+        self.assertEqual(wait_cert.validator_address, swc.validator_address)
+        self.assertEqual(wait_cert.block_hash, swc.block_hash)
 
     def check_enclave_timer_tampering(self, wait_cert, oid, certs, txn_ids):
         # now we are going to tamper with the members of the enclave wait

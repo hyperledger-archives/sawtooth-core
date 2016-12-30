@@ -94,11 +94,11 @@ class TestGossipCore(unittest.TestCase):
         core.datagramReceived(data, "localhost:8801")
         msgdic2 = str(core.MessageStats.get_stats())
         msgdic = core.MessageStats.get_stats(["MessageType"])["MessageType"]
-        self.assertEquals(packetdic2["MessagesAcked"], 1)
-        self.assertNotEquals(packetdic2["BytesSent"], [0, 0])
+        self.assertEqual(packetdic2["MessagesAcked"], 1)
+        self.assertNotEqual(packetdic2["BytesSent"], [0, 0])
         self.assertNotEqual(packetdic1, packetdic2)
         self.assertNotEqual(msgdic1, msgdic2)
-        self.assertEquals(msgdic['/gossip.Message/MessageBase'], 1)
+        self.assertEqual(msgdic['/gossip.Message/MessageBase'], 1)
 
     def test_gossip_peers(self):
         # Test retrieving peers and their ids
@@ -153,8 +153,8 @@ class TestGossipCoreDatagram(unittest.TestCase):
         core.LocalNode.NetPort = 100
         core.LocalNode.maxPacketSize = 10
         core.startProtocol()
-        self.assertEquals(core.LocalNode.NetPort, 9050)
-        self.assertEquals(core.transport.maxPacketSize, 49024)
+        self.assertEqual(core.LocalNode.NetPort, 9050)
+        self.assertEqual(core.transport.maxPacketSize, 49024)
 
     def test_gossip_stop_protocol(self):
         # Stop protocol does nothing at this point
@@ -178,7 +178,7 @@ class TestGossipCoreDatagram(unittest.TestCase):
         self.assertIn('/gossip.Message/MessageBase',
                       msgType["MessageType"])
         pakStats = core.PacketStats.get_stats(["MessagesAcked"])
-        self.assertEquals(pakStats["MessagesAcked"], 1)
+        self.assertEqual(pakStats["MessagesAcked"], 1)
         # Test handling of duplicate packets
         msg2 = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
         core.MessageHandledMap[msg2.Identifier] = time.time()
@@ -186,7 +186,7 @@ class TestGossipCoreDatagram(unittest.TestCase):
         data2 = pak.pack()
         core.datagramReceived(data2, "localhost:9001")
         pakStats = core.PacketStats.get_stats(["DuplicatePackets"])
-        self.assertEquals(pakStats["DuplicatePackets"], 1)
+        self.assertEqual(pakStats["DuplicatePackets"], 1)
 
     def test_gossip_datagram_unknown_peer(self):
         # Test that nothing is done if the nodes are not known
@@ -216,7 +216,7 @@ class TestGossipCoreDatagram(unittest.TestCase):
         # send ack
         core.datagramReceived(data, "localhost:9001")
         stats = core.PacketStats.get_stats(["AcksReceived"])
-        self.assertEquals(stats["AcksReceived"], 1)
+        self.assertEqual(stats["AcksReceived"], 1)
 
 
 class TestGossipCoreUtilityAndInterface(unittest.TestCase):
@@ -264,7 +264,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         status = core._do_write(pak.pack(), newNode)
         self.assertTrue(status)
         stats = core.PacketStats.get_stats(["BytesSent"])
-        self.assertNotEquals(stats["BytesSent"], [0, 0])
+        self.assertNotEqual(stats["BytesSent"], [0, 0])
         # Test failure of message that is too big
         # This will print out an error
         core.MaximumPacketSize = 0
@@ -278,12 +278,12 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         newNode = self._create_node(8807)
         msg = self._create_msg()
         core._send_msg(msg, [newNode.Identifier])
-        self.assertEquals(str(newNode.MessageQ), "[]")
+        self.assertEqual(str(newNode.MessageQ), "[]")
 
         # Make node known, should add to the queue
         core.add_node(newNode)
         core._send_msg(msg, [newNode.Identifier])
-        self.assertNotEquals(str(newNode.MessageQ), "[]")
+        self.assertNotEqual(str(newNode.MessageQ), "[]")
 
     def test_gossip_ack_good(self):
         # Test sending acknowledgements
@@ -301,7 +301,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         ack = pak.create_ack(newNode.Identifier)
         core._handle_ack(ack)
         stats = core.PacketStats.get_stats(["AcksReceived"])
-        self.assertEquals(stats["AcksReceived"], 1)
+        self.assertEqual(stats["AcksReceived"], 1)
 
     def test_gossip_ack_unknown_packet(self):
         # Test behavior of sending a packet incorrectly
@@ -312,7 +312,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         # Ignore acks from unexpected packets not in PendingAckMap
         core._handle_ack(pak)
         stats = core.PacketStats.get_stats(["AcksReceived"])
-        self.assertEquals(stats["AcksReceived"], 0)
+        self.assertEqual(stats["AcksReceived"], 0)
 
         badNode = self._create_node(8812)
         core.add_node(badNode)
@@ -325,7 +325,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         pak.DestinationID = badNode.Identifier
         core._handle_ack(pak)
         stats = core.PacketStats.get_stats(["AcksReceived"])
-        self.assertEquals(stats["AcksReceived"], 0)
+        self.assertEqual(stats["AcksReceived"], 0)
 
     def test_gossip_timer(self):
         # Test timertransmit
@@ -352,7 +352,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         self.assertEqual(core.PendingAckMap, {})
         core._timer_transmit(now)
         self.assertNotEqual(core.PendingAckMap, {})
-        self.assertEquals(len(core.PendingAckMap), 3)
+        self.assertEqual(len(core.PendingAckMap), 3)
         # Test _timercleanup
         now = time.time() + 10000
         # Clean up "dropped" packets
@@ -382,7 +382,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         now = time.time() + 100
         core._keep_alive(now)
         after = str(core.NodeMap)
-        self.assertEquals(before, after)
+        self.assertEqual(before, after)
 
         # Test that a node with too many missed ticks is dropped
         node3 = self._create_node(8883)
@@ -391,7 +391,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         now = now + 100
         core._keep_alive(now)
         after2 = str(core.NodeMap)
-        self.assertEquals(before, after2)
+        self.assertEqual(before, after2)
 
     # Locally defined interface methods
     def test_gossip_shutdown(self):
@@ -424,7 +424,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core = self._setup(8841)
         msg = shutdown_message.ShutdownMessage({'__SIGNATURE__': "test"})
         handler = core.dispatcher.get_message_handler(msg)
-        self.assertEquals(handler,
+        self.assertEqual(handler,
                           shutdown_message.shutdown_handler)
 
     def test_gossip_unpack_message(self):
@@ -434,7 +434,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         info = msg.dump()
         m = core.dispatcher.unpack_message(
             '/gossip.messages.ShutdownMessage/ShutdownMessage', info)
-        self.assertEquals(msg.Identifier, m.Identifier)
+        self.assertEqual(msg.Identifier, m.Identifier)
 
     def test_gossip_add_and_drop_node(self):
         # Test adding and dropping nodes from NodeMap
@@ -442,10 +442,10 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         node = self._create_node(8818)
         # Add node
         core.add_node(node)
-        self.assertIn(node, core.NodeMap.values())
+        self.assertIn(node, list(core.NodeMap.values()))
         # Drop node
         core.drop_node(node.Identifier)
-        self.assertNotIn(node, core.NodeMap.values())
+        self.assertNotIn(node, list(core.NodeMap.values()))
 
     def test_gossip_multicast_msg(self):
         # Test multicast message, send same message to both nodes
@@ -457,7 +457,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.add_node(node1)
         core.add_node(node2)
         core._multicast_message(msg, [node1.Identifier, node2.Identifier])
-        self.assertEquals(str(node1.MessageQ), str(node2.MessageQ))
+        self.assertEqual(str(node1.MessageQ), str(node2.MessageQ))
 
     def test_gossip_send_message(self):
         # Test send_message, send a message to 1 node, calls multicast
@@ -469,8 +469,8 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.add_node(node1)
         core.add_node(node2)
         core.send_message(msg, node2.Identifier)
-        self.assertEquals(str(node1.MessageQ), "[]")
-        self.assertNotEquals(str(node2.MessageQ), "[]")
+        self.assertEqual(str(node1.MessageQ), "[]")
+        self.assertNotEqual(str(node2.MessageQ), "[]")
 
     def test_gossip_forward_msg(self):
         # Test fwd message with an exception to not send to, calls multicast
@@ -482,7 +482,7 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.add_node(node1)
         core.add_node(node2)
         core.forward_message(msg, [node2.Identifier])
-        self.assertNotEquals(str(node1.MessageQ), str(node2.MessageQ))
+        self.assertNotEqual(str(node1.MessageQ), str(node2.MessageQ))
 
     def test_gossip_handle_msg(self):
         # Test handle_msg, uses sendmsg if
@@ -493,10 +493,10 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.add_node(node1)
         core.add_node(node2)
         core._handle_message(msg)
-        self.assertEquals(str(node1.MessageQ), str(node2.MessageQ))
+        self.assertEqual(str(node1.MessageQ), str(node2.MessageQ))
         self.assertIn(msg.Identifier, core.MessageHandledMap)
-        self.assertNotEquals(str(node1.MessageQ), "[]")
-        self.assertNotEquals(str(node2.MessageQ), "[]")
+        self.assertNotEqual(str(node1.MessageQ), "[]")
+        self.assertNotEqual(str(node2.MessageQ), "[]")
 
     def test_gossip_handle_broadcast_msg(self):
         # Test broadcast_message, uses handle_msg
@@ -507,5 +507,5 @@ class TestGossipCoreUtilityAndInterface(unittest.TestCase):
         core.add_node(node1)
         core.add_node(node2)
         core.broadcast_message(msg)
-        self.assertEquals(str(node1.MessageQ), str(node2.MessageQ))
+        self.assertEqual(str(node1.MessageQ), str(node2.MessageQ))
         self.assertIn(msg.Identifier, core.MessageHandledMap)

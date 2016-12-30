@@ -37,9 +37,9 @@ class TestSignedObject(unittest.TestCase):
         # Trival test creates a SignedObject
         # check that everything initalizes as expected
         temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
-        self.assertEquals(temp.SignatureDictKey, "TestSignatureDictKey")
-        self.assertEquals(temp.dump(), {"TestSignatureDictKey": "test", "PublicKey": None})
-        self.assertEquals(temp.__repr__(), temp.serialize())
+        self.assertEqual(temp.SignatureDictKey, "TestSignatureDictKey")
+        self.assertEqual(temp.dump(), {"TestSignatureDictKey": "test", "PublicKey": None})
+        self.assertEqual(temp.__repr__(), temp.serialize())
         self.assertIsNotNone(temp.Identifier)
         temp._identifier = None
         self.assertIsNotNone(temp.Identifier)
@@ -120,4 +120,4 @@ class TestSignedObject(unittest.TestCase):
         cbor = temp.serialize()
         # check that the unserilized serilized dictinary is the same
         # as before serilazation
-        self.assertEquals(cbor2dict(cbor), temp.dump())
+        self.assertEqual(cbor2dict(cbor), temp.dump())

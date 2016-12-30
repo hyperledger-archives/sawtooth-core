@@ -117,8 +117,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], '---------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], '---------')
 
         for space in [0, 10]:
             transaction = XoTransaction({
@@ -158,8 +158,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], '---------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], '---------')
 
         # Take space 1
         transaction = XoTransaction({
@@ -173,8 +173,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'X--------')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'X--------')
 
         # Take space 2
         transaction = XoTransaction({
@@ -188,8 +188,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-------')
 
         # Make sure it isn't valid to take space 2 again
         transaction = XoTransaction({
@@ -221,8 +221,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-X-----')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-X-----')
 
         # Make sure Player 1 can't go on Player 2's turn.
         transaction = XoTransaction({
@@ -245,8 +245,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-X----O')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-X----O')
 
         # Take space 7
         transaction = XoTransaction({
@@ -260,8 +260,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-WIN')
-        self.assertEquals(store['game000']['Board'], 'XO-X--X-O')
+        self.assertEqual(store['game000']['State'], 'P1-WIN')
+        self.assertEqual(store['game000']['Board'], 'XO-X--X-O')
 
         # Make sure we can't modify the game anymore
         transaction = XoTransaction({
@@ -289,8 +289,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], '---------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], '---------')
 
         # Take space 1
         transaction = XoTransaction({
@@ -304,8 +304,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'X--------')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'X--------')
 
         # Take space 2
         transaction = XoTransaction({
@@ -319,8 +319,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-------')
 
         # Take space 4
         transaction = XoTransaction({
@@ -334,8 +334,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-X-----')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-X-----')
 
         # Take space 8
         transaction = XoTransaction({
@@ -349,8 +349,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-X---O-')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-X---O-')
 
         # Take space 9
         transaction = XoTransaction({
@@ -364,8 +364,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-X---OX')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-X---OX')
 
         # Take space 5
         transaction = XoTransaction({
@@ -379,8 +379,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-WIN')
-        self.assertEquals(store['game000']['Board'], 'XO-XO--OX')
+        self.assertEqual(store['game000']['State'], 'P2-WIN')
+        self.assertEqual(store['game000']['Board'], 'XO-XO--OX')
 
     def test_xo_transaction_game_tie(self):
         player1_key = signed_object.generate_signing_key()
@@ -399,8 +399,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], '---------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], '---------')
 
         # Take space 1
         transaction = XoTransaction({
@@ -414,8 +414,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'X--------')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'X--------')
 
         # Take space 2
         transaction = XoTransaction({
@@ -429,8 +429,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-------')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-------')
 
         # Take space 4
         transaction = XoTransaction({
@@ -444,8 +444,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-X-----')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-X-----')
 
         # Take space 5
         transaction = XoTransaction({
@@ -459,8 +459,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-XO----')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-XO----')
 
         # Take space 8
         transaction = XoTransaction({
@@ -474,8 +474,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-XO--X-')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-XO--X-')
 
         # Take space 7
         transaction = XoTransaction({
@@ -489,8 +489,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XO-XO-OX-')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XO-XO-OX-')
 
         # Take space 3
         transaction = XoTransaction({
@@ -504,8 +504,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P2-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XOXXO-OX-')
+        self.assertEqual(store['game000']['State'], 'P2-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XOXXO-OX-')
 
         # Take space 6
         transaction = XoTransaction({
@@ -519,8 +519,8 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'P1-NEXT')
-        self.assertEquals(store['game000']['Board'], 'XOXXOOOX-')
+        self.assertEqual(store['game000']['State'], 'P1-NEXT')
+        self.assertEqual(store['game000']['Board'], 'XOXXOOOX-')
 
         # Take space 9
         transaction = XoTransaction({
@@ -534,5 +534,5 @@ class TestSawtoothXoTxnFamily(unittest.TestCase):
         self.assertIn('game000', store)
         self.assertIn('Board', store['game000'])
         self.assertIn('State', store['game000'])
-        self.assertEquals(store['game000']['State'], 'TIE')
-        self.assertEquals(store['game000']['Board'], 'XOXXOOOXX')
+        self.assertEqual(store['game000']['State'], 'TIE')
+        self.assertEqual(store['game000']['Board'], 'XOXXOOOXX')
