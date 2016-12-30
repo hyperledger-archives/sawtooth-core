@@ -56,14 +56,15 @@ def do_docker(args):
             args.docker_command))
 
 
-def _build_docker_image(image):
-    image_src = os.path.join(
-        os.path.dirname(__file__),
-        "data",
-        image)
+def _get_data_dir():
+    return os.path.join(os.path.dirname(__file__), 'data')
 
-    tmpdir = tempfile.mkdtemp(prefix='sawtooth-docker-')
+
+def _build_docker_image(image):
     try:
+        image_src = os.path.join(_get_data_dir(), image)
+        tmpdir = tempfile.mkdtemp(prefix='sawtooth-docker-')
+
         try:
             shutil.copyfile(image_src, os.path.join(tmpdir, "Dockerfile"))
         except IOError as e:
@@ -81,12 +82,9 @@ def _build_docker_image(image):
 
 def do_docker_build(args):
     if args.all:
-        for image in ['sawtooth-build-ubuntu-xenial',
-                      'sawtooth-dev-ubuntu-xenial',
-                      'sawtooth-validator',
-                      'sawtooth-python-intkey-1.0',
-                      'sawtooth-java-intkey-1.0']:
-            print("Building docker image: {}".format(image))
+        data_dir = _get_data_dir()
+        for image in os.listdir(data_dir):
+            print "Building docker image: {}".format(image)
             _build_docker_image(image)
     elif args.filename is not None:
         for image in args.filename:
