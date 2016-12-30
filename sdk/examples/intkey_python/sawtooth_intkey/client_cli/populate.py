@@ -26,8 +26,8 @@ import time
 import cbor
 import bitcoin
 
-from sawtooth_protobuf import transaction_pb2
-from sawtooth_protobuf import batch_pb2
+import sawtooth_protobuf.batch_pb2 as batch_pb2
+import sawtooth_protobuf.transaction_pb2 as transaction_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ def generate_word_list(count):
         return [generate_word() for _ in range(0, count)]
 
 
-def do_generate(args):
+def do_populate(args):
     private_key = bitcoin.random_key()
     public_key = bitcoin.encode_pubkey(
         bitcoin.privkey_to_pubkey(private_key), "hex")
@@ -138,39 +138,39 @@ def do_generate(args):
     batches = []
     start = time.time()
     total_txn_count = 0
-    for i in range(0, args.count):
-        txns = []
-        for _ in range(0, random.randint(1, args.batch_max_size)):
-            txn = create_intkey_transaction(
-                verb=random.choice(['inc', 'dec']),
-                name=random.choice(words),
-                value=1,
-                private_key=private_key,
-                public_key=public_key)
-            total_txn_count += 1
-            txns.append(txn)
 
-        batch = create_batch(
-            transactions=txns,
+    txns = []
+    for i in range(0, len(words)):
+        txn = create_intkey_transaction(
+            verb='set',
+            name=words[i],
+            value=random.randint(9000, 100000),
             private_key=private_key,
             public_key=public_key)
+        total_txn_count += 1
+        txns.append(txn)
 
-        batches.append(batch)
+    batch = create_batch(
+        transactions=txns,
+        private_key=private_key,
+        public_key=public_key)
 
-        if i % 100 == 0 and i != 0:
-            stop = time.time()
+    batches.append(batch)
 
-            txn_count = 0
-            for batch in batches[-100:]:
-                txn_count += len(batch.transactions)
+    if i % 100 == 0 and i != 0:
+        stop = time.time()
 
-            fmt = 'batches {}, batch/sec: {:.2f}, txns: {}, txns/sec: {:.2f}'
-            print(fmt.format(
-                str(i),
-                100 / (stop - start),
-                str(total_txn_count),
-                txn_count / (stop - start)))
-            start = stop
+        txn_count = 0
+        for batch in batches[-100:]:
+            txn_count += len(batch.transactions)
+
+        fmt = 'batches {}, batch/sec: {:.2f}, txns: {}, txns/sec: {:.2f}'
+        print(fmt.format(
+            str(i),
+            100 / (stop - start),
+            str(total_txn_count),
+            txn_count / (stop - start)))
+        start = stop
 
     batch_list = batch_pb2.BatchList(batches=batches)
 
@@ -179,9 +179,9 @@ def do_generate(args):
         fd.write(batch_list.SerializeToString())
 
 
-def add_generate_parser(subparsers, parent_parser):
+def add_populate_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
-        'generate',
+        'populate',
         parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -190,18 +190,6 @@ def add_generate_parser(subparsers, parent_parser):
         type=str,
         help='location of output file',
         default='batches.intkey')
-
-    parser.add_argument(
-        '-c', '--count',
-        type=int,
-        help='number of batches',
-        default=1000)
-
-    parser.add_argument(
-        '-B', '--batch-max-size',
-        type=int,
-        help='max size of the batch',
-        default=20)
 
     parser.add_argument(
         '-P', '--pool-size',
