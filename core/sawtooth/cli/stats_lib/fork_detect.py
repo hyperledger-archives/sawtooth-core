@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import time
 from operator import itemgetter
 
@@ -258,8 +260,8 @@ class BlockChainBranch(object):
                 info_list.append(
                     [{"Identifier": block_id, "BlockNum": block_num}])
                 if do_print:
-                    print block_id,
-            print
+                    print(block_id, end=' ')
+            print()
         else:
             for block_id, block_num, pred_id in sorted_list:
                 block = self.blocks[block_id]
@@ -267,8 +269,8 @@ class BlockChainBranch(object):
                               "BlockNum": block_num,
                               "PreviousBlockID": pred_id}
                 if do_print:
-                    print block["Identifier"], block["BlockNum"], block[
-                        "PreviousBlockID"],
+                    print(block["Identifier"], block["BlockNum"], block[
+                        "PreviousBlockID"], end=' ')
                 if print_all:
                     successor = self._predecessor_ids.get(
                         block["PreviousBlockID"], None)
@@ -276,9 +278,9 @@ class BlockChainBranch(object):
                     block_info["PreviousIDToSuccessorID"] = successor
                     block_info["BlockNumToBlockID"] = bid
                     if do_print:
-                        print successor, bid,
+                        print(successor, bid, end=' ')
                 if do_print:
-                    print
+                    print()
                 info_list.append(block_info)
         return info_list
 
@@ -451,11 +453,11 @@ class ForkManagerStats(object):
         self.validator_count = 0
 
     def print_stats(self):
-        print "network fork status:", self.status,
-        print "  fork count:", self.fork_count,
-        print "  parent forks:", self.parent_count,
-        print "  child forks:", self.child_count,
-        print "  longest child fork:", self.longest_child_fork_length
+        print("network fork status:", self.status, end=' ')
+        print("  fork count:", self.fork_count, end=' ')
+        print("  parent forks:", self.parent_count, end=' ')
+        print("  child forks:", self.child_count, end=' ')
+        print("  longest child fork:", self.longest_child_fork_length)
 
     def get_stats_as_dict(self):
         return get_public_attrs_as_dict(self)
@@ -478,13 +480,13 @@ class BranchManagerStats(object):
         self.sorted_longest_active = 0
 
     def print_stats(self):
-        print "branches identified:", self.identified,
-        print "  active branches:", self.active,
-        print "  longest branch length:", self.longest,
-        print "  longest active branch length:", self.longest_active,
-        print "  next longest active branch length:", \
-            self.next_longest_active,
-        print "  validator count:", self.validators
+        print("branches identified:", self.identified, end=' ')
+        print("  active branches:", self.active, end=' ')
+        print("  longest branch length:", self.longest, end=' ')
+        print("  longest active branch length:", self.longest_active, end=' ')
+        print("  next longest active branch length:",
+              self.next_longest_active, end=' ')
+        print("  validator count:", self.validators)
 
     def get_stats_as_dict(self):
         return get_public_attrs_as_dict(self)

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
 
 import argparse
 import logging
@@ -155,13 +156,13 @@ def main_wrapper():
     try:
         main()
     except CliException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except InvalidTransactionError as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except ClientException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         pass

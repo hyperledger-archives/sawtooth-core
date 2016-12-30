@@ -1,3 +1,6 @@
+
+from __future__ import print_function
+
 import os
 
 import unittest
@@ -29,7 +32,7 @@ class TestSawtoothStats(unittest.TestCase):
             rounds = 2
             txn_intv = 0
 
-            print "Testing transaction load."
+            print("Testing transaction load.")
             test = IntKeyLoadTest()
             urls = self.urls
             self.assertEqual(5, len(urls))
@@ -46,7 +49,7 @@ class TestSawtoothStats(unittest.TestCase):
                 raise MessageException('cant run stats print: {0}'.format(e))
 
         finally:
-            print "No Validators need to be stopped"
+            print("No Validators need to be stopped")
 
     def stats_config_dict(self):
         config = {}

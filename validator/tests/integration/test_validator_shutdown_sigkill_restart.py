@@ -1,4 +1,6 @@
 
+from __future__ import print_function
+
 import unittest
 import os
 import time
@@ -29,7 +31,7 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
             txn_intv = 0
             timeout = 5
 
-            print "Testing transaction load."
+            print("Testing transaction load.")
             test = IntKeyLoadTest()
             urls = self.urls
             self.assertEqual(5, len(urls))
@@ -48,14 +50,14 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
                                                standard=5)
             self.assertTrue(convergent, "All validators are "
                                         "not on the same chain.")
-            print "all validators are on the same chain"
+            print("all validators are on the same chain")
             report_before_shutdown = sit_rep(self.urls, verbosity=1)
             validator_report = report_before_shutdown[4]
             valid_dict_value = validator_report['Status']
             validator_blocks_shutdown = valid_dict_value['Blocks']
-            print "validator_blocks", validator_blocks_shutdown
+            print("validator_blocks", validator_blocks_shutdown)
 
-            print "shutdown validator 4 w/ SIGKILL"
+            print("shutdown validator 4 w/ SIGKILL")
             node_names = self.node_controller.get_node_names()
             node_names.sort()
             self.node_controller.kill(node_names[4])
@@ -63,17 +65,17 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
             while len(self.node_controller.get_node_names()) > 4:
                 if to.is_timed_out():
                     self.fail("Timed Out")
-            print 'check state of validators:'
+            print('check state of validators:')
             sit_rep(self.urls[:-1], verbosity=2)
 
-            print "sending more txns after SIGKILL"
+            print("sending more txns after SIGKILL")
             urls = self.urls[:-1]
             self.assertEqual(4, len(urls))
             test.setup(urls, keys)
             test.run(keys, rounds, txn_intv)
             test.validate()
 
-            print "turn off entire validator network"
+            print("turn off entire validator network")
             for node in node_names:
                 self.node_controller.stop(node)
             to = TimeOut(120)
@@ -81,7 +83,7 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
                 if to.is_timed_out():
                     self.fail("Timed Out")
 
-            print "relaunch validator 4"
+            print("relaunch validator 4")
             self.node_controller.start(self.nodes[4])
             report_after_relaunch = None
             to = TimeOut(120)
@@ -96,12 +98,12 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
             validator_report = report_after_relaunch[0]
             valid_dict_value = validator_report['Status']
             validator_blocks_relaunch = valid_dict_value['Blocks']
-            print "validator_blocks_relaunch", validator_blocks_relaunch
+            print("validator_blocks_relaunch", validator_blocks_relaunch)
 
             if len(validator_blocks_relaunch) == \
                     len(validator_blocks_shutdown):
                 if validator_blocks_shutdown == validator_blocks_relaunch:
-                    print "relaunched validator restored from local db"
+                    print("relaunched validator restored from local db")
             else:
                 for i in range(0, len(validator_blocks_shutdown)):
                     self.assertEqual(validator_blocks_relaunch[i],
@@ -109,10 +111,10 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
                                      "relaunched validator didn't"
                                      " restore fr local db")
                     break
-                print "relaunched validator restored from local database"
+                print("relaunched validator restored from local database")
 
         finally:
-            print "restart validators "
+            print("restart validators ")
             for node in self.nodes:
                 self.node_controller.start(node)
             to = TimeOut(120)
@@ -128,4 +130,4 @@ class TestValidatorShutdownSigKillRestart(unittest.TestCase):
                     if to.is_timed_out():
                         self.fail("Timed Out")
                 time.sleep(4)
-            print "No validators"
+            print("No validators")

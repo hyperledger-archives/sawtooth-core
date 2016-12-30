@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import traceback
 import logging
 
@@ -117,9 +119,9 @@ def reactor_startup(stats_interval, endpoint_interval, stats_man, ep_man):
 
 
 def handle_loop_error(reason, other_reason):
-    print "stopping in main due to error in {}".format(other_reason)
-    print reason
-    print "stopping monitor"
+    print("stopping in main due to error in {}".format(other_reason))
+    print(reason)
+    print("stopping monitor")
     reactor.stop()
 
 
@@ -148,14 +150,14 @@ class Monitor(object):
         ]
 
         if self.verbose == 0:
-            print "Monitor modules loading:"
+            print("Monitor modules loading:")
         else:   # Don't output redundant messages about modules if verbse > 0
             self.logger.info("Monitor modules to load: %s", str(self.verbose))
 
         while len(config['Modules']) > 0:
             already_appended = []
             m = config['Modules'].pop()
-            print m     # display each loading module
+            print(m)     # display each loading module
             if m == 'platform-cpu' and m not in already_appended:
                 modules.append(PlatformCpu)
                 already_appended.append(m)
@@ -167,7 +169,7 @@ class Monitor(object):
                 already_appended.append(m)
             else:
                 if self.verbose == 0:
-                    print "Module not known: {}".format(m)
+                    print("Module not known: {}".format(m))
                 else:
                     self.logger.info("Module not known: %s", str(m))
                 already_appended.append(m)
@@ -221,8 +223,8 @@ def run_monitor(url, config_opts=None):
     logger = logging.getLogger(__name__)
 
     if config_opts.verbose is None or config_opts.verbose == 0:
-        print "Running sawtooth monitor"
-        print "URl = {}".format(url)
+        print("Running sawtooth monitor")
+        print("URl = {}".format(url))
     else:
         logger.info("Running sawtooth monitor")
 

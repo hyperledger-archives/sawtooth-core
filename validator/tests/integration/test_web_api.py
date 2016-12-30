@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import json
 import tempfile
 import unittest
@@ -316,7 +318,7 @@ class TestWebApi(unittest.TestCase):
         # GET /transaction
         request = self._create_get_request("/transaction/", {})
         r = transaction_page.do_get(request)
-        print request.path, r
+        print(request.path, r)
         r = r[1:-1].replace('"', "")
         r = r.replace(" ", "").split(",")
         self.assertEquals(r, txns)

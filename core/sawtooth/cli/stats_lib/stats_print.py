@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 from sawtooth.cli.stats_lib.stats_utils import StatsModule
 
 from sawtooth.cli.stats_lib.validator_stats import ValidatorStatsManager
@@ -81,7 +83,7 @@ class ConsolePrint(object):
                                  attr)
                 self.scrn.addstr(print_string + "\n", attr)
         else:
-            print print_string
+            print(print_string)
 
     def cpstop(self):
         if self.use_curses:
@@ -89,7 +91,7 @@ class ConsolePrint(object):
             self.scrn.keypad(0)
             curses.echo()
             curses.endwin()
-            print "print manager ended curses window"
+            print("print manager ended curses window")
 
 
 class StatsPrintManager(StatsModule):

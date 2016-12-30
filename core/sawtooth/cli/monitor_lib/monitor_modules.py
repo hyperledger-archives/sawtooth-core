@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import json
 import logging
 import logging.config
@@ -54,14 +56,14 @@ class EventScriptManager(StatsModule):
 
     def run_script(self, sev):
         # Run script with event type as argument
-        print "Running script {}".format(self.script)
+        print("Running script {}".format(self.script))
         self.logger.info("Running script %s", self.script)
         args = [self.script, sev]
         output = subprocess.check_output(args)
-        print "Script output: {}".format(output)
+        print("Script output: {}".format(output))
         self.logger.info("Script output %s", str(output))
         if self.quit_after_exec is True:
-            print "Monitor quitting"
+            print("Monitor quitting")
             self.logger.info("Monitor quitting")
             self.mon.monitor_stop()
             quit()
@@ -112,8 +114,8 @@ class LogManager(StatsModule):
                         log_dic = json.load(log_config_fd)
                         logging.config.dictConfig(log_dic)
                 except IOError, ex:
-                    print >>sys.stderr, "Could not read log config: {}" \
-                        .format(str(ex))
+                    print("Could not read log config: {}"
+                          .format(str(ex)), file=sys.stderr)
                     sys.exit(1)
             elif log_config_file.split(".")[-1] == "yaml":
                 try:
@@ -121,18 +123,18 @@ class LogManager(StatsModule):
                         log_dic = yaml.load(log_config_fd)
                         logging.config.dictConfig(log_dic)
                 except IOError, ex:
-                    print >>sys.stderr, "Could not read log config: {}"\
-                        .format(str(ex))
+                    print("Could not read log config: {}"
+                          .format(str(ex)), file=sys.stderr)
                     sys.exit(1)
             else:
-                print >>sys.stderr, "LogConfigFile type not supported: {}"\
-                    .format(cfg['LogConfigFile'])
+                print("LogConfigFile type not supported: {}"
+                      .format(cfg['LogConfigFile']), file=sys.stderr)
                 sys.exit(1)
 
         else:
             if cfg['Verbose'] == 0:
-                print "No log config file specified"
-                print "Use -v option to send logging to console"
+                print("No log config file specified")
+                print("Use -v option to send logging to console")
 
 
 class ConnectionStatus(StatsModule):
@@ -152,7 +154,7 @@ class ConnectionStatus(StatsModule):
         self.system_stats = system_stats_manager.system_stats
         self.logger.info(
             "Monitor: finished initialization of ConnectionStatus module")
-        print "Waiting to connect..."
+        print("Waiting to connect...")
 
     def get_connection_status(self):
         active_validators = self.system_stats.sys_client.active_validators
@@ -164,7 +166,7 @@ class ConnectionStatus(StatsModule):
         connection_status, active_validators = self.get_connection_status()
         if connection_status != self.connection_status:
             self.connection_status = connection_status
-            print "Connection status: {}".format(connection_status)
+            print("Connection status: {}".format(connection_status))
             self.logger.info("Monitor connection status: %s",
                              connection_status)
         self.logger.debug("Number of active validators known: %s",
@@ -202,7 +204,7 @@ class PlatformCpu(StatsModule):
         cpu_percent = p_stats["scpu"]["percent"]
 
         if int(cpu_percent) > self.cpu_threshold:
-            print "Event detected: CPU threshold on platform"
+            print("Event detected: CPU threshold on platform")
             self.logger.info(
                 "Monitor event detected: CPU threshold on platform")
             event = self.event(
@@ -245,8 +247,8 @@ class ValidatorFailure(StatsModule):
         for client in stats_clients:
             if client.state == "NO_RESP":
                 flagged_validator = client.name
-                print "Event detected: no response from {}".\
-                    format(flagged_validator)
+                print("Event detected: no response from {}"
+                      .format(flagged_validator))
                 self.logger.info(
                     "Monitor event detected: no response from %s",
                     str(flagged_validator))
@@ -287,7 +289,7 @@ class SigUsr1(StatsModule):
         # self.no_response_trigger()
 
     def sigusr1_trigger(self, signum, stack):
-        print "SIGUSR1 received"
+        print("SIGUSR1 received")
         self.logger.info("Monitor: SIGUSR1 received")
         event = self.event(sev='SIGUSR1', event_desc='SIGUSR1 received')
         self.event_queue.append(event)
