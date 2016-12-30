@@ -58,8 +58,8 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
         self.assertEqual(wait_timer.local_mean, wait_cert.local_mean)
         self.assertEqual(wait_timer.previous_certificate_id,
                          wait_cert.previous_certificate_id)
-        self.assertEquals(len(wait_cert.identifier()),
-                          pe_sim.IDENTIFIER_LENGTH)
+        self.assertEqual(len(wait_cert.identifier()),
+                         pe_sim.IDENTIFIER_LENGTH)
 
         # the initial block does not need to wait, to accelerate
         # validator launch

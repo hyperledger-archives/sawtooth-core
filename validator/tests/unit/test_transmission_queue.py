@@ -43,9 +43,9 @@ class TestRoundTripEstimator(unittest.TestCase):
     def test_tranmission_queue_init(self):
         # Test init of TransmissionQueue
         tQ = TransmissionQueue()
-        self.assertEquals(tQ._messages, {})
-        self.assertEquals(tQ._times, {})
-        self.assertEquals(tQ._heap, [])
+        self.assertEqual(tQ._messages, {})
+        self.assertEqual(tQ._times, {})
+        self.assertEqual(tQ._heap, [])
 
     def test_tranmission_queue_str(self):
         # Test overridden string function
@@ -57,8 +57,8 @@ class TestRoundTripEstimator(unittest.TestCase):
             tQ.enqueue_message(msg, now)
         idlist = tQ._times.keys()
         # Should return a string with all 3 msgs
-        self.assertEquals(str(tQ), '[' + ', '
-                          .join([ident[:8] for ident in idlist]) + ']')
+        self.assertEqual(str(tQ), '[' + ', '
+                         .join([ident[:8] for ident in idlist]) + ']')
         for i in range(4):
             msg = self._create_msg()
             tQ.enqueue_message(msg, now)
@@ -66,8 +66,8 @@ class TestRoundTripEstimator(unittest.TestCase):
         idlist = idlist[:4]
         idlist.append('...')
         # Should return a string with the first 4 msgs and ... at the end
-        self.assertEquals(str(tQ), '[' + ', '
-                          .join([ident[:8] for ident in idlist]) + ']')
+        self.assertEqual(str(tQ), '[' + ', '
+                         .join([ident[:8] for ident in idlist]) + ']')
 
     def test_tranmission_queue_enqueue_message(self):
         # Test Enqueuing a message
@@ -84,7 +84,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         for i in range(10):
             msg = self._create_msg()
             tQ.enqueue_message(msg, now)
-        self.assertEquals(len(tQ._messages), 11)
+        self.assertEqual(len(tQ._messages), 11)
 
     def test_tranmission_queue_enqueue_message_duplicates(self):
         # Test Enqueuing a message, try to enqueue twice
@@ -141,8 +141,8 @@ class TestRoundTripEstimator(unittest.TestCase):
         tQ.enqueue_message(msg, now)
         # Return the time and message at the head
         head = tQ.Head
-        self.assertEquals(head[0], now)
-        self.assertEquals(head[1], msg)
+        self.assertEqual(head[0], now)
+        self.assertEqual(head[1], msg)
 
     def test_tranmission_queue_count(self):
         # Test property count of TransmissionQueue
@@ -151,17 +151,17 @@ class TestRoundTripEstimator(unittest.TestCase):
         node = self._create_node()
         msg = self._create_msg()
         # 0 messages in queue
-        self.assertEquals(tQ.Count, 0)
+        self.assertEqual(tQ.Count, 0)
         tQ.enqueue_message(msg, now)
         # 1 message in queue
-        self.assertEquals(tQ.Count, 1)
+        self.assertEqual(tQ.Count, 1)
         msg2 = self._create_msg()
         tQ.enqueue_message(msg2, now)
         # 2 messages in queue
-        self.assertEquals(tQ.Count, 2)
+        self.assertEqual(tQ.Count, 2)
         tQ.dequeue_message(msg)
         # Dequeue message from queue, leaving 1 message
-        self.assertEquals(tQ.Count, 1)
+        self.assertEqual(tQ.Count, 1)
 
     def test_tranmission_queue_messages(self):
         # Test the Message property of TransmissionQueue
@@ -170,10 +170,10 @@ class TestRoundTripEstimator(unittest.TestCase):
         node = self._create_node()
         msg = self._create_msg()
         # No messages
-        self.assertEquals(tQ.Messages, [])
+        self.assertEqual(tQ.Messages, [])
         tQ.enqueue_message(msg, now)
         # 1 message
-        self.assertEquals(tQ.Messages, [msg.Identifier])
+        self.assertEqual(tQ.Messages, [msg.Identifier])
         msg2 = self._create_msg()
         # 2 messages, check if messages id are in Messages
         tQ.enqueue_message(msg2, now)
@@ -188,15 +188,15 @@ class TestRoundTripEstimator(unittest.TestCase):
         msg = self._create_msg()
         # Test the _trimheap doesn't break on empty heap
         tQ._trimheap()
-        self.assertEquals(tQ._heap, [])
+        self.assertEqual(tQ._heap, [])
         tQ.enqueue_message(msg, now)
         tQ._trimheap()
         # Should not have changed anything
-        self.assertEquals(tQ._heap, [(now, msg.Identifier)])
+        self.assertEqual(tQ._heap, [(now, msg.Identifier)])
         # Change time to send in times, but not in heap, this makes it invalid
         tQ._times[msg.Identifier] = 0.0
         tQ._trimheap()
-        self.assertEquals(tQ._heap, [])
+        self.assertEqual(tQ._heap, [])
 
     def test_tranmission_queue_buildheap(self):
         # Test buildheap, cleans up the heap when a large number of
@@ -212,7 +212,7 @@ class TestRoundTripEstimator(unittest.TestCase):
         # Should not change the heap, no messages have been dequeued
         tQ._buildheap()
         after = str(tQ._heap)
-        self.assertEquals(before, after)
+        self.assertEqual(before, after)
 
         before = str(tQ._heap)
         for i in range(7):
@@ -223,9 +223,9 @@ class TestRoundTripEstimator(unittest.TestCase):
             tQ._times.pop(msgId, None)
         # The heap has not changed, even though 7 messages have been "dequeued"
         after = str(tQ._heap)
-        self.assertEquals(before, after)
+        self.assertEqual(before, after)
         # The heap is cleaned up and left with only the 3 messages.
         tQ._buildheap()
         after = str(tQ._heap)
-        self.assertNotEquals(before, after)
-        self.assertEquals(len(tQ._heap), 3)
+        self.assertNotEqual(before, after)
+        self.assertEqual(len(tQ._heap), 3)

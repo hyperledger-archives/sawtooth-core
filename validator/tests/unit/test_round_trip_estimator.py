@@ -23,53 +23,53 @@ class TestRoundTripEstimator(unittest.TestCase):
     def test_round_trip_estimator_init(self):
         # Test default init of RoundTripEstimator
         rte = RoundTripEstimator()
-        self.assertEquals(rte.RTO, 1.0)
-        self.assertEquals(rte._SRTT, 0.0)
-        self.assertEquals(rte._RTTVAR, 0.0)
+        self.assertEqual(rte.RTO, 1.0)
+        self.assertEqual(rte._SRTT, 0.0)
+        self.assertEqual(rte._RTTVAR, 0.0)
 
     def test_round_trip_estimator_update_once(self):
         # Test that .update() updates RTO, SRTT, and RTTVAR as expected
         rte = RoundTripEstimator()
         rte.update(5.0)
         # New RTO is calcualted useing the newley updated _SRTT and _RTTVAR
-        self.assertEquals(rte.RTO, 15)
-        self.assertEquals(rte._SRTT, 5.0)
-        self.assertEquals(rte._RTTVAR, 2.5)
+        self.assertEqual(rte.RTO, 15)
+        self.assertEqual(rte._SRTT, 5.0)
+        self.assertEqual(rte._RTTVAR, 2.5)
         rte.update(5.0)
-        self.assertNotEquals(rte.RTO, 15)
-        self.assertEquals(rte._SRTT, 5.0)
-        self.assertNotEquals(rte._RTTVAR, 2.5)
+        self.assertNotEqual(rte.RTO, 15)
+        self.assertEqual(rte._SRTT, 5.0)
+        self.assertNotEqual(rte._RTTVAR, 2.5)
 
     def test_round_trip_estimator_update_multiple(self):
         # Test that RTP converges on correct number if it is consistent
         rte = RoundTripEstimator()
-        self.assertEquals(rte.RTO, 1.0)
-        self.assertEquals(rte._SRTT, 0.0)
-        self.assertEquals(rte._RTTVAR, 0.0)
+        self.assertEqual(rte.RTO, 1.0)
+        self.assertEqual(rte._SRTT, 0.0)
+        self.assertEqual(rte._RTTVAR, 0.0)
         for i in range(100):
             rte.update(5.0)
         # Converges on 5 + MinResolution
-        self.assertEquals(rte.RTO, 5.025)
+        self.assertEqual(rte.RTO, 5.025)
 
         for i in range(100):
             rte.update(64.0)
         # Should not excede MaximumRTO ~ 60
-        self.assertEquals(rte.RTO, rte.MaximumRTO)
+        self.assertEqual(rte.RTO, rte.MaximumRTO)
 
     def test_round_trip_estimator_backoff_once(self):
         # Test one backoff.
         rte = RoundTripEstimator()
         rte.backoff()
         # Should reset SRTT and RTTVAR while multipling RTP by BackoffRate ~ 2
-        self.assertEquals(rte._SRTT, 0.0)
-        self.assertEquals(rte._RTTVAR, 0.0)
-        self.assertEquals(rte.RTO, 2)
+        self.assertEqual(rte._SRTT, 0.0)
+        self.assertEqual(rte._RTTVAR, 0.0)
+        self.assertEqual(rte.RTO, 2)
 
     def test_round_trip_estimator_backoff_multiple(self):
         # Test that RTO will not exceed MaximumRTO after repeated backoffs
         rte = RoundTripEstimator()
         for i in range(10):
             rte.backoff()
-        self.assertEquals(rte._SRTT, 0.0)
-        self.assertEquals(rte._RTTVAR, 0.0)
-        self.assertEquals(rte.RTO, rte.MaximumRTO)
+        self.assertEqual(rte._SRTT, 0.0)
+        self.assertEqual(rte._RTTVAR, 0.0)
+        self.assertEqual(rte.RTO, rte.MaximumRTO)

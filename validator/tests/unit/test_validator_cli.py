@@ -34,10 +34,10 @@ class TestValidatorCLI(unittest.TestCase):
         cfg = get_configuration(args=[], config_files_required=False)
 
         self.assertIn("CurrencyHome", cfg)
-        self.assertEquals(cfg["CurrencyHome"], "/test_path")
-        self.assertEquals(cfg["ConfigDirectory"], "/test_path/etc")
-        self.assertEquals(cfg["LogDirectory"], "/test_path/logs")
-        self.assertEquals(cfg["DataDirectory"], "/test_path/data")
+        self.assertEqual(cfg["CurrencyHome"], "/test_path")
+        self.assertEqual(cfg["ConfigDirectory"], "/test_path/etc")
+        self.assertEqual(cfg["LogDirectory"], "/test_path/logs")
+        self.assertEqual(cfg["DataDirectory"], "/test_path/data")
 
     def test_default_config_posix(self):
         os.environ.clear()
@@ -46,9 +46,9 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertNotIn("CurrencyHome", cfg)
-        self.assertEquals(cfg["ConfigDirectory"], "/etc/sawtooth-validator")
-        self.assertEquals(cfg["LogDirectory"], "/var/log/sawtooth-validator")
-        self.assertEquals(cfg["DataDirectory"], "/var/lib/sawtooth-validator")
+        self.assertEqual(cfg["ConfigDirectory"], "/etc/sawtooth-validator")
+        self.assertEqual(cfg["LogDirectory"], "/var/log/sawtooth-validator")
+        self.assertEqual(cfg["DataDirectory"], "/var/lib/sawtooth-validator")
 
     def test_default_config_nt(self):
         os.environ.clear()
@@ -57,13 +57,13 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertNotIn("CurrencyHome", cfg)
-        self.assertEquals(
+        self.assertEqual(
             cfg["ConfigDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\conf")
-        self.assertEquals(
+        self.assertEqual(
             cfg["LogDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\logs")
-        self.assertEquals(
+        self.assertEqual(
             cfg["DataDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\data")
 
@@ -74,7 +74,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("LogConfigFile", cfg)
-        self.assertEquals(cfg["LogConfigFile"], "Logging.js")
+        self.assertEqual(cfg["LogConfigFile"], "Logging.js")
 
     def test_options_mapping_conf_dir(self):
         os.environ.clear()
@@ -83,7 +83,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("ConfigDirectory", cfg)
-        self.assertEquals(cfg["ConfigDirectory"], "/test_path/etc")
+        self.assertEqual(cfg["ConfigDirectory"], "/test_path/etc")
 
     def test_options_mapping_data_dir(self):
         os.environ.clear()
@@ -92,7 +92,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("DataDirectory", cfg)
-        self.assertEquals(cfg["DataDirectory"], "/test_path/data")
+        self.assertEqual(cfg["DataDirectory"], "/test_path/data")
 
     def test_options_mapping_type(self):
         os.environ.clear()
@@ -101,7 +101,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("LedgerType", cfg)
-        self.assertEquals(cfg["LedgerType"], "test")
+        self.assertEqual(cfg["LedgerType"], "test")
 
     def test_options_mapping_key_file(self):
         os.environ.clear()
@@ -110,7 +110,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("KeyFile", cfg)
-        self.assertEquals(cfg["KeyFile"], "/test_path/keys/key.wif")
+        self.assertEqual(cfg["KeyFile"], "/test_path/keys/key.wif")
 
     def test_options_mapping_node(self):
         os.environ.clear()
@@ -119,7 +119,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("NodeName", cfg)
-        self.assertEquals(cfg["NodeName"], "test000")
+        self.assertEqual(cfg["NodeName"], "test000")
 
     def test_options_mapping_listsn(self):
         os.environ.clear()
@@ -128,7 +128,7 @@ class TestValidatorCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertIn("Listen", cfg)
-        self.assertEquals(cfg["Listen"], ['"localhost:5500/UDP gossip"'])
+        self.assertEqual(cfg["Listen"], ['"localhost:5500/UDP gossip"'])
 
     def test_options_mapping_peers(self):
         os.environ.clear()

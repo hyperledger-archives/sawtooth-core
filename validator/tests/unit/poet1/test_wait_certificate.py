@@ -147,12 +147,12 @@ class TestWaitCertificate(unittest.TestCase):
 
         self.assertIsNotNone(wc)
 
-        self.assertEquals(
+        self.assertEqual(
             wc.previous_certificate_id,
             wt.previous_certificate_id)
-        self.assertAlmostEquals(wc.local_mean, wt.local_mean)
-        self.assertAlmostEquals(wc.request_time, wt.request_time)
-        self.assertAlmostEquals(wc.duration, wt.duration)
+        self.assertAlmostEqual(wc.local_mean, wt.local_mean)
+        self.assertAlmostEqual(wc.request_time, wt.request_time)
+        self.assertAlmostEqual(wc.duration, wt.duration)
         self.assertEqual(wc.validator_address, wt.validator_address)
         self.assertEqual(wc.block_digest, "Reader's Digest")
         self.assertIsNotNone(wc.signature)
@@ -212,12 +212,12 @@ class TestWaitCertificate(unittest.TestCase):
                 dumped.get('SerializedCertificate'),
                 dumped.get('Signature'))
 
-        self.assertEquals(
+        self.assertEqual(
             wc.previous_certificate_id,
             wc_copy.previous_certificate_id)
-        self.assertAlmostEquals(wc.local_mean, wc_copy.local_mean)
-        self.assertAlmostEquals(wc.request_time, wc_copy.request_time)
-        self.assertAlmostEquals(wc.duration, wc_copy.duration)
+        self.assertAlmostEqual(wc.local_mean, wc_copy.local_mean)
+        self.assertAlmostEqual(wc.request_time, wc_copy.request_time)
+        self.assertAlmostEqual(wc.duration, wc_copy.duration)
         self.assertEqual(wc.validator_address, wc_copy.validator_address)
         self.assertEqual(wc.block_digest, wc_copy.block_digest)
         self.assertEqual(wc.signature, wc_copy.signature)

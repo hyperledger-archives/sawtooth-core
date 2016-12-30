@@ -36,27 +36,27 @@ class TestNode(unittest.TestCase):
         ident = SigObj.generate_identifier(signingkey)
         node = Node(identifier=ident, signingkey=signingkey,
                     address=("localhost", 8800))
-        self.assertEquals(node.NetHost, "localhost")
-        self.assertEquals(node.NetPort, 8800)
-        self.assertEquals(node.Identifier, ident)
-        self.assertEquals(node.SigningKey, signingkey)
-        self.assertEquals(node.Name, ident[:8])
+        self.assertEqual(node.NetHost, "localhost")
+        self.assertEqual(node.NetPort, 8800)
+        self.assertEqual(node.Identifier, ident)
+        self.assertEqual(node.SigningKey, signingkey)
+        self.assertEqual(node.Name, ident[:8])
         self.assertFalse(node.is_peer)
         self.assertIsInstance(node.Estimator, RoundTripEstimator)
         self.assertIsInstance(node.MessageQ, TransmissionQueue)
-        self.assertEquals(node.Delay, node._fixeddelay)
+        self.assertEqual(node.Delay, node._fixeddelay)
 
     def test_node_netaddress(self):
         # Test NetAddress property
         node = self._create_node()
-        self.assertEquals(node.NetAddress, ("localhost", 8800))
+        self.assertEqual(node.NetAddress, ("localhost", 8800))
 
     def test_node_str(self):
         # Test overloaded string function
         node = self._create_node()
         # If not given a name, node.Name is first 8 letters of its Id
-        self.assertEquals(node.Name, node.Identifier[:8])
-        self.assertEquals(node.Name, str(node))
+        self.assertEqual(node.Name, node.Identifier[:8])
+        self.assertEqual(node.Name, str(node))
 
     def test_node_delay(self):
         # Test _randomdelay and _fixeddelay for node
@@ -69,7 +69,7 @@ class TestNode(unittest.TestCase):
         fdelay3 = node._fixeddelay()
         fdelay4 = node._fixeddelay()
         # The delay _fixeddelay should not change after node is created
-        self.assertEquals(fdelay3, fdelay4)
+        self.assertEqual(fdelay3, fdelay4)
 
     def test_node_initialize_stats(self):
         # Test Stats are initialized as expected
@@ -135,7 +135,7 @@ class TestNode(unittest.TestCase):
         now = time.time()
         # Add only 1 message
         node.enqueue_message(msg, now)
-        self.assertEquals(node.get_next_message(now + 5), msg)
+        self.assertEqual(node.get_next_message(now + 5), msg)
         now = time.time()
         node.enqueue_message(msg, now)
         node.enqueue_message(msg2, now)
@@ -148,7 +148,7 @@ class TestNode(unittest.TestCase):
         self.assertNotIn(node.get_next_message(now + 5),
                          node.MessageQ.Messages)
         # No messages left, should return None
-        self.assertEquals(node.get_next_message(now + 5), None)
+        self.assertEqual(node.get_next_message(now + 5), None)
 
     def test_node_message_delivered(self):
         # Test behavior if message is "delivered"
@@ -181,10 +181,10 @@ class TestNode(unittest.TestCase):
         # Bump ticks 10 times
         for i in range(10):
             node.bump_ticks()
-        self.assertEquals(node.MissedTicks, 10)
+        self.assertEqual(node.MissedTicks, 10)
         # reset the MissedTicks to zero
         node.reset_ticks()
-        self.assertEquals(node.MissedTicks, 0)
+        self.assertEqual(node.MissedTicks, 0)
 
     def test_node_reset_peer_stats(self):
         # Test that reset_peers does not break
@@ -201,7 +201,7 @@ class TestNode(unittest.TestCase):
                                "MessageQueueLength"])
         stats2 = str(node.Stats.get_stats(["Address", "MessageQueue",
                                            "MessageQueueLength"]))
-        self.assertEquals(stats1, stats2)
+        self.assertEqual(stats1, stats2)
         node.enqueue_message(msg, now)
         stats3 = (node.Stats.get_stats(["Address", "MessageQueue",
                                         "MessageQueueLength"]))
@@ -211,12 +211,12 @@ class TestNode(unittest.TestCase):
                                         "MessageQueueLength"]))
         # All values are either sample or value metrics that are not changed
         # by the reset_peer_stats
-        self.assertEquals(stats3, stats4)
+        self.assertEqual(stats3, stats4)
 
     def test_node_clone(self):
         # Test making a clone of the node, it should have the same
         # Identifier and NetAddress, but will be different node objects
         node = self._create_node()
         twin = node._clone()
-        self.assertEquals(node.Identifier, twin.Identifier)
-        self.assertEquals(node.NetAddress, twin.NetAddress)
+        self.assertEqual(node.Identifier, twin.Identifier)
+        self.assertEqual(node.NetAddress, twin.NetAddress)
