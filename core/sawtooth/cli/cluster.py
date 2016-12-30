@@ -84,7 +84,7 @@ def add_cluster_start_parser(subparsers, parent_parser):
         '--processors',
         '-P',
         help='the transaction processors that are part of node,'
-             'e.g. sawtooth-java-intkey-1.0, sawtooth-python-intkey-1.0',
+             'e.g. tp_intkey_python, tp_intkey_java',
         nargs='*')
 
     parser.add_argument('--wrap', nargs='?', const=None, default=False,
@@ -326,6 +326,7 @@ def do_cluster_stop(args):
     for node_name in node_names:
         print("Stopping: {}".format(node_name))
         node_command_generator.stop(node_name)
+
         # Update status of Nodes
         if node_name in nodes:
             nodes[node_name]["Status"] = "Stopped"
@@ -459,26 +460,25 @@ def do_cluster_extend(args):
 
 
 def do_cluster_logs(args):
-    state_file = os.path.join(os.path.expanduser('~'),
-                              '.sawtooth',
-                              'cluster',
-                              'state.yaml')
-    state = yaml.load(file(state_file))
+    state = load_state()
+
     if state['Manage'] == 'docker-tng':
+        prefix = 'sawtooth-tng-cluster-0'
+
         for node_name in args.node_names:
             try:
                 node_num = node_name[len('validator-'):]
-                processors = [p[len('sawtooth-'):]
-                              for p in state['Processors']]
-                containers = ['sawtooth-tng-cluster-0-' + p + node_num
-                              for p in processors]
-                containers += ['sawtooth-tng-cluster-0-validator-' + node_num]
+                processes = state['Processors'] + ['validator']
+                containers = ['-'.join([prefix, proc, node_num])
+                              for proc in processes]
+
                 for c in containers:
                     print("Logs for container: " + c + "of node: " + node_name)
                     cmd = ['docker', 'logs', c]
                     handle = subprocess.Popen(cmd)
                     while handle.returncode is None:
                         handle.poll()
+
             except subprocess.CalledProcessError as cpe:
                 raise CliException(str(cpe))
     else:
@@ -486,19 +486,9 @@ def do_cluster_logs(args):
 
 
 def do_cluster_stats(args):
-    # pylint: disable=redefined-variable-type
-    file_name = \
-        os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster',
-                     "state.yaml")
-    # Get current expected state
-    if os.path.isfile(file_name):
-        with open(file_name, 'r') as state_file:
-            state = yaml.load(state_file)
-    else:
-        raise CliException("Missing state file")
+    state = load_state()
 
     node_controller = get_node_controller(state, args)
-
     node_command_generator = SimpleNodeCommandGenerator()
 
     vnm = ValidatorNetworkManager(

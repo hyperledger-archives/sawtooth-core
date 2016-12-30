@@ -41,18 +41,20 @@ class DockerTNGNodeController(NodeController):
         :param state_dir (str): optionally path to state directory
         """
         if state_dir is None:
-            state_dir = \
-                os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster')
+            state_dir = os.path.join(os.path.expanduser("~"),
+                                     '.sawtooth', 'cluster')
 
         if not os.path.exists(state_dir):
             os.makedirs(state_dir)
 
         self._state_dir = state_dir
 
+        self._prefix = 'sawtooth-tng-cluster-0'
+
     def _construct_start_args(self, node_name):
         try:
             network_ls_args = ['docker', 'network', 'ls', '--filter',
-                               'NAME=sawtooth-tng-cluster0', '-q']
+                               'NAME={}'.format(self._prefix), '-q']
             network_output = subprocess.check_output(
                 network_ls_args).splitlines()
         except subprocess.CalledProcessError as e:
@@ -61,13 +63,14 @@ class DockerTNGNodeController(NodeController):
         if len(network_output) == 0:
             try:
                 network_args = ['docker', 'network', 'create', '-d',
-                                'bridge', 'sawtooth-tng-cluster0']
+                                'bridge', self._prefix]
                 n_output = subprocess.check_output(network_args)
                 for l in n_output.splitlines():
                     LOGGER.info(l)
             except subprocess.CalledProcessError as e:
                 raise CliException(str(e))
-        args = ['docker-compose', '-p', 'sawtoothtngcluster0' + node_name,
+        args = ['docker-compose', '-p',
+                self._prefix.replace('-', '') + node_name,
                 'up', '-d']
 
         return args
@@ -84,8 +87,10 @@ class DockerTNGNodeController(NodeController):
     def start(self, node_config):
         node_name = node_config.node_name
         http_port = node_config.http_port
+
         args = self._construct_start_args(node_name)
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
+
         compose_dir = tempfile.mkdtemp()
         compose_dict = {
             'version': '2',
@@ -93,28 +98,26 @@ class DockerTNGNodeController(NodeController):
                 'validator': {
                     'image': 'sawtooth-validator',
                     'expose': ['40000'],
-                    'networks': ['sawtooth-tng-cluster0', 'default'],
+                    'networks': [self._prefix, 'default'],
                     'volumes': ['/project:/project'],
-                    'container_name': 'sawtooth-tng-cluster-0-' + node_name
+                    'container_name': self._prefix + '-' + node_name
                 }
             },
-            'networks': {'sawtooth-tng-cluster0': {'external': True}}
+            'networks': {self._prefix: {'external': True}}
         }
 
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
         state = yaml.load(file(state_file_path))
+
         # add the processors
         node_num = node_name[len('validator-'):]
         for proc in state['Processors']:
-            service_name = proc[len('sawtooth-'):]
-
-            compose_dict['services'][service_name] = {
+            compose_dict['services'][proc] = {
                 'image': proc,
                 'expose': ['40000'],
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
-                'container_name': 'sawtooth-tng-cluster-0-'
-                                  + service_name + node_num
+                'container_name': '-'.join([self._prefix, proc, node_num])
             }
 
         # add the host:container port mapping for validator
@@ -145,11 +148,14 @@ class DockerTNGNodeController(NodeController):
     def stop(self, node_name):
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
         state = yaml.load(file(state_file_path))
+
         node_num = node_name[len('validator-'):]
-        processors = [p[len('sawtooth-'):] for p in state['Processors']]
-        containers = ['sawtooth-tng-cluster-0-' + p + node_num
-                      for p in processors]
-        containers += ['sawtooth-tng-cluster-0-validator-' + node_num]
+
+        processes = state['Processors'] + ['validator']
+
+        containers = ['-'.join([self._prefix, proc, node_num])
+                      for proc in processes]
+
         for c_name in containers:
             args = ['docker', 'stop', c_name]
             LOGGER.debug('stopping %s: %s', c_name, ' '.join(args))
@@ -205,7 +211,7 @@ class DockerTNGNodeController(NodeController):
             '{{.Names}},{{.ID}},{{.Status}},'
             '{{.Command}}',
             '--filter',
-            'network=sawtooth-tng-cluster0']
+            'network={}'.format(self._prefix)]
 
         try:
             output = subprocess.check_output(args)
@@ -222,7 +228,7 @@ class DockerTNGNodeController(NodeController):
                 continue
             parts = line.split(',')
             entries.append(_StateEntry(
-                name=parts[0].replace('sawtooth-tng-cluster-0-', ''),
+                name=parts[0].replace(self._prefix + '-', ''),
                 identifier=parts[1],
                 status=parts[2],
                 command=parts[3]))
