@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import csv
 import json
 import sys
@@ -105,8 +107,8 @@ def do_transaction(args):
     subcommands = ['list', 'show', 'status']
 
     if args.subcommand not in subcommands:
-        print 'Unknown sub-command, expecting one of {0}'.format(
-            subcommands)
+        print('Unknown sub-command, expecting one of {0}'.format(
+            subcommands))
         return
 
     if args.url is not None:
@@ -132,21 +134,21 @@ def do_transaction(args):
                 web_client.get_transaction(
                     transaction_id=args.transactionID,
                     field=args.key)
-            print pretty_print_dict(tsct_info)
+            print(pretty_print_dict(tsct_info))
             return
         elif args.subcommand == 'status':
             tsct_status = web_client.get_transaction_status(args.transactionID)
             if tsct_status == transaction.Status.committed:
-                print 'transaction committed'
+                print('transaction committed')
             elif tsct_status == transaction.Status.pending:
-                print 'transaction still uncommitted'
+                print('transaction still uncommitted')
             elif tsct_status == transaction.Status.unknown:
-                print 'unknown transaction'
+                print('unknown transaction')
             elif tsct_status == transaction.Status.failed:
-                print 'transaction failed to validate.'
+                print('transaction failed to validate.')
             else:
-                print 'transaction returned unexpected status code {0}'\
-                    .format(tsct_status)
+                print('transaction returned unexpected status code {0}'
+                      .format(tsct_status))
             return
 
     except MessageException as e:
@@ -202,14 +204,14 @@ def print_trans_info(args, web_client, tsctids):
             "{:^" + f_length + "}" for f_length
             in format_mapping.itervalues()
         ])
-        print format_string.format(*fields)
+        print(format_string.format(*fields))
         for txn_id in tsctids:
             trans_dict = get_trans_info(web_client,
                                         txn_id,
                                         txn_type,
                                         info_fields_mapping)
             if trans_dict is not None:
-                print format_string.format(*[trans_dict[f] for f in fields])
+                print(format_string.format(*[trans_dict[f] for f in fields]))
 
     elif args.format == 'csv':
         try:
@@ -236,9 +238,9 @@ def print_trans_info(args, web_client, tsctids):
             if trans_dict is not None:
                 json_dict.append(trans_dict)
         if args.format == 'json':
-            print json.dumps(json_dict)
+            print(json.dumps(json_dict))
         else:
-            print yaml.dump(json_dict, default_flow_style=False)
+            print(yaml.dump(json_dict, default_flow_style=False))
 
     else:
         raise CliException(

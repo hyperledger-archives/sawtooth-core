@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 from collections import OrderedDict
 import json
 import os
@@ -287,7 +290,7 @@ class NetworkConfig(object):
 
     def print_config_list(self):
         val = self.get_config_list()
-        print json.dumps(val, indent=4)
+        print(json.dumps(val, indent=4))
 
 
 def get_default_network_config_obj(num_nodes,

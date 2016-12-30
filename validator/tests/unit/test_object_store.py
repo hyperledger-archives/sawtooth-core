@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import unittest
 
 from random import choice
@@ -45,7 +47,7 @@ class TestSawtoothObjectStore(unittest.TestCase):
         self.startTime = time.time()
 
     def tearDown(self):
-        print "%s: %.3f" % (self.id(), time.time() - self.startTime)
+        print("%s: %.3f" % (self.id(), time.time() - self.startTime))
 
     def _test_set_and_lookup(self, store):
         for n, val in zip(self.names, self.values):
@@ -241,7 +243,7 @@ class TestHeterogeneousStore(unittest.TestCase):
         self.startTime = time.time()
 
     def tearDown(self):
-        print "%s: %.3f" % (self.id(), time.time() - self.startTime)
+        print("%s: %.3f" % (self.id(), time.time() - self.startTime))
 
     def _test_lookup_by_all(self, objectstore):
         for name, val in zip(self.obj_type1_names, self.obj_type1_values):

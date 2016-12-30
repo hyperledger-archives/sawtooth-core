@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 import copy
 import numpy
 
@@ -55,10 +58,10 @@ class AdjacencyMatrix(object):
         if self.__mat is not None:
             for row in self.__mat:
                 for col in row:
-                    print '{:3}'.format(col),
-                print
+                    print('{:3}'.format(col), end=' ')
+                print()
         else:
-            print self.__mat
+            print(self.__mat)
 
 
 class AdjacencyMatrixAnimation(object):

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import os
 import random
 import shutil
@@ -93,7 +95,7 @@ class TestXoCli(unittest.TestCase):
             game_found = False
             for line in out.getvalue().split('\n'):
                 if line.startswith("{} ".format(game_name)):
-                    print line
+                    print(line)
                     game_found = True
             self.assertTrue(game_found)
 

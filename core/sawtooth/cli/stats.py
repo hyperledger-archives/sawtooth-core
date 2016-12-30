@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import signal
 import traceback
 
@@ -176,9 +178,9 @@ def reactor_startup(stats_interval, endpoint_interval, stats_man, ep_man):
 
 
 def handle_loop_error(reason, other_reason):
-    print "stopping in main due to error in {}".format(other_reason)
-    print reason
-    print "stopping sawtooth stats"
+    print("stopping in main due to error in {}".format(other_reason))
+    print(reason)
+    print("stopping sawtooth stats")
     reactor.stop()
 
 
@@ -247,10 +249,10 @@ def run_stats(url, config_opts=None, config_dict=None):
             # was called; call in try block to avoid throwing additional error
             try:
                 curses.endwin()
-                print "curses window existed"
+                print("curses window existed")
             except curses.error as ce:
-                print "curses window did not exist"
-                print ce
+                print("curses window did not exist")
+                print(ce)
         raise e
 
 

@@ -15,6 +15,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
 
 import argparse
 import ConfigParser
@@ -222,7 +223,7 @@ def do_init(args, config):
         username = args.username
 
     config.set('DEFAULT', 'username', username)
-    print "set username: {}".format(username)
+    print("set username: {}".format(username))
 
     save_config(config)
 
@@ -243,12 +244,12 @@ def do_init(args, config):
             addr = signing.generate_identifier(pubkey)
 
             with open(wif_filename, "w") as wif_fd:
-                print "writing file: {}".format(wif_filename)
+                print("writing file: {}".format(wif_filename))
                 wif_fd.write(encoded)
                 wif_fd.write("\n")
 
             with open(addr_filename, "w") as addr_fd:
-                print "writing file: {}".format(addr_filename)
+                print("writing file: {}".format(addr_filename))
                 addr_fd.write(addr)
                 addr_fd.write("\n")
         except IOError, ioe:
@@ -337,7 +338,7 @@ def do_join(args, config):
                 os.remove(data_file)
         os.rename(data_file + ".new", data_file)
     else:
-        print "Board and nonces already defined for game, reusing..."
+        print("Board and nonces already defined for game, reusing...")
 
     layout = BoardLayout.deserialize(data['games'][name]['layout'])
     nonces = data['games'][name]['nonces']
@@ -359,7 +360,7 @@ def do_list(args, config):
     state = client.get_all_store_objects()
 
     fmt = "%-15s %-15.15s %-15.15s %s"
-    print fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'STATE')
+    print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'STATE'))
     for name in state:
         if 'Player1' in state[name]:
             player1 = state[name]['Player1']
@@ -370,7 +371,7 @@ def do_list(args, config):
         else:
             player2 = ''
         game_state = state[name]['State']
-        print fmt % (name, player1, player2, game_state)
+        print(fmt % (name, player1, player2, game_state))
 
 
 def do_show(args, config):
@@ -397,10 +398,10 @@ def do_show(args, config):
         player2 = game['Player2']
     game_state = game['State']
 
-    print "GAME:     : {}".format(name)
-    print "PLAYER 1  : {}".format(player1)
-    print "PLAYER 2  : {}".format(player2)
-    print "STATE     : {}".format(game_state)
+    print("GAME:     : {}".format(name))
+    print("PLAYER 1  : {}".format(player1))
+    print("PLAYER 2  : {}".format(player2))
+    print("STATE     : {}".format(game_state))
 
     # figure out the proper user's target board, given the addr
     wif_filename = config.get('DEFAULT', 'key_file')
@@ -447,8 +448,8 @@ def do_show(args, config):
         target_board = game[target_board_name]
         size = len(target_board)
 
-        print
-        print "  Target Board"
+        print()
+        print("  Target Board")
         print_board(target_board, size, is_target_board=True,
                     pending_on_target_board=will_be_on_target_board,
                     last_fire=last_fire)
@@ -458,8 +459,8 @@ def do_show(args, config):
         board = layout.render()
         size = len(board)
 
-        print
-        print "  Secret Board"
+        print()
+        print("  Secret Board")
         print_board(board, size, is_target_board=False,
                     pending_on_target_board=will_be_on_target_board,
                     last_fire=last_fire)
@@ -467,39 +468,39 @@ def do_show(args, config):
 
 def print_board(board, size, is_target_board=True,
                 pending_on_target_board=False, last_fire=None):
-    print ''.join(["-"] * (size * 3 + 3))
-    print "  ",
+    print(''.join(["-"] * (size * 3 + 3)))
+    print("  ", end=' ')
     for i in xrange(0, size):
-        print " {}".format(chr(ord('A') + i)),
-    print
+        print(" {}".format(chr(ord('A') + i)), end=' ')
+    print()
 
     for row_idx, row in enumerate(xrange(0, size)):
-        print "%2d" % (row + 1),
+        print("%2d" % (row + 1), end=' ')
         for col_idx, space in enumerate(board[row]):
             if is_target_board:
                 if pending_on_target_board and last_fire is not None and \
                         row_idx == last_fire[0] and col_idx == last_fire[1]:
 
-                    print " {}".format(
+                    print(" {}".format(
                         space.replace('?', '*')
-                    ),
+                    ), end=' ')
                 else:
-                    print " {}".format(
+                    print(" {}".format(
                         space.replace('?', ' ')
                         .replace('M', '.').replace('H', 'X')
-                    ),
+                    ), end=' ')
 
             else:
                 if not pending_on_target_board and last_fire is not None and \
                         row_idx == last_fire[0] and col_idx == last_fire[1]:
-                    print " {}".format(
+                    print(" {}".format(
                         '*'
-                    ),
+                    ), end=' ')
                 else:
-                    print " {}".format(
+                    print(" {}".format(
                         space.replace('-', ' ')
-                    ),
-        print
+                    ), end=' ')
+        print()
 
 
 def do_genstats(args, config):
@@ -517,23 +518,23 @@ def do_genstats(args, config):
                 if board[row][col] != '-':
                     count_board[row][col] += 1
 
-    print "Percentages Board"
-    print "-----------------"
+    print("Percentages Board")
+    print("-----------------")
 
     # Print the board of percentages.
-    print "  ",
+    print("  ", end=' ')
     for i in xrange(0, size):
-        print "  {}".format(chr(ord('A') + i)),
-    print
+        print("  {}".format(chr(ord('A') + i)), end=' ')
+    print()
 
     for row in xrange(0, size):
-        print "%2d" % (row + 1),
+        print("%2d" % (row + 1), end=' ')
         for space in count_board[row]:
-            print "%3.0f" % (float(space) / float(count) * 100,),
-        print
+            print("%3.0f" % (float(space) / float(count) * 100,), end=' ')
+        print()
 
-    print
-    print "Total Games Created: {}".format(count)
+    print()
+    print("Total Games Created: {}".format(count))
 
 
 def load_config():
@@ -621,13 +622,13 @@ def main_wrapper():
     try:
         main()
     except BattleshipException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except InvalidTransactionError as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except ClientException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         pass

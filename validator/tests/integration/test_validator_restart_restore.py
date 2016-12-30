@@ -1,3 +1,6 @@
+
+from __future__ import print_function
+
 import traceback
 import unittest
 import os
@@ -30,7 +33,7 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             txn_intv = 0
             timeout = 20
 
-            print "Testing transaction load."
+            print("Testing transaction load.")
             test = IntKeyLoadTest()
             urls = self.urls
             self.assertEqual(5, len(urls))
@@ -49,15 +52,15 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
                                                standard=5)
             self.assertTrue(convergent, "All validators are "
                                         "not on the same chain.")
-            print "all validators are on the same chain"
+            print("all validators are on the same chain")
             sit_rep(self.urls, verbosity=1)
             report_before_shutdown = sit_rep(self.urls, verbosity=1)
             validator_report = report_before_shutdown[2]
             valid_dict_value = validator_report['Status']
             validator_blocks_shutdown = valid_dict_value['Blocks']
-            print "validator_blocks", validator_blocks_shutdown
+            print("validator_blocks", validator_blocks_shutdown)
 
-            print "turn off entire validator network"
+            print("turn off entire validator network")
             nodes_names = self.node_controller.get_node_names()
             for node in nodes_names:
                 self.node_controller.stop(node)
@@ -65,7 +68,7 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             while len(self.node_controller.get_node_names()) > 0:
                 if to.is_timed_out():
                     self.fail("Timed Out")
-            print "relaunch validator 0"
+            print("relaunch validator 0")
             self.node_controller.start(self.nodes[0])
             to = TimeOut(120)
             while len(self.node_controller.get_node_names()) < 1:
@@ -85,7 +88,7 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
             validator_report = report_after_relaunch[0]
             valid_dict_value = validator_report['Status']
             validator_blocks_relaunch = valid_dict_value['Blocks']
-            print "validator_blocks_relaunch", validator_blocks_relaunch
+            print("validator_blocks_relaunch", validator_blocks_relaunch)
 
             # the length of post-shutdown validator blocks might be bigger
             # than the length of pre-shutdown validator blocks
@@ -95,10 +98,10 @@ class TestValidatorShutdownRestartRestore(unittest.TestCase):
                                  "mismatch in post-shutdown validator blocks. "
                                  "Validator didn't restore fr local db")
                 break
-            print "relaunched validator restored from local database"
+            print("relaunched validator restored from local database")
 
         finally:
-            print "restart validators "
+            print("restart validators ")
             for node in self.nodes:
                 self.node_controller.start(node)
             to = TimeOut(120)

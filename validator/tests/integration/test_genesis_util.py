@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 import json
 import logging
 import os
@@ -40,11 +43,11 @@ DISABLE_POET1_SGX = True \
 @unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestGenesisUtil(unittest.TestCase):
     def extend_genesis_util(self, overrides):
-        print
+        print()
         vnm = None
         try:
             self._node_ctrl = None
-            print 'creating', str(self.__class__.__name__)
+            print('creating', str(self.__class__.__name__))
             # set up our nodes (suite-internal interface)
             self._node_ctrl = WrappedNodeController(SubprocessNodeController())
             cfg = overrides
@@ -64,7 +67,7 @@ class TestGenesisUtil(unittest.TestCase):
             self.urls = [
                 'http://localhost:%s' % x.http_port for x in self._nodes]
             # Make genesis block
-            print 'creating genesis block...'
+            print('creating genesis block...')
             self.assertFalse(os.path.exists(gblock_file))
             self._nodes[0].genesis = True
             self._node_ctrl.create_genesis_block(self._nodes[0])
@@ -78,7 +81,7 @@ class TestGenesisUtil(unittest.TestCase):
             head = genesis_dat['GenesisId']
             # Verify genesis tool efficacy on a minimal network
             # Launch network (node zero will trigger bootstrapping)
-            print 'launching network...'
+            print('launching network...')
             for x in self._nodes:
                 self._node_ctrl.start(x)
 
@@ -87,11 +90,11 @@ class TestGenesisUtil(unittest.TestCase):
             blk_lists = None
             prog_str = 'testing root extension (expect root: %s)' % head
             with Progress(prog_str) as p:
-                print
+                print()
                 while not to.is_timed_out() and blk_lists is None:
                     try:
                         blk_lists = get_blocklists(['http://localhost:8800'])
-                        print 'block_lists: %s' % blk_lists
+                        print('block_lists: %s' % blk_lists)
                         if len(blk_lists) < 1 or len(blk_lists[0]) < 2:
                             blk_lists = None
                     except MessageException as e:
@@ -104,7 +107,7 @@ class TestGenesisUtil(unittest.TestCase):
             # ...verify general convergence
             to = TimeOut(32)
             with Progress('testing root convergence') as p:
-                print
+                print()
                 while (is_convergent(self.urls, tolerance=1, standard=1)
                        is False and not to.is_timed_out()):
                     time.sleep(2)
@@ -113,9 +116,9 @@ class TestGenesisUtil(unittest.TestCase):
             blk_lists = get_blocklists(['http://localhost:8800'])
             root = blk_lists[0][0]
             self.assertEqual(head, root)
-            print 'network converged on root: %s' % root
+            print('network converged on root: %s' % root)
         finally:
-            print 'destroying', str(self.__class__.__name__)
+            print('destroying', str(self.__class__.__name__))
             if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
                 # Shut down the network
                 with Progress("terminating network") as p:
@@ -130,10 +133,10 @@ class TestGenesisUtil(unittest.TestCase):
                 # force kill anything left over
                 for node_name in self._node_ctrl.get_node_names():
                     try:
-                        print "%s still 'up'; sending kill..." % node_name
+                        print("%s still 'up'; sending kill..." % node_name)
                         self._node_ctrl.kill(node_name)
                     except Exception as e:
-                        print e.message
+                        print(e.message)
                 self._node_ctrl.archive(self.__class__.__name__)
                 self._node_ctrl.clean()
 

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import tarfile
 import time
 import os
@@ -82,12 +84,12 @@ class ValidatorCollectionController(NodeController):
                              log_config,
                              static_node=True,
                              )
-        print 'launching %s...' % (v.name),
+        print('launching %s...' % (v.name), end=' ')
         v.launch(launch, daemon=daemon, delay=delay)
         if probe_seconds > 0:
             self.probe_validator(v, max_time=probe_seconds)
         else:
-            print
+            print()
         self.hdls[idx] = v
         return v
 
@@ -115,7 +117,7 @@ class ValidatorCollectionController(NodeController):
                 try:
                     success = validator.is_started()
                 except Exception as e:
-                    print e.message
+                    print(e.message)
                 p.step()
                 time.sleep(1)
 
@@ -134,7 +136,7 @@ class ValidatorCollectionController(NodeController):
         cfg = self.net_config.get_node_cfg(idx)
         v_name = cfg['NodeName']
         v = self.hdls[idx]
-        print 'sending %s to %s' % (sig, v_name)
+        print('sending %s to %s' % (sig, v_name))
         if v.is_running():
             if sig == 'SIGTERM':
                 v.shutdown(term=True)
@@ -168,10 +170,11 @@ class ValidatorCollectionController(NodeController):
                 raise ValidatorManagerException(fail_msg)
             else:
                 timeout = max(4, timeout)
-                print '%s; trying SIGKILL, timeout %s...' % (fail_msg, timeout)
+                print('{}; trying SIGKILL, timeout {}...'
+                      .format(fail_msg, timeout))
                 self.validator_shutdown(idx, 'SIGKILL', timeout, force)
         if success is True:
-            print "%s shut down %.2f seconds after %s" % (v_name, dur, sig)
+            print("%s shut down %.2f seconds after %s" % (v_name, dur, sig))
         self.hdls[idx] = None
 
     def wait_for_registration(self, validators, validator, max_time=None):

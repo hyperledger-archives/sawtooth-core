@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import time
 import json
 import collections
@@ -83,13 +85,13 @@ class ValidatorCommunications(object):
         self.error_callback(failure)
 
     def _completion_default(self, data):
-        print "ValidatorCommunications.get_request() " \
-              "default completion handler"
-        print json.dumps(data, indent=4)
+        print("ValidatorCommunications.get_request() "
+              "default completion handler")
+        print(json.dumps(data, indent=4))
 
     def _error_default(self):
-        print "ValidatorCommunications.get_request() " \
-              "default error handler"
+        print("ValidatorCommunications.get_request() "
+              "default error handler")
 
 
 class StatsModule(object):
@@ -302,7 +304,7 @@ class StatsCollector(object):
 
     def pprint_stats(self):
         p_stats = self.get_data_as_dict()
-        print json.dumps(p_stats, indent=4)
+        print(json.dumps(p_stats, indent=4))
 
 
 def get_public_attrs_as_dict(class_instance):

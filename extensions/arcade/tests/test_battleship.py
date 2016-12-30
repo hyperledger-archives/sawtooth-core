@@ -1,3 +1,6 @@
+
+from __future__ import print_function
+
 import unittest
 
 import os
@@ -29,7 +32,7 @@ class TestBattleshipCommands(unittest.TestCase):
             try:
                 os.remove(f)
             except OSError as ose:
-                print "Could not remove file: {}".format(ose)
+                print("Could not remove file: {}".format(ose))
 
     def _call_battleship(self, args):
 

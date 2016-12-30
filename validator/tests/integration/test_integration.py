@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import unittest
 import os
 
@@ -29,7 +31,7 @@ class TestIntegration(unittest.TestCase):
         self.urls = urls
 
     def test_intkey_load_ext(self):
-        print "Testing transaction load."
+        print("Testing transaction load.")
         test = IntKeyLoadTest()
         test.setup(self.urls, 10)
         test.run(1)
@@ -37,7 +39,7 @@ class TestIntegration(unittest.TestCase):
         test.validate()
 
     def test_missing_dependencies(self):
-        print "Testing limit of missing dependencies."
+        print("Testing limit of missing dependencies.")
         test = IntKeyLoadTest()
         test.setup(self.urls, 10)
         test.run(1)

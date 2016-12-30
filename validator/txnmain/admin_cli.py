@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import argparse
 import cmd
 import json
@@ -87,7 +89,7 @@ class ClientController(cmd.Cmd):
                 pretty_print_dict(result)
 
         except MessageException as me:
-            print me
+            print(me)
 
     # =================================================================
     # COMMANDS
@@ -102,7 +104,7 @@ class ClientController(cmd.Cmd):
 
         pargs = args.split()
         if len(pargs) == 0:
-            print 'missing subcommand url|nodeid'
+            print('missing subcommand url|nodeid')
             return
 
         try:
@@ -114,7 +116,7 @@ class ClientController(cmd.Cmd):
                 options = parser.parse_args(pargs)
 
                 self.BaseURL = options.url
-                print "server URL set to {0}".format(self.BaseURL)
+                print("server URL set to {0}".format(self.BaseURL))
                 return
 
             elif pargs[0] == 'nodeid':
@@ -142,15 +144,15 @@ class ClientController(cmd.Cmd):
                                         identifier=identifier,
                                         signingkey=signingkey,
                                         name=name)
-                print "local id set to {0}".format(self._local_node)
+                print("local id set to {0}".format(self._local_node))
                 return
 
             else:
-                print "unknown subcommand; {0}".format(pargs[0])
+                print("unknown subcommand; {0}".format(pargs[0]))
                 return
 
         except Exception as e:
-            print 'an error occured processing {0}: {1}'.format(args, str(e))
+            print('an error occured processing {0}: {1}'.format(args, str(e)))
             return
 
     def do_state(self, args):
@@ -163,7 +165,7 @@ class ClientController(cmd.Cmd):
 
         pargs = args.split()
         if len(pargs) == 0:
-            print 'missing subcommand: fetch|keys|value'
+            print('missing subcommand: fetch|keys|value')
             return
 
         try:
@@ -180,9 +182,9 @@ class ClientController(cmd.Cmd):
                         key='*')
             elif pargs[0] == 'keys':
                 try:
-                    print self._current_state.keys()
+                    print(list(self._current_state.keys()))
                 except:
-                    print '[]'
+                    print('[]')
 
             elif pargs[0] == 'value':
                 parser = argparse.ArgumentParser()
@@ -193,10 +195,10 @@ class ClientController(cmd.Cmd):
                 while pathargs:
                     value = value.get(pathargs.pop(0))
 
-                print value
+                print(value)
 
         except Exception as e:
-            print 'an error occured processing {0}: {1}'.format(args, str(e))
+            print('an error occured processing {0}: {1}'.format(args, str(e)))
             return
 
     def do_txn(self, args):
@@ -212,7 +214,8 @@ class ClientController(cmd.Cmd):
         for expression in expressions:
             match = pattern.match(expression)
             if not match:
-                print 'unable to parse the transaction; {0}'.format(expression)
+                print('unable to parse the transaction; {0}'
+                      .format(expression))
                 return
 
             update = integer_key.Update()
@@ -237,7 +240,7 @@ class ClientController(cmd.Cmd):
 
         pargs = args.split()
         if len(pargs) == 0:
-            print 'missing subcommand: reset|dump'
+            print('missing subcommand: reset|dump')
             return
 
         try:
@@ -262,10 +265,10 @@ class ClientController(cmd.Cmd):
                 return
 
         except Exception as e:
-            print 'an error occured processing {0}: {1}'.format(args, str(e))
+            print('an error occured processing {0}: {1}'.format(args, str(e)))
             return
 
-        print 'unknown nodestats command {0}'.format(args)
+        print('unknown nodestats command {0}'.format(args))
 
     def do_peerstats(self, args):
         """
@@ -276,7 +279,7 @@ class ClientController(cmd.Cmd):
 
         pargs = args.split()
         if len(pargs) == 0:
-            print 'missing subcommand: reset|dump'
+            print('missing subcommand: reset|dump')
             return
 
         try:
@@ -301,10 +304,10 @@ class ClientController(cmd.Cmd):
                 return
 
         except Exception as e:
-            print 'an error occured processing {0}: {1}'.format(args, str(e))
+            print('an error occured processing {0}: {1}'.format(args, str(e)))
             return
 
-        print 'unknown peerstats command {0}'.format(args)
+        print('unknown peerstats command {0}'.format(args))
 
     def do_ping(self, args):
         """
@@ -448,8 +451,8 @@ def log_configuration(cfg):
                     log_dic = json.load(log_config_fd)
                     logging.config.dictConfig(log_dic)
             except IOError, ex:
-                print >>sys.stderr, "Could not read log config: {}" \
-                    .format(str(ex))
+                print("Could not read log config: {}"
+                      .format(str(ex)), file=sys.stderr)
                 sys.exit(1)
         elif log_config_file.split(".")[-1] == "yaml":
             try:
@@ -457,12 +460,12 @@ def log_configuration(cfg):
                     log_dic = yaml.load(log_config_fd)
                     logging.config.dictConfig(log_dic)
             except IOError, ex:
-                print >>sys.stderr, "Could not read log config: {}"\
-                    .format(str(ex))
+                print("Could not read log config: {}"
+                      .format(str(ex)), file=sys.stderr)
                 sys.exit(1)
         else:
-            print >>sys.stderr, "LogConfigFile type not supported: {}"\
-                .format(cfg['LogConfigFile'])
+            print("LogConfigFile type not supported: {}"
+                  .format(cfg['LogConfigFile']), file=sys.stderr)
             sys.exit(1)
 
     else:
@@ -478,20 +481,20 @@ def main(args=sys.argv[1:]):
     try:
         cfg = get_configuration(args)
     except ConfigFileNotFound, e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
     except InvalidSubstitutionKey, e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
     if 'LogLevel' in cfg:
-        print >>sys.stderr, "LogLevel is no longer supported, use " \
-            "LogConfigFile instead"
+        print("LogLevel is no longer supported, use "
+              "LogConfigFile instead", file=sys.stderr)
         sys.exit(1)
 
     if 'LogFile' in cfg:
-        print >>sys.stderr, "LogFile is no longer supported, use " \
-            "LogConfigFile instead"
+        print("LogFile is no longer supported, use "
+              "LogConfigFile instead", file=sys.stderr)
         sys.exit(1)
 
     log_configuration(cfg)

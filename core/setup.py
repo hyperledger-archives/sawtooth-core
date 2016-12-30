@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import os
 import shutil
 import subprocess
@@ -37,12 +39,12 @@ def auto_version(default, strict):
         msg = "setup.py and (bumped?) git describe versions differ: {} != {}"\
             .format(default, parts[0])
         if strict:
-            print >> sys.stderr, "ERROR: " + msg
+            print("ERROR: " + msg, file=sys.stderr)
             sys.exit(1)
         else:
-            print >> sys.stderr, "WARNING: " + msg
-            print >> sys.stderr, "WARNING: using setup.py version {}".format(
-                default)
+            print("WARNING: " + msg, file=sys.stderr)
+            print("WARNING: using setup.py version {}".format(
+                default), file=sys.stderr)
             parts[0] = default
 
     if len(parts) == 2:

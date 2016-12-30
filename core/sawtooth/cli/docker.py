@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import logging
 import os
 import tempfile
@@ -81,11 +83,11 @@ def do_docker_build(args):
     if args.all:
         for image in ['sawtooth-build-ubuntu-xenial',
                       'sawtooth-dev-ubuntu-xenial']:
-            print "Building docker image: {}".format(image)
+            print("Building docker image: {}".format(image))
             _build_docker_image(image)
     elif args.filename is not None:
         for image in args.filename:
             _build_docker_image(image)
-            print "Building docker image: {}".format(image)
+            print("Building docker image: {}".format(image))
     else:
-        print "Specify a dockerfile or use --all"
+        print("Specify a dockerfile or use --all")
