@@ -22,6 +22,7 @@ from sawtooth_validator.journal.journal import \
 from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockPublisher as TestModePublisher
+from sawtooth_validator.protobuf.batch_pb2 import Batch
 from tests.unit3.block_tree_manager import BlockTreeManager
 from tests.unit3.gossip_mock import GossipMock
 from tests.unit3.transaction_executor_mock import TransactionExecutorMock
@@ -41,16 +42,17 @@ class TestBlockPublisher(unittest.TestCase):
         publisher = BlockPublisher(
             consensus=TestModePublisher(),
             transaction_executor=TransactionExecutorMock(),
-            send_message=gossip.send_message)
+            send_message=gossip.send_message,
+            squash_handler=None)
 
         LOGGER.info("1")
 
         # initial load of existing state
-        publisher.on_chain_updated(self.blocks.chain_head, [], [])
+        publisher.on_chain_updated(self.blocks.chain_head.block, [], [])
 
         LOGGER.info("2")
         # repeat as necessary
-        batch = {}
+        batch = Batch()
         publisher.on_batch_received(batch)
         LOGGER.info("3")
         # current dev_mode consensus always claims blocks when asked.
@@ -61,7 +63,7 @@ class TestBlockPublisher(unittest.TestCase):
         LOGGER.info(self.blocks)
 
         # repeat as necessary
-        batch = {}
+        batch = Batch()
         publisher.on_batch_received(batch)
 
         publisher.on_check_publish_block()

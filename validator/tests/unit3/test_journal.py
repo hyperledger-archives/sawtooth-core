@@ -20,8 +20,8 @@ import unittest
 
 from sawtooth_validator.journal.consensus.test_mode \
     import test_mode_consensus
-
 from sawtooth_validator.journal.journal import Journal
+from sawtooth_validator.protobuf.batch_pb2 import Batch
 from tests.unit3.gossip_mock import GossipMock
 from tests.unit3.transaction_executor_mock import TransactionExecutorMock
 from tests.unit3.utils import TimeOut
@@ -46,7 +46,6 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         LOGGER.info("test_publish_block")
-
         block_store = {}
         journal = None
         try:
@@ -54,7 +53,9 @@ class TestJournal(unittest.TestCase):
                 consensus=test_mode_consensus,
                 block_store=block_store,
                 send_message=self.gossip.send_message,
-                transaction_executor=self.txn_executor)
+                transaction_executor=self.txn_executor,
+                squash_handler=None,
+                first_state_root="000000")
 
             self.gossip.on_batch_received = \
                 journal.on_batch_received
@@ -66,9 +67,7 @@ class TestJournal(unittest.TestCase):
             journal.start()
 
             # feed it a batch
-            batch = {}  # for testing purposes we don't need/want to use
-            # real batches here, since we are testing the journal parts
-            # not the transaction processing parts.
+            batch = Batch()
             journal.on_batch_received(batch)
 
             # wait for a block message to arrive should be soon

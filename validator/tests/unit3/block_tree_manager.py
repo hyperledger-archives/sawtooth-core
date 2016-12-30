@@ -15,6 +15,8 @@
 
 from concurrent.futures import Executor
 import pprint
+import random
+import string
 
 from sawtooth_validator.journal.journal import \
     BlockPublisher
@@ -22,18 +24,24 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockPublisher as TestModePublisher
 
-from sawtooth_validator.server.block import Block, BlockState, BlockStatus
-
+from sawtooth_validator.protobuf.block_pb2 import Block, BlockState, \
+    BlockStatus
 from tests.unit3.transaction_executor_mock import TransactionExecutorMock
 
 pp = pprint.PrettyPrinter(indent=4)
+
+
+def _generate_id(length=16):
+    return ''.join(
+        random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+        for _ in range(length))
 
 
 class BlockTreeManager(object):
     def block_def(self,
                   add_to_store=False,
                   batch_count=0,
-                  status=BlockStatus.Unknown,
+                  status=BlockStatus.Value('Unknown'),
                   invalid_consensus=False,
                   invalid_batch=False,
                   invalid_signature=False,
@@ -55,10 +63,11 @@ class BlockTreeManager(object):
         self.block_publisher = BlockPublisher(
             consensus=TestModePublisher(),
             transaction_executor=TransactionExecutorMock(),
-            send_message=self._send_message)
+            send_message=self._send_message,
+            squash_handler=None)
 
         block = self.generate_block(add_to_store=True,
-                                    status=BlockStatus.Valid)
+                                    status=BlockStatus.Value('Valid'))
         self.set_chain_head(block)
 
     def _send_message(self, block):
@@ -96,12 +105,22 @@ class BlockTreeManager(object):
     def generate_block(self, previous_block=None,
                        add_to_store=False,
                        batch_count=0,
-                       status=BlockStatus.Unknown,
+                       status=BlockStatus.Value('Unknown'),
                        invalid_consensus=False,
                        invalid_batch=False,
                        invalid_signature=False,
                        weight=1):
+
         previous = self._get_block(previous_block)
+        if previous is None:
+            previous = Block(block_num=0,
+                             previous_block_id="0000000000000000",
+                             id=_generate_id())
+            previous_block_state = BlockState(
+                block=previous,
+                weight=0,
+                status=BlockStatus.Value("Valid"))
+            self.block_store[previous.id] = previous_block_state
         self.block_publisher.on_chain_updated(previous)
 
         while self._new_block is None:
@@ -114,7 +133,7 @@ class BlockTreeManager(object):
             block.signature = "BAD"
 
         if add_to_store:
-            block_state = BlockState(block)
+            block_state = BlockState(block=block, weight=0)
             block_state.status = status
             self.block_store[block.id] = block_state
 

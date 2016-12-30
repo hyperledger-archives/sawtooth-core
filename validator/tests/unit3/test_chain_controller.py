@@ -50,14 +50,15 @@ class TestChainController(unittest.TestCase):
             send_message=self.gossip.send_message,
             executor=self.executor,
             transaction_executor=TransactionExecutorMock(),
-            on_chain_updated=chain_updated)
+            on_chain_updated=chain_updated,
+            squash_handler=None)
 
     def test_simple_case(self):
         # TEST Run the simple case
         block_1 = self.blocks.generate_block(self.blocks.chain_head)
         self.chain_ctrl.on_block_received(block_1)
         self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.id == block_1.id)
+        assert (self.chain_ctrl.chain_head.block.id == block_1.id)
 
     def test_alternate_genesis(self):
         # TEST Run generate and alternate genesis block
@@ -67,16 +68,16 @@ class TestChainController(unittest.TestCase):
         for b in self.blocks.generate_chain(other_genesis, 5):
             self.chain_ctrl.on_block_received(b)
             self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.id == head.id)
+        assert (self.chain_ctrl.chain_head.block.id == head.block.id)
 
     def test_bad_block_signature(self):
         # TEST Bad block extending current chain
         # Bad due to signature
         head = self.blocks.chain_head
-        block_bad = self.blocks.generate_block(self.blocks.chain_head,
+        block_bad = self.blocks.generate_block(self.blocks.chain_head.block,
                                                invalid_signature=True)
         self.chain_ctrl.on_block_received(block_bad)
-        assert (self.chain_ctrl.chain_head.id == head.id)
+        assert (self.chain_ctrl.chain_head.block.id == head.block.id)
 
     def test_bad_block_consensus(self):
         # Bad due to consensus
@@ -99,7 +100,7 @@ class TestChainController(unittest.TestCase):
         self.gossip.clear()
         self.chain_ctrl.on_block_received(new_blocks[0])
         self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.id == new_blocks[1].id)
+        assert (self.chain_ctrl.chain_head.block.id == new_blocks[1].id)
 
     def test_missing_block_invalid_head(self):
         # TEST Missing block G->missing->B

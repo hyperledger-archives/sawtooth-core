@@ -14,6 +14,12 @@
 # ------------------------------------------------------------------------------
 
 
+class BatchStatus(object):
+    def __init__(self, status, state_hash):
+        self.valid = status
+        self.state_hash = state_hash
+
+
 class SchedulerMock(object):
     def add_batch(self, batch, state_hash=None):
         pass
@@ -22,14 +28,17 @@ class SchedulerMock(object):
         pass
 
     def complete(self):
-        pass
+        return True
+
+    def batch_status(self, batch_id):
+        return BatchStatus(True, "0000000000")
 
 
 class TransactionExecutorMock(object):
     def __init__(self):
         self.messages = []
 
-    def create_scheduler(self):
+    def create_scheduler(self, squash_handler, first_state_root):
         return SchedulerMock()
 
     def execute(self, scheduler, state_hash=None):
