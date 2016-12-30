@@ -19,16 +19,26 @@ import queue
 from threading import RLock
 from threading import Thread
 import time
+import copy
+import random
+import string
 
-from sawtooth_validator.server.block import BlockState, Block, \
-    BlockStatus, NullIdentifier
-from sawtooth_validator.scheduler.serial import SerialScheduler
-
+from sawtooth_validator.scheduler.serial import SerialScheduler, SchedulerError
 from sawtooth_validator.server.messages import BlockRequestMessage, \
     BlockMessage
-
+from sawtooth_validator.protobuf.block_pb2 import Block, BlockState,\
+    BlockStatus
 
 LOGGER = logging.getLogger(__name__)
+
+
+NullIdentifier = "0000000000000000"
+
+
+def _generate_id(length=16):
+    return ''.join(
+        random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+        for _ in range(length))
 
 
 class BlockPublisher(object):
@@ -39,7 +49,8 @@ class BlockPublisher(object):
     def __init__(self,
                  consensus,
                  transaction_executor,
-                 send_message):
+                 send_message,
+                 squash_handler):
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
         self._consensus = consensus  # the consensus object.
@@ -49,18 +60,29 @@ class BlockPublisher(object):
         self._send_message = send_message
         self._scheduler = None
         self._chain_head = None
+        self._squash_handler = squash_handler
 
     def _build_block(self, chain_head):
         """ Build a candidate block
         """
-        block = Block(chain_head)
+        if self._chain_head is None:
+            block = self.generate_genesis_block()
+        else:
+            block = Block(block_num=chain_head.block_num + 1,
+                          previous_block_id=chain_head.id,
+                          id=_generate_id())
         self._consensus.initialize_block(block)
 
         # create a new scheduler
         # TBD move factory in to executor for easier mocking --
         # Yes I want to make fun of it.
-        self._scheduler = self._transaction_executor.create_scheduler()
+        self._scheduler = self._transaction_executor.create_scheduler(
+            self._squash_handler, chain_head.state_root_hash)
+
         self._transaction_executor.execute(self._scheduler)
+        for batch in self._pending_batches:
+            self._scheduler.add_batch(batch)
+        self._pending_batches = []
         return block
 
     def _sign_block(self, block):
@@ -82,7 +104,10 @@ class BlockPublisher(object):
                         batch)
             self._pending_batches.append(batch)
             if self._scheduler:
-                self._scheduler.add_batch(batch)
+                try:
+                    self._scheduler.add_batch(batch)
+                except SchedulerError:
+                    pass
 
     def on_chain_updated(self, chain_head,
                          committed_batches=None,
@@ -119,16 +144,31 @@ class BlockPublisher(object):
     def _finalize_block(self, block):
         if self._scheduler:
             self._scheduler.finalize()
-            self._scheduler.complete()
+            while not self._scheduler.complete():
+                time.sleep(2)
 
-        # TBD -- Read valid batches from self._scheduler
-        self._validated_batches = self._pending_batches
+        # Read valid batches from self._scheduler
+        pending_batches = copy.copy(self._pending_batches)
         self._pending_batches = []
 
-        block.batches = self._validated_batches
+        state_hash = None
+        for batch in pending_batches:
+            batch_status = self._scheduler.batch_status(batch.signature)
+            if (batch_status is not None) and batch_status.valid:
+                self._validated_batches.append(batch)
+                state_hash = batch_status.state_hash
+            elif batch_status is None:
+                self._pending_batches.append(batch)
+
+        # TBD need to handle the case that no batches were found to be valid
+
+        block.batches.extend(self._validated_batches)
         self._validated_batches = []
 
+        # might need to take state_hash
         self._consensus.finalize_block(block)
+        if state_hash is not None:
+            block.state_root_hash = state_hash
         self._sign_block(block)
         return block
 
@@ -148,9 +188,9 @@ class BlockPublisher(object):
                     self._consensus.check_publish_block(self._candidate_block):
                 candidate = self._candidate_block
                 self._candidate_block = None
-                self._finalize_block(candidate)
-
-                self._send_message(BlockMessage(candidate))
+                candidate = self._finalize_block(candidate)
+                msg = BlockMessage(candidate)
+                self._send_message(msg)
 
                 LOGGER.info("Claimed Block: %s", candidate.id)
 
@@ -159,9 +199,12 @@ class BlockPublisher(object):
                 self.on_chain_updated(candidate)
 
     def generate_genesis_block(self):
-        genesis_block = self._build_block(None)
+        genesis_block = Block(block_num=0,
+                              previous_block_id=NullIdentifier,
+                              id=_generate_id())
         # Small hack here not asking consensus if it is happy.
-        return self._finalize_block(genesis_block)
+        self._candidate_block = self._finalize_block(genesis_block)
+        return self._candidate_block
 
 
 class BlockValidator(object):
@@ -175,14 +218,17 @@ class BlockValidator(object):
                  new_block,
                  chain_head,
                  request_block_cb,
-                 done_cb):
+                 done_cb,
+                 executor,
+                 squash_handler):
         self._consensus = consensus
         self._block_store = block_store
         self._new_block = new_block
         self._chain_head = chain_head
         self._request_block_cb = request_block_cb
         self._done_cb = done_cb
-
+        self._executor = executor
+        self._squash_handler = squash_handler
         self._commit_new_block = False
 
     def commit_new_block(self):
@@ -196,73 +242,99 @@ class BlockValidator(object):
     def chain_head(self):
         return self._chain_head
 
-    def _validate_block(self, block):
-        LOGGER.info(block)
-        if block.status == BlockStatus.Valid:
+    def _validate_block(self, block_state):
+        LOGGER.info(block_state)
+        if block_state.status == BlockStatus.Value('Valid'):
             return True
-        elif block.status == BlockStatus.Invalid:
+        elif block_state.status == BlockStatus.Value('Invalid'):
             return False
         else:
             valid = True
             # verify signature
             # valid = block.signature == 'X'
+            if valid:
+                if len(block_state.block.batches) > 0:
+                    scheduler = self._executor.create_scheduler(
+                        self._squash_handler,
+                        self.chain_head.block.state_root_hash)
+                    self._executor.execute(scheduler)
+                    for i in range(len(block_state.block.batches) - 1):
+                        scheduler.add_batch(block_state.block.batches[i])
+                    scheduler.add_batch(block_state.block.batches[-1],
+                                        block_state.block.state_root_hash)
+                    scheduler.finalize()
+                    while not scheduler.complete():
+                        time.sleep(1)
+                    for i in range(len(block_state.block.batches)):
+                        batch_status = scheduler.batch_status(
+                            block_state.block.batches[i].signature)
+                        if (batch_status is not None) and batch_status.valid:
+                            state_hash = batch_status.state_hash
+                        else:
+                            valid = False
 
             if valid:
-                # TBD validate transactions
-                pass
-
-            if valid:
-                valid = self._consensus.verify_block(block)
+                valid = self._consensus.verify_block(block_state)
 
             # Update the block store
-            block.weight = self._consensus.compute_block_weight(block)
-            block.status = BlockStatus.Valid if valid else BlockStatus.Invalid
-            self._block_store[block.id] = block
+            block_state.weight = \
+                self._consensus.compute_block_weight(block_state)
+            block_state.status = BlockStatus.Value('Valid') if \
+                valid else BlockStatus.Value('Invalid')
+            self._block_store[block_state.block.id] = block_state
             return valid
 
     def run(self):
         LOGGER.info("Starting block validation of : %s",
-                    self._new_block.id)
+                    self._new_block.block.id)
         current_chain = []  # ordered list of the current chain
         new_chain = []
 
-        newb = self._new_block
-        curb = self._chain_head
-
+        new_block_state = self._new_block
+        current_block_state = self._chain_head
         # 1) find the common ancestor of this block in the current chain
         # Walk back until we have both chains at the same length
-        while newb.block_num > curb.block_num\
-                and newb.previous_block_id != NullIdentifier:
-            new_chain.append(newb)
+        while new_block_state.block.block_num > \
+                current_block_state.block.block_num\
+                and new_block_state.block.previous_block_id != NullIdentifier:
+            new_chain.append(new_block_state)
             try:
-                newb = self._block_store[newb.previous_block_id]
+                new_block_state = \
+                    self._block_store[new_block_state.block.previous_block_id]
             except KeyError as e:
                 # required block is missing
-                self._request_block_cb(newb.previous_block_id, self)
+                self._request_block_cb(
+                    new_block_state.block.previous_block_id, self)
                 return
 
-        while curb.block_num > newb.block_num \
-                and newb.previous_block_id != NullIdentifier:
-            current_chain.append(curb)
-            curb = self._block_store[curb.previous_block_id]
+        while current_block_state.block.block_num > \
+                new_block_state.block.block_num \
+                and new_block_state.block.previous_block_id != NullIdentifier:
+            current_chain.append(current_block_state)
+            current_block_state = \
+                self._block_store[current_block_state.block.previous_block_id]
 
         # 2) now we have both chain at the same block number
         # continue walking back until we find a common block.
-        while curb.id != newb.id:
-            if curb.previous_block_id == NullIdentifier or \
-                    newb.previous_block_id == NullIdentifier:
+        while current_block_state.block.id != new_block_state.block.id:
+            if current_block_state.block.previous_block_id == NullIdentifier \
+                    or new_block_state.block.previous_block_id == \
+                    NullIdentifier:
                 # We are at a genesis block and the blocks are not the
                 # same
                 LOGGER.info("Block rejected due to wrong genesis : %s %s",
-                            curb.id, newb.id)
+                            current_block_state.block.id,
+                            new_block_state.block.id)
 
                 self._done_cb(self)
                 return
-            new_chain.append(newb)
-            newb = self._block_store[newb.previous_block_id]
+            new_chain.append(new_block_state)
+            new_block_state = \
+                self._block_store[new_block_state.block.previous_block_id]
 
-            current_chain.append(curb)
-            curb = self._block_store[curb.previous_block_id]
+            current_chain.append(current_block_state)
+            current_block_state = \
+                self._block_store[current_block_state.block.previous_block_id]
 
         # 3) We now have the root of the fork.
         # determine the validity of the new fork
@@ -281,7 +353,7 @@ class BlockValidator(object):
         # Tell the journal we are done
         self._done_cb(self)
         LOGGER.info("Finished block validation of : %s",
-                    self._new_block.id)
+                    self._new_block.block.id)
 
 
 class ChainController(object):
@@ -295,7 +367,8 @@ class ChainController(object):
                  send_message,
                  executor,
                  transaction_executor,
-                 on_chain_updated):
+                 on_chain_updated,
+                 squash_handler):
         self._lock = RLock()
         self._consensus = consensus
         self._block_store = block_store
@@ -303,6 +376,7 @@ class ChainController(object):
         self._executor = executor
         self._transaction_executor = transaction_executor
         self._notifiy_on_chain_updated = on_chain_updated
+        self._sqaush_handler = squash_handler
 
         self._blocks_requested = {}  # a set of blocks that were requested.
         self._blocks_processing = {}  # a set of blocks that are
@@ -322,7 +396,7 @@ class ChainController(object):
                          "be determined: %s", e)
             raise
 
-        self._notifiy_on_chain_updated(self._chain_head)
+        self._notifiy_on_chain_updated(self._chain_head.block)
 
     @property
     def chain_head(self):
@@ -335,8 +409,10 @@ class ChainController(object):
             chain_head=self._chain_head,
             block_store=self._block_store,
             request_block_cb=self._request_block,
-            done_cb=self.on_block_validated)
-        self._blocks_processing[block_state.id] = validator
+            done_cb=self.on_block_validated,
+            executor=self._transaction_executor,
+            squash_handler=self._sqaush_handler)
+        self._blocks_processing[block_state.block.id] = validator
         self._executor.submit(validator.run)
 
     def _request_block(self, block_id, validator):
@@ -352,9 +428,9 @@ class ChainController(object):
         """
         with self._lock:
             LOGGER.info("on_block_validated : %s",
-                        validator.new_block.id)
+                        validator.new_block.block.id)
             # remove from the processing list
-            del self._blocks_processing[validator.new_block.id]
+            del self._blocks_processing[validator.new_block.block.id]
 
             # if the head has changed, since we started the work.
             if validator.chain_head != self._chain_head:
@@ -363,35 +439,33 @@ class ChainController(object):
                 self._verify_block(validator.new_block)
             elif validator.commit_new_block():
                 self._chain_head = validator.new_block
-                self._block_store["chain_head_id"] = self._chain_head.id
+                self._block_store["chain_head_id"] = self._chain_head.block.id
                 LOGGER.info("Chain head updated to: %s",
-                            self._chain_head.id)
-
+                            self._chain_head.block.id)
                 # tell everyone else the chain is updated
-                self._notifiy_on_chain_updated(self._chain_head)
+                self._notifiy_on_chain_updated(self._chain_head.block)
 
                 pending_blocks = \
-                    self._blocks_pending.get(
-                        self._chain_head.previous_block_id, [])
+                    self._blocks_pending.pop(
+                        self._chain_head.block.previous_block_id, [])
                 for pending_block in pending_blocks:
                     self._verify_block(pending_block)
 
     def on_block_received(self, block):
         with self._lock:
-            LOGGER.info("on_block_received : %s",
-                        block)
             if block.id in self._block_store:
                 # do we already have this block
                 return
 
-            block_state = BlockState(block)
+            block_state = BlockState(block=block, weight=0,
+                                     status=BlockStatus.Value("Unknown"))
             self._block_store[block.id] = block_state
-
+            self._blocks_pending[block.id] = []
             if block.id in self._blocks_requested:
                 # is it a requested block
                 # route block to the validator that requested
                 validator = self._blocks_requested.pop(block.id)
-                if validator.chain_head.id != self._chain_head.id:
+                if validator.chain_head.block.id != self._chain_head.block.id:
                     # the head of the chain has changed start over
                     self._verify_block(validator.new_block)
                 else:
@@ -401,7 +475,8 @@ class ChainController(object):
                 # queue
                 pending_blocks = \
                     self._blocks_pending.get(block.previous_block_id, [])
-                pending_blocks.push(block_state)
+                pending_blocks.append(block_state)
+                self._blocks_pending[block.previous_block_id] = pending_blocks
             else:
                 # schedule this block for validation.
                 self._verify_block(block_state)
@@ -464,15 +539,19 @@ class Journal(object):
                  consensus,
                  block_store,
                  send_message,
-                 transaction_executor):
+                 transaction_executor,
+                 squash_handler,
+                 first_state_root):
         self._consensus = consensus
         self._block_store = block_store
         self._send_message = send_message
+        self._squash_handler = squash_handler
 
         self._block_publisher = BlockPublisher(
             consensus=consensus.BlockPublisher(),
             transaction_executor=transaction_executor,
-            send_message=send_message
+            send_message=send_message,
+            squash_handler=squash_handler
         )
         self._batch_queue = queue.Queue()
         self._publisher_thread = self._PublisherThread(self._block_publisher,
@@ -480,13 +559,16 @@ class Journal(object):
         # HACK until genesis tool is working
         if "chain_head_id" not in self._block_store:
             genesis_block = BlockState(
-                self._block_publisher.generate_genesis_block())
-            genesis_block.status = BlockStatus.Valid
+                block=self._block_publisher.generate_genesis_block(),
+                weight=0,
+                status=BlockStatus.Value("Valid"))
+            genesis_block.block.state_root_hash = first_state_root
 
             self._block_store[genesis_block.block.id] = genesis_block
-            self._block_store["chain_head_id"] = genesis_block.id
+            self._block_store["chain_head_id"] = genesis_block.block.id
+            self._block_publisher.on_chain_updated(genesis_block.block)
             LOGGER.info("Journal created genesis block: %s",
-                        genesis_block.id)
+                        genesis_block.block.id)
 
         self._chain_controller = ChainController(
             consensus=consensus.BlockVerifier(),
@@ -494,7 +576,8 @@ class Journal(object):
             send_message=send_message,
             executor=ThreadPoolExecutor(1),
             transaction_executor=transaction_executor,
-            on_chain_updated=self._block_publisher.on_chain_updated
+            on_chain_updated=self._block_publisher.on_chain_updated,
+            squash_handler=self._squash_handler
         )
         self._block_queue = queue.Queue()
         self._chain_thread = self._ChainThread(self._chain_controller,

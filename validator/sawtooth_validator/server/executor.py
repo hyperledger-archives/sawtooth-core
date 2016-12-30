@@ -76,12 +76,10 @@ class TransactionExecutor(object):
         self._service = service
         self._context_manager = context_manager
 
-    def create_scheduler(self):
-        return SerialScheduler()
+    def create_scheduler(self, squash_handler, first_state_root):
+        return SerialScheduler(squash_handler, first_state_root)
 
-    def execute(self, scheduler, state_hash=None):
-        if state_hash is not None:
-            self._last_state_root = state_hash
+    def execute(self, scheduler):
         t = TransactionExecutorThread(self._service,
                                       self._context_manager,
                                       scheduler)

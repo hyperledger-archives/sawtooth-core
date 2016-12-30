@@ -213,7 +213,7 @@ class Validator(object):
         db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
         LOGGER.debug('database file is %s', db_filename)
 
-        lmdb = LMDBNoLockDatabase(merkle_filename, 'n')
+        lmdb = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(lmdb)
 
         block_db_filename = os.path.join(os.path.expanduser('~'), 'block.lmdb')
@@ -224,7 +224,7 @@ class Validator(object):
 
         # setup network
         dispatcher = Dispatcher()
-        network = FauxNetwork(dispatcher=dispatcher)
+        faux_network = FauxNetwork(dispatcher=dispatcher)
 
         identity = "{}-{}".format(socket.gethostname(),
                                   os.getpid()).encode('ascii')
@@ -239,8 +239,10 @@ class Validator(object):
             consensus=dev_mode_consensus,
             block_store={},  # FIXME - block_store=block_store
             # -- need to serialize blocks to dicts
-            send_message=network.send_message,
-            transaction_executor=executor)
+            send_message=faux_network.send_message,
+            transaction_executor=executor,
+            squash_handler=context_manager.get_squash_handler(),
+            first_state_root=context_manager.get_first_root())
 
         dispatcher.on_batch_received = \
             self._journal.on_batch_received

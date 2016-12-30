@@ -22,6 +22,11 @@ from sawtooth_validator.scheduler.base import Scheduler
 from sawtooth_validator.scheduler.base import SchedulerIterator
 
 
+class SchedulerError(Exception):
+    def __init__(self, msg):
+        super(Exception, self).__init__(msg)
+
+
 class SerialScheduler(Scheduler):
     """Serial scheduler which returns transactions in the natural order.
 
@@ -79,14 +84,18 @@ class SerialScheduler(Scheduler):
 
     def add_batch(self, batch, state_hash=None):
         with self._condition:
-            batch_signature = batch.signature
-            batch_length = len(batch.transactions)
-            for idx, txn in enumerate(batch.transactions):
-                if idx == batch_length - 1:
-                    self._last_in_batch.append(txn.signature)
-                self._txn_to_batch[txn.signature] = batch_signature
-                self._txn_queue.put(txn)
-            self._condition.notify_all()
+            if not self._final:
+                batch_signature = batch.signature
+                batch_length = len(batch.transactions)
+                for idx, txn in enumerate(batch.transactions):
+                    if idx == batch_length - 1:
+                        self._last_in_batch.append(txn.signature)
+                    self._txn_to_batch[txn.signature] = batch_signature
+                    self._txn_queue.put(txn)
+                self._condition.notify_all()
+            else:
+                raise SchedulerError("Scheduler is finilized. Cannnot take"
+                                     " new batches")
 
     def batch_status(self, batch_signature):
         with self._condition:

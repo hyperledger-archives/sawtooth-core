@@ -38,7 +38,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             none
         """
-        block.consensus = {}
+        block.consensus["magic"] = "Devmode"
 
     def check_publish_block(self, block):
         """Check if a candidate block is ready to be claimed.
@@ -67,9 +67,9 @@ class BlockPublisher(BlockPublisherInterface):
 
 
 class BlockVerifier(BlockVerifierInterface):
-    def verify_block(self, block):
+    def verify_block(self, block_state):
         return True
 
-    def compute_block_weight(self, block):
+    def compute_block_weight(self, block_state):
         # longest chain wins
-        return block.block_num
+        return block_state.block.block_num

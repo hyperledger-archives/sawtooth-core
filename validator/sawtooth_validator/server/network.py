@@ -34,11 +34,10 @@ from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
-
-LOGGER = logging.getLogger(__name__)
-
 from sawtooth_validator.server.messages \
     import BlockRequestMessage, BlockMessage, BatchMessage
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FauxNetwork(object):
@@ -52,9 +51,9 @@ class FauxNetwork(object):
         if isinstance(msg, BlockRequestMessage):
             self._dispatcher.on_block_request(msg.block_id)
         elif isinstance(msg, BlockMessage):
-            self._dispatcher.on_block_recieved(msg.block)
+            self._dispatcher.on_block_received(msg.block)
         elif isinstance(msg, BatchMessage):
-            self._dispatcher.on_batch_recieved(msg.batch)
+            self._dispatcher.on_batch_received(msg.batch)
 
     def load(self, data):
         batch_list = batch_pb2.BatchList()

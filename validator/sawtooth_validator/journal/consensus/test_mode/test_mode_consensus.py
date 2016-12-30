@@ -43,10 +43,8 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             none
         """
-        block.consensus = {
-            'magic': MAGIC,
-            'nonce': str(time.time()),
-        }
+        block.consensus["magic"]= MAGIC
+        block.consensus["nonce"]=str(time.time())
 
     def check_publish_block(self, block):
         """Check if a candidate block is ready to be claimed.
@@ -79,12 +77,12 @@ class BlockPublisher(BlockPublisherInterface):
 
 
 class BlockVerifier(BlockVerifierInterface):
-    def verify_block(self, block):
+    def verify_block(self, block_state):
         hash = hashlib.sha256()
-        hash.update(block.consensus["magic"].encode('utf-8'))
-        hash.update(block.consensus["nonce"].encode('utf-8'))
+        hash.update(block_state.block.consensus["magic"].encode('utf-8'))
+        hash.update(block_state.block.consensus["nonce"].encode('utf-8'))
         # hash.update(block.batches)
-        return block.consensus['signature'] == hash.hexdigest()
+        return block_state.block.consensus['signature'] == hash.hexdigest()
 
-    def compute_block_weight(self, block):
-        return block.block_num
+    def compute_block_weight(self, block_state):
+        return block_state.block.block_num
