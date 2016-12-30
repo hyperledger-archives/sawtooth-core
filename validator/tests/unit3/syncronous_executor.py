@@ -13,9 +13,20 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from concurrent.futures import Executor
 
-class Dispatcher(object):
+
+class SynchronousExecutor(Executor):
     def __init__(self):
-        self.on_batch_received = None
-        self.on_block_received = None
-        self.on_block_requested = None
+        self._work_queue = []
+
+    def submit(self, job):
+        self._work_queue.append(job)
+
+    def process_next(self):
+        job = self._work_queue.pop()
+        job()
+
+    def process_all(self):
+        while len(self._work_queue):
+            self.process_next()

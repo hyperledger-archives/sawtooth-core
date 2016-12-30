@@ -14,8 +14,4 @@
 # ------------------------------------------------------------------------------
 
 
-class Dispatcher(object):
-    def __init__(self):
-        self.on_batch_received = None
-        self.on_block_received = None
-        self.on_block_requested = None
+__all__ = []

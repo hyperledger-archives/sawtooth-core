@@ -23,6 +23,8 @@ from colorlog import ColoredFormatter
 
 from sawtooth_intkey.client_cli.generate import add_generate_parser
 from sawtooth_intkey.client_cli.generate import do_generate
+from sawtooth_intkey.client_cli.populate import do_populate
+from sawtooth_intkey.client_cli.populate import add_populate_parser
 from sawtooth_intkey.client_cli.load import add_load_parser
 from sawtooth_intkey.client_cli.load import do_load
 
@@ -83,6 +85,7 @@ def create_parser(prog_name):
 
     add_generate_parser(subparsers, parent_parser)
     add_load_parser(subparsers, parent_parser)
+    add_populate_parser(subparsers, parent_parser)
 
     return parser
 
@@ -101,6 +104,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_generate(args)
     elif args.command == 'load':
         do_load(args)
+    elif args.command == 'populate':
+        do_populate(args)
     else:
         raise IntKeyCliException("invalid command: {}".format(args.command))
 

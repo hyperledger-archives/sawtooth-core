@@ -226,7 +226,7 @@ class TestSerialScheduler(unittest.TestCase):
 
             batch_signatures.append(batch.signature)
             scheduler.add_batch(batch)
-            scheduler.finalize()
+        scheduler.finalize()
         # 2)
         sched1 = iter(scheduler)
         invalid_payload = hashlib.sha512('invalid'.encode()).hexdigest()

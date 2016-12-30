@@ -13,9 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import time
 
-class Dispatcher(object):
-    def __init__(self):
-        self.on_batch_received = None
-        self.on_block_received = None
-        self.on_block_requested = None
+
+class TimeOut(object):
+    def __init__(self, timeout):
+        self.start_time = time.time()
+        self.timeout = timeout
+
+    def __nonzero__(self):
+        return (time.time() - self.start_time) > self.timeout
