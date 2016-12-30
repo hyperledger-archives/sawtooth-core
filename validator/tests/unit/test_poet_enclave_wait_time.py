@@ -30,8 +30,8 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
         addr = random_name(20)
         previous_cert_id = pe_sim.NULL_IDENTIFIER
         wait_timer = pe_sim.create_wait_timer(addr, previous_cert_id, 100)
-        self.assertEquals(wait_timer.previous_certificate_id, previous_cert_id)
-        self.assertEquals(wait_timer.local_mean, 100)
+        self.assertEqual(wait_timer.previous_certificate_id, previous_cert_id)
+        self.assertEqual(wait_timer.local_mean, 100)
 
         # Random previous cert id
         previous_cert_id = random_name(pe_sim.IDENTIFIER_LENGTH)

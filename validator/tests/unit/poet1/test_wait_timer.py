@@ -101,7 +101,7 @@ class TestWaitTimer(unittest.TestCase):
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
-        self.assertEquals(wt.previous_certificate_id, NullIdentifier)
+        self.assertEqual(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
         self.assertGreaterEqual(
@@ -115,7 +115,7 @@ class TestWaitTimer(unittest.TestCase):
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
-        self.assertEquals(wt.previous_certificate_id, NullIdentifier)
+        self.assertEqual(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
         self.assertGreaterEqual(
@@ -154,7 +154,7 @@ class TestWaitTimer(unittest.TestCase):
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
-        self.assertEquals(wt.previous_certificate_id, NullIdentifier)
+        self.assertEqual(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
         self.assertGreaterEqual(
@@ -168,7 +168,7 @@ class TestWaitTimer(unittest.TestCase):
 
         self.assertIsNotNone(wt)
         self.assertEqual(wt.local_mean, wait_timer.WaitTimer.target_wait_time)
-        self.assertEquals(wt.previous_certificate_id, NullIdentifier)
+        self.assertEqual(wt.previous_certificate_id, NullIdentifier)
         self.assertGreaterEqual(wt.request_time, stake_in_the_sand)
         self.assertLessEqual(wt.request_time, time.time())
         self.assertGreaterEqual(

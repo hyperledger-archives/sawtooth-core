@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import argparse
 import importlib
 import json
@@ -146,7 +148,7 @@ def local_main(config, windows_service=False, daemonized=False):
             http_port=http_port,
         )
     except GossipException as e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
     listen_info = config.get("Listen", None)
@@ -316,8 +318,8 @@ def log_configuration(cfg):
                     log_dic = json.load(log_config_fd)
                     logging.config.dictConfig(log_dic)
             except IOError, ex:
-                print >>sys.stderr, "Could not read log config: {}" \
-                    .format(str(ex))
+                print("Could not read log config: {}"
+                      .format(str(ex)), file=sys.stderr)
                 sys.exit(1)
         elif log_config_file.split(".")[-1] == "yaml":
             try:
@@ -325,12 +327,12 @@ def log_configuration(cfg):
                     log_dic = yaml.load(log_config_fd)
                     logging.config.dictConfig(log_dic)
             except IOError, ex:
-                print >>sys.stderr, "Could not read log config: {}"\
-                    .format(str(ex))
+                print("Could not read log config: {}"
+                      .format(str(ex)), file=sys.stderr)
                 sys.exit(1)
         else:
-            print >>sys.stderr, "LogConfigFile type not supported: {}"\
-                .format(cfg['LogConfigFile'])
+            print("LogConfigFile type not supported: {}"
+                  .format(cfg['LogConfigFile']), file=sys.stderr)
             sys.exit(1)
 
     else:
@@ -396,20 +398,20 @@ def main(args, windows_service=False):
     try:
         cfg = get_configuration(args)
     except ConfigFileNotFound, e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
     except InvalidSubstitutionKey, e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
     if 'LogLevel' in cfg:
-        print >>sys.stderr, "LogLevel is no longer supported, use " \
-            "LogConfigFile instead"
+        print("LogLevel is no longer supported, use "
+              "LogConfigFile instead", file=sys.stderr)
         sys.exit(1)
 
     if 'LogFile' in cfg:
-        print >>sys.stderr, "LogFile is no longer supported, use " \
-            "LogConfigFile instead"
+        print("LogFile is no longer supported, use "
+              "LogConfigFile instead", file=sys.stderr)
         sys.exit(1)
 
     daemonize = cfg.get('Daemonize', False)

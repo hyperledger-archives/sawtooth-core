@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import json
 import tempfile
 import unittest
@@ -157,7 +159,7 @@ class TestWebApi(unittest.TestCase):
         error = root._error_response(request, http.BAD_REQUEST,
                                      'error processing http request {0}',
                                      request.path)
-        self.assertEquals(error, "error processing http request /stat\n")
+        self.assertEqual(error, "error processing http request /stat\n")
 
     def test_web_api_forward(self):
         # Test _msgforward
@@ -178,7 +180,7 @@ class TestWebApi(unittest.TestCase):
         # Post /forward
         request = self._create_post_request("forward", data)
         r = yaml.load(forward_page.do_post(request))
-        self.assertEquals(r, data)
+        self.assertEqual(r, data)
         self.assertIn(msg.Identifier, node1.MessageQ.Messages)
         self.assertIn(msg.Identifier, node2.MessageQ.Messages)
 
@@ -190,7 +192,7 @@ class TestWebApi(unittest.TestCase):
         # Post an unknown error messsage
         request = self._create_post_request("forward", data)
         r = yaml.load(forward_page.do_post(request))
-        self.assertEquals(r['status'], http.NOT_FOUND)
+        self.assertEqual(r['status'], http.NOT_FOUND)
 
     def test_web_api_store(self):
         # Test _handlestorerequest
@@ -210,23 +212,23 @@ class TestWebApi(unittest.TestCase):
         journal.global_store.TransactionStores["/TestTransaction"].set(
             "TestKey", 0)
         # GET /store
-        self.assertEquals(store_page.do_get(request), '["/TestTransaction"]')
+        self.assertEqual(store_page.do_get(request), '["/TestTransaction"]')
 
         # GET /store/TestTransaction
         request = self._create_get_request("/store/TestTransaction", {})
-        self.assertEquals(store_page.do_get(request), '["TestKey"]')
+        self.assertEqual(store_page.do_get(request), '["TestKey"]')
         # GET /store/TestTransaction/*
         request = self._create_get_request("/store/TestTransaction/*", {})
-        self.assertEquals(store_page.do_get(request), '{"TestKey": 0}')
+        self.assertEqual(store_page.do_get(request), '{"TestKey": 0}')
         # GET /store/TestTransaction/*?delta=1
         request = self._create_get_request("/store/TestTransaction/*",
                                            {"delta": ['1']})
-        self.assertEquals(store_page.do_get(request),
-                          '{"DeletedKeys": [], "Store": {"TestKey": 0}}')
+        self.assertEqual(store_page.do_get(request),
+                         '{"DeletedKeys": [], "Store": {"TestKey": 0}}')
         # GET /store/TestTransaction/TestKey
         request = self._create_get_request("/store/TestTransaction/TestKey",
                                            {})
-        self.assertEquals(store_page.do_get(request), "0")
+        self.assertEqual(store_page.do_get(request), "0")
 
         try:
             blockstore = BlockStore()
@@ -243,7 +245,7 @@ class TestWebApi(unittest.TestCase):
         # GET /store/TestTransaction/*?blockid=123
         request = self._create_get_request("/store/TestTransaction/*",
                                            {"blockid": ["123"]})
-        self.assertEquals(store_page.do_get(request), '{"TestKey": 0}')
+        self.assertEqual(store_page.do_get(request), '{"TestKey": 0}')
 
     def test_web_api_block(self):
         # Test _handleblkrequest
@@ -270,27 +272,27 @@ class TestWebApi(unittest.TestCase):
         request = self._create_get_request("/block", {})
         string = '["' + str(trans_block2.Identifier) + '", "' + \
             str(trans_block.Identifier) + '"]'
-        self.assertEquals(block_page.do_get(request), string)
+        self.assertEqual(block_page.do_get(request), string)
         # GET /block?blockcount=2
         request = self._create_get_request("/block", {"blockcount": [2]})
-        self.assertEquals(block_page.do_get(request), string)
+        self.assertEqual(block_page.do_get(request), string)
         # GET /block?blockcount=1
         string = '["' + str(trans_block2.Identifier) + '"]'
         request = self._create_get_request("/block", {"blockcount": [1]})
-        self.assertEquals(block_page.do_get(request), string)
+        self.assertEqual(block_page.do_get(request), string)
         # Add identifier to dictionary
         dict_b = trans_block.dump()
         dict_b["Identifier"] = trans_block.Identifier
         # GET /block/{BlockId}
         request = self._create_get_request("/block/" + trans_block.Identifier,
                                            {})
-        self.assertEquals(yaml.load(block_page.do_get(request)), dict_b)
+        self.assertEqual(yaml.load(block_page.do_get(request)), dict_b)
         # GET /block/{BlockId}/Signature
         request = self._create_get_request("/block/" +
                                            trans_block.Identifier +
                                            "/Signature", {})
-        self.assertEquals(block_page.do_get(request), '"' +
-                          trans_block.Signature + '"')
+        self.assertEqual(block_page.do_get(request), '"' +
+                         trans_block.Signature + '"')
 
     def test_web_api_transaction(self):
         validator = self._create_validator()
@@ -316,16 +318,16 @@ class TestWebApi(unittest.TestCase):
         # GET /transaction
         request = self._create_get_request("/transaction/", {})
         r = transaction_page.do_get(request)
-        print request.path, r
+        print(request.path, r)
         r = r[1:-1].replace('"', "")
         r = r.replace(" ", "").split(",")
-        self.assertEquals(r, txns)
+        self.assertEqual(r, txns)
         # GET /transaction?blockcount=1
         request = self._create_get_request("/transaction", {"blockcount": [1]})
         r = transaction_page.do_get(request)
         r = r[1:-1].replace('"', "")
         r = r.replace(" ", "").split(",")
-        self.assertEquals(r, txns)
+        self.assertEqual(r, txns)
         # Returns None if testing
         # GET /transaction/{TransactionID}
         request = self._create_get_request("/transaction/" + txns[1], {})
@@ -335,12 +337,12 @@ class TestWebApi(unittest.TestCase):
         tinfo['Status'] = txn.Status
         if txn.Status == tStatus.committed:
             tinfo['InBlock'] = txn.InBlock
-        self.assertEquals(yaml.load(transaction_page.do_get(request)), tinfo)
+        self.assertEqual(yaml.load(transaction_page.do_get(request)), tinfo)
         # GET /transaction/{TransactionID{}/InBlock
         request = self._create_get_request("/transaction/" + txns[1] +
                                            "/InBlock", {})
-        self.assertEquals(transaction_page.do_get(request).replace('"', ""),
-                          txn.InBlock)
+        self.assertEqual(transaction_page.do_get(request).replace('"', ""),
+                         txn.InBlock)
 
     def test_web_api_stats(self):
         # Test _handlestatrequest
@@ -362,17 +364,17 @@ class TestWebApi(unittest.TestCase):
         dic["packet"] = validator.stat_domains["packet"].get_stats()
         # GET /statistics/journal
         request = self._create_get_request("/statistics/journal", {})
-        self.assertEquals(yaml.load(statistics_page.do_get(request)), dic)
+        self.assertEqual(yaml.load(statistics_page.do_get(request)), dic)
         # GET /statistics/node - with no peers
         request = self._create_get_request("/statistics/node", {})
-        self.assertEquals(yaml.load(statistics_page.do_get(request)), {})
+        self.assertEqual(yaml.load(statistics_page.do_get(request)), {})
         node = self._create_node(8804)
         gossip.add_node(node)
         dic2 = {}
         dic2[node.Name] = node.Stats.get_stats()
         dic2[node.Name]["IsPeer"] = node.is_peer
         # GET /stats/node - with one peer
-        self.assertEquals(yaml.load(statistics_page.do_get(request)), dic2)
+        self.assertEqual(yaml.load(statistics_page.do_get(request)), dic2)
 
         request = self._create_get_request("AnythingElse", {})
         dic3 = statistics_page.do_get(request)

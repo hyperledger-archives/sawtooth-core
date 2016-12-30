@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 from sawtooth.cli.stats_lib.stats_utils import ValidatorCommunications
 
 
@@ -73,9 +75,9 @@ class EndpointManager(object):
             self.recent_validator_responded = False
 
     def endpoint_loop_stop(self, reason):
-        print "handling endpoint loop stop"
+        print("handling endpoint loop stop")
         return reason
 
     def update_endpoint_loop_error(self, reason):
-        print "handling endpoint loop error"
+        print("handling endpoint loop error")
         return reason

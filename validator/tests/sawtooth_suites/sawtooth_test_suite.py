@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 import time
 import os
 import json
@@ -28,7 +31,7 @@ class SawtoothTestSuite(unittest.TestCase):
     def _do_setup(self, cfg, node_count=5):
         # give defaults to teardown vars
         self._node_ctrl = None
-        print 'creating', str(self.__class__.__name__)
+        print('creating', str(self.__class__.__name__))
         # set up our nodes (suite-internal interface)
         self._node_ctrl = WrappedNodeController(SubprocessNodeController())
         temp_dir = self._node_ctrl.get_data_dir()
@@ -43,17 +46,17 @@ class SawtoothTestSuite(unittest.TestCase):
         # set up our urls (external interface)
         self.urls = ['http://localhost:%s' % x.http_port for x in self._nodes]
         # Make genesis block
-        print 'creating genesis block...'
+        print('creating genesis block...')
         self._nodes[0].genesis = True
         self._node_ctrl.create_genesis_block(self._nodes[0])
         # Launch network (node zero will trigger bootstrapping)
-        print 'launching network...'
+        print('launching network...')
         for x in self._nodes:
             self._node_ctrl.start(x)
 
 
     def _do_teardown(self):
-        print 'destroying', str(self.__class__.__name__)
+        print('destroying', str(self.__class__.__name__))
         if hasattr(self, '_node_ctrl') and self._node_ctrl is not None:
             # Shut down the network
             with Progress("terminating network") as p:
@@ -68,10 +71,10 @@ class SawtoothTestSuite(unittest.TestCase):
             # force kill anything left over
             for node_name in self._node_ctrl.get_node_names():
                 try:
-                    print "%s still 'up'; sending kill..." % node_name
+                    print("%s still 'up'; sending kill..." % node_name)
                     self._node_ctrl.kill(node_name)
                 except Exception as e:
-                    print e.message
+                    print(e.message)
             self._node_ctrl.archive(self.__class__.__name__)
             self._node_ctrl.clean()
 

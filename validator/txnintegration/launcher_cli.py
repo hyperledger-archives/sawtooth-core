@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import argparse
 import json
 import logging
@@ -97,20 +99,20 @@ def configure(args):
         'LedgerURL',
     ]
     if any(k in validator_config for k in keys):
-        print "Overriding the following keys from validator configuration " \
-              "file: {}".format(opts.config)
+        print("Overriding the following keys from validator configuration "
+              "file: {}".format(opts.config))
         for k in keys:
             if k in validator_config:
-                print "\t{}".format(k)
+                print("\t{}".format(k))
                 del validator_config[k]
     if opts.log_config:
-        print "\tLogConfigFile"
+        print("\tLogConfigFile")
 
     opts.validator_config = validator_config
 
     opts.count = max(1, opts.count)
 
-    print "Configuration:"
+    print("Configuration:")
     pp.pprint(opts.__dict__)
 
     return vars(opts)
@@ -137,7 +139,7 @@ def main():
     try:
         opts = configure(sys.argv[1:])
     except Exception as e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
     try:
@@ -177,31 +179,32 @@ def main():
         # set up our urls (external interface)
         urls = ['http://localhost:%s' % x.http_port for x in nodes]
         # Make genesis block
-        print 'creating genesis block...'
+        print('creating genesis block...')
         nodes[0].genesis = True
         node_ctrl.create_genesis_block(nodes[0])
         # Launch network (node zero will trigger bootstrapping)
         batch_size = 8
-        print 'staged-launching network (batch_size: {})...'.format(batch_size)
+        print('staged-launching network (batch_size: {})...'
+              .format(batch_size))
         lower_bound = 0
         while lower_bound < count:
             upper_bound = lower_bound + min(count - lower_bound, batch_size)
             for idx in range(lower_bound, upper_bound):
-                print "launching {}".format(nodes[idx].node_name)
+                print("launching {}".format(nodes[idx].node_name))
                 node_ctrl.start(nodes[idx])
             _poll_for_convergence(urls[lower_bound:upper_bound])
             lower_bound = upper_bound
         run_stats(urls[0])
     except KeyboardInterrupt:
-        print "\nExiting"
+        print("\nExiting")
     except ExitError as e:
         # this is an expected error/exit, don't print stack trace -
         # the code raising this exception is expected to have printed the error
         # details
-        print "\nFailed!\nExiting: {}".format(e)
+        print("\nFailed!\nExiting: {}".format(e))
     except:
         traceback.print_exc()
-        print "\nFailed!\nExiting: {}".format(sys.exc_info()[0])
+        print("\nFailed!\nExiting: {}".format(sys.exc_info()[0]))
 
     finally:
         if node_ctrl is not None:
@@ -217,7 +220,7 @@ def main():
                     p.step()
             # force kill anything left over
             for node_name in node_ctrl.get_node_names():
-                print "%s still 'up'; sending kill..." % node_name
+                print("%s still 'up'; sending kill..." % node_name)
                 node_ctrl.kill(node_name)
             node_ctrl.archive('launcher')
             node_ctrl.clean()

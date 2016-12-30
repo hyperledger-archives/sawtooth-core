@@ -34,10 +34,10 @@ class TestClientCLI(unittest.TestCase):
         cfg = get_configuration(args=[], config_files_required=False)
 
         self.assertIn("CurrencyHome", cfg)
-        self.assertEquals(cfg["CurrencyHome"], "/test_path")
-        self.assertEquals(cfg["ConfigDirectory"], "/test_path/etc")
-        self.assertEquals(cfg["LogDirectory"], "/test_path/logs")
-        self.assertEquals(cfg["DataDirectory"], "/test_path/data")
+        self.assertEqual(cfg["CurrencyHome"], "/test_path")
+        self.assertEqual(cfg["ConfigDirectory"], "/test_path/etc")
+        self.assertEqual(cfg["LogDirectory"], "/test_path/logs")
+        self.assertEqual(cfg["DataDirectory"], "/test_path/data")
 
     def test_default_config_posix(self):
         os.environ.clear()
@@ -46,9 +46,9 @@ class TestClientCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertNotIn("CurrencyHome", cfg)
-        self.assertEquals(cfg["ConfigDirectory"], "/etc/sawtooth-validator")
-        self.assertEquals(cfg["LogDirectory"], "/var/log/sawtooth-validator")
-        self.assertEquals(cfg["DataDirectory"], "/var/lib/sawtooth-validator")
+        self.assertEqual(cfg["ConfigDirectory"], "/etc/sawtooth-validator")
+        self.assertEqual(cfg["LogDirectory"], "/var/log/sawtooth-validator")
+        self.assertEqual(cfg["DataDirectory"], "/var/lib/sawtooth-validator")
 
     def test_default_config_nt(self):
         os.environ.clear()
@@ -57,13 +57,13 @@ class TestClientCLI(unittest.TestCase):
                                 config_files_required=False)
 
         self.assertNotIn("CurrencyHome", cfg)
-        self.assertEquals(
+        self.assertEqual(
             cfg["ConfigDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\conf")
-        self.assertEquals(
+        self.assertEqual(
             cfg["LogDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\logs")
-        self.assertEquals(
+        self.assertEqual(
             cfg["DataDirectory"],
             "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\data")
 
@@ -75,7 +75,7 @@ class TestClientCLI(unittest.TestCase):
             config_files_required=False)
 
         self.assertIn("LogConfigFile", cfg)
-        self.assertEquals(cfg["LogConfigFile"], "Logging.js")
+        self.assertEqual(cfg["LogConfigFile"], "Logging.js")
 
 
 if __name__ == '__main__':

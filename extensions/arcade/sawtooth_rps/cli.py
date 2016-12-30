@@ -15,6 +15,7 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
+from __future__ import print_function
 
 import os
 import sys
@@ -73,34 +74,34 @@ def do_list(args, config):
     client = RPSClient(base_url=url, keyfile=key_file)
     state = client.get_all_store_objects()
 
-    print "GAMES:"
+    print("GAMES:")
     for k, v in state.iteritems():
         creator = v['InitialID']
         players = v.get('Players')
         state = v.get('State')
         comp = v.get("Computer")
-        print "%s\tplayers: %s status: %s creator: %s" % (k, players,
+        print("%s\tplayers: %s status: %s creator: %s" % (k, players,
                                                           state.capitalize(),
-                                                          creator)
+                                                          creator))
         if state == "COMPLETE":
-            print "  Hands Played:"
+            print("  Hands Played:")
             for player, hand in v['Hands'].iteritems():
                 if comp and (player != creator):
-                    print "    %s: %s" % ("Computer", hand.capitalize())
+                    print("    %s: %s" % ("Computer", hand.capitalize()))
                 else:
-                    print "    %s: %s" % (player, hand.capitalize())
-            print "  Results:"
+                    print("    %s: %s" % (player, hand.capitalize()))
+            print("  Results:")
             for other_player, result in v['Results'].iteritems():
                 if comp:
-                    print "    %s vs %s: %s" % (creator, "Computer", result)
+                    print("    %s vs %s: %s" % (creator, "Computer", result))
                 else:
-                    print "    %s vs %s: %s" % (creator, other_player, result)
-            print ""
+                    print("    %s vs %s: %s" % (creator, other_player, result))
+            print("")
         else:
-            print "  Hands Played:"
+            print("  Hands Played:")
             for player, hand in v['Hands'].iteritems():
-                print "    %s: %s" % (player, "*******")
-            print ""
+                print("    %s: %s" % (player, "*******"))
+            print("")
 
 
 def do_show(args, config):
@@ -121,26 +122,26 @@ def do_show(args, config):
     players = game.get('Players')
     state = game.get('State')
     comp = game.get("Computer")
-    print "%s\tplayers: %s status: %s creator: %s" % (name, players,
+    print("%s\tplayers: %s status: %s creator: %s" % (name, players,
                                                       state.capitalize(),
-                                                      creator)
+                                                      creator))
     if state == "COMPLETE":
-        print "  Hands Played:"
+        print("  Hands Played:")
         for player, hand in game['Hands'].iteritems():
             if comp and (player != creator):
-                print "    %s: %s" % ("Computer", hand.capitalize())
+                print("    %s: %s" % ("Computer", hand.capitalize()))
             else:
-                print "    %s: %s" % (player, hand.capitalize())
-        print "  Results:"
+                print("    %s: %s" % (player, hand.capitalize()))
+        print("  Results:")
         for other_player, result in game['Results'].iteritems():
             if comp:
-                print "    %s vs %s: %s" % (creator, "Computer", result)
+                print("    %s vs %s: %s" % (creator, "Computer", result))
             else:
-                print "    %s vs %s: %s" % (creator, other_player, result)
+                print("    %s vs %s: %s" % (creator, other_player, result))
     else:
-        print "  Hands Played:"
+        print("  Hands Played:")
         for player, hand in game['Hands'].iteritems():
-            print "    %s: %s" % (player, "*******")
+            print("    %s: %s" % (player, "*******"))
 
 
 def do_init(args, config):
@@ -149,7 +150,7 @@ def do_init(args, config):
         username = args.username
 
     config.set('DEFAULT', 'username', username)
-    print "set username: {}".format(username)
+    print("set username: {}".format(username))
 
     save_config(config)
 
@@ -170,12 +171,12 @@ def do_init(args, config):
             addr = signing.generate_identifier(pubkey)
 
             with open(wif_filename, "w") as wif_fd:
-                print "writing file: {}".format(wif_filename)
+                print("writing file: {}".format(wif_filename))
                 wif_fd.write(encoded)
                 wif_fd.write("\n")
 
             with open(addr_filename, "w") as addr_fd:
-                print "writing file: {}".format(addr_filename)
+                print("writing file: {}".format(addr_filename))
                 addr_fd.write(addr)
                 addr_fd.write("\n")
         except IOError, ioe:
@@ -327,13 +328,13 @@ def main_wrapper():
     try:
         main()
     except RPSException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except InvalidTransactionError as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except ClientException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         pass

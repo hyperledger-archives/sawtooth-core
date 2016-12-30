@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import os
 import random
 import shutil
@@ -83,17 +85,17 @@ class TestXoCli(unittest.TestCase):
                 xo_cli.main(prog_name='xo',
                             args=['create', game_name, '--wait'])
 
-            self.assertEquals(err.getvalue(), '')
+            self.assertEqual(err.getvalue(), '')
 
             with std_output() as (out, err):
                 xo_cli.main(prog_name='xo', args=['list'])
 
-            self.assertEquals(err.getvalue(), '')
+            self.assertEqual(err.getvalue(), '')
 
             game_found = False
             for line in out.getvalue().split('\n'):
                 if line.startswith("{} ".format(game_name)):
-                    print line
+                    print(line)
                     game_found = True
             self.assertTrue(game_found)
 
@@ -125,7 +127,7 @@ class TestXoCli(unittest.TestCase):
                 xo_cli.main(prog_name='xo',
                             args=['take', game_name, '7', '--wait'])
 
-            self.assertEquals(err.getvalue(), '')
+            self.assertEqual(err.getvalue(), '')
 
             with std_output() as (out, err):
                 xo_cli.main(prog_name='xo', args=['show', game_name])

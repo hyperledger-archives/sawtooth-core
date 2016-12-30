@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 from argparse import Namespace
 import logging
 import os
@@ -211,7 +213,7 @@ def get_node_controller(state, args):
         if state['Wrap'] is None:
             state['Wrap'] = node_controller.get_data_dir()
             state['ManageWrap'] = True
-        print '{} wrapped to {}'.format(args.cluster_command, state['Wrap'])
+        print('{} wrapped to {}'.format(args.cluster_command, state['Wrap']))
 
     # Return out construction:
     return node_controller
@@ -261,7 +263,7 @@ def do_cluster_start(args):
     for i in xrange(0, args.count):
         node_name = "validator-{:0>3}".format(i)
         if node_name in existing_nodes and vnm.is_running(node_name):
-            print "Already running: {}".format(node_name)
+            print("Already running: {}".format(node_name))
             raise CliException("Please use 'sawtooth cluster extend'\
              to add more nodes.")
 
@@ -281,7 +283,7 @@ def do_cluster_start(args):
                                   gossip_port=gossip_port, genesis=genesis)
         if node_args.genesis is True:
             node_controller.create_genesis_block(node_args)
-        print "Starting: {}".format(node_name)
+        print("Starting: {}".format(node_name))
         node_command_generator.start(node_args)
 
         state["Nodes"][node_name] = {
@@ -300,7 +302,7 @@ def do_cluster_start(args):
             while True:
                 time.sleep(128)
         except KeyboardInterrupt:
-            print
+            print()
             ns = Namespace(cluster_command='stop', command='cluster',
                            node_names=[], verbose=None)
             do_cluster_stop(ns)
@@ -322,7 +324,7 @@ def do_cluster_stop(args):
 
     nodes = state["Nodes"]
     for node_name in node_names:
-        print "Stopping: {}".format(node_name)
+        print("Stopping: {}".format(node_name))
         node_command_generator.stop(node_name)
         # Update status of Nodes
         if node_name in nodes:
@@ -359,7 +361,7 @@ def do_cluster_stop(args):
 
     # Force kill any targeted nodes that are still up
     for node_name in find_still_up(node_names):
-        print "Node name still up: killling {}".format(node_name)
+        print("Node name still up: killling {}".format(node_name))
         node_controller.kill(node_name)
 
 
@@ -387,22 +389,22 @@ def do_cluster_status(args):
         nodes = state['Nodes']
 
     # Check expected status of nodes vs what is returned from vnm
-    print "NodeName Expected Current"
+    print("NodeName Expected Current")
     for node_name in nodes:
         if node_name not in node_names and \
                 (nodes[node_name]["Status"] == "Running" or
                     nodes[node_name]["Status"] == "No Response"):
-            print "{} {} {}".format(
-                node_name, nodes[node_name]["Status"], "Not Running")
+            print("{} {} {}".format(
+                node_name, nodes[node_name]["Status"], "Not Running"))
         else:
             status = vnm.status(node_name)
             if status == "UNKNOWN" and \
                     nodes[node_name]["Status"] == "Stopped":
-                print "{} {} {}".format(node_name, nodes[node_name]["Status"],
-                                        status)
+                print("{} {} {}".format(node_name, nodes[node_name]["Status"],
+                                        status))
             else:
-                print "{} {} {}".format(node_name, nodes[node_name]["Status"],
-                                        status)
+                print("{} {} {}".format(node_name, nodes[node_name]["Status"],
+                                        status))
 
 
 def do_cluster_extend(args):
@@ -423,7 +425,7 @@ def do_cluster_extend(args):
             "You must have a running network.\n" +
             "Use the cluster start command to start a validator network.")
 
-    print "Extending network by {} nodes.".format(args.count)
+    print("Extending network by {} nodes.".format(args.count))
 
     index_offset = len(existing_nodes)
 
@@ -432,7 +434,7 @@ def do_cluster_extend(args):
         node_name = "validator-{:0>3}".format(j)
 
         if node_name in existing_nodes and vnm.is_running(node_name):
-            print "Already running: {}".format(node_name)
+            print("Already running: {}".format(node_name))
             continue
 
         # genesis is true for the first node
@@ -472,7 +474,7 @@ def do_cluster_logs(args):
                               for p in processors]
                 containers += ['sawtooth-tng-cluster-0-validator-' + node_num]
                 for c in containers:
-                    print "Logs for container: " + c + "of node: " + node_name
+                    print("Logs for container: " + c + "of node: " + node_name)
                     cmd = ['docker', 'logs', c]
                     handle = subprocess.Popen(cmd)
                     while handle.returncode is None:
@@ -480,7 +482,7 @@ def do_cluster_logs(args):
             except subprocess.CalledProcessError as cpe:
                 raise CliException(str(cpe))
     else:
-        print "logs not implemented for {}".format(state['Manage'])
+        print("logs not implemented for {}".format(state['Manage']))
 
 
 def do_cluster_stats(args):

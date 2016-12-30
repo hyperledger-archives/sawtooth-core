@@ -15,6 +15,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
 
 import argparse
 import ConfigParser
@@ -185,7 +186,7 @@ def do_init(args, config):
         username = args.username
 
     config.set('DEFAULT', 'username', username)
-    print "set username: {}".format(username)
+    print("set username: {}".format(username))
 
     save_config(config)
 
@@ -206,12 +207,12 @@ def do_init(args, config):
             addr = signing.generate_identifier(pubkey)
 
             with open(wif_filename, "w") as wif_fd:
-                print "writing file: {}".format(wif_filename)
+                print("writing file: {}".format(wif_filename))
                 wif_fd.write(encoded)
                 wif_fd.write("\n")
 
             with open(addr_filename, "w") as addr_fd:
-                print "writing file: {}".format(addr_filename)
+                print("writing file: {}".format(addr_filename))
                 addr_fd.write(addr)
                 addr_fd.write("\n")
         except IOError, ioe:
@@ -226,7 +227,7 @@ def do_list(args, config):
     state = client.get_all_store_objects()
 
     fmt = "%-15s %-15.15s %-15.15s %-9s %s"
-    print fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE')
+    print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
     for name in state:
         if 'Player1' in state[name]:
             player1 = state[name]['Player1']
@@ -238,7 +239,7 @@ def do_list(args, config):
             player2 = ''
         board = state[name]['Board']
         game_state = state[name]['State']
-        print fmt % (name, player1, player2, board, game_state)
+        print(fmt % (name, player1, player2, board, game_state))
 
 
 def do_show(args, config):
@@ -264,17 +265,17 @@ def do_show(args, config):
     board = list(game['Board'].replace('-', ' '))
     game_state = game['State']
 
-    print "GAME:     : {}".format(name)
-    print "PLAYER 1  : {}".format(player1)
-    print "PLAYER 2  : {}".format(player2)
-    print "STATE     : {}".format(game_state)
-    print ""
-    print "  {} | {} | {}".format(board[0], board[1], board[2])
-    print " ---|---|---"
-    print "  {} | {} | {}".format(board[3], board[4], board[5])
-    print " ---|---|---"
-    print "  {} | {} | {}".format(board[6], board[7], board[8])
-    print ""
+    print("GAME:     : {}".format(name))
+    print("PLAYER 1  : {}".format(player1))
+    print("PLAYER 2  : {}".format(player2))
+    print("STATE     : {}".format(game_state))
+    print("")
+    print("  {} | {} | {}".format(board[0], board[1], board[2]))
+    print(" ---|---|---")
+    print("  {} | {} | {}".format(board[3], board[4], board[5]))
+    print(" ---|---|---")
+    print("  {} | {} | {}".format(board[6], board[7], board[8]))
+    print("")
 
 
 def do_take(args, config):
@@ -357,13 +358,13 @@ def main_wrapper():
     try:
         main()
     except XoException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except InvalidTransactionError as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except ClientException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         pass
