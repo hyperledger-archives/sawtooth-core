@@ -18,7 +18,6 @@
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 PYTHONPATH=$(pwd)/core
-PYTHONPATH=$PYTHONPATH:$(pwd)/core/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/validator

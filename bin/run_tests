@@ -74,7 +74,6 @@ test_validator() {
 	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 	PYTHONPATH=$PYTHONPATH:$top_dir/core
 	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 	export PYTHONPATH
 	cd validator
 	nose2 -v unit
