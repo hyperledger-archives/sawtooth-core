@@ -63,7 +63,7 @@ def local_main(config, windows_service=False, daemonized=False):
 
     logger.warn('validator pid is %s', os.getpid())
 
-    consensus_type = config.get('LedgerType', 'poet0')
+    consensus_type = config.get('LedgerType', 'poet1')
     stat_domains = {}
 
     try:
@@ -88,18 +88,7 @@ def local_main(config, windows_service=False, daemonized=False):
         data_directory = config.get("DataDirectory")
         store_type = config.get("StoreType")
 
-        if consensus_type == 'poet0':
-            from sawtooth_validator.consensus.poet0 import poet_consensus
-            from sawtooth_validator.consensus.poet0.wait_timer \
-                import set_wait_timer_globals
-            set_wait_timer_globals(target_wait_time,
-                                   initial_wait_time,
-                                   certificate_sample_length,
-                                   fixed_duration_blocks)
-            # Continue to pass config to PoetConsensus for possible other
-            # enclave implementations - poet_enclave.initialize
-            consensus = poet_consensus.PoetConsensus(config)
-        elif consensus_type == 'poet1':
+        if consensus_type == 'poet1':
             from sawtooth_validator.consensus.poet1 import poet_consensus
             from sawtooth_validator.consensus.poet1.wait_timer \
                 import set_wait_timer_globals

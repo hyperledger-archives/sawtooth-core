@@ -1,7 +1,6 @@
 recursive-include journal *.py
 recursive-include ledger *.py
 recursive-include gossip  *.py
-include journal/consensus/poet0/poet_enclave_simulator/*
 include txnserver/*.py
 include etc/txnvalidator.js.example
 include etc/systemd/sawtooth-validator.service

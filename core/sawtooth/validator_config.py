@@ -295,7 +295,7 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
 
         # topological configuration
         self['TopologyAlgorithm'] = 'RandomWalk'
-        self['InitialConnectivity'] = 1
+        self['InitialConnectivity'] = 0
         self['TargetConnectivity'] = 3
         self['MaximumConnectivity'] = 15
         self['MinimumConnectivity'] = 1

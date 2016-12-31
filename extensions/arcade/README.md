@@ -250,31 +250,6 @@ Hits are shown with an 'X', while misses are shown with a '.'
 ```
 
 
-Sawtooth Rock Paper Scissors
-----------------------------
-
-rps is a very basic multiplayer rock paper scissors implementation. All
-players will be playing against the creator of the game.
-
-Currently anybody can join the game until all player slots are filled.
-
-Game state is stored plainly into the blockchain. This means that everybody
-can see the hands that are played even before the round as ended.
-
-Thoughts for improvements; multiple rounds, keep hands secret until every
-player has send in his hand, play against the computer, create game for
-specific players only.
-
-
-Sawtooth Ethereum Guess
------------------------
-
-seg is a game about guessing the balances of Ethereum addresses.  While it
-isn't really fun... it does show how to integrate an Ethereum client into
-a transaction family (thus using Ethereum as a source of record for some
-data).
-
-
 Potential Future Enhancements
 -----------------------------
 Contributions welcome!

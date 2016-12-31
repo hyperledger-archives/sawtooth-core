@@ -11,15 +11,6 @@ Bitcoin. Sawtooth Lake uses a unique mechanism for reaching consensus
 on the validity of the ledger based on trusted code running inside a
 hardware-protected Intel Software Guard Extensions (SGX) enclave.
 
-One of the initial transaction families supported by Sawtooth Lake is
-the MarketPlace. The MarketPlace Transaction Family establishes the
-concepts of participants, accounts, assets, holdings, liabilities,
-and offers in a decentralized ledger to facilitate the exchange of
-digital assets. The Sawtooth Lake architecture allows the definition
-of additional transaction families or the consumption of an existing
-asset-type agnostic transaction family (like MarketPlace) to meet
-domain-specific needs.
-
 Repository Structure
 ====================
 
@@ -38,18 +29,7 @@ sawtooth-core
 
       - acts as a node on the gossip network
       - validators exchange and act upon messages, as defined by the core 
-        classes and via additional plug-in transaction families like the 
-        MarketPlace Transaction Family
-
-    * The MarketPlace Transaction Family, located in the extensions
-      directory. 
-
-      - demonstrates how to inherit and extend base sawtooth-core
-        object types to implement a custom transaction family
-      - includes a command line interface called *mktclient* for
-        interacting with validators running the MarketPlace Transaction
-        Family
-      - useful for buying, selling and trading digital assets
+        classes and via additional plug-in transaction families
 
     * Example code, in the form of games, which demonstrate key concepts of
       Sawtooth Lake
@@ -83,9 +63,7 @@ classes already present in the Communication and Journal layers.
 
 In addition to some in-built system ledgers (Endpoint Registry, and Integer
 Key Registry), implementing new classes in the ledger layer allows for the
-creation of new transaction families. The MarketPlace Transaction Family,
-located in the extensions directory of sawtooth-core, is a good example of how
-the ledger layer can be extended.
+creation of new transaction families.
 
 Journals
 --------
@@ -233,8 +211,7 @@ implement __init__
 implement __init__, __str__, is_valid, apply, and dump
 
 Refer to ledger.transaction.integer_key in sawtooth-core for a
-simple example, or to mktplace.transactions.market_place in
-sawtooth-core/extensions/mktplace for a more substantial example.
+simple example.
 
 Transaction Families are loaded into the validator in sawtooth-validator
 via the "TransactionFamilies" config value (see

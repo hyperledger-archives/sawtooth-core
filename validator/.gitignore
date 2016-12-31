@@ -25,7 +25,6 @@ txnvalidator.js
 sawtooth_validator/consensus/poet*/poet_enclave_simulator/build
 sawtooth_validator/consensus/poet*/poet_enclave_simulator/*.so
 sawtooth_validator/consensus/poet*/poet_enclave_simulator/*.pyd
-sawtooth_validator/consensus/poet0/poet_enclave_simulator/poet*_enclave_simulator.py
 sawtooth_validator/consensus/poet*/poet_enclave_simulator/poet_enclave_simulator_wrap.cpp
 _poet*_enclave_simulator.so
 

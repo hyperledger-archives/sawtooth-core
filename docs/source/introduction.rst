@@ -44,9 +44,6 @@ deploying a marketplace for digital assets:
 
     * IntegerKey - A transaction family used for testing deployed ledgers.
 
-    * MarketPlace - A transaction family for buying, selling and trading
-      digital assets.
-
 This set of transaction families provides an “out of the box” ledger that
 implements a fully functional marketplace for digital assets.
 

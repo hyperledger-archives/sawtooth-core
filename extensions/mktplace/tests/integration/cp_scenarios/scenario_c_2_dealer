@@ -1,5 +1,0 @@
-echo Running: scenario_c_2_dealer
-holding reg --waitforcommit --account /account --asset //mkt/asset/commercialpaper/note --count 0 --name /paper-scenario-c
-holdings --creator //BANK-dealer
-exchangeoffer reg --input /paper-scenario-c --output /USD --ratio 1 99388 --name /offer-c-dealer --waitforcommit
-exit

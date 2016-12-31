@@ -66,7 +66,7 @@ scripts
 tests
   The tests directory includes tests run within the Vagrant environment. These are
   in addition to the unit and integration tests found in the tests directory of
-  sawtooth-core, sawtooth-validator and sawtooth-mktplace.
+  sawtooth-core and sawtooth-validator.
 
 win-bin
   The win-bin directory includes scripts for running Sawtooth natively
@@ -110,9 +110,9 @@ INSTALL_TYPE
   By default, this is set to 'none'.  It can be set to one of:
 
     * none - do not install anything by default
-    * setup.py - build and install sawtooth-core, sawtooth-validator,
-      sawtooth-mktplace from the git repositories using 'python setup.py install'
-    * deb - build and install sawtooth-core, sawtooth-validator, sawtooth-mktplace from
+    * setup.py - build and install sawtooth-core, sawtooth-validator from the
+      git repositories using 'python setup.py install'
+    * deb - build and install sawtooth-core, sawtooth-validator from
       the git repositories by first creating deb packages and then installing
       those deb packages.
 

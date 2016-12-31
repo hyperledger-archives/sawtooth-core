@@ -1,5 +1,0 @@
-echo Running: scenario_a_1_trader
-holdings --creator //BANK-trader --verbose
-holdings --creator //BANK-agent --verbose
-exchangeoffer reg --input /paper --output /USD --ratio 1 99388 --name /offer-a --waitforcommit
-exit

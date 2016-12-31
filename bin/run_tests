@@ -21,7 +21,7 @@ usage() {
     echo
     echo "Options:"
     echo "  -h          print usage and exit"
-    echo "  -m Module   only run tests of specified module <core, signing, validator, mktplace, bond, arcade>"
+    echo "  -m Module   only run tests of specified module <core, signing, validator, arcade>"
 }
 
 set -e
@@ -74,7 +74,6 @@ test_validator() {
 	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
 	PYTHONPATH=$PYTHONPATH:$top_dir/core
 	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
 	export PYTHONPATH
 	cd validator
 	nose2 -v unit
@@ -89,37 +88,6 @@ test_validator() {
        nose2 -v sawtooth_suites.ts_pr_poet1.Poet1TestSuite
 	unset RUN_TEST_SUITES
 	cd ..
-}
-
-test_mktplace() {
-	PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/core
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
-	export PYTHONPATH
-	cd extensions/mktplace
-	nose2 -v unit
-	export RUN_TEST_SUITES=1
-       nose2 -v sawtooth_suites.ts_pr_mkt_dev_mode.DevModeMktTestSuite
-	unset RUN_TEST_SUITES
-	cd ../..
-}
-
-test_bond() {
-	PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/core
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/extensions/bond
-	export PYTHONPATH
-	cd extensions/bond
-	nose2 -v
-	cd ../..
 }
 
 
@@ -146,8 +114,6 @@ case $MODULE in
         test_core
         test_signing
         test_validator
-        test_mktplace
-        test_bond
         test_sdk_examples
         ;;
     core)
@@ -158,12 +124,6 @@ case $MODULE in
         ;;
     validator)
         test_validator
-        ;;
-    mktplace)
-        test_mktplace
-        ;;
-    bond)
-        test_bond
         ;;
     sdk_examples)
         test_sdk_examples

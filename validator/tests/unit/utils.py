@@ -17,8 +17,6 @@ import random
 import string
 
 from sawtooth_signing import pbct_nativerecover as signing
-from sawtooth_validator.consensus.poet0.poet_enclave_simulator \
-    import poet0_enclave_simulator as pe_sim
 
 
 class AttrDict(dict):
@@ -31,31 +29,10 @@ class AttrDict(dict):
         return self[name]
 
 
-def generate_certs(count):
-    out = []
-    for i in range(0, count):
-        out.append(AttrDict(**{
-            "identifier": random_name(pe_sim.IDENTIFIER_LENGTH),
-            "duration": 2,
-            "local_mean": 1
-        }))
-    return out
-
-
 def random_name(length=16):
     return ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits)
         for _ in range(length))
-
-
-def generate_txn_ids(count):
-    out = []
-    hasher = hashlib.sha256()
-    for i in range(0, count):
-        name = random_name(pe_sim.IDENTIFIER_LENGTH)
-        hasher.update(name)
-        out.append(name)
-    return out, hasher.hexdigest()
 
 
 def create_random_private_key():

@@ -144,9 +144,6 @@ class TestGenesisUtil(unittest.TestCase):
         self.extend_genesis_util({'LedgerType': 'dev_mode',
                                   'DevModePublisher': True})
 
-    def test_poet0_genesis(self):
-        self.extend_genesis_util({'LedgerType': 'poet0'})
-
     @unittest.skipIf(DISABLE_POET1_SGX, 'SGX currently behind simulator')
     def test_poet1_genesis(self):
         self.extend_genesis_util({'LedgerType': 'poet1'})

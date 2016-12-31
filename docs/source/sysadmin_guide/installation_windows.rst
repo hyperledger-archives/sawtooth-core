@@ -233,8 +233,7 @@ valid transaction families supported by the validator network.
 .. code-block:: none
 
   "TransactionFamilies" : [
-      "IntegerKey",
-      "MarketPlace"
+      "IntegerKey"
   ]
 
 Lastly, the "AdministrationNode" setting must contain the address of the

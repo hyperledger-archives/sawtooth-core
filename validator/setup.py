@@ -82,22 +82,6 @@ else:
     include_dirs = []
     library_dirs = []
 
-poet0_enclave_mod = Extension(
-    '_poet0_enclave_simulator',
-    ['sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
-     'poet_enclave_simulator.i',
-     'sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
-     'common.cpp',
-     'sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
-     'wait_certificate.cpp',
-     'sawtooth_validator/consensus/poet0/poet_enclave_simulator/'
-     'wait_timer.cpp'],
-    swig_opts=['-c++'],
-    extra_compile_args=extra_compile_args,
-    include_dirs=include_dirs,
-    libraries=libraries,
-    library_dirs=library_dirs)
-
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\conf"
     log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\logs"
@@ -148,16 +132,10 @@ setup(
                       'cbor>=0.1.23', 'colorlog', 'twisted',
                       'PyYAML', 'psutil', 'numpy', 'requests',
                       'pybitcointools', 'ipaddr'],
-    ext_modules=[poet0_enclave_mod],
-    py_modules=[
-        'sawtooth_validator.consensus.poet0.poet_enclave_simulator'
-        '.poet0_enclave_simulator',
-    ],
     data_files=data_files,
     entry_points={
         'console_scripts': [
-            'txnvalidator = txnserver.validator_cli:main_wrapper',
-            'txnadmin = txnmain.admin_cli:main'
+            'txnvalidator = txnserver.validator_cli:main_wrapper'
         ]
     })
 
@@ -168,18 +146,7 @@ if "clean" in sys.argv and "--all" in sys.argv:
             if fn.endswith(".pyc"):
                 os.remove(os.path.join(root, fn))
     for filename in [
-            ".coverage"
-            "_poet0_enclave_simulator.so",
-            os.path.join("journal",
-                         "consensus",
-                         "poet0",
-                         "poet_enclave_simulator",
-                         "poet0_enclave_simulator.py"),
-            os.path.join("journal",
-                         "consensus",
-                         "poet0",
-                         "poet_enclave_simulator",
-                         "poet_enclave_simulator_wrap.cpp")]:
+            ".coverage"]:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))
     shutil.rmtree(os.path.join(directory, "htmlcov"), ignore_errors=True)

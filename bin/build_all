@@ -18,27 +18,21 @@
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 PYTHONPATH=$(pwd)/core
-PYTHONPATH=$PYTHONPATH:$(pwd)/core/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/validator
-PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/mktplace
 PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/arcade
 export PYTHONPATH
 
-pip list --no-index | grep grpc > /dev/null 2>&1
-if [ $? = 0 ]; then
-    echo -e "\033[0;32m--- Found GRPC ---\n\033[0m"
-    $top_dir/bin/protogen || exit 1
-fi
-
 set -e
+
+echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
+$top_dir/bin/protogen || exit 1
 
 pkgs="
     core
     validator
     extensions/arcade
-    extensions/mktplace
 "
 
 pkg="signing"
