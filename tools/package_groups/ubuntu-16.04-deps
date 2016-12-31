@@ -1,6 +1,7 @@
 libcrypto++-dev
 libjson0
 libjson0-dev
+libzmq-dev
 python-cbor
 python-colorlog
 python-cryptography
@@ -18,3 +19,4 @@ python3-nose2
 python3-cbor
 python3-colorlog
 python3-lmdb
+python3-zmq
