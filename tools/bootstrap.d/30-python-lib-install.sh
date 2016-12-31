@@ -24,10 +24,6 @@ pip install -r /project/sawtooth-core/core/sawtooth_core.egg-info/requires.txt
 (cd /project/sawtooth-core/validator/ && python setup.py egg_info)
 install_requires /project/sawtooth-core/validator/sawtooth_validator.egg-info/requires.txt
 
-# sawtooth-core/extensions/mktplace
-(cd /project/sawtooth-core/extensions/mktplace/ && python setup.py egg_info)
-install_requires /project/sawtooth-core/extensions/mktplace/sawtooth_mktplace.egg-info/requires.txt
-
 # sawtooth-core/extensions/arcade
 (cd /project/sawtooth-core/extensions/arcade/ && python setup.py egg_info)
 install_requires /project/sawtooth-core/extensions/arcade/sawtooth_arcade.egg-info/requires.txt

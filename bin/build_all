@@ -22,7 +22,6 @@ PYTHONPATH=$PYTHONPATH:$(pwd)/core/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/validator
-PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/mktplace
 PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/arcade
 export PYTHONPATH
 
@@ -38,7 +37,6 @@ pkgs="
     core
     validator
     extensions/arcade
-    extensions/mktplace
 "
 
 pkg="signing"

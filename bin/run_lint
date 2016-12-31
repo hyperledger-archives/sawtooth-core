@@ -137,7 +137,7 @@ done
 
 if [ "$DRY_RUN" = "1" ]; then
     for dir in core signing validator sdk/python sdk/examples/intkey_python \
-        extensions/mktplace extensions/arcade
+        extensions/arcade
     do
         for package in $(find_packages "$dir" "$SINCE")
         do
@@ -183,17 +183,6 @@ export PYTHONPATH
 lint pylint validator "$SINCE" .pylintrc-validator 1 sawtooth_validator || retval=1
 lint pylint validator/sawtooth_validator/consensus "$SINCE" .pylintrc-validator 1 || retval=1
 lint pylint3 validator/sawtooth_validator "$SINCE" .pylintrc-strict 1 consensus || retval=1
-
-
-PYTHONPATH=$top_dir/core
-PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$top_dir/extensions/mktplace
-export PYTHONPATH
-lint pylint extensions/mktplace "$SINCE" .pylintrc-mktplace 1 || retval=1
 
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/core/build/lib.linux-x86_64-2.7
