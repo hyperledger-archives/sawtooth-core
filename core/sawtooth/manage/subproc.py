@@ -123,8 +123,6 @@ class SubprocessNodeController(NodeController):
             if node_args.ledger_type is None or \
                     node_args.ledger_type == "poet1":
                 cmd += ['admin', 'poet1-genesis']
-            elif node_args.ledger_type == "poet0":
-                cmd += ['admin', 'poet0-genesis']
             else:
                 cmd += ['admin', 'dev-mode-genesis']
             if self._verbose is True:
