@@ -36,6 +36,7 @@ class TransactionProcessor(object):
     def __init__(self, url):
         self._stream = Stream(url)
         self._handlers = []
+        self._stop = False
 
     def add_handler(self, handler):
         self._handlers.append(handler)
@@ -58,6 +59,8 @@ class TransactionProcessor(object):
             LOGGER.info("future result: %s", repr(future.result))
 
         while True:
+            if self._stop:
+                break
             msg = self._stream.receive()
             LOGGER.info("received %s", msg.message_type)
 
@@ -89,3 +92,6 @@ class TransactionProcessor(object):
                     content=TransactionProcessResponse(
                         status=TransactionProcessResponse.INTERNAL_ERROR
                     ).SerializeToString())
+
+    def stop(self):
+        self._stop = True

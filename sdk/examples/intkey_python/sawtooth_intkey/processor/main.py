@@ -31,4 +31,9 @@ def main(args=sys.argv[1:]):
     handler = IntkeyTransactionHandler(namespace_prefix=intkey_prefix)
     processor.add_handler(handler)
 
-    processor.start()
+    try:
+        processor.start()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        processor.stop()
