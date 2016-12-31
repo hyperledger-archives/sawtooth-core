@@ -7,6 +7,7 @@ python-colorlog
 python-cryptography
 python-dev
 python-ipaddr
+python-lmdb
 python-numpy
 python-openssl
 python-service-identity
