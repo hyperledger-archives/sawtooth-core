@@ -28,10 +28,6 @@ install_requires /project/sawtooth-core/validator/sawtooth_validator.egg-info/re
 (cd /project/sawtooth-core/extensions/mktplace/ && python setup.py egg_info)
 install_requires /project/sawtooth-core/extensions/mktplace/sawtooth_mktplace.egg-info/requires.txt
 
-# sawtooth-core/extensions/bond
-(cd /project/sawtooth-core/extensions/bond/ && python setup.py egg_info)
-install_requires /project/sawtooth-core/extensions/bond/sawtooth_bond.egg-info/requires.txt
-
 # sawtooth-core/extensions/arcade
 (cd /project/sawtooth-core/extensions/arcade/ && python setup.py egg_info)
 install_requires /project/sawtooth-core/extensions/arcade/sawtooth_arcade.egg-info/requires.txt

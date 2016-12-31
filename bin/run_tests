@@ -21,7 +21,7 @@ usage() {
     echo
     echo "Options:"
     echo "  -h          print usage and exit"
-    echo "  -m Module   only run tests of specified module <core, signing, validator, mktplace, bond, arcade>"
+    echo "  -m Module   only run tests of specified module <core, signing, validator, mktplace, arcade>"
 }
 
 set -e
@@ -108,20 +108,6 @@ test_mktplace() {
 	cd ../..
 }
 
-test_bond() {
-	PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/core
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/extensions/bond
-	export PYTHONPATH
-	cd extensions/bond
-	nose2 -v
-	cd ../..
-}
-
 
 MODULE="all"
 while getopts :m:h opt
@@ -147,7 +133,6 @@ case $MODULE in
         test_signing
         test_validator
         test_mktplace
-        test_bond
         test_sdk_examples
         ;;
     core)
@@ -161,9 +146,6 @@ case $MODULE in
         ;;
     mktplace)
         test_mktplace
-        ;;
-    bond)
-        test_bond
         ;;
     sdk_examples)
         test_sdk_examples

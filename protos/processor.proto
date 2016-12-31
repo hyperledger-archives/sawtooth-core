@@ -21,8 +21,8 @@ option java_package = "sawtooth.sdk.protobuf";
 // The registration request from the transaction processor to the validator/executor
 message TransactionProcessorRegisterRequest {
 
-    // xo, or bond, or identity
-    // a settled upon name for the capabilities of the transaction processor
+    // A settled upon name for the capabilities of the transaction processor.
+    // For example: intkey, xo
     string family = 1;
 
     // The version supported.  For example:
