@@ -266,15 +266,6 @@ player has send in his hand, play against the computer, create game for
 specific players only.
 
 
-Sawtooth Ethereum Guess
------------------------
-
-seg is a game about guessing the balances of Ethereum addresses.  While it
-isn't really fun... it does show how to integrate an Ethereum client into
-a transaction family (thus using Ethereum as a source of record for some
-data).
-
-
 Potential Future Enhancements
 -----------------------------
 Contributions welcome!
