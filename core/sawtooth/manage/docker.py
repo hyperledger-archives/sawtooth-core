@@ -86,9 +86,13 @@ class DockerNodeController(NodeController):
 
         cmd = []
         bin_path = '/project/sawtooth-core/bin'
+
+        initial_connectivity = 0 if genesis else 1
+        cmd.append(
+            'echo "{\\\"InitialConnectivity\\\": %d}"' % initial_connectivity)
+        cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
+
         if genesis:
-            cmd.append('echo "{\\\"InitialConnectivity\\\": 0}"')
-            cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
             cmd.append('%s/sawtooth keygen %s; ' % (bin_path, node_name))
             cmd.append('%s/sawtooth admin' % bin_path)
             cmd.append('poet1-genesis -vv --node %s; exec' % node_name)
@@ -99,8 +103,7 @@ class DockerNodeController(NodeController):
         cmd.append("--listen '{}:{}/TCP http'".format(ip_addr, http_port))
         # Set Ledger Url
         cmd.append("--url 'http://{}:8800'".format(str(subnet_list[3])))
-        if genesis:
-            cmd.append('--config ${CURRENCYHOME}/data/validator-000.json')
+        cmd.append('--config ${CURRENCYHOM}}/data/%s.json' % node_name)
         args.append(' '.join(cmd))
         return args
 
