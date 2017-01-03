@@ -124,11 +124,13 @@ class SerialScheduler(Scheduler):
             return txn_info
 
     def mark_as_applied(self, transaction_signature):
-        if (self._in_progress_transaction is None or
-                self._in_progress_transaction != transaction_signature):
-            raise ValueError("transaction not in progress: {}",
-                             transaction_signature)
-        self._in_progress_transaction = None
+        with self._condition:
+            if (self._in_progress_transaction is None or
+                    self._in_progress_transaction != transaction_signature):
+                raise ValueError("transaction not in progress: {}",
+                                 transaction_signature)
+            self._in_progress_transaction = None
+            self._condition.notify_all()
 
     def finalize(self):
         with self._condition:
