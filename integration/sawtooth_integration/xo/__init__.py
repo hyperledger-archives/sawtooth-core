@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-sawtooth docker build sawtooth-test-ubuntu-xenial
-sawtooth docker build sawtooth-validator
-sawtooth docker build tp_intkey_python
-sawtooth docker build tp_intkey_java
-sawtooth docker build tp_xo_python
-build_all
-./tools/plugins/install_jdk.sh
-build_java_sdk
-build_java_intkey

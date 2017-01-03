@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,11 +42,13 @@ test_core() {
 test_sdk_examples() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
+    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
     PYTHONPATH=$PYTHONPATH:$top_dir/integration
     export PYTHONPATH
     cd integration/sawtooth_integration/test_suites
     run_tp_test tp_intkey_python ts_tp_intkey.TestSuiteIntkey
-    cd ../../../
+    run_tp_test tp_xo_python ts_tp_xo.TestSuiteXo
+    cd ../../../../
 }
 
 test_sdk_examples_docker() {
@@ -57,6 +59,7 @@ test_sdk_examples_docker() {
     cd integration/sawtooth_integration
     run_docker_test docker/tp-intkey-python.yaml -s validator
     run_docker_test docker/intkey-load-python.yaml -s integration_test
+    run_docker_test docker/tp-xo-python.yaml -s validator
     cd ../../
 }
 
