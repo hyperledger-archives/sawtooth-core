@@ -24,6 +24,7 @@ import yaml
 
 from sawtooth.cli.exceptions import CliException
 from sawtooth.exceptions import ManagementError
+
 from sawtooth.manage.node import NodeArguments
 from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.wrap import WrappedNodeController
@@ -35,21 +36,17 @@ from sawtooth.manage.docker_tng import DockerTNGNodeController
 from sawtooth.manage.subproc import SubprocessNodeController
 from sawtooth.manage.subproc_tng import SubprocessTNGNodeController
 
-
 from sawtooth.cli.stats import run_stats
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-MANAGE_TYPES = ['subprocess', 'daemon', 'docker',
-                'docker-tng', 'subprocess-tng']
+MANAGE_TYPES = 'docker', 'subprocess'
+LEGACY_MANAGE = 'subprocess-legacy', 'daemon-legacy', 'docker-legacy'
+ALL_MANAGE_TYPES = MANAGE_TYPES + LEGACY_MANAGE
 
-DEFAULT_MANAGE = 'subprocess'
-
-TNG_MANAGE = ['docker-tng', 'subprocess-tng']
-
-SUBPROCESS_MANAGE = ['subprocess', 'subprocess-tng']
+DEFAULT_MANAGE = 'docker'
 
 
 def add_cluster_parser(subparsers, parent_parser):
@@ -89,7 +86,7 @@ def add_cluster_start_parser(subparsers, parent_parser):
     parser.add_argument(
         '-m', '--manage',
         help='style of validator management',
-        choices=MANAGE_TYPES,
+        choices=ALL_MANAGE_TYPES,
         default=DEFAULT_MANAGE)
 
     parser.add_argument(
@@ -140,7 +137,7 @@ def add_cluster_logs_parser(subparsers, parent_parser):
         'node_names',
         metavar='NODE_NAME',
         help='get logs from specific validator nodes. implemented for '
-             'docker-tng',
+             'docker',
         nargs='+')
 
 
@@ -190,18 +187,18 @@ def get_node_controller(state, args):
     manage_type = state['Manage']
 
     node_controller_types = {
-        'subprocess': SubprocessNodeController,
-        'docker': DockerNodeController,
-        'daemon': DaemonNodeController,
-        'docker-tng': DockerTNGNodeController,
-        'subprocess-tng': SubprocessTNGNodeController
+        'docker': DockerTNGNodeController,
+        'subprocess': SubprocessTNGNodeController,
+        'subprocess-legacy': SubprocessNodeController,
+        'docker-legacy': DockerNodeController,
+        'daemon-legacy': DaemonNodeController,
     }
 
     try:
         node_controller_type = node_controller_types[manage_type]
     except:
         # manage_type hasn't been added to node_controller_types
-        if manage_type in MANAGE_TYPES:
+        if manage_type in ALL_MANAGE_TYPES:
             error_msg = '{} manamgement type not implemented'
         else:
             error_msg = 'Invalid management type: {}'
@@ -211,6 +208,7 @@ def get_node_controller(state, args):
 
     # Optionally decorate with WrappedNodeController
     args_wrap = False if not hasattr(args, 'wrap') else args.wrap
+
     if 'Wrap' not in state.keys():
         # if wrap has not been set in state, set it
         state['Wrap'] = args_wrap
@@ -220,9 +218,10 @@ def get_node_controller(state, args):
             raise CliException("Already wrapped to %s." % state["Wrap"])
 
     if state['Wrap'] is not False:
-        if not isinstance(node_controller, SubprocessNodeController):
-            raise CliException("--wrap currently only implemented for "
-                               "'subprocess' management type")
+        wrappable_types = SubprocessNodeController,
+        if not isinstance(node_controller, wrappable_types):
+            msg = '--wrap currently only implemented for {} management types'
+            raise CliException(msg.format(wrappable_types))
         # either args or state have indicated a WrappedNodeController
         if 'ManageWrap' not in state.keys():
             state['ManageWrap'] = None
@@ -256,7 +255,7 @@ def do_cluster_start(args):
 
     state["DesiredState"] = "Running"
 
-    if state["Manage"] in TNG_MANAGE:
+    if state["Manage"] not in LEGACY_MANAGE:
         if args.processors is None:
             raise CliException("Use -P to specify one or more processors")
         state['Processors'] = args.processors
@@ -315,7 +314,8 @@ def do_cluster_start(args):
 
     node_names = state['Nodes'].keys()
 
-    if state["Manage"] in SUBPROCESS_MANAGE:
+    subprocess_manage = 'subprocess', 'subprocess-legacy'
+    if state["Manage"] in subprocess_manage:
         try:
             while True:
                 time.sleep(128)
@@ -486,7 +486,8 @@ def do_cluster_extend(args):
 def do_cluster_logs(args):
     state = load_state()
 
-    if state['Manage'] == 'docker-tng':
+    supported_types = 'docker',
+    if state['Manage'] in supported_types:
         prefix = 'sawtooth-tng-cluster-0'
 
         for node_name in args.node_names:
