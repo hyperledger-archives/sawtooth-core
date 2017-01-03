@@ -145,6 +145,16 @@ class _SendReceiveThread(Thread):
         return asyncio.run_coroutine_threadsafe(self._get_message(),
                                                 self._event_loop).result()
 
+    def _exit_tasks(self):
+        for task in asyncio.Task.all_tasks(self._event_loop):
+            task.cancel()
+
+    def shutdown(self):
+        self._exit_tasks()
+        self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+        self._sock.close()
+        self._context.destroy()
+
     def run(self):
         self._event_loop = zmq.asyncio.ZMQEventLoop()
         asyncio.set_event_loop(self._event_loop)
@@ -167,6 +177,7 @@ class Stream(object):
         self._url = url
         self._futures = FutureCollection()
         self._send_recieve_thread = _SendReceiveThread(url, self._futures)
+        self._send_recieve_thread.daemon = True
         self._send_recieve_thread.start()
 
     def send(self, message_type, content):
@@ -201,4 +212,4 @@ class Stream(object):
         return self._send_recieve_thread.get_message()
 
     def close(self):
-        self._send_recieve_thread.join()
+        self._send_recieve_thread.shutdown()
