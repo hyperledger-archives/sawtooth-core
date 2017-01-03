@@ -30,8 +30,13 @@ class SubprocessNodeController(NodeController):
         self._host_name = host_name
         self._verbose = verbose
         self._base_config = get_validator_configuration([], {})
-        self._v0_cfg = {
+        # Additional configuration for the genesis validator
+        self._genesis_cfg = {
             "InitialConnectivity": 0,
+        }
+        # Additional configuration for the non-genesis validators
+        self._non_genesis_cfg = {
+            "InitialConnectivity": 1,
         }
         self._nodes = {}
 
@@ -48,17 +53,19 @@ class SubprocessNodeController(NodeController):
         cmd += ['--listen', "{}:{}/UDP gossip".format(host, gossip_port)]
         for x in node_args.config_files:
             cmd += ['--config', x]
+        # Create and indicate special config file
+        config_dir = self._base_config['ConfigDirectory']
+        if node_args.currency_home is not None:
+            config_dir = os.path.join(node_args.currency_home, 'etc')
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+        config_file = '{}_bootstrap.json'.format(node_name)
+        cfg = self._non_genesis_cfg
         if node_args.genesis:
-            # Create and indicate special config file
-            config_dir = self._base_config['ConfigDirectory']
-            if node_args.currency_home is not None:
-                config_dir = os.path.join(node_args.currency_home, 'etc')
-            if not os.path.exists(config_dir):
-                os.makedirs(config_dir)
-            config_file = '{}_bootstrap.json'.format(node_name)
-            with open(os.path.join(config_dir, config_file), 'w') as f:
-                f.write(json.dumps(self._v0_cfg, indent=4))
-            cmd += ['--config', config_file]
+            cfg = self._genesis_cfg
+        with open(os.path.join(config_dir, config_file), 'w') as f:
+            f.write(json.dumps(cfg, indent=4))
+        cmd += ['--config', config_file]
         return cmd
 
     def is_running(self, node_name):
