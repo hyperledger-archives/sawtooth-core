@@ -39,6 +39,24 @@ class TransactionExecutorThread(threading.Thread):
         self._context_manager = context_manager
         self._scheduler = scheduler
 
+    def _future_done_callback(self, request, result):
+        """
+
+        :param request (bytes):the serialized request
+        :param result (FutureResult):
+        """
+        req = processor_pb2.TransactionProcessRequest()
+        req.ParseFromString(request)
+
+        response = processor_pb2.TransactionProcessResponse()
+        response.ParseFromString(result.content)
+        if response.status == processor_pb2.TransactionProcessResponse.OK:
+            self._scheduler.set_status(req.signature, True, req.context_id)
+        else:
+            self._context_manager.delete_context(
+                context_id_list=[req.context_id])
+            self._scheduler.set_status(req.signature, False, req.context_id)
+
     def run(self):
         for txn_info in self._scheduler:
             txn = txn_info.txn
@@ -61,14 +79,7 @@ class TransactionExecutorThread(threading.Thread):
                 content=content)
 
             future = self._service.send_txn(header=header, message=message)
-            response = processor_pb2.TransactionProcessResponse()
-            response.ParseFromString(future.result().content)
-            if response.status == processor_pb2.TransactionProcessResponse.OK:
-                self._scheduler.set_status(txn.signature, True, context_id)
-            else:
-                self._context_manager.delete_context(
-                    context_id_list=[context_id])
-                self._scheduler.set_status(txn.signature, False, context_id)
+            future.add_callback(self._future_done_callback)
 
 
 class TransactionExecutor(object):
