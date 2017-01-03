@@ -94,8 +94,7 @@ def do_poet1_genesis(args):
         txn_family.register_transaction_types(journal)
 
     # Make genesis block:
-    # pylint: disable=protected-access
-    consensus_obj._register_signup_information(journal=journal)
+    consensus_obj.register_signup_information(journal=journal)
 
     # ...make sure there is no current chain here, or fail
     # ...pop VR seed (we'll presently defer resolving VR seed issues)

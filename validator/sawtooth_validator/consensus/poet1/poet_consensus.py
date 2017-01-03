@@ -17,6 +17,7 @@ import collections
 import logging
 import importlib
 import hashlib
+import random
 
 from gossip import common
 from gossip import stats
@@ -42,7 +43,14 @@ class PoetConsensus(Consensus):
             keep.
     """
 
-    __BLOCK_COMMIT_THRESHOLD = 25
+    # The default maximum number of blocks that a validator can claim
+    # before it is required to submit new signup information
+    __BLOCK_CLAIM_THRESHOLD = 25
+
+    # The default number of blocks that a validator can claim before it
+    # will start testing (through a random algorithm) whether it will
+    # submit new signup information
+    __BLOCK_CLAIM_TRIGGER = 20
 
     def __init__(self, kwargs):
         """Constructor for the PoetJournal class.
@@ -60,12 +68,43 @@ class PoetConsensus(Consensus):
                              'poet_enclave_simulator' \
                              '.poet_enclave_simulator'
 
-        self._block_commit_threshold = \
-            kwargs.get('BlockCommitThreshold', self.__BLOCK_COMMIT_THRESHOLD)
+        self._block_claim_threshold = \
+            max(
+                kwargs.get(
+                    'BlockClaimThreshold',
+                    self.__BLOCK_CLAIM_THRESHOLD),
+                1)
         LOGGER.debug(
-            'Validators may only commit %d block(s) before obtaining new '
-            'keys',
-            self._block_commit_threshold)
+            'Validators may only claim %d block(s) before being required to '
+            'obtain new keys',
+            self._block_claim_threshold)
+
+        self._block_claim_trigger = \
+            min(
+                kwargs.get(
+                    'BlockClaimTrigger',
+                    self.__BLOCK_CLAIM_TRIGGER),
+                self._block_claim_threshold)
+        LOGGER.debug(
+            'After claiming %d block(s), validator will begin randomly '
+            'determining if it wants to create new keys',
+            self._block_claim_trigger)
+
+        # We are going to sum up the numbers between the trigger and the
+        # threshold (inclusive), shifting all numbers "left" by (trigger - 1)
+        # i.e., n * (n + 1) / 1, where n is the number of claims between
+        # trigger and threshold, inclusive.  If trigger and threshold are the
+        # same, n is 1.
+        #
+        # Later, when we check to see if we want to create new signup
+        # information, we are going to make the same calculation, but using
+        # the claim count instead of threshold, meaning that the closer we get
+        # to the threshold, the more likely it is we will generate new keys,
+        # guaranteeing that when the claimed count hits the threshold, we will
+        # generate new keys with 100% probability.
+        self._weighted_range = \
+            (self._block_claim_threshold - self._block_claim_trigger + 1) * \
+            (self._block_claim_threshold - self._block_claim_trigger + 2) / 2
 
         poet_enclave = importlib.import_module(enclave_module)
         poet_enclave.initialize(**kwargs)
@@ -93,13 +132,13 @@ class PoetConsensus(Consensus):
 
         return registration
 
-    def _update_validator_committed_block_count(self,
-                                                journal,
-                                                block,
-                                                increment_value,
-                                                default_initial_value,
-                                                sync_local_store=True,
-                                                reset_on_different_key=True):
+    def _update_validator_claimed_block_count(self,
+                                              journal,
+                                              block,
+                                              increment_value,
+                                              default_initial_value,
+                                              sync_local_store=True,
+                                              reset_on_different_key=True):
         # Retrieve the validator registration information for the validator
         # that is the originator for the block in question
         registration = \
@@ -115,7 +154,7 @@ class PoetConsensus(Consensus):
                 block.OriginatorID,
                 {
                     'poet_public_key': registration['poet-public-key'],
-                    'committed_block_count': default_initial_value
+                    'claimed_block_count': default_initial_value
                 })
 
         # Compare the PoET public key in our statistics entry with the PoET
@@ -127,19 +166,19 @@ class PoetConsensus(Consensus):
                 statistics['poet_public_key'] and reset_on_different_key:
             statistics['poet_public_key'] = \
                 registration['poet-public-key']
-            statistics['committed_block_count'] = default_initial_value
+            statistics['claimed_block_count'] = default_initial_value
 
         # If the PoET public keys are the same, then update the block commit
         # count appropriately.
         if registration['poet-public-key'] == statistics['poet_public_key']:
-            statistics['committed_block_count'] += increment_value
+            statistics['claimed_block_count'] += increment_value
 
         # A guard to keep our statistics in the reasonable range
-        if statistics['committed_block_count'] < 0:
-            statistics['committed_block_count'] = 0
-        elif statistics['committed_block_count'] > \
-                self._block_commit_threshold:
-            statistics['committed_block_count'] = self._block_commit_threshold
+        if statistics['claimed_block_count'] < 0:
+            statistics['claimed_block_count'] = 0
+        elif statistics['claimed_block_count'] > \
+                self._block_claim_threshold:
+            statistics['claimed_block_count'] = self._block_claim_threshold
 
         # Update the in-memory local store and if requested, also sync the
         # local store to the persisted backing storage.
@@ -173,7 +212,7 @@ class PoetConsensus(Consensus):
                 # PoET public key for the validator, do not reset the
                 # statistics as we have hit an old, out-of-date PoET public
                 # key for the validator.
-                self._update_validator_committed_block_count(
+                self._update_validator_claimed_block_count(
                     journal=journal,
                     block=block,
                     increment_value=1,
@@ -185,10 +224,10 @@ class PoetConsensus(Consensus):
 
         for originator, statistics in self._validator_statistics.iteritems():
             LOGGER.debug(
-                'Validator with ID %s has committed %d block(s) with PoET '
+                'Validator with ID %s has claimed %d block(s) with PoET '
                 'public key %s',
                 originator,
-                statistics['committed_block_count'],
+                statistics['claimed_block_count'],
                 statistics['poet_public_key'])
 
         # Sync the statistics back so they are persisted
@@ -236,7 +275,7 @@ class PoetConsensus(Consensus):
                 journal.local_node.Identifier,
                 self.poet_public_key)
         else:
-            self._register_signup_information(journal)
+            self.register_signup_information(journal)
 
         return True
 
@@ -277,22 +316,22 @@ class PoetConsensus(Consensus):
                         block.OriginatorID,
                         {
                             'poet_public_key': registration['poet-public-key'],
-                            'committed_block_count': 0
+                            'claimed_block_count': 0
                         })
 
-                # If the validator has already reached commit limit for the
+                # If the validator has already reached claimed limit for the
                 # public key, then we reject the block as the validator needs
                 # to get new signup information
                 if (registration['poet-public-key'] ==
                         statistics['poet_public_key']) and \
-                    (statistics['committed_block_count'] >=
-                        self._block_commit_threshold):
+                    (statistics['claimed_block_count'] >=
+                        self._block_claim_threshold):
                     LOGGER.error(
-                        'Validator %s has reached block commit limit '
+                        'Validator %s has reached block claim limit '
                         '(%d >= %d) with current signup information',
                         block.OriginatorID,
-                        statistics['committed_block_count'],
-                        self._block_commit_threshold)
+                        statistics['claimed_block_count'],
+                        self._block_claim_threshold)
                     return False
 
             except ValueError, error:
@@ -313,11 +352,11 @@ class PoetConsensus(Consensus):
             True on success, False on failure.
         """
         LOGGER.info(
-            'Block %s has been committed by %s',
+            'Block %s has been claimed by %s',
             block.Identifier,
             block.OriginatorID)
 
-        self._update_validator_committed_block_count(
+        self._update_validator_claimed_block_count(
             journal=journal,
             block=block,
             increment_value=1,
@@ -325,25 +364,26 @@ class PoetConsensus(Consensus):
 
         statistics = self._validator_statistics[block.OriginatorID]
         LOGGER.debug(
-            'After block commit, validator %s has committed %d block(s) with '
+            'After block commit, validator %s has claimed %d block(s) with '
             'PoET public key %s',
             block.OriginatorID,
-            statistics['committed_block_count'],
+            statistics['claimed_block_count'],
             statistics['poet_public_key'])
 
-        # If we are the validator that committed the block, we need to see
+        # If we are the validator that claimed the block, we need to see
         # if we need to get new signup information to ensure that we are
         # able to continue claiming blocks
         if journal.local_node.Identifier == block.OriginatorID:
-            if statistics['committed_block_count'] >= \
-                    self._block_commit_threshold:
+            if self._should_reregister_signup_information(
+                    statistics['claimed_block_count']):
                 LOGGER.info(
-                    'Validator has reached block commit threshold '
-                    '(%d >= %d). We need to refresh our signup information.',
-                    statistics['committed_block_count'],
-                    self._block_commit_threshold)
+                    'Validator has decided to refresh signup information '
+                    '(claim count = %d, trigger = %d threshold = %d).',
+                    statistics['claimed_block_count'],
+                    self._block_claim_trigger,
+                    self._block_claim_threshold)
 
-                self._register_signup_information(journal)
+                self.register_signup_information(journal)
 
         return True
 
@@ -360,32 +400,54 @@ class PoetConsensus(Consensus):
             True on success, False on failure.
         """
         LOGGER.info(
-            'Block %s has been de-committed by %s',
+            'Block %s by validator %s will be de-committed',
             block.Identifier,
             block.OriginatorID)
 
         # Update the statistics for this validator.  In this case, we are
         # going to assume the worst and set the default block count to the
-        # threshold it turns out that we either don't have statistics for this
-        # validator or de-committing the one or more blocks caused the
+        # threshold as it turns out that we either don't have statistics for
+        # this validator or de-committing the one or more blocks caused the
         # validator to temporarily revert to a previous public key.
-        self._update_validator_committed_block_count(
+        self._update_validator_claimed_block_count(
             journal=journal,
             block=block,
             increment_value=-1,
-            default_initial_value=self._block_commit_threshold)
+            default_initial_value=self._block_claim_threshold)
 
         statistics = self._validator_statistics[block.OriginatorID]
         LOGGER.debug(
-            'After block de-commit, validator %s has committed %d block(s) '
+            'After block de-commit, validator %s has claimed %d block(s) '
             'with PoET public key %s',
             block.OriginatorID,
-            statistics['committed_block_count'],
+            statistics['claimed_block_count'],
             statistics['poet_public_key'])
 
         return True
 
-    def _register_signup_information(self, journal):
+    def _should_reregister_signup_information(self, block_claim_count):
+        # If the block claim count has hit the trigger, we are going to
+        # randomly determine if we want to generate new keys.  The random
+        # distribution is based upon the sum of the range between the
+        # trigger and the threshold and the range between the trigger and
+        # the claim count.  Assuming that S represents the sum of the range
+        # between the trigger and the threshold, the probabilities (starting
+        # with claim count == trigger, up through claim count == threshold:
+        # 1 / S, 3 / S, 6 / S, ..., S / S
+        if block_claim_count >= self._block_claim_trigger:
+            LOGGER.debug(
+                'Claim count has triggered key regeneration check (%d >= %d)',
+                block_claim_count,
+                self._block_claim_trigger)
+            weighted_distance = \
+                (block_claim_count - self._block_claim_trigger + 1) * \
+                (block_claim_count - self._block_claim_trigger + 2) / 2
+            if random.randint(1, self._weighted_range) <= weighted_distance:
+                return True
+
+        return False
+
+    def register_signup_information(self, journal):
         wait_certificate_id = journal.most_recent_committed_block_id
         public_key_hash = \
             hashlib.sha256(
@@ -474,7 +536,7 @@ class PoetConsensus(Consensus):
         journal.on_initialization_complete += \
             self._on_journal_initialization_complete
 
-        # We want the ability to test a block before it gets committed so that
+        # We want the ability to test a block before it gets claimed so that
         # we can enforce PoET 1 policies
         journal.on_block_test += self._on_block_test
 
@@ -593,10 +655,10 @@ class PoetConsensus(Consensus):
                         journal.local_node.Identifier,
                         {
                             'poet_public_key': self.poet_public_key,
-                            'committed_block_count': 0
+                            'claimed_block_count': 0
                         })
 
-                # If the validator has already reached commit the limit for
+                # If the validator has already reached the claim limit for
                 # its current public key, then we reject the block as the
                 # validator should be getting new validator registration
                 # information.
@@ -607,15 +669,15 @@ class PoetConsensus(Consensus):
                 # the belt and suspenders approach.
                 if (registration['poet-public-key'] ==
                         statistics['poet_public_key']) and \
-                    (statistics['committed_block_count'] >=
-                        self._block_commit_threshold):
+                    (statistics['claimed_block_count'] >=
+                        self._block_claim_threshold):
                     raise \
                         ValueError(
-                            'Validator {0} has reached block commit limit '
+                            'Validator {0} has reached block claim limit '
                             '({1} >= {2}) with current signup info'.format(
                                 journal.local_node.Identifier,
-                                statistics['committed_block_count'],
-                                self._block_commit_threshold))
+                                statistics['claimed_block_count'],
+                                self._block_claim_threshold))
 
                     # Note - we don't update our block commit statistics here.
                     # We wait until the _on_commit_block callback.  Claiming

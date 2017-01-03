@@ -829,7 +829,6 @@ class Journal(object):
         Args:
             tblock (Transaction.TransactionBlock): A disconnected block.
         """
-
         pending = self.pending_block
         self.pending_block = None
         try:
@@ -1158,7 +1157,7 @@ class Journal(object):
             for txnid in block.TransactionIDs:
                 # there is a chance that this block is incomplete and some
                 # of the transactions have not arrived, don't put
-                # transactions into pending if we dont have the transaction
+                # transactions into pending if we don't have the transaction
                 txn = self.transaction_store.get(txnid)
                 if txn:
                     txn.Status = transaction.Status.pending
