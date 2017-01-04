@@ -165,10 +165,12 @@ class ValidatorService(object):
             raise Exception("internal error, no processor available")
         processor = self._processors[processor_type]
         message.sender = processor.sender
-        self._send_receive_thread.send_message(message)
 
         fut = future.Future(message.correlation_id)
         self._futures.put(fut)
+
+        self._send_receive_thread.send_message(message)
+
         return fut
 
     def register_transaction_processor(self, sender, family, version,
