@@ -92,8 +92,7 @@ class StateContext(object):
 
     def set_futures(self, address_value_dict):
         for add, val in address_value_dict.items():
-            context_future = self._address_value_dict.get(add)
-            context_future.set_result(val)
+            context_future = self._address_value_dict.get(add).set_result(val)
 
     def get_writable_address_value_dict(self):
         add_value_dict = {}
@@ -264,8 +263,8 @@ class ContextManager(object):
                 return []
         with self._shared_lock:
             context = self._contexts.get(context_id)
-            return [(a, f.result())
-                    for a, f in context.get_from_prefetched(address_list)]
+        return [(a, f.result())
+                for a, f in context.get_from_prefetched(address_list)]
 
     def set(self, context_id, address_value_list):
         """
@@ -297,7 +296,8 @@ class ContextManager(object):
             tree = MerkleDatabase(self._database, state_root)
             updates = dict()
             for c_id in context_ids:
-                context = self._contexts[c_id]
+                with self._shared_lock:
+                    context = self._contexts[c_id]
                 for add in context.get_address_value_dict().keys():
                     if add in updates:
                         raise SquashException(
@@ -390,4 +390,4 @@ class _ContextFuture(object):
         with self._condition:
             self._result = result
             self._result_is_set = True
-            self._condition.notify()
+            self._condition.notify_all()
