@@ -111,3 +111,8 @@ class TestSuiteIntkeyPython(TestSuiteIntkey):
 class TestSuiteIntkeyJava(TestSuiteIntkey):
     def __init__(self, test_name):
         super().__init__(test_name, 'tp_intkey_java')
+
+
+class TestSuiteIntkeyJavascript(TestSuiteIntkey):
+    def __init__(self, test_name):
+        super().__init__(test_name, 'tp_intkey_javascript')
