@@ -24,20 +24,32 @@ import yaml
 
 from sawtooth.cli.exceptions import CliException
 from sawtooth.exceptions import ManagementError
+from sawtooth.manage.node import NodeArguments
+from sawtooth.manage.simple import SimpleNodeCommandGenerator
+from sawtooth.manage.wrap import WrappedNodeController
+from sawtooth.manage.vnm import ValidatorNetworkManager
+
 from sawtooth.manage.daemon import DaemonNodeController
 from sawtooth.manage.docker import DockerNodeController
 from sawtooth.manage.docker_tng import DockerTNGNodeController
-from sawtooth.manage.node import NodeArguments
-from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.subproc import SubprocessNodeController
-from sawtooth.manage.wrap import WrappedNodeController
-from sawtooth.manage.vnm import ValidatorNetworkManager
+from sawtooth.manage.subproc_tng import SubprocessTNGNodeController
 
 
 from sawtooth.cli.stats import run_stats
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+MANAGE_TYPES = ['subprocess', 'daemon', 'docker',
+                'docker-tng', 'subprocess-tng']
+
+DEFAULT_MANAGE = 'subprocess'
+
+TNG_MANAGE = ['docker-tng', 'subprocess-tng']
+
+SUBPROCESS_MANAGE = ['subprocess', 'subprocess-tng']
 
 
 def add_cluster_parser(subparsers, parent_parser):
@@ -77,8 +89,8 @@ def add_cluster_start_parser(subparsers, parent_parser):
     parser.add_argument(
         '-m', '--manage',
         help='style of validator management',
-        choices=['subprocess', 'daemon', 'docker', 'docker-tng'],
-        default='subprocess')
+        choices=MANAGE_TYPES,
+        default=DEFAULT_MANAGE)
 
     parser.add_argument(
         '--processors',
@@ -161,8 +173,7 @@ def load_state(start=False):
         with open(file_name, 'r') as state_file:
             state = yaml.load(state_file)
     elif start is True:
-        state = dict()
-        state["DesiredState"] = "Stopped"
+        state = {'DesiredState': 'Stopped'}
     else:
         raise CliException("Missing state file")
     return state
@@ -175,21 +186,28 @@ def save_state(state):
 
 
 def get_node_controller(state, args):
-    # pylint: disable=redefined-variable-type
-
     # Get base controller:
-    node_controller = None
-    if state['Manage'] == 'subprocess':
-        node_controller = SubprocessNodeController()
-    elif state['Manage'] == 'docker':
-        node_controller = DockerNodeController()
-    elif state['Manage'] == 'daemon':
-        node_controller = DaemonNodeController()
-    elif state['Manage'] == 'docker-tng':
-        node_controller = DockerTNGNodeController()
-    else:
-        raise CliException('invalid management type:'
-                           ' {}'.format(state['Manage']))
+    manage_type = state['Manage']
+
+    node_controller_types = {
+        'subprocess': SubprocessNodeController,
+        'docker': DockerNodeController,
+        'daemon': DaemonNodeController,
+        'docker-tng': DockerTNGNodeController,
+        'subprocess-tng': SubprocessTNGNodeController
+    }
+
+    try:
+        node_controller_type = node_controller_types[manage_type]
+    except:
+        # manage_type hasn't been added to node_controller_types
+        if manage_type in MANAGE_TYPES:
+            error_msg = '{} manamgement type not implemented'
+        else:
+            error_msg = 'Invalid management type: {}'
+        raise CliException(error_msg.format(manage_type))
+
+    node_controller = node_controller_type()
 
     # Optionally decorate with WrappedNodeController
     args_wrap = False if not hasattr(args, 'wrap') else args.wrap
@@ -200,6 +218,7 @@ def get_node_controller(state, args):
         # state already knows about a wrapper
         if args_wrap is not False and args_wrap != state['Wrap']:
             raise CliException("Already wrapped to %s." % state["Wrap"])
+
     if state['Wrap'] is not False:
         if not isinstance(node_controller, SubprocessNodeController):
             raise CliException("--wrap currently only implemented for "
@@ -226,15 +245,10 @@ def do_cluster_start(args):
     if state["DesiredState"] == "Stopped":
         state["Nodes"] = {}
 
+    manage_type = DEFAULT_MANAGE if args.manage is None else args.manage
+
     if "Manage" not in state or state["DesiredState"] == "Stopped":
-        if args.manage == "subprocess" or args.manage is None:
-            state["Manage"] = "subprocess"
-        elif args.manage == "docker":
-            state["Manage"] = "docker"
-        elif args.manage == "daemon":
-            state["Manage"] = "daemon"
-        elif args.manage == "docker-tng":
-            state["Manage"] = "docker-tng"
+        state['Manage'] = manage_type
     elif args.manage is not None and state['Manage'] != args.manage\
             and state["DesiredState"] == "Running":
         raise CliException('Cannot use two different Manage types.'
@@ -242,7 +256,7 @@ def do_cluster_start(args):
 
     state["DesiredState"] = "Running"
 
-    if state["Manage"] == 'docker-tng':
+    if state["Manage"] in TNG_MANAGE:
         if args.processors is None:
             raise CliException("Use -P to specify one or more processors")
         state['Processors'] = args.processors
@@ -270,9 +284,9 @@ def do_cluster_start(args):
     for i in xrange(0, args.count):
         node_name = "validator-{:0>3}".format(i)
 
-        # if node_name in existing_nodes and vnm.is_running(node_name):
-        #     print "Already running: {}".format(node_name)
-        #     continue
+        if node_name in existing_nodes and vnm.is_running(node_name):
+            print("Already running: {}".format(node_name))
+            continue
 
         # genesis is true for the first node
         genesis = (i == 0)
@@ -281,8 +295,10 @@ def do_cluster_start(args):
 
         node_args = NodeArguments(node_name, http_port=http_port,
                                   gossip_port=gossip_port, genesis=genesis)
+
         if node_args.genesis is True:
             node_controller.create_genesis_block(node_args)
+
         print("Starting: {}".format(node_name))
         node_command_generator.start(node_args)
 
@@ -297,14 +313,16 @@ def do_cluster_start(args):
     except ManagementError as e:
         raise CliException(str(e))
 
-    if state["Manage"] == 'subprocess':
+    node_names = state['Nodes'].keys()
+
+    if state["Manage"] in SUBPROCESS_MANAGE:
         try:
             while True:
                 time.sleep(128)
         except KeyboardInterrupt:
             print()
             ns = Namespace(cluster_command='stop', command='cluster',
-                           node_names=[], verbose=None)
+                           node_names=node_names, verbose=None)
             do_cluster_stop(ns)
 
 
@@ -322,7 +340,9 @@ def do_cluster_stop(args):
     else:
         node_names = vnm.get_node_names()
 
-    nodes = state["Nodes"]
+    state_nodes = state["Nodes"]
+
+    # if node_names is empty, stop doesn't get called
     for node_name in node_names:
         if node_name not in nodes:
             raise CliException(
@@ -334,23 +354,21 @@ def do_cluster_stop(args):
         node_command_generator.stop(node_name)
 
         # Update status of Nodes
-        if node_name in nodes:
-            nodes[node_name]["Status"] = "Stopped"
-        else:
-            nodes[node_name] = {"Status": "Unknown"}
+        node_status = 'Stopped' if node_name in state_nodes else 'Unknown'
+        state_nodes[node_name]['Status'] = node_status
 
     if len(args.node_names) == 0 and len(node_names) == 0:
-        for node_name in nodes:
-            nodes[node_name]["Status"] = "Unknown"
+        for node_name in state_nodes:
+            state_nodes[node_name]["Status"] = "Unknown"
 
     # If none of the nodes are running set overall State to Stopped
     state["DesiredState"] = "Stopped"
-    for node in nodes:
-        if nodes[node]["Status"] == "Running":
+    for node in state_nodes:
+        if state_nodes[node]["Status"] == "Running":
             state["DesiredState"] = "Running"
 
     # Update state of nodes
-    state["Nodes"] = nodes
+    state["Nodes"] = state_nodes
     save_state(state)
 
     vnm.update()

@@ -17,18 +17,17 @@ import hashlib
 import sys
 
 from sawtooth_sdk.processor.core import TransactionProcessor
-
 from sawtooth_intkey.processor.handler import IntkeyTransactionHandler
 
 
 def main(args=sys.argv[1:]):
+    processor = TransactionProcessor(url=args[0])
+
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
     intkey_prefix = hashlib.sha512('intkey'.encode()).hexdigest()[0:6]
-
-    processor = TransactionProcessor(url=args[0] + ":40000")
-
     handler = IntkeyTransactionHandler(namespace_prefix=intkey_prefix)
+
     processor.add_handler(handler)
 
     try:
