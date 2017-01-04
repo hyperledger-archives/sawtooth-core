@@ -49,6 +49,8 @@ class TestSignedObject(unittest.TestCase):
         # Signed Object
         # test a valid signature
         temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
+        signing_key = generate_private_key()
+        temp.sign_object(signing_key)
         self.assertTrue(temp.is_valid("unused"))
 
         # test OriginatorID
@@ -57,6 +59,13 @@ class TestSignedObject(unittest.TestCase):
 
         # test invalid OriginatorID
         self.assertFalse(temp.verify_signature("invalid"))
+
+    def test_is_valid_no_public_key(self):
+        # Verify that is_valid only returns true if working with a valid
+        # Signed Object
+        # test a valid signature
+        temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
+        self.assertFalse(temp.is_valid("invalid"))
 
     def test_is_valid_assertion(self):
         # Test that an AssertionError is raised when dealing with a
