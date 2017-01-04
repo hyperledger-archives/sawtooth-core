@@ -45,23 +45,34 @@ class SubprocessTNGNodeController(NodeController):
 
         node_name = node_args.node_name
         node_num = int(node_name[len('validator-'):])
-        magic_num = 40000
-        url = '0.0.0.0:' + str(magic_num + node_num)
 
-        commands = ['validator'] + state['Processors']
+        base_component_port = 40000
+        port = str(base_component_port + node_num)
+        url = '0.0.0.0:' + port
 
-        # get_executable_script returns [#!, path]
-        def get_path(command):
-            return get_executable_script(command)[1]
-
-        paths = [get_path(cmd) for cmd in commands]
+        base_gossip_port = 8800
+        gossip_port_num = str(base_gossip_port + node_num)
+        gossip_port = 'tcp://0.0.0.0:' + gossip_port_num
 
         state['Nodes'][node_name]['pid'] = []
 
-        for path in paths:
-            handle = subprocess.Popen(['python3', path, url])
-            pid = handle.pid
+        commands = ['validator'] + state['Processors']
 
+        for cmd in commands:
+            # get_executable_script returns (path, executable)
+            _, executable = get_executable_script(cmd)
+
+            # validator takes ports as separate args, but this might change
+            if cmd == 'validator':
+                component = '--component-endpoint', url
+                network = '--network-endpoint', gossip_port
+                flags = component + network
+            else:
+                flags = (url,)
+
+            handle = subprocess.Popen((executable,) + flags)
+
+            pid = handle.pid
             state['Nodes'][node_name]['pid'] += [pid]
 
         self._save_state(state)

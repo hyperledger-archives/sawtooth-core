@@ -43,8 +43,7 @@ class TestSuiteIntkey(unittest.TestCase):
         self.tp_command = tp_command
 
     def _set_up(self):
-        url = "127.0.0.1"
-        port = "40000"
+        url = "127.0.0.1:40000"
 
         # 1. Create and setup tester
         self.tester = TransactionProcessorTester()
@@ -53,7 +52,7 @@ class TestSuiteIntkey(unittest.TestCase):
             "state/setrequest", compare_set_request
         )
 
-        self.tester.listen(url + ":" + port)
+        self.tester.listen(url)
         print("Test running in PID: {}".format(os.getpid()))
 
         # 2. Start up transaction processor, pass it url
