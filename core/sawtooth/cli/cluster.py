@@ -344,10 +344,10 @@ def do_cluster_stop(args):
 
     # if node_names is empty, stop doesn't get called
     for node_name in node_names:
-        if node_name not in nodes:
+        if node_name not in state_nodes:
             raise CliException(
                 "{} is not a known node name".format(node_name))
-        if nodes[node_name]['Status'] == 'Stopped':
+        if state_nodes[node_name]['Status'] == 'Stopped':
             raise CliException('{} already stopped'.format(node_name))
 
         print("Stopping: {}".format(node_name))
