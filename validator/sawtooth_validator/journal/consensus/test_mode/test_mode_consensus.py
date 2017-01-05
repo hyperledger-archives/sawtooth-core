@@ -19,8 +19,6 @@ import time
 from sawtooth_validator.journal.consensus.consensus import \
     BlockPublisherInterface, BlockVerifierInterface
 
-MAGIC = "mEhHSSH9KRyCUp6O"
-
 
 class BlockPublisher(BlockPublisherInterface):
     """Consensus objects provide the following services to the Journal:
@@ -32,7 +30,7 @@ class BlockPublisher(BlockPublisherInterface):
 
     """
 
-    def initialize_block(self, block):
+    def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activates, starting proof of work
         hash generation, or create a PoET wait timer.
@@ -43,8 +41,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             none
         """
-        block.consensus["magic"]= MAGIC
-        block.consensus["nonce"]=str(time.time())
+        block_header.consensus = b"test_mode"
 
     def check_publish_block(self, block):
         """Check if a candidate block is ready to be claimed.
@@ -58,7 +55,7 @@ class BlockPublisher(BlockPublisherInterface):
         """
         return True
 
-    def finalize_block(self, block):
+    def finalize_block(self, block_header):
         """Finalize a block to be claimed. Provide any signatures and
         data updates that need to be applied to the block before it is
         signed and broadcast to the network.
@@ -70,19 +67,15 @@ class BlockPublisher(BlockPublisherInterface):
             None
         """
         hash = hashlib.sha256()
-        hash.update(block.consensus["magic"].encode('utf-8'))
-        hash.update(block.consensus["nonce"].encode('utf-8'))
-        # hash.update(block.batches)
-        block.consensus['signature'] = hash.hexdigest()
+        hash.update(block_header.consensus)
+        block_header.consensus = hash.hexdigest().encode()
 
 
 class BlockVerifier(BlockVerifierInterface):
     def verify_block(self, block_state):
         hash = hashlib.sha256()
-        hash.update(block_state.block.consensus["magic"].encode('utf-8'))
-        hash.update(block_state.block.consensus["nonce"].encode('utf-8'))
-        # hash.update(block.batches)
-        return block_state.block.consensus['signature'] == hash.hexdigest()
+        hash.update(b"test_mode")
+        return block_state.block.consensus == hash.hexdigest().encode()
 
     def compute_block_weight(self, block_state):
         return block_state.block.block_num

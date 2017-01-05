@@ -27,7 +27,7 @@ class BlockPublisher(BlockPublisherInterface):
 
     """
 
-    def initialize_block(self, block):
+    def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activates, starting proof of work
         hash generation, or create a PoET wait timer.
@@ -38,7 +38,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             none
         """
-        block.consensus["magic"] = "Devmode"
+        block_header.consensus = b"Devmode"
 
     def check_publish_block(self, block):
         """Check if a candidate block is ready to be claimed.
@@ -52,7 +52,7 @@ class BlockPublisher(BlockPublisherInterface):
         """
         return True
 
-    def finalize_block(self, block):
+    def finalize_block(self, block_header):
         """Finalize a block to be claimed. Provide any signatures and
         data updates that need to be applied to the block before it is
         signed and broadcast to the network.
