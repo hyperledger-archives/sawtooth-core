@@ -124,7 +124,7 @@ terminal window.
   **Note on genesis block creation and clearing validator state**
 
     The script *genesis.sh* should be run whenever you want to start a
-    validator as part of the tuturial. The script clears existing data
+    validator as part of the tutorial. The script clears existing data
     files and keys, which would otherwise be loaded when starting the
     validator. The script also runs a utility that creates a genesis
     block, and creates a special configuration file needed by an initial
