@@ -19,25 +19,17 @@ option java_package = "sawtooth.sdk.protobuf";
 
 import "batch.proto";
 
-
-message Block {
+message BlockHeader {
     int32 block_num = 1;
     string previous_block_id = 2;
+    string signer_pubkey = 3;
+    repeated string batch_ids = 4;
+    bytes consensus = 5;
+    string state_root_hash = 6;
+}
+
+message Block {
+    bytes header = 1;
+    string header_signature = 2;
     repeated Batch batches = 3;
-    map<string,string> consensus= 4;
-    string state_root_hash = 5;
-    string signature = 6;
-    string id = 7;
-}
-
-message BlockState {
-    Block block = 1;
-    int32 weight = 2;
-    BlockStatus status = 3;
-}
-
-enum BlockStatus{
-    Unknown = 0;
-    Invalid = 1;
-    Valid = 2;
 }
