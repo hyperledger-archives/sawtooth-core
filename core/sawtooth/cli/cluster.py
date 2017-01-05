@@ -30,11 +30,11 @@ from sawtooth.manage.simple import SimpleNodeCommandGenerator
 from sawtooth.manage.wrap import WrappedNodeController
 from sawtooth.manage.vnm import ValidatorNetworkManager
 
-from sawtooth.manage.daemon import DaemonNodeController
 from sawtooth.manage.docker import DockerNodeController
-from sawtooth.manage.docker_tng import DockerTNGNodeController
 from sawtooth.manage.subproc import SubprocessNodeController
-from sawtooth.manage.subproc_tng import SubprocessTNGNodeController
+from sawtooth.manage.daemon_legacy import DaemonLegacyNodeController
+from sawtooth.manage.docker_legacy import DockerLegacyNodeController
+from sawtooth.manage.subproc_legacy import SubprocessLegacyNodeController
 
 from sawtooth.cli.stats import run_stats
 
@@ -187,11 +187,11 @@ def get_node_controller(state, args):
     manage_type = state['Manage']
 
     node_controller_types = {
-        'docker': DockerTNGNodeController,
-        'subprocess': SubprocessTNGNodeController,
-        'subprocess-legacy': SubprocessNodeController,
-        'docker-legacy': DockerNodeController,
-        'daemon-legacy': DaemonNodeController,
+        'docker': DockerNodeController,
+        'subprocess': SubprocessNodeController,
+        'subprocess-legacy': SubprocessLegacyNodeController,
+        'docker-legacy': DockerLegacyNodeController,
+        'daemon-legacy': DaemonLegacyNodeController,
     }
 
     try:
@@ -218,7 +218,7 @@ def get_node_controller(state, args):
             raise CliException("Already wrapped to %s." % state["Wrap"])
 
     if state['Wrap'] is not False:
-        wrappable_types = SubprocessNodeController,
+        wrappable_types = SubprocessLegacyNodeController,
         if not isinstance(node_controller, wrappable_types):
             msg = '--wrap currently only implemented for {} management types'
             raise CliException(msg.format(wrappable_types))
@@ -488,7 +488,7 @@ def do_cluster_logs(args):
 
     supported_types = 'docker',
     if state['Manage'] in supported_types:
-        prefix = 'sawtooth-tng-cluster-0'
+        prefix = 'sawtooth-cluster-0'
 
         for node_name in args.node_names:
             try:

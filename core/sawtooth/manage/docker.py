@@ -16,7 +16,7 @@
 import logging
 import os
 import subprocess
-import ipaddr
+import tempfile
 import yaml
 
 from sawtooth.cli.exceptions import CliException
@@ -35,76 +35,44 @@ class _StateEntry(object):
 
 
 class DockerNodeController(NodeController):
-    '''
-    Note that, for the present time, only node 0 may serve as the initial
-    validator.
-    '''
 
     def __init__(self, state_dir=None):
+        """
+        :param state_dir (str): optionally path to state directory
+        """
         if state_dir is None:
-            state_dir = \
-                os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster')
+            state_dir = os.path.join(os.path.expanduser("~"),
+                                     '.sawtooth', 'cluster')
 
         if not os.path.exists(state_dir):
             os.makedirs(state_dir)
 
         self._state_dir = state_dir
 
-    def _construct_start_args(self, node_name, http_port, gossip_port,
-                              genesis):
-        # only create 'genesis' ledger if there is not existing network
-        if len(self.get_node_names()) > 0:
-            genesis = False
-        # Check for running the network sawtooth and get the subnet
-        subnet_arg = ['docker', 'network', 'inspect', 'sawtooth']
+        self._prefix = 'sawtooth-cluster-0'
+
+    def _construct_start_args(self, node_name):
         try:
-            output = yaml.load(subprocess.check_output(subnet_arg))
-            subnet = unicode(output[0]['IPAM']['Config'][0]['Subnet'])
-            subnet_list = list(ipaddr.IPv4Network(subnet))
+            network_ls_args = ['docker', 'network', 'ls', '--filter',
+                               'NAME={}'.format(self._prefix), '-q']
+            network_output = subprocess.check_output(
+                network_ls_args).splitlines()
         except subprocess.CalledProcessError as e:
             raise CliException(str(e))
 
-        num = int(node_name[len('validator-'):]) + 3
+        if len(network_output) == 0:
+            try:
+                network_args = ['docker', 'network', 'create', '-d',
+                                'bridge', self._prefix]
+                n_output = subprocess.check_output(network_args)
+                for l in n_output.splitlines():
+                    LOGGER.info(l)
+            except subprocess.CalledProcessError as e:
+                raise CliException(str(e))
+        args = ['docker-compose', '-p',
+                self._prefix.replace('-', '') + node_name,
+                'up', '-d']
 
-        if num < len(subnet_list) - 1:
-            ip_addr = str(subnet_list[num])
-        else:
-            raise CliException("Out of Usable IP Addresses")
-        local_project_dir = '/project'
-
-        args = ['docker', 'run', '-t', '-d', '--network', 'sawtooth']
-
-        args.extend(['--name', node_name])
-        args.extend(['--label', 'sawtooth.cluster=default'])
-        args.extend(['--ip', ip_addr])
-        args.extend(['-p', str(http_port)])
-        args.extend(['-p', '{}/udp'.format(gossip_port)])
-        args.extend(['-e', 'CURRENCYHOME=/project/sawtooth-core/validator'])
-        args.extend(['-v', '{}:/project'.format(local_project_dir)])
-        args.append('sawtooth-build-ubuntu-xenial')
-        args.extend(['bash', '-c'])
-
-        cmd = []
-        bin_path = '/project/sawtooth-core/bin'
-
-        initial_connectivity = 0 if genesis else 1
-        cmd.append(
-            'echo "{\\\"InitialConnectivity\\\": %d}"' % initial_connectivity)
-        cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
-
-        if genesis:
-            cmd.append('%s/sawtooth keygen %s; ' % (bin_path, node_name))
-            cmd.append('%s/sawtooth admin' % bin_path)
-            cmd.append('poet1-genesis -vv --node %s; exec' % node_name)
-        cmd.append('%s/txnvalidator' % bin_path)
-        cmd.extend(['--node', node_name])
-        cmd.append('-vv')
-        cmd.append("--listen '{}:{}/UDP gossip'".format(ip_addr, gossip_port))
-        cmd.append("--listen '{}:{}/TCP http'".format(ip_addr, http_port))
-        # Set Ledger Url
-        cmd.append("--url 'http://{}:8800'".format(str(subnet_list[3])))
-        cmd.append('--config ${CURRENCYHOM}}/data/%s.json' % node_name)
-        args.append(' '.join(cmd))
         return args
 
     def _join_args(self, args):
@@ -116,53 +84,162 @@ class DockerNodeController(NodeController):
                 formatted_args.append(arg)
         return ' '.join(formatted_args)
 
-    def create_genesis_block(self, node_args):
-        pass
+    def start(self, node_config):
+        node_name = node_config.node_name
+        http_port = node_config.http_port
 
-    def start(self, node_args):
-        node_name = node_args.node_name
-        http_port = node_args.http_port
-        gossip_port = node_args.gossip_port
-        genesis = node_args.genesis
-        args = self._construct_start_args(node_name, http_port, gossip_port,
-                                          genesis)
+        args = self._construct_start_args(node_name)
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
+
+        compose_dir = tempfile.mkdtemp()
+        compose_dict = {
+            'version': '2',
+            'services': {
+                'validator': {
+                    'image': 'sawtooth-validator',
+                    'expose': ['40000'],
+                    'networks': [self._prefix, 'default'],
+                    'volumes': ['/project:/project'],
+                    'container_name': self._prefix + '-' + node_name
+                }
+            },
+            'networks': {self._prefix: {'external': True}}
+        }
+
+        state_file_path = os.path.join(self._state_dir, 'state.yaml')
+        state = yaml.load(file(state_file_path))
+
+        # add the processors
+        node_num = node_name[len('validator-'):]
+        for proc in state['Processors']:
+            compose_dict['services'][proc] = {
+                'image': proc,
+                'expose': ['40000'],
+                'links': ['validator'],
+                'volumes': ['/project:/project'],
+                'container_name': '-'.join([self._prefix, proc, node_num])
+            }
+
+        # add the host:container port mapping for validator
+        http_port = http_port + 31200
+        compose_dict['services']['validator']['ports'] = \
+            [str(http_port) + ":" + str(40000)]
+
+        yaml.dump(compose_dict,
+                  file(os.path.join(compose_dir, 'docker-compose.yaml'),
+                       mode='w'))
         try:
+            os.chdir(compose_dir)
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
+            processors = state['Processors']
+            # check if the docker image is built
+            unbuilt = self._get_unbuilt_images(processors)
+            if unbuilt:
+                raise CliException(
+                    'Docker images not built: {}. Try running '
+                    '"sawtooth docker build {}"'.format(
+                        ', '.join(unbuilt), ' '.join(unbuilt)))
+
+            invalid = self._check_invalid_processors(processors)
+            if invalid:
+                raise CliException(
+                    'No such processor: {}'.format(', '.join(invalid)))
+
             raise CliException(str(e))
+
+        except OSError as e:
+            if e.errno == 2:
+                raise CliException("{}:{}".format(str(e), args[0]))
+            else:
+                raise e
 
         for line in output.split('\n'):
             if len(line) < 1:
                 continue
             LOGGER.debug("command output: %s", str(line))
+
+    def _get_unbuilt_images(self, processors):
+        processors += ['sawtooth-validator']
+        built_ins = self._built_in_processor_types()
+        built_images = self._get_built_images()
+
+        unbuilt = [image for image in processors
+                   if image not in built_images and image in built_ins]
+
+        return unbuilt
+
+    def _check_invalid_processors(self, processors):
+        built_ins = self._built_in_processor_types()
+        built_images = self._get_built_images()
+
+        invalid = [image for image in processors
+                   if image not in built_images and image not in built_ins]
+
+        return invalid
+
+    def _get_built_images(self):
+        docker_img_cmd = ['docker', 'images', '--format', '{{.Repository}}']
+        return subprocess.check_output(docker_img_cmd).split('\n')
+
+    def _built_in_processor_types(self):
+        image_data_dir = os.path.join(os.path.dirname(__file__),
+                                      os.path.pardir,
+                                      'cli', 'data')
+        return os.listdir(image_data_dir)
 
     def stop(self, node_name):
-        args = ['docker', 'stop', node_name]
-        LOGGER.debug('stopping %s: %s', node_name, ' '.join(args))
+        state_file_path = os.path.join(self._state_dir, 'state.yaml')
+        state = yaml.load(file(state_file_path))
 
-        try:
-            output = subprocess.check_output(args)
-        except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
+        node_num = node_name[len('validator-'):]
 
-        for line in output.split('\n'):
-            if len(line) < 1:
-                continue
-            LOGGER.debug("command output: %s", str(line))
+        processes = state['Processors'] + ['validator']
 
-        args = ['docker', 'rm', node_name]
-        LOGGER.debug('stopping %s: %s', node_name, ' '.join(args))
+        containers = ['-'.join([self._prefix, proc, node_num])
+                      for proc in processes]
 
-        try:
-            output = subprocess.check_output(args)
-        except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
+        for c_name in containers:
+            args = ['docker', 'stop', c_name]
+            LOGGER.debug('stopping %s: %s', c_name, ' '.join(args))
 
-        for line in output.split('\n'):
-            if len(line) < 1:
-                continue
-            LOGGER.debug("command output: %s", str(line))
+            try:
+                output = subprocess.check_output(args)
+            except subprocess.CalledProcessError as e:
+                raise CliException(str(e))
+
+            for line in output.split('\n'):
+                if len(line) < 1:
+                    continue
+                LOGGER.debug("command output: %s", str(line))
+
+            args = ['docker', 'rm', c_name]
+            LOGGER.debug('stopping %s: %s', c_name, ' '.join(args))
+
+            try:
+                output = subprocess.check_output(args)
+            except subprocess.CalledProcessError as e:
+                raise CliException(str(e))
+
+            for line in output.split('\n'):
+                if len(line) < 1:
+                    continue
+                LOGGER.debug("command output: %s", str(line))
+            if 'validator' in c_name:
+                network = c_name.replace('-', '') + '_default'
+                args = ['docker', 'network', 'rm', network]
+                try:
+                    output = subprocess.check_output(args)
+                except subprocess.CalledProcessError as e:
+                    raise CliException(str(e))
+
+                for line in output.splitlines():
+                    if len(line) < 1:
+                        continue
+                    LOGGER.debug("command output: %s", str(line))
+
+    def create_genesis_block(self, node_args):
+        pass
 
     def kill(self, node_name):
         self.stop(node_name)
@@ -174,15 +251,19 @@ class DockerNodeController(NodeController):
             '-a',
             '--no-trunc',
             '--format',
-            '{{.Names}},{{.ID}},{{.Status}},{{.Label "sawtooth.cluster"}},'
+            '{{.Names}},{{.ID}},{{.Status}},'
             '{{.Command}}',
             '--filter',
-            'label=sawtooth.cluster']
+            'network={}'.format(self._prefix)]
 
         try:
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
             raise CliException(str(e))
+        except OSError as e:
+            if e.errno == 2:
+                raise CliException("{}:{}".format(str(e),
+                                                  args[0]))
 
         entries = []
         for line in output.split('\n'):
@@ -190,7 +271,7 @@ class DockerNodeController(NodeController):
                 continue
             parts = line.split(',')
             entries.append(_StateEntry(
-                name=parts[0],
+                name=parts[0].replace(self._prefix + '-', ''),
                 identifier=parts[1],
                 status=parts[2],
                 command=parts[3]))
@@ -208,19 +289,3 @@ class DockerNodeController(NodeController):
             if node_name == entry.name:
                 return entry.status.startswith("Up")
         return False
-
-    def get_ip(self, node_name):
-        args = [
-            'docker',
-            'inspect',
-            "--format='{{range .NetworkSettings.Networks}}\
-            {{.IPAddress}}{{end}}'",
-            node_name
-        ]
-
-        try:
-            output = subprocess.check_output(args)
-        except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
-
-        return output
