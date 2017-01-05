@@ -22,8 +22,8 @@ class BlockRequestMessage(object):
     Place holder for requests for missing block
     """
 
-    def __init__(self, block_id):
-        self.block_id = block_id
+    def __init__(self, block_signature):
+        self.block_signature = block_signature
 
 
 class BlockMessage(object):

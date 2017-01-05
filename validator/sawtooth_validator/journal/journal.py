@@ -26,7 +26,9 @@ import string
 from sawtooth_validator.scheduler.serial import SerialScheduler, SchedulerError
 from sawtooth_validator.server.messages import BlockRequestMessage, \
     BlockMessage
-from sawtooth_validator.protobuf.block_pb2 import Block, BlockState,\
+from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
+
+from sawtooth_validator.server.block_wrapper import BlockWrapper, BlockState, \
     BlockStatus
 
 LOGGER = logging.getLogger(__name__)
@@ -66,12 +68,12 @@ class BlockPublisher(object):
         """ Build a candidate block
         """
         if self._chain_head is None:
-            block = self.generate_genesis_block()
+            block_header = self.generate_genesis_block()
         else:
-            block = Block(block_num=chain_head.block_num + 1,
-                          previous_block_id=chain_head.id,
-                          id=_generate_id())
-        self._consensus.initialize_block(block)
+            block_header = BlockHeader(
+                block_num=chain_head.block_num + 1,
+                previous_block_id=chain_head.header_signature)
+        self._consensus.initialize_block(block_header)
 
         # create a new scheduler
         # TBD move factory in to executor for easier mocking --
@@ -83,6 +85,7 @@ class BlockPublisher(object):
         for batch in self._pending_batches:
             self._scheduler.add_batch(batch)
         self._pending_batches = []
+        block = BlockWrapper(block_header)
         return block
 
     def _sign_block(self, block):
@@ -90,7 +93,8 @@ class BlockPublisher(object):
         signature from the publishing validator(this validator) needs to
         be added.
         """
-        block.signature = "X"
+        # Temp signature creation to use as identifier
+        block.set_signature(_generate_id())
         return block
 
     def on_batch_received(self, batch):
@@ -129,7 +133,8 @@ class BlockPublisher(object):
             self._chain_head = chain_head
             if self._candidate_block is not None and \
                     chain_head is not None and \
-                    chain_head.id == self._candidate_block.previous_block_id:
+                    chain_head.header_signature == \
+                    self._candidate_block.previous_block_id:
                 # nothing to do. We are building of the current head.
                 # This can happen after we publish a block and speculatively
                 # create a new block.
@@ -152,22 +157,23 @@ class BlockPublisher(object):
 
         state_hash = None
         for batch in pending_batches:
-            batch_status = self._scheduler.batch_status(batch.signature)
-            if (batch_status is not None) and batch_status.valid:
+            batch_status = self._scheduler.batch_status(batch.header_signature)
+            # if a batch_status is None, this means that the executor never
+            # received the batch and it should be added to
+            # the pending_batches
+            if batch_status is None:
+                self._pending_batches.append(batch)
+            elif batch_status.valid:
                 self._validated_batches.append(batch)
                 state_hash = batch_status.state_hash
-            elif batch_status is None:
-                self._pending_batches.append(batch)
 
-        # TBD need to handle the case that no batches were found to be valid
-
-        block.batches.extend(self._validated_batches)
+        block.add_batches(self._validated_batches)
         self._validated_batches = []
 
         # might need to take state_hash
-        self._consensus.finalize_block(block)
+        self._consensus.finalize_block(block.block_header)
         if state_hash is not None:
-            block.state_root_hash = state_hash
+            block.set_state_hash(state_hash)
         self._sign_block(block)
         return block
 
@@ -188,21 +194,28 @@ class BlockPublisher(object):
                 candidate = self._candidate_block
                 self._candidate_block = None
                 candidate = self._finalize_block(candidate)
-                msg = BlockMessage(candidate)
+                # if no batches are in the block, do not send it out
+                if len(candidate.batches) == 0:
+                    LOGGER.info("No Valid batches added to block, dropping %s",
+                                candidate.header_signature)
+                    return
+                msg = BlockMessage(candidate.get_block())
                 self._send_message(msg)
 
-                LOGGER.info("Claimed Block: %s", candidate.id)
+                LOGGER.info("Claimed Block: %s", candidate.header_signature)
 
                 # create a new block based on this one -- opportunistically
                 # assume the published block is the valid block.
                 self.on_chain_updated(candidate)
 
     def generate_genesis_block(self):
-        genesis_block = Block(block_num=0,
-                              previous_block_id=NullIdentifier,
-                              id=_generate_id())
+        genesis_header = BlockHeader(previous_block_id=NullIdentifier,
+                                     block_num=0)
+
         # Small hack here not asking consensus if it is happy.
-        self._candidate_block = self._finalize_block(genesis_block)
+
+        self._candidate_block = \
+            self._finalize_block(BlockWrapper(genesis_header))
         return self._candidate_block
 
 
@@ -243,20 +256,21 @@ class BlockValidator(object):
 
     def _validate_block(self, block_state):
         LOGGER.info(block_state)
-        if block_state.status == BlockStatus.Value('Valid'):
+        if block_state.status == BlockStatus.Valid:
             return True
-        elif block_state.status == BlockStatus.Value('Invalid'):
+        elif block_state.status == BlockStatus.Invalid:
             return False
         else:
             valid = True
-            # verify signature
-            # valid = block.signature == 'X'
+            # verify header_signature
+
             if valid:
                 if len(block_state.block.batches) > 0:
                     scheduler = self._executor.create_scheduler(
                         self._squash_handler,
                         self.chain_head.block.state_root_hash)
                     self._executor.execute(scheduler)
+
                     for i in range(len(block_state.block.batches) - 1):
                         scheduler.add_batch(block_state.block.batches[i])
                     scheduler.add_batch(block_state.block.batches[-1],
@@ -265,7 +279,9 @@ class BlockValidator(object):
                     scheduler.complete(block=True)
                     for i in range(len(block_state.block.batches)):
                         batch_status = scheduler.batch_status(
-                            block_state.block.batches[i].signature)
+                            block_state.block.batches[i].header_signature)
+                        # If the batch_status is None, the executor did not
+                        # receive the batch
                         if (batch_status is not None) and batch_status.valid:
                             state_hash = batch_status.state_hash
                         else:
@@ -277,14 +293,14 @@ class BlockValidator(object):
             # Update the block store
             block_state.weight = \
                 self._consensus.compute_block_weight(block_state)
-            block_state.status = BlockStatus.Value('Valid') if \
-                valid else BlockStatus.Value('Invalid')
-            self._block_store[block_state.block.id] = block_state
+            block_state.status = BlockStatus.Valid if \
+                valid else BlockStatus.Invalid
+            self._block_store[block_state.block.header_signature] = block_state
             return valid
 
     def run(self):
         LOGGER.info("Starting block validation of : %s",
-                    self._new_block.block.id)
+                    self._new_block.block.header_signature)
         current_chain = []  # ordered list of the current chain
         new_chain = []
 
@@ -294,11 +310,13 @@ class BlockValidator(object):
         # Walk back until we have both chains at the same length
         while new_block_state.block.block_num > \
                 current_block_state.block.block_num\
-                and new_block_state.block.previous_block_id != NullIdentifier:
+                and new_block_state.block.previous_block_id != \
+                NullIdentifier:
             new_chain.append(new_block_state)
             try:
                 new_block_state = \
-                    self._block_store[new_block_state.block.previous_block_id]
+                    self._block_store[
+                        new_block_state.block.previous_block_id]
             except KeyError as e:
                 # required block is missing
                 self._request_block_cb(
@@ -307,32 +325,38 @@ class BlockValidator(object):
 
         while current_block_state.block.block_num > \
                 new_block_state.block.block_num \
-                and new_block_state.block.previous_block_id != NullIdentifier:
+                and new_block_state.block.previous_block_id != \
+                NullIdentifier:
             current_chain.append(current_block_state)
             current_block_state = \
-                self._block_store[current_block_state.block.previous_block_id]
+                self._block_store[
+                    current_block_state.block.previous_block_id]
 
         # 2) now we have both chain at the same block number
         # continue walking back until we find a common block.
-        while current_block_state.block.id != new_block_state.block.id:
-            if current_block_state.block.previous_block_id == NullIdentifier \
-                    or new_block_state.block.previous_block_id == \
+        while current_block_state.block.header_signature != \
+                new_block_state.block.header_signature:
+            if current_block_state.block.previous_block_id ==  \
+                    NullIdentifier or \
+                    new_block_state.block.previous_block_id == \
                     NullIdentifier:
                 # We are at a genesis block and the blocks are not the
                 # same
                 LOGGER.info("Block rejected due to wrong genesis : %s %s",
-                            current_block_state.block.id,
-                            new_block_state.block.id)
+                            current_block_state.block.header_signature,
+                            new_block_state.block.header_signature)
 
                 self._done_cb(self)
                 return
             new_chain.append(new_block_state)
             new_block_state = \
-                self._block_store[new_block_state.block.previous_block_id]
+                self._block_store[
+                    new_block_state.block.previous_block_id]
 
             current_chain.append(current_block_state)
             current_block_state = \
-                self._block_store[current_block_state.block.previous_block_id]
+                self._block_store[
+                    current_block_state.block.previous_block_id]
 
         # 3) We now have the root of the fork.
         # determine the validity of the new fork
@@ -351,7 +375,7 @@ class BlockValidator(object):
         # Tell the journal we are done
         self._done_cb(self)
         LOGGER.info("Finished block validation of : %s",
-                    self._new_block.block.id)
+                    self._new_block.block.header_signature)
 
 
 class ChainController(object):
@@ -410,7 +434,7 @@ class ChainController(object):
             done_cb=self.on_block_validated,
             executor=self._transaction_executor,
             squash_handler=self._sqaush_handler)
-        self._blocks_processing[block_state.block.id] = validator
+        self._blocks_processing[block_state.block.header_signature] = validator
         self._executor.submit(validator.run)
 
     def _request_block(self, block_id, validator):
@@ -426,9 +450,10 @@ class ChainController(object):
         """
         with self._lock:
             LOGGER.info("on_block_validated : %s",
-                        validator.new_block.block.id)
+                        validator.new_block.block.header_signature)
             # remove from the processing list
-            del self._blocks_processing[validator.new_block.block.id]
+            del self._blocks_processing[
+                validator.new_block.block.header_signature]
 
             # if the head has changed, since we started the work.
             if validator.chain_head != self._chain_head:
@@ -437,9 +462,10 @@ class ChainController(object):
                 self._verify_block(validator.new_block)
             elif validator.commit_new_block():
                 self._chain_head = validator.new_block
-                self._block_store["chain_head_id"] = self._chain_head.block.id
+                self._block_store["chain_head_id"] = \
+                    self._chain_head.block.header_signature
                 LOGGER.info("Chain head updated to: %s",
-                            self._chain_head.block.id)
+                            self._chain_head.block.header_signature)
                 # tell everyone else the chain is updated
                 self._notifiy_on_chain_updated(self._chain_head.block)
 
@@ -451,19 +477,23 @@ class ChainController(object):
 
     def on_block_received(self, block):
         with self._lock:
-            if block.id in self._block_store:
+            if block.header_signature in self._block_store:
                 # do we already have this block
                 return
-
-            block_state = BlockState(block=block, weight=0,
-                                     status=BlockStatus.Value("Unknown"))
-            self._block_store[block.id] = block_state
-            self._blocks_pending[block.id] = []
-            if block.id in self._blocks_requested:
+            header = BlockHeader()
+            header.ParseFromString(block.header)
+            block = BlockWrapper(header, block)
+            # TODO What do we actually want to store in the block_store??
+            block_state = BlockState(block_wrapper=block, weight=0,
+                                     status=BlockStatus.Unknown)
+            self._block_store[block.header_signature] = block_state
+            self._blocks_pending[block.header_signature] = []
+            if block.header_signature in self._blocks_requested:
                 # is it a requested block
                 # route block to the validator that requested
-                validator = self._blocks_requested.pop(block.id)
-                if validator.chain_head.block.id != self._chain_head.block.id:
+                validator = self._blocks_requested.pop(block.header_signature)
+                if validator.chain_head.block.header_signature != \
+                        self._chain_head.block.header_signature:
                     # the head of the chain has changed start over
                     self._verify_block(validator.new_block)
                 else:
@@ -472,9 +502,11 @@ class ChainController(object):
                 # if the previous block is being processed...put it in a wait
                 # queue
                 pending_blocks = \
-                    self._blocks_pending.get(block.previous_block_id, [])
+                    self._blocks_pending.get(block.previous_block_id,
+                                             [])
                 pending_blocks.append(block_state)
-                self._blocks_pending[block.previous_block_id] = pending_blocks
+                self._blocks_pending[block.previous_block_id] = \
+                    pending_blocks
             else:
                 # schedule this block for validation.
                 self._verify_block(block_state)
@@ -557,16 +589,18 @@ class Journal(object):
         # HACK until genesis tool is working
         if "chain_head_id" not in self._block_store:
             genesis_block = BlockState(
-                block=self._block_publisher.generate_genesis_block(),
+                block_wrapper=self._block_publisher.generate_genesis_block(),
                 weight=0,
-                status=BlockStatus.Value("Valid"))
-            genesis_block.block.state_root_hash = first_state_root
+                status=BlockStatus.Valid)
+            genesis_block.block.set_state_hash(first_state_root)
 
-            self._block_store[genesis_block.block.id] = genesis_block
-            self._block_store["chain_head_id"] = genesis_block.block.id
+            self._block_store[genesis_block.block.header_signature] = \
+                genesis_block
+            self._block_store["chain_head_id"] = \
+                genesis_block.block.header_signature
             self._block_publisher.on_chain_updated(genesis_block.block)
             LOGGER.info("Journal created genesis block: %s",
-                        genesis_block.block.id)
+                        genesis_block.block.header_signature)
 
         self._chain_controller = ChainController(
             consensus=consensus.BlockVerifier(),

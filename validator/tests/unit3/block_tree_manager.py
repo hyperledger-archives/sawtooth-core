@@ -76,8 +76,9 @@ class BlockTreeManager(object):
     def _get_block_id(self, block):
         if (block is None):
             return None
-        elif isinstance(block, Block) or isinstance(block, BlockState):
-            return block.id
+        elif isinstance(block, Block) or isinstance(block, BlockState) or \
+                isinstance(block, BlockWrapper):
+            return block.header_signature
         elif isinstance(block, basestring):
             return block
         else:
