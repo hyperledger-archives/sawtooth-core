@@ -84,10 +84,11 @@ class TestJournal(unittest.TestCase):
 
             # wait for the chain_head to be updated.
             to = TimeOut(2)
-            while block_store['chain_head_id'] != block.id:
+            while block_store['chain_head_id'] != block.header_signature:
                 time.sleep(0.1)
 
-            self.assertTrue(block_store['chain_head_id'] == block.id)
+            self.assertTrue(block_store['chain_head_id'] ==
+                            block.header_signature)
 
         finally:
             if journal is not None:
