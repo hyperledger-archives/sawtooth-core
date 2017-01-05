@@ -77,6 +77,7 @@ class _SendReceiveThread(Thread):
                     message.correlation_id,
                     future.FutureResult(content=message.content,
                                         message_type=message.message_type))
+                self._futures.remove(message.correlation_id)
             except future.FutureCollectionKeyError:
                 # if there isn't a future, we are getting an initial message
                 if message.message_type in self._handlers:
