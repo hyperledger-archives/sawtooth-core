@@ -479,11 +479,12 @@ class _PoetEnclaveSimulator(object):
         decoded_poet_public_key = \
             signing.decode_pubkey(poet_public_key, 'hex')
 
-        return \
+        if not \
             signing.verify(
                 certificate.serialize(),
                 certificate.signature,
-                decoded_poet_public_key)
+                decoded_poet_public_key):
+            raise ValueError('Wait certificate signature does not match')
 
 
 def initialize(**kwargs):
@@ -548,7 +549,6 @@ def deserialize_wait_certificate(serialized_certificate, signature):
 
 
 def verify_wait_certificate(certificate, poet_public_key):
-    return \
-        _PoetEnclaveSimulator.verify_wait_certificate(
-            certificate=certificate,
-            poet_public_key=poet_public_key)
+    _PoetEnclaveSimulator.verify_wait_certificate(
+        certificate=certificate,
+        poet_public_key=poet_public_key)

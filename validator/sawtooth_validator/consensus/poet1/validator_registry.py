@@ -86,7 +86,7 @@ class Update(object):
 
         Args:
             validator_name (str): Human readable name of the validator
-            validator_id (str): Bitcoin-style address of the validators
+            validator_id (str): Bitcoin-style address of the validator's
                 public key
             signup_info (SignupInfo): A SignupInfo object that was
                 previously created by a call to SignupInfo.create_signup_info
@@ -95,13 +95,13 @@ class Update(object):
             validator_registry.Update: An update object for registering the
                 validator's details.
         """
-        minfo = {}
-        minfo['validator_name'] = validator_name
-        minfo['validator_id'] = validator_id
-        minfo['signup_info'] = signup_info.serialize()
-        update = Update(minfo)
-        update.verb = 'reg'
-        return update
+        minfo = {
+            'validator_name': validator_name,
+            'validator_id': validator_id,
+            'signup_info': signup_info.serialize(),
+            'verb': 'reg'
+        }
+        return Update(minfo)
 
     def __init__(self, minfo=None):
         """Constructor for Update class.

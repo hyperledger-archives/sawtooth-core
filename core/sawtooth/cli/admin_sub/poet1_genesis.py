@@ -69,6 +69,7 @@ def do_poet1_genesis(args):
     max_txn_age = cfg.get("MaxTxnAge")
     stat_domains = {}
     consensus_obj = PoetConsensus(cfg)
+
     journal = Journal(gossiper.LocalNode,
                       gossiper,
                       gossiper.dispatcher,
@@ -93,6 +94,8 @@ def do_poet1_genesis(args):
         txn_family.register_transaction_types(journal)
 
     # Make genesis block:
+    consensus_obj.register_signup_information(journal=journal)
+
     # ...make sure there is no current chain here, or fail
     # ...pop VR seed (we'll presently defer resolving VR seed issues)
     vr_seed = gossiper.IncomingMessageQueue.pop()

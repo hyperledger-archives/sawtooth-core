@@ -228,6 +228,9 @@ def connect_ack_handler(msg, gossiper):
     # we have confirmation that this peer is currently up, so add it to our
     # list
     if msg.OriginatorID in gossiper.NodeMap:
+        logger.info(
+            'mark node %s as a peer',
+            gossiper.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8]))
         gossiper.NodeMap[msg.OriginatorID].is_peer = True
 
     # send syn_ack back to new peer to demonstrate 2-way communication line
@@ -291,6 +294,9 @@ def connect_syn_ack_handler(msg, gossiper):
                 gossiper.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8]))
     # add peer now that we know 2-directional communication is possible
     if msg.OriginatorID in gossiper.NodeMap:
+        logger.info(
+            'mark node %s as a peer',
+            gossiper.NodeMap.get(msg.OriginatorID, msg.OriginatorID[:8]))
         gossiper.NodeMap[msg.OriginatorID].is_peer = True
 
 

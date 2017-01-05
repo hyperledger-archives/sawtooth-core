@@ -18,7 +18,6 @@ from requests import ConnectionError
 from requests import Timeout
 
 from sawtooth.exceptions import NotAvailableException
-from gossip.common import NullIdentifier
 from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
 
 LOGGER = logging.getLogger(__name__)
@@ -154,7 +153,7 @@ class WaitCertificate(object):
                 self.identifier,
                 self.previous_certificate_id)
 
-    def is_valid(self, certificates, poet_public_key):
+    def check_valid(self, certificates, poet_public_key):
         """Determines whether the wait certificate is valid.
 
         Args:
@@ -172,37 +171,36 @@ class WaitCertificate(object):
         expected_mean = WaitTimer.compute_local_mean(certificates)
 
         if enclave_certificate.duration < self.poet_enclave.MINIMUM_WAIT_TIME:
-            LOGGER.warn('Wait time less then minimum: %s != %s',
+            raise \
+                ValueError(
+                    'Wait time less than minimum: {0} < {1}'.format(
                         enclave_certificate.duration,
-                        self.poet_enclave.MINIMUM_WAIT_TIME)
-            return False
+                        self.poet_enclave.MINIMUM_WAIT_TIME))
 
         if not _is_close(
                 enclave_certificate.local_mean,
                 expected_mean,
                 abs_tol=0.001):
-            LOGGER.warn(
-                'mismatch local mean: %s != %s',
-                enclave_certificate.local_mean,
-                expected_mean)
-            return False
+            raise \
+                ValueError(
+                    'Local mean does not match: {0} != {1}'.format(
+                        enclave_certificate.local_mean,
+                        expected_mean))
 
-        if enclave_certificate.previous_certificate_id == NullIdentifier:
-            if len(certificates) == 0:
-                return True
-
-        if enclave_certificate.previous_certificate_id != \
+        if len(certificates) != 0 and \
+            enclave_certificate.previous_certificate_id != \
                 certificates[-1].identifier:
-            LOGGER.warn('mismatch previous identifier: %s != %s',
+            raise \
+                ValueError(
+                    'Previous certificate ID does not match: {0} != '
+                    '{1}'.foramt(
                         enclave_certificate.previous_certificate_id,
-                        certificates[-1].identifier)
-            return False
+                        certificates[-1].identifier))
 
         try:
-            return \
-                self.poet_enclave.verify_wait_certificate(
-                    certificate=enclave_certificate,
-                    poet_public_key=poet_public_key)
+            self.poet_enclave.verify_wait_certificate(
+                certificate=enclave_certificate,
+                poet_public_key=poet_public_key)
         except Timeout:
             raise NotAvailableException
         except ConnectionError:

@@ -196,6 +196,10 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                     family=ValidatorRegistryTransaction,
                     block_id=self.PreviousBlockID)
             if store is None:
+                LOGGER.error(
+                    'Unable to retrieve %s store for block_id=%s',
+                    ValidatorRegistryTransaction.TransactionTypeName,
+                    self.PreviousBlockID)
                 return False
 
             try:
@@ -224,11 +228,16 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 self.OriginatorID,
                 poet_public_key)
 
-            return \
-                self.wait_certificate.is_valid(
+            try:
+                self.wait_certificate.check_valid(
                     certificates=journal.consensus.build_certificate_list(
                         journal.block_store, self),
                     poet_public_key=poet_public_key)
+            except (ValueError, TypeError), err:
+                LOGGER.error('Wait certificate is not valid: %s', err)
+                return False
+
+        return True
 
     def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list
