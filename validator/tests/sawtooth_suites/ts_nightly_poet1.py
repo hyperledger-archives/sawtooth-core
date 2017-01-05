@@ -32,7 +32,8 @@ LOGGER = logging.getLogger(__name__)
 
 class Poet1NightlyTestSuite(SawtoothTestSuite):
     def test_suite(self):
-        cfg = {"LedgerType": "poet1"}
+        cfg = {"LedgerType": "poet1",
+               "InitialConnectivity": 1}
 
         success = False
         try:
