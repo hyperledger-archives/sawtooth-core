@@ -30,7 +30,8 @@ LOGGER = logging.getLogger(__name__)
 class Poet1TestSuite(SawtoothTestSuite):
     def test_suite(self):
         cfg = {"LedgerType": "poet1",
-               "TransactionFamilies": ["ledger.transaction.integer_key"]}
+               "TransactionFamilies": ["ledger.transaction.integer_key"],
+               "InitialConnectivity": 1}
 
         success = False
         try:
