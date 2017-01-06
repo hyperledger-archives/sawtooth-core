@@ -1,6 +1,7 @@
 #!/bin/bash -x
 
 . /vagrant/func.sh
+. /vagrant/conf.sh
 
 set -e
 
@@ -23,3 +24,5 @@ apt-get update
 package_group_install docker
 
 usermod -aG docker $VAGRANT_USER
+
+echo "Logout and log back in to use docker"
