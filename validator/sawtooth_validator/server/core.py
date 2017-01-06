@@ -16,7 +16,6 @@
 import logging
 import os
 import socket
-import random
 from threading import Condition
 from threading import Thread
 
@@ -30,7 +29,6 @@ from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server import future
-from sawtooth_validator.server import state
 from sawtooth_validator.server.dispatch import Dispatcher
 from sawtooth_validator.server.executor import TransactionExecutor
 from sawtooth_validator.server.loader import SystemLoadHandler
@@ -38,6 +36,7 @@ from sawtooth_validator.server.network import FauxNetwork
 from sawtooth_validator.server.network import Network
 from sawtooth_validator.server import state
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
+from sawtooth_validator.server import processor_iterator
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
@@ -78,6 +77,7 @@ class _SendReceiveThread(Thread):
                     message.correlation_id,
                     future.FutureResult(content=message.content,
                                         message_type=message.message_type))
+                self._futures.remove(message.correlation_id)
             except future.FutureCollectionKeyError:
                 # if there isn't a future, we are getting an initial message
                 if message.message_type in self._handlers:
@@ -141,7 +141,9 @@ class _SendReceiveThread(Thread):
 class ValidatorService(object):
     def __init__(self, url):
         self._handlers = {}
-        self._processors = {}
+        self._processors = processor_iterator.ProcessorIteratorCollection(
+            processor_iterator.RoundRobinProcessorIterator)
+
         self._futures = future.FutureCollection()
         self._send_receive_thread = _SendReceiveThread(url,
                                                        self._handlers,
@@ -155,30 +157,31 @@ class ValidatorService(object):
         family_name = header.family_name
         family_version = header.family_version
         encoding = header.payload_encoding
-        key = (family_name, family_version, encoding)
-        print(repr(key))
-        print(repr(self._processors.keys()))
-        if key not in self._processors.keys():
+        processor_type = processor_iterator.ProcessorType(family_name,
+                                                          family_version,
+                                                          encoding)
+        print(repr(processor_type))
+        print(repr(self._processors))
+        if processor_type not in self._processors:
             raise Exception("internal error, no processor available")
+        processor = self._processors[processor_type]
+        message.sender = processor.sender
 
-        # Choose a random processor of the type
-        processor = random.choice(self._processors[key])
-        peer = processor[0]
-        message.sender = peer
+        fut = future.Future(message.correlation_id, message.content)
+        self._futures.put(fut)
+
         self._send_receive_thread.send_message(message)
 
-        fut = future.Future(message.correlation_id)
-        self._futures.put(fut)
         return fut
 
     def register_transaction_processor(self, sender, family, version,
                                        encoding, namespaces):
-        key = (family, version, encoding)
-        data = (sender, namespaces)
-
-        if key not in self._processors.keys():
-            self._processors[key] = []
-        self._processors[key].append(data)
+        processor_type = processor_iterator.ProcessorType(
+            family,
+            version,
+            encoding)
+        processor = processor_iterator.Processor(sender, namespaces)
+        self._processors[processor_type] = processor
 
     def start(self):
         self._send_receive_thread.start()

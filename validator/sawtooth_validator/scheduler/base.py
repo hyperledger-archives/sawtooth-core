@@ -35,7 +35,7 @@ class Scheduler(object, metaclass=ABCMeta):
             state_hash: The expected resulting state_hash after the
                 transactions have been applied.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def batch_status(self, batch_signature):
@@ -48,7 +48,7 @@ class Scheduler(object, metaclass=ABCMeta):
         Returns:
             BatchStatus: the status of the batch, see BatchStatus below
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def set_status(self, txn_signature, status, context_id):
@@ -59,7 +59,7 @@ class Scheduler(object, metaclass=ABCMeta):
             status (bool): whether the txn passed or failed
             context_id (str): the context_id for the txn
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def next_transaction(self):
@@ -71,7 +71,7 @@ class Scheduler(object, metaclass=ABCMeta):
             there are no more transactions, only that there are no
             transactions which have had their dependencies met.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def mark_as_applied(self, transaction_signature):
@@ -89,7 +89,7 @@ class Scheduler(object, metaclass=ABCMeta):
             ValueError: Thrown if transaction_signature does not match a
             transaction.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def finalize(self):
@@ -99,7 +99,7 @@ class Scheduler(object, metaclass=ABCMeta):
         transactions are marked applied, complete() will return True.  After
         finalize() is called, batches can no longer be added to the scheduler.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def complete(self):
@@ -109,7 +109,7 @@ class Scheduler(object, metaclass=ABCMeta):
             True if all transactions have been marked as applied and that the
             finalize() as been called.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def __iter__(self):
@@ -124,7 +124,7 @@ class Scheduler(object, metaclass=ABCMeta):
         Returns:
              An Transaction iterator.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class SchedulerIterator(object):
