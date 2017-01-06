@@ -159,9 +159,16 @@ def do_cluster(args):
             args.cluster_command))
 
 
-def get_state_file_name():
+def get_state_dir_name():
     home = os.path.expanduser("~")
-    return os.path.join(home, '.sawtooth', 'cluster', "state.yaml")
+    dir_name = os.path.join(home, '.sawtooth', 'cluster')
+    return dir_name
+
+
+def get_state_file_name():
+    dir_name = get_state_dir_name()
+    file_name = os.path.join(dir_name, 'state.yaml')
+    return file_name
 
 
 def load_state(start=False):
@@ -169,11 +176,21 @@ def load_state(start=False):
     if os.path.isfile(file_name):
         with open(file_name, 'r') as state_file:
             state = yaml.load(state_file)
+            return state
     elif start is True:
-        state = {'DesiredState': 'Stopped'}
+        dir_name = get_state_dir_name()
+        # Ensure state directory exists
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        state = {
+            'DesiredState': 'Stopped',
+            'Nodes': {}
+        }
+        # Ensure state file exists
+        save_state(state)
+        return state
     else:
         raise CliException("Missing state file")
-    return state
 
 
 def save_state(state):
