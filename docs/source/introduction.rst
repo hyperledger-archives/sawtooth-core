@@ -2,6 +2,12 @@
 Introduction
 ************
 
+.. note::
+  
+  This documentation applies to version 0.7 of Sawtooth Lake. Documentation
+  for the `latest version <http://intelledger.github.io/0.8/>`_ is also
+  available.
+
 .. caution::
 
     This project includes a consensus algorithm, PoET (Proof of Elapsed Time),
