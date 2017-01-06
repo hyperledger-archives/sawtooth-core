@@ -69,7 +69,7 @@
   (let [pub-key (public-key signee)
         txn (cond-> txn
               (not (:Nonce txn)) (assoc :Nonce (seconds-since-epoch))
-              (not (:public_key txn)) (assoc :public_key pub-key))]
+              (not (:PublicKey txn)) (assoc :PublicKey pub-key))]
     (go
       (let [signed-txn (<! (sign-transaction signee txn))
             msg {:Transaction signed-txn
