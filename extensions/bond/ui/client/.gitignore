@@ -1,0 +1,23 @@
+# Build artifacts
+/resources/public/js/compiled/**
+/resources/public/js/test/**
+/resources/public/css/main.css
+/resources/public/css/main.css.map
+/lib/deps_library.js
+
+# dev tool artifacts
+node_modules
+figwheel_server.log
+pom.xml
+*jar
+/classes/
+/out/
+/target/
+.lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+.lein-failures
+.repl
+.nrepl-port
+.sass-cache
+yarn-error.log

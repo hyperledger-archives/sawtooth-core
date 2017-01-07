@@ -15,7 +15,12 @@
 
 import logging
 
-import pybitcointools
+try:
+    # Python 2
+    import pybitcointools
+except ImportError:
+    # Python 3
+    import bitcoin as pybitcointools
 
 from sawtooth_signing.ECDSA import ECDSARecoverModule as nativeECDSA
 
@@ -77,7 +82,12 @@ def recover_pubkey(message, signature):
         LOGGER.warn('Unable to extract public key from signature' + ex.args[0])
         return ""
 
-    pubkey = pubkey.translate(None, 'h')
+    try:
+        # pybitcointools package
+        pubkey = pubkey.translate(None, 'h')
+    except TypeError:
+        # bitcoin package
+        pubkey = pubkey.translate('h')
     pubkey = '04' + pubkey
 
     if compress:

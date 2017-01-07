@@ -41,16 +41,16 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 nonce='Eeny, meeny, miny, moe.',
                 block_digest='Indigestion. Pepto Bismol.')
 
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_timer.request_time,
             wait_certificate.request_time)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_timer.duration,
             wait_certificate.duration)
         self.assertEqual(
             wait_timer.previous_certificate_id,
             wait_certificate.previous_certificate_id)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_timer.local_mean,
             wait_certificate.local_mean)
         self.assertEqual(
@@ -78,16 +78,16 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 nonce='Eeny, meeny, miny, moe.',
                 block_digest=wait_certificate.block_digest)
 
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_certificate.duration,
             other_wait_certificate.duration)
         self.assertEqual(
             wait_certificate.previous_certificate_id,
             other_wait_certificate.previous_certificate_id)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_certificate.local_mean,
             other_wait_certificate.local_mean)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_certificate.request_time,
             other_wait_certificate.request_time)
         self.assertEqual(
@@ -139,16 +139,16 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 serialized,
                 wait_certificate.signature)
 
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_certificate.request_time,
             copy_wait_certificate.request_time)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_certificate.duration,
             copy_wait_certificate.duration)
         self.assertEqual(
             wait_certificate.previous_certificate_id,
             copy_wait_certificate.previous_certificate_id)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_certificate.local_mean,
             copy_wait_certificate.local_mean)
         self.assertEqual(

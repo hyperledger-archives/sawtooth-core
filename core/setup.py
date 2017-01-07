@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import os
 import shutil
 import subprocess
@@ -29,7 +31,7 @@ def bump_version(version):
 
 def auto_version(default, strict):
     output = subprocess.check_output(['git', 'describe', '--dirty'])
-    parts = output.strip().split('-', 1)
+    parts = output.decode('utf-8').strip().split('-', 1)
     parts[0] = parts[0][1:]  # strip the leading 'v'
     if len(parts) == 2:
         parts[0] = bump_version(parts[0])
@@ -37,12 +39,12 @@ def auto_version(default, strict):
         msg = "setup.py and (bumped?) git describe versions differ: {} != {}"\
             .format(default, parts[0])
         if strict:
-            print >> sys.stderr, "ERROR: " + msg
+            print("ERROR: " + msg, file=sys.stderr)
             sys.exit(1)
         else:
-            print >> sys.stderr, "WARNING: " + msg
-            print >> sys.stderr, "WARNING: using setup.py version {}".format(
-                default)
+            print("WARNING: " + msg, file=sys.stderr)
+            print("WARNING: using setup.py version {}".format(
+                default), file=sys.stderr)
             parts[0] = default
 
     if len(parts) == 2:

@@ -1,3 +1,20 @@
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 import unittest
 
 import os
@@ -5,43 +22,13 @@ import random
 import string
 
 from sawtooth_battleship import battleship_cli
-from txnintegration.validator_network_manager import get_default_vnm
 
-ENABLE_INTEGRATION_TESTS = False
-if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1":
-    ENABLE_INTEGRATION_TESTS = True
+RUN_TEST_SUITES = True \
+    if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
-@unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestBattleshipCommands(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.vnm = None
-        try:
-            if 'TEST_VALIDATOR_URL' in os.environ:
-                cls.url = os.environ['TEST_VALIDATOR_URL']
-            else:
-                overrides = {
-                    "TransactionFamilies": ['sawtooth_battleship'],
-                }
-                cls.vnm = get_default_vnm(5, overrides=overrides)
-                cls.vnm.do_genesis()
-                cls.vnm.launch()
-                # the url of the initial validator
-                cls.url = cls.vnm.urls()[0] + '/'
-        except:
-            if cls.vnm is not None:
-                cls.vnm.shutdown()
-                cls.vnm = None
-            raise Exception("Validators didn't start up correctly.")
-
-    @classmethod
-    def tearDownClass(cls):
-        if cls.vnm is not None:
-            cls.vnm.shutdown(archive_name='TestBattleshipCli')
-        else:
-            print "No Validator data and logs to preserve."
 
     def _clean_data_and_key_files(self, user1, user2):
         home_dir = os.path.expanduser("~")
@@ -59,7 +46,7 @@ class TestBattleshipCommands(unittest.TestCase):
             try:
                 os.remove(f)
             except OSError as ose:
-                print "Could not remove file: {}".format(ose)
+                print("Could not remove file: {}".format(ose))
 
     def _call_battleship(self, args):
 

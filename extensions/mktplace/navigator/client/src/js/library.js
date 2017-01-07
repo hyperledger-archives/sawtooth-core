@@ -52,6 +52,10 @@ export const  bitcoin = {
         return keyPair.getAddress();
     },
 
+    publicKeyHex: (keyPair) => {
+        return keyPair.getPublicKeyBuffer().toString('hex');
+    },
+
     /**
      * Converts a hex string to base 64
      */

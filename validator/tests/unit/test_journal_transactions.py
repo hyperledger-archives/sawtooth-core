@@ -37,16 +37,16 @@ class TestingJournalTransaction(unittest.TestCase):
         minfo = {'__SIGNATURE__': 'Test', '__NONCE__': time.time(),
                  'Dependencies': []}
         transaction = Transaction(minfo)
-        self.assertEquals(transaction.Status, tStatus.unknown)
+        self.assertEqual(transaction.Status, tStatus.unknown)
         self.assertFalse(transaction.InBlock)
-        self.assertEquals(transaction.Dependencies, [])
+        self.assertEqual(transaction.Dependencies, [])
 
     def test_journal_transaction_str(self):
         # Test str function for transaction
         minfo = {'__SIGNATURE__': 'Test', '__NONCE__': time.time(),
                  'Dependencies': []}
         transaction = Transaction(minfo)
-        self.assertEquals(str(transaction), '/Transaction')
+        self.assertEqual(str(transaction), '/Transaction')
 
     def test_journal_transaction_apply(self):
         # Test Transaction apply, Does nothing at this point
@@ -69,9 +69,9 @@ class TestingJournalTransaction(unittest.TestCase):
                  'Dependencies': []}
         transaction = Transaction(minfo)
         msg = transaction.build_message()
-        self.assertEquals(msg.MessageType,
-                          "/journal.messages.TransactionMessage/Transaction")
-        self.assertEquals(msg.Transaction, transaction)
+        self.assertEqual(msg.MessageType,
+                         "/journal.messages.TransactionMessage/Transaction")
+        self.assertEqual(msg.Transaction, transaction)
 
     def test_journal_transaction_dump(self):
         # Test that transactions dump the correct info
@@ -83,14 +83,14 @@ class TestingJournalTransaction(unittest.TestCase):
         t_dict = transaction.dump()
         new = time.time()
         self.assertLess(t_dict["Nonce"], new)
-        self.assertEquals(t_dict["Dependencies"], [])
-        self.assertEquals(t_dict["TransactionType"], '/Transaction')
+        self.assertEqual(t_dict["Dependencies"], [])
+        self.assertEqual(t_dict["TransactionType"], '/Transaction')
 
     def test_is_valid_pub_key(self):
         pubkey = signing.generate_pubkey("5KQ4iQQGgbQX9MmfiPUwwHBL1R"
                                          "GPa86NwFbqrWoodjuzruqFVDd")
         pub = signing.encode_pubkey(pubkey, "hex")
-        minfo = {'Nonce': 100, 'public_key': pub,
+        minfo = {'Nonce': 100, 'PublicKey': pub,
                  'TransactionType': '/Transaction', 'Dependencies': []}
         sig = signing.sign(
             signed_object.dict2cbor(minfo),
@@ -136,10 +136,10 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         # Test normal init of a transaction
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 0}
         trans_block = TransactionBlock(minfo)
-        self.assertEquals(trans_block.BlockNum, 0)
-        self.assertEquals(trans_block.TransactionIDs, [])
-        self.assertEquals(trans_block.Status, tbStatus.incomplete)
-        self.assertEquals(trans_block.TransactionDepth, 0)
+        self.assertEqual(trans_block.BlockNum, 0)
+        self.assertEqual(trans_block.TransactionIDs, [])
+        self.assertEqual(trans_block.Status, tbStatus.incomplete)
+        self.assertEqual(trans_block.TransactionDepth, 0)
 
     def test_journal_transaction_block_str(self):
         # Test str function for a signed transaction block
@@ -148,11 +148,11 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         node = self._create_node()
         # Need to sign TransactionBlock, use sign_from_node form signed object
         trans_block.sign_from_node(node)
-        self.assertEquals(str(trans_block), "{0}, {1}, {2}, {3:0.2f}"
-                          .format(trans_block.BlockNum,
-                                  trans_block.Identifier[:8],
-                                  len(trans_block.TransactionIDs),
-                                  trans_block.CommitTime))
+        self.assertEqual(str(trans_block), "{0}, {1}, {2}, {3:0.2f}"
+                         .format(trans_block.BlockNum,
+                                 trans_block.Identifier[:8],
+                                 len(trans_block.TransactionIDs),
+                                 trans_block.CommitTime))
 
     def test_journal_transaction_block_str_unsigned(self):
         # Test that an assertion error is caused if the Block is not signed
@@ -248,7 +248,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         trans_block.sign_from_node(node)
         missing = trans_block.missing_transactions(journal)
         # No missing transactions
-        self.assertEquals(missing, [])
+        self.assertEqual(missing, [])
 
         minfo = {'__SIGNATURE__': 'Test', '__NONCE__': time.time(),
                  'Dependencies': []}
@@ -257,12 +257,12 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         trans_block.TransactionIDs += [transaction.Identifier]
         missing = trans_block.missing_transactions(journal)
         # One missing transactions
-        self.assertEquals(missing, [transaction.Identifier])
+        self.assertEqual(missing, [transaction.Identifier])
 
         journal.transaction_store[transaction.Identifier] = transaction
         missing = trans_block.missing_transactions(journal)
         # Back to no missing transactions
-        self.assertEquals(missing, [])
+        self.assertEqual(missing, [])
 
     def test_journal_transaction_block_update_block_weight(self):
         # Test block update weight
@@ -275,7 +275,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         trans_block.sign_from_node(gossip.LocalNode)
         trans_block.update_block_weight(journal)
         # No transactions
-        self.assertEquals(trans_block.TransactionDepth, 0)
+        self.assertEqual(trans_block.TransactionDepth, 0)
 
         minfo = {'__SIGNATURE__': 'Test', '__NONCE__': time.time(),
                  'Dependencies': []}
@@ -284,7 +284,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         trans_block.TransactionIDs += [transaction.Identifier]
         trans_block.update_block_weight(journal)
         # One transaction
-        self.assertEquals(trans_block.TransactionDepth, 1)
+        self.assertEqual(trans_block.TransactionDepth, 1)
 
         minfo = {'__SIGNATURE__': 'Test', "BlockNum": 1,
                  'PreviousBlockID': trans_block.Identifier}
@@ -293,7 +293,7 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         journal.block_store[trans_block.Identifier] = trans_block
         new_trans_block.update_block_weight(journal)
         # Get depth from previous block
-        self.assertEquals(new_trans_block.TransactionDepth, 1)
+        self.assertEqual(new_trans_block.TransactionDepth, 1)
 
     def test_journal_transaction_block_build_message(self):
         # Test build_message, returns a TransactionBlockMessage
@@ -303,10 +303,10 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         trans_block.sign_from_node(node)
         trans_block.Status = tbStatus.valid
         msg = trans_block.build_message()
-        self.assertEquals(msg.MessageType,
+        self.assertEqual(msg.MessageType,
                           "/journal.messages.TransactionBlockMessage" +
                           "/TransactionBlock")
-        self.assertEquals(msg.TransactionBlock, trans_block)
+        self.assertEqual(msg.TransactionBlock, trans_block)
 
     def test_journal_transaction_block_dump(self):
         # Test that transactions dump the correct info
@@ -316,8 +316,8 @@ class TestingJournalTransactionBlock(unittest.TestCase):
         trans_block.sign_from_node(node)
         trans_block.Status = tbStatus.valid
         tb_dic = trans_block.dump()
-        self.assertEquals(tb_dic["TransactionIDs"], [])
-        self.assertEquals(tb_dic["TransactionBlockType"], "/TransactionBlock")
-        self.assertEquals(tb_dic["BlockNum"], 0)
+        self.assertEqual(tb_dic["TransactionIDs"], [])
+        self.assertEqual(tb_dic["TransactionBlockType"], "/TransactionBlock")
+        self.assertEqual(tb_dic["BlockNum"], 0)
         self.assertIsNotNone(tb_dic["Signature"])
-        self.assertNotEquals(tb_dic["Signature"], "")
+        self.assertNotEqual(tb_dic["Signature"], "")

@@ -1,5 +1,4 @@
 *.log*
-*.pyc
 *.out
 *.xml
 build

@@ -36,11 +36,10 @@ class TestSignedObject(unittest.TestCase):
     def test_init(self):
         # Trival test creates a SignedObject
         # check that everything initalizes as expected
-        signkey = SigObj.generate_signing_key()
-        temp = SignedObject({signkey: "test"}, signkey)
-        self.assertEquals(temp.SignatureKey, signkey)
-        self.assertEquals(temp.dump(), {signkey: "test", "public_key": None})
-        self.assertEquals(temp.__repr__(), temp.serialize())
+        temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
+        self.assertEqual(temp.SignatureDictKey, "TestSignatureDictKey")
+        self.assertEqual(temp.dump(), {"TestSignatureDictKey": "test", "PublicKey": None})
+        self.assertEqual(temp.__repr__(), temp.serialize())
         self.assertIsNotNone(temp.Identifier)
         temp._identifier = None
         self.assertIsNotNone(temp.Identifier)
@@ -49,8 +48,7 @@ class TestSignedObject(unittest.TestCase):
         # Verify that is_valid only returns true if working with a valid
         # Signed Object
         # test a valid signature
-        signkey = SigObj.generate_signing_key()
-        temp = SignedObject({signkey: "test"}, signkey)
+        temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
         self.assertTrue(temp.is_valid("unused"))
 
         # test OriginatorID
@@ -78,8 +76,7 @@ class TestSignedObject(unittest.TestCase):
         # Verify that signed_node and sign_object does not invalidate the
         # signed object and can be returned to original
         # create initial signed object
-        signkey = SigObj.generate_signing_key()
-        temp = SignedObject({signkey: "test"}, signkey)
+        temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
         # save origanl OriginatorID before creating node
         idBeforeNode = temp.OriginatorID
 
@@ -103,8 +100,7 @@ class TestSignedObject(unittest.TestCase):
         # Test that an assertion error is thrown when a node is passed
         # that does not have a Signingkey
         # create SignedObject
-        signkey = SigObj.generate_signing_key()
-        temp = SignedObject({signkey: "test"}, signkey)
+        temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
         # create a Node that does not have a signingKey
         testNode = Node(name="badNode")
         try:
@@ -119,10 +115,9 @@ class TestSignedObject(unittest.TestCase):
         # Test that serilazation returns the correct dictionary and that
         # it can be retrieved.
         # create SignedObject
-        signkey = SigObj.generate_signing_key()
-        temp = SignedObject({signkey: "test"}, signkey)
+        temp = SignedObject({"TestSignatureDictKey": "test"}, "TestSignatureDictKey")
         # serlize SignedObject
         cbor = temp.serialize()
         # check that the unserilized serilized dictinary is the same
         # as before serilazation
-        self.assertEquals(cbor2dict(cbor), temp.dump())
+        self.assertEqual(cbor2dict(cbor), temp.dump())

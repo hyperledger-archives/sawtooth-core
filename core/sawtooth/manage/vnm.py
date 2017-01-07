@@ -37,3 +37,6 @@ class ValidatorNetworkManager(object):
             return 'RUNNING'
         else:
             return 'UNKNOWN'
+
+    def get_ip(self, node_name):
+        return self._node_controller.get_ip(node_name)

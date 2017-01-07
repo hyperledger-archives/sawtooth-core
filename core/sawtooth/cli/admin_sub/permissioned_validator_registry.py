@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import json
 import logging
 
@@ -142,4 +144,4 @@ def list_validator_registry(args):
     client =\
         PermissionedValidatorRegistryClient(keyfile=args.keyfile,
                                             base_url=validator_url)
-    print pretty_print_dict(client.get_validator_list())
+    print(pretty_print_dict(client.get_validator_list()))

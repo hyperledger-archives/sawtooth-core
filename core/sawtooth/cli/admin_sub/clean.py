@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import os
 import re
 
@@ -61,7 +63,7 @@ def add_clean_parser(subparsers, parent_parser):
 def purge(directory, files):
     for f in files:
         full_path = os.path.join(directory, f)
-        print "Removing {}".format(full_path)
+        print("Removing {}".format(full_path))
         os.remove(full_path)
 
 
@@ -120,7 +122,7 @@ def do_clean_state(cfg, args):
     if args.dry_run is True:
         try:
             for f in files:
-                print "Would remove {}".format(f)
+                print("Would remove {}".format(f))
         except OSError as err:
             raise CliException("OS error: {0}".format(err))
 
@@ -142,7 +144,7 @@ def do_delete_keys(cfg, args):
     if args.dry_run is True:
         try:
             for f in files:
-                print "Would remove {}".format(f)
+                print("Would remove {}".format(f))
 
         except OSError as err:
             raise CliException("OS error: {0}".format(err))

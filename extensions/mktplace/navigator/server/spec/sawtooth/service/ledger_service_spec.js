@@ -43,14 +43,14 @@ describe('LedgerService', () => {
                     TransactionType: '/MarketPlaceTransaction',
                     Signature: 'some_long_signature_string',
                     Nonce: 59568591313305.586,
-                    Update: {
-                        CreatorID: '61b4746fd90b7cb2',
-                        FinalLiabilityID: "9b598458273cf19d",
+                    Updates: [{
+                        CreatorId: '61b4746fd90b7cb2',
+                        FinalLiabilityId: "9b598458273cf19d",
                         InitialCount: 1,
-                        InitialLiabilityID: "dd994a04101aa8dc",
-                        OfferIDList: ["0448ee05c78306db"],
-                        UpdateType: "/mktplace.transactions.ExchangeUpdate/Exchange",
-                    },
+                        InitialLiabilityId: "dd994a04101aa8dc",
+                        OfferIdList: ["0448ee05c78306db"],
+                        UpdateType: "Exchange",
+                    }],
             })
             .then((id) => {
                 expect(id).toBe('1122334455667788');

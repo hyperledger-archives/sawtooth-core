@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 from sawtooth.cli.stats_lib.stats_utils import StatsModule
 
 from sawtooth.cli.stats_lib.validator_stats import ValidatorStatsManager
@@ -81,7 +83,7 @@ class ConsolePrint(object):
                                  attr)
                 self.scrn.addstr(print_string + "\n", attr)
         else:
-            print print_string
+            print(print_string)
 
     def cpstop(self):
         if self.use_curses:
@@ -89,13 +91,15 @@ class ConsolePrint(object):
             self.scrn.keypad(0)
             curses.echo()
             curses.endwin()
-            print "print manager ended curses window"
+            print("print manager ended curses window")
 
 
 class StatsPrintManager(StatsModule):
 
     def __init__(self, epm, config):
         super(StatsPrintManager, self).__init__()
+        self.config = config
+
         self._console_print = ConsolePrint()
 
         self.platform_stats = None
@@ -108,6 +112,8 @@ class StatsPrintManager(StatsModule):
         self._view_options = None
         self._view_mode = None
         self._current_view = None
+
+        self.print_all = False
 
     def initialize(self, module_list):
         self.module_list = module_list
@@ -128,6 +134,8 @@ class StatsPrintManager(StatsModule):
         self._view_mode = view_option[0]  # 'general'
         self._current_view = view_option[1]  # GeneralView instance
 
+        self.update_config(self.config)
+
     def report(self):
         self._print_stats()
 
@@ -137,7 +145,10 @@ class StatsPrintManager(StatsModule):
     def _print_stats(self):
         self._check_view()
         self._summary_view.print_summary(self._view_mode)
-        self._current_view.print_view()
+        if self.print_all:
+            self._print_all_views()
+        else:
+            self._current_view.print_view()
         self._console_print.cpprint("", True)
 
     def _check_view(self):
@@ -172,3 +183,15 @@ class StatsPrintManager(StatsModule):
                 self._console_print, self.branch_manager)]
         }
         return view_options
+
+    def update_config(self, config):
+        stats_print_config = config.get('StatsPrint', None)
+        if stats_print_config is None:
+            return
+        else:
+            if stats_print_config.get('print_all', False):
+                self.print_all = True
+
+    def _print_all_views(self):
+        for value in self._view_options.values():
+            value[1].print_view()

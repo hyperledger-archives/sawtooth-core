@@ -295,7 +295,7 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
 
         # topological configuration
         self['TopologyAlgorithm'] = 'RandomWalk'
-        self['InitialConnectivity'] = 1
+        self['InitialConnectivity'] = 0
         self['TargetConnectivity'] = 3
         self['MaximumConnectivity'] = 15
         self['MinimumConnectivity'] = 1
@@ -327,12 +327,6 @@ class ValidatorDefaultConfig(sawtooth.config.Config):
 
         # ledger type (PoET default)
         self['LedgerType'] = 'poet0'
-
-        # quorum specific configuration
-        self['VotingQuorumTargetSize'] = None
-        self['VoteTimeInterval'] = 30.0
-        self['BallotTimeInterval'] = 5.0
-        self["Quorum"] = []
 
         # block-chain transaction limits
         self['MinTransactionsPerBlock'] = 1

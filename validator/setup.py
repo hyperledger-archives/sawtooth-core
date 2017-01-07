@@ -30,7 +30,7 @@ def bump_version(version):
 
 def auto_version(default, strict):
     output = subprocess.check_output(['git', 'describe', '--dirty'])
-    parts = output.strip().split('-', 1)
+    parts = output.decode('utf-8').strip().split('-', 1)
     parts[0] = parts[0][1:]  # strip the leading 'v'
     if len(parts) == 2:
         parts[0] = bump_version(parts[0])
@@ -130,14 +130,12 @@ data_files = [
     (static_content_dir, static_content_files),
 ]
 
-if os.path.exists("/etc/debian_version"):
-    data_files.append(('/etc/init', ['etc/init/sawtooth-validator.conf']))
+if os.path.exists("/etc/default"):
     data_files.append(('/etc/default', ['etc/default/sawtooth-validator']))
 
-if os.path.exists("/etc/SuSE-release"):
-    data_files.append(('/usr/lib/systemd/system',
+if os.path.exists("/lib/systemd/system"):
+    data_files.append(('/lib/systemd/system',
                        ['etc/systemd/sawtooth-validator.service']))
-    data_files.append(('/etc/sysconfig', ['etc/default/sawtooth-validator']))
 
 setup(
     name='sawtooth-validator',
@@ -158,8 +156,7 @@ setup(
     data_files=data_files,
     entry_points={
         'console_scripts': [
-            'txnvalidator = txnserver.validator_cli:main_wrapper',
-            'txnadmin = txnmain.admin_cli:main'
+            'txnvalidator = txnserver.validator_cli:main_wrapper'
         ]
     })
 

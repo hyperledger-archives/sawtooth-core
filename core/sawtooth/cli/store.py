@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
 
 from gossip.common import pretty_print_dict
 
@@ -61,8 +62,8 @@ def do_store(args):
     subcommands = ['list', 'show']
 
     if args.subcommand not in subcommands:
-        print 'Unknown sub-command, expecting one of {0}'.format(
-            subcommands)
+        print('Unknown sub-command, expecting one of {0}'.format(
+            subcommands))
         return
 
     if args.url is not None:
@@ -75,7 +76,7 @@ def do_store(args):
     try:
         if args.subcommand == 'list':
             transaction_type_name = web_client.get_store_list()
-            print pretty_print_dict(transaction_type_name)
+            print(pretty_print_dict(transaction_type_name))
             return
         elif args.subcommand == 'show':
             store_info = \
@@ -84,7 +85,7 @@ def do_store(args):
                     key=args.key,
                     block_id=args.blockID,
                     delta=args.incremental)
-            print pretty_print_dict(store_info)
+            print(pretty_print_dict(store_info))
             return
 
     except MessageException as e:

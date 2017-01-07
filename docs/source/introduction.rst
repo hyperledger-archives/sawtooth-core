@@ -85,15 +85,14 @@ algorithms and uses multiple rounds of explicit votes to achieve consensus.
 developed consensus protocols that extend traditional BFT for open
 participation.
 
-Sawtooth Lake abstracts the core concepts of consensus, isolates consensus
-from transaction semantics, and provides two consensus protocols with
-different performance trade-offs.  The first, called PoET for “Proof
-of Elapsed Time”, is a lottery protocol that builds on trusted execution
-environments (TEEs) provided by Intel's SGX to address the needs of
-large populations of participants. The second, Quorum Voting,
-is an adaptation of the Ripple and Stellar consensus protocols and
-serves to address the needs of applications that require immediate
-transaction finality.
+Sawtooth Lake abstracts the core concepts of consensus and isolates consensus
+from transaction semantics. Sawtooth Lake currently provides a single
+consensus protocol called PoET, for “Proof of Elapsed Time." PoET is a lottery
+protocol that builds on trusted execution environments (TEEs) provided by
+Intel's SGX to address the needs of large populations of participants. The
+second, Quorum Voting, is an adaptation of the Ripple and Stellar consensus
+protocols and serves to address the needs of applications that require
+immediate transaction finality.
 
 
 Proof of Elapsed Time (PoET)

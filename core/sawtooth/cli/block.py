@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import csv
 import json
 import sys
@@ -74,8 +76,8 @@ def add_block_parser(subparsers, parent_parser):
 def do_block(args):
     subcommands = ['list', 'show']
     if args.subcommand not in subcommands:
-        print 'Unknown sub-command, expecting one of {0}'.format(
-            subcommands)
+        print('Unknown sub-command, expecting one of {0}'.format(
+            subcommands))
         return
 
     if args.url is not None:
@@ -93,16 +95,16 @@ def do_block(args):
                 blockids = web_client.get_block_list(count=args.blockcount)
 
             if args.format == 'default':
-                print '{:6} {:20} {:4} {:10} {:10} {:50}'.format(
+                print('{:6} {:20} {:4} {:10} {:10} {:50}'.format(
                     'NUM', 'BLOCK', 'TXNS', 'DURATION', 'LOCALMEAN',
-                    'VALIDATOR')
+                    'VALIDATOR'))
 
                 for block_id in blockids:
                     block_num, blockid, txns, duration, local_mean,\
                         validator_dest = get_block_info(web_client, block_id)
-                    print '{:6} {:20} {:4} {:10} {:10} {:50}'.format(
+                    print('{:6} {:20} {:4} {:10} {:10} {:50}'.format(
                         block_num, blockid, txns, duration, local_mean,
-                        validator_dest)
+                        validator_dest))
 
             elif args.format == 'csv':
                 try:
@@ -129,9 +131,9 @@ def do_block(args):
                     json_dict.append(json_block)
 
                 if args.format == 'json':
-                    print json.dumps(json_dict)
+                    print(json.dumps(json_dict))
                 else:
-                    print yaml.dump(json_dict, default_flow_style=False)
+                    print(yaml.dump(json_dict, default_flow_style=False))
 
             else:
                 raise CliException(
@@ -142,7 +144,7 @@ def do_block(args):
                 web_client.get_block(
                     block_id=args.blockID,
                     field=args.key)
-            print pretty_print_dict(block_info)
+            print(pretty_print_dict(block_info))
             return
 
     except MessageException as e:

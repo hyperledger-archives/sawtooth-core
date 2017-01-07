@@ -1,3 +1,20 @@
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 import csv
 import argparse
 import sys
@@ -6,8 +23,8 @@ mpl_imported = True
 try:
     import matplotlib.pyplot as plt
 except ImportError:
-    print "matplotlib not available on this platform - plotting disabled"
-    print "see http://matplotlib.org/users/installing.html"
+    print("matplotlib not available on this platform - plotting disabled")
+    print("see http://matplotlib.org/users/installing.html")
     mpl_imported = False
 
 
@@ -41,16 +58,16 @@ def display_headings(infile):
         table.append(table_column)
         max_column_width.append(max(width))
 
-    print "available fields in stats file:"
+    print("available fields in stats file:")
     heading_index = 0
     for row_num in range(0, table_rows):
         for column_num, column in enumerate(table):
-            print "{0:{1}}".format(column[row_num],
-                                   max_column_width[column_num]),
+            print("{0:{1}}".format(column[row_num],
+                                   max_column_width[column_num]), end=' ')
             heading_index += 1
             if heading_index == headings:
                 break
-        print
+        print()
 
 
 field_index = {}
@@ -231,14 +248,14 @@ def main():
         sys.exit(1)
 
     if opts.statsfile == "":
-        print "no filename specified "
-        print "generate stats csv file by running stats client using "
-        print "--csv-enable = True option"
+        print("no filename specified ")
+        print("generate stats csv file by running stats client using ")
+        print("--csv-enable = True option")
         sys.exit()
 
     infile = opts.statsfile
 
-    print "stats file to analyze: ", infile
+    print("stats file to analyze: ", infile)
 
     display_headings(infile)
 

@@ -23,16 +23,18 @@
 (defn- find-dependencies [txn-update]
   (->> txn-update
        (filter (fn [[k v]]
-                 (re-find #".*ID.*" (name k))))
+                 (re-find #".*Id.*" (name k))))
        (map (fn [[k v]] v))
        flatten
-       sort))
+       sort
+       distinct
+       vec))
 
 (defn- make-mktplace-txn [mktplace-update]
   (msg/make-transaction
     mktplace-txn-family
-    mktplace-update
-    (vec (distinct (find-dependencies mktplace-update)))))
+    [mktplace-update]
+    (find-dependencies mktplace-update)))
 
 (defn- holding-id-for-asset [participant {asset-id :asset}]
   (->>
@@ -52,12 +54,12 @@
 
         asset-id (if (map? asset) (:id asset) asset)]
     (make-mktplace-txn
-      {:UpdateType "/mktplace.transactions.HoldingUpdate/Register"
-       :CreatorID participant-id
+      {:UpdateType "RegisterHolding"
+       :CreatorId participant-id
        :Name (or holding-name "")
        :Description (or description "")
-       :AccountID account-id
-       :AssetID asset-id
+       :AccountId account-id
+       :AssetId asset-id
        :Count (or holding-count 0)})))
 
 (defn exchange
@@ -82,20 +84,20 @@
                              ; it's probably a holding id
                              :default final-liability)
        _ [(make-mktplace-txn
-            {:UpdateType "/mktplace.transactions.ExchangeUpdate/Exchange"
-             :FinalLiabilityID final-liability-id
-             :InitialLiabilityID (if (map? initial-liability)
+            {:UpdateType "Exchange"
+             :FinalLiabilityId final-liability-id
+             :InitialLiabilityId (if (map? initial-liability)
                                    (:id initial-liability)
                                    initial-liability)
-             :OfferIDList (mapv :id offers)
+             :OfferIdList (mapv :id offers)
              :InitialCount initial-count})
           annotations]]
        on-done-fn))))
 
 (defn- register-asset-type [participant-id {:keys [name description restricted]}]
   (make-mktplace-txn
-    {:UpdateType "/mktplace.transactions.AssetTypeUpdate/Register"
-     :CreatorID participant-id
+    {:UpdateType "RegisterAssetType"
+     :CreatorId participant-id
      :Name (or name "")
      :Description (or description "")
      :Restricted (if-not (nil? restricted) restricted true)}))
@@ -111,14 +113,14 @@
                         {:creator participant-id}]
                        asset-type-id-or-map)
       _ (make-mktplace-txn
-          {:UpdateType "/mktplace.transactions.AssetUpdate/Register"
-           :CreatorID participant-id
+          {:UpdateType "RegisterAsset"
+           :CreatorId participant-id
            :Restricted (if-not (nil? restricted) restricted true)
            :Consumable (if-not (nil? consumable) consumable true)
            :Divisible (if-not (nil? divisible) divisible false)
            :Name (or name "")
            :Description (or description "")
-           :AssetTypeID asset-type-id})]
+           :AssetTypeId asset-type-id})]
       nil)))
 
 (defn register-holding
@@ -143,7 +145,7 @@
     signing-identity
     mktplace-msg-type
     (make-mktplace-txn
-      {:UpdateType "/mktplace.transactions.ParticipantUpdate/Register"
+      {:UpdateType "RegisterParticipant"
        :Name (or name "")
        :Description (or desc "")})
     {:address address}
@@ -155,8 +157,8 @@
       signing-identity
       mktplace-msg-type
       (make-mktplace-txn
-        {:UpdateType "/mktplace.transactions.AccountUpdate/Register"
-         :CreatorID participant-id
+        {:UpdateType "RegisterAccount"
+         :CreatorId participant-id
          :Name (str "/account/" name)
          :Description ""})
       {:creator participant-id})))
@@ -178,12 +180,12 @@
       signing-identity
       mktplace-msg-type
       (make-mktplace-txn
-        {:UpdateType "/mktplace.transactions.SellOfferUpdate/Register"
-         :CreatorID participant-id
+        {:UpdateType "RegisterSellOffer"
+         :CreatorId participant-id
          :Name (or name "")
          :Description (or description "")
-         :InputID input
-         :OutputID output
+         :InputId input
+         :OutputId output
          :Ratio (/ output-count input-count)
          :Minimum minimum
          :Maximum maximum
@@ -200,8 +202,8 @@
     signing-identity
     mktplace-msg-type
     (make-mktplace-txn
-      {:UpdateType "/mktplace.transactions.SellOfferUpdate/Unregister"
-       :ObjectID offer-id
-       :CreatorID participant-id})
+      {:UpdateType "UnregisterSellOffer"
+       :ObjectId offer-id
+       :CreatorId participant-id})
     {:creator participant-id}
     on-done-fn)))

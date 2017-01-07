@@ -30,34 +30,43 @@ class SubprocessNodeController(NodeController):
         self._host_name = host_name
         self._verbose = verbose
         self._base_config = get_validator_configuration([], {})
-        self._v0_cfg = {
+        # Additional configuration for the genesis validator
+        self._genesis_cfg = {
             "InitialConnectivity": 0,
+        }
+        # Additional configuration for the non-genesis validators
+        self._non_genesis_cfg = {
+            "InitialConnectivity": 1,
         }
         self._nodes = {}
 
-    def _construct_start_command(self, node_config):
+    def _construct_start_command(self, node_args):
         host = self._host_name
-        node_name = node_config.node_name
-        http_port = node_config.http_port
-        gossip_port = node_config.gossip_port
+        node_name = node_args.node_name
+        http_port = node_args.http_port
+        gossip_port = node_args.gossip_port
         cmd = get_executable_script('txnvalidator')
         if self._verbose is True:
             cmd += ['-vv']
         cmd += ['--node', node_name]
-        cmd += ['--listen', "{}:{}/TCP http".format(host, http_port)]
+        cmd += ['--listen', "0.0.0.0:{}/TCP http".format(http_port)]
         cmd += ['--listen', "{}:{}/UDP gossip".format(host, gossip_port)]
-        if node_config.genesis:
-            # Create and indicate special config file
-            config_dir = self._base_config['ConfigDirectory']
-            config_file = 'initial_node.json'
+        for x in node_args.config_files:
+            cmd += ['--config', x]
+        # Create and indicate special config file
+        config_dir = self._base_config['ConfigDirectory']
+        if node_args.currency_home is not None:
+            config_dir = os.path.join(node_args.currency_home, 'etc')
+        if not os.path.exists(config_dir):
             os.makedirs(config_dir)
-            with open(os.path.join(config_dir, config_file), 'w') as f:
-                f.write(json.dumps(self._v0_cfg, indent=4))
-            cmd += ['--conf-dir', config_dir, '--config', config_file]
+        config_file = '{}_bootstrap.json'.format(node_name)
+        cfg = self._non_genesis_cfg
+        if node_args.genesis:
+            cfg = self._genesis_cfg
+        with open(os.path.join(config_dir, config_file), 'w') as f:
+            f.write(json.dumps(cfg, indent=4))
+        cmd += ['--config', config_file]
         return cmd
-
-    def _get_out_err(self, node_config):
-        return [sys.stdout, sys.stderr]
 
     def is_running(self, node_name):
         '''
@@ -65,7 +74,8 @@ class SubprocessNodeController(NodeController):
         node no longer exists, it removes the node from _nodes.  We do this
         here rather than in stop/kill in order to allow stop/kill to be
         non-blocking.  Thus, our internal model of nodes (_nodes) will always
-        be correct the next time someone checks.
+        be correct for a particular node the next time someone asks if it
+        'is_running'.
         Args:
             node_name (str):
         Returns:
@@ -86,53 +96,73 @@ class SubprocessNodeController(NodeController):
             self._nodes.pop(node_name, None)
         return ret_val
 
-    def do_genesis(self, node_config):
+    def _build_env(self, node_args):
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        if node_args.currency_home is not None:
+            env['CURRENCYHOME'] = node_args.currency_home
+
+        return env
+
+    def create_genesis_block(self, node_args):
         '''
         Creates a key, then uses this key to author a genesis block.  The node
-        corresponding to node_config must be initially available on the network
+        corresponding to node_args must be initially available on the network
         in order to serve this genesis block.
         Args:
-            node_config (NodeConfig):
+            node_args (NodeArguments):
         '''
-        node_name = node_config.node_name
-        if self.is_running(node_name) is False:
+        if self.is_running(node_args.node_name) is False:
             # Create key for initial validator
-            key_dir = self._base_config['KeyDirectory']
             cmd = get_executable_script('sawtooth')
-            cmd += ['keygen', node_name]
+            cmd += ['keygen', node_args.node_name]
+            # ...sawtooth keygen does not assume validator's CURRENCYHOME
+            key_dir = self._base_config['KeyDirectory']
+            if node_args.currency_home is not None:
+                key_dir = os.path.join(node_args.currency_home, 'keys')
             cmd += ['--key-dir', key_dir]
             if self._verbose is False:
                 cmd += ['--quiet']
-            proc = subprocess.Popen(cmd)
+            proc = subprocess.Popen(cmd, env=self._build_env(node_args))
             proc.wait()
             # Create genesis block
             cmd = get_executable_script('sawtooth')
-            cmd += ['admin', 'poet0-genesis']
+            if node_args.ledger_type is None or \
+                    node_args.ledger_type == "poet0":
+                cmd += ['admin', 'poet0-genesis']
+            elif node_args.ledger_type == "poet1":
+                cmd += ['admin', 'poet1-genesis']
+            else:
+                cmd += ['admin', 'dev-mode-genesis']
             if self._verbose is True:
                 cmd += ['-vv']
-            cmd += ['--node', node_name]
-            cmd += ['--keyfile', os.path.join(key_dir, '%s.wif' % node_name)]
-            proc = subprocess.Popen(cmd)
+            cmd += ['--node', node_args.node_name]
+            for x in node_args.config_files:
+                cmd += ['--config', x]
+            proc = subprocess.Popen(cmd, env=self._build_env(node_args))
             proc.wait()
 
-    def start(self, node_config):
+    def do_start(self, node_args, stdout, stderr):
+        cmd = self._construct_start_command(node_args)
+        # Execute popen and store the process handle
+        handle = subprocess.Popen(cmd, stdout=stdout, stderr=stderr,
+                                  env=self._build_env(node_args))
+        handle.poll()
+        if handle.returncode is None:
+            # process is known to be running; save handle
+            self._nodes[node_args.node_name] = {"Handle": handle}
+
+    def _do_start(self, node_args, stdout, stderr):
+        self.do_start(node_args, stdout, stderr)
+
+    def start(self, node_args):
         '''
         Start a node if it is not already running.
         Args:
-            node_config (NodeConfig):
+            node_args (NodeArguments):
         '''
-        node_name = node_config.node_name
-        if self.is_running(node_name) is False:
-            cmd = self._construct_start_command(node_config)
-            # Execute popen and store the process handle
-            env = os.environ.copy()
-            env['PYTHONPATH'] = os.pathsep.join(sys.path)
-            [out, err] = self._get_out_err(node_config)
-            handle = subprocess.Popen(cmd, stdout=out, stderr=err, env=env)
-            handle.poll()
-            if handle.returncode is None:
-                # process is known to be running; save handle
-                self._nodes[node_name] = {"Handle": handle}
+        if self.is_running(node_args.node_name) is False:
+            self._do_start(node_args, sys.stdout, sys.stderr)
 
     def stop(self, node_name):
         '''
@@ -169,3 +199,8 @@ class SubprocessNodeController(NodeController):
     def get_node_names(self):
         names = self._nodes.keys()
         return [x for x in names if self.is_running(x)]
+
+    def get_ip(self, node_name):
+
+        hostname = self._host_name
+        return hostname

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import logging
 import os
 import tempfile
@@ -36,7 +38,14 @@ def add_docker_parser(subparsers, parent_parser):
 
 
 def add_docker_build_parser(subparsers, parent_parser):
-    subparsers.add_parser('build', parents=[parent_parser])
+    build_parser = subparsers.add_parser('build', parents=[parent_parser])
+    build_parser.add_argument('--all',
+                              help='build all the images',
+                              default=False,
+                              action='store_true')
+    build_parser.add_argument('filename',
+                              help='specify Dockerfile filenames to build',
+                              nargs='*')
 
 
 def do_docker(args):
@@ -71,8 +80,14 @@ def _build_docker_image(image):
 
 
 def do_docker_build(args):
-    for image in [
-            'sawtooth-build-ubuntu-trusty',
-            'sawtooth-dev-ubuntu-trusty']:
-        print "Building docker image: {}".format(image)
-        _build_docker_image(image)
+    if args.all:
+        for image in ['sawtooth-build-ubuntu-xenial',
+                      'sawtooth-dev-ubuntu-xenial']:
+            print("Building docker image: {}".format(image))
+            _build_docker_image(image)
+    elif args.filename is not None:
+        for image in args.filename:
+            _build_docker_image(image)
+            print("Building docker image: {}".format(image))
+    else:
+        print("Specify a dockerfile or use --all")

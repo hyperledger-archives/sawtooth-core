@@ -214,28 +214,27 @@ describe("OfferService", () => {
             connector.exec((db) => db.table('transactions').insert([
                     {
                         id: '63fab542a3415ce',
-                        ledgerID: '63fab542a3415ce',
+                        ledgerId: '63fab542a3415ce',
                         blockid: '111222',
                         Status: consts.TransactionStatuses.PENDING,
                         creator: '3e9c534c01340ee7',
-                        updateType: 'SellOfferUpdate/Register',
                         created: Date.now(),
 
                         TransactionType: '/MarketPlaceTransaction',
                         Signature: 'some_other_long_signature_string',
                         Nonce: 452743709641932.7,
-                        Update: {
-                            "CreatorID" : "3e9c534c01340ee7",
+                        Updates: [{
+                            "CreatorId" : "3e9c534c01340ee7",
                             "Description" : "",
                             "Execution" : "Any",
-                            "InputID" : "79386c0a237df4e7",
+                            "InputId" : "79386c0a237df4e7",
                             "Maximum" : 1000000000,
                             "Minimum" : 1,
                             "Name" : "",
-                            "OutputID" : "9b598458273cf19d",
+                            "OutputId" : "9b598458273cf19d",
                             "Ratio" : 21,
-                            "UpdateType" : "/mktplace.transactions.SellOfferUpdate/Register"
-                        },
+                            "UpdateType" : "RegisterSellOffer"
+                        }],
                     }
             ]))
             .then(done)
@@ -312,22 +311,21 @@ describe("OfferService", () => {
                     {
                         // annotated transaction fields
                         id: '7f61dag340a1fb14',
-                        ledgerID: '7f61dag340a1fb14',
+                        ledgerId: '7f61dag340a1fb14',
                         blockid: '123456',
                         Status: consts.TransactionStatuses.PENDING,
                         creator: '4f2ede53e0e08e6f',
-                        updateType: 'SellOfferUpdate/Unregister',
                         created: Date.now(),
 
                         // Original transaction fields
                         TransactionType: '/MarketPlaceTransaction',
                         Signature: 'some_long_signature_string',
                         Nonce: 59568591313305.586,
-                        Update: {
-                            CreatorID: '4f2ede53e0e08e6f',
-                            ObjectID: '01f4e11442867022',
-                            UpdateType: '/mktplace.transactions.SellOfferUpdate/Unregister',
-                        },
+                        Updates: [{
+                            CreatorId: '4f2ede53e0e08e6f',
+                            ObjectId: '01f4e11442867022',
+                            UpdateType: 'UnregisterSellOffer',
+                        }],
                     },
             ]))
             .then(done)
@@ -412,23 +410,22 @@ describe("OfferService", () => {
                         "id" : "4bf2a65310409a52",
                         "Status" : 1,
                         "created" : 1457558804993,
-                        "ledgerID" : "4bf2a65310409a52",
-                        "updateType" : "ExchangeUpdate/Exchange",
+                        "ledgerId" : "4bf2a65310409a52",
                         "creator" : "4f2ede53e0e08e6f",
                         "blockid" : "12345678",
                         "Dependencies" : [ ],
                         "Nonce" : 1457558804.852492,
                         "Signature" : "some_other_long_signature_string",
                         "TransactionType" : "/MarketPlaceTransaction",
-                        "Update" : {
-                            "FinalLiabilityID" : "9b598458273cf19d",
+                        "Updates" : [{
+                            "FinalLiabilityId" : "9b598458273cf19d",
                             "InitialCount" : 1,
-                            "InitialLiabilityID" : "991ba2e592243d51",
-                            "OfferIDList" : [
+                            "InitialLiabilityId" : "991ba2e592243d51",
+                            "OfferIdList" : [
                                 "01f4e11442867022"
                             ],
-                            "UpdateType" : "/mktplace.transactions.ExchangeUpdate/Exchange"
-                         },
+                            "UpdateType" : "Exchange"
+                         }],
                          "sellOffer" : {
                              "id" : "01f4e11442867022",
                              "creator" : "4f2ede53e0e08e6f",

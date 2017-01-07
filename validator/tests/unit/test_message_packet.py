@@ -27,24 +27,24 @@ class TestPacket(unittest.TestCase):
         # Test trival intialization of a packet
         # Check each value defualts correctly
         pak = Packet()
-        self.assertEquals(pak.TimeToLive, 255)
-        self.assertEquals(pak.SequenceNumber, 0)
-        self.assertEquals(pak.IsAcknowledgement, False)
-        self.assertEquals(pak.IsReliable, True)
-        self.assertEquals(pak.SenderID, '========================')
-        self.assertEquals(pak.Message, None)
-        self.assertEquals(pak.Data, '')
-        self.assertEquals(pak.TransmitTime, 0.0)
-        self.assertEquals(pak.RoundTripEstimate, 0.0)
-        self.assertEquals(pak.DestinationID, '========================')
-        self.assertEquals(pak.Identifier, None)
+        self.assertEqual(pak.TimeToLive, 255)
+        self.assertEqual(pak.SequenceNumber, 0)
+        self.assertEqual(pak.IsAcknowledgement, False)
+        self.assertEqual(pak.IsReliable, True)
+        self.assertEqual(pak.SenderID, '========================')
+        self.assertEqual(pak.Message, None)
+        self.assertEqual(pak.Data, b'')
+        self.assertEqual(pak.TransmitTime, 0.0)
+        self.assertEqual(pak.RoundTripEstimate, 0.0)
+        self.assertEqual(pak.DestinationID, '========================')
+        self.assertEqual(pak.Identifier, None)
 
     def test_packet_str(self):
         # Test string method
         pak = Packet()
         string = pak.__str__()
-        self.assertEquals(string, "PKT:{0}:{1}".format(pak.SenderID[:8],
-                                                       pak.SequenceNumber))
+        self.assertEqual(string, "PKT:{0}:{1}".format(pak.SenderID[:8],
+                                                      pak.SequenceNumber))
 
     def test_create_ack(self):
         # Test creating an acknowledgement packet for a packet
@@ -55,8 +55,8 @@ class TestPacket(unittest.TestCase):
         self.assertIsNotNone(newAck)
         self.assertTrue(newAck.IsAcknowledgement)
         # Should have the same SequenceNumber
-        self.assertEquals(newAck.SequenceNumber, pak.SequenceNumber)
-        self.assertEquals(newAck.SenderID, nodeID)
+        self.assertEqual(newAck.SequenceNumber, pak.SequenceNumber)
+        self.assertEqual(newAck.SenderID, nodeID)
 
     def test_add_message(self):
         # Add a message to a packet, along with source node and destination
@@ -68,17 +68,17 @@ class TestPacket(unittest.TestCase):
         msg = Message({'__SIGNATURE__': "MsgTestS"})
         pak.add_message(msg, srcNode, desNode, 1)
         # Check that msg and pak have the same attributes
-        self.assertEquals([msg.Identifier, msg.TimeToLive, msg.IsReliable],
-                          [pak.Identifier, pak.TimeToLive, pak.IsReliable])
+        self.assertEqual([msg.Identifier, msg.TimeToLive, msg.IsReliable],
+                         [pak.Identifier, pak.TimeToLive, pak.IsReliable])
         # Check correct SenderID
-        self.assertEquals(srcNode.Identifier, pak.SenderID)
+        self.assertEqual(srcNode.Identifier, pak.SenderID)
         # Check correct destinationID and destination RTE
-        self.assertEquals(desNode.Identifier, pak.DestinationID)
-        self.assertEquals(desNode.Estimator.RTO, pak.RoundTripEstimate)
+        self.assertEqual(desNode.Identifier, pak.DestinationID)
+        self.assertEqual(desNode.Estimator.RTO, pak.RoundTripEstimate)
 
         # Check correct data and msg
-        self.assertEquals(pak.Message, msg)
-        self.assertEquals(pak.Data, repr(msg))
+        self.assertEqual(pak.Message, msg)
+        self.assertEqual(pak.Data, repr(msg))
 
     def test_pack_unpack(self):
         # Test packing a paket and a packed packet can be unpacked correctly
@@ -98,8 +98,8 @@ class TestPacket(unittest.TestCase):
                pak.SequenceNumber, pak.IsAcknowledgement,
                pak.IsReliable, str(pak.SenderID)]
 
-        self.assertEquals(original, new)
-        self.assertEquals("test the pack", pak.Data)
+        self.assertEqual(original, new)
+        self.assertEqual("test the pack", pak.Data.decode())
 
 
 class TestMessage(unittest.TestCase):
@@ -110,22 +110,22 @@ class TestMessage(unittest.TestCase):
         msg = Message()
         time.sleep(.05)
         self.assertLess(msg.Nonce, time.time())
-        self.assertEquals(msg.TimeToLive, (2**31))
+        self.assertEqual(msg.TimeToLive, (2**31))
         self.assertTrue(msg.IsForward)
         self.assertTrue(msg.IsReliable)
         self.assertFalse(msg.IsSystemMessage)
         self.assertIsNone(msg._data)
         # Add signature and nounce to minfo
         msg2 = Message({'__SIGNATURE__': "Test", "__NONCE__": 10.02})
-        self.assertEquals(msg2.Nonce, 10.02)
+        self.assertEqual(msg2.Nonce, 10.02)
 
     def test_message_str(self):
         # Test overridden string method
         # Will cause warning from SignedObject identifier
         msg = Message({'__SIGNATURE__': "Test"})
         string = str(msg)
-        self.assertEquals(string, "MSG:{0}:{1}".format(msg.OriginatorID[:8],
-                                                       msg._identifier[:8]))
+        self.assertEqual(string, "MSG:{0}:{1}".format(msg.OriginatorID[:8],
+                                                      msg._identifier[:8]))
 
     def test_str_assertion(self):
         # Test if the assert is called within SignedObject, An assert error
@@ -143,13 +143,13 @@ class TestMessage(unittest.TestCase):
         msg = Message({'__SIGNATURE__': "Test"})
         serMsg = msg.serialize()
         self.assertIsNone(msg._data)
-        self.assertEquals(repr(msg), serMsg)
-        self.assertEquals(msg._data, serMsg)
+        self.assertEqual(repr(msg), serMsg)
+        self.assertEqual(msg._data, serMsg)
         # Second case is when the msg contains data
         msg2 = Message({'__SIGNATURE__': "Test"})
         msg2._data = "test data"
-        self.assertEquals(repr(msg2), "test data")
-        self.assertEquals(msg2._data, "test data")
+        self.assertEqual(repr(msg2), "test data")
+        self.assertEqual(msg2._data, "test data")
 
     def test_message_len(self):
         # Test the overriden len function
@@ -157,23 +157,23 @@ class TestMessage(unittest.TestCase):
         msg = Message({'__SIGNATURE__': "Test"})
         length = len(dict2cbor(msg.dump()))
         self.assertIsNone(msg._data)
-        self.assertEquals(len(msg), length)
+        self.assertEqual(len(msg), length)
         # The second case is when the msg does have data
         msg2 = Message({"__SIGNATURE__": "Test"})
         msg2._data = "test data"
-        self.assertEquals(len(msg2), len("test data"))
+        self.assertEqual(len(msg2), len("test data"))
 
     def test_message_dump(self):
         # Test dump for message
         msg = Message({'__SIGNATURE__': "Test", "__NONCE__": 1000.3})
         expectedDump = {'__SIGNATURE__': "Test", "__NONCE__": 1000.3,
                         "__TYPE__": "/gossip.Message/MessageBase",
-                        "public_key": None}
-        self.assertEquals(msg.dump(), expectedDump)
+                        "PublicKey": None}
+        self.assertEqual(msg.dump(), expectedDump)
 
     def test_unpack_message(self):
         # Make sure that the message can be unpacked after serliazation
         msg = Message({'__SIGNATURE__': "Test"})
         cbor = dict2cbor(msg.dump())
         msgdict = unpack_message_data(cbor)
-        self.assertEquals(msg.dump(), msgdict)
+        self.assertEqual(msg.dump(), msgdict)

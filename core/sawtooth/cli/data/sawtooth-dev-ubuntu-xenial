@@ -1,0 +1,84 @@
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+FROM ubuntu:xenial
+
+RUN sh -c "echo deb http://archive.ubuntu.com/ubuntu xenial-backports main restricted universe multiverse >> /etc/apt/sources.list"
+RUN sh -c "echo deb-src http://archive.ubuntu.com/ubuntu xenial-backports main restricted universe multiverse >> /etc/apt/sources.list"
+
+RUN apt-get update && apt-get install -y -q \
+    git \
+    make \ 
+    sudo \
+    openssh-server \
+    openjdk-8-jdk \
+    python-pip \
+    wget \
+    zip \
+    connect-proxy \
+    g++ \
+    libcrypto++-dev \
+    libjson0 \
+    libjson0-dev \
+    python-all-dev \
+    python-dev \
+    python-enum34 \
+    python-numpy \
+    python-psutil \
+    python-setuptools \
+    python-stdeb \
+    python-twisted \
+    python-twisted-web \
+    python-yaml \
+    swig3.0 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install psutil
+
+RUN ln -s /usr/bin/swig3.0 /usr/bin/swig
+
+RUN sed -i 's|session required pam_loginuid.so|session optional pam_loginuid.so|g' /etc/pam.d/sshd
+RUN mkdir -p /var/run/sshd
+RUN adduser --quiet sawtooth
+RUN echo "sawtooth ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sawtooth
+RUN echo "sawtooth:sawtooth" | chpasswd
+
+RUN mkdir /home/sawtooth/packages && mkdir /home/sawtooth/projects
+
+WORKDIR /home/sawtooth/projects
+RUN wget https://pypi.python.org/packages/source/c/cbor/cbor-0.1.24.tar.gz && \
+    wget https://pypi.python.org/packages/source/c/colorlog/colorlog-2.6.0.tar.gz && \
+    wget https://pypi.python.org/packages/source/p/pybitcointools/pybitcointools-1.1.15.tar.gz
+
+RUN tar xvfz cbor-0.1.24.tar.gz && \
+    tar xvfz colorlog-2.6.0.tar.gz && \
+    tar xvfz pybitcointools-1.1.15.tar.gz
+
+WORKDIR /home/sawtooth/projects/cbor-0.1.24
+RUN python setup.py --command-packages=stdeb.command bdist_deb
+RUN cp deb_dist/python-cbor*.deb /home/sawtooth/packages/
+
+WORKDIR /home/sawtooth/projects/colorlog-2.6.0
+RUN python setup.py --command-packages=stdeb.command bdist_deb
+RUN cp deb_dist/python-colorlog*.deb /home/sawtooth/packages/
+
+WORKDIR /home/sawtooth/projects/pybitcointools-1.1.15
+RUN python setup.py --command-packages=stdeb.command bdist_deb
+RUN cp deb_dist/python-pybitcointools*.deb /home/sawtooth/packages/
+
+WORKDIR /home/sawtooth/packages/
+RUN sudo dpkg -i *.deb
+
+USER sawtooth

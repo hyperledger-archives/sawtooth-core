@@ -108,25 +108,26 @@ class SignedObject(object):
 
     Attributes:
         Signature (str): The signature used to sign the object.
-        SignatureKey (str): The name of the key related to the signature.
-            Used to build dict return types.
+        SignatureDictKey (str): The key in the serialized dict containing the
+            signature. Used to build dict return types.
 
     """
     signature_cache = LruCache()
 
-    def __init__(self, minfo=None, signkey='Signature'):
+    def __init__(self, minfo=None, sig_dict_key='Signature'):
         """Constructor for the SignedObject class.
 
         Args:
             minfo (dict): object data
-            signkey (str): the field name for the signature within the
+            sig_dict_key (str): the field name for the signature within the
                 object data
         """
         if minfo is None:
             minfo = {}
-        self.Signature = minfo.get(signkey)
-        self.SignatureKey = signkey
-        self.public_key = minfo.get("public_key")
+
+        self.Signature = minfo.get(sig_dict_key)
+        self.SignatureDictKey = sig_dict_key
+        self.public_key = minfo.get("PublicKey")
         self._identifier = hashlib.sha256(
             self.Signature).hexdigest() if self.Signature else None
         self._originator_id = None
@@ -260,30 +261,30 @@ class SignedObject(object):
         self._identifier = hashlib.sha256(self.Signature).hexdigest()
 
     def serialize(self, signable=False):
-        """Generates a CBOR serialized dict containing the a SignatureKey
+        """Generates a CBOR serialized dict containing the SignatureDictKey
         to Signature mapping.
 
         Args:
-            signable (bool): if signable is True, self.SignatureKey is
+            signable (bool): if signable is True, self.SignatureDictKey is
                 removed from the dict prior to serialization to CBOR.
 
         Returns:
-            bytes: a CBOR representation of a SignatureKey to Signature
+            bytes: a CBOR representation of a SignatureDictKey to Signature
                 mapping.
         """
         dump = self.dump()
 
-        if signable and self.SignatureKey in dump:
-            del dump[self.SignatureKey]
+        if signable and self.SignatureDictKey in dump:
+            del dump[self.SignatureDictKey]
 
         return dict2cbor(dump)
 
     def dump(self):
-        """Builds a dict containing a mapping of SignatureKey to Signature.
+        """Builds a dict containing a mapping of SignatureDictKey to Signature.
 
         Returns:
-            dict: a map containing SignatureKey:Signature.
+            dict: a map containing SignatureDictKey:Signature.
         """
-        result = {self.SignatureKey: self.Signature}
-        result["public_key"] = self.public_key
+        result = {self.SignatureDictKey: self.Signature}
+        result["PublicKey"] = self.public_key
         return result

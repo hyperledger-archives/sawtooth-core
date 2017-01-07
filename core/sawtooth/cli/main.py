@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
 
 import argparse
 import logging
@@ -23,6 +24,7 @@ import sys
 from colorlog import ColoredFormatter
 
 from sawtooth.exceptions import ClientException
+from sawtooth.exceptions import ManagementError
 from sawtooth.exceptions import InvalidTransactionError
 
 from sawtooth.cli.block import add_block_parser
@@ -44,6 +46,8 @@ from sawtooth.cli.submit import add_submit_parser
 from sawtooth.cli.submit import do_submit
 from sawtooth.cli.transaction import add_transaction_parser
 from sawtooth.cli.transaction import do_transaction
+from sawtooth.cli.monitor import add_monitor_parser
+from sawtooth.cli.monitor import do_monitor
 
 
 def create_console_handler(verbose_level):
@@ -107,6 +111,7 @@ def create_parser(prog_name):
     add_store_parser(subparsers, parent_parser)
     add_admin_parser(subparsers, parent_parser)
     add_stats_parser(subparsers, parent_parser)
+    add_monitor_parser(subparsers, parent_parser)
 
     return parser
 
@@ -141,6 +146,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_admin(args)
     elif args.command == 'stats':
         do_stats(args)
+    elif args.command == 'monitor':
+        do_monitor(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
@@ -150,13 +157,16 @@ def main_wrapper():
     try:
         main()
     except CliException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except InvalidTransactionError as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except ClientException as e:
-        print >>sys.stderr, "Error: {}".format(e)
+        print("Error: {}".format(e), file=sys.stderr)
+        sys.exit(1)
+    except ManagementError as e:
+        print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         pass

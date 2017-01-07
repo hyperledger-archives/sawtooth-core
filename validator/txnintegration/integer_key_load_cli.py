@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import logging
 import random
 import time
@@ -36,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 class IntKeyLoadTest(object):
     def __init__(self, timeout=None):
-        print "start inkeyloadtest"
+        print("start inkeyloadtest")
         self.localState = {}
         self.transactions = []
         self.clients = []
@@ -82,13 +84,13 @@ class IntKeyLoadTest(object):
 
         if txnCnt != 0:
             if len(self.transactions) != 0:
-                print "Uncommitted transactions: ", self.transactions
+                print("Uncommitted transactions: ", self.transactions)
             raise Exception("{} transactions failed to commit in {}s".format(
                 txnCnt, to.WaitTime))
 
     def _wait_for_no_transaction_commits(self):
         # for the case where no transactions are expected to commit
-        to = TimeOut(120)
+        to = TimeOut(240)
         starting_txn_count = len(self.transactions)
 
         remaining_txn_cnt = len(self.transactions)
@@ -104,16 +106,16 @@ class IntKeyLoadTest(object):
                             "were committed in {}s"
                             .format(committedtxncount, to.WaitTime))
         else:
-            print "No transactions with missing dependencies " \
-                  "were committed in {0}s".format(to.WaitTime)
+            print("No transactions with missing dependencies "
+                  "were committed in {0}s".format(to.WaitTime))
 
     def _wait_for_limit_pending_transactions(self):
-        result = self.is_registered('http://localhost:9000/statistics/ledger')
+        result = self.is_registered('http://localhost:8800/statistics/journal')
         json_data = json.loads(result)
-        self.committedBlckCount = json_data['ledger']['CommittedBlockCount']
-        print ("committedBlckCount: ", self.committedBlckCount)
-        self.pendingTxnCount = json_data['ledger']['PendingTxnCount']
-        print ("PendingTxnCount: ", self.pendingTxnCount)
+        self.committedBlckCount = json_data['journal']['CommittedBlockCount']
+        print(("committedBlckCount: ", self.committedBlckCount))
+        self.pendingTxnCount = json_data['journal']['PendingTxnCount']
+        print(("PendingTxnCount: ", self.pendingTxnCount))
 
         if (self.committedBlckCount > 3 & self.pendingTxnCount != 0):
             raise Exception("{} blocks were committed "
@@ -121,8 +123,8 @@ class IntKeyLoadTest(object):
                             .format(self.committedBlckCount,
                                     self.pendingTxnCount))
         else:
-            print "All pending transactions after " \
-                  "3 blocks have been dropped"
+            print("All pending transactions after "
+                  "3 blocks have been dropped")
 
     def setup(self, urls, numkeys):
         self.localState = {}
@@ -167,7 +169,7 @@ class IntKeyLoadTest(object):
                     txncount += 1
                     self.last_key_txn[n] = txnid
                     p.step()
-            print
+            print()
             self.txnrate(starttime, txncount, "submitted")
         self._wait_for_transaction_commits()
         self.txnrate(starttime, txncount, "committed")
@@ -179,9 +181,9 @@ class IntKeyLoadTest(object):
         self.state.fetch()
         keys = self.state.State.keys()
 
-        print "Running {0} rounds for {1} keys " \
-              "with {2} second inter-transaction time" \
-            .format(rounds, numkeys, txintv)
+        print("Running {0} rounds for {1} keys "
+              "with {2} second inter-transaction time"
+              .format(rounds, numkeys, txintv))
 
         for r in range(0, rounds):
             cnt = 0
@@ -230,28 +232,28 @@ class IntKeyLoadTest(object):
             logger.warn("Unable to connect to Validators, No Clients created")
             return
         self.state.fetch()
-        print "Validating IntegerKey State"
+        print("Validating IntegerKey State")
         for k, v in self.state.State.iteritems():
             if self.localState[k] != v:
-                print "key {} is {} expected to be {}".format(
-                    k, v, self.localState[k])
+                print("key {} is {} expected to be {}".format(
+                    k, v, self.localState[k]))
             assert self.localState[k] == v
 
-    def ledgerstate(self):
+    def journalstate(self):
         self.state.fetch()
 
-        print "state: "
+        print("state: ")
         for k, v in self.state.State.iteritems():
-            print k, v
-        print
+            print(k, v)
+        print()
 
     def txnrate(self, starttime, numtxns, purpose):
         if numtxns > 0:
             endtime = time.time()
             totaltime = endtime - starttime
             avgrate = (numtxns / totaltime)
-            print "{0} transaction in {1} seconds averaging {2} t/s " \
-                  "{3}" .format(numtxns, totaltime, avgrate, purpose)
+            print("{0} transaction in {1} seconds averaging {2} t/s "
+                  "{3}" .format(numtxns, totaltime, avgrate, purpose))
 
     def generate_txn_id(self):
         string_id = ''
@@ -266,22 +268,18 @@ class IntKeyLoadTest(object):
     def run_with_limit_txn_dependencies(self, numkeys, rounds=1, txintv=0):
         if len(self.clients) == 0:
             return
-
         self.state.fetch()
         keys = self.state.State.keys()
 
-        print "Running {0} rounds for {1} keys " \
-              "with {2} second inter-transaction time" \
-              "with limit on missing dep transactions" \
-            .format(rounds, numkeys, txintv)
+        print("Running {0} rounds for {1} keys "
+              "with {2} second inter-transaction time"
+              "with limit on missing dep transactions"
+              .format(rounds, numkeys, txintv))
 
         for r in range(1, rounds + 1):
             with Progress("Updating clients state") as p:
-                for c in self.clients:
-                    c.fetch_state()
-                    p.step()
 
-                print "Round {}".format(r)
+                print("Round {}".format(r))
                 for k in range(1, numkeys + 1):
                     k = str(k)
                     c = self._get_client()
@@ -294,16 +292,16 @@ class IntKeyLoadTest(object):
                         dependingtid = c.inc(k, 1, txndep=missingid)
                         self.pendingTxns.append(dependingtid)
                         cnt += 1
-                    print("pendingTxns: ", self.pendingTxns)
+                    print(("pendingTxns: ", self.pendingTxns))
                     self.txnrate(starttime, cnt,
                                  " invalid transactions NOT submitted")
 
                     result = self.is_registered(
-                        'http://localhost:9000/statistics/ledger')
+                        'http://localhost:8800/statistics/journal')
                     json_data = json.loads(result)
                     self.pendingTxnCount = \
-                        json_data['ledger']['PendingTxnCount']
-                    print ("PendingTxnCount: ", self.pendingTxnCount)
+                        json_data['journal']['PendingTxnCount']
+                    print(("PendingTxnCount: ", self.pendingTxnCount))
 
                     for loop_ind in range(0, 4):
                         print ("Sending valid txn:")
@@ -331,21 +329,19 @@ class IntKeyLoadTest(object):
                         self._wait_for_transaction_commits()
                         self._wait_for_limit_pending_transactions()
 
-                    print "checking pending txn limit"
+                    print("checking pending txn limit")
                     self._wait_for_limit_pending_transactions()
 
     def run_with_missing_dep(self, numkeys, rounds=1):
         self.state.fetch()
 
-        print "Running {0} rounds for {1} keys " \
-              "with missing transactions" \
-            .format(rounds, numkeys)
+        print("Running {0} rounds for {1} keys "
+              "with missing transactions"
+              .format(rounds, numkeys))
 
         starttime = time.time()
         for r in range(1, rounds + 1):
-            for c in self.clients:
-                c.fetch_state()
-            print "Round {}".format(r)
+            print("Round {}".format(r))
             for k in range(1, numkeys + 1):
                 k = str(k)
                 c = c = self._get_client()
@@ -403,12 +399,12 @@ after transaction rounds are complete (default: %(default)s)""",
 
 
 def configure(opts):
-    print "     validator count: ", opts.count
-    print "  validator base url: ", opts.url
-    print " validator base port: ", opts.port
-    print "                keys: ", opts.keys
-    print "              rounds: ", opts.rounds
-    print "transaction interval: ", opts.interval
+    print("     validator count: ", opts.count)
+    print("  validator base url: ", opts.url)
+    print(" validator base port: ", opts.port)
+    print("                keys: ", opts.keys)
+    print("              rounds: ", opts.rounds)
+    print("transaction interval: ", opts.interval)
 
 
 def main():
@@ -430,13 +426,13 @@ def main():
         url = baseurl + ":" + str(portnum + i)
         urls.append(url)
 
-    print "validator urls: ", urls
+    print("validator urls: ", urls)
 
     keys = opts.keys
     rounds = opts.rounds
     txn_intv = opts.interval
 
-    print "Testing transaction load."
+    print("Testing transaction load.")
 
     test = IntKeyLoadTest()
     test.setup(urls, keys)

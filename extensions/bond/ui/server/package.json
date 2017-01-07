@@ -1,0 +1,39 @@
+{
+  "name": "sawtooth_bond_backend",
+  "version": "0.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon --ignore spec/ server.js",
+    "test": "node spec/support/run_tests.js"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "binstring": "^0.2.1",
+    "bitcoinjs-lib": "^2.2.0",
+    "bluebird": "^3.4.1",
+    "body-parser": "^1.15.2",
+    "cbor": "^1.0.4",
+    "compression": "^1.6.2",
+    "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.3",
+    "express": "^4.14.0",
+    "immutable": "^3.8.1",
+    "js-schema": "^1.0.1",
+    "longjohn": "^0.2.11",
+    "nodemon": "^1.9.2",
+    "python-shell": "^0.4.0",
+    "request-promise": "^3.0.0",
+    "rethinkdb": "^2.3.2",
+    "sawtooth-client": "file:../../../../clients/javascript",
+    "sha256": "^0.2.0",
+    "socket.io": "^1.4.8",
+    "underscore": "^1.8.3",
+    "winston": "^1.1.1"
+  },
+  "devDependencies": {
+    "jasmine": "^2.4.1",
+    "jasmine-spec-reporter": "2.7.0"
+  }
+}

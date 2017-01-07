@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 from collections import OrderedDict
 import json
 import os
@@ -188,12 +191,10 @@ class NetworkConfig(object):
             # initial athourity
             nd["LedgerURL"] = []
             # aux information
-            nd["Quorum"] = []
             self.nodes.append(nd)
 
         self.node_mat = None
         self.peer_mat = None
-        self.quorum_mat = None
         self.blacklist_mat = None
 
     def resolve_networking_info(self, host, udp, http, endpoint):
@@ -252,17 +253,6 @@ class NetworkConfig(object):
                 if is_peer == 1 and peer_idx != nd_idx:
                     nd['Peers'].append(self.nodes[peer_idx]['NodeName'])
 
-    def set_quorum(self, quorum_mat):
-        if self.quorum_mat is not None:
-            raise Exception('validator configuration is static')
-        self.quorum_mat = AdjacencyMatrix(self.n_mag, quorum_mat)
-        mat = self.quorum_mat.get_mat()
-        for (nd_idx, nd) in enumerate(self.nodes):
-            nd['Quorum'] = []
-            for (quorum_idx, in_quorum) in enumerate(mat[nd_idx]):
-                if in_quorum == 1:
-                    nd['Quorum'].append(self.nodes[quorum_idx]['NodeName'])
-
     def set_blacklist(self, blacklist_mat=None):
         if self.blacklist_mat is not None:
             raise Exception('validator configuration is static')
@@ -300,7 +290,7 @@ class NetworkConfig(object):
 
     def print_config_list(self):
         val = self.get_config_list()
-        print json.dumps(val, indent=4)
+        print(json.dumps(val, indent=4))
 
 
 def get_default_network_config_obj(num_nodes,

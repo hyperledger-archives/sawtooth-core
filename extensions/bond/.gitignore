@@ -1,0 +1,14 @@
+.ifxplayer.js
+.ifxmarket.js
+*.pyc
+*.egg-info
+*.egg
+*.tar.gz
+build
+/keys
+dist
+.idea
+.coverage
+cover
+htmlcov
+

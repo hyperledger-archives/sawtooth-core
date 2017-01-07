@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import json
 import logging
 import os
@@ -79,8 +81,8 @@ def is_convergent(urls, tolerance=2, standard=5, verbose=False):
     # check for block id convergence across network:
     sample_size = max(1, tolerance) * standard
     if verbose is True:
-        print "testing block-level convergence with min sample size:",
-        print " %s (after tolerance: %s)" % (sample_size, tolerance)
+        print("testing block-level convergence with min sample size:", end=' ')
+        print(" %s (after tolerance: %s)" % (sample_size, tolerance))
     # ...get all blockids from each server, newest last
     block_lists = get_blocklists(urls)
     # ...establish preconditions
@@ -88,15 +90,15 @@ def is_convergent(urls, tolerance=2, standard=5, verbose=False):
     min_mag = len(min(block_lists, key=len))
     if max_mag - min_mag > tolerance:
         if verbose is True:
-            print 'block list magnitude differences (%s) ' \
-                  'exceed tolerance (%s)' % (max_mag - min_mag, tolerance)
+            print('block list magnitude differences (%s) '
+                  'exceed tolerance (%s)' % (max_mag - min_mag, tolerance))
         return False
     effective_sample_size = max_mag - tolerance
     if verbose is True:
-        print 'effective sample size: %s' % effective_sample_size
+        print('effective sample size: %s' % effective_sample_size)
     if effective_sample_size < sample_size:
         if verbose is True:
-            print 'not enough target samples to determine convergence'
+            print('not enough target samples to determine convergence')
         return False
     # ...(optionally) permit reasonable forks by normalizing lists
     if tolerance > 0:
@@ -108,11 +110,11 @@ def is_convergent(urls, tolerance=2, standard=5, verbose=False):
     for (i, block_list) in enumerate(block_lists):
         if block_lists[0] != block_list:
             if verbose is True:
-                print '%s is divergent:\n\t%s vs.\n\t%s' % (
-                    urls[i], block_lists[0], block_list)
+                print('%s is divergent:\n\t%s vs.\n\t%s' % (
+                    urls[i], block_lists[0], block_list))
             return False
     if verbose is True:
-        print 'network exhibits tolerable convergence'
+        print('network exhibits tolerable convergence')
     return True
 
 
@@ -121,16 +123,16 @@ def get_statuslist(urls):
     try:
         ret = [(SawtoothClient(base_url=u)).get_status() for u in urls]
     except Exception as e:
-        print e
+        print(e)
         raise
     return ret
 
 
 def sit_rep(urls, verbosity=1):
     def print_helper(data, tag, key):
-        print tag
+        print(tag)
         for x in data:
-            print '\t%s: %s' % (x['Status']['Name'], x['Status'][key])
+            print('\t%s: %s' % (x['Status']['Name'], x['Status'][key]))
     statuslist = get_statuslist(urls)
     reports = [{'Status': statuslist[i]} for i in range(len(urls))]
     blocklists = get_blocklists(urls)
@@ -148,7 +150,7 @@ def sit_rep(urls, verbosity=1):
 
 class StaticNetworkConfig(object):
     def __init__(self, n, q=None, base_name='validator', base_port=9000,
-                 base_http_port=8000, use_quorum=False):
+                 base_http_port=8000):
         self.n_mag = n
         assert self.n_mag >= 1
         self.q_mag = n if q is None else q
@@ -165,50 +167,15 @@ class StaticNetworkConfig(object):
             }
             for (idx, wif) in enumerate(self.keys)
         ]
-        self.use_quorum = use_quorum
 
     def get_nodes(self):
         return self.nodes
-
-    def get_quorum(self, tgt, dfl=None):
-        '''
-        This is a hack 'wrapping' function intended to ensure that all nodes
-        enjoy quorum intersection.
-        Args:
-            tgt: node index for which we need a peer list
-            dfl: Q override if not self.use_quorum
-        Returns:
-            peers: a list of q node NodeNames (including the requestor)
-            gathered by modulating around the nodelist
-        '''
-        dfl = [] if dfl is None else dfl
-        peers = dfl
-        if self.use_quorum:
-            peers = [x['NodeName'] for x in self.nodes]
-            assert len(peers) == len(set(peers))
-            return [peers[(tgt + i) % (self.n_mag)] for i in range(self.q_mag)]
 
     def get_node(self, idx):
         return self.nodes[idx]
 
     def get_key(self, idx):
         return self.keys[idx]
-
-    def print_quorum_schema(self):
-        '''
-        A dev-only utility to assist in manually crafting hardcoded config
-        files when manually testing/pogramming.  Includes the SigningKey as
-        part of each node, as well as the list of its possible quorum members.
-        Obviously, you'd never want to include the SigningKey in a shared
-        configuation file.
-        '''
-        ret = []
-        for (i, nd) in enumerate(self.nodes):
-            x = nd.copy()
-            x["SigningKey"] = self.keys[i]
-            x["Quorum"] = self.get_quorum(i)
-            ret.append(x)
-        print json.dumps(ret, indent=4)
 
 
 class Progress(object):
@@ -252,7 +219,7 @@ class Timer(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        print time.time() - self.start
+        print(time.time() - self.start)
 
     def elapsed(self):
         return time.time() - self.start
@@ -386,7 +353,7 @@ def find_executable(executable_name):
             ret_val = os.path.join(directory, executable_name)
             return ret_val
     if ret_val is None:
-        print "%s: %s" % (executable_name, ret_val)
+        print("%s: %s" % (executable_name, ret_val))
         raise ExitError("Could not find %s in your $PATH" % executable_name)
     return ret_val
 

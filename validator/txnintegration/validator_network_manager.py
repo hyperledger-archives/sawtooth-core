@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from __future__ import print_function
+
 import json
 import logging
 import numpy
@@ -100,11 +103,11 @@ class ValidatorNetworkManager(object):
             genesis_dat = json.load(f)
         assert 'GenesisId' in genesis_dat.keys()
         head = genesis_dat['GenesisId']
-        print 'created genesis block: %s' % head
+        print('created genesis block: %s' % head)
 
     def launch(self, **kwargs):
         assert self._initialized
-        print 'launching network'
+        print('launching network')
         mat = numpy.ones(shape=(self.n_mag, self.n_mag))
         self.update(node_mat=mat, edge_mat=mat, **kwargs)
 
@@ -120,13 +123,12 @@ class ValidatorNetworkManager(object):
         '''
         assert self._initialized
         if stage_chunk_size < self.n_mag:
-            print 'launching network in segments of %s' % stage_chunk_size
+            print('launching network in segments of %s' % stage_chunk_size)
         mat = numpy.zeros(shape=(self.n_mag, self.n_mag))
         idx = 0
         while idx < self.n_mag:
             n = min(idx + stage_chunk_size, self.n_mag)
             for i in range(n):
-                self.net_config.set_ledger_url(i, [idx])
                 for j in range(n):
                     mat[i][j] = 1
             self.update(node_mat=mat, edge_mat=mat, **kwargs)
@@ -151,7 +153,7 @@ class ValidatorNetworkManager(object):
             except AssertionError:
                 msg = "You've chose to overrload the edge matrix, but your"
                 msg += " node and edge matrices differ..."
-                print msg
+                print(msg)
 
     def get_configuration(self, idx):
         assert self._initialized

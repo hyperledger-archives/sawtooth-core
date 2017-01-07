@@ -13,25 +13,28 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import unittest
 import os
 import logging
 
 from txnintegration.integer_key_load_cli import IntKeyLoadTest
 from txnintegration.utils import is_convergent
-from txnintegration.validator_network_manager import get_default_vnm
 
 logger = logging.getLogger(__name__)
-
-ENABLE_INTEGRATION_TESTS = True \
-    if os.environ.get("ENABLE_INTEGRATION_TESTS", False) == "1" else False
 
 RUN_TEST_SUITES = True \
     if os.environ.get("RUN_TEST_SUITES", False) == "1" else False
 
 
+@unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
 class TestSmoke(unittest.TestCase):
-    def _run_int_load(self, num_nodes, archive_name, overrides, urls=None):
+    def __init__(self, test_name, urls=None):
+        super(TestSmoke, self).__init__(test_name)
+        self.urls = urls
+
+    def _run_int_load(self):
         """
         Args:
             num_nodes (int): Total number of nodes in network simulation
@@ -41,36 +44,13 @@ class TestSmoke(unittest.TestCase):
         vnm = None
         try:
             test = IntKeyLoadTest()
-            if urls is None:
-                if "TEST_VALIDATOR_URLS" not in os.environ:
-                    print "Launching validator network."
-                    vnm = get_default_vnm(num_nodes, overrides=overrides)
-                    vnm.do_genesis()
-                    vnm.launch()
-                    urls = vnm.urls()
-                else:
-                    print "Fetching Urls of Running Validators"
-                    # TEST_VALIDATORS_RUNNING is a list of validators urls
-                    # separated by commas.
-                    # e.g. 'http://localhost:8800,http://localhost:8801'
-                    urls = str(os.environ["TEST_VALIDATOR_URLS"]).split(",")
-            print "Testing transaction load."
-            test.setup(urls, 100)
+            print("Testing transaction load.")
+            test.setup(self.urls, 100)
             test.run(2)
             test.validate()
-            self.assertTrue(is_convergent(urls, tolerance=2, standard=5))
+            self.assertTrue(is_convergent(self.urls, tolerance=2, standard=3))
         finally:
-            if vnm is not None:
-                vnm.shutdown(archive_name=archive_name)
-            else:
-                print "No Validator data and logs to preserve"
+            print("No Validator data and logs to preserve")
 
-    @unittest.skipUnless(ENABLE_INTEGRATION_TESTS, "integration test")
-    def test_intkey_load_poet0(self):
-        overrides = {}
-        self._run_int_load(5, "TestSmokeResultsPoet0", overrides)
-
-    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
-    def test_intkey_load_dev_mode(self):
-        self._run_int_load(1, "TestSmokeResultsDevMode", None,
-                           urls=["http://localhost:8800"])
+    def test_intkey_load(self):
+        self._run_int_load()

@@ -81,14 +81,18 @@ class DockerNodeController(NodeController):
         args.extend(['-p', '{}/udp'.format(gossip_port)])
         args.extend(['-e', 'CURRENCYHOME=/project/sawtooth-core/validator'])
         args.extend(['-v', '{}:/project'.format(local_project_dir)])
-        args.append('sawtooth-build-ubuntu-trusty')
+        args.append('sawtooth-build-ubuntu-xenial')
         args.extend(['bash', '-c'])
 
         cmd = []
         bin_path = '/project/sawtooth-core/bin'
+
+        initial_connectivity = 0 if genesis else 1
+        cmd.append(
+            'echo "{\\\"InitialConnectivity\\\": %d}"' % initial_connectivity)
+        cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
+
         if genesis:
-            cmd.append('echo "{\\\"InitialConnectivity\\\": 0}"')
-            cmd.append('> ${CURRENCYHOME}/data/%s.json;' % node_name)
             cmd.append('%s/sawtooth keygen %s; ' % (bin_path, node_name))
             cmd.append('%s/sawtooth admin' % bin_path)
             cmd.append('poet0-genesis -vv --node %s; exec' % node_name)
@@ -99,8 +103,7 @@ class DockerNodeController(NodeController):
         cmd.append("--listen '{}:{}/TCP http'".format(ip_addr, http_port))
         # Set Ledger Url
         cmd.append("--url 'http://{}:8800'".format(str(subnet_list[3])))
-        if genesis:
-            cmd.append('--config ${CURRENCYHOME}/data/validator-000.json')
+        cmd.append('--config ${CURRENCYHOM}}/data/%s.json' % node_name)
         args.append(' '.join(cmd))
         return args
 
@@ -113,11 +116,14 @@ class DockerNodeController(NodeController):
                 formatted_args.append(arg)
         return ' '.join(formatted_args)
 
-    def start(self, node_config):
-        node_name = node_config.node_name
-        http_port = node_config.http_port
-        gossip_port = node_config.gossip_port
-        genesis = node_config.genesis
+    def create_genesis_block(self, node_args):
+        pass
+
+    def start(self, node_args):
+        node_name = node_args.node_name
+        http_port = node_args.http_port
+        gossip_port = node_args.gossip_port
+        genesis = node_args.genesis
         args = self._construct_start_args(node_name, http_port, gossip_port,
                                           genesis)
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
@@ -157,6 +163,9 @@ class DockerNodeController(NodeController):
             if len(line) < 1:
                 continue
             LOGGER.debug("command output: %s", str(line))
+
+    def kill(self, node_name):
+        self.stop(node_name)
 
     def _get_state(self):
         args = [
@@ -199,3 +208,19 @@ class DockerNodeController(NodeController):
             if node_name == entry.name:
                 return entry.status.startswith("Up")
         return False
+
+    def get_ip(self, node_name):
+        args = [
+            'docker',
+            'inspect',
+            "--format='{{range .NetworkSettings.Networks}}\
+            {{.IPAddress}}{{end}}'",
+            node_name
+        ]
+
+        try:
+            output = subprocess.check_output(args)
+        except subprocess.CalledProcessError as e:
+            raise CliException(str(e))
+
+        return output

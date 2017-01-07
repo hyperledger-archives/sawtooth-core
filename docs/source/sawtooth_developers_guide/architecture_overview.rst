@@ -31,7 +31,7 @@ sawtooth-core
     * The gossip networking layer
     * Basic transaction, block, and message objects
     * The base journal implementation
-    * The PoET and quorum voting journal consensus mechanisms
+    * The PoET journal consensus mechanism
     * Built-in transaction families - Endpoint Registry and Integer Key
       Registry
     * The implementation of a server, known as the validator
@@ -111,8 +111,7 @@ sawtooth-core repository.
 Consensus Mechanisms
 ~~~~~~~~~~~~~~~~~~~~
 
-Sawtooth Lake contains two consensus implementations: PoET and Quorum
-Voting.
+Sawtooth Lake implements PoET as a consensus mechanism.
 
 PoET and SGX
 ::::::::::::
@@ -136,19 +135,6 @@ be used as the consensus mechanism in any 'production' environment.
 The PoET implementation is located in sawtooth_validator.consensus.poet0 in
 sawtooth-core.
 
-Quorum Voting
-:::::::::::::
-
-The Quorum Voting consensus implementation is an adaptation of the
-Ripple [#]_ and Stellar [#]_ consensus protocols.
-
-.. [#] The Ripple Consensus Protocol -
-   https://ripple.com/files/ripple_consensus_whitepaper.pdf
-.. [#] The Stellar Consensus Protocol -
-   https://www.stellar.org/papers/stellar-consensus-protocol.pdf
-
-The Quorum Voting implementation is located in
-sawtooth_validator.consensus.quorum in sawtooth-core.
 
 Transactions
 ~~~~~~~~~~~~

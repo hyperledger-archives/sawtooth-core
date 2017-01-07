@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import csv
 import json
 import sys
@@ -43,6 +45,11 @@ def add_transaction_parser(subparsers, parent_parser):
     '''
 
     list_parser = grand_parsers.add_parser('list', epilog=epilog)
+    list_parser.add_argument(
+        '--type',
+        type=str,
+        required=False,
+        help='the name of the transaction type')
     list_parser.add_argument(
         '--url',
         type=str,
@@ -100,8 +107,8 @@ def do_transaction(args):
     subcommands = ['list', 'show', 'status']
 
     if args.subcommand not in subcommands:
-        print 'Unknown sub-command, expecting one of {0}'.format(
-            subcommands)
+        print('Unknown sub-command, expecting one of {0}'.format(
+            subcommands))
         return
 
     if args.url is not None:
@@ -127,21 +134,21 @@ def do_transaction(args):
                 web_client.get_transaction(
                     transaction_id=args.transactionID,
                     field=args.key)
-            print pretty_print_dict(tsct_info)
+            print(pretty_print_dict(tsct_info))
             return
         elif args.subcommand == 'status':
             tsct_status = web_client.get_transaction_status(args.transactionID)
             if tsct_status == transaction.Status.committed:
-                print 'transaction committed'
+                print('transaction committed')
             elif tsct_status == transaction.Status.pending:
-                print 'transaction still uncommitted'
+                print('transaction still uncommitted')
             elif tsct_status == transaction.Status.unknown:
-                print 'unknown transaction'
+                print('unknown transaction')
             elif tsct_status == transaction.Status.failed:
-                print 'transaction failed to validate.'
+                print('transaction failed to validate.')
             else:
-                print 'transaction returned unexpected status code {0}'\
-                    .format(tsct_status)
+                print('transaction returned unexpected status code {0}'
+                      .format(tsct_status))
             return
 
     except MessageException as e:
@@ -149,6 +156,7 @@ def do_transaction(args):
 
 
 def print_trans_info(args, web_client, tsctids):
+    txn_type = args.type
     info_fields_mapping = {
         # These map the names of the keys in the returned ordered dict
         # to the field names that will be displayed.
@@ -156,25 +164,39 @@ def print_trans_info(args, web_client, tsctids):
         "InBlock": "BLOCK",
         "Status": "STATUS",
         "TransactionType": "TXNTYPE",
-        "Update": {
-            "HttpPort": "HTTPPORT",
-            "NetHost": "HOST",
-            "NetPort": "UDPPORT",
-            "Name": "NAME",
-            "NodeIdentifier": "NODE",
-            "Verb": "VERB"
-        }
     }
     format_mapping = {"TRANS": '20',
                       "BLOCK": '20',
                       "STATUS": '8',
-                      "TXNTYPE": '30',
-                      "HTTPPORT": '8',
-                      "HOST": '15',
-                      "UDPPORT": '8',
-                      "NAME": '15',
-                      "NODE": '35',
-                      "VERB": '5'}
+                      "TXNTYPE": '30'}
+
+    if txn_type == "/EndpointRegistryTransaction":
+        info_fields_mapping = {
+            # These map the names of the keys in the returned ordered dict
+            # to the field names that will be displayed.
+            "Identifier": "TRANS",
+            "InBlock": "BLOCK",
+            "Status": "STATUS",
+            "TransactionType": "TXNTYPE",
+            "Update": {
+                "HttpPort": "HTTPPORT",
+                "NetHost": "HOST",
+                "NetPort": "UDPPORT",
+                "Name": "NAME",
+                "NodeIdentifier": "NODE",
+                "Verb": "VERB"
+            }
+        }
+        format_mapping = {"TRANS": '20',
+                          "BLOCK": '20',
+                          "STATUS": '8',
+                          "TXNTYPE": '30',
+                          "HTTPPORT": '8',
+                          "HOST": '15',
+                          "UDPPORT": '8',
+                          "NAME": '15',
+                          "NODE": '35',
+                          "VERB": '5'}
 
     fields = [f for f in format_mapping.iterkeys()]
     if args.format == 'default':
@@ -182,22 +204,26 @@ def print_trans_info(args, web_client, tsctids):
             "{:^" + f_length + "}" for f_length
             in format_mapping.itervalues()
         ])
-
-        print format_string.format(*fields)
+        print(format_string.format(*fields))
         for txn_id in tsctids:
             trans_dict = get_trans_info(web_client,
                                         txn_id,
+                                        txn_type,
                                         info_fields_mapping)
-            print format_string.format(*[trans_dict[f] for f in fields])
+            if trans_dict is not None:
+                print(format_string.format(*[trans_dict[f] for f in fields]))
 
     elif args.format == 'csv':
         try:
             writer = csv.writer(sys.stdout)
             writer.writerow(fields)
             for txn_id in tsctids:
-                trans_dict = get_trans_info(web_client, txn_id,
+                trans_dict = get_trans_info(web_client,
+                                            txn_id,
+                                            txn_type,
                                             info_fields_mapping)
-                field_values = [trans_dict[f] for f in fields]
+                if trans_dict is not None:
+                    field_values = [trans_dict[f] for f in fields]
                 writer.writerow(field_values)
         except csv.Error as e:
             raise CliException(e)
@@ -205,21 +231,28 @@ def print_trans_info(args, web_client, tsctids):
     elif args.format == 'json' or args.format == 'yaml':
         json_dict = []
         for txn_id in tsctids:
-            trans_dict = get_trans_info(web_client, txn_id,
+            trans_dict = get_trans_info(web_client,
+                                        txn_id,
+                                        txn_type,
                                         info_fields_mapping)
-            json_dict.append(trans_dict)
+            if trans_dict is not None:
+                json_dict.append(trans_dict)
         if args.format == 'json':
-            print json.dumps(json_dict)
+            print(json.dumps(json_dict))
         else:
-            print yaml.dump(json_dict, default_flow_style=False)
+            print(yaml.dump(json_dict, default_flow_style=False))
 
     else:
         raise CliException(
             "unknown format option: {}".format(args.format))
 
 
-def get_trans_info(web_client, txn_id, info_fields_mapping=None):
+def get_trans_info(web_client, txn_id, txn_type, info_fields_mapping=None):
     trans_info = web_client.get_transaction(txn_id)
+    if txn_type is not None:
+        if trans_info['TransactionType'] != txn_type:
+            return None
+
     trans_info_specified = {}
     if info_fields_mapping is not None:
         for input_key, output_field in info_fields_mapping.iteritems():

@@ -51,7 +51,7 @@ class TestConvergence(unittest.TestCase):
         sit_rep(self.urls, verbosity=1)
         return convergent
 
-    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
+    @unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
     def test_bootstrap(self):
         '''
         Ensures that the network (self.urls) is convergent on at least 2
@@ -61,11 +61,11 @@ class TestConvergence(unittest.TestCase):
         block on the network is the 'intended' block.  To do so, it would need
         to have additional, internal knowledge about the validator subsystem.
         '''
-        convergent = self._poll_for_convergence(timeout=128, tolerance=1,
+        convergent = self._poll_for_convergence(timeout=240, tolerance=1,
                                                 standard=2)
         self.assertTrue(convergent, 'network divergent')
 
-    @unittest.skipUnless(RUN_TEST_SUITES, "test suites")
+    @unittest.skipUnless(RUN_TEST_SUITES, "Must be run in a test suites")
     def test_convergence(self):
         '''
         Ensures that the network (self.urls) is convergent on at least 10

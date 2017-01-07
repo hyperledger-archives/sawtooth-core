@@ -21,7 +21,7 @@ Prerequisites
 
 The following tools are required:
 
-* `Vagrant <https://www.vagrantup.com/downloads.html>`_ (1.7.4 or later)
+* `Vagrant <https://www.vagrantup.com/downloads.html>`_ (1.9.0 or later)
 * `VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_ (5.0.10 r104061
   or later)
 
@@ -103,8 +103,7 @@ build, run the following inside vagrant:
 
 .. code-block:: console
 
-  $ cd /project/sawtooth-core/validator
-  $ python setup.py build
+  $ /project/sawtooth-core/bin/build_all
 
 Running txnvalidator
 ====================
@@ -116,16 +115,16 @@ and run the following commands:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/vagrant/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/ubuntu/sawtooth/v0.json
 
 This will start txnvalidator and logging output will be printed to the
 terminal window.
 
 .. note::
   **Note on genesis block creation and clearing validator state**
-  
+
     The script *genesis.sh* should be run whenever you want to start a
-    validator as part of the tuturial. The script clears existing data
+    validator as part of the tutorial. The script clears existing data
     files and keys, which would otherwise be loaded when starting the
     validator. The script also runs a utility that creates a genesis
     block, and creates a special configuration file needed by an initial
@@ -200,7 +199,7 @@ the following command:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place --config /home/vagrant/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place --config /home/ubuntu/sawtooth/v0.json
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:

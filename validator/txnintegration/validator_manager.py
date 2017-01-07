@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import subprocess
 import signal
 import urllib2
@@ -188,7 +190,7 @@ class ValidatorManager(object):
         try:
             sta = client.get_status(timeout=2)
         except MessageException as e:
-            print e.message
+            print(e.message)
             return False
         if sta is not None:
             return sta.get('Status', '') == 'started'
@@ -237,7 +239,7 @@ class ValidatorManager(object):
         try:
             client.forward_message(msg)
         except MessageException as me:
-            print me
+            print(me)
 
     def is_running(self):
         if self._handle:
@@ -321,25 +323,25 @@ class ValidatorManager(object):
 
     def dump_config(self, out=sys.stdout):
         with open(self._config_file, 'r') as fin:
-            print >>out, fin.read()
+            print(fin.read(), file=out)
 
     def dump_log(self, out=sys.stdout):
         if os.path.exists(self._log_file):
             with open(self._log_file, 'r') as fin:
-                print >>out, fin.read()
+                print(fin.read(), file=out)
                 if fin.tell() == 0:
-                    print >>out, '<empty>'
+                    print('<empty>', file=out)
 
     def dump_stdout(self, out=sys.stdout):
         if os.path.exists(self._stdout_file):
             with open(self._stdout_file, 'r') as fin:
-                print >>out, fin.read()
+                print(fin.read(), file=out)
                 if fin.tell() == 0:
-                    print >>out, '<empty>'
+                    print('<empty>', file=out)
 
     def dump_stderr(self, out=sys.stdout):
         if os.path.exists(self._stderr_file):
             with open(self._stderr_file, 'r') as fin:
-                print >>out, fin.read()
+                print(fin.read(), file=out)
                 if fin.tell() == 0:
-                    print >>out, '<empty>'
+                    print('<empty>', file=out)

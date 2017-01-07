@@ -38,11 +38,11 @@ class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
         self.assertEqual(
             wait_timer.validator_address,
             '1600 Pennsylvania Avenue NW')
-        self.assertAlmostEquals(wait_timer.duration, 3.14159, 3)
+        self.assertAlmostEqual(wait_timer.duration, 3.14159, 3)
         self.assertLessEqual(wait_timer.request_time, time.time())
         self.assertEqual(
             wait_timer.previous_certificate_id, 'Bond.  James Bond.')
-        self.assertAlmostEquals(wait_timer.local_mean, 2.71828, 3)
+        self.assertAlmostEqual(wait_timer.local_mean, 2.71828, 3)
         self.assertIsNone(wait_timer.signature)
 
     def test_serialize_wait_timer(self):
@@ -76,16 +76,16 @@ class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
         self.assertEqual(
             wait_timer.validator_address,
             copy_wait_timer.validator_address)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_timer.request_time,
             copy_wait_timer.request_time)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_timer.duration,
             copy_wait_timer.duration)
         self.assertEqual(
             wait_timer.previous_certificate_id,
             copy_wait_timer.previous_certificate_id)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             wait_timer.local_mean,
             copy_wait_timer.local_mean)
         self.assertEqual(

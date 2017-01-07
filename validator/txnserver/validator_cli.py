@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import argparse
 import importlib
 import json
@@ -23,8 +25,6 @@ import sys
 import traceback
 import warnings
 import ctypes
-
-from journal.journal_core import Journal
 
 from sawtooth.config import ArgparseOptionsConfig
 from sawtooth.config import ConfigFileNotFound
@@ -59,6 +59,7 @@ def local_main(config, windows_service=False, daemonized=False):
     from txnserver import web_api
     from gossip.gossip_core import GossipException
     from gossip.gossip_core import Gossip
+    from journal.journal_core import Journal
 
     logger.warn('validator pid is %s', os.getpid())
 
@@ -110,19 +111,6 @@ def local_main(config, windows_service=False, daemonized=False):
             # Continue to pass config to PoetConsensus for possible other
             # enclave implementations - poet_enclave.initialize
             consensus = poet_consensus.PoetConsensus(config)
-        elif consensus_type == 'quorum':
-            quorum = config.get("Quorum")
-            nodes = config.get("Nodes")
-            vote_time_interval = config.get("VoteTimeInterval")
-            ballot_time_interval = config.get("BallotTimeInterval")
-            voting_quorum_target_size = config.get("VotingQuorumTargetSize")
-            from sawtooth_validator.consensus.quorum import quorum_consensus
-            consensus = quorum_consensus.QsuorumConsensus(
-                vote_time_interval,
-                ballot_time_interval,
-                voting_quorum_target_size,
-                quorum,
-                nodes)
         elif consensus_type == 'dev_mode':
             block_publisher = config.get("DevModePublisher", False)
             block_wait_time = config.get("BlockWaitTime")
@@ -160,7 +148,7 @@ def local_main(config, windows_service=False, daemonized=False):
             http_port=http_port,
         )
     except GossipException as e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
     listen_info = config.get("Listen", None)
@@ -330,8 +318,8 @@ def log_configuration(cfg):
                     log_dic = json.load(log_config_fd)
                     logging.config.dictConfig(log_dic)
             except IOError, ex:
-                print >>sys.stderr, "Could not read log config: {}" \
-                    .format(str(ex))
+                print("Could not read log config: {}"
+                      .format(str(ex)), file=sys.stderr)
                 sys.exit(1)
         elif log_config_file.split(".")[-1] == "yaml":
             try:
@@ -339,12 +327,12 @@ def log_configuration(cfg):
                     log_dic = yaml.load(log_config_fd)
                     logging.config.dictConfig(log_dic)
             except IOError, ex:
-                print >>sys.stderr, "Could not read log config: {}"\
-                    .format(str(ex))
+                print("Could not read log config: {}"
+                      .format(str(ex)), file=sys.stderr)
                 sys.exit(1)
         else:
-            print >>sys.stderr, "LogConfigFile type not supported: {}"\
-                .format(cfg['LogConfigFile'])
+            print("LogConfigFile type not supported: {}"
+                  .format(cfg['LogConfigFile']), file=sys.stderr)
             sys.exit(1)
 
     else:
@@ -410,20 +398,20 @@ def main(args, windows_service=False):
     try:
         cfg = get_configuration(args)
     except ConfigFileNotFound, e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
     except InvalidSubstitutionKey, e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
     if 'LogLevel' in cfg:
-        print >>sys.stderr, "LogLevel is no longer supported, use " \
-            "LogConfigFile instead"
+        print("LogLevel is no longer supported, use "
+              "LogConfigFile instead", file=sys.stderr)
         sys.exit(1)
 
     if 'LogFile' in cfg:
-        print >>sys.stderr, "LogFile is no longer supported, use " \
-            "LogConfigFile instead"
+        print("LogFile is no longer supported, use "
+              "LogConfigFile instead", file=sys.stderr)
         sys.exit(1)
 
     daemonize = cfg.get('Daemonize', False)

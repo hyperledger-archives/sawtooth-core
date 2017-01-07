@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
 
 import getpass
 import os
@@ -60,7 +61,7 @@ def do_keygen(args):
         key_dir = os.path.join(os.path.expanduser('~'), '.sawtooth', 'keys')
         if not os.path.exists(key_dir):
             if not args.quiet:
-                print 'creating key directory: {}'.format(key_dir)
+                print('creating key directory: {}'.format(key_dir))
             try:
                 os.makedirs(key_dir)
             except IOError, e:
@@ -74,7 +75,7 @@ def do_keygen(args):
         for filename in [wif_filename, addr_filename]:
             if os.path.exists(filename):
                 file_exists = True
-                print >>sys.stderr, 'file exists: {}'.format(filename)
+                print('file exists: {}'.format(filename), file=sys.stderr)
         if file_exists:
             raise ClientException(
                 'files exist, rerun with --force to overwrite existing files')
@@ -89,9 +90,9 @@ def do_keygen(args):
         with open(wif_filename, 'w') as wif_fd:
             if not args.quiet:
                 if wif_exists:
-                    print 'overwriting file: {}'.format(wif_filename)
+                    print('overwriting file: {}'.format(wif_filename))
                 else:
-                    print 'writing file: {}'.format(wif_filename)
+                    print('writing file: {}'.format(wif_filename))
             wif_fd.write(encoded)
             wif_fd.write('\n')
 
@@ -99,9 +100,9 @@ def do_keygen(args):
         with open(addr_filename, 'w') as addr_fd:
             if not args.quiet:
                 if addr_exists:
-                    print 'overwriting file: {}'.format(addr_filename)
+                    print('overwriting file: {}'.format(addr_filename))
                 else:
-                    print 'writing file: {}'.format(addr_filename)
+                    print('writing file: {}'.format(addr_filename))
             addr_fd.write(addr)
             addr_fd.write('\n')
     except IOError, ioe:

@@ -47,7 +47,7 @@ class TestEnvConfig(unittest.TestCase):
         os.environ["TEST_VAR"] = "set"
         cfg = EnvConfig([("TEST_VAR", "test_env_var")])
         self.assertIn("test_env_var", cfg)
-        self.assertEquals(cfg["test_env_var"], "set")
+        self.assertEqual(cfg["test_env_var"], "set")
 
         os.environ.update(env_bak)
 
@@ -68,7 +68,7 @@ class TestJsonishConfig(unittest.TestCase):
                 os.unlink(filename)
 
         self.assertIn("TestVar", cfg)
-        self.assertEquals(cfg["TestVar"], "test_value")
+        self.assertEqual(cfg["TestVar"], "test_value")
 
     def test_load_from_jsonish_no_filename(self):
         """Verifies that we can use JsonConfig without specifying a
@@ -77,7 +77,7 @@ class TestJsonishConfig(unittest.TestCase):
         cfg = JsonConfig(['{ "TestVar": "test_value" }'])
 
         self.assertIn("TestVar", cfg)
-        self.assertEquals(cfg["TestVar"], "test_value")
+        self.assertEqual(cfg["TestVar"], "test_value")
 
 
 class TestArgparseOptionsConfig(unittest.TestCase):
@@ -97,7 +97,7 @@ class TestArgparseOptionsConfig(unittest.TestCase):
 
         self.assertIn("CliOption", cfg)
         self.assertNotIn("UnsetOption", cfg)
-        self.assertEquals(cfg["CliOption"], "value")
+        self.assertEqual(cfg["CliOption"], "value")
 
 
 class TestAggregateConfig(unittest.TestCase):
@@ -117,13 +117,13 @@ class TestAggregateConfig(unittest.TestCase):
 
         multi = AggregateConfig([config1, config2, config3])
 
-        self.assertEquals(multi["keya"], "value1")
-        self.assertEquals(multi["keyb"], "value2")
-        self.assertEquals(multi["keyc"], "value3")
+        self.assertEqual(multi["keya"], "value1")
+        self.assertEqual(multi["keyb"], "value2")
+        self.assertEqual(multi["keyc"], "value3")
 
-        self.assertEquals(multi.get_source("keya"), "config1name")
-        self.assertEquals(multi.get_source("keyb"), "config2name")
-        self.assertEquals(multi.get_source("keyc"), "config3name")
+        self.assertEqual(multi.get_source("keya"), "config1name")
+        self.assertEqual(multi.get_source("keyb"), "config2name")
+        self.assertEqual(multi.get_source("keyc"), "config3name")
 
 
 class TestConfig(unittest.TestCase):
@@ -163,17 +163,17 @@ class TestConfig(unittest.TestCase):
             "undef": "undef",
         })
 
-        self.assertEquals(resolved["keyb"], "value1")
-        self.assertEquals(resolved["keyc"], "value1")
-        self.assertEquals(resolved["keyd"], "value1")
-        self.assertEquals(resolved["keye"], "value1")
-        self.assertEquals(resolved["keyf"], "value1")
-        self.assertEquals(resolved["keyg"], "value1")
-        self.assertEquals(resolved["keyh"], "value1")
-        self.assertEquals(resolved["keyi"], "value1")
+        self.assertEqual(resolved["keyb"], "value1")
+        self.assertEqual(resolved["keyc"], "value1")
+        self.assertEqual(resolved["keyd"], "value1")
+        self.assertEqual(resolved["keye"], "value1")
+        self.assertEqual(resolved["keyf"], "value1")
+        self.assertEqual(resolved["keyg"], "value1")
+        self.assertEqual(resolved["keyh"], "value1")
+        self.assertEqual(resolved["keyi"], "value1")
         self.assertIn(resolved["circ1"], ["{c1}", "{c2}"])
         self.assertIn(resolved["circ2"], ["{c1}", "{c2}"])
-        self.assertEquals(resolved["circular"], "{circular}")
+        self.assertEqual(resolved["circular"], "{circular}")
 
 
 if __name__ == '__main__':

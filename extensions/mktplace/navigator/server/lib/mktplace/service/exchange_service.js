@@ -33,30 +33,32 @@ var utils = require('../utils');
 
 var logger = require('../../sawtooth/logger').getRESTLogger();
 
+var _update = txn => txn('Updates').nth(0);
+
 var _blockItem = (txn, fieldName, currentBlock) => 
-    r.branch(txn('Update').hasFields(fieldName),
-             currentBlock.get(txn('Update')(fieldName)),
+    r.branch(_update(txn).hasFields(fieldName),
+             currentBlock.get(_update(txn)(fieldName)),
              null);
 
 var _blockItems = (txn, fieldName, currentBlock) =>
-    r.branch(r.and(txn('Update').hasFields(fieldName),
-                   txn('Update')(fieldName).isEmpty().not()),
-            currentBlock.getAll(r.args(txn('Update')(fieldName))).coerceTo('array'),
+    r.branch(r.and(_update(txn).hasFields(fieldName),
+                   _update(txn)(fieldName).isEmpty().not()),
+            currentBlock.getAll(r.args(_update(txn)(fieldName))).coerceTo('array'),
             []);
 
 var _MERGE_FNS = {};
 
 _MERGE_FNS[UpdateTypes.EXCHANGE] = (currentBlock) => 
         (txn) => ({
-            sellOffers: _blockItems(txn, 'OfferIDList', currentBlock),
-            input: _blockItem(txn, 'InitialLiabilityID', currentBlock),
-            output: _blockItem(txn, 'FinalLiabilityID', currentBlock)
+            sellOffers: _blockItems(txn, 'OfferIdList', currentBlock),
+            input: _blockItem(txn, 'InitialLiabilityId', currentBlock),
+            output: _blockItem(txn, 'FinalLiabilityId', currentBlock)
         });
 
 _MERGE_FNS[UpdateTypes.REGISTER_SELL_OFFER] = (currentBlock) =>
         (txn) => ({
-            input: _blockItem(txn, 'InputID', currentBlock),
-            output: _blockItem(txn, 'OutputID', currentBlock),
+            input: _blockItem(txn, 'InputId', currentBlock),
+            output: _blockItem(txn, 'OutputId', currentBlock),
         });
     
 transaction.registerMergeFns(TRANSACTION_TYPE, {
@@ -67,9 +69,9 @@ transaction.registerMergeFns(TRANSACTION_TYPE, {
 var _applyDetails = (txn) => {
     var sellOffer = _.first(txn.sellOffers);
     var amount = sellOffer ?
-        Math.round(txn.Update.InitialCount / utils.toFraction(sellOffer.ratio).denominator) :
+        Math.round(txn.Updates[0].InitialCount / utils.toFraction(sellOffer.ratio).denominator) :
         0;
-    return _.extend(_.clone(txn.Update), {
+    return _.extend(_.clone(txn.Updates[0]), {
         id: txn.id,
         status: txn.Status,
         creator: txn.creator,
@@ -100,13 +102,13 @@ var _service = {
 
         let ands = [
             queries.$in('Status', statuses),
-            r.row('Update')('UpdateType').eq(UpdateTypes.EXCHANGE),
+            _update(r.row)('UpdateType').eq(UpdateTypes.EXCHANGE),
         ];
 
         if(optionalCreatorId) {
             ands.push(r.row('creator').eq(optionalCreatorId));
         } else {
-            ands.push(r.row('Update')('OfferIDList').isEmpty().not());
+            ands.push(_update(r.row)('OfferIdList').isEmpty().not());
         }
 
         let query = r.and(r.args(ands));
