@@ -37,6 +37,7 @@ from sawtooth_validator.server.network import Network
 from sawtooth_validator.server import state
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
 from sawtooth_validator.server import processor_iterator
+from sawtooth_validator.server.client import ClientHandler
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
@@ -263,6 +264,7 @@ class Validator(object):
                                   ProcessorRegisterHandler(self._service))
         self._service.add_handler('system/load',
                                   SystemLoadHandler(faux_network))
+        self._service.add_handler('client/get', ClientHandler())
 
     def start(self):
         self._service.start()
