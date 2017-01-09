@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import traceback
+import subprocess
 import asyncio
 
 import zmq
@@ -70,7 +72,33 @@ class TransactionProcessorTester:
         self._socket = self._context.socket(zmq.ROUTER)
         print("Binding to " + self._url)
         self._socket.set(zmq.LINGER, 0)
-        self._socket.bind("tcp://" + self._url)
+        try:
+            self._socket.bind("tcp://" + self._url)
+
+        # Catch errors with binding and print out more debug info
+        except zmq.error.ZMQError as zmqerror:
+            netstat = "netstat -lp | grep -e tcp"
+            result = subprocess.check_output(netstat, shell=True).decode()
+            print("\n`{}`".format(netstat))
+            print(result)
+
+            print("`ps pid`")
+            try:
+                lines = result.split('\n')[:-1]
+                for line in lines:
+                    pidnprog = line.split()[6]
+                    if pidnprog != '-':
+                        pid = pidnprog.split('/')[0]
+                        ps = subprocess.check_output(
+                            ["ps", pid]
+                        ).decode().split('\n')[1]
+                        print(ps)
+                print()
+            except BaseException:
+                print("Failed to show process info")
+
+            # Raise the original error again
+            raise
 
     def close(self):
         """
