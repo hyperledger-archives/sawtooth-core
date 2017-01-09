@@ -137,7 +137,7 @@ class SerialScheduler(Scheduler):
             self._final = True
             self._condition.notify_all()
 
-    def complete(self):
+    def complete(self, block):
         with self._condition:
             if not self._final:
                 return False

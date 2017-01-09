@@ -102,7 +102,7 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def complete(self):
+    def complete(self, block):
         """Returns True if all transactions have been marked as applied.
 
         Returns:
@@ -146,9 +146,9 @@ class SchedulerIterator(object):
             # Exit by throwing StopIteration when the scheduler is complete
             # and we have returned all the scheduler's transactions.
             while True:
-                if (self._scheduler.complete()
+                if (self._scheduler.complete(block=False)
                         and self._scheduler.count() == self._next_index):
-                    raise StopIteration
+                    raise StopIteration()
 
                 txn = self._scheduler.next_transaction()
                 if txn is not None:

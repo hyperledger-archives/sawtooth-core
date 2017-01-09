@@ -230,7 +230,7 @@ class TestSerialScheduler(unittest.TestCase):
         # 2)
         sched1 = iter(scheduler)
         invalid_payload = hashlib.sha512('invalid'.encode()).hexdigest()
-        while not scheduler.complete():
+        while not scheduler.complete(block=False):
             txn_info = next(sched1)
             txn_header = transaction_pb2.TransactionHeader()
             txn_header.ParseFromString(txn_info.txn.header)

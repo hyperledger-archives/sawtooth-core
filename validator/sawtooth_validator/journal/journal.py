@@ -144,8 +144,7 @@ class BlockPublisher(object):
     def _finalize_block(self, block):
         if self._scheduler:
             self._scheduler.finalize()
-            while not self._scheduler.complete():
-                time.sleep(2)
+            self._scheduler.complete(block=True)
 
         # Read valid batches from self._scheduler
         pending_batches = copy.copy(self._pending_batches)
@@ -263,8 +262,7 @@ class BlockValidator(object):
                     scheduler.add_batch(block_state.block.batches[-1],
                                         block_state.block.state_root_hash)
                     scheduler.finalize()
-                    while not scheduler.complete():
-                        time.sleep(1)
+                    scheduler.complete(block=True)
                     for i in range(len(block_state.block.batches)):
                         batch_status = scheduler.batch_status(
                             block_state.block.batches[i].signature)
