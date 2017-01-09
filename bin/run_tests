@@ -112,10 +112,10 @@ done
 
 case $MODULE in
     all)
+        test_sdk_examples
         test_core
         test_signing
         test_validator
-        test_sdk_examples
         ;;
     core)
         test_core
