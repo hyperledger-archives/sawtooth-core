@@ -28,7 +28,7 @@ from sawtooth.cli.exceptions import CliException
 from sawtooth.cli.stats import run_stats
 from sawtooth.exceptions import MessageException
 from sawtooth.manage.node import NodeArguments
-from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.subproc_legacy import SubprocessLegacyNodeController
 from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.exceptions import ExitError
 from txnintegration.utils import is_convergent
@@ -157,8 +157,9 @@ def main():
         except KeyError:
             # None defaults to poet1
             ledger_type = None
-        node_ctrl = WrappedNodeController(SubprocessNodeController(),
-                                          data_dir=currency_home)
+        node_ctrl = WrappedNodeController(
+            SubprocessLegacyNodeController(),
+            data_dir=currency_home)
         nodes = []
         for idx in range(count):
             node = NodeArguments("validator-{:0>3}".format(idx),

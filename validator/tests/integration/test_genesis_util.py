@@ -24,7 +24,7 @@ import unittest
 from sawtooth.cli.admin_sub.genesis_common import genesis_info_file_name
 from sawtooth.exceptions import MessageException
 from sawtooth.manage.node import NodeArguments
-from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.subproc_legacy import SubprocessLegacyNodeController
 from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.utils import get_blocklists
 from txnintegration.utils import is_convergent
@@ -49,7 +49,8 @@ class TestGenesisUtil(unittest.TestCase):
             self._node_ctrl = None
             print('creating', str(self.__class__.__name__))
             # set up our nodes (suite-internal interface)
-            self._node_ctrl = WrappedNodeController(SubprocessNodeController())
+            self._node_ctrl = WrappedNodeController(
+                SubprocessLegacyNodeController())
             cfg = overrides
             temp_dir = self._node_ctrl.get_data_dir()
             file_name = os.path.join(temp_dir, "config.js")

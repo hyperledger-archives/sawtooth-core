@@ -17,21 +17,16 @@ import logging
 import os
 import subprocess
 import sys
-import signal
-import time
-import psutil
 
 from sawtooth.manage.node import NodeController
 from sawtooth.manage.utils import get_executable_script
 from sawtooth.validator_config import get_validator_configuration
-from sawtooth.exceptions import ManagementError
-from sawtooth.cli.exceptions import CliException
 
 LOGGER = logging.getLogger(__name__)
 
 
-class DaemonNodeController(NodeController):
-    def __init__(self, host_name='localhost', verbose=False, state_dir=None):
+class SubprocessLegacyNodeController(NodeController):
+    def __init__(self, host_name='localhost', verbose=False):
         self._host_name = host_name
         self._verbose = verbose
         self._base_config = get_validator_configuration([], {})
@@ -43,31 +38,19 @@ class DaemonNodeController(NodeController):
         self._non_genesis_cfg = {
             "InitialConnectivity": 1,
         }
-
-        if state_dir is None:
-            state_dir = \
-                os.path.join(os.path.expanduser("~"), '.sawtooth', 'cluster')
-
-        if not os.path.exists(state_dir):
-            os.makedirs(state_dir)
-
-        self._state_dir = state_dir
+        self._nodes = {}
 
     def _construct_start_command(self, node_args):
         host = self._host_name
         node_name = node_args.node_name
         http_port = node_args.http_port
         gossip_port = node_args.gossip_port
-        pid_file = os.path.join(self._state_dir, "{}.pid".format(node_name))
         cmd = get_executable_script('txnvalidator')
         if self._verbose is True:
             cmd += ['-vv']
         cmd += ['--node', node_name]
-        cmd += ['--listen', "{}:{}/TCP http".format(host, http_port)]
+        cmd += ['--listen', "0.0.0.0:{}/TCP http".format(http_port)]
         cmd += ['--listen', "{}:{}/UDP gossip".format(host, gossip_port)]
-        cmd += ['--daemon']
-        cmd += ['--pidfile', pid_file]
-
         for x in node_args.config_files:
             cmd += ['--config', x]
         # Create and indicate special config file
@@ -80,26 +63,38 @@ class DaemonNodeController(NodeController):
         cfg = self._non_genesis_cfg
         if node_args.genesis:
             cfg = self._genesis_cfg
-
         with open(os.path.join(config_dir, config_file), 'w') as f:
             f.write(json.dumps(cfg, indent=4))
         cmd += ['--config', config_file]
         return cmd
 
     def is_running(self, node_name):
-        pid_file = os.path.join(self._state_dir, "{}.pid".format(node_name))
-
-        if os.path.exists(pid_file):
-            with open(pid_file, 'r') as fd:
-                try:
-                    pid = int(fd.readline())
-                except ValueError:
-                    raise ManagementError(
-                        "invalid pid file: {}".format(pid_file))
-                if psutil.pid_exists(pid):
-                    return True
-
-        return False
+        '''
+        Authority on whether a node is in fact running.  On discovering that a
+        node no longer exists, it removes the node from _nodes.  We do this
+        here rather than in stop/kill in order to allow stop/kill to be
+        non-blocking.  Thus, our internal model of nodes (_nodes) will always
+        be correct for a particular node the next time someone asks if it
+        'is_running'.
+        Args:
+            node_name (str):
+        Returns:
+            ret_val (bool):
+        '''
+        ret_val = False
+        handle = None
+        try:
+            handle = self._nodes[node_name]['Handle']
+        except KeyError:
+            pass
+        if handle is not None:
+            handle.poll()
+            if handle.returncode is None:
+                ret_val = True
+        if ret_val is False:
+            # process is authoritatively stopped; toss handle if it exists
+            self._nodes.pop(node_name, None)
+        return ret_val
 
     def _build_env(self, node_args):
         env = os.environ.copy()
@@ -132,7 +127,11 @@ class DaemonNodeController(NodeController):
             proc.wait()
             # Create genesis block
             cmd = get_executable_script('sawtooth')
-            cmd += ['admin', 'poet1-genesis']
+            if node_args.ledger_type is None or \
+                    node_args.ledger_type == "poet1":
+                cmd += ['admin', 'poet1-genesis']
+            else:
+                cmd += ['admin', 'dev-mode-genesis']
             if self._verbose is True:
                 cmd += ['-vv']
             cmd += ['--node', node_args.node_name]
@@ -141,60 +140,63 @@ class DaemonNodeController(NodeController):
             proc = subprocess.Popen(cmd, env=self._build_env(node_args))
             proc.wait()
 
+    def do_start(self, node_args, stdout, stderr):
+        cmd = self._construct_start_command(node_args)
+        # Execute popen and store the process handle
+        handle = subprocess.Popen(cmd, stdout=stdout, stderr=stderr,
+                                  env=self._build_env(node_args))
+        handle.poll()
+        if handle.returncode is None:
+            # process is known to be running; save handle
+            self._nodes[node_args.node_name] = {"Handle": handle}
+
+    def _do_start(self, node_args, stdout, stderr):
+        self.do_start(node_args, stdout, stderr)
+
     def start(self, node_args):
         '''
         Start a node if it is not already running.
         Args:
             node_args (NodeArguments):
         '''
-        node_name = node_args.node_name
-        if self.is_running(node_name) is False:
-            cmd = self._construct_start_command(node_args)
-            # Execute check_call and check for successful execution
-            try:
-                output = subprocess.check_output(
-                    cmd, env=self._build_env(node_args))
-            except subprocess.CalledProcessError as e:
-                raise CliException(str(e))
-
-        for line in output.split('\n'):
-            if len(line) < 1:
-                continue
-            LOGGER.debug("command output: %s", str(line))
+        if self.is_running(node_args.node_name) is False:
+            self._do_start(node_args, sys.stdout, sys.stderr)
 
     def stop(self, node_name):
-        pid = self._get_validator_pid(node_name)
-        os.kill(pid, signal.SIGKILL)
+        '''
+        Send a non-blocking termination request to a node if it appears to be
+        running.  OSError is caught and logged because the process may die
+        between is_running and our signal transmission attempt.
+        Args:
+            node_name (str):
+        '''
+        if self.is_running(node_name) is True:
+            try:
+                handle = self._nodes[node_name]['Handle']
+                handle.terminate()
+            except OSError as e:
+                LOGGER.debug('%s.stop failed: %s', self.__class__.__name__,
+                             str(e))
 
     def kill(self, node_name):
-        self.stop(node_name)
+        '''
+        Send a non-blocking kill (9) to a node if it appears to be running.
+        OSError is caught and logged because the process may die between
+        is_running and our signal transmission attempt.
+        Args:
+            node_name (str):
+        '''
+        if self.is_running(node_name) is True:
+            try:
+                handle = self._nodes[node_name]['Handle']
+                handle.kill()
+            except OSError as e:
+                LOGGER.debug('%s.kill failed: %s', self.__class__.__name__,
+                             str(e))
 
     def get_node_names(self):
-        node_names = []
-        for filename in os.listdir(self._state_dir):
-            if filename.endswith('.pid'):
-                node_names.append(filename[:-len('.pid')])
-        return [x for x in node_names if self.is_running(x)]
-
-    def _get_validator_pid(self, node_name):
-        pid_file = os.path.join(self._state_dir, "{}.pid".format(node_name))
-
-        max_attempts = 3
-        attempts = 0
-        while attempts < max_attempts:
-            if os.path.exists(pid_file):
-                with open(pid_file, 'r') as fd:
-                    try:
-                        return int(fd.readline())
-                    except ValueError:
-                        if attempts >= max_attempts:
-                            raise ManagementError(
-                                "invalid pid file: {}".format(pid_file))
-            time.sleep(1)
-            attempts = attempts + 1
-
-        raise ManagementError(
-            "no such file: {}".format(pid_file))
+        names = self._nodes.keys()
+        return [x for x in names if self.is_running(x)]
 
     def get_ip(self, node_name):
 

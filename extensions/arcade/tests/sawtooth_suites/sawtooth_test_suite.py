@@ -21,7 +21,7 @@ import json
 import unittest
 
 from sawtooth.manage.node import NodeArguments
-from sawtooth.manage.subproc import SubprocessNodeController
+from sawtooth.manage.subproc_legacy import SubprocessLegacyNodeController
 from sawtooth.manage.wrap import WrappedNodeController
 from txnintegration.utils import Progress
 from txnintegration.utils import TimeOut
@@ -36,7 +36,8 @@ class SawtoothTestSuite(unittest.TestCase):
         self._node_ctrl = None
         print('creating', str(self.__class__.__name__))
         # set up our nodes (suite-internal interface)
-        self._node_ctrl = WrappedNodeController(SubprocessNodeController())
+        self._node_ctrl = WrappedNodeController(
+            SubprocessLegacyNodeController())
         temp_dir = self._node_ctrl.get_data_dir()
         file_name = os.path.join(temp_dir, "config.js")
         with open(file_name, 'w') as config:
