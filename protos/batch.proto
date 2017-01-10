@@ -21,13 +21,23 @@ option java_package = "sawtooth.sdk.protobuf";
 import "transaction.proto";
 
 message BatchHeader {
+    // Public key for the client that signed the BatchHeader
     string signer_pubkey = 1;
+
+    // List of transaction.header_signatures that match the order of
+    // transactions required for the batch
     repeated string transaction_ids = 2;
 }
 
 message Batch {
+    // The serialized version of the BlockHeader
     bytes header = 1;
+
+    // The signature derived from signing the header
     string header_signature = 2;
+
+    // A list of the transactions that match the list of
+    // transaction_ids listed in the batch header
     repeated Transaction transactions = 3;
 }
 
