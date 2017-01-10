@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+from subprocess import Popen, PIPE, run
+import sys
+
+if len(sys.argv) > 1:
+    tp_bin = sys.argv[1]
+else:
+    tp_bin = 'tp_intkey_python'
+
+tp_intkey = [tp_bin, '0.0.0.0:40000']
+
+tp_tester = ['nose2-3', '-v', 'ts_intkey.TestSuiteIntkey']
+
+tp_proc = Popen(tp_intkey)
+tester_proc = run(tp_tester)
+
+tp_proc.kill()
+tp_proc.wait()
+
+print("Test exited with error code: {}".format(tester_proc.returncode))
+exit(tester_proc.returncode)

@@ -16,7 +16,6 @@
 import os
 import unittest
 import traceback
-from subprocess import Popen
 import cbor
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
@@ -36,40 +35,28 @@ def compare_set_request(req1, req2):
 
 # Subclass this test for testing different intkey processors.
 class TestSuiteIntkey(unittest.TestCase):
-    def __init__(self, test_name, tp_command):
+    def __init__(self, test_name):
         super().__init__(test_name)
-        self.tester = None
-        self.tp_process = None
-        self.tp_command = tp_command
-
-    def _set_up(self):
-        url = "127.0.0.1:40000"
-
-        # 1. Create and setup tester
         self.tester = TransactionProcessorTester()
 
+    def _set_up(self):
+        # url = "127.0.0.1:40000"
+        url = "0.0.0.0:40000"
+
+        # 1. Init tester
         self.tester.register_comparator(
             "state/setrequest", compare_set_request
         )
 
-        self.tester.listen(url)
         print("Test running in PID: {}".format(os.getpid()))
+        self.tester.listen(url)
+        print("Listening on {}...".format(url))
 
-        # 2. Start up transaction processor, pass it url
-        self.tp_process = Popen([self.tp_command, url])
-
-        print("Started processor in PID: {}".format(self.tp_process.pid))
-
-        # 3. Register the transaction processor with the tester
+        # 2. Register the transaction processor with the tester
         if not self.tester.register_processor():
             raise Exception("Failed to register processor")
 
     def _tear_down(self):
-        # Cleanup the processor
-        if self.tp_process is not None:
-            self.tp_process.terminate()
-            self.tp_process.wait()
-
         if self.tester is not None:
             self.tester.close()
 
@@ -78,7 +65,7 @@ class TestSuiteIntkey(unittest.TestCase):
         try:
             self._set_up()
 
-            runner = unittest.TextTestRunner(verbosity=2)
+            runner = unittest.TextTestRunner(verbosity=2, failfast=True)
             suite = unittest.TestSuite()
 
             # --- Tests to run --- #
@@ -100,18 +87,3 @@ class TestSuiteIntkey(unittest.TestCase):
             self._tear_down()
             if not success:
                 self.fail(self.__class__.__name__)
-
-
-class TestSuiteIntkeyPython(TestSuiteIntkey):
-    def __init__(self, test_name):
-        super().__init__(test_name, 'tp_intkey_python')
-
-
-class TestSuiteIntkeyJava(TestSuiteIntkey):
-    def __init__(self, test_name):
-        super().__init__(test_name, 'tp_intkey_java')
-
-
-class TestSuiteIntkeyJavascript(TestSuiteIntkey):
-    def __init__(self, test_name):
-        super().__init__(test_name, 'tp_intkey_javascript')

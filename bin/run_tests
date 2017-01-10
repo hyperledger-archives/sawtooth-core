@@ -45,9 +45,9 @@ test_sdk_examples() {
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
     export PYTHONPATH
     cd sdk/examples/processor_tests/intkey
-    nose2-3 -v ts_intkey.TestSuiteIntkeyPython
-    #nose2-3 -v ts_intkey.TestSuiteIntkeyJava
-    #nose2-3 -v ts_intkey.TestSuiteIntkeyJavascript
+    ./run_tp_test tp_intkey_python
+    #./run_tp_test tp_intkey_java
+    #./run_tp_test tp_intkey_js
     cd ../../../../
 }
 
