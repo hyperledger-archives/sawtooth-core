@@ -252,8 +252,7 @@ class PoetConsensus(Consensus):
         # If we have sealed signup data (meaning that we have previously
         # created signup info), we can request that the enclave unseal it,
         # in the process restoring the enclave to its previous state.  If
-        # we don't have sealed signup data.  If we don't have sealed signup
-        # data, we need to create and register it.
+        # we don't have sealed signup data, we need to create and register it.
         #
         # Note - this MUST be done AFTER the journal has completed
         # initialization so that there is at least one peer node to which
@@ -616,12 +615,8 @@ class PoetConsensus(Consensus):
             #     key.
             # 3.  We cannot have already hit the block commit limit for
             #     our keys.
-            # Failure to meet this criteria would result in death and
-            # destruction if we tried to claim a block.  Okay, it is not
-            # quite that dire, but other validators would refuse to commit the
-            # block, our friends would shun us, our dog would run away, our
-            # truck would break down, and we would be reduced to writing sad
-            # country music songs for a living.
+            # Failure to meet this criteria will result in other validators
+            # refusing to commit the block.
 
             # Retrieve the validator registry information for the most-
             # recently-committed block.  Failure to do so will indicate that
@@ -641,11 +636,9 @@ class PoetConsensus(Consensus):
                     raise \
                         ValueError(
                             "Our current PoET public key does not match the "
-                            "globally-visible one.  We cannot in good "
-                            "conscience waste the other validators' time, "
-                            "only to have them reject the block when trying "
-                            "to commit it.  Our fragile ego would not be "
-                            "able to handle that kind of rejection.")
+                            "globally-visible one.  Wait until another "
+                            "validator has added our new key to the "
+                            "validator registry.")
 
                 # Get our statistics, creating them if they don't already
                 # exist (we create them as this may be the first block we can
@@ -662,11 +655,6 @@ class PoetConsensus(Consensus):
                 # its current public key, then we reject the block as the
                 # validator should be getting new validator registration
                 # information.
-                #
-                # As an aside, this third check should be completely
-                # unnecessary as we _should_ have detected this in the
-                # _on_commit_block callback.  However, when in doubt, choose
-                # the belt and suspenders approach.
                 if (registration['poet-public-key'] ==
                         statistics['poet_public_key']) and \
                     (statistics['claimed_block_count'] >=
