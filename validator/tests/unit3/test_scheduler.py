@@ -31,7 +31,7 @@ def create_transaction(name, private_key, public_key):
     addr = '000000' + hashlib.sha512(name.encode()).hexdigest()
 
     header = transaction_pb2.TransactionHeader(
-        signer=public_key,
+        signer_pubkey=public_key,
         family_name='scheduler_test',
         family_version='1.0',
         inputs=[addr],
@@ -39,7 +39,7 @@ def create_transaction(name, private_key, public_key):
         dependencies=[],
         payload_encoding="application/cbor",
         payload_sha512=hashlib.sha512(payload.encode()).hexdigest(),
-        batcher=public_key)
+        batcher_pubkey=public_key)
 
     header_bytes = header.SerializeToString()
 
@@ -50,17 +50,17 @@ def create_transaction(name, private_key, public_key):
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
         payload=payload.encode(),
-        signature=signature)
+        header_signature=signature)
 
     return transaction
 
 
 def create_batch(transactions, private_key, public_key):
-    transaction_signatures = [t.signature for t in transactions]
+    transaction_ids = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer=public_key,
-        transaction_signatures=transaction_signatures)
+        signer_pubkey=public_key,
+        transaction_ids=transaction_ids)
 
     header_bytes = header.SerializeToString()
 
@@ -71,7 +71,7 @@ def create_batch(transactions, private_key, public_key):
     batch = batch_pb2.Batch(
         header=header_bytes,
         transactions=transactions,
-        signature=signature)
+        header_signature=signature)
 
     return batch
 
@@ -126,7 +126,7 @@ class TestSerialScheduler(unittest.TestCase):
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
-            scheduler.set_status(txn.signature, False, None)
+            scheduler.set_status(txn.header_signature, False, None)
 
         with self.assertRaises(StopIteration):
             next(iterable1)
@@ -181,7 +181,7 @@ class TestSerialScheduler(unittest.TestCase):
 
         self.assertIsNone(scheduler.next_transaction())
 
-        scheduler.mark_as_applied(scheduled_txn_info.txn.signature)
+        scheduler.mark_as_applied(scheduled_txn_info.txn.header_signature)
 
         scheduled_txn_info = scheduler.next_transaction()
         self.assertIsNotNone(scheduled_txn_info)
@@ -225,7 +225,7 @@ class TestSerialScheduler(unittest.TestCase):
                 private_key=private_key,
                 public_key=public_key)
 
-            batch_signatures.append(batch.signature)
+            batch_signatures.append(batch.header_signature)
             scheduler.add_batch(batch)
         scheduler.finalize()
         # 2)
@@ -240,10 +240,11 @@ class TestSerialScheduler(unittest.TestCase):
                                                   inputs_or_outputs,
                                                   inputs_or_outputs)
             if txn_header.payload_sha512 == invalid_payload:
-                scheduler.set_status(txn_info.txn.signature, False, c_id)
+                scheduler.set_status(txn_info.txn.header_signature,
+                                     False, c_id)
             else:
                 context_manager.set(c_id, [{inputs_or_outputs[0]: 1}])
-                scheduler.set_status(txn_info.txn.signature,
+                scheduler.set_status(txn_info.txn.header_signature,
                                      True,
                                      c_id)
 

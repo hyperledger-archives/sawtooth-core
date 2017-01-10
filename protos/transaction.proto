@@ -19,7 +19,7 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 
 message TransactionHeader {
-    string batcher = 1;
+    string batcher_pubkey = 1;
     repeated string dependencies = 2;
     string family_name = 3;
     string family_version = 4;
@@ -28,11 +28,11 @@ message TransactionHeader {
     repeated string outputs = 7;
     string payload_encoding = 8;
     string payload_sha512 = 9;
-    string signer = 10;
+    string signer_pubkey = 10;
 }
 
 message Transaction {
     bytes header = 1;
-    bytes payload = 2;
-    string signature = 3;
+    string header_signature = 2;
+    bytes payload = 3;
 }

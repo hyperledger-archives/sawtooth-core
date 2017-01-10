@@ -21,14 +21,14 @@ option java_package = "sawtooth.sdk.protobuf";
 import "transaction.proto";
 
 message BatchHeader {
-    string signer = 1;
-    repeated string transaction_signatures = 2;
+    string signer_pubkey = 1;
+    repeated string transaction_ids = 2;
 }
 
 message Batch {
     bytes header = 1;
-    repeated Transaction transactions = 2;
-    string signature = 3;
+    string header_signature = 2;
+    repeated Transaction transactions = 3;
 }
 
 message BatchList {

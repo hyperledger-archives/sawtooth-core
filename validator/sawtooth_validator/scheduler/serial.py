@@ -92,12 +92,12 @@ class SerialScheduler(Scheduler):
             if self._final:
                 raise SchedulerError("Scheduler is finalized. Cannnot take"
                                      " new batches")
-            batch_signature = batch.signature
+            batch_signature = batch.header_signature
             batch_length = len(batch.transactions)
             for idx, txn in enumerate(batch.transactions):
                 if idx == batch_length - 1:
-                    self._last_in_batch.append(txn.signature)
-                self._txn_to_batch[txn.signature] = batch_signature
+                    self._last_in_batch.append(txn.header_signature)
+                self._txn_to_batch[txn.header_signature] = batch_signature
                 self._txn_queue.put(txn)
 
     def batch_status(self, batch_signature):
@@ -121,7 +121,7 @@ class SerialScheduler(Scheduler):
             except queue.Empty:
                 return None
 
-            self._in_progress_transaction = txn.signature
+            self._in_progress_transaction = txn.header_signature
             txn_info = TxnInformation(txn, self._last_state_hash)
             self._scheduled_transactions.append(txn_info)
             return txn_info

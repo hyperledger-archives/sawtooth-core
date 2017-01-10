@@ -71,7 +71,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
     addr = intkey_prefix + hashlib.sha512(name.encode('utf-8')).hexdigest()
 
     header = transaction_pb2.TransactionHeader(
-        signer=public_key,
+        signer_pubkey=public_key,
         family_name='intkey',
         family_version='1.0',
         inputs=[addr],
@@ -79,7 +79,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
         dependencies=[],
         payload_encoding="application/cbor",
         payload_sha512=payload.sha512(),
-        batcher=public_key)
+        batcher_pubkey=public_key)
 
     header_bytes = header.SerializeToString()
 
@@ -90,17 +90,17 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
         payload=payload.to_cbor(),
-        signature=signature)
+        header_signature=signature)
 
     return transaction
 
 
 def create_batch(transactions, private_key, public_key):
-    transaction_signatures = [t.signature for t in transactions]
+    transaction_signatures = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer=public_key,
-        transaction_signatures=transaction_signatures)
+        signer_pubkey=public_key,
+        transaction_ids=transaction_signatures)
 
     header_bytes = header.SerializeToString()
 
@@ -111,7 +111,7 @@ def create_batch(transactions, private_key, public_key):
     batch = batch_pb2.Batch(
         header=header_bytes,
         transactions=transactions,
-        signature=signature)
+        header_signature=signature)
 
     return batch
 
