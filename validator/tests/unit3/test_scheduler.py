@@ -117,6 +117,8 @@ class TestSerialScheduler(unittest.TestCase):
 
             scheduler.add_batch(batch)
 
+        scheduler.finalize()
+
         iterable1 = iter(scheduler)
         iterable2 = iter(scheduler)
         for txn in txns:
@@ -124,9 +126,8 @@ class TestSerialScheduler(unittest.TestCase):
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
-            scheduler.mark_as_applied(scheduled_txn_info.txn.signature)
+            scheduler.set_status(txn.signature, False, None)
 
-        scheduler.finalize()
         with self.assertRaises(StopIteration):
             next(iterable1)
 
@@ -230,7 +231,7 @@ class TestSerialScheduler(unittest.TestCase):
         # 2)
         sched1 = iter(scheduler)
         invalid_payload = hashlib.sha512('invalid'.encode()).hexdigest()
-        while not scheduler.complete():
+        while not scheduler.complete(block=False):
             txn_info = next(sched1)
             txn_header = transaction_pb2.TransactionHeader()
             txn_header.ParseFromString(txn_info.txn.header)

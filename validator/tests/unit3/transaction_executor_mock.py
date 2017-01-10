@@ -27,7 +27,7 @@ class SchedulerMock(object):
     def finalize(self):
         pass
 
-    def complete(self):
+    def complete(self, block):
         return True
 
     def batch_status(self, batch_id):

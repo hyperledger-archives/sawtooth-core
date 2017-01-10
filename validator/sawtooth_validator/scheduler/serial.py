@@ -44,6 +44,7 @@ class SerialScheduler(Scheduler):
         self._txn_to_batch = {}
         self._in_progress_transaction = None
         self._final = False
+        self._complete = False
         self._squash = squash_handler
         self._condition = Condition()
         # contains all txn.signatures where txn is
@@ -82,20 +83,22 @@ class SerialScheduler(Scheduler):
                     batch_status = BatchStatus(status, self._last_state_hash)
                     self._batch_statuses[batch_signature] = batch_status
 
+            if self._final and self._txn_queue.empty():
+                self._complete = True
+            self._condition.notify_all()
+
     def add_batch(self, batch, state_hash=None):
         with self._condition:
-            if not self._final:
-                batch_signature = batch.signature
-                batch_length = len(batch.transactions)
-                for idx, txn in enumerate(batch.transactions):
-                    if idx == batch_length - 1:
-                        self._last_in_batch.append(txn.signature)
-                    self._txn_to_batch[txn.signature] = batch_signature
-                    self._txn_queue.put(txn)
-                self._condition.notify_all()
-            else:
-                raise SchedulerError("Scheduler is finilized. Cannnot take"
+            if self._final:
+                raise SchedulerError("Scheduler is finalized. Cannnot take"
                                      " new batches")
+            batch_signature = batch.signature
+            batch_length = len(batch.transactions)
+            for idx, txn in enumerate(batch.transactions):
+                if idx == batch_length - 1:
+                    self._last_in_batch.append(txn.signature)
+                self._txn_to_batch[txn.signature] = batch_signature
+                self._txn_queue.put(txn)
 
     def batch_status(self, batch_signature):
         with self._condition:
@@ -137,10 +140,13 @@ class SerialScheduler(Scheduler):
             self._final = True
             self._condition.notify_all()
 
-    def complete(self):
+    def complete(self, block):
         with self._condition:
             if not self._final:
                 return False
-            if self._txn_queue.empty():
+            if self._complete:
+                return True
+            if block:
+                self._condition.wait_for(lambda: self._complete)
                 return True
             return False
