@@ -15,7 +15,8 @@
 
 import unittest
 
-from processor_tests.intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_integration.intkey.intkey_message_factory \
+    import IntkeyMessageFactory
 
 
 class TestIntkey(unittest.TestCase):

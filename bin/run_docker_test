@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+#
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from subprocess import run, PIPE
+import argparse
+import yaml
+
+TIMEOUT = 60
+
+
+def main():
+    args = parse_args()
+
+    compose = [
+        'docker-compose',
+        '-p', args.prefix,
+        '-f', args.compose_file
+    ]
+
+    compose_up = compose + [
+        'up', '--abort-on-container-exit', '--build'
+    ]
+
+    compose_down = compose + ['down']
+
+    inspect = [
+        'docker', 'inspect',
+        '-f', "{{.State.ExitCode}}",
+        "{}_{}_1".format(args.prefix, args.test_service)
+    ]
+
+    docker_build_all(args.compose_file)
+
+    # Run tests
+    print("Running: {}".format(compose_up))
+    run(compose_up)
+
+    # Get success value of tests
+    print("Running: {}".format(inspect))
+    success = run(
+        inspect,
+        stdout=PIPE,
+        timeout=TIMEOUT
+    ).stdout.decode().strip()
+
+    # Clean up
+    print("Running: {}".format(compose_down))
+    run(compose_down)
+
+    exit(int(success))
+
+
+def docker_build_all(compose_file):
+    fd = open(compose_file)
+    contents = fd.read()
+    fd.close()
+
+    compose = yaml.load(contents)
+    print(compose['services'])
+
+    for name, service in compose['services'].items():
+        if 'image' in service:
+            print("Building {}...".format(name))
+            run(['sawtooth', 'docker', 'build', service['image']])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    # Allow passing in a prefix to docker compose.
+    # This can be used to run multiple isolated instances of the test.
+    parser.add_argument("-p", "--prefix", 
+        help="id tests running in parallel, must contain only alphanumeric characters", 
+        default="intkey")
+
+    # Allow specifying a docker compose file
+    parser.add_argument(
+        "-f", "--compose-file", 
+        help="docker-compose.yaml file that contains the test", 
+        default="docker-compose.yaml")
+
+    parser.add_argument(
+        "-t", "--test-service",
+        help="service in docker-compose.yaml that runs the test",
+        default="integration_test")
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main()

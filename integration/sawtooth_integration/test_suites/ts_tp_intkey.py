@@ -20,7 +20,7 @@ import cbor
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
-from processor_tests.intkey.test_intkey import TestIntkey
+from sawtooth_integration.tests.test_tp_intkey import TestIntkey
 
 
 def compare_set_request(req1, req2):

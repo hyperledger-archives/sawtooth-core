@@ -29,7 +29,7 @@ class IntkeyMessageFactory:
             private=private,
             public=public
         )
-        self._factory._namespace = self._factory._sha512(
+        self._factory.namespace = self._factory.sha512(
             "intkey".encode("utf-8"))[0:6]
 
     def _dumps(self, obj):
@@ -39,8 +39,8 @@ class IntkeyMessageFactory:
         return cbor.loads(data)
 
     def _key_to_address(self, key):
-        return self._factory._namespace + \
-           self._factory._sha512(key.encode("utf-8"))
+        return self._factory.namespace + \
+            self._factory.sha512(key.encode("utf-8"))
 
     def create_tp_register(self):
         return self._factory.create_tp_register()

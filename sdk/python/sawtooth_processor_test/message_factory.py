@@ -48,10 +48,10 @@ class MessageFactory:
         self, encoding, family_name, family_version, namespace,
         private=None, public=None
     ):
-        self._encoding = encoding
-        self._family_name = family_name
-        self._family_version = family_version
-        self._namespace = namespace
+        self.encoding = encoding
+        self.family_name = family_name
+        self.family_version = family_version
+        self.namespace = namespace
 
         if private is None:
             private = _private()
@@ -62,7 +62,7 @@ class MessageFactory:
         self._private = private
         self._public = public
 
-    def _sha512(self, content):
+    def sha512(self, content):
         return hashlib.sha512(content).hexdigest()
 
     def _sha256(self, content):
@@ -73,10 +73,10 @@ class MessageFactory:
 
     def create_tp_register(self):
         return TpRegisterRequest(
-            family=self._family_name,
-            version=self._family_version,
-            encoding=self._encoding,
-            namespaces=[self._namespace]
+            family=self.family_name,
+            version=self.family_version,
+            encoding=self.encoding,
+            namespaces=[self.namespace]
         )
 
     def create_tp_response(self, status):
@@ -94,13 +94,13 @@ class MessageFactory:
 
         header = TransactionHeader(
             signer_pubkey=self._public,
-            family_name=self._family_name,
-            family_version=self._family_version,
+            family_name=self.family_name,
+            family_version=self.family_version,
             inputs=inputs,
             outputs=outputs,
             dependencies=dependencies,
-            payload_encoding=self._encoding,
-            payload_sha512=self._sha512(payload),
+            payload_encoding=self.encoding,
+            payload_sha512=self.sha512(payload),
             batcher_pubkey=self._public
         ).SerializeToString()
 
