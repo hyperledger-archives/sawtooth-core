@@ -70,9 +70,10 @@ class PoetConsensus(Consensus):
 
         self._block_claim_threshold = \
             max(
-                kwargs.get(
-                    'BlockClaimThreshold',
-                    self.__BLOCK_CLAIM_THRESHOLD),
+                int(
+                    kwargs.get(
+                        'BlockClaimThreshold',
+                        self.__BLOCK_CLAIM_THRESHOLD)),
                 1)
         LOGGER.debug(
             'Validators may only claim %d block(s) before being required to '
@@ -81,9 +82,10 @@ class PoetConsensus(Consensus):
 
         self._block_claim_trigger = \
             min(
-                kwargs.get(
-                    'BlockClaimTrigger',
-                    self.__BLOCK_CLAIM_TRIGGER),
+                int(
+                    kwargs.get(
+                        'BlockClaimTrigger',
+                        self.__BLOCK_CLAIM_TRIGGER)),
                 self._block_claim_threshold)
         LOGGER.debug(
             'After claiming %d block(s), validator will begin randomly '
