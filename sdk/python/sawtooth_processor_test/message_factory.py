@@ -18,6 +18,7 @@ import bitcoin
 
 from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
 from sawtooth_protobuf.processor_pb2 import TransactionProcessResponse
+from sawtooth_protobuf.processor_pb2 import TransactionProcessRequest
 
 from sawtooth_protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_protobuf.transaction_pb2 import Transaction
@@ -103,10 +104,10 @@ class MessageFactory:
 
         signature = _sign(header, self._private)
 
-        return Transaction(
+        return TransactionProcessRequest(
             header=header,
             payload=payload,
-            header_signature=signature
+            signature=signature
         )
 
     def create_get_request(self, addresses):

@@ -15,6 +15,7 @@
 
 from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
 from sawtooth_protobuf.processor_pb2 import TransactionProcessResponse
+from sawtooth_protobuf.processor_pb2 import TransactionProcessRequest
 
 from sawtooth_protobuf.transaction_pb2 import Transaction
 
@@ -26,7 +27,7 @@ from sawtooth_protobuf.state_context_pb2 import SetRequest
 _TYPE_TO_PROTO = {
     "tp/register": TransactionProcessorRegisterRequest,
     "tp/response": TransactionProcessResponse,
-    "tp/request": Transaction,
+    "tp/request": TransactionProcessRequest,
 
     "state/getrequest": GetRequest,
     "state/getresponse": GetResponse,
