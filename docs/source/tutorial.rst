@@ -1,4 +1,4 @@
-
+ 
 .. _tutorial:
 
 ********
@@ -43,6 +43,10 @@ Open up a terminal and run the following:
    % mkdir project
    % cd project
    % git clone https://github.com/IntelLedger/sawtooth-core.git
+   % git checkout 0-7
+
+  Note that the last command switches to the 0.7 branch, which is the version
+  covered by this tutorial.
 
 Environment Startup
 ===================
