@@ -8,9 +8,8 @@ if [ ! -f /etc/debian_version ]; then
     exit 0
 fi
 
-root=/project
-build_dir=$root/build
-pkg_dir=$build_dir/packages
+build_dir=/tmp/build
+pkg_dir=/project/build/packages
 
 mkdir -p $build_dir
 mkdir -p $pkg_dir
