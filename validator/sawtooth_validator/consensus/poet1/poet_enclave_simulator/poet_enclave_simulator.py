@@ -47,14 +47,9 @@ class _PoetEnclaveSimulator(object):
     # A lock to protect threaded access
     _lock = threading.Lock()
 
-    # The WIF-encoded enclave private seal key.  From it, we will create
-    # private and public keys we can use for sealing and unsealing signup
-    # info.
-    __SEAL_PRIVATE_KEY_WIF = \
-        '5KYsbooGBg51Gohakgq45enpXvCXmEBed1JivFfUZskmjLegHBG'
-
-    _seal_private_key = \
-        signing.decode_privkey(__SEAL_PRIVATE_KEY_WIF, 'wif')
+    # The private key we generate to sign the certificate ID when creating
+    # the random wait timeout value
+    _seal_private_key = signing.generate_privkey()
     _seal_public_key = signing.generate_pubkey(_seal_private_key)
 
     # The WIF-encoded private report key.  From it, we will create private
