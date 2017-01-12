@@ -4,6 +4,30 @@
 require 'rbconfig'
 require 'yaml'
 
+# Check bash script for CRLFs
+crlf_count=0
+
+Dir.glob('*.sh') do |item|
+ if open(item).grep(/\r/).length > 0 
+  crlf_count+=1
+ end 
+end
+
+Dir.glob('bootstrap.d/*.sh') do |item|
+ if open(item).grep(/\r/).length > 0 
+  crlf_count+=1
+ end 
+end
+
+if crlf_count > 0 
+  puts "One or more bash scripts contain CRLF line endings. Please check out"
+  puts "Sawtooth Lake again with the git setting 'core.autocrlf' set to false"
+  puts "in your git configuration."
+  puts "See https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration"
+  puts "for more information on this setting."
+  exit(false)
+end
+
 VAGRANTFILE_API_VERSION = "2"
 
 def load_conf()
