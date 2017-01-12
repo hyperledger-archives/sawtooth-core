@@ -18,6 +18,7 @@ import bitcoin
 
 from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
 from sawtooth_protobuf.processor_pb2 import TransactionProcessResponse
+from sawtooth_protobuf.processor_pb2 import TransactionProcessRequest
 
 from sawtooth_protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_protobuf.transaction_pb2 import Transaction
@@ -90,7 +91,7 @@ class MessageFactory:
     def create_transaction(self, payload, inputs, outputs, dependencies):
 
         header = TransactionHeader(
-            signer=self._public,
+            signer_pubkey=self._public,
             family_name=self._family_name,
             family_version=self._family_version,
             inputs=inputs,
@@ -98,12 +99,12 @@ class MessageFactory:
             dependencies=dependencies,
             payload_encoding=self._encoding,
             payload_sha512=self._sha512(payload),
-            batcher=self._public
+            batcher_pubkey=self._public
         ).SerializeToString()
 
         signature = _sign(header, self._private)
 
-        return Transaction(
+        return TransactionProcessRequest(
             header=header,
             payload=payload,
             signature=signature

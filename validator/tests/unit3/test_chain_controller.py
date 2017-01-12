@@ -56,19 +56,20 @@ class TestChainController(unittest.TestCase):
     def test_simple_case(self):
         # TEST Run the simple case
         block_1 = self.blocks.generate_block(self.blocks.chain_head)
-        self.chain_ctrl.on_block_received(block_1)
+        self.chain_ctrl.on_block_received(block_1.get_block())
         self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.block.id == block_1.id)
+        assert(self.chain_ctrl.chain_head.block.header_signature ==
+               block_1.header_signature)
 
     def test_alternate_genesis(self):
         # TEST Run generate and alternate genesis block
         head = self.chain_ctrl.chain_head
-
         other_genesis = self.blocks.generate_block(add_to_store=True)
         for b in self.blocks.generate_chain(other_genesis, 5):
-            self.chain_ctrl.on_block_received(b)
+            self.chain_ctrl.on_block_received(b.get_block())
             self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.block.id == head.block.id)
+        assert(self.chain_ctrl.chain_head.block.header_signature ==
+               head.block.header_signature)
 
     def test_bad_block_signature(self):
         # TEST Bad block extending current chain
@@ -76,8 +77,9 @@ class TestChainController(unittest.TestCase):
         head = self.blocks.chain_head
         block_bad = self.blocks.generate_block(self.blocks.chain_head.block,
                                                invalid_signature=True)
-        self.chain_ctrl.on_block_received(block_bad)
-        assert (self.chain_ctrl.chain_head.block.id == head.block.id)
+        self.chain_ctrl.on_block_received(block_bad.get_block())
+        assert (self.chain_ctrl.chain_head.block.header_signature ==
+                head.block.header_signature)
 
     def test_bad_block_consensus(self):
         # Bad due to consensus
@@ -91,16 +93,17 @@ class TestChainController(unittest.TestCase):
         # TEST Missing block G->missing->B
         head = self.blocks.chain_head
         new_blocks = self.blocks.generate_chain(head, 2)
-        self.chain_ctrl.on_block_received(new_blocks[1])
+        self.chain_ctrl.on_block_received(new_blocks[1].get_block())
         self.executor.process_all()
         assert(len(self.gossip.messages) == 1)
         msg = self.gossip.messages[0]
         assert (isinstance(msg, BlockRequestMessage))
-        assert (msg.block_id == new_blocks[0].id)
+        assert (msg.block_signature == new_blocks[0].header_signature)
         self.gossip.clear()
-        self.chain_ctrl.on_block_received(new_blocks[0])
+        self.chain_ctrl.on_block_received(new_blocks[0].get_block())
         self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.block.id == new_blocks[1].id)
+        assert (self.chain_ctrl.chain_head.block.header_signature ==
+                new_blocks[1].header_signature)
 
     def test_missing_block_invalid_head(self):
         # TEST Missing block G->missing->B
@@ -109,14 +112,14 @@ class TestChainController(unittest.TestCase):
         new_blocks_def = self.blocks.generate_chain_definition(2)
         new_blocks_def[1]["invalid_signature"] = True
         new_blocks = self.blocks.generate_chain(head, new_blocks_def)
-        self.chain_ctrl.on_block_received(new_blocks[1])
+        self.chain_ctrl.on_block_received(new_blocks[1].get_block())
         self.executor.process_all()
         assert (len(self.gossip.messages) == 1)
         msg = self.gossip.messages[0]
         assert (isinstance(msg, BlockRequestMessage))
-        assert (msg.block_id == new_blocks[0].id)
+        assert (msg.block_signature == new_blocks[0].header_signature)
         self.gossip.clear()
-        self.chain_ctrl.on_block_received(new_blocks[0])
+        self.chain_ctrl.on_block_received(new_blocks[0].get_block())
         self.executor.process_all()
 
         pp.pprint(new_blocks)

@@ -19,20 +19,53 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 
 message TransactionHeader {
-    string batcher = 1;
+    // Public key for the client who added this transaction to a batch
+    string batcher_pubkey = 1;
+
+    // A list of transaction signatures that describe the transactions that
+    // must be processed before this transaction can be valid
     repeated string dependencies = 2;
+
+    // The family name correlates to the transaction processor's family name
+    // that this transaction can be processed on, for example 'intkey'
     string family_name = 3;
+
+    // The family version correlates to the transaction processor's family
+    // version that this transaction can be processed on, for example "1.0"
     string family_version = 4;
+
+    // A list of addresses that are given to the context manager and control
+    // what addresses the transaction processor is allowed to read from.
     repeated string inputs = 5;
+
+    // A random string that will allow the same transaction to be submitted
+    // several times
     string nonce = 6;
+
+    // A list of addresses that are given to the context manager and control
+    // what addresses the transaction processor is allowed to write to.
     repeated string outputs = 7;
+
+    // The payload encoding correlates to the transaction processor's payload
+    // encoding that this transaction can be processed on,
+    // for example ""application/cbor""
     string payload_encoding = 8;
+
+    //The sha512 hash of the encoded payload
     string payload_sha512 = 9;
-    string signer = 10;
+
+    // Public key for the client that signed the TransactionHeader
+    string signer_pubkey = 10;
 }
 
 message Transaction {
+    // The serialized version of the TransactionHeader
     bytes header = 1;
-    bytes payload = 2;
-    string signature = 3;
+
+    // The signature derived from signing the header
+    string header_signature = 2;
+
+    // The payload is the encoded family specific information of the
+    // transaction. Example cbor({'Verb': verb, 'Name': name,'Value': value})
+    bytes payload = 3;
 }

@@ -70,7 +70,7 @@ class TransactionExecutorThread(threading.Thread):
             content = processor_pb2.TransactionProcessRequest(
                 header=txn.header,
                 payload=txn.payload,
-                signature=txn.signature,
+                signature=txn.header_signature,
                 context_id=context_id).SerializeToString()
 
             message = validator_pb2.Message(

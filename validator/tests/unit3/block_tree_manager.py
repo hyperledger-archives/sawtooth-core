@@ -24,7 +24,9 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockPublisher as TestModePublisher
 
-from sawtooth_validator.protobuf.block_pb2 import Block, BlockState, \
+from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.server.block_wrapper import BlockWrapper, BlockState, \
     BlockStatus
 from tests.unit3.transaction_executor_mock import TransactionExecutorMock
 
@@ -41,7 +43,7 @@ class BlockTreeManager(object):
     def block_def(self,
                   add_to_store=False,
                   batch_count=0,
-                  status=BlockStatus.Value('Unknown'),
+                  status=BlockStatus.Unknown,
                   invalid_consensus=False,
                   invalid_batch=False,
                   invalid_signature=False,
@@ -67,7 +69,7 @@ class BlockTreeManager(object):
             squash_handler=None)
 
         block = self.generate_block(add_to_store=True,
-                                    status=BlockStatus.Value('Valid'))
+                                    status=BlockStatus.Valid)
         self.set_chain_head(block)
 
     def _send_message(self, block):
@@ -76,8 +78,9 @@ class BlockTreeManager(object):
     def _get_block_id(self, block):
         if (block is None):
             return None
-        elif isinstance(block, Block) or isinstance(block, BlockState):
-            return block.id
+        elif isinstance(block, Block) or isinstance(block, BlockState) or \
+                isinstance(block, BlockWrapper):
+            return block.header_signature
         elif isinstance(block, basestring):
             return block
         else:
@@ -87,6 +90,8 @@ class BlockTreeManager(object):
         if (block is None):
             return None
         elif isinstance(block, Block):
+            return block
+        elif isinstance(block, BlockWrapper):
             return block
         elif isinstance(block, BlockState):
             return block.block
@@ -105,7 +110,7 @@ class BlockTreeManager(object):
     def generate_block(self, previous_block=None,
                        add_to_store=False,
                        batch_count=0,
-                       status=BlockStatus.Value('Unknown'),
+                       status=BlockStatus.Unknown,
                        invalid_consensus=False,
                        invalid_batch=False,
                        invalid_signature=False,
@@ -113,29 +118,36 @@ class BlockTreeManager(object):
 
         previous = self._get_block(previous_block)
         if previous is None:
-            previous = Block(block_num=0,
-                             previous_block_id="0000000000000000",
-                             id=_generate_id())
+            previous = BlockWrapper(BlockHeader(
+                block_num=0,
+                previous_block_id="0000000000000000",
+            ))
+            previous.set_signature(_generate_id())
             previous_block_state = BlockState(
-                block=previous,
+                block_wrapper=previous,
                 weight=0,
-                status=BlockStatus.Value("Valid"))
-            self.block_store[previous.id] = previous_block_state
-        self.block_publisher.on_chain_updated(previous)
+                status=BlockStatus.Valid)
+            self.block_store[previous.header_signature] = previous_block_state
+            self.block_publisher.on_chain_updated(previous)
 
         while self._new_block is None:
+            self.block_publisher.on_batch_received(Batch())
             self.block_publisher.on_check_publish_block(True)
 
         block = self._new_block
         self._new_block = None
 
+        header = BlockHeader()
+        header.ParseFromString(block.header)
+        block = BlockWrapper(header, block)
+
         if invalid_signature:
-            block.signature = "BAD"
+            block.set_signature("BAD")
 
         if add_to_store:
-            block_state = BlockState(block=block, weight=0)
+            block_state = BlockState(block_wrapper=block, weight=0)
             block_state.status = status
-            self.block_store[block.id] = block_state
+            self.block_store[block.header_signature] = block_state
 
         return block
 
