@@ -24,7 +24,7 @@ import sawtooth.sdk.client.Utils;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
-import sawtooth.sdk.protobuf.TransactionProcessRequest;
+import sawtooth.sdk.protobuf.TpProcessRequest;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -81,7 +81,7 @@ public class IntegerKeyHandler implements TransactionHandler {
   }
 
   @Override
-  public void apply(TransactionProcessRequest transactionRequest,
+  public void apply(TpProcessRequest transactionRequest,
                     State state) throws InvalidTransactionException, InternalError {
     /*
      * Integer Key state will be stored at an address of the name
