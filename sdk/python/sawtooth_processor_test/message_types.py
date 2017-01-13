@@ -13,30 +13,29 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
-from sawtooth_protobuf.processor_pb2 import TransactionProcessResponse
-from sawtooth_protobuf.processor_pb2 import TransactionProcessRequest
+from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_protobuf.processor_pb2 import TpProcessRequest
 
-from sawtooth_protobuf.transaction_pb2 import Transaction
-
-from sawtooth_protobuf.state_context_pb2 import GetResponse
-from sawtooth_protobuf.state_context_pb2 import GetRequest
-from sawtooth_protobuf.state_context_pb2 import SetResponse
-from sawtooth_protobuf.state_context_pb2 import SetRequest
+from sawtooth_protobuf.state_context_pb2 import TpStateGetResponse
+from sawtooth_protobuf.state_context_pb2 import TpStateGetRequest
+from sawtooth_protobuf.state_context_pb2 import TpStateSetResponse
+from sawtooth_protobuf.state_context_pb2 import TpStateSetRequest
+from sawtooth_protobuf.validator_pb2 import Message
 
 _TYPE_TO_PROTO = {
-    "tp/register": TransactionProcessorRegisterRequest,
-    "tp/response": TransactionProcessResponse,
-    "tp/request": TransactionProcessRequest,
+    Message.TP_REGISTER_REQUEST: TpRegisterRequest,
+    Message.TP_PROCESS_RESPONSE: TpProcessResponse,
+    Message.TP_PROCESS_REQUEST: TpProcessRequest,
 
-    "state/getrequest": GetRequest,
-    "state/getresponse": GetResponse,
-    "state/setrequest": SetRequest,
-    "state/setresponse": SetResponse
+    Message.TP_STATE_GET_REQUEST: TpStateGetRequest,
+    Message.TP_STATE_GET_RESPONSE: TpStateGetResponse,
+    Message.TP_STATE_SET_REQUEST: TpStateSetRequest,
+    Message.TP_STATE_SET_RESPONSE: TpStateSetResponse
 }
 
 _PROTO_TO_TYPE = {
-    proto: type_string for type_string, proto in _TYPE_TO_PROTO.items()
+    proto: type_ for type_, proto in _TYPE_TO_PROTO.items()
 }
 
 
