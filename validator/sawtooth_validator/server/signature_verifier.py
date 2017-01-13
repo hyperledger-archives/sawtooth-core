@@ -37,7 +37,6 @@ class SignatureVerifier(Thread):
         self.out_condition = out_condition
 
     def validate_block(self, block):
-        # Update block to have correct protobuff format (add header)
         # validate block signature
         valid = True
         recovered_pubkey = signing.recover_pubkey(block.header,
