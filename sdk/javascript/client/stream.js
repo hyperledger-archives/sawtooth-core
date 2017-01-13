@@ -28,7 +28,7 @@ const {Message, MessageList} = require('../protobuf')
 const Future = require('./future')
 
 const _encodeMessage = (messageType, correlationId, content) => {
-  assert(util.isString(messageType))
+  assert(util.isNumber(messageType))
   assert(util.isString(correlationId))
   assert(Buffer.isBuffer(content))
 

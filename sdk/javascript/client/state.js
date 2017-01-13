@@ -17,7 +17,9 @@
 
 'use strict'
 
-const {Entry, GetRequest, GetResponse, SetRequest, SetResponse} = require('../protobuf')
+const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
+Message.MessageType = Message.nested.MessageType.values
+
 
 class State {
   constructor (stream, contextId) {
@@ -31,12 +33,12 @@ class State {
    * the encoded value at the specified address
    */
   get (addresses) {
-    let getRequest = GetRequest.encode({addresses, contextId: this._contextId}).finish()
+    let getRequest = TpStateGetRequest.encode({addresses, contextId: this._contextId}).finish()
 
-    let future = this._stream.send('state/getrequest', getRequest)
+    let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST, getRequest)
 
     return future.then((buffer) => {
-      let getResponse = GetResponse.decode(buffer)
+      let getResponse = TpStateGetResponse.decode(buffer)
 
       let results = {}
       getResponse.entries.forEach((entry) => {
@@ -56,12 +58,12 @@ class State {
     let entries = Object.keys(addressValuePairs).map((address) =>
       Entry.create({address, data: addressValuePairs[address]}))
 
-    let setRequest = SetRequest.encode({entries, contextId: this._contextId}).finish()
+    let setRequest = TpStateSetRequest.encode({entries, contextId: this._contextId}).finish()
 
-    let future = this._stream.send('state/setrequest', setRequest)
+    let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST, setRequest)
 
     return future.then((buffer) => {
-      let setResponse = SetResponse.decode(buffer)
+      let setResponse = TpStateSetResponse.decode(buffer)
 
       return setResponse.addresses
     })
