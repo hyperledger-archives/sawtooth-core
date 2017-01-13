@@ -10,8 +10,8 @@ Overview
 
 This tutorial walks through the process of setting up a virtual development
 environment for the Distributed Ledger using Vagrant and VirtualBox. At the
-end, you will have a running validator network and be able to use client
-commands to interact with it.
+end, you will have a running validator network and a running transaction
+processor. You will have submitted transactions to the validator. 
 
 Commands in this tutorial can be run via Terminal.app on MacOS, Git Bash on
 Windows, etc.
@@ -31,6 +31,18 @@ On Windows, you will also need to install:
 
 Git for Windows will provide not only git to clone the repositories, but also
 ssh which is required by Vagrant. During installation, accept all defaults.
+
+.. note:: 
+
+  When checking out Sawtooth Lake on Windows for use with vagrant, you should
+  take steps to ensure that Windows-style CRLF line endings are not added to
+  the code. The bash scripts used by your vagrant VM will not run correctly 
+  with CRLF line endings. Git uses a configuration setting, *core.autocrlf*,
+  to control whether or not LF-style line endings are automatically converted
+  to CRLF-style line endings. `This setting should be set in such a way that 
+  CRLFs are not introduced into your repository 
+  <https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration>`_. 
+
 
 Clone Repository
 ================
@@ -105,55 +117,129 @@ build, run the following inside vagrant:
 
   $ /project/sawtooth-core/bin/build_all
 
-Running txnvalidator
-====================
+Running validator
+=================
 
-To start txnvalidator, log in to the development environment with 'vagrant ssh'
+To start a validator, log in to the development environment with 'vagrant ssh'
 and run the following commands:
 
 .. code-block:: console
 
-   $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
-   $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/ubuntu/sawtooth/v0.json
+   $ cd sawtooth-core/
+   $ sawtooth cluster start --count 3 -m daemon 
 
-This will start txnvalidator and logging output will be printed to the
-terminal window.
+This will start validator and logging output will be printed to the
+terminal window. The validator outputs the following to the terminal window:
 
-.. note::
-  **Note on genesis block creation and clearing validator state**
+.. code-block:: console
 
-    The script *genesis.sh* should be run whenever you want to start a
-    validator as part of the tutorial. The script clears existing data
-    files and keys, which would otherwise be loaded when starting the
-    validator. The script also runs a utility that creates a genesis
-    block, and creates a special configuration file needed by an initial
-    node serving a genesis block (see note below for details). This
-    utility is part of the sawtooth CLI. To view the available
-    subcommands, run the command **sawtooth -h**. The genesis creation
-    utility used in this tutorial is: **sawtooth admin poet1-genesis**
-    (see script *genesis.sh* for the command line options used in the
-    tutorial).
+  database file is /home/ubuntu/merkle.lmdb
+  block store file is /home/ubuntu/block.lmdb
 
 
-.. note::
-  **Note on configuration needed for initial node serving genesis block**
+Running a transaction processor
+===============================
 
-    The special configuration file created using the utility *genesis.sh*
-    described in the note above contains the following setting, which is
-    required for the intitial node that serves the genesis block:
+To start a transaction processor, log in to the development environment with 
+'vagrant ssh' and run the following commands:
 
-    **{"InitialConnectivity": 0}**
+.. code-block:: console
 
-    The initial node that serves the genesis block must refrain from
-    establishing initial connectivity until it assumes the role of a
-    validator that can provide ledger transfers to other nodes. The
-    initial validator already has the ledger, including the prefabricated
-    genesis block. However, if the initial connectivity is not set to
-    zero, it might attempt to  obtain the ledger from other nodes, rather
-    than providing the critical genesis block to the rest of the network.
+  $ cd sawtooth-core/
+  $ tp_intkey_python 127.0.0.1:40000
+
+This will start a transaction processor that includes an **intkey** handler, 
+which can understand and process transactions that use the built-in intkey
+transaction family. The processor communicates with the validator on 
+TCP port 40000. 
+
+The transaction processor produces the following output:
+
+.. code-block:: console
+
+  future result: <bound method Future.result of <sawtooth_sdk.client.future.Future object at 0x7f145f5fc668>>
+
+Multi-language support for transaction processors
+-------------------------------------------------
+
+Sawtooth Lake includes additional transaction processors:
+
+* tp_intkey_java
+
+  - An intkey transaction processor written in Java
+
+* tp_intkey_javascript
+
+  - An intkey transaction processor written in JavaScript
+  - Requires node.js 
+
+* tp_intkey_jvm_sc
+
+  - An intkey transaction processor implemented as a smart contract.
+  - The bytecode to run a transaction is stored in state and the blockchain.
+  - Requires Java
 
 
+Creating and submitting transactions
+====================================
+
+Commands to create sample transactions of the intkey transaction type are
+included for testing purposes.
+
+The commands in this section guide you through the following tasks:
+
+1. Prepare a batch of intkey transactions that set the keys to random values
+   with the 'intkey populate' command.
+2. Generate *inc* (increment) and *dec* (decrement) transactions to apply to
+   the existing state stored in the blockchain using the 'intkey generate'
+   command. 
+3. Submit these transactions to the validator using the 'intkey load' command.
+
+Enter the following series of commands after logging in to the development 
+environment with 'vagrant ssh':
+
+.. code-block:: console
+
+  $ intkey populate -o initial_state -P 100
+  $ intkey generate -o inc_dec_transactions -c 100
+  $ intkey load -f initial_state
+  $ intkey load -f inc_dec_transactions
+
+You can monitor the activity of the validator as it processes the batches, and
+the activity of the transaction processor as it processes the transactions, by
+switching to the respective terminal windows. 
+
+To stop the validator, press CTRL-c in the terminal window from which
+you ran the validator. The transaction processor can be stopped the same way.
 
 
-To stop the validator, press CTRL-c.
+Using sawtooth cluster to start a network
+=========================================
+
+The 'sawtooth cluster' command can be used to start a network of validators
+and transaction processors. 
+
+The following command will start a network of two validators and two transaction processors:
+
+.. code-block:: console
+
+  $ sawtooth cluster start --count 2 -m subprocess -P tp_intkey_python
+
+You can view the running processes that are part of the network with the
+following command:
+
+.. code-block:: console
+
+  $ ps -ef | grep python
+  ubuntu   26036 22422 14 22:59 pts/0    00:00:02 python /project/sawtooth-core/bin/sawtooth cluster start --count 2 -m subprocess -P tp_intkey_python
+  ubuntu   26039 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/validator --component-endpoint 0.0.0.0:40000 --network-endpoint tcp://0.0.0.0:8800
+  ubuntu   26040 26036  8 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/tp_intkey_python 0.0.0.0:40000
+  ubuntu   26041 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/validator --component-endpoint 0.0.0.0:40001 --network-endpoint tcp://0.0.0.0:8801
+  ubuntu   26042 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/tp_intkey_python 0.0.0.0:40001
+
+
+To submit sample transactions, follow the steps above under
+`Creating and submitting transactions`_.
+
+To stop a running network that was started using the subprocess management
+method, simply press CTRL-c.
