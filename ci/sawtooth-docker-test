@@ -1,0 +1,13 @@
+FROM sawtooth-build:@@BUILD_TAG@@
+
+USER root
+
+RUN apt-get update && apt-get install -y -q \
+    python-ipaddr \
+    python-psutil
+
+COPY core/deb_dist/*.deb /tmp
+COPY signing/deb_dist/*.deb /tmp
+COPY *.deb /tmp
+
+RUN dpkg -i /tmp/*.deb
