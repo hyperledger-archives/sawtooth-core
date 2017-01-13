@@ -25,6 +25,6 @@ class SystemLoadHandler(object):
 
         responder.send(validator_pb2.Message(
             sender=message.sender,
-            message_type="system/load-response",
+            message_type=validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE,
             correlation_id=message.correlation_id,
             content="{ 'status': 'SUCCESS' }".encode()))
