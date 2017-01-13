@@ -42,18 +42,6 @@ def _generate_id():
             for _ in range(0, 1024)]).encode('ascii')).hexdigest()
 
 
-class MessageType(object):
-    """
-    This datastructure is the message_type used in the Stream().send() method
-    """
-    DEFAULT = 'default'
-    STATE_GET = 'state/getrequest'
-    STATE_SET = 'state/setrequest'
-    STATE_DELETE = 'state/deleterequest'
-    TP_REGISTER = 'tp/register'
-    TP_RESPONSE = 'tp/response'
-
-
 class _SendReceiveThread(Thread):
     """
     Internal thread to Stream class that runs the asyncio event loop.
@@ -194,7 +182,7 @@ class Stream(object):
     def send_back(self, message_type, correlation_id, content):
         """
         Return a response to a message.
-        :param message_type: one of the strs on MessageType
+        :param message_type: validator_pb2.Message.MessageType enum value
         :param correlation_id: a random str internal to the validator
         :param content: protobuf bytes
         """

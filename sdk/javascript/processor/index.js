@@ -18,12 +18,13 @@
 'use strict'
 
 const {
-  TransactionProcessorRegisterRequest,
-  // Acknowledgement,
-  TransactionProcessRequest,
-  TransactionProcessResponse,
-  TransactionHeader
+  TpRegisterRequest,
+  TpProcessRequest,
+  TpProcessResponse,
+  TransactionHeader,
+  Message
 } = require('../protobuf')
+Message.MessageType = Message.nested.MessageType.values
 
 const {InternalError, InvalidTransaction} = require('./exceptions')
 
@@ -47,7 +48,7 @@ class TransactionProcessor {
     this._stream.onReceive(message => {
       console.log('Received', message.messageType)
 
-      const request = TransactionProcessRequest.decode(message.content)
+      const request = TpProcessRequest.decode(message.content)
 
       const state = new State(this._stream, request.contextId)
 
@@ -61,38 +62,38 @@ class TransactionProcessor {
 
         if (handler) {
           handler.apply(request, state)
-            .then(() => TransactionProcessResponse.encode({
-              status: TransactionProcessResponse.Status.OK
+            .then(() => TpProcessResponse.encode({
+              status: TpProcessResponse.Status.OK
             }).finish())
             .catch((e) => {
               if (e instanceof InvalidTransaction) {
                 console.log(e)
-                return TransactionProcessResponse.encode({
-                  status: TransactionProcessResponse.Status.INVALID_TRANSACTION
+                return TpProcessResponse.encode({
+                  status: TpProcessResponse.Status.INVALID_TRANSACTION
                 }).finish()
               } else if (e instanceof InternalError) {
                 console.log(e)
-                return TransactionProcessResponse.encode({
-                  status: TransactionProcessResponse.Status.INTERNAL_ERROR
+                return TpProcessResponse.encode({
+                  status: TpProcessResponse.Status.INTERNAL_ERROR
                 }).finish()
               } else {
                 console.log('Unhandled exception, returning INTERNAL_ERROR')
                 console.log(e)
-                return TransactionProcessResponse.encode({
-                  status: TransactionProcessResponse.Status.INTERNAL_ERROR
+                return TpProcessResponse.encode({
+                  status: TpProcessResponse.Status.INTERNAL_ERROR
                 }).finish()
               }
             })
             .then((response) =>
-                  this._stream.sendBack('tp/response', message.correlationId, response))
+                  this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE, message.correlationId, response))
         }
       }
     })
 
     this._handlers.forEach(handler => {
       this._stream.send(
-        'tp/register',
-        TransactionProcessorRegisterRequest.encode({
+        Message.MessageType.TP_REGISTER_REQUEST,
+        TpRegisterRequest.encode({
           family: handler.transactionFamilyName,
           version: handler.version,
           encoding: handler.encoding,
@@ -127,7 +128,7 @@ class TransactionHandler {
   }
 
   apply (transactionProcessRequest, state) {
-    throw new Error('apply(transactionProcessRequest, state) not implemented')
+    throw new Error('apply(TpProcessRequest, state) not implemented')
   }
 }
 

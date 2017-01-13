@@ -14,7 +14,6 @@
 
 package sawtooth.examples.jvmsc;
 
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -33,8 +32,8 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
 import sawtooth.sdk.protobuf.Entry;
-import sawtooth.sdk.protobuf.TransactionProcessRequest;
-import sawtooth.sdk.protobuf.TransactionProcessorRegisterRequest;
+import sawtooth.sdk.protobuf.TpProcessRequest;
+import sawtooth.sdk.protobuf.TpRegisterRequest;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -251,7 +250,7 @@ public class JvmScHandler implements TransactionHandler{
   }
 
   @Override
-  public void apply(TransactionProcessRequest transactionRequest, State state)
+  public void apply(TpProcessRequest transactionRequest, State state)
       throws InvalidTransactionException, InternalError {
     try {
       JVMPayload payload = JVMPayload.parseFrom(transactionRequest.getPayload());

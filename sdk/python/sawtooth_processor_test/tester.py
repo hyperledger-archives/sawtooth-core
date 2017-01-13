@@ -20,7 +20,7 @@ import asyncio
 import zmq
 import zmq.asyncio
 
-from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
+from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_protobuf.validator_pb2 import Message
 from sawtooth_protobuf.validator_pb2 import MessageList
 
@@ -54,7 +54,8 @@ class TransactionProcessorTester:
         self._tp_ident = None
 
         # The set request comparison is a little more complex by default
-        self.register_comparator("state/setrequest", compare_set_request)
+        self.register_comparator(Message.TP_STATE_SET_REQUEST,
+                                 compare_set_request)
 
     def listen(self, url):
         """
@@ -111,12 +112,12 @@ class TransactionProcessorTester:
 
     def register_processor(self):
         message = self.receive()
-        if message.message_type != "tp/register":
+        if message.message_type != Message.TP_REGISTER_REQUEST:
             return False
         else:
             self._tp_ident = message.sender
 
-            request = TransactionProcessorRegisterRequest()
+            request = TpRegisterRequest()
             request.ParseFromString(message.content)
             print("Processor registered: {}, {}, {}, {}".format(
                 request.family, request.version,
@@ -225,7 +226,7 @@ class TransactionProcessorTester:
             if self._compare(exp_con, received_content):
                 return message, expected_content_list.index(exp_con)
 
-        raise UnexpectedMessageException(expected_content, received_content)
+        raise UnexpectedMessageException(exp_con, received_content)
 
     def respond(self, message_content, message):
         """

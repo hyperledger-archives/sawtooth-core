@@ -16,15 +16,15 @@
 import logging
 
 from sawtooth_sdk.client.stream import Stream
-from sawtooth_sdk.client.stream import MessageType
 
 from sawtooth_sdk.processor.state import State
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
-from sawtooth_protobuf.processor_pb2 import TransactionProcessRequest
-from sawtooth_protobuf.processor_pb2 import TransactionProcessResponse
+from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_protobuf.processor_pb2 import TpProcessRequest
+from sawtooth_protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_protobuf.validator_pb2 import Message
 
 
 LOGGER = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ class TransactionProcessor(object):
             for version in handler.family_versions:
                 for encoding in handler.encodings:
                     future = self._stream.send(
-                        message_type='tp/register',
-                        content=TransactionProcessorRegisterRequest(
+                        message_type=Message.TP_REGISTER_REQUEST,
+                        content=TpRegisterRequest(
                             family=handler.family_name,
                             version=version,
                             encoding=encoding,
@@ -64,33 +64,33 @@ class TransactionProcessor(object):
             msg = self._stream.receive()
             LOGGER.info("received %s", msg.message_type)
 
-            request = TransactionProcessRequest()
+            request = TpProcessRequest()
             request.ParseFromString(msg.content)
             state = State(self._stream, request.context_id)
 
             try:
                 self._handlers[0].apply(request, state)
                 self._stream.send_back(
-                    message_type=MessageType.TP_RESPONSE,
+                    message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
-                    content=TransactionProcessResponse(
-                        status=TransactionProcessResponse.OK
+                    content=TpProcessResponse(
+                        status=TpProcessResponse.OK
                     ).SerializeToString())
             except InvalidTransaction as it:
                 LOGGER.warning("Invalid Transaction %s", it)
                 self._stream.send_back(
-                    message_type=MessageType.TP_RESPONSE,
+                    message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
-                    content=TransactionProcessResponse(
-                        status=TransactionProcessResponse.INVALID_TRANSACTION
+                    content=TpProcessResponse(
+                        status=TpProcessResponse.INVALID_TRANSACTION
                     ).SerializeToString())
             except InternalError as ie:
                 LOGGER.warning("State Error! %s", ie)
                 self._stream.send_back(
-                    message_type=MessageType.TP_RESPONSE,
+                    message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
-                    content=TransactionProcessResponse(
-                        status=TransactionProcessResponse.INTERNAL_ERROR
+                    content=TpProcessResponse(
+                        status=TpProcessResponse.INTERNAL_ERROR
                     ).SerializeToString())
 
     def stop(self):

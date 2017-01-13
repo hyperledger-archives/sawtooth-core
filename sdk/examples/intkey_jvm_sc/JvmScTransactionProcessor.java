@@ -24,7 +24,7 @@ public class JvmScTransactionProcessor{
    */
   public static void main(String[] args) {
 
-    TransactionProcessor transactionProcessor = new TransactionProcessor("localhost", 40000);
+    TransactionProcessor transactionProcessor = new TransactionProcessor("localhost:40000");
     transactionProcessor.addHandler(new JvmScHandler());
     Thread thread = new Thread(transactionProcessor);
     thread.start();

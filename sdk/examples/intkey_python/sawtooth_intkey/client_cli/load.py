@@ -20,6 +20,7 @@ import time
 from sawtooth_sdk.client.stream import Stream
 
 import sawtooth_protobuf.batch_pb2 as batch_pb2
+from sawtooth_protobuf.validator_pb2 import Message
 
 
 LOGGER = logging.getLogger(__file__)
@@ -47,13 +48,13 @@ def do_load(args):
 
     for batch_list in _split_batch_list(batches):
         future = stream.send(
-            message_type='system/load',
+            message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
             content=batch_list.SerializeToString())
         futures.append(future)
 
     for future in futures:
         result = future.result()
-        assert result.message_type == 'system/load-response'
+        assert result.message_type == Message.CLIENT_BATCH_SUBMIT_RESPONSE
 
     stop = time.time()
     print("batches: {} batch/sec: {}".format(

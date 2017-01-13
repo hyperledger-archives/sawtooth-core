@@ -45,12 +45,12 @@ class TransactionExecutorThread(threading.Thread):
         :param request (bytes):the serialized request
         :param result (FutureResult):
         """
-        req = processor_pb2.TransactionProcessRequest()
+        req = processor_pb2.TpProcessRequest()
         req.ParseFromString(request)
 
-        response = processor_pb2.TransactionProcessResponse()
+        response = processor_pb2.TpProcessResponse()
         response.ParseFromString(result.content)
-        if response.status == processor_pb2.TransactionProcessResponse.OK:
+        if response.status == processor_pb2.TpProcessResponse.OK:
             self._scheduler.set_status(req.signature, True, req.context_id)
         else:
             self._context_manager.delete_context(
@@ -67,14 +67,14 @@ class TransactionExecutorThread(threading.Thread):
                 txn_info.state_hash,
                 inputs=list(header.inputs),
                 outputs=list(header.outputs))
-            content = processor_pb2.TransactionProcessRequest(
+            content = processor_pb2.TpProcessRequest(
                 header=txn.header,
                 payload=txn.payload,
                 signature=txn.header_signature,
                 context_id=context_id).SerializeToString()
 
             message = validator_pb2.Message(
-                message_type='tp/process',
+                message_type=validator_pb2.Message.TP_PROCESS_REQUEST,
                 correlation_id=_generate_id(),
                 content=content)
 

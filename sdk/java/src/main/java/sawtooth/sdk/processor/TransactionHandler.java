@@ -17,7 +17,7 @@ package sawtooth.sdk.processor;
 import sawtooth.sdk.client.State;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
-import sawtooth.sdk.protobuf.TransactionProcessRequest;
+import sawtooth.sdk.protobuf.TpProcessRequest;
 
 import java.util.Collection;
 
@@ -32,7 +32,7 @@ public interface TransactionHandler {
 
   public Collection<String> getNameSpaces();
 
-  public void apply(TransactionProcessRequest transactionRequest,
+  public void apply(TpProcessRequest transactionRequest,
                     State state) throws InvalidTransactionException, InternalError;
 
 

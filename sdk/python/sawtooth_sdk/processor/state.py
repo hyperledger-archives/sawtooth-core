@@ -14,8 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 
-from sawtooth_sdk.client.stream import MessageType
-
+from sawtooth_protobuf.validator_pb2 import Message
 from sawtooth_protobuf import state_context_pb2
 
 
@@ -41,12 +40,13 @@ class State(object):
         self._context_id = context_id
 
     def get(self, addresses):
-        request = state_context_pb2.GetRequest(context_id=self._context_id,
-                                               addresses=addresses)
+        request = state_context_pb2.TpStateGetRequest(
+            context_id=self._context_id,
+            addresses=addresses)
         response_string = self._stream.send(
-            MessageType.STATE_GET,
+            Message.TP_STATE_GET_REQUEST,
             request.SerializeToString()).result().content
-        response = state_context_pb2.GetResponse()
+        response = state_context_pb2.TpStateGetResponse()
         response.ParseFromString(response_string)
         entries = response.entries if response is not None else []
         LOGGER.info("Entries %s", entries)
@@ -64,12 +64,14 @@ class State(object):
             addresses (list): a list of addresses that were set
 
         """
-        state_entries = [state_context_pb2.Entry(address=e.address,
-                                                 data=e.data) for e in entries]
-        request = state_context_pb2.SetRequest(entries=state_entries,
-                                               context_id=self._context_id)
-        response = state_context_pb2.SetResponse()
+        state_entries = [state_context_pb2.Entry(
+            address=e.address,
+            data=e.data) for e in entries]
+        request = state_context_pb2.TpStateSetRequest(
+            entries=state_entries,
+            context_id=self._context_id)
+        response = state_context_pb2.TpStateSetResponse()
         response.ParseFromString(
-            self._stream.send(MessageType.STATE_SET,
+            self._stream.send(Message.TP_STATE_SET_REQUEST,
                               request.SerializeToString()).result().content)
         return response.addresses

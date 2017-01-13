@@ -16,17 +16,16 @@
 import hashlib
 import bitcoin
 
-from sawtooth_protobuf.processor_pb2 import TransactionProcessorRegisterRequest
-from sawtooth_protobuf.processor_pb2 import TransactionProcessResponse
-from sawtooth_protobuf.processor_pb2 import TransactionProcessRequest
+from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_protobuf.processor_pb2 import TpProcessRequest
 
 from sawtooth_protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_protobuf.transaction_pb2 import Transaction
 
-from sawtooth_protobuf.state_context_pb2 import GetResponse
-from sawtooth_protobuf.state_context_pb2 import GetRequest
-from sawtooth_protobuf.state_context_pb2 import SetResponse
-from sawtooth_protobuf.state_context_pb2 import SetRequest
+from sawtooth_protobuf.state_context_pb2 import TpStateGetResponse
+from sawtooth_protobuf.state_context_pb2 import TpStateGetRequest
+from sawtooth_protobuf.state_context_pb2 import TpStateSetResponse
+from sawtooth_protobuf.state_context_pb2 import TpStateSetRequest
 from sawtooth_protobuf.state_context_pb2 import Entry
 
 
@@ -70,7 +69,7 @@ class MessageFactory:
         return self._public
 
     def create_tp_register(self):
-        return TransactionProcessorRegisterRequest(
+        return TpRegisterRequest(
             family=self._family_name,
             version=self._family_version,
             encoding=self._encoding,
@@ -80,13 +79,13 @@ class MessageFactory:
     def create_tp_response(self, status):
         d = {
             "OK":
-                TransactionProcessResponse.OK,
+                TpProcessResponse.OK,
             "INVALID_TRANSACTION":
-                TransactionProcessResponse.INVALID_TRANSACTION,
+                TpProcessResponse.INVALID_TRANSACTION,
             "INTERNAL_ERROR":
-                TransactionProcessResponse.INTERNAL_ERROR
+                TpProcessResponse.INTERNAL_ERROR
         }
-        return TransactionProcessResponse(status=d[status])
+        return TpProcessResponse(status=d[status])
 
     def create_transaction(self, payload, inputs, outputs, dependencies):
 
@@ -104,14 +103,14 @@ class MessageFactory:
 
         signature = _sign(header, self._private)
 
-        return TransactionProcessRequest(
+        return TpProcessRequest(
             header=header,
             payload=payload,
             signature=signature
         )
 
     def create_get_request(self, addresses):
-        return GetRequest(
+        return TpStateGetRequest(
             addresses=addresses
         )
 
@@ -130,7 +129,7 @@ class MessageFactory:
         ]
 
         # Create a GetResponse object
-        return GetResponse(
+        return TpStateGetResponse(
             entries=entries
         )
 
@@ -140,11 +139,11 @@ class MessageFactory:
             for address, data in address_data_map.items()
         ]
 
-        return SetRequest(
+        return TpStateSetRequest(
             entries=entries
         )
 
     def create_set_response(self, addresses):
-        return SetResponse(
+        return TpStateSetResponse(
             addresses=addresses
         )

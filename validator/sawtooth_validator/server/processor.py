@@ -13,12 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_validator.protobuf import validator_pb2
-
-from sawtooth_validator.protobuf.processor_pb2 import Acknowledgement
-
+from sawtooth_validator.protobuf.processor_pb2 import TpRegisterResponse
 from sawtooth_validator.protobuf.processor_pb2 \
-    import TransactionProcessorRegisterRequest
+    import TpRegisterRequest
+
+from sawtooth_validator.protobuf.validator_pb2 import Message
 
 
 class ProcessorRegisterHandler(object):
@@ -26,7 +25,7 @@ class ProcessorRegisterHandler(object):
         self._service = service
 
     def handle(self, message, responder):
-        request = TransactionProcessorRegisterRequest()
+        request = TpRegisterRequest()
         request.ParseFromString(message.content)
 
         print("transaction processor {} {} {} {} {}".format(
@@ -43,11 +42,11 @@ class ProcessorRegisterHandler(object):
             request.encoding,
             request.namespaces)
 
-        ack = Acknowledgement()
+        ack = TpRegisterResponse()
         ack.status = ack.OK
 
-        responder.send(validator_pb2.Message(
+        responder.send(Message(
             sender=message.sender,
-            message_type='common/ack',
+            message_type=Message.TP_REGISTER_RESPONSE,
             correlation_id=message.correlation_id,
             content=ack.SerializeToString()))

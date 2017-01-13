@@ -21,11 +21,11 @@ const protobuf = require('protobufjs')
 
 const root = protobuf.Root.fromJSON(require('./protobuf_bundle.json'))
 
-const Acknowledgement = root.lookup('Acknowledgement')
-Acknowledgement.Status = Acknowledgement.nested.Status.values
+const TpRegisterResponse = root.lookup('TpRegisterResponse')
+TpRegisterResponse.Status = TpRegisterResponse.nested.Status.values
 
-const TransactionProcessResponse = root.lookup('TransactionProcessResponse')
-TransactionProcessResponse.Status = TransactionProcessResponse.nested.Status.values
+const TpProcessResponse = root.lookup('TpProcessResponse')
+TpProcessResponse.Status = TpProcessResponse.nested.Status.values
 
 module.exports = {
   Message: root.lookup('Message'),
@@ -34,27 +34,27 @@ module.exports = {
 
   //
   // processor
-  TransactionProcessorRegisterRequest:
-    root.lookup('TransactionProcessorRegisterRequest'),
+  TpRegisterRequest:
+    root.lookup('TpRegisterRequest'),
 
-  Acknowledgement,
+  TpRegisterResponse,
 
-  TransactionProcessRequest:
-    root.lookup('TransactionProcessRequest'),
+  TpProcessRequest:
+    root.lookup('TpProcessRequest'),
 
-  TransactionProcessResponse,
+  TpProcessResponse,
 
   //
   // State
   Entry: root.lookup('Entry'),
 
-  GetRequest: root.lookup('GetRequest'),
+  TpStateGetRequest: root.lookup('TpStateGetRequest'),
 
-  GetResponse: root.lookup('GetResponse'),
+  TpStateGetResponse: root.lookup('TpStateGetResponse'),
 
-  SetRequest: root.lookup('SetRequest'),
+  TpStateSetRequest: root.lookup('TpStateSetRequest'),
 
-  SetResponse: root.lookup('SetResponse'),
+  TpStateSetResponse: root.lookup('TpStateSetResponse'),
 
   //
   // Transaction

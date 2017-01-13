@@ -84,7 +84,7 @@ class _SendReceiveThread(Thread):
                 if message.message_type in self._handlers:
                     handler = self._handlers[message.message_type]
                 else:
-                    handler = self._handlers['default']
+                    handler = self._handlers[validator_pb2.Message.DEFAULT]
 
                 handler.handle(message, _Responder(self.send_message))
 
@@ -255,15 +255,21 @@ class Validator(object):
         dispatcher.on_block_request = \
             self._journal.on_block_request
 
-        self._service.add_handler('default', DefaultHandler())
-        self._service.add_handler('state/getrequest',
-                                  state.GetHandler(context_manager))
-        self._service.add_handler('state/setrequest',
-                                  state.SetHandler(context_manager))
-        self._service.add_handler('tp/register',
-                                  ProcessorRegisterHandler(self._service))
-        self._service.add_handler('system/load',
-                                  SystemLoadHandler(faux_network))
+        self._service.add_handler(
+            validator_pb2.Message.DEFAULT,
+            DefaultHandler())
+        self._service.add_handler(
+            validator_pb2.Message.TP_STATE_GET_REQUEST,
+            state.GetHandler(context_manager))
+        self._service.add_handler(
+            validator_pb2.Message.TP_STATE_SET_REQUEST,
+            state.SetHandler(context_manager))
+        self._service.add_handler(
+            validator_pb2.Message.TP_REGISTER_REQUEST,
+            ProcessorRegisterHandler(self._service))
+        self._service.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            SystemLoadHandler(faux_network))
         self._service.add_handler('client/get', ClientHandler())
 
     def start(self):
