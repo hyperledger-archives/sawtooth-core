@@ -14,7 +14,6 @@
 
 package sawtooth.sdk.processor;
 
-
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import sawtooth.sdk.client.State;
@@ -22,9 +21,9 @@ import sawtooth.sdk.client.Stream;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.Message;
-import sawtooth.sdk.protobuf.TransactionProcessRequest;
-import sawtooth.sdk.protobuf.TransactionProcessResponse;
-import sawtooth.sdk.protobuf.TransactionProcessorRegisterRequest;
+import sawtooth.sdk.protobuf.TpProcessRequest;
+import sawtooth.sdk.protobuf.TpProcessResponse;
+import sawtooth.sdk.protobuf.TpRegisterRequest;
 
 
 import java.util.ArrayList;
@@ -54,14 +53,14 @@ public class TransactionProcessor implements Runnable {
    * @param handler implements that TransactionHandler interface
    */
   public void addHandler(TransactionHandler handler) {
-    TransactionProcessorRegisterRequest registerRequest = TransactionProcessorRegisterRequest
+    TpRegisterRequest registerRequest = TpRegisterRequest
             .newBuilder()
             .setFamily(handler.transactionFamilyName())
             .addAllNamespaces(handler.getNameSpaces())
             .setEncoding(handler.getEncoding())
             .setVersion(handler.getVersion())
             .build();
-    this.stream.send(Stream.REGISTER, registerRequest.toByteString());
+    this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
     this.handlers.add(handler);
   }
 
@@ -76,7 +75,7 @@ public class TransactionProcessor implements Runnable {
     while (this.isRunning) {
       try {
         Message message = this.stream.receive();
-        TransactionProcessRequest transactionRequest = TransactionProcessRequest
+        TpProcessRequest transactionRequest = TpProcessRequest
                 .parseFrom(message.getContent());
         State state = new State(this.stream, transactionRequest.getContextId());
         if (!this.handlers.isEmpty()) {
@@ -85,28 +84,28 @@ public class TransactionProcessor implements Runnable {
           TransactionHandler handler = this.handlers.get(0);
           try {
             handler.apply(transactionRequest, state);
-            TransactionProcessResponse response = TransactionProcessResponse.newBuilder()
-                    .setStatus(TransactionProcessResponse.Status.OK).build();
+            TpProcessResponse response = TpProcessResponse.newBuilder()
+                    .setStatus(TpProcessResponse.Status.OK).build();
 
-            this.stream.sendBack(Stream.TP_RESPONSE,
+            this.stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
                     message.getCorrelationId(),
                     response.toByteString());
           } catch (InvalidTransactionException ite) {
             ite.printStackTrace();
             logger.log(Level.WARNING, "Invalid Transaction");
-            TransactionProcessResponse response = TransactionProcessResponse.newBuilder()
-                    .setStatus(TransactionProcessResponse.Status.INVALID_TRANSACTION)
+            TpProcessResponse response = TpProcessResponse.newBuilder()
+                    .setStatus(TpProcessResponse.Status.INVALID_TRANSACTION)
                     .build();
-            this.stream.sendBack(Stream.TP_RESPONSE,
+            this.stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
                     message.getCorrelationId(),
                     response.toByteString());
           } catch (InternalError ie) {
             ie.printStackTrace();
             logger.log(Level.WARNING, "State Exception!");
-            TransactionProcessResponse response = TransactionProcessResponse.newBuilder()
-                    .setStatus(TransactionProcessResponse.Status.INTERNAL_ERROR)
+            TpProcessResponse response = TpProcessResponse.newBuilder()
+                    .setStatus(TpProcessResponse.Status.INTERNAL_ERROR)
                     .build();
-            this.stream.sendBack(Stream.TP_RESPONSE,
+            this.stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
                     message.getCorrelationId(),
                     response.toByteString());
           }

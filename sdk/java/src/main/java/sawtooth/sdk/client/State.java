@@ -19,10 +19,12 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.protobuf.Entry;
-import sawtooth.sdk.protobuf.GetRequest;
-import sawtooth.sdk.protobuf.GetResponse;
-import sawtooth.sdk.protobuf.SetRequest;
-import sawtooth.sdk.protobuf.SetResponse;
+import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.TpStateGetRequest;
+import sawtooth.sdk.protobuf.TpStateGetResponse;
+import sawtooth.sdk.protobuf.TpStateSetRequest;
+import sawtooth.sdk.protobuf.TpStateSetResponse;
+
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,7 +37,6 @@ import java.util.concurrent.TimeoutException;
  * Client state that interacts with the context manager through Stream networking.
  */
 public class State {
-
 
   private Stream stream;
   private String contextId;
@@ -54,16 +55,17 @@ public class State {
    */
   public Map<String, ByteString> get(Collection<String> addresses) throws InternalError {
 
-    GetRequest getRequest = GetRequest.newBuilder()
+    TpStateGetRequest getRequest = TpStateGetRequest.newBuilder()
             .addAllAddresses(addresses)
             .setContextId(this.contextId).build();
-    FutureByteString future = stream.send(Stream.GET_REQUEST, getRequest.toByteString());
-    GetResponse getResponse = null;
+    FutureByteString future = stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
+        getRequest.toByteString());
+    TpStateGetResponse getResponse = null;
     try {
-      getResponse = GetResponse.parseFrom(future.getResult());
+      getResponse = TpStateGetResponse.parseFrom(future.getResult());
     } catch (TimeoutException toe) {
       try {
-        getResponse = GetResponse.parseFrom(future.getResult());
+        getResponse = TpStateGetResponse.parseFrom(future.getResult());
       } catch (Exception e) {
         throw new InternalError(e.toString());
       }
@@ -99,16 +101,17 @@ public class State {
               .build();
       entryArrayList.add(ourEntry);
     }
-    SetRequest setRequest = SetRequest.newBuilder()
+    TpStateSetRequest setRequest = TpStateSetRequest.newBuilder()
             .addAllEntries(entryArrayList)
             .setContextId(this.contextId).build();
-    FutureByteString future = stream.send(Stream.SET_REQUEST, setRequest.toByteString());
-    SetResponse setResponse = null;
+    FutureByteString future = stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
+        setRequest.toByteString());
+    TpStateSetResponse setResponse = null;
     try {
-      setResponse = SetResponse.parseFrom(future.getResult());
+      setResponse = TpStateSetResponse.parseFrom(future.getResult());
     } catch (TimeoutException toe) {
       try {
-        setResponse = SetResponse.parseFrom(future.getResult());
+        setResponse = TpStateSetResponse.parseFrom(future.getResult());
       } catch (Exception e) {
         throw new InternalError(e.toString());
       }

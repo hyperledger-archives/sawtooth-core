@@ -35,12 +35,6 @@ public class Stream {
   private SendReceiveThread sendReceiveThread;
   private Thread thread;
 
-  public static final String REGISTER = "tp/register";
-  public static final String GET_REQUEST = "state/getrequest";
-  public static final String SET_REQUEST = "state/setrequest";
-  public static final String DELETE_REQUEST = "state/deleterequest";
-  public static final String TP_RESPONSE = "tp/response";
-
   /**
    * The constructor.
    *
@@ -58,12 +52,12 @@ public class Stream {
 
   /**
    * Send a message and return a Future that will later have the Bytestring.
-   * @param destination one of the static Strings in this class
+   * @param destination one of the Message.MessageType enum values defined in validator.proto
    * @param contents the ByteString that has been serialized from a Protobuf class
    * @return future a future that will have ByteString that can be deserialized into a,
    *         for example, GetResponse
    */
-  public FutureByteString send(String destination, ByteString contents) {
+  public FutureByteString send(Message.MessageType destination, ByteString contents) {
 
     Message message = Message.newBuilder()
             .setCorrelationId(this.generateId())
@@ -79,11 +73,11 @@ public class Stream {
   /**
    * Send a message without getting a future back.
    * Useful for sending a response message to, for example, a transaction
-   * @param destination one of the static Strings in this class
+   * @param destination Message.MessageType defined in validator.proto
    * @param correlationId a random string generated on the server for the client to send back
    * @param contents ByteString serialized contents that the server is expecting
    */
-  public void sendBack(String destination, String correlationId, ByteString contents) {
+  public void sendBack(Message.MessageType destination, String correlationId, ByteString contents) {
     Message message = Message.newBuilder()
             .setCorrelationId(correlationId)
             .setMessageType(destination).setContent(contents).build();
