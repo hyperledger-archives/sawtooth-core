@@ -38,8 +38,9 @@ message BlockHeader {
     // create and validate the block
     bytes consensus = 5;
 
-    // The state_root used by the merkle tree to be able to validate the
-    // the transactions within the batches
+    // The state_root_hash should match the final state_root after all
+    // transactions in the batches have been applied, otherwise the block
+    // is not valid
     string state_root_hash = 6;
 }
 
