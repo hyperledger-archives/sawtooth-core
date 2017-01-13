@@ -26,10 +26,64 @@ message MessageList {
 // The message passed between the validator and client, containing the
 // header fields and content.
 message Message {
+
+    enum MessageType {
+        DEFAULT = 0;
+        // Registration request from the transaction processor to the validator
+        TP_REGISTER_REQUEST = 1;
+        // Registration response from the validator to the transaction processor
+        TP_REGISTER_RESPONSE = 2;
+        // Process Request from the validator/executor to the transaction processor
+        TP_PROCESS_REQUEST = 3;
+        // Process response from the transaction processor to the validator/executor
+        TP_PROCESS_RESPONSE = 4;
+        // State get request from the transaction processor to validator/context_manager
+        TP_STATE_GET_REQUEST = 5;
+        // State get response from the validator/context_manager to the transaction processor
+        TP_STATE_GET_RESPONSE = 6;
+        // State set request from the transaction processor to the validator/context_manager
+        TP_STATE_SET_REQUEST = 7;
+        // State set response from the validator/context_manager to the transaction processor
+        TP_STATE_SET_RESPONSE = 8;
+        // State delete request from the transaction processor to the validator/context_manager
+        TP_STATE_DEL_REQUEST = 9;
+        // State delete response from the validator/context_manager to the transaction processor
+        TP_STATE_DEL_RESPONSE = 10;
+        // Submission of a batchlist from the web api or another client to the validator
+        CLIENT_BATCH_SUBMIT_REQUEST = 11;
+        // Response from the validator to the web api/client that the submission was accepted
+        CLIENT_BATCH_SUBMIT_RESPONSE = 12;
+        // A request to list blocks from the web api/client to the validator
+        CLIENT_BLOCK_LIST_REQUEST = 13;
+        CLIENT_BLOCK_LIST_RESPONSE = 14;
+        CLIENT_BLOCK_GET_REQUEST = 15;
+        CLIENT_BLOCK_GET_RESPONSE = 16;
+        CLIENT_BATCH_LIST_REQUEST = 17;
+        CLIENT_BATCH_LIST_RESPONSE = 18;
+        CLIENT_BATCH_GET_REQUEST = 19;
+        CLIENT_BATCH_GET_RESPONSE = 20;
+        CLIENT_TRANSACTION_LIST_REQUEST = 21;
+        CLIENT_TRANSACTION_LIST_RESPONSE = 22;
+        CLIENT_TRANSACTION_GET_RESPONSE = 23;
+        // Client state request of the current state hash to be retrieved from the journal
+        CLIENT_STATE_CURRENT_REQUEST = 24;
+        // Response with the current state hash
+        CLIENT_STATE_CURRENT_RESPONSE = 25;
+        // A request of all the addresses under a particular prefix, for a state hash.
+        CLIENT_STATE_LIST_REQUEST = 26;
+        // The response of the addresses
+        CLIENT_STATE_LIST_RESPONSE = 27;
+        // Get the address:data entry at a particular address
+        CLIENT_STATE_GET_REQUEST = 28;
+        // The response with the entry
+        CLIENT_STATE_GET_RESPONSE = 29;
+        // Further messages from the stats client through the web api
+
+    }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
     // content.
-    string message_type = 1;
+    MessageType message_type = 1;
 
     // The identifier used to coorelate response messages to their related
     // request messages.  correlation_id should be set to a random string
@@ -38,8 +92,8 @@ message Message {
     // contained in the request message.
     string correlation_id = 2;
 
-    // The content of the message, generally defined by message_type.  In many
-    // cases, this data which has been serialized with Protocol Buffers or
+    // The content of the message, defined by message_type.  In many
+    // cases, this data has been serialized with Protocol Buffers or
     // CBOR.
     bytes content = 3;
 

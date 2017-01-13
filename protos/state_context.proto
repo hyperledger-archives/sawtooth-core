@@ -24,35 +24,35 @@ message Entry {
 }
 
 // A request from a handler/tp for the values at a series of addresses
-message GetRequest {
+message TpStateGetRequest {
     // The context id that references a context in the contextmanager
     string context_id = 1;
     repeated string addresses = 2;
 }
 
 // A response from the contextmanager/validator with a series of State entries
-message GetResponse {
+message TpStateGetResponse {
     repeated Entry entries = 1;
 }
 
 // A request from the handler/tp to put entries in the state of a context
-message SetRequest {
+message TpStateSetRequest {
     string context_id = 1;
     repeated Entry entries = 2;
 }
 
 // A response from the contextmanager/validator with the addresses that were set
-message SetResponse {
+message TpStateSetResponse {
     repeated string addresses = 1;
 }
 
 // A request from the handler/tp to delete state entries at an collection of addresses
-message DeleteRequest {
+message TpStateDeleteRequest {
     string context_id = 1;
     repeated string addresses = 2;
 }
 
 // A response form the contextmanager/validator with the addresses that were deleted
-message DeleteResponse {
+message TpStateDeleteResponse {
     repeated string addresses = 1;
 }

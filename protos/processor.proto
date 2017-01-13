@@ -19,7 +19,7 @@ option java_package = "sawtooth.sdk.protobuf";
 
 
 // The registration request from the transaction processor to the validator/executor
-message TransactionProcessorRegisterRequest {
+message TpRegisterRequest {
 
     // A settled upon name for the capabilities of the transaction processor.
     // For example: intkey, xo
@@ -41,7 +41,7 @@ message TransactionProcessorRegisterRequest {
 }
 
 // A response sent from the validator to the transaction processor acknowledging the registration
-message Acknowledgement {
+message TpRegisterResponse {
     enum Status {
         OK = 0;
         ERROR = 1;
@@ -53,7 +53,7 @@ message Acknowledgement {
 
 // The request from the validator/executor of the transaction processor
 // to verify a transaction.
-message TransactionProcessRequest {
+message TpProcessRequest {
     bytes header = 1;
     bytes payload = 2;
     string signature = 3;
@@ -63,7 +63,7 @@ message TransactionProcessRequest {
 
 // The response from the transaction processor to the validator/executor
 // used to respond about the validity of a transaction
-message TransactionProcessResponse {
+message TpProcessResponse {
     enum Status {
         OK = 0;
         INVALID_TRANSACTION = 1;
