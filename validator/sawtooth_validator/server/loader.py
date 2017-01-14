@@ -27,4 +27,4 @@ class SystemLoadHandler(object):
             sender=message.sender,
             message_type=validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE,
             correlation_id=message.correlation_id,
-            content="{ 'status': 'SUCCESS' }".encode()))
+            content='{ "status": "SUCCESS" }'.encode()))

@@ -32,10 +32,11 @@ class Future(object):
     def done(self):
         return self._result is not None
 
-    def result(self):
+    def result(self, timeout=None):
         with self._condition:
             if self._result is None:
-                self._condition.wait()
+                if not self._condition.wait(timeout):
+                    raise FutureTimeoutError('Future timed out')
         return self._result
 
     def set_result(self, result):
@@ -45,6 +46,10 @@ class Future(object):
 
 
 class FutureCollectionKeyError(Exception):
+    pass
+
+
+class FutureTimeoutError(Exception):
     pass
 
 

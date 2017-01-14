@@ -40,6 +40,7 @@ def start_rest_api(host, port, stream_url):
     # Add routes to the web app
     app.router.add_get('/', handlers.hello)
     app.router.add_get('/stream', handlers.stream)
+    app.router.add_post('/batches', handlers.batches)
 
     web.run_app(app, host=host, port=port)
 
