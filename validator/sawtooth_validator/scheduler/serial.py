@@ -20,11 +20,7 @@ from sawtooth_validator.scheduler.base import BatchStatus
 from sawtooth_validator.scheduler.base import TxnInformation
 from sawtooth_validator.scheduler.base import Scheduler
 from sawtooth_validator.scheduler.base import SchedulerIterator
-
-
-class SchedulerError(Exception):
-    def __init__(self, msg):
-        super(Exception, self).__init__(msg)
+from sawtooth_validator.scheduler.exceptions import SchedulerError
 
 
 class SerialScheduler(Scheduler):
