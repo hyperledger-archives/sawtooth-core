@@ -26,7 +26,7 @@ from sawtooth_validator.scheduler.exceptions import SchedulerError
 class SerialScheduler(Scheduler):
     """Serial scheduler which returns transactions in the natural order.
 
-    This scheduler will scheduler one transaction at a time (only one may be
+    This scheduler will schedule one transaction at a time (only one may be
     unapplied), in the exact order provided as batches were added to the
     scheduler.
 
