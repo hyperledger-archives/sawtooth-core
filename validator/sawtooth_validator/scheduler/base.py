@@ -126,6 +126,27 @@ class Scheduler(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    @abstractmethod
+    def get_transaction(self, index):
+        """Returns the scheduled Transaction at index.
+
+        This is used by SchedulerIterator to return a consistent order of
+        Transactions.  Once the Scheduler has picked
+
+        Returns:
+            Returns the Transaction at index.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def count(self):
+        """The count of transactions which have been scheduled.
+
+        Returns:
+            An integer.
+        """
+        raise NotImplementedError()
+
 
 class SchedulerIterator(object):
     def __init__(self, scheduler, condition, start_index=0):
