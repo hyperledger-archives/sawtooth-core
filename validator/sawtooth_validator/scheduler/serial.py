@@ -58,8 +58,14 @@ class SerialScheduler(Scheduler):
          prior txn failed the batch, the
         batch is valid
         """
-        self.mark_as_applied(txn_signature)
         with self._condition:
+            if (self._in_progress_transaction is None or
+                    self._in_progress_transaction != txn_signature):
+                raise ValueError("transaction not in progress: {}",
+                                 txn_signature)
+            self._in_progress_transaction = None
+            self._condition.notify_all()
+
             if txn_signature not in self._txn_to_batch:
                 raise ValueError("transaction not in any batches: {}".format(
                     txn_signature))
@@ -121,15 +127,6 @@ class SerialScheduler(Scheduler):
             txn_info = TxnInformation(txn, self._last_state_hash)
             self._scheduled_transactions.append(txn_info)
             return txn_info
-
-    def mark_as_applied(self, transaction_signature):
-        with self._condition:
-            if (self._in_progress_transaction is None or
-                    self._in_progress_transaction != transaction_signature):
-                raise ValueError("transaction not in progress: {}",
-                                 transaction_signature)
-            self._in_progress_transaction = None
-            self._condition.notify_all()
 
     def finalize(self):
         with self._condition:

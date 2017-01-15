@@ -89,24 +89,6 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def mark_as_applied(self, transaction_signature):
-        """Instruct the scheduler that the transaction has been applied.
-
-        The scheduler must know when transactions have been applied so that it
-        can determine which transactions will become eligible for processing.
-
-        Args:
-            transaction_signature: The signature of the transaction, which
-                must match the signature field of the Transaction object
-                which was part of the added Batch.
-
-        Raises:
-            ValueError: Thrown if transaction_signature does not match a
-            transaction.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def finalize(self):
         """Tell the scheduler that no more batches/transactions will be added.
 

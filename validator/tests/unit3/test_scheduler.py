@@ -131,14 +131,14 @@ class TestSerialScheduler(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(iterable1)
 
-    def test_mark_as_applied(self):
-        """Tests that mark_as_applied() has the correct behavior.
+    def test_set_status(self):
+        """Tests that set_status() has the correct behavior.
 
         Basically:
             1. Adds a batch which has two transactions.
             2. Calls next_transaction() to get the first Transaction.
             3. Calls next_transaction() to verify that it returns None.
-            4. Calls mark_as_applied() to mark the first transaction applied.
+            4. Calls set_status() to mark the first transaction applied.
             5. Calls next_transaction() to  get the second Transaction.
 
         Step 3 returns None because the first transaction hasn't been marked
@@ -181,7 +181,10 @@ class TestSerialScheduler(unittest.TestCase):
 
         self.assertIsNone(scheduler.next_transaction())
 
-        scheduler.mark_as_applied(scheduled_txn_info.txn.header_signature)
+        scheduler.set_status(
+            scheduled_txn_info.txn.header_signature,
+            status=False,
+            context_id=None)
 
         scheduled_txn_info = scheduler.next_transaction()
         self.assertIsNotNone(scheduled_txn_info)
