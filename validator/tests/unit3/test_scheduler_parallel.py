@@ -16,6 +16,7 @@
 import unittest
 
 from sawtooth_validator.scheduler.parallel import RadixTree
+from sawtooth_validator.scheduler.parallel import TopologicalSorter
 
 
 class TestRadixTree(unittest.TestCase):
@@ -114,3 +115,22 @@ class TestRadixTree(unittest.TestCase):
         self.assertEqual(
             tree.find_readers_and_writers(address_b),
             ['txn3', 'txn2'])
+
+
+class TestTopologicalSorter(unittest.TestCase):
+
+    def test_topological_sorter(self):
+        sorter = TopologicalSorter()
+        sorter.add_relation('9', '2')
+        sorter.add_relation('3', '7')
+        sorter.add_relation('7', '5')
+        sorter.add_relation('5', '8')
+        sorter.add_relation('8', '6')
+        sorter.add_relation('4', '6')
+        sorter.add_relation('1', '3')
+        sorter.add_relation('7', '4')
+        sorter.add_relation('9', '5')
+        sorter.add_relation('2', '8')
+        self.assertEqual(
+            sorter.order(),
+            ['9', '2', '1', '3', '7', '5', '8', '4', '6'])

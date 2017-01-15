@@ -93,3 +93,46 @@ class RadixTree:
                 readers_and_writers.append(node.writer)
 
         return readers_and_writers
+
+
+class TopologicalSorter:
+    def __init__(self):
+        self._count = {}
+        self._successors = {}
+        self._identifiers = []
+
+    def _init(self, identifier):
+        if identifier not in self._count:
+            self._count[identifier] = 0
+        if identifier not in self._successors:
+            self._successors[identifier] = []
+        if identifier not in self._identifiers:
+            self._identifiers.append(identifier)
+
+    def add_relation(self, predecessor, successor):
+        self._init(predecessor)
+        self._init(successor)
+        self._count[successor] += 1
+        self._successors[predecessor].append(successor)
+
+    def order(self):
+        retval = []
+
+        while len(self._identifiers) > 0:
+            found = None
+            for identifier in self._identifiers:
+                if self._count[identifier] == 0:
+                    found = identifier
+                    break
+            if found is not None:
+                retval.append(found)
+                for successor in self._successors[found]:
+                    self._count[successor] -= 1
+
+                self._identifiers.remove(found)
+                del self._count[found]
+                del self._successors[found]
+            else:
+                raise Exception("non-acyclic graph detected, aborting")
+
+        return retval
