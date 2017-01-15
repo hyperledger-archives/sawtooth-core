@@ -115,7 +115,7 @@ and run the following commands:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/ubuntu/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/ubuntu/sawtooth/v0.json --keyfile /home/ubuntu/sawtooth/keys/base000.wif
 
 This will start txnvalidator and logging output will be printed to the
 terminal window.
