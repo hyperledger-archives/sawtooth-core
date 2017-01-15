@@ -52,12 +52,27 @@ class Scheduler(object, metaclass=ABCMeta):
 
     @abstractmethod
     def set_status(self, txn_signature, status, context_id):
-        """Called by the executor after a txn has been processed
+        """Set the status of an executed transaction.
+
+        Called by the executor after a transaction has been processed.
+
+        The scheduler must know when transactions have finished being
+        applied so that it can determine which transactions will become
+        eligible for processing.
 
         Args:
-            txn_signature (str): the signature of the last txn
-            status (bool): whether the txn passed or failed
-            context_id (str): the context_id for the txn
+            txn_signature (str): The signature of the transaction, which
+                must match the header_signature field of the Transaction
+                object which was part of the added Batch.
+            status (bool): True if transaction applied successfully or False
+                if the transaction failed and was not applied.
+            context_id (str): If status is True, contains the context_id
+                associated with the state changes made by the transaction.
+                If status is False, this should be set to None.
+
+        Raises:
+            ValueError: Thrown if transaction_signature does not match a
+            transaction.
         """
         raise NotImplementedError()
 
