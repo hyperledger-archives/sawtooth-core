@@ -64,7 +64,6 @@ class SerialScheduler(Scheduler):
                 raise ValueError("transaction not in progress: {}",
                                  txn_signature)
             self._in_progress_transaction = None
-            self._condition.notify_all()
 
             if txn_signature not in self._txn_to_batch:
                 raise ValueError("transaction not in any batches: {}".format(
