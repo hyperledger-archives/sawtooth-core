@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
 import time
 
 
 class TimeOut(object):
-    def __init__(self, timeout):
-        self.start_time = time.time()
-        self.timeout = timeout
+    def __init__(self, wait):
+        self.WaitTime = wait
+        self.ExpireTime = time.time() + wait
 
-    def __nonzero__(self):
-        return (time.time() - self.start_time) > self.timeout
+    def is_timed_out(self):
+        return time.time() > self.ExpireTime
+
+    def __call__(self, *args, **kwargs):
+        return time.time() > self.ExpireTime

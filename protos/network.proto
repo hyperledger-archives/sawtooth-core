@@ -33,6 +33,7 @@ message PingRequest {
 
 message GossipMessage {
     bytes content = 1;
+    string content_type = 2;
 }
 
 // A response sent from the validator to the peer acknowledging message

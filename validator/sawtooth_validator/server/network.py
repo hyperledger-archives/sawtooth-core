@@ -18,6 +18,7 @@ import asyncio
 import queue
 import socket
 import zmq
+import zmq.asyncio
 import logging
 import random
 import hashlib
@@ -27,8 +28,10 @@ from threading import Thread
 from threading import Condition
 
 from sawtooth_validator.server import future
+from sawtooth_validator.server.signature_verifier import SignatureVerifier
 from sawtooth_validator.protobuf import validator_pb2
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
+import sawtooth_validator.protobuf.block_pb2 as block_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
@@ -504,12 +507,21 @@ class Network(object):
         self._handlers = {}
         self._peered_with_us = {}
         self.inbound_queue = queue.Queue()
+        self.outboud_queue = queue.Queue()
+        self._signature_condition = Condition()
+        self._dispatcher_condition = Condition()
         self._futures = future.FutureCollection()
         self._send_receive_thread = _ServerSendReceiveThread(endpoint,
                                                              self._handlers,
                                                              self._futures)
 
         self._send_receive_thread.daemon = True
+
+        self._signature_verifier = SignatureVerifier(
+            self.inbound_queue, self.outboud_queue, self._signature_condition,
+            self._dispatcher_condition)
+        self._dispatcher.set_incoming_msg_queue(self.outboud_queue)
+        self._dispatcher.set_condition(self._dispatcher_condition)
         self.add_handler('default', DefaultHandler())
         self.add_handler('gossip/register',
                          PeerRegisterHandler(self))
@@ -518,6 +530,7 @@ class Network(object):
         self.add_handler('gossip/msg',
                          GossipMessageHandler(self))
         self.start()
+        self._dispatcher.start()
 
         if peer_list is not None:
             for peer in peer_list:
@@ -546,6 +559,16 @@ class Network(object):
                 # core at ~0.001-0.01 duration sleeps.
                 time.sleep(0.01)
 
+        # Send messages to :
+        # inbound queue -> SignatureVerifier -> outbound queue -> Dispatcher
+        for _ in range(20):
+            msg = GossipMessage(content=bytes(
+                str("This is a gossip payload"), 'UTF-8'),
+                content_type="Test")
+
+            self._put_on_inbound(msg)
+            time.sleep(.01)
+
     def add_handler(self, message_type, handler):
         LOGGER.debug("Network service adding "
                      "handler for {}".format(message_type))
@@ -553,6 +576,8 @@ class Network(object):
 
     def _put_on_inbound(self, item):
         self.inbound_queue.put_nowait(item)
+        with self._signature_condition:
+            self._signature_condition.notify_all()
 
     def broadcast_message(self, message):
         self._send_receive_thread.broadcast_message(message)
@@ -585,8 +610,17 @@ class Network(object):
 
     def start(self):
         self._send_receive_thread.start()
+        self._signature_verifier.start()
 
     def stop(self):
+        self._signature_verifier.stop()
+        self._dispatcher.stop()
+        with self._signature_condition:
+            self._signature_condition.notify_all()
+
+        with self._dispatcher_condition:
+            self._dispatcher_condition.notify_all()
+
         self._send_receive_thread.join()
 
 
