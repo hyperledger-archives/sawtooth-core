@@ -617,6 +617,10 @@ class Journal(object):
         self._chain_thread = self._ChainThread(self._chain_controller,
                                                self._block_queue)
 
+    def get_current_root(self):
+        # return self._block_publisher._chain_head.state_root_hash
+        return self._chain_controller.chain_head.block.state_root_hash
+
     def start(self):
         # TBD do load activities....
         # TBD transfer activities - request chain-head from
