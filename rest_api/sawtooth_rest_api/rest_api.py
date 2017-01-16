@@ -39,8 +39,12 @@ def start_rest_api(host, port, stream_url):
     app = web.Application()
     # Add routes to the web app
     app.router.add_get('/', handlers.hello)
-    app.router.add_get('/stream', handlers.stream)
     app.router.add_post('/batches', handlers.batches)
+    app.router.add_get('/state', handlers.state_current)
+    app.router.add_get('/state/{merkle_root}/{address}', handlers.state_get)
+    app.router.add_get('/state/{merkle_root}', handlers.state_list)
+
+
 
     web.run_app(app, host=host, port=port)
 

@@ -99,7 +99,15 @@ class Validator(object):
         self._service.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             SystemLoadHandler(faux_network))
-        self._service.add_handler('client/get', ClientHandler())
+        self._service.add_handler(
+            validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
+            ClientHandler())
+        self._service.add_handler(
+            validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
+            ClientHandler())
+        self._service.add_handler(
+            validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
+            ClientHandler())
 
     def start(self):
         self._service.start()
