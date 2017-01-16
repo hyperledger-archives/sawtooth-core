@@ -254,5 +254,11 @@ class MerkleDatabase(object):
 
         return addresses
 
+    def leaves(self, prefix):
+        leaves = {}
+        for address, value in self._yield_iter(prefix, self._root_hash):
+            leaves[address] = value
+        return leaves
+
     def close(self):
         self._database.close()
