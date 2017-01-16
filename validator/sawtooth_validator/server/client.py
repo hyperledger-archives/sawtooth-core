@@ -12,7 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+import logging
+
+from google.protobuf.message import DecodeError
+
+from sawtooth_validator.merkle import MerkleDatabase
+from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf.state_context_pb2 import Entry
 from sawtooth_validator.protobuf import validator_pb2
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ClientHandler(object):

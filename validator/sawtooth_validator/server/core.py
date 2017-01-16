@@ -23,15 +23,20 @@ from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server import future
+from sawtooth_validator.server import state
+from sawtooth_validator.server import processor_iterator
 from sawtooth_validator.server.dispatch import Dispatcher
 from sawtooth_validator.server.executor import TransactionExecutor
 from sawtooth_validator.server.loader import SystemLoadHandler
 from sawtooth_validator.server.network import FauxNetwork
 from sawtooth_validator.server.network import Network
-from sawtooth_validator.server import state
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
-from sawtooth_validator.server.client import ClientHandler
 from sawtooth_validator.server.interconnect import Interconnect
+from sawtooth_validator.server.client import ClientHandler
+from sawtooth_validator.server.client import ClientStateCurrentRequestHandler
+from sawtooth_validator.server.client import ClientStateGetRequestHandler
+from sawtooth_validator.server.client import ClientStateListRequestHandler
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -101,13 +106,13 @@ class Validator(object):
             SystemLoadHandler(faux_network))
         self._service.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-            ClientHandler())
+            ClientStateCurrentRequestHandler(self._journal.get_current_root))
         self._service.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            ClientHandler())
+            ClientStateGetRequestHandler(lmdb))
         self._service.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            ClientHandler())
+            ClientStateListRequestHandler(lmdb))
 
     def start(self):
         self._service.start()
