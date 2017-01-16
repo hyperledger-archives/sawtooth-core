@@ -17,6 +17,15 @@
 
 import os
 import sys
+import sysconfig
+
+build_str = "lib.{}-{}.{}".format(
+    sysconfig.get_platform(),
+    sys.version_info.major, sys.version_info.minor)
+
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'signing', 'build', build_str))
 
 # If running from a git repository, insert the repository into sys.path
 # so that sawtooth_battleship is imported from there.

@@ -29,6 +29,9 @@ sys.path.insert(0, os.path.join(
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
             'sdk', 'python'))
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'signing', 'build', build_str))
 
 from sawtooth_intkey.processor.main import main
 
