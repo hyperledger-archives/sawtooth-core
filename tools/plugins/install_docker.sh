@@ -26,5 +26,3 @@ package_group_install docker
 usermod -aG docker $VAGRANT_USER
 
 pip install docker-compose
-
-echo "Log out and log back in, before running Docker"
