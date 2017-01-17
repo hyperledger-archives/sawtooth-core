@@ -58,7 +58,8 @@ class _PoetEnclaveSimulator(object):
         '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
 
     _report_private_key = \
-        signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
+        signing.encode_privkey(
+            signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif'), 'hex')
     _report_public_key = signing.generate_pubkey(_report_private_key)
 
     # Minimum duration for PoET 1 simulator is 30 seconds
@@ -79,7 +80,7 @@ class _PoetEnclaveSimulator(object):
         # Create an anti-Sybil ID that is unique for this validator
         cls._anti_sybil_id = \
             hashlib.sha256(
-                kwargs.get('NodeName', 'validator')).hexdigest()
+                kwargs.get('NodeName', 'validator').encode()).hexdigest()
 
     @classmethod
     def create_signup_info(cls,
@@ -103,7 +104,7 @@ class _PoetEnclaveSimulator(object):
                         'hex')
             }
             sealed_signup_data = \
-                base64.b64encode(dict2json(signup_data))
+                base64.b64encode(bytes(dict2json(signup_data).encode()))
 
             # Create a fake report
             report_data = '{0}{1}'.format(
@@ -114,23 +115,26 @@ class _PoetEnclaveSimulator(object):
             )
             quote = {
                 'report_body': hashlib.sha256(
-                    dict2json(report_data)).hexdigest()
+                    dict2json(report_data).encode()).hexdigest()
             }
 
             # Fake our "proof" data.
             verification_report = {
                 'id': base64.b64encode(
-                    hashlib.sha256(
-                        datetime.datetime.now().isoformat()).hexdigest()),
+                    bytes(hashlib.sha256(
+                        datetime.datetime.now().isoformat().encode())
+                        .hexdigest().encode())).decode(),
                 'isvEnclaveQuoteStatus': 'OK',
                 'isvEnclaveQuoteBody':
-                    base64.b64encode(dict2json(quote)),
+                    base64.b64encode(
+                        dict2json(quote).encode()).decode(),
                 'pseManifestStatus': 'OK',
                 'pseManifestHash':
                     base64.b64encode(
                         hashlib.sha256(
-                            b'Do you believe in '
-                            'manifest destiny?').hexdigest()),
+                            bytes(b'Do you believe in '
+                                  b'manifest destiny?')).hexdigest()
+                        .encode()).decode(),
                 'nonce': most_recent_wait_certificate_id
             }
 
@@ -175,7 +179,7 @@ class _PoetEnclaveSimulator(object):
         # we can convert back to a dictionary we can use to get the
         # data we need
         signup_data = \
-            json2dict(base64.b64decode(sealed_signup_data))
+            json2dict(base64.b64decode(sealed_signup_data).decode())
 
         with cls._lock:
             cls._poet_public_key = \
@@ -241,7 +245,9 @@ class _PoetEnclaveSimulator(object):
         expected_pse_manifest_hash = \
             base64.b64encode(
                 hashlib.sha256(
-                    b'Do you believe in manifest destiny?').hexdigest())
+                    bytes(b'Do you believe in '
+                          b'manifest destiny?')).hexdigest()
+                .encode()).decode()
 
         if pse_manifest_hash != expected_pse_manifest_hash:
             raise \
@@ -278,10 +284,10 @@ class _PoetEnclaveSimulator(object):
             signup_info.poet_public_key.upper()
         )
         expected_report_body = hashlib.sha256(
-            dict2json(report_data)).hexdigest()
+            dict2json(report_data).encode()).hexdigest()
 
         enclave_quote_dict = \
-            json2dict(base64.b64decode(enclave_quote))
+            json2dict(base64.b64decode(enclave_quote).decode())
         report_body = enclave_quote_dict.get('report_body')
         if report_body is None:
             raise ValueError('Enclave quote does not contain a report body')
@@ -440,7 +446,7 @@ class _PoetEnclaveSimulator(object):
                     'wait_timer_signature': cls._active_wait_timer.signature,
                     'now': datetime.datetime.utcnow().isoformat()
                 })
-            nonce = hashlib.sha256(random_string).hexdigest()
+            nonce = hashlib.sha256(random_string.encode()).hexdigest()
 
             # First create a new enclave wait certificate using the data
             # provided and then sign the certificate with the PoET private key

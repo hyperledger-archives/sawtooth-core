@@ -18,8 +18,6 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.validator_pb2 import Message
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 class GetHandler(object):
@@ -33,7 +31,7 @@ class GetHandler(object):
         return_values = self._context_manager.get(get_request.context_id,
                                                   get_request.addresses)
         return_list = return_values if return_values is not None else []
-        LOGGER.info("GET: %s", return_list)
+        LOGGER.debug("GET: %s", return_list)
         entry_list = [state_context_pb2.Entry(address=a,
                                               data=d) for a, d in return_list]
         responder.send(message=validator_pb2.Message(

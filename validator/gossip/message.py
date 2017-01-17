@@ -138,7 +138,7 @@ class Packet(object):
         self.SequenceNumber = int(seqno)
         self.IsAcknowledgement = aflag
         self.IsReliable = rflag
-        self.SenderID = senderid.rstrip('\0')
+        self.SenderID = senderid.decode().rstrip('\0')
 
         self.Data = databuf[size:]
 

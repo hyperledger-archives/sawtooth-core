@@ -32,69 +32,69 @@ PATH=$top_dir/bin:$PATH
 export PATH
 
 test_core() {
-	PYTHONPATH=$top_dir/core
-	export PYTHONPATH
-	cd core
-	nose2 -v
-	cd ..
+    PYTHONPATH=$top_dir/core
+    export PYTHONPATH
+    cd core
+    nose2 -v
+    cd ..
 }
 
 test_sdk_examples() {
-	PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
-	PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-  export PYTHONPATH
-  cd sdk/examples/processor_tests/intkey
-  nose2-3 -v ts_intkey.TestSuiteIntkeyPython
-  #nose2-3 -v ts_intkey.TestSuiteIntkeyJava
-  #nose2-3 -v ts_intkey.TestSuiteIntkeyJavascript
-  cd ../../../../
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
+    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
+    export PYTHONPATH
+    cd sdk/examples/processor_tests/intkey
+    nose2-3 -v ts_intkey.TestSuiteIntkeyPython
+    #nose2-3 -v ts_intkey.TestSuiteIntkeyJava
+    #nose2-3 -v ts_intkey.TestSuiteIntkeyJavascript
+    cd ../../../../
 }
 
 test_signing() {
-	PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-	export PYTHONPATH
-	cd signing
-	nose2 -v
-	cd ..
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
+    export PYTHONPATH
+    cd signing
+    nose2 -v
+    cd ..
 
-	PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-	export PYTHONPATH
-	cd signing
-	nose2-3 -v
-	cd ..
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
+    export PYTHONPATH
+    cd signing
+    nose2-3 -v
+    cd ..
 }
 
 test_validator() {
-       PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-	PYTHONPATH=$PYTHONPATH:$top_dir/core
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-	export PYTHONPATH
-	cd validator
-	nose2 -v unit
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
+    PYTHONPATH=$PYTHONPATH:$top_dir/core
+    PYTHONPATH=$PYTHONPATH:$top_dir/validator
+    export PYTHONPATH
+    cd validator
+    nose2 -v unit
 
-	export RUN_TEST_SUITES=1
-       nose2 -v sawtooth_suites.ts_pr_dev_mode.DevModeTestSuite
-       nose2 -v sawtooth_suites.ts_pr_poet1.Poet1TestSuite
-	unset RUN_TEST_SUITES
+    export RUN_TEST_SUITES=1
+    nose2 -v sawtooth_suites.ts_pr_dev_mode.DevModeTestSuite
+    nose2 -v sawtooth_suites.ts_pr_poet1.Poet1TestSuite
+    unset RUN_TEST_SUITES
 
-       # Disable nose2-3 within docker container until bugs can be resolved.
-       PYTHONPATH=$top_dir
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing
-	PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-	PYTHONPATH=$PYTHONPATH:$top_dir/core
-	PYTHONPATH=$PYTHONPATH:$top_dir/validator
-       export PYTHONPATH
-	if [ "$DOCKER_CONTAINER_ID" = "" ]; then
-	    nose2-3 -v unit3
-	fi
-	cd ..
+    # Disable nose2-3 within docker container until bugs can be resolved.
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
+    PYTHONPATH=$PYTHONPATH:$top_dir/core
+    PYTHONPATH=$PYTHONPATH:$top_dir/validator
+    export PYTHONPATH
+    if [ "$DOCKER_CONTAINER_ID" = "" ]; then
+        nose2-3 -v unit3
+    fi
+    cd ..
 }
 
 
@@ -135,5 +135,4 @@ case $MODULE in
     sdk_examples)
         test_sdk_examples
         ;;
-
 esac

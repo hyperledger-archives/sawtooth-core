@@ -261,7 +261,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             LOGGER.debug("WAIT_TIMER: %s", str(self.wait_timer))
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
-                hasher.update(tid)
+                hasher.update(tid.encode())
             block_digest = hasher.hexdigest()
 
             self.wait_certificate = \

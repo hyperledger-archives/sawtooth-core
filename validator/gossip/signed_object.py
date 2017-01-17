@@ -85,7 +85,7 @@ def generate_signing_key(wifstr=None):
         str: a signing key.
     """
     if wifstr:
-        return signing.decode_privkey(wifstr)
+        return signing.encode_privkey(signing.decode_privkey(wifstr), 'hex')
     else:
         return signing.generate_privkey()
 
@@ -128,8 +128,11 @@ class SignedObject(object):
         self.Signature = minfo.get(sig_dict_key)
         self.SignatureDictKey = sig_dict_key
         self.public_key = minfo.get("PublicKey")
-        self._identifier = hashlib.sha256(
-            self.Signature).hexdigest() if self.Signature else None
+        if self.Signature:
+            self._identifier = hashlib.sha256(
+                self.Signature.encode()).hexdigest()
+        else:
+            self.Signature = None
         self._originator_id = None
         self._originator_public_key = None
         self._data = None
@@ -152,7 +155,8 @@ class SignedObject(object):
         assert self.Signature
 
         if not self._identifier:
-            self._identifier = hashlib.sha256(self.Signature).hexdigest()
+            self._identifier = hashlib.sha256(
+                self.Signature.encode()).hexdigest()
 
         return self._identifier[:16]
 
@@ -164,7 +168,8 @@ class SignedObject(object):
                 self.signature_cache[self.Signature]
             if not self._originator_id:
                 self._originator_id = \
-                    signing.generate_identifier(self.originator_public_key)
+                    signing.generate_identifier(
+                        self.originator_public_key.encode())
                 self.signature_cache[self.Signature] = self._originator_id
 
     @property
@@ -255,10 +260,11 @@ class SignedObject(object):
 
         self._originator_id = None
         serialized = self.serialize(signable=True)
-        self.Signature = signing.sign(serialized, signingkey)
+        self.Signature = signing.sign(bytes(serialized), signingkey)
 
         self._recover_verifying_address()
-        self._identifier = hashlib.sha256(self.Signature).hexdigest()
+        self._identifier = hashlib.sha256(
+            self.Signature.encode()).hexdigest()
 
     def serialize(self, signable=False):
         """Generates a CBOR serialized dict containing the SignatureDictKey

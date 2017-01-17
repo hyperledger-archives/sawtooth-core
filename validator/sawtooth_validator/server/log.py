@@ -13,15 +13,20 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
-import sys
-import argparse
 import logging
+import sys
 
 from colorlog import ColoredFormatter
 
-from sawtooth_sdk.processor.core import TransactionProcessor
-from sawtooth_intkey.processor.handler import IntkeyTransactionHandler
+
+class LogWriter(object):
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+
+    def write(self, line):
+        if line != '\n':
+            self.logger.log(self.level, line.rstrip())
 
 
 def create_console_handler(verbose_level):
@@ -51,47 +56,13 @@ def create_console_handler(verbose_level):
     return clog
 
 
-def init_console_logging(verbose_level=2):
+def init_console_logging(verbose_level=2, capture_std_output=False):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
     if verbose_level > 0:
         logger.addHandler(create_console_handler(verbose_level))
 
-
-def parse_args(args):
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('endpoint',
-                        nargs='?',
-                        default='localhost:40000',
-                        help='Endpoint for the validator connection')
-    parser.add_argument('-v', '--verbose',
-                        action='count',
-                        default=0,
-                        help='Increase output sent to stderr')
-
-    return parser.parse_args(args)
-
-
-def main(args=sys.argv[1:]):
-    opts = parse_args(args)
-
-    init_console_logging(verbose_level=opts.verbose)
-
-    processor = TransactionProcessor(url=opts.endpoint)
-
-    # The prefix should eventually be looked up from the
-    # validator's namespace registry.
-    intkey_prefix = hashlib.sha512('intkey'.encode()).hexdigest()[0:6]
-    handler = IntkeyTransactionHandler(namespace_prefix=intkey_prefix)
-
-    processor.add_handler(handler)
-
-    try:
-        processor.start()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        processor.stop()
+    if capture_std_output:
+        sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
+        sys.stderr = LogWriter(logging.getLogger("STDERR"), logging.ERROR)

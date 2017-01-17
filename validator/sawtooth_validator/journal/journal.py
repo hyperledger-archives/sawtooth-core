@@ -28,8 +28,9 @@ from sawtooth_validator.server.messages import BlockRequestMessage, \
     BlockMessage
 from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
 
-from sawtooth_validator.server.block_wrapper import BlockWrapper, BlockState, \
-    BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import BlockState
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 
 LOGGER = logging.getLogger(__name__)
 
@@ -104,8 +105,6 @@ class BlockPublisher(object):
         :return:
         """
         with self._lock:
-            LOGGER.info("on_batch_received: %s",
-                        batch)
             self._pending_batches.append(batch)
             if self._scheduler:
                 try:
@@ -128,8 +127,12 @@ class BlockPublisher(object):
         :return:
         """
         with self._lock:
-            LOGGER.info("Chain updated, new head: %s",
-                        chain_head)
+            LOGGER.info(
+                'Chain updated, new head: num=%s id=%s state=%s prev=%s',
+                chain_head.block_num,
+                chain_head.header_signature,
+                chain_head.state_root_hash,
+                chain_head.previous_block_id)
             self._chain_head = chain_head
             if self._candidate_block is not None and \
                     chain_head is not None and \
@@ -255,7 +258,6 @@ class BlockValidator(object):
         return self._chain_head
 
     def _validate_block(self, block_state):
-        LOGGER.info(block_state)
         if block_state.status == BlockStatus.Valid:
             return True
         elif block_state.status == BlockStatus.Invalid:
@@ -412,7 +414,7 @@ class ChainController(object):
                 self._block_store[self._block_store["chain_head_id"]]
 
             LOGGER.info("Chain controller initialized with chain head: %s",
-                        self._chain_head)
+                        self._chain_head.block.header_signature)
         except Exception as e:
             LOGGER.error("Invalid block store. Head of the block chain cannot "
                          "be determined: %s", e)

@@ -52,12 +52,27 @@ class Scheduler(object, metaclass=ABCMeta):
 
     @abstractmethod
     def set_status(self, txn_signature, status, context_id):
-        """Called by the executor after a txn has been processed
+        """Set the status of an executed transaction.
+
+        Called by the executor after a transaction has been processed.
+
+        The scheduler must know when transactions have finished being
+        applied so that it can determine which transactions will become
+        eligible for processing.
 
         Args:
-            txn_signature (str): the signature of the last txn
-            status (bool): whether the txn passed or failed
-            context_id (str): the context_id for the txn
+            txn_signature (str): The signature of the transaction, which
+                must match the header_signature field of the Transaction
+                object which was part of the added Batch.
+            status (bool): True if transaction applied successfully or False
+                if the transaction failed and was not applied.
+            context_id (str): If status is True, contains the context_id
+                associated with the state changes made by the transaction.
+                If status is False, this should be set to None.
+
+        Raises:
+            ValueError: Thrown if transaction_signature does not match a
+            transaction.
         """
         raise NotImplementedError()
 
@@ -70,24 +85,6 @@ class Scheduler(object, metaclass=ABCMeta):
             can be processed.  A value of None does not necessarily indicate
             there are no more transactions, only that there are no
             transactions which have had their dependencies met.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def mark_as_applied(self, transaction_signature):
-        """Instruct the scheduler that the transaction has been applied.
-
-        The scheduler must know when transactions have been applied so that it
-        can determine which transactions will become eligible for processing.
-
-        Args:
-            transaction_signature: The signature of the transaction, which
-                must match the signature field of the Transaction object
-                which was part of the added Batch.
-
-        Raises:
-            ValueError: Thrown if transaction_signature does not match a
-            transaction.
         """
         raise NotImplementedError()
 
@@ -123,6 +120,27 @@ class Scheduler(object, metaclass=ABCMeta):
 
         Returns:
              An Transaction iterator.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_transaction(self, index):
+        """Returns the scheduled Transaction at index.
+
+        This is used by SchedulerIterator to return a consistent order of
+        Transactions.  Once the Scheduler has picked
+
+        Returns:
+            Returns the Transaction at index.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def count(self):
+        """The count of transactions which have been scheduled.
+
+        Returns:
+            An integer.
         """
         raise NotImplementedError()
 

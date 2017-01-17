@@ -106,7 +106,7 @@ class IntegerKeyCommunication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            return json2dict(content)
+            return json2dict(content.decode())
         elif encoding == 'application/cbor':
             return cbor2dict(content)
         else:

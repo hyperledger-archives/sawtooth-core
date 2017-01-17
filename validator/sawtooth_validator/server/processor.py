@@ -13,11 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
+
 from sawtooth_validator.protobuf.processor_pb2 import TpRegisterResponse
 from sawtooth_validator.protobuf.processor_pb2 \
     import TpRegisterRequest
 
 from sawtooth_validator.protobuf.validator_pb2 import Message
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ProcessorRegisterHandler(object):
@@ -28,12 +32,13 @@ class ProcessorRegisterHandler(object):
         request = TpRegisterRequest()
         request.ParseFromString(message.content)
 
-        print("transaction processor {} {} {} {} {}".format(
+        LOGGER.info(
+            'registered transaction processor: family=%s, version=%s, '
+            'encoding=%s, namepsaces=%s',
             request.family,
             request.version,
             request.encoding,
-            request.namespaces,
-            message.sender))
+            request.namespaces)
 
         self._service.register_transaction_processor(
             message.sender,

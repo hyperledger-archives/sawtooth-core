@@ -80,7 +80,7 @@ class Dispatcher(Thread):
                     self.on_block_requested(block_id)
 
                 elif request.content_type == "Test":
-                    LOGGER.info("Dispatch Handle Test")
+                    LOGGER.debug("Dispatch Handle Test")
 
             except queue.Empty:
                 with self.condition:

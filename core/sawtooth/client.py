@@ -59,7 +59,7 @@ def _sign_message_with_transaction(transaction, message_type, key):
     sig = signing.sign(_dict2cbor(transaction), key)
     transaction['Signature'] = sig
 
-    txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
+    txnid = hashlib.sha256(transaction['Signature'].encode()).hexdigest()[:16]
     message = {
         'Transaction': transaction,
         '__TYPE__': message_type,
@@ -241,7 +241,7 @@ class _Communication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            return _json2dict(content)
+            return _json2dict(content.decode())
         elif encoding == 'application/cbor':
             return _cbor2dict(content)
         else:
@@ -389,12 +389,14 @@ class SawtoothClient(object):
 
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            self._signing_key = signing.decode_privkey(keystring, 'wif')
+            self._signing_key = signing.encode_privkey(
+                signing.decode_privkey(keystring, 'wif'), 'hex')
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                self._signing_key = signing.decode_privkey(
-                    open(keyfile, "r").read().strip(), 'wif')
+                self._signing_key = signing.encode_privkey(
+                    signing.decode_privkey(
+                        open(keyfile, "r").read().strip(), 'wif'), 'hex')
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))
