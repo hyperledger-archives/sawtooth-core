@@ -32,17 +32,25 @@ def parse_args(args):
 
     return parser.parse_args(args)
 
+async def logging_middleware(app, handler):
+    async def logging_handler(request):
+        print('Handling {} request for {}'.format(
+            request.method,
+            request.rel_url
+        ))
+        return await handler(request)
+    return logging_handler
 
 def start_rest_api(host, port, stream_url):
     handlers = Routes(stream_url)
 
-    app = web.Application()
+    app = web.Application(middlewares=[logging_middleware])
     # Add routes to the web app
     app.router.add_get('/', handlers.hello)
     app.router.add_post('/batches', handlers.batches)
     app.router.add_get('/state', handlers.state_current)
-    app.router.add_get('/state/{merkle_root}/{address}', handlers.state_get)
     app.router.add_get('/state/{merkle_root}', handlers.state_list)
+    app.router.add_get('/state/{merkle_root}/{address}', handlers.state_get)
 
 
 

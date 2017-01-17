@@ -16,6 +16,7 @@ import asyncio
 from aiohttp import web
 from aiohttp.helpers import parse_mimetype
 from google.protobuf.json_format import MessageToJson
+from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.client.future import FutureTimeoutError
 from sawtooth_sdk.client.stream import Stream
@@ -28,29 +29,34 @@ class Routes(object):
     def __init__(self, stream_url):
         self._stream = Stream(stream_url)
 
-    def _try_future_content(self, future):
+    def _try_validator_request(self, message_type, content):
+        """
+        Sends a protobuf message to the validator
+        Handles a possible timeout if validator is unresponsive
+        """
         timeout = 5
         timeout_msg = 'Could not reach validator, validator timed out'
 
+        if isinstance(content, BaseMessage):
+            content = content.SerializeToString()
+
+        future = self._stream.send(message_type=message_type, content=content)
+
         try:
-            content = future.result(timeout=timeout).content
+            response = future.result(timeout=timeout)
         except FutureTimeoutError as e:
             print(str(e))
             raise web.HTTPGatewayTimeout(reason=timeout_msg)
 
-        return content
+        return response.content
 
-    def _parsed_response(self, headers, response, proto):
+    def _try_response_parse(self, proto, response):
         """
-        Parses a protobuf response from the validator,
-        and formats it as a JSON HTTP response.
-        Protos must have an OK and NO RESOURCE enum status.
+        Parses a protobuf response from the validator
+        Handles error statuses from validator as HTTP errors
         """
-        notfound_msg = 'There is no resource at that address or prefix'
         unknown_msg = 'An unknown error occured with your request'
-        media_msg = 'The requested media type is unsupported'
-        mime_type = None
-        sub_type = None
+        notfound_msg = 'There is no resource at that root, address or prefix'
 
         parsed = proto()
         parsed.ParseFromString(response)
@@ -63,6 +69,16 @@ class Routes(object):
         except AttributeError:
             pass
 
+        return parsed
+
+    def _try_client_response(self, headers, parsed):
+        """
+        Sends a response back to the client based on Accept header
+        Defaults to JSON
+        """
+        media_msg = 'The requested media type is unsupported'
+        mime_type = None
+        sub_type = None
 
         try:
             accept_types = headers['Accept']
@@ -85,6 +101,10 @@ class Routes(object):
 
         raise web.HTTPUnsupportedMediaType(reason=media_msg)
 
+    def _generic_get(self, web_request, msg_type, msg_content, resp_proto):
+        response = self._try_validator_request(msg_type, msg_content)
+        parsed = self._try_response_parse(resp_proto, response)
+        return self._try_client_response(web_request.headers, parsed)
 
     @asyncio.coroutine
     def hello(self, request):
@@ -94,8 +114,7 @@ class Routes(object):
     @asyncio.coroutine
     def batches(self, request):
         """
-        Takes a Protobuf binary from an HTTP Post, and sends it
-        to the Validator
+        Takes protobuf binary from HTTP POST, and sends it to the validator
         """
         mime_type = 'application/octet-stream'
         type_msg = 'Expected an octet-stream encoded Protobuf binary'
@@ -105,35 +124,23 @@ class Routes(object):
             return type_error
 
         payload = yield from request.read()
-
-        if type(payload) is not bytes:
-            return type_error
-
-        future = self._stream.send(
-            message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            content=payload
+        validator_response = self._try_validator_request(
+            Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            payload
         )
 
-        validator_response = self._try_future_content(future)
-
-        # TODO: Update decode to serializing protobuf once merged
-        return web.json_response(validator_response.decode('utf-8'))
+        # TODO: Update to parsing protobuf once validator updated
+        parsed_response = validator_response.decode('utf-8')
+        return web.json_response(parsed_response)
 
     @asyncio.coroutine
     def state_current(self, request):
         #CLIENT_STATE_CURRENT_REQUEST
-        client_request = client.ClientStateCurrentRequest()
-        future = self._stream.send(
-            message_type=Message.CLIENT_STATE_CURRENT_REQUEST,
-            content=client_request.SerializeToString()
-        )
-
-        validator_response = self._try_future_content(future)
-
-        return self._parsed_response(
-            request.headers,
-            validator_response,
-            client.ClientStateCurrentResponse
+        return self._generic_get(
+            web_request=request,
+            msg_type=Message.CLIENT_STATE_CURRENT_REQUEST,
+            msg_content=client.ClientStateCurrentRequest(),
+            resp_proto=client.ClientStateCurrentResponse,
         )
 
     @asyncio.coroutine
@@ -141,20 +148,13 @@ class Routes(object):
         #CLIENT_STATE_GET_REQUEST
         root = request.match_info.get("merkle_root", "")
         addr = request.match_info.get("address", "")
-
         client_request = client.ClientStateGetRequest(merkle_root=root,
                                                       address=addr)
-        future = self._stream.send(
-            message_type=Message.CLIENT_STATE_GET_REQUEST,
-            content=client_request.SerializeToString()
-        )
-
-        validator_response = self._try_future_content(future)
-
-        return self._parsed_response(
-            request.headers,
-            validator_response,
-            client.ClientStateGetResponse
+        return self._generic_get(
+            web_request=request,
+            msg_type=Message.CLIENT_STATE_GET_REQUEST,
+            msg_content=client_request,
+            resp_proto=client.ClientStateGetResponse,
         )
 
     @asyncio.coroutine
@@ -164,18 +164,11 @@ class Routes(object):
         params = request.rel_url.query
         # if no prefix is defined return all
         prefix = params.get("prefix", "")
-
         client_request = client.ClientStateListRequest(merkle_root=root,
                                                        prefix=prefix)
-        future = self._stream.send(
-            message_type=Message.CLIENT_STATE_LIST_REQUEST,
-            content=client_request.SerializeToString()
-        )
-
-        validator_response = self._try_future_content(future)
-
-        return self._parsed_response(
-            request.headers,
-            validator_response,
-            client.ClientStateListResponse
+        return self._generic_get(
+            web_request=request,
+            msg_type=Message.CLIENT_STATE_LIST_REQUEST,
+            msg_content=client_request,
+            resp_proto=client.ClientStateListResponse,
         )
