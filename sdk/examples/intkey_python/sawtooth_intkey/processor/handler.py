@@ -48,7 +48,6 @@ class IntkeyTransactionHandler(object):
 
     def apply(self, transaction, state):
         content = cbor.loads(transaction.payload)
-        print(repr(content))
 
         (verb, name, value) = \
             (content['Verb'], content['Name'], content['Value'])
@@ -66,10 +65,23 @@ class IntkeyTransactionHandler(object):
         address = self._namespace_prefix + hashlib.sha512(
             name.encode()).hexdigest()
 
+        LOGGER.info(
+            'processing: Verb=%s Name=%s Value=%s address=%s',
+            verb,
+            name,
+            value,
+            address)
+
         entries_list = state.get([address])
         state_value_rep = entries_list[0].data \
             if len(entries_list) != 0 else None
-        LOGGER.info("STATE VALUE %s", state_value_rep)
+
+        if state_value_rep is not None:
+            LOGGER.debug(
+                'address received: %s=%s',
+                address,
+                state_value_rep)
+
         if verb in ['inc', 'dec'] and (state_value_rep is None):
             raise InvalidTransaction("inc/dec require existing value")
 
