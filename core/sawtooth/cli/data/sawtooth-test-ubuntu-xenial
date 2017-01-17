@@ -1,0 +1,18 @@
+FROM ubuntu:xenial
+
+RUN apt-get -y update && apt-get install -y -q \
+  python3 \
+  python3-zmq \
+  python3-cbor \
+  python3-nose2 \
+  python3-pip \
+  inetutils-ping
+  #nodejs
+  #openjdk-8-jdk maven \
+
+RUN pip3 install grpcio-tools bitcoin colorlog
+
+VOLUME /project/sawtooth-core
+
+ENV PATH="/project/sawtooth-core/bin:$PATH"
+ENV PYTHONPATH="/project/sawtooth-core/sdk/python:/project/sawtooth-core/integration"
