@@ -4,6 +4,19 @@
 
   <h1>Sawtooth Lake documentation</h1>
 
+  <p>
+  <select name="version_switch" id="version_switch">
+  <option value="http://intelledger.github.io/0.7/">Version 0.7</option>
+  <option selected value="http://intelledger.github.io/0.8/">Version 0.8</option>
+  </select>
+  <script type="text/javascript">
+   var urlmenu = document.getElementById( 'version_switch' );
+   urlmenu.onchange = function() {
+        window.location.replace( this.options[ this.selectedIndex ].value );
+   };
+  </script>
+  </p>
+  
   <p class="biglink"><a class="biglink" href="{{ pathto("introduction") }}">{% trans %}Introduction{% endtrans %}</a><br/>
     <span class="linkdescr">{% trans %}learn about Sawtooth Lake{% endtrans %}</span></p>
 
