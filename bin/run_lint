@@ -171,6 +171,10 @@ export PYTHONPATH
 lint pylint3 sdk/python "$SINCE" .pylintrc-strict 1 || retval=1
 lint pylint3 sdk/examples/intkey_python "$SINCE" .pylintrc-strict 1 || retval=1
 
+PYTHONPATH=$top_dir/core_transactions/config
+export PYTHONPATH
+lint pylint3 core_transactions/config "$SINCE" .pylintrc-strict 1 || retval=1
+
 PYTHONPATH=$top_dir/core
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7

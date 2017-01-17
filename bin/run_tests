@@ -51,6 +51,17 @@ test_sdk_examples() {
     cd ../../../../
 }
 
+test_tp_config() {
+    config_dir=$top_dir/core_transactions/config
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
+    PYTHONPATH=$PYTHONPATH:$config_dir
+    PYTHONPATH=$PYTHONPATH:$config_dir/tests
+    export PYTHONPATH
+    echo $PYTHONPATH
+    nose2-3 -s $config_dir/tests sawtooth_config_test.ts_config.TestSuiteConfig
+}
+
 test_signing() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/signing
@@ -119,6 +130,7 @@ done
 case $MODULE in
     all)
         test_sdk_examples
+#        test_tp_config
         test_core
         test_signing
         test_validator
@@ -135,4 +147,8 @@ case $MODULE in
     sdk_examples)
         test_sdk_examples
         ;;
+    tp_config)
+        test_tp_config
+        ;;
+
 esac

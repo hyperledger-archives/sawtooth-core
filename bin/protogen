@@ -56,3 +56,9 @@ validator_pkg=sawtooth_validator/protobuf
 
 run_protoc $sdk_dir $sdk_pkg
 run_protoc $validator_dir $validator_pkg
+
+# Config txn family protos
+config_dir=$top_dir/core_transactions/config
+protos_dir=$config_dir/protos
+config_pkg=sawtooth_config/protobuf
+run_protoc $config_dir $config_pkg
