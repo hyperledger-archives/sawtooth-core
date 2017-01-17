@@ -139,7 +139,7 @@ class ValidatorManager(object):
             fp.write('#!/usr/bin/env bash\n')
             fp.write(' '.join(args))
             fp.write('\n')
-        os.chmod(cmd_file, 0744)
+        os.chmod(cmd_file, 0o744)
 
         # redirect stdout and stderror
         self._stdout_file = os.path.join(self._data_dir,
