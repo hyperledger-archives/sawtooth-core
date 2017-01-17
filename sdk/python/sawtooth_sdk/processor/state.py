@@ -34,13 +34,24 @@ class State(object):
         self._stream = stream
         self._context_id = context_id
 
-    def get(self, addresses):
+    def get(self, addresses, timeout=None):
+        """
+        Get the value at a given list of address in the validator's merkle
+        state.
+        Args:
+            addressses (list): the addresss to fetch
+            timeout: optional timeout, in seconds
+        Returns:
+            results ((map): a map of address to StateEntry values, for the
+            addresses that have a value
+        """
+
         request = state_context_pb2.TpStateGetRequest(
             context_id=self._context_id,
             addresses=addresses)
         response_string = self._stream.send(
             Message.TP_STATE_GET_REQUEST,
-            request.SerializeToString()).result().content
+            request.SerializeToString()).result(timeout).content
         response = state_context_pb2.TpStateGetResponse()
         response.ParseFromString(response_string)
         entries = response.entries if response is not None else []
@@ -48,11 +59,12 @@ class State(object):
                    for e in entries if len(e.data) != 0]
         return results
 
-    def set(self, entries):
+    def set(self, entries, timeout=None):
         """
         set an address to a value in the validator's merkle state
         Args:
             entries (list): list of StateEntry
+            timeout: optional timeout, in seconds
 
         Returns:
             addresses (list): a list of addresses that were set
@@ -63,9 +75,9 @@ class State(object):
             data=e.data) for e in entries]
         request = state_context_pb2.TpStateSetRequest(
             entries=state_entries,
-            context_id=self._context_id)
+            context_id=self._context_id).SerializeToString()
         response = state_context_pb2.TpStateSetResponse()
         response.ParseFromString(
             self._stream.send(Message.TP_STATE_SET_REQUEST,
-                              request.SerializeToString()).result().content)
+                              request).result(timeout).content)
         return response.addresses
