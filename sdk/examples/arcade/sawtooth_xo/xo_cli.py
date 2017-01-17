@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,21 +16,20 @@
 from __future__ import print_function
 
 import argparse
-import ConfigParser
+import configparser
 import getpass
 import logging
 import os
 import traceback
 import sys
+import shutil
 
 from colorlog import ColoredFormatter
 
-from sawtooth_signing import pbct_nativerecover as signing
-from sawtooth.exceptions import ClientException
-from sawtooth.exceptions import InvalidTransactionError
+import sawtooth_signing.pbct_nativerecover as signing
 
-from sawtooth_xo.xo_client import XoClient
-from sawtooth_xo.xo_exceptions import XoException
+from arcade.sawtooth_xo.xo_client import XoClient
+from arcade.sawtooth_xo.xo_exceptions import XoException
 
 
 def create_console_handler(verbose_level):
@@ -98,6 +95,10 @@ def add_init_parser(subparsers, parent_parser):
         help='the name of the player')
 
 
+def add_reset_parser(subparsers, parent_parser):
+    subparsers.add_parser('reset', parents=[parent_parser])
+
+
 def add_list_parser(subparsers, parent_parser):
     subparsers.add_parser('list', parents=[parent_parser])
 
@@ -124,18 +125,6 @@ def add_take_parser(subparsers, parent_parser):
         type=int,
         help='the square number to take')
 
-    parser.add_argument(
-        '--disable-client-validation',
-        action='store_true',
-        default=False,
-        help='disable client validation')
-
-    parser.add_argument(
-        '--wait',
-        action='store_true',
-        default=False,
-        help='wait for this commit before exiting')
-
 
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
@@ -158,26 +147,12 @@ def create_parser(prog_name):
 
     add_create_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
+    add_reset_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
     add_show_parser(subparsers, parent_parser)
     add_take_parser(subparsers, parent_parser)
 
     return parser
-
-
-def do_create(args, config):
-    name = args.name
-
-    url = config.get('DEFAULT', 'url')
-    key_file = config.get('DEFAULT', 'key_file')
-
-    client = XoClient(base_url=url,
-                      keyfile=key_file,
-                      disable_client_validation=args.disable_client_validation)
-    client.create(name=name)
-
-    if args.wait:
-        client.wait_for_commit()
 
 
 def do_init(args, config):
@@ -215,8 +190,16 @@ def do_init(args, config):
                 print("writing file: {}".format(addr_filename))
                 addr_fd.write(addr)
                 addr_fd.write("\n")
-        except IOError, ioe:
+        except IOError as ioe:
             raise XoException("IOError: {}".format(str(ioe)))
+
+
+def do_reset(args, config):
+    home = os.path.expanduser("~")
+    config_dir = os.path.join(home, ".sawtooth")
+
+    if os.path.exists(config_dir):
+        shutil.rmtree(home, ".sawtooth")
 
 
 def do_list(args, config):
@@ -224,22 +207,19 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    state = client.get_all_store_objects()
+    game_list = client.list()
 
-    fmt = "%-15s %-15.15s %-15.15s %-9s %s"
-    print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
-    for name in state:
-        if 'Player1' in state[name]:
-            player1 = state[name]['Player1']
-        else:
-            player1 = ''
-        if 'Player2' in state[name]:
-            player2 = state[name]['Player2']
-        else:
-            player2 = ''
-        board = state[name]['Board']
-        game_state = state[name]['State']
-        print(fmt % (name, player1, player2, board, game_state))
+    if game_list is not None:
+        fmt = "%-15s %-15.15s %-15.15s %-9s %s"
+        print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
+        for game_data in game_list:
+
+            board, game_state, player1, player2, name = \
+                game_data.decode().split(",")
+
+            print(fmt % (name, player1[:6], player2[:6], board, game_state))
+    else:
+        raise XoException("Could not retrieve game listing.")
 
 
 def do_show(args, config):
@@ -249,33 +229,41 @@ def do_show(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    state = client.get_all_store_objects()
+    game = client.show(name).decode()
 
-    if name not in state:
-        raise XoException('no such game: {}'.format(name))
+    if game is not None:
 
-    game = state[name]
+        board_str, game_state, player1, player2, name = \
+            game.split(",")
 
-    player1 = ''
-    player2 = ''
-    if 'Player1' in game:
-        player1 = game['Player1']
-    if 'Player2' in game:
-        player2 = game['Player2']
-    board = list(game['Board'].replace('-', ' '))
-    game_state = game['State']
+        board = list(board_str.replace("-", " "))
 
-    print("GAME:     : {}".format(name))
-    print("PLAYER 1  : {}".format(player1))
-    print("PLAYER 2  : {}".format(player2))
-    print("STATE     : {}".format(game_state))
-    print("")
-    print("  {} | {} | {}".format(board[0], board[1], board[2]))
-    print(" ---|---|---")
-    print("  {} | {} | {}".format(board[3], board[4], board[5]))
-    print(" ---|---|---")
-    print("  {} | {} | {}".format(board[6], board[7], board[8]))
-    print("")
+        print("GAME:     : {}".format(name))
+        print("PLAYER 1  : {}".format(player1[:6]))
+        print("PLAYER 2  : {}".format(player2[:6]))
+        print("STATE     : {}".format(game_state))
+        print("")
+        print("  {} | {} | {}".format(board[0], board[1], board[2]))
+        print(" ---|---|---")
+        print("  {} | {} | {}".format(board[3], board[4], board[5]))
+        print(" ---|---|---")
+        print("  {} | {} | {}".format(board[6], board[7], board[8]))
+        print("")
+
+    else:
+        raise XoException("Game not found: {}".format(name))
+
+
+def do_create(args, config):
+    name = args.name
+
+    url = config.get('DEFAULT', 'url')
+    key_file = config.get('DEFAULT', 'key_file')
+
+    client = XoClient(base_url=url,
+                      keyfile=key_file)
+    response = client.create(name)
+    print("Response: {}".format(response))
 
 
 def do_take(args, config):
@@ -286,12 +274,9 @@ def do_take(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url,
-                      keyfile=key_file,
-                      disable_client_validation=args.disable_client_validation)
-    client.take(name=name, space=space)
-
-    if args.wait:
-        client.wait_for_commit()
+                      keyfile=key_file)
+    response = client.take(name, space)
+    print("Response: {}".format(response))
 
 
 def load_config():
@@ -301,8 +286,8 @@ def load_config():
     config_file = os.path.join(home, ".sawtooth", "xo.cfg")
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
-    config = ConfigParser.SafeConfigParser()
-    config.set('DEFAULT', 'url', 'http://localhost:8800')
+    config = configparser.ConfigParser()
+    config.set('DEFAULT', 'url', '127.0.0.1:8080')
     config.set('DEFAULT', 'key_dir', key_dir)
     config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.wif')
     config.set('DEFAULT', 'username', real_user)
@@ -344,6 +329,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_create(args, config)
     elif args.command == 'init':
         do_init(args, config)
+    elif args.command == 'reset':
+        do_reset(args, config)
     elif args.command == 'list':
         do_list(args, config)
     elif args.command == 'show':
@@ -357,19 +344,13 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
 def main_wrapper():
     try:
         main()
-    except XoException as e:
-        print("Error: {}".format(e), file=sys.stderr)
-        sys.exit(1)
-    except InvalidTransactionError as e:
-        print("Error: {}".format(e), file=sys.stderr)
-        sys.exit(1)
-    except ClientException as e:
-        print("Error: {}".format(e), file=sys.stderr)
+    except XoException as err:
+        print("Error: {}".format(err), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         pass
-    except SystemExit as e:
-        raise e
-    except:
+    except SystemExit as err:
+        raise err
+    except BaseException as err:
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)

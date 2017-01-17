@@ -11,17 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# -----------------------------------------------------------------------------
-
-from sawtooth_xo.txn_family import _register_transaction_types
-
-__all__ = [
-    'txn_family',
-    'xo_cli',
-    'xo_client',
-    'xo_exceptions'
-]
-
-
-def register_transaction_types(journal):
-    _register_transaction_types(journal)
+# ------------------------------------------------------------------------------

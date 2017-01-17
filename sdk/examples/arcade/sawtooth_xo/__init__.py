@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,21 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-import os
-import sys
-
-# Temporary fix for 2.7 signing path
-TWO_SEVEN = '/project/sawtooth-core/signing/build/lib.linux-x86_64-2.7'
-THREE_FIVE = '/project/sawtooth-core/signing/build/lib.linux-x86_64-3.5'
-
-if TWO_SEVEN in sys.path:
-    idx = sys.path.index(TWO_SEVEN)
-    sys.path[idx] = THREE_FIVE
-
-from arcade.sawtooth_xo.xo_cli import main_wrapper
-
-if __name__ == '__main__':
-
-    main_wrapper()
+__all__ = [
+    'xo_cli',
+    'xo_client',
+    'xo_exceptions'
+]

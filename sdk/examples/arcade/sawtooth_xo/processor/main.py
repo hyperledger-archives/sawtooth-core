@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +13,23 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import os
+import hashlib
 import sys
 
-# Temporary fix for 2.7 signing path
-TWO_SEVEN = '/project/sawtooth-core/signing/build/lib.linux-x86_64-2.7'
-THREE_FIVE = '/project/sawtooth-core/signing/build/lib.linux-x86_64-3.5'
+from sawtooth_sdk.processor.core import TransactionProcessor
 
-if TWO_SEVEN in sys.path:
-    idx = sys.path.index(TWO_SEVEN)
-    sys.path[idx] = THREE_FIVE
+from arcade.sawtooth_xo.processor.handler import XoTransactionHandler
 
-from arcade.sawtooth_xo.xo_cli import main_wrapper
 
-if __name__ == '__main__':
+def main(args=sys.argv[1:]):
+    # The prefix should eventually be looked up from the
+    # validator's namespace registry.
+    xo_prefix = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
 
-    main_wrapper()
+    url = args[0] if len(args) > 0 else "0.0.0.0"
+    processor = TransactionProcessor(url=url + ":40000")
+
+    handler = XoTransactionHandler(namespace_prefix=xo_prefix)
+    processor.add_handler(handler)
+
+    processor.start()
