@@ -152,15 +152,12 @@ class ValidatorService(object):
         self._handlers[message_type] = handler
 
     def send_txn(self, header, message):
-        print(repr(header))
         family_name = header.family_name
         family_version = header.family_version
         encoding = header.payload_encoding
         processor_type = processor_iterator.ProcessorType(family_name,
                                                           family_version,
                                                           encoding)
-        print(repr(processor_type))
-        print(repr(self._processors))
         if processor_type not in self._processors:
             raise Exception("internal error, no processor available")
         processor = self._processors[processor_type]
