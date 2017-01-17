@@ -20,13 +20,11 @@ from sawtooth_test_suite import SawtoothTestSuite
 
 from integration.test_integration import TestIntegration
 from integration.test_convergence import TestConvergence
-from integration.test_validator_restart_restore \
-    import TestValidatorShutdownRestartRestore
 from integration.test_validator_restart import TestValidatorShutdownRestart
-from integration.test_validator_shutdown_sigkill_restart \
-    import TestValidatorShutdownSigKillRestart
 from integration.test_sawtooth_stats import TestSawtoothStats
+
 from integration.test_poet1_int_load import TestPoet1IntLoad
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -52,11 +50,11 @@ class Poet1NightlyTestSuite(SawtoothTestSuite):
                 'test_validator_shutdown_restart_ext',
                 urls, self._node_ctrl, self._nodes))
             suite.addTest(TestConvergence('test_bootstrap', urls))
-            suite.addTest(TestValidatorShutdownSigKillRestart(
+            suite.addTest(TestValidatorShutdownRestart(
                 'test_validator_shutdown_sigkill_restart_ext',
                 urls, self._node_ctrl, self._nodes))
             suite.addTest(TestConvergence('test_bootstrap', urls))
-            suite.addTest(TestValidatorShutdownRestartRestore(
+            suite.addTest(TestValidatorShutdownRestart(
                 'test_validator_shutdown_restart_restore_ext',
                 urls, self._node_ctrl, self._nodes))
             runner = unittest.TextTestRunner(verbosity=2)
