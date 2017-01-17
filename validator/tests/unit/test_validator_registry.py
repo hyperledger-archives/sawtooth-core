@@ -40,7 +40,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
             hashlib.sha256(
                 signing.encode_pubkey(
                     signing.generate_pubkey(key),
-                    'hex')).hexdigest()
+                    'hex').encode()).hexdigest()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
         signup_info = \
@@ -68,7 +68,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
             hashlib.sha256(
                 signing.encode_pubkey(
                     signing.generate_pubkey(key),
-                    'hex')).hexdigest()
+                    'hex').encode()).hexdigest()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'
         signup_info = \
@@ -100,7 +100,7 @@ class TestValidatorRegistryTransaction(unittest.TestCase):
             hashlib.sha256(
                 signing.encode_pubkey(
                     signing.generate_pubkey(key),
-                    'hex')).hexdigest()
+                    'hex').encode()).hexdigest()
         key2 = signed_object.generate_signing_key()
         validator_id = signed_object.generate_identifier(key)
         name = 'DasValidator'

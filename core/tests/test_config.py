@@ -61,7 +61,7 @@ class TestJsonishConfig(unittest.TestCase):
         try:
             with tempfile.NamedTemporaryFile(delete=False) as f:
                 filename = f.name
-                f.write('{ "TestVar": "test_value" }\n')
+                f.write(bytes('{ "TestVar": "test_value" }\n'.encode()))
             cfg = JsonFileConfig(filename)
         finally:
             if filename is not None:

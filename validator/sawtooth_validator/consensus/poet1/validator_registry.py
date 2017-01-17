@@ -169,7 +169,7 @@ class Update(object):
                 hashlib.sha256(
                     signing.encode_pubkey(
                         txn.originator_public_key,
-                        'hex')).hexdigest()
+                        'hex').encode()).hexdigest()
 
             self.signup_info.check_valid(
                 originator_public_key_hash=public_key_hash,

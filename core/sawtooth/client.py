@@ -59,7 +59,7 @@ def _sign_message_with_transaction(transaction, message_type, key):
     sig = signing.sign(_dict2cbor(transaction), key)
     transaction['Signature'] = sig
 
-    txnid = hashlib.sha256(transaction['Signature']).hexdigest()[:16]
+    txnid = hashlib.sha256(transaction['Signature'].encode()).hexdigest()[:16]
     message = {
         'Transaction': transaction,
         '__TYPE__': message_type,
@@ -241,7 +241,7 @@ class _Communication(object):
         encoding = headers.get('Content-Type')
 
         if encoding == 'application/json':
-            return _json2dict(content)
+            return _json2dict(content.decode())
         elif encoding == 'application/cbor':
             return _cbor2dict(content)
         else:
