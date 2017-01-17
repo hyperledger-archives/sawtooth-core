@@ -389,12 +389,14 @@ class SawtoothClient(object):
 
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            self._signing_key = signing.decode_privkey(keystring, 'wif')
+            self._signing_key = signing.encode_privkey(
+                signing.decode_privkey(keystring, 'wif'), 'hex')
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                self._signing_key = signing.decode_privkey(
-                    open(keyfile, "r").read().strip(), 'wif')
+                self._signing_key = signing.encode_privkey(
+                    signing.decode_privkey(
+                        open(keyfile, "r").read().strip(), 'wif'), 'hex')
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))

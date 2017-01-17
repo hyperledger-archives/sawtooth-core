@@ -85,7 +85,7 @@ def generate_signing_key(wifstr=None):
         str: a signing key.
     """
     if wifstr:
-        return signing.decode_privkey(wifstr)
+        return signing.encode_privkey(signing.decode_privkey(wifstr), 'hex')
     else:
         return signing.generate_privkey()
 
@@ -260,7 +260,7 @@ class SignedObject(object):
 
         self._originator_id = None
         serialized = self.serialize(signable=True)
-        self.Signature = signing.sign(serialized, signingkey)
+        self.Signature = signing.sign(bytes(serialized), signingkey)
 
         self._recover_verifying_address()
         self._identifier = hashlib.sha256(

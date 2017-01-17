@@ -58,7 +58,8 @@ class _PoetEnclaveSimulator(object):
         '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
 
     _report_private_key = \
-        signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
+        signing.encode_privkey(
+            signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif'), 'hex')
     _report_public_key = signing.generate_pubkey(_report_private_key)
 
     # Minimum duration for PoET 1 simulator is 30 seconds
