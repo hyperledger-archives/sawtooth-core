@@ -384,7 +384,6 @@ class _ServerSendReceiveThread(Thread):
             connection.stop()
 
     def run(self):
-        LOGGER.info("Server thread started...")
         self._event_loop = zmq.asyncio.ZMQEventLoop()
         asyncio.set_event_loop(self._event_loop)
         context = zmq.asyncio.Context()
