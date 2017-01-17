@@ -47,9 +47,6 @@ class BlockWrapper(object):
     def __str__(self):
         return str(self.block_header) + str(self.block)
 
-    def __repr__(self):
-        return str(self.block_header) + str(self.block)
-
     def add_batches(self, batches):
         # need to update block_header and block.batches
         batch_id_list = [batch.header_signature for batch in batches]
