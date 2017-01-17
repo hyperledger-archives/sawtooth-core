@@ -19,6 +19,7 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 
 import "batch.proto";
+import "state_context.proto";
 
 
 // Corresponds to messagetype CLIENT_BATCH_SUBMIT_REQUEST
@@ -32,4 +33,48 @@ message ClientBatchSubmitResponse {
         ERROR = 1;
     }
     Status status = 1;
+}
+
+message ClientStateCurrentRequest {
+}
+
+message ClientStateCurrentResponse {
+    enum Status {
+        OK = 0;
+        ERROR = 1;
+    }
+    Status status = 1;
+    string merkle_root = 2;
+
+}
+
+message ClientStateGetRequest {
+    string merkle_root = 1;
+    string address = 2;
+}
+
+message ClientStateGetResponse {
+    enum Status {
+      OK = 0;
+      NORESOURCE = 1;
+      NONLEAF = 2;
+      ERROR = 3;
+    }
+    Status status = 1;
+    bytes value = 2;
+}
+
+message ClientStateListRequest {
+    string merkle_root = 1;
+    string prefix = 2;
+}
+
+message ClientStateListResponse {
+    enum Status {
+      OK = 0;
+      NORESOURCE = 1;
+      ERROR = 2;
+    }
+    Status status = 1;
+    repeated Entry entries = 2;
 }

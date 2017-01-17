@@ -40,7 +40,13 @@ class MerkleDatabase(object):
             yield item
 
     def _yield_iter(self, path, hash_key):
-        node = self._get_by_hash(hash_key)
+        try:
+            node = self._get_by_addr(path)
+        except KeyError:
+            raise StopIteration()
+
+        if path == INIT_ROOT_KEY:
+            node = self._get_by_hash(hash_key)
 
         if node["v"] is not None:
             yield (path, self._decode(node["v"]))
@@ -247,6 +253,12 @@ class MerkleDatabase(object):
             addresses.append(address)
 
         return addresses
+
+    def leaves(self, prefix):
+        leaves = {}
+        for address, value in self._yield_iter(prefix, self._root_hash):
+            leaves[address] = value
+        return leaves
 
     def close(self):
         self._database.close()
