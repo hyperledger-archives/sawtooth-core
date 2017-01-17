@@ -65,6 +65,9 @@ class MessageFactory:
     def _sha512(self, content):
         return hashlib.sha512(content).hexdigest()
 
+    def _sha256(self, content):
+        return hashlib.sha256(content).hexdigest()
+
     def get_public_key(self):
         return self._public
 

@@ -29,10 +29,12 @@ from sawtooth_processor_test.message_types \
 
 
 class UnexpectedMessageException(Exception):
-    def __init__(self, expected, received):
-        super().__init__("Expected {}, Got {}".format(
+    def __init__(self, message_type, expected, received):
+        super().__init__("{}: Expected {}, Got {}".format(
+            to_protobuf_class(message_type).__name__,
             expected, received
         ))
+        self.message_type_name = to_protobuf_class(message_type).__name__
         self.expected = expected
         self.received = received
 
@@ -202,7 +204,9 @@ class TransactionProcessorTester:
 
         if not self._compare(received_content, expected_content):
             raise UnexpectedMessageException(
-                expected_content, received_content
+                message.message_type,
+                expected_content,
+                received_content
             )
 
         return message
@@ -226,7 +230,10 @@ class TransactionProcessorTester:
             if self._compare(exp_con, received_content):
                 return message, expected_content_list.index(exp_con)
 
-        raise UnexpectedMessageException(exp_con, received_content)
+        raise UnexpectedMessageException(
+            message.message_type,
+            exp_con,
+            received_content)
 
     def respond(self, message_content, message):
         """
