@@ -128,8 +128,12 @@ class BlockPublisher(object):
         :return:
         """
         with self._lock:
-            LOGGER.info("Chain updated, new head: %s",
-                        chain_head)
+            LOGGER.info(
+                'Chain updated, new head: num=%s id=%s state=%s prev=%s',
+                chain_head.block_num,
+                chain_head.header_signature,
+                chain_head.state_root_hash,
+                chain_head.previous_block_id)
             self._chain_head = chain_head
             if self._candidate_block is not None and \
                     chain_head is not None and \
@@ -412,7 +416,7 @@ class ChainController(object):
                 self._block_store[self._block_store["chain_head_id"]]
 
             LOGGER.info("Chain controller initialized with chain head: %s",
-                        self._chain_head)
+                        self._chain_head.block.header_signature)
         except Exception as e:
             LOGGER.error("Invalid block store. Head of the block chain cannot "
                          "be determined: %s", e)
