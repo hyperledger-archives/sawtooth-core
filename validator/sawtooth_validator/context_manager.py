@@ -184,7 +184,7 @@ class ContextManager(object):
 
         self._address_queue.put_nowait(
             (context.session_id, state_hash, inputs))
-        LOGGER.info("CREATE_CONTEXT: %s", context.session_id)
+        LOGGER.debug("CREATE_CONTEXT: %s", context.session_id)
         return context.session_id
 
     def commit_context(self, context_id_list, virtual):
