@@ -28,8 +28,6 @@ from sawtooth_protobuf.validator_pb2 import Message
 
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 class TransactionProcessor(object):

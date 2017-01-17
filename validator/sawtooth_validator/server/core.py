@@ -40,8 +40,6 @@ from sawtooth_validator.server import processor_iterator
 from sawtooth_validator.server.client import ClientHandler
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 class _SendReceiveThread(Thread):

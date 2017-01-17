@@ -25,8 +25,6 @@ from sawtooth_validator.merkle import MerkleDatabase
 
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 class AuthorizationException(Exception):

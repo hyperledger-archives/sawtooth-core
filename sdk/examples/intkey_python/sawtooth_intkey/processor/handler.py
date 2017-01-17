@@ -24,8 +24,6 @@ from sawtooth_sdk.processor.exceptions import InternalError
 
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 class IntkeyTransactionHandler(object):

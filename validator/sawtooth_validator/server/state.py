@@ -18,8 +18,6 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.validator_pb2 import Message
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 class GetHandler(object):
