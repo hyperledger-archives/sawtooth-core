@@ -18,11 +18,6 @@ from sawtooth_protobuf.validator_pb2 import Message
 from sawtooth_protobuf import state_context_pb2
 
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
-
-
 class StateEntry(object):
     def __init__(self, address, data):
         self.address = address
@@ -49,7 +44,6 @@ class State(object):
         response = state_context_pb2.TpStateGetResponse()
         response.ParseFromString(response_string)
         entries = response.entries if response is not None else []
-        LOGGER.info("Entries %s", entries)
         results = [StateEntry(address=e.address, data=e.data)
                    for e in entries if len(e.data) != 0]
         return results

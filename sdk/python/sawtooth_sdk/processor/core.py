@@ -54,13 +54,15 @@ class TransactionProcessor(object):
                     futures.append(future)
 
         for future in futures:
-            LOGGER.info("future result: %s", repr(future.result))
+            LOGGER.debug("future result: %s", repr(future.result))
 
         while True:
             if self._stop:
                 break
             msg = self._stream.receive()
-            LOGGER.info("received %s", msg.message_type)
+            LOGGER.debug(
+                'received message of type: %s',
+                Message.MessageType.Name(msg.message_type))
 
             request = TpProcessRequest()
             request.ParseFromString(msg.content)
