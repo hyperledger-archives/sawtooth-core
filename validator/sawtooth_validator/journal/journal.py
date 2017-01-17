@@ -28,8 +28,9 @@ from sawtooth_validator.server.messages import BlockRequestMessage, \
     BlockMessage
 from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
 
-from sawtooth_validator.server.block_wrapper import BlockWrapper, BlockState, \
-    BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import BlockState
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 
 LOGGER = logging.getLogger(__name__)
 

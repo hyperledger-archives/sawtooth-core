@@ -26,8 +26,11 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
 
 from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.server.block_wrapper import BlockWrapper, BlockState, \
-    BlockStatus
+
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import BlockState
+from sawtooth_validator.journal.block_wrapper import BlockStatus
+
 from tests.unit3.transaction_executor_mock import TransactionExecutorMock
 
 pp = pprint.PrettyPrinter(indent=4)
