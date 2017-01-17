@@ -17,6 +17,7 @@ import sys
 import argparse
 
 from sawtooth_validator.server.core import Validator
+from sawtooth_validator.server.log import init_console_logging
 
 
 def parse_args(args):
@@ -35,12 +36,19 @@ def parse_args(args):
                         help='A list of peers to attempt to connect to '
                              'in the format tcp://hostname:port',
                         nargs='+')
+    parser.add_argument('-v', '--verbose',
+                        action='count',
+                        default=0,
+                        help='Increase output sent to stderr')
 
     return parser.parse_args(args)
 
 
 def main(args=sys.argv[1:]):
     opts = parse_args(args)
+    verbose_level = opts.verbose
+
+    init_console_logging(verbose_level=verbose_level)
 
     validator = Validator(opts.network_endpoint,
                           opts.component_endpoint,
