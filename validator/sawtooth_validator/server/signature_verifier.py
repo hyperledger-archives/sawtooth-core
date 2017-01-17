@@ -139,7 +139,7 @@ class SignatureVerifier(Thread):
                         self.out_condition.notify_all()
 
                 elif request.content_type == "Test":
-                    LOGGER.info("Verifier Handle Test")
+                    LOGGER.debug("Verifier Handle Test")
                     self.outgoing_msg_queue.put_nowait(request)
                     with self.out_condition:
                         self.out_condition.notify_all()
