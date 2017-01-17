@@ -104,8 +104,6 @@ class BlockPublisher(object):
         :return:
         """
         with self._lock:
-            LOGGER.info("on_batch_received: %s",
-                        batch)
             self._pending_batches.append(batch)
             if self._scheduler:
                 try:
@@ -259,7 +257,6 @@ class BlockValidator(object):
         return self._chain_head
 
     def _validate_block(self, block_state):
-        LOGGER.info(block_state)
         if block_state.status == BlockStatus.Valid:
             return True
         elif block_state.status == BlockStatus.Invalid:
