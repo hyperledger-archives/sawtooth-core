@@ -73,13 +73,16 @@ class _SendReceiveThread(Thread):
             message_list = validator_pb2.MessageList()
             message_list.ParseFromString(msg_bytes)
             for message in message_list.messages:
-                try:
-                    self._futures.set_result(
-                        message.correlation_id,
-                        FutureResult(message_type=message.message_type,
-                                     content=message.content))
-                except FutureCollectionKeyError:
-                    # if we are getting an initial message, not a response
+                if message.correlation_id:
+                    try:
+                        self._futures.set_result(
+                            message.correlation_id,
+                            FutureResult(message_type=message.message_type,
+                                         content=message.content))
+                    except FutureCollectionKeyError:
+                        # if we are getting an initial message, not a response
+                        self._recv_queue.put_nowait(message)
+                else:
                     self._recv_queue.put_nowait(message)
 
     @asyncio.coroutine
@@ -151,8 +154,8 @@ class _SendReceiveThread(Thread):
         self._sock.identity = "{}-{}".format(self.__class__.__name__,
                                              os.getpid()).encode('ascii')
         self._sock.connect('tcp://' + self._url)
-        self._send_queue = asyncio.Queue()
-        self._recv_queue = asyncio.Queue()
+        self._send_queue = asyncio.Queue(loop=self._event_loop)
+        self._recv_queue = asyncio.Queue(loop=self._event_loop)
         with self._condition:
             self._condition.notify_all()
         asyncio.ensure_future(self._send_message(), loop=self._event_loop)
