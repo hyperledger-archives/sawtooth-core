@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y -q \
     python3-pip \
     python3-cbor
 
-RUN pip3 install grpcio-tools
+RUN pip3 install grpcio-tools bitcoin colorlog
 
 RUN mkdir -p /project/sawtooth-core
 
@@ -29,4 +29,4 @@ ARG PROJECT_DIR="/project/sawtooth-core"
 
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ./bin/tp_xo_python_1.0 validator
+ENTRYPOINT ./bin/tp_xo_python validator
