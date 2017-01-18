@@ -53,7 +53,7 @@ class Routes(object):
     def _try_response_parse(self, proto, response):
         """
         Parses a protobuf response from the validator
-        Handles error statuses from validator as HTTP errors
+        Raises common validator error statuses as HTTP errors
         """
         unknown_msg = 'An unknown error occured with your request'
         notfound_msg = 'There is no resource at that root, address or prefix'
@@ -89,7 +89,7 @@ class Routes(object):
         if mime_type == 'application' and sub_type == 'octet-stream':
             return web.Response(
                 content_type='application/octet-stream',
-                body=response
+                body=parsed.SerializeToString()
             )
 
         if ((mime_type == 'application' or mime_type == '*' or mime_type == None)
@@ -144,20 +144,6 @@ class Routes(object):
         )
 
     @asyncio.coroutine
-    def state_get(self, request):
-        #CLIENT_STATE_GET_REQUEST
-        root = request.match_info.get("merkle_root", "")
-        addr = request.match_info.get("address", "")
-        client_request = client.ClientStateGetRequest(merkle_root=root,
-                                                      address=addr)
-        return self._generic_get(
-            web_request=request,
-            msg_type=Message.CLIENT_STATE_GET_REQUEST,
-            msg_content=client_request,
-            resp_proto=client.ClientStateGetResponse,
-        )
-
-    @asyncio.coroutine
     def state_list(self, request):
         #CLIENT_STATE_LIST_REQUEST
         root = request.match_info.get("merkle_root", "")
@@ -171,4 +157,32 @@ class Routes(object):
             msg_type=Message.CLIENT_STATE_LIST_REQUEST,
             msg_content=client_request,
             resp_proto=client.ClientStateListResponse,
+        )
+
+    @asyncio.coroutine
+    def state_get(self, request):
+        #CLIENT_STATE_GET_REQUEST
+        nonleaf_msg = 'Expected a specific leaf address, but received a prefix instead'
+
+        root = request.match_info.get("merkle_root", "")
+        addr = request.match_info.get("address", "")
+        client_request = client.ClientStateGetRequest(merkle_root=root,
+                                                      address=addr)
+
+        validator_response = self._try_validator_request(
+            Message.CLIENT_STATE_GET_REQUEST,
+            client_request
+        )
+
+        parsed_response = self._try_response_parse(
+            client.ClientStateGetResponse,
+            validator_response
+        )
+
+        if parsed_response.status == client.ClientStateGetResponse.NONLEAF:
+            raise web.HTTPBadRequest(reason=nonleaf_msg)
+
+        return self._try_client_response(
+            request.headers,
+            parsed_response
         )
