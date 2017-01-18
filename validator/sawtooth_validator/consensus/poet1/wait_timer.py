@@ -82,8 +82,7 @@ class WaitTimer(object):
         sum_means = 0
         sum_waits = 0
         for certificate in certificates[:cls.certificate_sample_length]:
-            sum_waits += \
-                certificate.duration - cls.poet_enclave.MINIMUM_WAIT_TIME
+            sum_waits += certificate.duration - cls.minimum_wait_time
             sum_means += certificate.local_mean
 
         avg_wait = sum_waits / len(certificates)
@@ -115,9 +114,10 @@ class WaitTimer(object):
         # WaitTimer object
         enclave_timer = \
             cls.poet_enclave.create_wait_timer(
-                validator_address,
-                previous_certificate_id,
-                local_mean)
+                validator_address=validator_address,
+                previous_certificate_id=previous_certificate_id,
+                local_mean=local_mean,
+                minimum_wait_time=cls.minimum_wait_time)
         timer = cls(enclave_timer)
 
         LOGGER.info('wait timer created; %s', timer)

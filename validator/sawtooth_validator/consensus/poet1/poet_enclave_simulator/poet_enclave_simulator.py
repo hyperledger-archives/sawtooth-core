@@ -35,12 +35,7 @@ from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
 
 LOGGER = logging.getLogger(__name__)
 
-MINIMUM_WAIT_TIME = 1.0
 TIMER_TIMEOUT_PERIOD = 3.0
-
-
-class _PoetEnclaveError(Exception):
-    pass
 
 
 class _PoetEnclaveSimulator(object):
@@ -61,9 +56,6 @@ class _PoetEnclaveSimulator(object):
         signing.encode_privkey(
             signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif'), 'hex')
     _report_public_key = signing.generate_pubkey(_report_private_key)
-
-    # Minimum duration for PoET 1 simulator is 30 seconds
-    __MINIMUM_DURATTION = 30.0
 
     # The anti-sybil ID for this particular validator.  This will get set when
     # the enclave is initialized
@@ -324,7 +316,8 @@ class _PoetEnclaveSimulator(object):
     def create_wait_timer(cls,
                           validator_address,
                           previous_certificate_id,
-                          local_mean):
+                          local_mean,
+                          minimum_wait_time):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
@@ -346,8 +339,8 @@ class _PoetEnclaveSimulator(object):
 
             tagd = float(struct.unpack('L', tag[-8:])[0]) / (2**64 - 1)
 
-            # Now compute the duration
-            duration = cls.__MINIMUM_DURATTION - local_mean * math.log(tagd)
+            # Now compute the duration with a minimum wait time guaranteed
+            duration = minimum_wait_time - local_mean * math.log(tagd)
 
             # Create and sign the wait timer
             wait_timer = \
@@ -520,12 +513,16 @@ def verify_signup_info(signup_info,
             most_recent_wait_certificate_id=most_recent_wait_certificate_id)
 
 
-def create_wait_timer(validator_address, previous_certificate_id, local_mean):
+def create_wait_timer(validator_address,
+                      previous_certificate_id,
+                      local_mean,
+                      minimum_wait_time=1.0):
     return \
         _PoetEnclaveSimulator.create_wait_timer(
             validator_address=validator_address,
             previous_certificate_id=previous_certificate_id,
-            local_mean=local_mean)
+            local_mean=local_mean,
+            minimum_wait_time=minimum_wait_time)
 
 
 def deserialize_wait_timer(serialized_timer, signature):
