@@ -139,7 +139,7 @@ done
 case $MODULE in
     all)
         test_sdk_examples
-#        test_tp_config
+        test_tp_config
         test_core
         test_signing
         test_validator
