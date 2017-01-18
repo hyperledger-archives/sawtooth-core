@@ -65,7 +65,7 @@ def version(default):
 
 setup(
     name='sawtooth-bond',
-    version=version('0.7.1'),
+    version=version('0.7.2'),
     description='Sawtooth Bond Transaction Family',
     author='Intel Corporation',
     url='http://www.intel.com',
