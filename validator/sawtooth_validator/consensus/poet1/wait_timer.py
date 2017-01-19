@@ -160,6 +160,7 @@ class WaitTimer(object):
 
         self._enclave_wait_timer = enclave_timer
         self._expires = self.request_time + self.duration + 0.1
+        self._serialized_timer = None
 
     def __str__(self):
         return \
@@ -167,6 +168,14 @@ class WaitTimer(object):
                 self.local_mean,
                 self.duration,
                 self.previous_certificate_id)
+
+    def serialize(self):
+        """Serializes the underlying enclave wait timer
+        """
+        if self._serialized_timer is None:
+            self._serialized_timer = self._enclave_wait_timer.serialize()
+
+        return self._serialized_timer
 
     def has_expired(self, now):
         """Determines whether the timer has expired.

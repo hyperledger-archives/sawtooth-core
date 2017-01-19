@@ -391,8 +391,12 @@ class _PoetEnclaveSimulator(object):
             # Several criteria need to be met before we can create a wait
             # certificate:
             # 1. We have an active timer
-            # 2. The active timer has expired
-            # 3. The active timer has not timed out
+            # 2. The caller's wait timer is the active wait timer.  We are not
+            #    going to rely the objects, being the same, but will compute
+            #    a signature over the object and verify that the signatures
+            #    are the same.
+            # 3. The active timer has expired
+            # 4. The active timer has not timed out
             #
             # Note - we make a concession for the genesis block (i.e., a wait
             # timer for which the previous certificate ID is the Null
@@ -401,7 +405,16 @@ class _PoetEnclaveSimulator(object):
             if cls._active_wait_timer is None:
                 raise \
                     ValueError(
-                        'Enclave active wait timer has not been initialized')
+                        'There is not a current enclave active wait timer')
+
+            if wait_timer is None or \
+                    cls._active_wait_timer.signature != \
+                    signing.sign(
+                        wait_timer.serialize(),
+                        cls._poet_private_key):
+                raise \
+                    ValueError(
+                        'Validator is not using the current wait timer')
 
             is_not_genesis_block = \
                 (cls._active_wait_timer.previous_certificate_id !=

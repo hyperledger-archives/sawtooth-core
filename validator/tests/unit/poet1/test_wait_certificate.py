@@ -31,6 +31,12 @@ class TestWaitCertificate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._originator_public_key_hash = create_random_public_key_hash()
+        cls._original_target_wait_time = WaitTimer.target_wait_time
+        WaitTimer.target_wait_time = 5.0
+
+    @classmethod
+    def tearDownClass(cls):
+        WaitTimer.target_wait_time = cls._original_target_wait_time
 
     def setUp(self):
         # This is a little ham-handed, but we need to ensure that the
@@ -88,10 +94,9 @@ class TestWaitCertificate(unittest.TestCase):
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[wc])
         with self.assertRaises(ValueError):
-            wc = \
-                WaitCertificate.create_wait_certificate(
-                    wait_timer=wt,
-                    block_digest="Reader's Digest")
+            WaitCertificate.create_wait_certificate(
+                wait_timer=wt,
+                block_digest="Reader's Digest")
 
     def test_create_wait_certificate_after_wait_timer_timed_out(self):
         # Need to create signup information
@@ -120,10 +125,82 @@ class TestWaitCertificate(unittest.TestCase):
         time.sleep(WaitTimer.poet_enclave.TIMER_TIMEOUT_PERIOD + 1)
 
         with self.assertRaises(ValueError):
-            wc = \
-                WaitCertificate.create_wait_certificate(
-                    wait_timer=wt,
-                    block_digest="Reader's Digest")
+            WaitCertificate.create_wait_certificate(
+                wait_timer=wt,
+                block_digest="Reader's Digest")
+
+    def test_create_wait_certificate_with_wrong_wait_timer(self):
+        # Need to create signup information
+        SignupInfo.create_signup_info(
+            validator_address='1660 Pennsylvania Avenue NW',
+            originator_public_key_hash=self._originator_public_key_hash,
+            most_recent_wait_certificate_id=NullIdentifier)
+
+        # Create two timers and try to create the wait certificate with the
+        # first one, which should fail as it is not the current wait timer
+        invalid_wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
+        valid_wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
+
+        # Verify that we cannot create a wait certificate with the old wait
+        # timer, but we can with the new one
+        with self.assertRaises(ValueError):
+            WaitCertificate.create_wait_certificate(
+                wait_timer=invalid_wt,
+                block_digest="Reader's Digest")
+
+        WaitCertificate.create_wait_certificate(
+            wait_timer=valid_wt,
+            block_digest="Reader's Digest")
+
+    def test_create_wait_certificate_with_reused_wait_timer(self):
+        # Need to create signup information
+        SignupInfo.create_signup_info(
+            validator_address='1660 Pennsylvania Avenue NW',
+            originator_public_key_hash=self._originator_public_key_hash,
+            most_recent_wait_certificate_id=NullIdentifier)
+
+        # Create a wait certificate for the genesis block so that we can
+        # create another wait certificate that has to play by the rules.
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[])
+        wc = \
+            WaitCertificate.create_wait_certificate(
+                wait_timer=wt,
+                block_digest="Reader's Digest")
+
+        consumed_wt = wt
+
+        # Verify that we cannot use the consumed wait timer to create a wait
+        # certificate either before or after creating a new wait timer
+        with self.assertRaises(ValueError):
+            WaitCertificate.create_wait_certificate(
+                wait_timer=consumed_wt,
+                block_digest="Reader's Digest")
+        wt = \
+            WaitTimer.create_wait_timer(
+                validator_address='1660 Pennsylvania Avenue NW',
+                certificates=[wc])
+        with self.assertRaises(ValueError):
+            WaitCertificate.create_wait_certificate(
+                wait_timer=consumed_wt,
+                block_digest="Reader's Digest")
+
+        # Verify that once the new timer expires, we can create a wait
+        # certificate with it
+        while not wt.has_expired(time.time()):
+            time.sleep(1)
+
+        WaitCertificate.create_wait_certificate(
+            wait_timer=wt,
+            block_digest="Reader's Digest")
 
     def test_create_wait_certificate(self):
         # Need to create signup information and wait timer first
