@@ -95,6 +95,7 @@ class Connection(object):
 
     @asyncio.coroutine
     def send_message(self, message):
+        # pylint: disable=not-an-iterable
         yield from self._stream.send_message(message)
 
     def stop(self):
