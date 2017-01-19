@@ -79,11 +79,11 @@ class DefaultHandler(object):
 
 
 class Connection(object):
-    def __init__(self, identity, url):
+    def __init__(self, identity, url, ingest_message_func):
         LOGGER.debug("Network %s initiating "
                      "a connection to %s", identity, url)
         self._identity = identity
-        self._stream = Stream(url)
+        self._stream = Stream(url, ingest_message_func)
         self.start()
 
     def start(self):
@@ -105,14 +105,14 @@ class Connection(object):
 
 
 class Stream(object):
-    def __init__(self, url):
+    def __init__(self, url, ingest_message_func):
         self._url = url
         self._futures = future.FutureCollection()
         self._handlers = {}
 
         self.add_handler('default', DefaultHandler())
         self.add_handler('gossip/msg',
-                         GossipMessageHandler(self))
+                         GossipMessageHandler(ingest_message_func))
         self.add_handler('gossip/ping',
                          PingHandler(self))
 
@@ -277,7 +277,7 @@ class _ServerSendReceiveThread(Thread):
     A background thread for zmq communication with asyncio.Queues
     To interact with the queues in a threadsafe manner call send_message()
     """
-    def __init__(self, url, handlers, futures):
+    def __init__(self, url, handlers, futures, ingest_message_func):
         super(_ServerSendReceiveThread, self).__init__()
         self._handlers = handlers
         self._futures = futures
@@ -287,6 +287,7 @@ class _ServerSendReceiveThread(Thread):
         self._proc_sock = None
         self._connections = []
         self._broadcast_queue = None
+        self._ingest_message_func = ingest_message_func
         self._condition = Condition()
 
     @asyncio.coroutine
@@ -376,7 +377,9 @@ class _ServerSendReceiveThread(Thread):
 
     def add_connection(self, server_identity, url):
         LOGGER.debug("Adding connection for %s, %s", server_identity, url)
-        self._connections.append(Connection(server_identity, url))
+        self._connections.append(Connection(server_identity,
+                                            url,
+                                            self._ingest_message_func))
 
     def close_connections(self):
         for connection in self._connections:
@@ -450,8 +453,8 @@ class PeerUnregisterHandler(object):
 
 
 class GossipMessageHandler(object):
-    def __init__(self, service):
-        self._service = service
+    def __init__(self, ingest_message_func):
+        self._ingest_message = ingest_message_func
 
     def handle(self, message, peer):
         LOGGER.debug("GossipMessageHandler message: %s", message.sender)
@@ -463,7 +466,7 @@ class GossipMessageHandler(object):
                      message.content,
                      message.sender)
 
-        self._service._put_on_inbound(request)
+        self._ingest_message(request)
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
@@ -507,20 +510,22 @@ class Network(object):
         self._handlers = {}
         self._peered_with_us = {}
         self.inbound_queue = queue.Queue()
-        self.outboud_queue = queue.Queue()
+        self.outbound_queue = queue.Queue()
         self._signature_condition = Condition()
         self._dispatcher_condition = Condition()
         self._futures = future.FutureCollection()
-        self._send_receive_thread = _ServerSendReceiveThread(endpoint,
-                                                             self._handlers,
-                                                             self._futures)
+        self._send_receive_thread = _ServerSendReceiveThread(
+            endpoint,
+            self._handlers,
+            self._futures,
+            self._put_on_inbound)
 
         self._send_receive_thread.daemon = True
 
         self._signature_verifier = SignatureVerifier(
-            self.inbound_queue, self.outboud_queue, self._signature_condition,
+            self.inbound_queue, self.outbound_queue, self._signature_condition,
             self._dispatcher_condition)
-        self._dispatcher.set_incoming_msg_queue(self.outboud_queue)
+        self._dispatcher.set_incoming_msg_queue(self.outbound_queue)
         self._dispatcher.set_condition(self._dispatcher_condition)
         self.add_handler('default', DefaultHandler())
         self.add_handler('gossip/register',
@@ -528,7 +533,7 @@ class Network(object):
         self.add_handler('gossip/unregister',
                          PeerUnregisterHandler(self))
         self.add_handler('gossip/msg',
-                         GossipMessageHandler(self))
+                         GossipMessageHandler(self._put_on_inbound))
         self.start()
         self._dispatcher.start()
 
