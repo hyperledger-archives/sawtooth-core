@@ -11,6 +11,7 @@ function install_requires {
 
 # Packages for testing
 pip install -r /project/sawtooth-core/tools/requirements-testing.txt
+pip3 install pylint
 
 # sawtooth-core/signing
 (cd /project/sawtooth-core/signing/ && python setup.py egg_info)
