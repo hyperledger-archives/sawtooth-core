@@ -23,10 +23,10 @@ import copy
 import random
 import string
 
-from sawtooth_validator.scheduler.serial import SerialScheduler, SchedulerError
+from sawtooth_validator.scheduler.serial import SchedulerError
 from sawtooth_validator.server.messages import BlockRequestMessage, \
     BlockMessage
-from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import BlockState
@@ -35,7 +35,7 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 LOGGER = logging.getLogger(__name__)
 
 
-NullIdentifier = "0000000000000000"
+NULLIDENTIFIER = "0000000000000000"
 
 
 def _generate_id(length=16):
@@ -212,7 +212,7 @@ class BlockPublisher(object):
                 self.on_chain_updated(candidate)
 
     def generate_genesis_block(self):
-        genesis_header = BlockHeader(previous_block_id=NullIdentifier,
+        genesis_header = BlockHeader(previous_block_id=NULLIDENTIFIER,
                                      block_num=0)
 
         # Small hack here not asking consensus if it is happy.
@@ -279,6 +279,7 @@ class BlockValidator(object):
                                         block_state.block.state_root_hash)
                     scheduler.finalize()
                     scheduler.complete(block=True)
+                    state_hash = None
                     for i in range(len(block_state.block.batches)):
                         batch_status = scheduler.batch_status(
                             block_state.block.batches[i].header_signature)
@@ -288,7 +289,8 @@ class BlockValidator(object):
                             state_hash = batch_status.state_hash
                         else:
                             valid = False
-
+                    if block_state.block.state_root_hash != state_hash:
+                        valid = False
             if valid:
                 valid = self._consensus.verify_block(block_state)
 
@@ -313,13 +315,13 @@ class BlockValidator(object):
         while new_block_state.block.block_num > \
                 current_block_state.block.block_num\
                 and new_block_state.block.previous_block_id != \
-                NullIdentifier:
+                NULLIDENTIFIER:
             new_chain.append(new_block_state)
             try:
                 new_block_state = \
                     self._block_store[
                         new_block_state.block.previous_block_id]
-            except KeyError as e:
+            except KeyError:
                 # required block is missing
                 self._request_block_cb(
                     new_block_state.block.previous_block_id, self)
@@ -328,7 +330,7 @@ class BlockValidator(object):
         while current_block_state.block.block_num > \
                 new_block_state.block.block_num \
                 and new_block_state.block.previous_block_id != \
-                NullIdentifier:
+                NULLIDENTIFIER:
             current_chain.append(current_block_state)
             current_block_state = \
                 self._block_store[
@@ -339,9 +341,9 @@ class BlockValidator(object):
         while current_block_state.block.header_signature != \
                 new_block_state.block.header_signature:
             if current_block_state.block.previous_block_id ==  \
-                    NullIdentifier or \
+                    NULLIDENTIFIER or \
                     new_block_state.block.previous_block_id == \
-                    NullIdentifier:
+                    NULLIDENTIFIER:
                 # We are at a genesis block and the blocks are not the
                 # same
                 LOGGER.info("Block rejected due to wrong genesis : %s %s",
@@ -485,7 +487,7 @@ class ChainController(object):
             header = BlockHeader()
             header.ParseFromString(block.header)
             block = BlockWrapper(header, block)
-            # TODO What do we actually want to store in the block_store??
+
             block_state = BlockState(block_wrapper=block, weight=0,
                                      status=BlockStatus.Unknown)
             self._block_store[block.header_signature] = block_state
@@ -533,7 +535,7 @@ class Journal(object):
             self._exit = False
 
         def run(self):
-            while (True):
+            while True:
                 try:
                     block = self._block_queue.get(timeout=0.1)
                     self._block_publisher.on_block_received(block)
@@ -553,7 +555,7 @@ class Journal(object):
             self._exit = False
 
         def run(self):
-            while(True):
+            while True:
                 try:
                     batch = self._batch_queue.get(timeout=0.1)
                     self._block_publisher.on_batch_received(batch)

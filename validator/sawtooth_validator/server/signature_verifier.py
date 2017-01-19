@@ -12,17 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=import-error,no-name-in-module
+# needed for google.protobuf import
 import queue
 import logging
 
 from threading import Thread
-from threading import Condition
 from google.protobuf.message import DecodeError
 
 from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -110,12 +113,12 @@ class SignatureVerifier(Thread):
                             self.outgoing_msg_queue.put_nowait(request)
                             with self.out_condition:
                                 self.out_condition.notify_all()
-                                LOGGER.info("Block signature is invalid: {}",
+                                LOGGER.info("Block signature is invalid: %s",
                                             block.header_signature)
                     except DecodeError as e:
                         # what to do with a bad msg
-                        LOGGER.warn("Problem decoding GossipMessage for Block,"
-                                    "%s", e)
+                        LOGGER.warning("Problem decoding GossipMessage for "
+                                       "Block, %s", e)
 
                 elif request.content_type == "Batch":
                     try:
@@ -127,11 +130,11 @@ class SignatureVerifier(Thread):
                             with self.out_condition:
                                 self.out_condition.notify_all()
                         else:
-                            LOGGER.info("Batch signature is invalid: {}",
+                            LOGGER.info("Batch signature is invalid: %s",
                                         batch.header_signature)
                     except DecodeError as e:
-                        LOGGER.warn("Problem decoding GossipMessage for Batch,"
-                                    " %s", e)
+                        LOGGER.warning("Problem decoding GossipMessage for "
+                                       "Batch, %s", e)
 
                 elif request.content_type == "BlockRequest":
                     self.outgoing_msg_queue.put_notwait(request)

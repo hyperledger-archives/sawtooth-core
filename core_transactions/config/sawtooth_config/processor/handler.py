@@ -26,7 +26,6 @@ from sawtooth_protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_config.protobuf.config_pb2 import ConfigPayload
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
 from sawtooth_config.protobuf.config_pb2 import SettingEntry
 
@@ -52,7 +51,7 @@ def _get_setting_entry(state, address):
     except FutureTimeoutError:
         raise InternalError('Unable to get {}'.format(address))
 
-    if(len(entries_list) != 0):
+    if len(entries_list) != 0:
         setting_entry.ParseFromString(entries_list[0].data)
 
     return setting_entry
@@ -86,11 +85,11 @@ def _set_config_value(state, key, value):
     except FutureTimeoutError:
         raise InternalError('Unable to set {}'.format(key))
 
-    if(len(addresses) != 1):
+    if len(addresses) != 1:
         raise InternalError(
             'Unable to save config value {}'.format(key))
-    LOGGER.info('Config setting {} changed from {} to {}'.format(
-        key, old_value, value))
+    LOGGER.info('Config setting %s changed from %s to %s',
+                key, old_value, value)
 
 
 def _get_config_candidates(state):
@@ -191,16 +190,16 @@ class ConfigurationTransactionHandler(object):
                 'auth_type {} should not have been allowed'.format(auth_type))
 
     def _apply_ballot_config(self, pubkey, config_payload, state):
-        if (config_payload.action == ConfigPayload.PROPOSE):
+        if config_payload.action == ConfigPayload.PROPOSE:
             return self._apply_proposal(pubkey, config_payload.data, state)
-        elif (config_payload.action == ConfigPayload.VOTE):
+        elif config_payload.action == ConfigPayload.VOTE:
             return self._apply_vote(pubkey, config_payload.data, state)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
     def _apply_noauth_config(self, pubkey, config_payload, state):
-        if (config_payload.action == ConfigPayload.PROPOSE):
+        if config_payload.action == ConfigPayload.PROPOSE:
             config_proposal = ConfigProposal()
             config_proposal.ParseFromString(config_payload.data)
 
@@ -221,7 +220,7 @@ class ConfigurationTransactionHandler(object):
 
         _validate_setting(config_proposal.setting, config_proposal.value)
 
-        if(approval_threshold >= 1):
+        if approval_threshold >= 1:
             config_candidates = _get_config_candidates(state)
             if proposal_id in config_candidates.candidates:
                 raise InvalidTransaction(
@@ -264,7 +263,7 @@ class ConfigurationTransactionHandler(object):
 
         accepted_count = 0
         rejected_count = 0
-        for voter_id, vote in config_candidate.votes.items():
+        for _, vote in config_candidate.votes.items():
             if vote == ConfigVote.ACCEPT:
                 accepted_count += 1
             elif vote == ConfigVote.REJECT:

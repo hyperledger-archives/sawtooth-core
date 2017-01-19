@@ -32,6 +32,7 @@ class Future(object):
         self._condition = Condition()
         self._create_time = time.time()
         self._callback_func = None
+        self._reconcile_time = None
 
     def done(self):
         return self._result is not None

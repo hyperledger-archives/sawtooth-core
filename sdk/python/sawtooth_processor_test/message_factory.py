@@ -43,7 +43,7 @@ def _sign(content, private):
     return bitcoin.ecdsa_sign(content, private)
 
 
-class MessageFactory:
+class MessageFactory(object):
     def __init__(
         self, encoding, family_name, family_version, namespace,
         private=None, public=None
@@ -65,7 +65,7 @@ class MessageFactory:
     def sha512(self, content):
         return hashlib.sha512(content).hexdigest()
 
-    def _sha256(self, content):
+    def sha256(self, content):
         return hashlib.sha256(content).hexdigest()
 
     def get_public_key(self):

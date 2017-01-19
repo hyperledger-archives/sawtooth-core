@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import traceback
 import subprocess
 import asyncio
 
@@ -39,7 +38,7 @@ class UnexpectedMessageException(Exception):
         self.received = received
 
 
-class TransactionProcessorTester:
+class TransactionProcessorTester(object):
 
     def __init__(self):
         self._comparators = {}
@@ -79,7 +78,7 @@ class TransactionProcessorTester:
             self._socket.bind("tcp://" + self._url)
 
         # Catch errors with binding and print out more debug info
-        except zmq.error.ZMQError as zmqerror:
+        except zmq.error.ZMQError:
             netstat = "netstat -lp | grep -e tcp"
             result = subprocess.check_output(netstat, shell=True).decode()
             print("\n`{}`".format(netstat))
@@ -150,6 +149,8 @@ class TransactionProcessorTester:
     async def _send(self, ident, message):
         """
         (asyncio coroutine) Send the message and wait for a response.
+        :param message (sawtooth_protobuf.Message)
+        :param ident (str) the identity of the zmq.DEALER to send to
         """
 
         print("Sending {} to {}".format(message.message_type, ident))
@@ -232,7 +233,7 @@ class TransactionProcessorTester:
 
         raise UnexpectedMessageException(
             message.message_type,
-            exp_con,
+            expected_content_list,
             received_content)
 
     def respond(self, message_content, message):

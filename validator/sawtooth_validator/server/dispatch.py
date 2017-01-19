@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=import-error,no-name-in-module
+# needed for google.protobuf import
 import queue
 import logging
 
 from threading import Thread
 from google.protobuf.message import DecodeError
 
-from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.block_pb2 import Block
 LOGGER = logging.getLogger(__name__)
 
 
@@ -40,13 +42,22 @@ class Dispatcher(Thread):
     def set_condition(self, condition):
         self.condition = condition
 
+    def set_on_block_received(self, on_block_received_func):
+        self.on_block_received = on_block_received_func
+
+    def set_on_batch_received(self, on_batch_received_func):
+        self.on_batch_received = on_batch_received_func
+
+    def set_on_block_requested(self, on_block_requested_func):
+        self.on_block_requested = on_block_requested_func
+
     def stop(self):
         self._exit = True
 
     def run(self):
         if self.incoming_msg_queue is None or self.condition is None:
-            LOGGER.warn("Dispatcher can not be used if incoming_msg_queue or"
-                        "condition is not set.")
+            LOGGER.warning("Dispatcher can not be used if incoming_msg_queue "
+                           "or condition is not set.")
             return
 
         while True:
@@ -62,8 +73,8 @@ class Dispatcher(Thread):
                         self.on_block_received(block)
                     except DecodeError as e:
                         # what to do with a bad msg
-                        LOGGER.warn("Problem decoding GossipMessage for Block,"
-                                    "%s", e)
+                        LOGGER.warning("Problem decoding GossipMessage for "
+                                       "Block, %s", e)
 
                 elif request.content_type == "Batch":
                     try:
@@ -72,8 +83,8 @@ class Dispatcher(Thread):
                         self.on_batch_received(batch)
 
                     except DecodeError as e:
-                        LOGGER.warn("Problem decoding GossipMessage for Batch,"
-                                    " %s", e)
+                        LOGGER.warning("Problem decoding GossipMessage for "
+                                       "Batch, %s", e)
 
                 elif request.content_type == "BlockRequest":
                     block_id = str(request.content, "utf-8")

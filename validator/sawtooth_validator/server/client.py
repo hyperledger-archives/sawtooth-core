@@ -14,7 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import logging
-
+# pylint: disable=import-error,no-name-in-module
+# needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.merkle import MerkleDatabase
@@ -24,18 +25,6 @@ from sawtooth_validator.protobuf import validator_pb2
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class ClientHandler(object):
-    # The validator will use this handler to deal with client/get messages
-    # it recieves from a client
-    def handle(self, message, responder):
-        print("Message recieved", message)
-        responder.send(validator_pb2.Message(
-            sender=message.sender,
-            message_type=validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-            correlation_id=message.correlation_id,
-            content='{ "status": "SUCCESS" }'.encode()))
 
 
 class ClientStateCurrentRequestHandler(object):
@@ -51,12 +40,9 @@ class ClientStateCurrentRequestHandler(object):
                 message.content)
             current_root = self._current_root_func()
         except DecodeError:
-            LOGGER.info("Expected protobuf of class {} failed to "
-                        "deserialize.".format(
-                            client_pb2.ClientStateCurrentRequest()))
-            error = True
-        except Exception as e:
-            LOGGER.error(e)
+            LOGGER.info("Expected protobuf of class %s failed to "
+                        "deserialize.",
+                        client_pb2.ClientStateCurrentRequest())
             error = True
         if error:
             response = client_pb2.ClientStateCurrentResponse(
@@ -89,13 +75,9 @@ class ClientStateGetRequestHandler(object):
             LOGGER.info(e)
             error = True
         except DecodeError:
-            LOGGER.info("Expected protobuf of class {} failed to "
-                        "deserialize".format(request))
+            LOGGER.info("Expected protobuf of class %s failed to "
+                        "deserialize", request)
             error = True
-        except Exception as e:
-            LOGGER.error(e)
-            error = True
-
         if error:
             response = client_pb2.ClientStateGetResponse(
                 status=status or client_pb2.ClientStateGetResponse.ERROR)
@@ -106,16 +88,11 @@ class ClientStateGetRequestHandler(object):
                 status = client_pb2.ClientStateGetResponse.OK
             except KeyError:
                 status = client_pb2.ClientStateGetResponse.NORESOURCE
-                LOGGER.debug("No entry at state address {}".format(address))
+                LOGGER.debug("No entry at state address %s", address)
                 error = True
             except ValueError:
                 status = client_pb2.ClientStateGetResponse.NONLEAF
-                LOGGER.debug("Node at state address {} is a nonleaf".format(
-                    address))
-                error = True
-            except Exception as e:
-                status = client_pb2.ClientStateGetResponse.ERROR
-                LOGGER.error(e)
+                LOGGER.debug("Node at state address %s is a nonleaf", address)
                 error = True
             response = client_pb2.ClientStateGetResponse(status=status)
             if not error:
@@ -144,11 +121,8 @@ class ClientStateListRequestHandler(object):
             LOGGER.info(e)
             error = True
         except DecodeError:
-            LOGGER.info("Expected protobuf of class {} failed to "
-                        "deserialize".format(request))
-            error = True
-        except Exception as e:
-            LOGGER.error(e)
+            LOGGER.info("Expected protobuf of class %s failed to "
+                        "deserialize", request)
             error = True
         if error:
             response = client_pb2.ClientStateListResponse(

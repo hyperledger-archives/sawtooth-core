@@ -90,7 +90,7 @@ class StateContext(object):
 
     def set_futures(self, address_value_dict):
         for add, val in address_value_dict.items():
-            context_future = self._address_value_dict.get(add).set_result(val)
+            self._address_value_dict.get(add).set_result(val)
 
     def get_writable_address_value_dict(self):
         add_value_dict = {}

@@ -16,4 +16,4 @@
 
 class SchedulerError(Exception):
     def __init__(self, msg):
-        super(Exception, self).__init__(msg)
+        super().__init__(msg)

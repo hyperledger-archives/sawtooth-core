@@ -39,7 +39,7 @@ class TestPKRecover(unittest.TestCase):
         sig = pbt.ecdsa_sign(msg, priv)
         native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
         py_recovered = pbt.ecdsa_recover(msg, sig)
-        self.assertEquals(native_recovered, py_recovered)
+        self.assertEqual(native_recovered, py_recovered)
 
     def test_bulk_keymatch(self):
         """
@@ -51,8 +51,8 @@ class TestPKRecover(unittest.TestCase):
             sig = pbt.ecdsa_sign(msg, priv)
             native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
             py_recovered = pbt.ecdsa_recover(msg, sig)
-            self.assertEquals(native_recovered, py_recovered,
-                              "Priv Key that failed: {}".format(priv))
+            self.assertEqual(native_recovered, py_recovered,
+                             "Priv Key that failed: {}".format(priv))
 
     def test_compressed_keys(self):
         """
@@ -68,8 +68,8 @@ class TestPKRecover(unittest.TestCase):
         sig = pbt.encode_sig(v, r, s)
         pub = pbt.compress(pbt.privtopub(priv))
         native_recovered = pbct_nativerecover.recover_pubkey(msg, sig)
-        self.assertEquals(native_recovered, pub,
-                          "Priv Key that failed: {}".format(priv))
+        self.assertEqual(native_recovered, pub,
+                         "Priv Key that failed: {}".format(priv))
 
     def test_exception_on_empty_param(self):
         """

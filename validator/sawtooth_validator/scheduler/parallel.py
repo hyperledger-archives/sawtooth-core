@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from ast import literal_eval
+
 
 class RadixNode:
     def __init__(self, children=None, readers=None, writer=None):
@@ -29,7 +31,7 @@ class RadixNode:
             retval['writer'] = self.writer
         if len(self.children) > 0:
             retval['children'] = \
-                {k: eval(repr(v)) for k, v in self.children.items()}
+                {k: literal_eval(repr(v)) for k, v in self.children.items()}
 
         return repr(retval)
 

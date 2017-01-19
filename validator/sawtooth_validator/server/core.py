@@ -22,9 +22,7 @@ from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server import future
 from sawtooth_validator.server import state
-from sawtooth_validator.server import processor_iterator
 from sawtooth_validator.server.dispatch import Dispatcher
 from sawtooth_validator.server.executor import TransactionExecutor
 from sawtooth_validator.server.loader import SystemLoadHandler
@@ -32,7 +30,6 @@ from sawtooth_validator.server.network import FauxNetwork
 from sawtooth_validator.server.network import Network
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
 from sawtooth_validator.server.interconnect import Interconnect
-from sawtooth_validator.server.client import ClientHandler
 from sawtooth_validator.server.client import ClientStateCurrentRequestHandler
 from sawtooth_validator.server.client import ClientStateGetRequestHandler
 from sawtooth_validator.server.client import ClientStateListRequestHandler
@@ -56,8 +53,9 @@ class Validator(object):
 
         block_db_filename = os.path.join(os.path.expanduser('~'), 'block.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
-        block_store = LMDBNoLockDatabase(block_db_filename, 'n')
-
+        # block_store = LMDBNoLockDatabase(block_db_filename, 'n')
+        # this is not currently being used but will be something like this
+        # in the future, when Journal takes a block_store that isn't a dict
         self._service = Interconnect(component_endpoint)
 
         # setup network
@@ -75,7 +73,7 @@ class Validator(object):
         executor = TransactionExecutor(self._service, context_manager)
         self._journal = Journal(
             consensus=dev_mode_consensus,
-            block_store={},  # FIXME - block_store=block_store
+            block_store={},
             # -- need to serialize blocks to dicts
             send_message=faux_network.send_message,
             transaction_executor=executor,

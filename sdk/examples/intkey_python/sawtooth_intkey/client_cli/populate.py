@@ -21,7 +21,6 @@ import os
 import logging
 import random
 import string
-import time
 
 import cbor
 import bitcoin
@@ -136,7 +135,6 @@ def do_populate(args):
     words = generate_word_list(args.pool_size)
 
     batches = []
-    start = time.time()
     total_txn_count = 0
 
     txns = []
@@ -156,21 +154,6 @@ def do_populate(args):
         public_key=public_key)
 
     batches.append(batch)
-
-    if i % 100 == 0 and i != 0:
-        stop = time.time()
-
-        txn_count = 0
-        for batch in batches[-100:]:
-            txn_count += len(batch.transactions)
-
-        fmt = 'batches {}, batch/sec: {:.2f}, txns: {}, txns/sec: {:.2f}'
-        print(fmt.format(
-            str(i),
-            100 / (stop - start),
-            str(total_txn_count),
-            txn_count / (stop - start)))
-        start = stop
 
     batch_list = batch_pb2.BatchList(batches=batches)
 
