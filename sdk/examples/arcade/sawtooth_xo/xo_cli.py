@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,6 +94,11 @@ def add_init_parser(subparsers, parent_parser):
         type=str,
         help='the name of the player')
 
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='the url of the REST API')
+
 
 def add_reset_parser(subparsers, parent_parser):
     subparsers.add_parser('reset', parents=[parent_parser])
@@ -160,8 +165,14 @@ def do_init(args, config):
     if args.username is not None:
         username = args.username
 
+    url = config.get('DEFAULT', 'url')
+    if args.url is not None:
+        url = args.url
+
     config.set('DEFAULT', 'username', username)
     print("set username: {}".format(username))
+    config.set('DEFAULT', 'url', url)
+    print("set url: {}".format(url))
 
     save_config(config)
 
