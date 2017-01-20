@@ -19,11 +19,14 @@ RUN apt-get update && apt-get install -y -q \
     python3 \
     python3-zmq \
     python3-pip \
-    python3-cbor
+    python3-cbor \
+    libcrypto++-dev
 
 RUN pip3 install \
         grpcio-tools \
-        lmdb
+        lmdb \
+        bitcoin \
+        colorlog
 
 RUN mkdir -p /project/sawtooth-core
 

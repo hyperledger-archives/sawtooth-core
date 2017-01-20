@@ -21,7 +21,9 @@ RUN apt-get update && apt-get install -y -q \
     python3-pip \
     python3-cbor
 
-RUN pip3 install grpcio-tools
+RUN pip3 install \
+	grpcio-tools \
+	colorlog
 
 RUN mkdir -p /project/sawtooth-core
 
