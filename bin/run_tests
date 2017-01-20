@@ -48,10 +48,10 @@ test_sdk_examples() {
     cd integration/sawtooth_integration/test_suites
     run_tp_test tp_intkey_python ts_tp_intkey.TestSuiteIntkey
     run_tp_test tp_xo_python ts_tp_xo.TestSuiteXo
-    cd ../../../../
+    cd ../../../
 }
 
-test_sdk_examples_docker() {
+test_docker() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
@@ -60,6 +60,7 @@ test_sdk_examples_docker() {
     run_docker_test docker/tp-intkey-python.yaml -s validator
     run_docker_test docker/intkey-load-python.yaml -s integration_test
     run_docker_test docker/tp-xo-python.yaml -s validator
+    run_docker_test docker/xo-smoke.yaml -s integration_test
     cd ../../
 }
 
@@ -148,7 +149,6 @@ case $MODULE in
         test_core
         test_signing
         test_validator
-        #test_sdk_examples_docker
         ;;
     core)
         test_core
@@ -165,7 +165,7 @@ case $MODULE in
     tp_config)
         test_tp_config
         ;;
-    sdk_examples_docker)
-        test_sdk_examples_docker
+    docker)
+        test_docker
         ;;
 esac
