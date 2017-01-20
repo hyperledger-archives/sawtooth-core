@@ -105,9 +105,10 @@ class XoClient:
             request = urllib.request.Request(url)
         else:
             request = urllib.request.Request(url, content, content_type)
-
-        result = urllib.request.urlopen(request).read().decode()
-
+        try:
+            result = urllib.request.urlopen(request).read().decode()
+        except  BaseException as err:
+            raise XoException(err)
         return result
 
     def _send_xo_txn(self, name, action, space=""):
