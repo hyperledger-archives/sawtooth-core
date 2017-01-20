@@ -62,7 +62,7 @@ master_doc = 'contents'
 
 # General information about the project.
 project = u'Sawtooth Lake'
-copyright = u'2015-2016, Intel Corporation'
+copyright = u'2015-2017, Intel Corporation'
 author = u'Intel Corporation'
 
 # The version info for the project you're documenting, acts as replacement for
