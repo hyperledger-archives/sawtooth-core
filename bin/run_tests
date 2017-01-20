@@ -111,7 +111,9 @@ test_validator() {
     PYTHONPATH=$PYTHONPATH:$top_dir/core
     PYTHONPATH=$PYTHONPATH:$top_dir/validator
     export PYTHONPATH
-    if [ "$DOCKER_CONTAINER_ID" = "" ]; then
+    if [ -e /.dockerenv ]; then
+        true
+    else
         nose2-3 -v unit3
     fi
     cd ..

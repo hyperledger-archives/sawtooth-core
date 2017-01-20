@@ -10,10 +10,24 @@ node {
     readTrusted 'bin/build_debs'
     readTrusted 'bin/package_validator'
     readTrusted 'bin/run_tests'
+    readTrusted 'core/setup.py'
+    readTrusted 'extensions/arcade/setup.py'
+    readTrusted 'signing/setup.py'
+    readTrusted 'validator/setup.py'
   }
 
   stage("Build docker build slave") {
     docker.build('sawtooth-build:$BUILD_TAG', '-f core/sawtooth/cli/data/sawtooth-build-ubuntu-xenial .')
+  }
+
+  stage("Run Tests"){
+    docker.withServer('tcp://0.0.0.0:4243'){
+      docker.image('sawtooth-build:$BUILD_TAG').inside {
+        sh './bin/build_all'
+        sh './bin/run_tests'
+        sh './bin/build_all'
+      }
+    }
   }
 
   stage("Build the packages"){
