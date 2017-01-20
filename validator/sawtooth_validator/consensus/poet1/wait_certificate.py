@@ -124,6 +124,10 @@ class WaitCertificate(object):
                 self._serialized_certificate,
                 self.signature)
 
+    @property
+    def population_estimate(self):
+        return self.local_mean / WaitTimer.target_wait_time
+
     def __init__(self, enclave_certificate):
         """Initialize the wait certificate from a PoET enclave wait
         certificate.

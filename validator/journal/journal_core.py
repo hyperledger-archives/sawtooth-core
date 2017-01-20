@@ -760,13 +760,13 @@ class Journal(object):
             genesis (bool): Whether to force the creation of the
                 initial block. Used during genesis block creation
         """
+        if not genesis and len(self.pending_transactions) == 0:
+            return None
+
         new_block = self.consensus.create_block()
         # in some cases the consensus will not build candidate blocks.
         # for example devmode non block publishing nodes.
         if new_block is None:
-            return
-
-        if not genesis and len(self.pending_transactions) == 0:
             return None
 
         logger.debug('attempt to build transaction block extending %s',
@@ -1467,11 +1467,8 @@ class Journal(object):
                         len(self.pending_transactions) - txn_count
                     self.transaction_enqueue_time =\
                         time.time() if remaining_transactions > 0 else None
-
-        with self._txn_lock:
-            if self.pending_block and \
-                    self.consensus.check_claim_block(
-                        self,
-                        self.pending_block,
-                        now):
+            elif self.consensus.check_claim_block(
+                    self,
+                    self.pending_block,
+                    now):
                 self.claim_block()

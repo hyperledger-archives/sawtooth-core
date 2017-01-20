@@ -42,7 +42,7 @@ class Consensus(object):
         consolidated.
 
         Returns:
-            block: the candidate transaction block
+            block: the candidate transaction block or None on failure
         """
         pass
 

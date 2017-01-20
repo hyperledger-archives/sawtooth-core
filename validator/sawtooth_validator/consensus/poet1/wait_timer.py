@@ -52,7 +52,7 @@ class WaitTimer(object):
     poet_enclave = None
 
     @classmethod
-    def _population_estimate(cls, certificates):
+    def _compute_population_estimate(cls, certificates):
         """Estimates the size of the validator population by computing
         the average wait time and the average local mean used by
         the winning validator.
@@ -146,9 +146,14 @@ class WaitTimer(object):
                 (cls.initial_wait_time * ratio**2)
         else:
             local_mean = \
-                cls.target_wait_time * cls._population_estimate(certificates)
+                cls.target_wait_time * \
+                cls._compute_population_estimate(certificates)
 
         return local_mean
+
+    @property
+    def population_estimate(self):
+        return self.local_mean / WaitTimer.target_wait_time
 
     def __init__(self, enclave_timer):
         self.previous_certificate_id =\
