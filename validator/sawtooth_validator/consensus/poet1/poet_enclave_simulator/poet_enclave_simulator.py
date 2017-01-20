@@ -337,7 +337,7 @@ class _PoetEnclaveSimulator(object):
                         previous_certificate_id,
                         cls._seal_private_key))
 
-            tagd = float(struct.unpack('L', tag[-8:])[0]) / (2**64 - 1)
+            tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
 
             # Now compute the duration with a minimum wait time guaranteed
             duration = minimum_wait_time - local_mean * math.log(tagd)
