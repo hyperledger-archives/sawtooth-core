@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import run, PIPE
+from subprocess import run, PIPE, CalledProcessError
+import sys
 import argparse
+import time
 import yaml
 
-TIMEOUT = 60
+
+class RunDockerTestError(Exception):
+    pass
 
 
 def main():
     args = parse_args()
+
+    if not args.prefix.isalnum():
+        raise RunDockerTestError("Prefix must be alphanumeric")
 
     compose = [
         'docker-compose',
@@ -42,63 +49,129 @@ def main():
         "{}_{}_1".format(args.prefix, args.test_service)
     ]
 
-    docker_build_all(args.compose_file)
+    compose_dict = load_compose_file(args.compose_file)
+    if args.test_service not in compose_dict['services']:
+        raise RunDockerTestError(
+            "Test service '{}' does not exist in compose file: '{}'".format(
+                args.test_service, args.compose_file))
+
+    if not args.no_build:
+        docker_build_all(compose_dict)
+
+    start_time = time.time()
+    timeout = args.timeout
 
     # Run tests
-    print("Running: {}".format(compose_up))
-    run(compose_up)
+    try:
+        print("Running: {}".format(compose_up))
+        run(compose_up, check=True, timeout=timeout)
+    except CalledProcessError:
+        raise RunDockerTestError(
+            "Failed to start all docker containers. Do `docker ps -a` to "
+            "list residual containers.")
+
+    end_time = time.time()
+    delta_time = end_time - start_time
+    start_time = end_time
+    timeout = int(timeout - delta_time)
 
     # Get success value of tests
-    print("Running: {}".format(inspect))
-    success = run(
-        inspect,
-        stdout=PIPE,
-        timeout=TIMEOUT
-    ).stdout.decode().strip()
+    try:
+        print("Running: {}".format(inspect))
+        success = run(
+            inspect, stdout=PIPE,
+            timeout=timeout, check=True
+        ).stdout.decode().strip()
+    except CalledProcessError:
+        raise RunDockerTestError(
+            "Aborting.. Could not inspect test services '{}'. Do "
+            "`docker ps -a` to list residual containers.".format(
+                args.test_service))
+
+    end_time = time.time()
+    delta_time = end_time - start_time
+    start_time = end_time
+    timeout = int(timeout - delta_time)
 
     # Clean up
-    print("Running: {}".format(compose_down))
-    run(compose_down)
+    try:
+        print("Running: {}".format(compose_down))
+        run(compose_down, check=True, timeout=timeout)
+    except CalledProcessError:
+        raise RunDockerTestError(
+            "Failed to remove all docker containers. Do `docker ps -a` to "
+            "list residual containers.")
 
     exit(int(success))
 
 
-def docker_build_all(compose_file):
-    fd = open(compose_file)
-    contents = fd.read()
-    fd.close()
+def load_compose_file(compose_file):
+    try:
+        with open(compose_file) as fd:
+            contents = fd.read()
+        compose = yaml.load(contents)
+        return compose
 
-    compose = yaml.load(contents)
-    print(compose['services'])
+    except OSError:
+        raise RunDockerTestError(
+            "Docker compose file '{}' could not be opened. Make sure it "
+            "exists and is readable.".format(compose_file))
 
-    for name, service in compose['services'].items():
+
+def docker_build_all(compose_dict):
+
+    for name, service in compose_dict['services'].items():
         if 'image' in service:
             print("Building {}...".format(name))
-            run(['sawtooth', 'docker', 'build', service['image']])
+            try:
+                run(
+                    ['sawtooth', 'docker', 'build', service['image']],
+                    check=True)
+
+            except CalledProcessError:
+                raise RunDockerTestError(
+                    "Sawtooth failed to build docker image '{}'. Does it "
+                    "exist?".format(service['image']))
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "compose_file",
+        help="docker-compose.yaml file that contains the test")
+
     # Allow passing in a prefix to docker compose.
     # This can be used to run multiple isolated instances of the test.
-    parser.add_argument("-p", "--prefix", 
-        help="id tests running in parallel, must contain only alphanumeric characters", 
-        default="intkey")
-
-    # Allow specifying a docker compose file
     parser.add_argument(
-        "-f", "--compose-file", 
-        help="docker-compose.yaml file that contains the test", 
-        default="docker-compose.yaml")
+        "-p", "--prefix",
+        help="id tests running in parallel, must be alphanumeric",
+        default="test")
 
     parser.add_argument(
-        "-t", "--test-service",
+        "-s", "--test-service",
         help="service in docker-compose.yaml that runs the test",
         default="integration_test")
+
+    parser.add_argument(
+        "-n", "--no-build",
+        help="don't build docker images",
+        action='store_true',
+        default=False)
+
+    parser.add_argument(
+        "-t", "--timeout",
+        help="how long to wait before timing out",
+        type=int,
+        default=300)
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+
+    except RunDockerTestError as err:
+        print(err, file=sys.stderr)
+        exit(1)

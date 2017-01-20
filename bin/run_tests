@@ -55,8 +55,8 @@ test_sdk_examples_docker() {
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
     export PYTHONPATH
     cd integration/sawtooth_integration
-    run_docker_test -f docker/tp-intkey-python.yaml -t validator
-    run_docker_test -f docker/intkey-load-python.yaml -t integration_test
+    run_docker_test docker/tp-intkey-python.yaml -s validator
+    run_docker_test docker/intkey-load-python.yaml -s integration_test
     cd ../../
 }
 
