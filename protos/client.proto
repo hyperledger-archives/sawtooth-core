@@ -38,6 +38,10 @@ message ClientBatchSubmitResponse {
 message ClientStateCurrentRequest {
 }
 
+// This is a response to a request from a client (including the rest api)
+// for the current merkle root. There will always be a current merkle root
+// (if genesis has happened)
+// so there is only the general ERROR status response or OK.
 message ClientStateCurrentResponse {
     enum Status {
         OK = 0;
@@ -48,11 +52,18 @@ message ClientStateCurrentResponse {
 
 }
 
+// A request from a client for a particular address's data, for a given merkle root
 message ClientStateGetRequest {
     string merkle_root = 1;
     string address = 2;
 }
 
+// The response to a GetRequest from the client. NORESOURCE means that either the
+// merkle root is not a merkle root in State or the address doesn't exist
+// under a valid merkle root. NONLEAF means that the address isn't a valid
+// leaf address in the merkle tree, this would probably mean that the address
+// is a prefix (truncated). ERROR is a general internal error, like the protobuf
+// sent by the client didn't deserialize correctly.
 message ClientStateGetResponse {
     enum Status {
       OK = 0;
@@ -64,11 +75,18 @@ message ClientStateGetResponse {
     bytes value = 2;
 }
 
+// A request to list the Entries under a given prefix (could be the root prefix ('')
+// which would give everything in State under a given merkle root) or (since the
+// merkle trie implementation requires addresses and prefixes to be length % 2 == 0)
+// any length % 2 == 0 prefix namespace.
 message ClientStateListRequest {
     string merkle_root = 1;
     string prefix = 2;
 }
-
+// A response that lists the Entries under a given prefix (subtree). NORESOURCE means
+// that the merkle_root supplied isn't in the merkle trie or there aren't any leaves
+// under the given prefix. ERROR is a general internal error, like the protobuf sent
+// by the client didn't deserialize correctly.
 message ClientStateListResponse {
     enum Status {
       OK = 0;
