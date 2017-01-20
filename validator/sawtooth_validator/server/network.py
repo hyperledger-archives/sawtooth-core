@@ -17,8 +17,6 @@ import os
 import asyncio
 import queue
 import socket
-import zmq
-import zmq.asyncio
 import logging
 import random
 import hashlib
@@ -27,11 +25,13 @@ import time
 from threading import Thread
 from threading import Condition
 
+import zmq
+import zmq.asyncio
+
 from sawtooth_validator.server import future
 from sawtooth_validator.server.signature_verifier import SignatureVerifier
 from sawtooth_validator.protobuf import validator_pb2
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
-import sawtooth_validator.protobuf.block_pb2 as block_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
@@ -75,26 +75,27 @@ def _generate_id():
 
 class DefaultHandler(object):
     def handle(self, message, responder):
-        print("invalid message {}".format(message.message_type))
+        print("invalid message %s", message.message_type)
 
 
 class Connection(object):
-    def __init__(self, identity, url):
-        LOGGER.debug("Network {} initiating "
-                     "a connection to {}".format(identity, url))
+    def __init__(self, identity, url, ingest_message_func):
+        LOGGER.debug("Network %s initiating "
+                     "a connection to %s", identity, url)
         self._identity = identity
-        self._stream = Stream(url)
+        self._stream = Stream(url, ingest_message_func)
         self.start()
 
     def start(self):
         futures = []
-        future = self._stream.send(
+        fut = self._stream.send(
             message_type='gossip/register',
             content=PeerRegisterRequest().SerializeToString())
-        futures.append(future)
+        futures.append(fut)
 
     @asyncio.coroutine
     def send_message(self, message):
+        # pylint: disable=not-an-iterable
         yield from self._stream.send_message(message)
 
     def stop(self):
@@ -105,14 +106,14 @@ class Connection(object):
 
 
 class Stream(object):
-    def __init__(self, url):
+    def __init__(self, url, ingest_message_func):
         self._url = url
         self._futures = future.FutureCollection()
         self._handlers = {}
 
         self.add_handler('default', DefaultHandler())
         self.add_handler('gossip/msg',
-                         GossipMessageHandler(self))
+                         GossipMessageHandler(ingest_message_func))
         self.add_handler('gossip/ping',
                          PingHandler(self))
 
@@ -125,19 +126,19 @@ class Stream(object):
 
     def add_handler(self, message_type, handler):
         LOGGER.debug("Client stream adding "
-                     "handler for {}".format(message_type))
+                     "handler for %s", message_type)
         self._handlers[message_type] = handler
 
     @asyncio.coroutine
     def send_message(self, message):
-        LOGGER.debug("Client sending message {}".format(message))
+        LOGGER.debug("Client sending message %s", message)
         my_future = future.Future(message.correlation_id)
         self._futures.put(my_future)
         self._send_receive_thread.send_message(message)
         return my_future
 
     def send(self, message_type, content):
-        LOGGER.debug("Client sending {}: {}".format(message_type, content))
+        LOGGER.debug("Client sending %s: %s", message_type, content)
         message = validator_pb2.Message(
             message_type=message_type,
             correlation_id=_generate_id(),
@@ -166,6 +167,8 @@ class _ClientSendReceiveThread(Thread):
         self._futures = futures
         self._url = url
         self._event_loop = None
+        self._context = None
+        self._recv_queue = None
         self._send_queue = None
         self._proc_sock = None
         self._condition = Condition()
@@ -180,7 +183,7 @@ class _ClientSendReceiveThread(Thread):
             self._condition.wait_for(lambda: self._proc_sock is not None)
         while True:
             msg_bytes = yield from self._proc_sock.recv()
-            LOGGER.debug("Client received message: {}".format(msg_bytes))
+            LOGGER.debug("Client received message: %s", msg_bytes)
             message_list = validator_pb2.MessageList()
             message_list.ParseFromString(msg_bytes)
             for message in message_list.messages:
@@ -201,7 +204,7 @@ class _ClientSendReceiveThread(Thread):
                 else:
                     my_future = self._futures.get(message.correlation_id)
                     LOGGER.debug("Message round "
-                                 "trip: {}".format(my_future.get_duration()))
+                                 "trip: %s", my_future.get_duration())
 
     @asyncio.coroutine
     def _send_message(self):
@@ -210,8 +213,8 @@ class _ClientSendReceiveThread(Thread):
                                      and self._proc_sock is not None)
         while True:
             msg = yield from self._send_queue.get()
-            LOGGER.debug("Client sending {} "
-                         "message".format(msg.message_type))
+            LOGGER.debug("Client sending %s "
+                         "message", msg.message_type)
             yield from self._proc_sock.send(msg.SerializeToString())
 
     @asyncio.coroutine
@@ -248,7 +251,6 @@ class _ClientSendReceiveThread(Thread):
                                                 self._event_loop).result()
 
     def run(self):
-        LOGGER.info("Client thread started..")
         self._event_loop = zmq.asyncio.ZMQEventLoop()
         asyncio.set_event_loop(self._event_loop)
         self._context = zmq.asyncio.Context()
@@ -276,7 +278,7 @@ class _ServerSendReceiveThread(Thread):
     A background thread for zmq communication with asyncio.Queues
     To interact with the queues in a threadsafe manner call send_message()
     """
-    def __init__(self, url, handlers, futures):
+    def __init__(self, url, handlers, futures, ingest_message_func):
         super(_ServerSendReceiveThread, self).__init__()
         self._handlers = handlers
         self._futures = futures
@@ -286,6 +288,7 @@ class _ServerSendReceiveThread(Thread):
         self._proc_sock = None
         self._connections = []
         self._broadcast_queue = None
+        self._ingest_message_func = ingest_message_func
         self._condition = Condition()
 
     @asyncio.coroutine
@@ -299,7 +302,7 @@ class _ServerSendReceiveThread(Thread):
         while True:
             ident, result = yield from self._proc_sock.recv_multipart()
             LOGGER.debug("Server received message "
-                         "from {}: {}".format(ident, result))
+                         "from %s: %s", ident, result)
             message = validator_pb2.Message()
             message.ParseFromString(result)
             message.sender = ident
@@ -325,9 +328,8 @@ class _ServerSendReceiveThread(Thread):
                                      and self._proc_sock is not None)
         while True:
             msg = yield from self._send_queue.get()
-            LOGGER.debug("Server sending {} "
-                         "message to {}".format(msg.message_type,
-                                                msg.sender))
+            LOGGER.debug("Server sending %s "
+                         "message to %s", msg.message_type, msg.sender)
             yield from self._proc_sock.send_multipart(
                 [bytes(msg.sender, 'UTF-8'),
                  validator_pb2.MessageList(messages=[msg]
@@ -356,8 +358,8 @@ class _ServerSendReceiveThread(Thread):
                                      and self._proc_sock is not None)
         while True:
             msg = yield from self._broadcast_queue.get()
-            LOGGER.debug("Server broadcasting {} "
-                         "message to connected peers".format(msg.message_type))
+            LOGGER.debug("Server broadcasting %s "
+                         "message to connected peers", msg.message_type)
             for connection in self._connections:
                 yield from connection.send_message(msg)
 
@@ -375,9 +377,10 @@ class _ServerSendReceiveThread(Thread):
                                          self._event_loop)
 
     def add_connection(self, server_identity, url):
-        LOGGER.debug("Adding connection for {} {}".format(server_identity,
-                                                          url))
-        self._connections.append(Connection(server_identity, url))
+        LOGGER.debug("Adding connection for %s, %s", server_identity, url)
+        self._connections.append(Connection(server_identity,
+                                            url,
+                                            self._ingest_message_func))
 
     def close_connections(self):
         for connection in self._connections:
@@ -388,7 +391,7 @@ class _ServerSendReceiveThread(Thread):
         asyncio.set_event_loop(self._event_loop)
         context = zmq.asyncio.Context()
         self._proc_sock = context.socket(zmq.ROUTER)
-        LOGGER.debug("Network service binding to {}".format(self._url))
+        LOGGER.debug("Network service binding to %s", self._url)
         self._proc_sock.bind(self._url)
         self._send_queue = asyncio.Queue()
         self._broadcast_queue = asyncio.Queue()
@@ -413,7 +416,7 @@ class PeerRegisterHandler(object):
             request.identity)
 
         LOGGER.debug("Got peer register message "
-                     "from {}. Sending ack".format(message.sender))
+                     "from %s. Sending ack", message.sender)
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
@@ -438,7 +441,7 @@ class PeerUnregisterHandler(object):
             request.identity)
 
         LOGGER.debug("Got peer unregister message "
-                     "from {}. Sending ack".format(message.sender))
+                     "from %s. Sending ack", message.sender)
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
@@ -451,19 +454,20 @@ class PeerUnregisterHandler(object):
 
 
 class GossipMessageHandler(object):
-    def __init__(self, service):
-        self._service = service
+    def __init__(self, ingest_message_func):
+        self._ingest_message = ingest_message_func
 
     def handle(self, message, peer):
-        LOGGER.debug("GossipMessageHandler message: {}".format(message))
+        LOGGER.debug("GossipMessageHandler message: %s", message.sender)
         request = GossipMessage()
         request.ParseFromString(message.content)
 
-        LOGGER.debug("Got gossip message {} "
-                     "from {}. sending ack".format(message.content,
-                                                   message.sender))
+        LOGGER.debug("Got gossip message %s "
+                     "from %s. sending ack",
+                     message.content,
+                     message.sender)
 
-        self._service._put_on_inbound(request)
+        self._ingest_message(request)
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
@@ -480,13 +484,14 @@ class PingHandler(object):
         self._service = service
 
     def handle(self, message, peer):
-        LOGGER.debug("PingHandler message: {}".format(message))
+        LOGGER.debug("PingHandler message: %s", message)
         request = PingRequest()
         request.ParseFromString(message.content)
 
-        LOGGER.debug("Got ping message {} "
-                     "from {}. sending ack".format(message.content,
-                                                   message.sender))
+        LOGGER.debug("Got ping message %s "
+                     "from %s. sending ack",
+                     message.content,
+                     message.sender)
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
@@ -506,20 +511,22 @@ class Network(object):
         self._handlers = {}
         self._peered_with_us = {}
         self.inbound_queue = queue.Queue()
-        self.outboud_queue = queue.Queue()
+        self.outbound_queue = queue.Queue()
         self._signature_condition = Condition()
         self._dispatcher_condition = Condition()
         self._futures = future.FutureCollection()
-        self._send_receive_thread = _ServerSendReceiveThread(endpoint,
-                                                             self._handlers,
-                                                             self._futures)
+        self._send_receive_thread = _ServerSendReceiveThread(
+            endpoint,
+            self._handlers,
+            self._futures,
+            self._put_on_inbound)
 
         self._send_receive_thread.daemon = True
 
         self._signature_verifier = SignatureVerifier(
-            self.inbound_queue, self.outboud_queue, self._signature_condition,
+            self.inbound_queue, self.outbound_queue, self._signature_condition,
             self._dispatcher_condition)
-        self._dispatcher.set_incoming_msg_queue(self.outboud_queue)
+        self._dispatcher.set_incoming_msg_queue(self.outbound_queue)
         self._dispatcher.set_condition(self._dispatcher_condition)
         self.add_handler('default', DefaultHandler())
         self.add_handler('gossip/register',
@@ -527,7 +534,7 @@ class Network(object):
         self.add_handler('gossip/unregister',
                          PeerUnregisterHandler(self))
         self.add_handler('gossip/msg',
-                         GossipMessageHandler(self))
+                         GossipMessageHandler(self._put_on_inbound))
         self.start()
         self._dispatcher.start()
 
@@ -570,7 +577,7 @@ class Network(object):
 
     def add_handler(self, message_type, handler):
         LOGGER.debug("Network service adding "
-                     "handler for {}".format(message_type))
+                     "handler for %s", message_type)
         self._handlers[message_type] = handler
 
     def _put_on_inbound(self, item):
@@ -588,24 +595,23 @@ class Network(object):
         data = sender
 
         LOGGER.debug("Registering peer: "
-                     "sender {}, identity {}".format(sender, identity))
+                     "sender %s, identity %s", sender, identity)
 
         if sender not in self._peered_with_us.keys():
             self._peered_with_us[sender] = []
         self._peered_with_us[sender].append(data)
 
-        LOGGER.debug("Peers: {}".format(self._peered_with_us))
+        LOGGER.debug("Peers: %s", self._peered_with_us)
 
     def unregister_peer(self, sender, identity):
-        data = sender
 
         LOGGER.debug("Unregistering peer: "
-                     "sender {}, identity {}".format(sender, identity))
+                     "sender %s, identity %s", sender, identity)
 
         if sender in self._peered_with_us.keys():
             del self._peered_with_us[sender]
 
-        LOGGER.debug("Peers: {}".format(self._peered_with_us))
+        LOGGER.debug("Peers: %s", self._peered_with_us)
 
     def start(self):
         self._send_receive_thread.start()

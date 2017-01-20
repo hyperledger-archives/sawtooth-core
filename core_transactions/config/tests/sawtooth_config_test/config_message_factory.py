@@ -15,13 +15,12 @@
 
 from sawtooth_processor_test.message_factory import MessageFactory
 from sawtooth_config.protobuf.config_pb2 import ConfigPayload
-from sawtooth_config.protobuf.config_pb2 import ConfigPayload
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
 from sawtooth_config.protobuf.config_pb2 import SettingEntry
 
 
-class ConfigMessageFactory:
+class ConfigMessageFactory(object):
 
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
@@ -38,8 +37,8 @@ class ConfigMessageFactory:
         return self._factory.get_public_key()
 
     def _key_to_address(self, key):
-        return self._factory._namespace + \
-            self._factory._sha256(key.encode("utf-8"))
+        return self._factory.namespace + \
+            self._factory.sha256(key.encode("utf-8"))
 
     def create_tp_register(self):
         return self._factory.create_tp_register()

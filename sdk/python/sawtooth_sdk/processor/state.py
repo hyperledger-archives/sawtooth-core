@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import logging
 
 from sawtooth_protobuf.validator_pb2 import Message
 from sawtooth_protobuf import state_context_pb2

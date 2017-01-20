@@ -79,7 +79,8 @@ def recover_pubkey(message, signature):
         pubkey = nativeECDSA.recover_pubkey(
             str(z), str(r), str(s), int(rec))
     except ValueError as ex:
-        LOGGER.warn('Unable to extract public key from signature' + ex.args[0])
+        LOGGER.warning(
+            'Unable to extract public key from signature' + ex.args[0])
         return ""
 
     try:

@@ -14,15 +14,12 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import hashlib
 import sys
 
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_config.processor.handler import ConfigurationTransactionHandler
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
 
 def main(args=sys.argv[1:]):
