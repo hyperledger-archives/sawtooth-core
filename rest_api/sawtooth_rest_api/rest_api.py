@@ -32,6 +32,7 @@ def parse_args(args):
 
     return parser.parse_args(args)
 
+
 async def logging_middleware(app, handler):
     async def logging_handler(request):
         print('Handling {} request for {}'.format(
@@ -40,6 +41,7 @@ async def logging_middleware(app, handler):
         ))
         return await handler(request)
     return logging_handler
+
 
 def start_rest_api(host, port, stream_url):
     handlers = Routes(stream_url)
@@ -52,8 +54,6 @@ def start_rest_api(host, port, stream_url):
     app.router.add_get('/state/{merkle_root}', handlers.state_list)
     app.router.add_get('/state/{merkle_root}/{address}', handlers.state_get)
 
-
-
     web.run_app(app, host=host, port=port)
 
 
@@ -61,6 +61,7 @@ def main():
     try:
         opts = parse_args(sys.argv[1:])
         start_rest_api(opts.host, int(opts.port), opts.stream_url)
+        # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)

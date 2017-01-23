@@ -15,14 +15,16 @@
 import asyncio
 from aiohttp import web
 from aiohttp.helpers import parse_mimetype
+# pylint: disable=no-name-in-module,import-error
+# needed for the google.protobuf imports to pass pylint
 from google.protobuf.json_format import MessageToJson
 from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.client.future import FutureTimeoutError
 from sawtooth_sdk.client.stream import Stream
 
-from sawtooth_validator.protobuf import client_pb2 as client
-from sawtooth_validator.protobuf.validator_pb2 import Message
+from sawtooth_protobuf import client_pb2 as client
+from sawtooth_protobuf.validator_pb2 import Message
 
 
 class Routes(object):
@@ -82,7 +84,7 @@ class Routes(object):
 
         try:
             accept_types = headers['Accept']
-            mime_type, sub_type, suffix, params = parse_mimetype(accept_types)
+            mime_type, sub_type, _, _ = parse_mimetype(accept_types)
         except KeyError:
             pass
 
@@ -92,8 +94,8 @@ class Routes(object):
                 body=parsed.SerializeToString()
             )
 
-        if ((mime_type == 'application' or mime_type == '*' or mime_type == None)
-            and (sub_type == 'json' or sub_type == '*' or sub_type == None)):
+        if ((mime_type in ['application', '*'] or mime_type is None)
+                and (sub_type in ['json', '*'] or sub_type is None)):
             return web.Response(
                 content_type='application/json',
                 text=MessageToJson(parsed)
@@ -135,7 +137,7 @@ class Routes(object):
 
     @asyncio.coroutine
     def state_current(self, request):
-        #CLIENT_STATE_CURRENT_REQUEST
+        # CLIENT_STATE_CURRENT_REQUEST
         return self._generic_get(
             web_request=request,
             msg_type=Message.CLIENT_STATE_CURRENT_REQUEST,
@@ -145,7 +147,7 @@ class Routes(object):
 
     @asyncio.coroutine
     def state_list(self, request):
-        #CLIENT_STATE_LIST_REQUEST
+        # CLIENT_STATE_LIST_REQUEST
         root = request.match_info.get("merkle_root", "")
         params = request.rel_url.query
         # if no prefix is defined return all
@@ -161,8 +163,9 @@ class Routes(object):
 
     @asyncio.coroutine
     def state_get(self, request):
-        #CLIENT_STATE_GET_REQUEST
-        nonleaf_msg = 'Expected a specific leaf address, but received a prefix instead'
+        # CLIENT_STATE_GET_REQUEST
+        nonleaf_msg = 'Expected a specific leaf address, ' \
+                      'but received a prefix instead'
 
         root = request.match_info.get("merkle_root", "")
         addr = request.match_info.get("address", "")
