@@ -126,15 +126,18 @@ and run the following commands:
 .. code-block:: console
 
    $ cd sawtooth-core/
-   $ sawtooth cluster start --count 3 -m daemon 
+   $ validator -v
 
 This will start validator and logging output will be printed to the
-terminal window. The validator outputs the following to the terminal window:
+terminal window. The validator outputs something similar to this to
+the terminal window:
 
 .. code-block:: console
 
-  database file is /home/ubuntu/merkle.lmdb
-  block store file is /home/ubuntu/block.lmdb
+  [23:01:36 INFO    journal] Chain updated, new head: num=0 id=FDU5FQB87A5LXROA state=a16efac64a0dc542eabbf36124f1e040f34e18d3405c87460e37568a622bae05 prev=0000000000000000
+  [23:01:36 INFO    journal] Journal created genesis block: FDU5FQB87A5LXROA
+  [23:01:36 INFO    journal] Chain controller initialized with chain head: FDU5FQB87A5LXROA
+  [23:01:36 INFO    journal] Chain updated, new head: num=0 id=FDU5FQB87A5LXROA state=a16efac64a0dc542eabbf36124f1e040f34e18d3405c87460e37568a622bae05 prev=0000000000000000
 
 
 Running a transaction processor
