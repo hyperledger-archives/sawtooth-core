@@ -89,8 +89,9 @@ class Connection(object):
 
     def start(self):
         futures = []
+
         fut = self._stream.send(
-            message_type='gossip/register',
+            message_type=validator_pb2.Message.GOSSIP_REGISTER,
             content=PeerRegisterRequest().SerializeToString())
         futures.append(fut)
 
@@ -101,7 +102,7 @@ class Connection(object):
 
     def stop(self):
         self._stream.send(
-            message_type='gossip/unregister',
+            message_type=validator_pb2.Message.GOSSIP_UNREGISTER,
             content=PeerUnregisterRequest().SerializeToString())
         self._stream.close()
 
@@ -113,9 +114,9 @@ class Stream(object):
         self._handlers = {}
 
         self.add_handler('default', DefaultHandler())
-        self.add_handler('gossip/msg',
+        self.add_handler(validator_pb2.Message.GOSSIP_MESSAGE,
                          GossipMessageHandler(ingest_message_func))
-        self.add_handler('gossip/ping',
+        self.add_handler(validator_pb2.Message.GOSSIP_PING,
                          PingHandler(self))
 
         self._send_receive_thread = _ClientSendReceiveThread(url,
@@ -423,7 +424,7 @@ class PeerRegisterHandler(object):
 
         peer.send(validator_pb2.Message(
             sender=message.sender,
-            message_type='gossip/ack',
+            message_type=validator_pb2.Message.GOSSIP_ACK,
             correlation_id=message.correlation_id,
             content=ack.SerializeToString()))
 
@@ -448,7 +449,7 @@ class PeerUnregisterHandler(object):
 
         peer.send(validator_pb2.Message(
             sender=message.sender,
-            message_type='gossip/ack',
+            message_type=validator_pb2.Message.GOSSIP_ACK,
             correlation_id=message.correlation_id,
             content=ack.SerializeToString()))
 
@@ -468,13 +469,12 @@ class GossipMessageHandler(object):
                      message.sender)
 
         self._ingest_message(request)
-
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
 
         peer.send(validator_pb2.Message(
             sender=message.sender,
-            message_type='gossip/ack',
+            message_type=validator_pb2.Message.GOSSIP_ACK,
             correlation_id=message.correlation_id,
             content=ack.SerializeToString()))
 
@@ -498,7 +498,7 @@ class PingHandler(object):
 
         peer.send(validator_pb2.Message(
             sender=message.sender,
-            message_type='gossip/ack',
+            message_type=validator_pb2.Message.GOSSIP_ACK,
             correlation_id=message.correlation_id,
             content=ack.SerializeToString()))
 
@@ -529,11 +529,11 @@ class Network(object):
         self._dispatcher.set_incoming_msg_queue(self.outbound_queue)
         self._dispatcher.set_condition(self._dispatcher_condition)
         self.add_handler('default', DefaultHandler())
-        self.add_handler('gossip/register',
+        self.add_handler(validator_pb2.Message.GOSSIP_REGISTER,
                          PeerRegisterHandler(self))
-        self.add_handler('gossip/unregister',
+        self.add_handler(validator_pb2.Message.GOSSIP_UNREGISTER,
                          PeerUnregisterHandler(self))
-        self.add_handler('gossip/msg',
+        self.add_handler(validator_pb2.Message.GOSSIP_MESSAGE,
                          GossipMessageHandler(self._put_on_inbound))
         self.start()
         self._dispatcher.start()
@@ -551,7 +551,7 @@ class Network(object):
 
             for _ in range(1000):
                 message = validator_pb2.Message(
-                    message_type=b'gossip/msg',
+                    message_type=validator_pb2.Message.GOSSIP_MESSAGE,
                     correlation_id=_generate_id(),
                     content=content)
 
