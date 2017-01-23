@@ -107,7 +107,7 @@ class XoClient:
             request = urllib.request.Request(url, content, content_type)
         try:
             result = urllib.request.urlopen(request).read().decode()
-        except  BaseException as err:
+        except BaseException as err:
             raise XoException(err)
         return result
 
