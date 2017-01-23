@@ -130,10 +130,9 @@ class Routes(object):
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
             payload
         )
-
-        # TODO: Update to parsing protobuf once validator updated
-        parsed_response = validator_response.decode('utf-8')
-        return web.json_response(parsed_response)
+        response = client.ClientStateCurrentResponse()
+        response.ParseFromString(validator_response)
+        return self._try_client_response(request.headers, response)
 
     @asyncio.coroutine
     def state_current(self, request):

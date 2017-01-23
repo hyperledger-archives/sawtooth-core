@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf import client_pb2
 
 
 class SystemLoadHandler(object):
@@ -27,4 +28,6 @@ class SystemLoadHandler(object):
             sender=message.sender,
             message_type=validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE,
             correlation_id=message.correlation_id,
-            content='{ "status": "SUCCESS" }'.encode()))
+            content=client_pb2.ClientBatchSubmitResponse(
+                status=client_pb2.ClientBatchSubmitResponse.OK
+            ).SerializeToString()))
