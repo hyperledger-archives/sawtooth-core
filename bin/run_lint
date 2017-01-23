@@ -166,9 +166,13 @@ lint "python -m pylint" core/sawtooth "$SINCE" .pylintrc-strict 0 || retval=1
 
 PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
 export PYTHONPATH
 lint "python3 -m pylint" sdk/python "$SINCE" .pylintrc-strict 1 || retval=1
 lint "python3 -m pylint" sdk/examples/intkey_python "$SINCE" .pylintrc-strict 1 || retval=1
+lint "python3 -m pylint" sdk/examples/arcade/sawtooth_xo "$SINCE" .pylintrc-strict 1 || retval=1
+lint "python3 -m pylint" rest_api/sawtooth_rest_api "$SINCE" .pylintrc-strict 1 || retval=1
 
 PYTHONPATH=$top_dir/core_transactions/config
 PYTHONPATH=$top_dir/sdk/python
@@ -182,6 +186,10 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint "python -m pylint" validator "$SINCE" .pylintrc-validator 1 sawtooth_validator || retval=1
 lint "python -m pylint" validator/sawtooth_validator/consensus "$SINCE" .pylintrc-validator 1 || retval=1
+
+PYTHONPATH=$top_dir/core
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
 lint "python3 -m pylint" validator/sawtooth_validator "$SINCE" .pylintrc-strict 1 consensus || retval=1
 
 PYTHONPATH=$top_dir/core
