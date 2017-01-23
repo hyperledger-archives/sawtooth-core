@@ -3,3 +3,9 @@ tools/ubuntu-xenial-16.04-cloudimg-console.log
 sdk/python/sawtooth_protobuf
 core_transactions/config/sawtooth_config/protobuf
 validator/sawtooth_validator/protobuf
+
+.idea
+*.sublime*
+tools/conf-local.sh
+tools/vagrant.local.yaml
+bin/sdk/python/sawtooth_protobuf/__init__.py
