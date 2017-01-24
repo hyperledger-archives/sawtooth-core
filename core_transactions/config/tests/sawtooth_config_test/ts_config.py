@@ -18,10 +18,46 @@ import os
 import unittest
 import traceback
 from subprocess import Popen
+import base64
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
 from sawtooth_config_test.test_config import TestConfig
+
+from sawtooth_config.protobuf.config_pb2 import SettingEntry
+from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
+from sawtooth_protobuf.validator_pb2 import Message
+
+
+def _parse_setting_entry(data):
+    entry = SettingEntry()
+    entry.ParseFromString(data)
+
+    d = {}
+    for k, v in entry.values.items():
+        if k == 'sawtooth.config.vote.proposals':
+            d[k] = ConfigCandidates()
+            d[k].ParseFromString(base64.b64decode(v))
+        else:
+            d[k] = v
+
+    return d
+
+
+def compare_set_request(req1, req2):
+    if len(req1.entries) != len(req2.entries):
+        return False
+
+    entries1 = [(e.address, _parse_setting_entry(e.data))
+                for e in req1.entries]
+    entries2 = [(e.address, _parse_setting_entry(e.data))
+                for e in req2.entries]
+
+    match = entries1 == entries2
+    if not match:
+        print('expected: {}, got {}'.format(entries1, entries2))
+
+    return match
 
 
 class TestSuiteConfig(unittest.TestCase):
@@ -34,6 +70,8 @@ class TestSuiteConfig(unittest.TestCase):
         url = '127.0.0.1:40000'
 
         self.tester = TransactionProcessorTester()
+        self.tester.register_comparator(Message.TP_STATE_SET_REQUEST,
+                                        compare_set_request)
 
         self.tester.listen(url)
         print('Test running in PID: {}'.format(os.getpid()))
@@ -65,6 +103,8 @@ class TestSuiteConfig(unittest.TestCase):
             suite.addTest(TestConfig('test_set_value_no_auth', self.tester))
             suite.addTest(TestConfig('test_set_value_bad_auth_type',
                                      self.tester))
+            suite.addTest(TestConfig('test_error_on_bad_auth_type',
+                                     self.tester))
             suite.addTest(TestConfig('test_set_value_bad_approval_threshold',
                                      self.tester))
             suite.addTest(TestConfig('test_set_value_proposals',
@@ -75,7 +115,7 @@ class TestSuiteConfig(unittest.TestCase):
                                      self.tester))
             suite.addTest(TestConfig('test_vote_in_ballot_mode_counted',
                                      self.tester))
-            suite.addTest(TestConfig('test_vote_in_ballot_mode_rejeceted',
+            suite.addTest(TestConfig('test_vote_in_ballot_mode_rejected',
                                      self.tester))
             suite.addTest(TestConfig('test_authorized_keys_accept_no_approval',
                                      self.tester))

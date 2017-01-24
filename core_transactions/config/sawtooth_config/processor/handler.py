@@ -15,7 +15,7 @@
 
 import logging
 import hashlib
-from binascii import hexlify, unhexlify
+import base64
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.client.future import FutureTimeoutError
@@ -32,7 +32,11 @@ from sawtooth_config.protobuf.config_pb2 import SettingEntry
 LOGGER = logging.getLogger(__name__)
 
 
+# The config namespace is special: it is not derived from a hash.
 CONFIG_NAMESPACE = '000000'
+
+# Number of seconds to wait for state operations to succeed
+STATE_TIMEOUT_SEC = 10
 
 
 def _to_hash(value):
@@ -47,8 +51,9 @@ def _get_setting_entry(state, address):
     setting_entry = SettingEntry()
 
     try:
-        entries_list = state.get([address], timeout=5)
+        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
+        LOGGER.warning('Timeout occured on state.get([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
     if len(entries_list) != 0:
@@ -81,11 +86,15 @@ def _set_config_value(state, key, value):
         addresses = list(state.set(
             [StateEntry(address=address,
                         data=setting_entry.SerializeToString())],
-            timeout=5))
+            timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on state.set([%s, <value>])', address)
         raise InternalError('Unable to set {}'.format(key))
 
     if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save value on address %s', address)
         raise InternalError(
             'Unable to save config value {}'.format(key))
     LOGGER.info('Config setting %s changed from %s to %s',
@@ -98,14 +107,14 @@ def _get_config_candidates(state):
         return ConfigCandidates(candidates={})
     else:
         config_candidates = ConfigCandidates()
-        config_candidates.ParseFromString(unhexlify(value))
+        config_candidates.ParseFromString(base64.b64decode(value))
         return config_candidates
 
 
 def _save_config_candidates(state, config_candidates):
     _set_config_value(state,
                       'sawtooth.config.vote.proposals',
-                      hexlify(config_candidates.SerializeToString()))
+                      base64.b64encode(config_candidates.SerializeToString()))
 
 
 def _get_auth_type(state):
@@ -186,6 +195,8 @@ class ConfigurationTransactionHandler(object):
                                              config_payload,
                                              state)
         else:
+            LOGGER.error(
+                'auth_type %s should not have been allowed', auth_type)
             raise InternalError(
                 'auth_type {} should not have been allowed'.format(auth_type))
 

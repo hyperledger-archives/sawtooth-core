@@ -23,8 +23,8 @@ from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_protobuf.validator_pb2 import Message
 from sawtooth_protobuf.validator_pb2 import MessageList
 
-from sawtooth_processor_test.message_types \
-    import to_protobuf_class, to_message_type
+from sawtooth_processor_test.message_types import to_protobuf_class
+from sawtooth_processor_test.message_types import to_message_type
 
 
 class UnexpectedMessageException(Exception):
@@ -153,7 +153,11 @@ class TransactionProcessorTester(object):
         :param ident (str) the identity of the zmq.DEALER to send to
         """
 
-        print("Sending {} to {}".format(message.message_type, ident))
+        print("Sending {}({}) to {}".format(
+            to_protobuf_class(message.message_type).__name__,
+            message.message_type,
+            ident
+        ))
 
         return await self._socket.send_multipart([
             bytes(ident, 'UTF-8'),
@@ -173,8 +177,10 @@ class TransactionProcessorTester(object):
         message.ParseFromString(result)
         message.sender = ident
 
-        print("Received {} from {}".format(
-            message.message_type, message.sender
+        print("Received {}({}) from {}".format(
+            to_protobuf_class(message.message_type).__name__,
+            message.message_type,
+            message.sender
         ))
 
         return message
