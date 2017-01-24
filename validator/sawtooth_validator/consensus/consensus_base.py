@@ -31,7 +31,7 @@ class Consensus(object):
         pass
 
     @abstractmethod
-    def create_block(self):
+    def create_block(self, pub_key):
         """Build a new candidate transaction block. This can be called
         as a result of the previous candidate block being claimed or a new
         block arriving and becoming the current head of the chain after

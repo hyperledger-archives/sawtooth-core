@@ -546,15 +546,16 @@ class PoetConsensus(Consensus):
         journal.on_commit_block += self._on_commit_block
         journal.on_decommit_block += self._on_decommit_block
 
-    def create_block(self):
+    def create_block(self, pub_key):
         """Creates a candidate transaction block.
 
         Args:
-
+            pub_key: public key corresponding to private key used to sign block
         Returns:
-            None
+            new transaction block.
         """
-        return poet_transaction_block.PoetTransactionBlock()
+        minfo = {"PublicKey": pub_key}
+        return poet_transaction_block.PoetTransactionBlock(minfo)
 
     def initialize_block(self, journal, block):
         """Builds a transaction block that is specific to this particular

@@ -34,6 +34,7 @@ from journal.messages import transaction_block_message
 from journal.messages import transaction_message
 
 from sawtooth.exceptions import NotAvailableException
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.consensus.consensus_base import Consensus
 
 logger = logging.getLogger(__name__)
@@ -760,7 +761,10 @@ class Journal(object):
             genesis (bool): Whether to force the creation of the
                 initial block. Used during genesis block creation
         """
-        new_block = self.consensus.create_block()
+        assert self.local_node.SigningKey
+        pub_key = signing.encode_pubkey(
+            signing.generate_pubkey(self.local_node.SigningKey), "hex")
+        new_block = self.consensus.create_block(pub_key)
         # in some cases the consensus will not build candidate blocks.
         # for example devmode non block publishing nodes.
         if new_block is None:
