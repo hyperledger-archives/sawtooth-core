@@ -54,8 +54,8 @@ class DevModeConsensus(Consensus):
     def create_block(self):
         """Build a new candidate transaction block.
 
-        :return:
-            new transaction block.
+        Returns:
+            A new transaction block on success, None on failure
         """
         if not self._block_publisher:
             return None
@@ -67,7 +67,7 @@ class DevModeConsensus(Consensus):
         consensus mechanism, in this case there is nothing to do.
 
         Args:
-            jounrnal: the journal
+            journal: the journal
             block: the block to initialize.
         Returns:
             None

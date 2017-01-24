@@ -124,6 +124,10 @@ class WaitCertificate(object):
                 self._serialized_certificate,
                 self.signature)
 
+    @property
+    def population_estimate(self):
+        return self.local_mean / WaitTimer.target_wait_time
+
     def __init__(self, enclave_certificate):
         """Initialize the wait certificate from a PoET enclave wait
         certificate.
@@ -170,12 +174,12 @@ class WaitCertificate(object):
         enclave_certificate = self.enclave_wait_certificate
         expected_mean = WaitTimer.compute_local_mean(certificates)
 
-        if enclave_certificate.duration < self.poet_enclave.MINIMUM_WAIT_TIME:
+        if enclave_certificate.duration < WaitTimer.minimum_wait_time:
             raise \
                 ValueError(
                     'Wait time less than minimum: {0} < {1}'.format(
                         enclave_certificate.duration,
-                        self.poet_enclave.MINIMUM_WAIT_TIME))
+                        WaitTimer.minimum_wait_time))
 
         if not _is_close(
                 enclave_certificate.local_mean,

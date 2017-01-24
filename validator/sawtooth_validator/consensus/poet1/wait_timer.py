@@ -52,7 +52,7 @@ class WaitTimer(object):
     poet_enclave = None
 
     @classmethod
-    def _population_estimate(cls, certificates):
+    def _compute_population_estimate(cls, certificates):
         """Estimates the size of the validator population by computing
         the average wait time and the average local mean used by
         the winning validator.
@@ -82,8 +82,7 @@ class WaitTimer(object):
         sum_means = 0
         sum_waits = 0
         for certificate in certificates[:cls.certificate_sample_length]:
-            sum_waits += \
-                certificate.duration - cls.poet_enclave.MINIMUM_WAIT_TIME
+            sum_waits += certificate.duration - cls.minimum_wait_time
             sum_means += certificate.local_mean
 
         avg_wait = sum_waits / len(certificates)
@@ -115,9 +114,10 @@ class WaitTimer(object):
         # WaitTimer object
         enclave_timer = \
             cls.poet_enclave.create_wait_timer(
-                validator_address,
-                previous_certificate_id,
-                local_mean)
+                validator_address=validator_address,
+                previous_certificate_id=previous_certificate_id,
+                local_mean=local_mean,
+                minimum_wait_time=cls.minimum_wait_time)
         timer = cls(enclave_timer)
 
         LOGGER.info('wait timer created; %s', timer)
@@ -146,9 +146,14 @@ class WaitTimer(object):
                 (cls.initial_wait_time * ratio**2)
         else:
             local_mean = \
-                cls.target_wait_time * cls._population_estimate(certificates)
+                cls.target_wait_time * \
+                cls._compute_population_estimate(certificates)
 
         return local_mean
+
+    @property
+    def population_estimate(self):
+        return self.local_mean / WaitTimer.target_wait_time
 
     def __init__(self, enclave_timer):
         self.previous_certificate_id =\
@@ -160,6 +165,7 @@ class WaitTimer(object):
 
         self._enclave_wait_timer = enclave_timer
         self._expires = self.request_time + self.duration + 0.1
+        self._serialized_timer = None
 
     def __str__(self):
         return \
@@ -167,6 +173,14 @@ class WaitTimer(object):
                 self.local_mean,
                 self.duration,
                 self.previous_certificate_id)
+
+    def serialize(self):
+        """Serializes the underlying enclave wait timer
+        """
+        if self._serialized_timer is None:
+            self._serialized_timer = self._enclave_wait_timer.serialize()
+
+        return self._serialized_timer
 
     def has_expired(self, now):
         """Determines whether the timer has expired.

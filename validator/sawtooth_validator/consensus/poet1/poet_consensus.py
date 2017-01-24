@@ -18,6 +18,7 @@ import logging
 import importlib
 import hashlib
 import random
+import math
 
 from gossip import common
 from gossip import stats
@@ -30,6 +31,10 @@ from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
 from sawtooth_validator.consensus.poet1.wait_certificate import WaitCertificate
 
 LOGGER = logging.getLogger(__name__)
+
+BlockInformation = collections.namedtuple('BlockInformation',
+                                          ['originator_id',
+                                           'population_estimate'])
 
 
 class PoetConsensus(Consensus):
@@ -52,6 +57,20 @@ class PoetConsensus(Consensus):
     # submit new signup information
     __BLOCK_CLAIM_TRIGGER = 20
 
+    # The default maximum deviation from the expected win frequency
+    # for a particular validator before the z-test will fail and the
+    # claimed block will be rejected.  Deviations and corresponding
+    # confidence intervals:
+    # 3.075 ==> 99.9%
+    # 2.575 ==> 99.5%
+    # 2.321 ==> 99%
+    # 1.645 ==> 95%
+    __MAXIMUM_WIN_DEVIATION = 3.075
+
+    # The default minimum number of observations before the deviation
+    # from expected win frequency is checked
+    __MINIMUM_WIN_OBSERVATIONS = 3
+
     def __init__(self, kwargs):
         """Constructor for the PoetJournal class.
 
@@ -60,6 +79,7 @@ class PoetConsensus(Consensus):
         """
         self.poet_public_key = None
         self._validator_statistics = None
+        self._population_cache = {}
 
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
@@ -91,6 +111,29 @@ class PoetConsensus(Consensus):
             'After claiming %d block(s), validator will begin randomly '
             'determining if it wants to create new keys',
             self._block_claim_trigger)
+
+        self._maximum_win_deviation = \
+            float(
+                kwargs.get(
+                    'MaximumWinDeviation',
+                    self.__MAXIMUM_WIN_DEVIATION))
+        LOGGER.debug(
+            'A validator will be allowed a maximum deviation of %f from '
+            'the expected election win frequency',
+            self._maximum_win_deviation)
+
+        self._minimum_win_observations = \
+            max(
+                int(
+                    kwargs.get(
+                        'MinimumWinObservations',
+                        self.__MINIMUM_WIN_OBSERVATIONS)),
+                1)
+        LOGGER.debug(
+            'A validator must win at least %d block elections before zTest is '
+            'used to check its win frequency is tested against the maximum '
+            'deviation',
+            self._minimum_win_observations)
 
         # We are going to sum up the numbers between the trigger and the
         # threshold (inclusive), shifting all numbers "left" by (trigger - 1)
@@ -293,52 +336,7 @@ class PoetConsensus(Consensus):
         Returns:
             True if we accept the block as a valid block, False otherwise
         """
-        # If there are no committed blocks, we are testing the genesis block.
-        # That means that no validator registration information exists and
-        # therefore we cannot even hope to gather any statistics.  So, we will
-        # have to just assume, for the time being, that the block is valid,
-        # although other checks may determine it is invalid.
-        if journal.committed_block_count != 0:
-            try:
-                # Retrieve the validator registry transaction information.
-                # Note that we have to use the most-recently-committed block
-                # as the block under test has not transaction store associated
-                # with it.  Been there, done that...didn't work.  =)
-                registration = \
-                    PoetConsensus._retrieve_validator_registration(
-                        journal=journal,
-                        block_id=journal.most_recent_committed_block_id,
-                        originator_id=block.OriginatorID)
-
-                # Get the statistics, creating them if they don't already
-                # exist
-                statistics = \
-                    self._validator_statistics.setdefault(
-                        block.OriginatorID,
-                        {
-                            'poet_public_key': registration['poet-public-key'],
-                            'claimed_block_count': 0
-                        })
-
-                # If the validator has already reached claimed limit for the
-                # public key, then we reject the block as the validator needs
-                # to get new signup information
-                if (registration['poet-public-key'] ==
-                        statistics['poet_public_key']) and \
-                    (statistics['claimed_block_count'] >=
-                        self._block_claim_threshold):
-                    LOGGER.error(
-                        'Validator %s has reached block claim limit '
-                        '(%d >= %d) with current signup information',
-                        block.OriginatorID,
-                        statistics['claimed_block_count'],
-                        self._block_claim_threshold)
-                    return False
-
-            except ValueError, error:
-                LOGGER.error('Error attempting to verify block: %s', error)
-
-        return True
+        return self._block_can_be_claimed(journal=journal, block=block)
 
     def _on_commit_block(self, journal, block):
         """
@@ -448,6 +446,211 @@ class PoetConsensus(Consensus):
 
         return False
 
+    def _validator_has_reached_claim_limit(self, originator_id, registration):
+        # Get the statistics, creating them if they don't already
+        # exist
+        statistics = \
+            self._validator_statistics.setdefault(
+                originator_id,
+                {
+                    'poet_public_key': registration['poet-public-key'],
+                    'claimed_block_count': 0
+                })
+
+        # If the validator has already reached the claim limit for the
+        # public key, then we reject the block as the validator needs
+        # to get new signup information.
+        if (registration['poet-public-key'] ==
+                statistics['poet_public_key']) and \
+                (statistics['claimed_block_count'] >=
+                    self._block_claim_threshold):
+            LOGGER.error(
+                'Validator %s has reached block claim limit '
+                '(%d >= %d) with current signup information',
+                originator_id,
+                statistics['claimed_block_count'],
+                self._block_claim_threshold)
+            return True
+
+        return False
+
+    def _build_population_list(self, journal, block):
+        population_list = []
+
+        # Starting with the block previous to the one provided, walk the
+        # blocks backwards until we get to the root
+        block_id = block.PreviousBlockID
+        while block_id != common.NullIdentifier:
+            other_block = journal.block_store[block_id]
+
+            # If we haven't cached the information for this block, then
+            # do so first
+            population_cache_entry = self._population_cache.get(block_id)
+            if population_cache_entry is None:
+                originator_id = other_block.OriginatorID
+                population_estimate = \
+                    other_block.wait_certificate.population_estimate
+                block_info = \
+                    BlockInformation(
+                        originator_id=originator_id,
+                        population_estimate=population_estimate)
+
+            # Now add it to the population list and get the previous block
+            population_list.append(block_info)
+            block_id = other_block.PreviousBlockID
+
+        # Drop the first WaitTimer.fixed_duration_blocks blocks from the list
+        # as the population numbers for these blocks are meaningless since
+        # the duration was fixed.
+        return population_list[:-WaitTimer.fixed_duration_blocks]
+
+    def _validator_is_winning_too_frequently(self,
+                                             journal,
+                                             block,
+                                             pre_claim_test=False):
+        # Build up the population list for the block chain and if empty, then
+        # don't bother with the z-test
+        population_list = \
+            self._build_population_list(journal=journal, block=block)
+        if population_list:
+            # If we are testing before claiming, set the originator ID to our
+            # own as it will not be retrievable from the block (as it hasn't
+            # been signed yet) and get the population estimate from the wait
+            # timer.  Otherwise, get it from the block.
+            if pre_claim_test:
+                originator_id = journal.local_node.Identifier
+                population_estimate = block.wait_timer.population_estimate
+            else:
+                originator_id = block.OriginatorID
+                population_estimate = \
+                    block.wait_certificate.population_estimate
+
+            # Insert this block information at the front
+            population_list.insert(
+                0,
+                BlockInformation(
+                    originator_id=originator_id,
+                    population_estimate=population_estimate))
+
+            observed_wins = 0
+            expected_wins = 0
+            block_count = 0
+
+            # We are now going to compute a "1 sample Z test" for each
+            # progressive range of results in the history.  Test the
+            # hypothesis that validator won elections (i.e., was able to
+            # claim blocks) with higher mean that expected.
+            #
+            # See: http://www.cogsci.ucsd.edu/classes/SP07/COGS14/NOTES/
+            #             binomial_ztest.pdf
+
+            for block_info in population_list:
+                block_count += 1
+                expected_wins += 1.0 / block_info.population_estimate
+                if block_info.originator_id == originator_id:
+                    observed_wins += 1
+                    if observed_wins > self._minimum_win_observations and \
+                            observed_wins > expected_wins:
+                        probability = expected_wins / block_count
+                        standard_deviation = \
+                            math.sqrt(block_count * probability *
+                                      (1.0 - probability))
+                        z_score = \
+                            (observed_wins - expected_wins) / \
+                            standard_deviation
+                        if z_score > self._maximum_win_deviation:
+                            LOGGER.info(
+                                'zTest failed for %s at depth %d with z=%f, '
+                                'expected=%f, observed=%d',
+                                originator_id,
+                                block_count,
+                                z_score,
+                                expected_wins,
+                                observed_wins)
+                            return True
+
+            LOGGER.debug(
+                'zTest succeeded for %s with block depth %d, expected=%f, '
+                'observed=%g',
+                originator_id,
+                block_count,
+                expected_wins,
+                observed_wins)
+            LOGGER.debug(
+                'zTest history: %s',
+                ['{0}:{1:0.2f}'.format(
+                    x.originator_id[:8],
+                    x.population_estimate) for x in population_list[:3]])
+
+        return False
+
+    def _block_can_be_claimed(self, journal, block, pre_claim_test=False):
+        # If there are no committed blocks, we are testing the genesis block.
+        # That means that no validator registration information exists and
+        # therefore we cannot even hope to gather any statistics.  So, we will
+        # have to just assume, for the time being, that the block can be
+        # claimed unless some further test rejects it.
+        if journal.committed_block_count != 0:
+            # If we are testing before we try to claim the block, then we use
+            # the local node identifier as the originator of the block as we
+            # cannot get the originator ID from the block until it is signed.
+            if pre_claim_test:
+                originator_id = journal.local_node.Identifier
+            else:
+                originator_id = block.OriginatorID
+
+            try:
+                # Retrieve the validator registry transaction information.
+                # Note that we have to use the most-recently-committed block
+                # as the block under test has no transaction store associated
+                # with it.  Been there, done that...didn't work.  =)  If there
+                # is no validator registration information, then we will reject
+                # the block as we have no way to validate it.
+                registration = \
+                    PoetConsensus._retrieve_validator_registration(
+                        journal=journal,
+                        block_id=journal.most_recent_committed_block_id,
+                        originator_id=originator_id)
+
+                # If we are testing before trying to claim, then we need to
+                # make sure that we will be signing the wait certificate with
+                # the private key that corresponds to the publicly-known public
+                # key.
+                if pre_claim_test:
+                    if registration['poet-public-key'] != self.poet_public_key:
+                        raise \
+                            ValueError(
+                                "Our current PoET public key does not match "
+                                "the globally-visible one.  Wait until "
+                                "another validator has added our new key to "
+                                "the validator registry.")
+
+                # Test to see if the validator has reached its claim limit
+                if self._validator_has_reached_claim_limit(
+                        originator_id=originator_id,
+                        registration=registration):
+                    raise \
+                        ValueError(
+                            'Validator {} has reached block claim '
+                            'limit'.format(
+                                originator_id))
+
+                # Test to see if a validator is winning too frequently
+                if self._validator_is_winning_too_frequently(
+                        journal=journal,
+                        block=block,
+                        pre_claim_test=pre_claim_test):
+                    raise \
+                        ValueError(
+                            'Validator {} is winning elections to '
+                            'frequently'.format(
+                                originator_id))
+            except ValueError, error:
+                LOGGER.error('Block cannot be claimed: %s', error)
+                return False
+
+        return True
+
     def register_signup_information(self, journal):
         wait_certificate_id = journal.most_recent_committed_block_id
         public_key_hash = \
@@ -549,10 +752,8 @@ class PoetConsensus(Consensus):
     def create_block(self):
         """Creates a candidate transaction block.
 
-        Args:
-
         Returns:
-            None
+            A new PoET transaction block on success, None on failure
         """
         return poet_transaction_block.PoetTransactionBlock()
 
@@ -600,82 +801,10 @@ class PoetConsensus(Consensus):
                 blocks
             block (PoetTransactionBlock): The block to claim.
         """
-        # If there are no committed blocks, we are trying to claim the
-        # genesis block.  That means that no validator registration
-        # information exists and therefore we cannot even hope to check any
-        # statistics.  So, we will have to just assume, for the time being,
-        # that the we can claim the block, although other checks may determine
-        # later that the block is invalid.  Can't fault us for trying,
-        # though. =)
-        if journal.committed_block_count != 0:
-            # Before we can lay claim to the block, there are some
-            # criteria that need to be met:
-            # 1.  Our validator registry information needs to be on
-            #     the block chain.
-            # 2.  The PoET public key in said validator registry
-            #     information needs to match our current PoET public
-            #     key.
-            # 3.  We cannot have already hit the block commit limit for
-            #     our keys.
-            # Failure to meet this criteria will result in other validators
-            # refusing to commit the block.
-
-            # Retrieve the validator registry information for the most-
-            # recently-committed block.  Failure to do so will indicate that
-            # we cannot claim the block as we need to wait until registration
-            # information is on the block chain.
-            try:
-                registration = \
-                    PoetConsensus._retrieve_validator_registration(
-                        journal=journal,
-                        block_id=journal.most_recent_committed_block_id,
-                        originator_id=journal.local_node.Identifier)
-
-                # Make sure we will sign the wait certificate with the secret
-                # key corresponding to the public key that the other
-                # validators know about.
-                if registration['poet-public-key'] != self.poet_public_key:
-                    raise \
-                        ValueError(
-                            "Our current PoET public key does not match the "
-                            "globally-visible one.  Wait until another "
-                            "validator has added our new key to the "
-                            "validator registry.")
-
-                # Get our statistics, creating them if they don't already
-                # exist (we create them as this may be the first block we can
-                # claim).
-                statistics = \
-                    self._validator_statistics.setdefault(
-                        journal.local_node.Identifier,
-                        {
-                            'poet_public_key': self.poet_public_key,
-                            'claimed_block_count': 0
-                        })
-
-                # If the validator has already reached the claim limit for
-                # its current public key, then we reject the block as the
-                # validator should be getting new validator registration
-                # information.
-                if (registration['poet-public-key'] ==
-                        statistics['poet_public_key']) and \
-                    (statistics['claimed_block_count'] >=
-                        self._block_claim_threshold):
-                    raise \
-                        ValueError(
-                            'Validator {0} has reached block claim limit '
-                            '({1} >= {2}) with current signup info'.format(
-                                journal.local_node.Identifier,
-                                statistics['claimed_block_count'],
-                                self._block_claim_threshold))
-
-                    # Note - we don't update our block commit statistics here.
-                    # We wait until the _on_commit_block callback.  Claiming
-                    # and actually getting the block committed are two
-                    # different things.
-            except ValueError, error:
-                LOGGER.error('Could not claim block: %s', error)
-                raise
+        if not self._block_can_be_claimed(journal=journal,
+                                          block=block,
+                                          pre_claim_test=True):
+            raise ValueError('Could not claim block')
 
         # If we got this far, we are fairly confident in creating a wait
         # certificate for the block and embedding our public key.
