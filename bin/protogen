@@ -51,6 +51,9 @@ protos_dir=$top_dir/protos
 sdk_dir=$top_dir/sdk/python
 sdk_pkg=sawtooth_protobuf
 
+cli_dir=$top_dir/cli
+cli_pkg=sawtooth_protobuf
+
 validator_dir=$top_dir/validator
 validator_pkg=sawtooth_validator/protobuf
 
@@ -58,6 +61,7 @@ rest_api_dir=$top_dir/rest_api
 rest_api_pkg=sawtooth_rest_api/protobuf
 
 run_protoc $sdk_dir $sdk_pkg
+run_protoc $cli_dir $cli_pkg
 run_protoc $validator_dir $validator_pkg
 run_protoc $rest_api_dir $rest_api_pkg
 

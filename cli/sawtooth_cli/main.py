@@ -27,6 +27,8 @@ from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.keygen import add_keygen_parser
 from sawtooth_cli.keygen import do_keygen
+from sawtooth_cli.genesis import add_genesis_parser
+from sawtooth_cli.genesis import do_genesis
 
 
 def create_console_handler(verbose_level):
@@ -82,6 +84,7 @@ def create_parser(prog_name):
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
     add_keygen_parser(subparsers, parent_parser)
+    add_genesis_parser(subparsers, parent_parser)
 
     return parser
 
@@ -100,6 +103,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
 
     if args.command == 'keygen':
         do_keygen(args)
+    elif args.command == 'genesis':
+        do_genesis(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 

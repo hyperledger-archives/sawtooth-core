@@ -123,6 +123,15 @@ test_validator() {
     cd ..
 }
 
+test_cli() {
+    PYTHONPATH=$top_dir
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing
+    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
+    PYTHONPATH=$PYTHONPATH:$top_dir/cli
+    export PYTHONPATH
+    nose2-3 -s $top_dir/cli/tests
+}
+
 
 MODULE="all"
 while getopts :m:h opt
@@ -147,11 +156,15 @@ case $MODULE in
         test_sdk_examples
         test_tp_config
         test_core
+        test_cli
         test_signing
         test_validator
         ;;
     core)
         test_core
+        ;;
+    cli)
+        test_cli
         ;;
     signing)
         test_signing
