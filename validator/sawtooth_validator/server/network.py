@@ -185,27 +185,26 @@ class _ClientSendReceiveThread(Thread):
         while True:
             msg_bytes = yield from self._proc_sock.recv()
             LOGGER.debug("Client received message: %s", msg_bytes)
-            message_list = validator_pb2.MessageList()
-            message_list.ParseFromString(msg_bytes)
-            for message in message_list.messages:
-                try:
-                    self._futures.set_result(
-                        message.correlation_id,
-                        future.FutureResult(message_type=message.message_type,
-                                            content=message.content))
-                except future.FutureCollectionKeyError:
-                    # if we are getting an initial message, not a response
-                    if message.message_type in self._handlers:
-                        handler = self._handlers[message.message_type]
-                    else:
-                        handler = self._handlers['default']
-
-                    handler.handle(message, _Responder(self.send_message))
-                    self._recv_queue.put_nowait(message)
+            message = validator_pb2.Message()
+            message.ParseFromString(msg_bytes)
+            try:
+                self._futures.set_result(
+                    message.correlation_id,
+                    future.FutureResult(message_type=message.message_type,
+                                        content=message.content))
+            except future.FutureCollectionKeyError:
+                # if we are getting an initial message, not a response
+                if message.message_type in self._handlers:
+                    handler = self._handlers[message.message_type]
                 else:
-                    my_future = self._futures.get(message.correlation_id)
-                    LOGGER.debug("Message round "
-                                 "trip: %s", my_future.get_duration())
+                    handler = self._handlers['default']
+
+                handler.handle(message, _Responder(self.send_message))
+                self._recv_queue.put_nowait(message)
+            else:
+                my_future = self._futures.get(message.correlation_id)
+                LOGGER.debug("Message round "
+                             "trip: %s", my_future.get_duration())
 
     @asyncio.coroutine
     def _send_message(self):
@@ -216,7 +215,8 @@ class _ClientSendReceiveThread(Thread):
             msg = yield from self._send_queue.get()
             LOGGER.debug("Client sending %s "
                          "message", msg.message_type)
-            yield from self._proc_sock.send(msg.SerializeToString())
+            yield from self._proc_sock.send_multipart(
+                [msg.SerializeToString()])
 
     @asyncio.coroutine
     def _put_message(self, message):
@@ -333,8 +333,7 @@ class _ServerSendReceiveThread(Thread):
                          "message to %s", msg.message_type, msg.sender)
             yield from self._proc_sock.send_multipart(
                 [bytes(msg.sender, 'UTF-8'),
-                 validator_pb2.MessageList(messages=[msg]
-                                           ).SerializeToString()])
+                 msg.SerializeToString()])
 
     @asyncio.coroutine
     def _put_message(self, message):
