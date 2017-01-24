@@ -591,7 +591,6 @@ class Journal(object):
         """
         logger.debug('blkid: %s - processing incoming transaction block',
                      tblock.Identifier[:8])
-
         # Make sure this is a valid block, for now this will just check the
         # signature... more later
         if not tblock.verify_signature():
@@ -1469,7 +1468,8 @@ class Journal(object):
                         time.time() if remaining_transactions > 0 else None
 
         with self._txn_lock:
-            if self.pending_block and \
+            if self.pending_block and self.pending_block.Status != \
+                    transaction_block.Status.invalid and\
                     self.consensus.check_claim_block(
                         self,
                         self.pending_block,
