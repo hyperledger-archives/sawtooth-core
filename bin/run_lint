@@ -200,4 +200,9 @@ PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
 export PYTHONPATH
 lint "python -m pylint" extensions/arcade "$SINCE" .pylintrc-arcade 1 || retval=1
 
+PYTHONPATH=$top_dir/cli
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+export PYTHONPATH
+lint "python3 -m pylint" cli  "$SINCE" .pylintrc-strict 1 || retval=1
+
 exit $retval
