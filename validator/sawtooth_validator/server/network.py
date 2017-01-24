@@ -75,7 +75,8 @@ def _generate_id():
 
 class DefaultHandler(object):
     def handle(self, message, responder):
-        print("invalid message %s", message.message_type)
+        LOGGER.info("invalid message %s: %s", message.message_type,
+                    message.correlation_id)
 
 
 class Connection(object):
