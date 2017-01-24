@@ -22,7 +22,7 @@ from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
 
-from arcade.sawtooth_xo.processor.handler import XoTransactionHandler
+from sawtooth_xo.processor.handler import XoTransactionHandler
 
 
 def create_console_handler(verbose_level):

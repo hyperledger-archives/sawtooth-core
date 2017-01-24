@@ -28,8 +28,8 @@ from colorlog import ColoredFormatter
 
 import sawtooth_signing.pbct_nativerecover as signing
 
-from arcade.sawtooth_xo.xo_client import XoClient
-from arcade.sawtooth_xo.xo_exceptions import XoException
+from sawtooth_xo.xo_client import XoClient
+from sawtooth_xo.xo_exceptions import XoException
 
 
 def create_console_handler(verbose_level):
