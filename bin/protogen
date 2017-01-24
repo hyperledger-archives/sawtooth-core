@@ -54,8 +54,12 @@ sdk_pkg=sawtooth_protobuf
 validator_dir=$top_dir/validator
 validator_pkg=sawtooth_validator/protobuf
 
+rest_api_dir=$top_dir/rest_api
+rest_api_pkg=sawtooth_rest_api/protobuf
+
 run_protoc $sdk_dir $sdk_pkg
 run_protoc $validator_dir $validator_pkg
+run_protoc $rest_api_dir $rest_api_pkg
 
 # Config txn family protos
 config_dir=$top_dir/core_transactions/config
