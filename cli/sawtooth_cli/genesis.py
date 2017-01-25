@@ -12,16 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import logging
-
 from sawtooth_cli.exceptions import CliException
 
-from sawtooth_protobuf.batch_pb2 import BatchList
-from sawtooth_protobuf.genesis_pb2 import GenesisData
-from sawtooth_protobuf.transaction_pb2 import TransactionHeader
-
-
-LOGGER = logging.getLogger(__name__)
+from sawtooth_cli.protobuf.batch_pb2 import BatchList
+from sawtooth_cli.protobuf.genesis_pb2 import GenesisData
+from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 
 
 def add_genesis_parser(subparsers, parent_parser):
@@ -49,15 +44,19 @@ def do_genesis(args):
     """
     genesis_batches = []
     for input_file in args.input_file:
-        LOGGER.info('Processing %s...', input_file)
+        print('Processing {}...'.format(input_file))
         input_data = BatchList()
-        with open(input_file, 'rb') as in_file:
-            input_data.ParseFromString(in_file.read())
+        try:
+            with open(input_file, 'rb') as in_file:
+                input_data.ParseFromString(in_file.read())
+        except:
+            raise CliException('Unable to read {}'.format(input_file))
+
         genesis_batches += input_data.batches
 
     _validate_depedencies(genesis_batches)
 
-    LOGGER.info('Generating %s', args.output)
+    print('Generating {}'.format(args.output))
     output_data = GenesisData(batches=genesis_batches)
     with open(args.output, 'wb') as out_file:
         out_file.write(output_data.SerializeToString())

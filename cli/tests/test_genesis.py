@@ -16,14 +16,15 @@
 import argparse
 import os
 import tempfile
+import shutil
 import unittest
 
-from sawtooth_protobuf.batch_pb2 import BatchHeader
-from sawtooth_protobuf.batch_pb2 import Batch
-from sawtooth_protobuf.batch_pb2 import BatchList
-from sawtooth_protobuf.genesis_pb2 import GenesisData
-from sawtooth_protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_protobuf.transaction_pb2 import Transaction
+from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
+from sawtooth_cli.protobuf.batch_pb2 import Batch
+from sawtooth_cli.protobuf.batch_pb2 import BatchList
+from sawtooth_cli.protobuf.genesis_pb2 import GenesisData
+from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 
 from sawtooth_cli import genesis
 from sawtooth_cli.exceptions import CliException
@@ -33,16 +34,11 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
     def __init__(self, test_name):
         super().__init__(test_name)
-        self._files = None
-        self._target_file = None
+        self._temp_dir = None
         self._parser = None
 
     def setUp(self):
-        self._files = []
-
-        self._target_file = tempfile.NamedTemporaryFile(delete=False,
-                                                        suffix=".batch")
-        self._files.append(self._target_file.name)
+        self._temp_dir = tempfile.mkdtemp()
 
         self._parser = argparse.ArgumentParser()
         subparsers = self._parser.add_subparsers(title='subcommands',
@@ -51,14 +47,20 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         genesis.add_genesis_parser(subparsers, self._parser)
 
     def tearDown(self):
-        for f in self._files:
-            os.unlink(f)
+        shutil.rmtree(self._temp_dir)
 
     def _parse_command(self, batch_filenames):
-        cmd_args = ['genesis', '-o', self._target_file.name]
+        cmd_args = ['genesis', '-o',
+                    os.path.join(self._temp_dir, 'genesis.batch')]
         cmd_args += batch_filenames
 
         return self._parser.parse_args(cmd_args)
+
+    def _result_data(self):
+        with open(os.path.join(self._temp_dir, "genesis.batch"), "rb") as f:
+            output = GenesisData()
+            output.ParseFromString(f.read())
+            return output
 
     def test_validate_with_no_deps(self):
         batches = [self.make_batch('batch1',
@@ -71,11 +73,8 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         args = self._parse_command(batches)
         genesis.do_genesis(args)
 
-        with open(self._target_file.name, 'r+b') as result:
-            output = GenesisData()
-            output.ParseFromString(result.read())
-
-            self.assertEqual(2, len(output.batches))
+        output = self._result_data()
+        self.assertEqual(2, len(output.batches))
 
     def test_validate_with_deps_in_same_batch(self):
         batches = [self.make_batch('batch1',
@@ -89,11 +88,8 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         args = self._parse_command(batches)
         genesis.do_genesis(args)
 
-        with open(self._target_file.name, 'r+b') as result:
-            output = GenesisData()
-            output.ParseFromString(result.read())
-
-            self.assertEqual(3, len(output.batches))
+        output = self._result_data()
+        self.assertEqual(3, len(output.batches))
 
     def test_validate_with_deps_in_across_batches(self):
         batches = [self.make_batch('batch1',
@@ -106,11 +102,8 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         args = self._parse_command(batches)
         genesis.do_genesis(args)
 
-        with open(self._target_file.name, 'r+b') as result:
-            output = GenesisData()
-            output.ParseFromString(result.read())
-
-            self.assertEqual(2, len(output.batches))
+        output = self._result_data()
+        self.assertEqual(2, len(output.batches))
 
     def test_validation_fails_missing_dep(self):
         batches = [self.make_batch('batch1',
@@ -160,9 +153,9 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         )
 
         batch_list = BatchList(batches=[batch])
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".batch") as f:
+        target_path = os.path.join(self._temp_dir, batch_sig + ".batch")
+        with open(target_path, "wb") as f:
             filename = f.name
-            self._files.append(filename)
             f.write(batch_list.SerializeToString())
 
         return filename
