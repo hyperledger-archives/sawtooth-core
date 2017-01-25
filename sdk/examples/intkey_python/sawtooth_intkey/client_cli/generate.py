@@ -180,10 +180,18 @@ def do_generate(args):
 
 
 def add_generate_parser(subparsers, parent_parser):
+
+    epilog = '''
+    deprecated:
+     use create_batch, which combines
+     the populate and generate commands.
+    '''
+
     parser = subparsers.add_parser(
         'generate',
         parents=[parent_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=epilog)
 
     parser.add_argument(
         '-o', '--output',
