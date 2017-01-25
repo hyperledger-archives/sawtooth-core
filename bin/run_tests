@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,21 +42,25 @@ test_core() {
 test_sdk_examples() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
+    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
     PYTHONPATH=$PYTHONPATH:$top_dir/integration
     export PYTHONPATH
     cd integration/sawtooth_integration/test_suites
     run_tp_test tp_intkey_python ts_tp_intkey.TestSuiteIntkey
+    run_tp_test tp_xo_python ts_tp_xo.TestSuiteXo
     cd ../../../
 }
 
-test_sdk_examples_docker() {
+test_docker() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
     PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
     export PYTHONPATH
     cd integration/sawtooth_integration
-    run_docker_test -f docker/tp-intkey-python.yaml -t validator
-    run_docker_test -f docker/intkey-load-python.yaml -t integration_test
+    run_docker_test docker/tp-intkey-python.yaml -s validator
+    run_docker_test docker/intkey-load-python.yaml -s integration_test
+    run_docker_test docker/tp-xo-python.yaml -s validator
+    run_docker_test docker/xo-smoke.yaml -s integration_test
     cd ../../
 }
 
@@ -145,7 +149,6 @@ case $MODULE in
         test_core
         test_signing
         test_validator
-        #test_sdk_examples_docker
         ;;
     core)
         test_core
@@ -162,7 +165,7 @@ case $MODULE in
     tp_config)
         test_tp_config
         ;;
-    sdk_examples_docker)
-        test_sdk_examples_docker
+    docker)
+        test_docker
         ;;
 esac

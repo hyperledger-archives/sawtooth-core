@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,23 +13,23 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
-import sys
+version: "2"
 
-from sawtooth_sdk.processor.core import TransactionProcessor
+services:
 
-from arcade.sawtooth_xo.processor.handler import XoTransactionHandler
+  tp_xo:
+    image: "tp_xo_python"
+    volumes:
+      - /project/sawtooth-core:/project/sawtooth-core
+    expose:
+      - 40000
+    entrypoint: ./bin/tp_xo_python validator:40000
 
-
-def main(args=sys.argv[1:]):
-    # The prefix should eventually be looked up from the
-    # validator's namespace registry.
-    xo_prefix = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
-
-    url = args[0] if len(args) > 0 else "0.0.0.0"
-    processor = TransactionProcessor(url=url + ":40000")
-
-    handler = XoTransactionHandler(namespace_prefix=xo_prefix)
-    processor.add_handler(handler)
-
-    processor.start()
+  validator:
+    image: "sawtooth-test-ubuntu-xenial"
+    volumes:
+      - /project/sawtooth-core:/project/sawtooth-core
+    expose: 
+      - 40000
+    working_dir: /project/sawtooth-core/integration/sawtooth_integration/test_suites
+    entrypoint: nose2-3 -v ts_tp_xo.TestSuiteXo

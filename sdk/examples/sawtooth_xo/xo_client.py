@@ -26,7 +26,7 @@ from sawtooth_protobuf.batch_pb2 import BatchList
 from sawtooth_protobuf.batch_pb2 import BatchHeader
 from sawtooth_protobuf.batch_pb2 import Batch
 
-from arcade.sawtooth_xo.xo_exceptions import XoException
+from sawtooth_xo.xo_exceptions import XoException
 
 
 def _sha512(data):
