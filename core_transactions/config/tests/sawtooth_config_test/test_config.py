@@ -29,6 +29,9 @@ def _to_hash(value):
     return hashlib.sha256(value).hexdigest()
 
 
+EMPTY_CANDIDATES = ConfigCandidates(candidates=[]).SerializeToString()
+
+
 class TestConfig(unittest.TestCase):
     """
     Set of tests to run in a test suite with an existing TPTester and
@@ -130,9 +133,7 @@ class TestConfig(unittest.TestCase):
         Tests setting the value of sawtooth.config.vote.proposals, which is
         only an internally set structure.
         """
-        self._propose(
-            'sawtooth.config.vote.proposals',
-            ConfigCandidates(candidates={}).SerializeToString())
+        self._propose('sawtooth.config.vote.proposals', EMPTY_CANDIDATES)
 
         self._expect_get('sawtooth.config.authorization_type', 'None')
         self._expect_get('sawtooth.config.vote.authorized_keys', '')
@@ -156,11 +157,15 @@ class TestConfig(unittest.TestCase):
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
+        record = ConfigCandidate.VoteRecord(
+            public_key=self._public_key,
+            vote=ConfigVote.ACCEPT)
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={self._public_key: ConfigVote.ACCEPT})
+            votes=[record])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
         # Get's again to update the entry
         self._expect_get('sawtooth.config.vote.proposals')
@@ -179,11 +184,15 @@ class TestConfig(unittest.TestCase):
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
+        record = ConfigCandidate.VoteRecord(
+            public_key="some_other_pubkey",
+            vote=ConfigVote.ACCEPT)
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={'some_other_pubkey': ConfigVote.ACCEPT})
+            votes=[record])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
 
@@ -200,9 +209,8 @@ class TestConfig(unittest.TestCase):
         # expect to update the proposals
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        empty_candidates = ConfigCandidates(candidates={}).SerializeToString()
         self._expect_set('sawtooth.config.vote.proposals',
-                         base64.b64encode(empty_candidates))
+                         base64.b64encode(EMPTY_CANDIDATES))
 
         self._expect_ok()
 
@@ -216,11 +224,15 @@ class TestConfig(unittest.TestCase):
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
+        record = ConfigCandidate.VoteRecord(
+            public_key="some_other_pubkey",
+            vote=ConfigVote.ACCEPT)
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={'some_other_pubkey': ConfigVote.ACCEPT})
+            votes=[record])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
 
@@ -234,10 +246,21 @@ class TestConfig(unittest.TestCase):
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
 
-        candidates.candidates[proposal_id].votes[self._public_key] = \
-            ConfigVote.ACCEPT
-        self._expect_set('sawtooth.config.vote.proposals',
-                         base64.b64encode(candidates.SerializeToString()))
+        record = ConfigCandidate.VoteRecord(
+            public_key="some_other_pubkey",
+            vote=ConfigVote.ACCEPT)
+        new_record = ConfigCandidate.VoteRecord(
+            public_key=self._public_key,
+            vote=ConfigVote.ACCEPT)
+        candidate = ConfigCandidate(
+            proposal_id=proposal_id,
+            proposal=proposal,
+            votes=[record, new_record])
+
+        updated_candidates = ConfigCandidates(candidates=[candidate])
+        self._expect_set(
+            'sawtooth.config.vote.proposals',
+            base64.b64encode(updated_candidates.SerializeToString()))
 
         self._expect_ok()
 
@@ -252,11 +275,18 @@ class TestConfig(unittest.TestCase):
         )
         proposal_id = _to_hash(proposal.SerializeToString())
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={'some_other_pubkey': ConfigVote.ACCEPT,
-                   'a_rejectors_pubkey': ConfigVote.REJECT})
+            votes=[
+                ConfigCandidate.VoteRecord(
+                    public_key='some_other_pubkey',
+                    vote=ConfigVote.ACCEPT),
+                ConfigCandidate.VoteRecord(
+                    public_key='a_rejectors_pubkey',
+                    vote=ConfigVote.REJECT)
+            ])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
 
@@ -269,9 +299,8 @@ class TestConfig(unittest.TestCase):
         # expect to update the proposals
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        empty_candidates = ConfigCandidates(candidates={}).SerializeToString()
         self._expect_set('sawtooth.config.vote.proposals',
-                         base64.b64encode(empty_candidates))
+                         base64.b64encode(EMPTY_CANDIDATES))
 
         self._expect_ok()
 

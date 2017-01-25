@@ -18,46 +18,10 @@ import os
 import unittest
 import traceback
 from subprocess import Popen
-import base64
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
 from sawtooth_config_test.test_config import TestConfig
-
-from sawtooth_config.protobuf.config_pb2 import SettingEntry
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_protobuf.validator_pb2 import Message
-
-
-def _parse_setting_entry(data):
-    entry = SettingEntry()
-    entry.ParseFromString(data)
-
-    d = {}
-    for k, v in entry.values.items():
-        if k == 'sawtooth.config.vote.proposals':
-            d[k] = ConfigCandidates()
-            d[k].ParseFromString(base64.b64decode(v))
-        else:
-            d[k] = v
-
-    return d
-
-
-def compare_set_request(req1, req2):
-    if len(req1.entries) != len(req2.entries):
-        return False
-
-    entries1 = [(e.address, _parse_setting_entry(e.data))
-                for e in req1.entries]
-    entries2 = [(e.address, _parse_setting_entry(e.data))
-                for e in req2.entries]
-
-    match = entries1 == entries2
-    if not match:
-        print('expected: {}, got {}'.format(entries1, entries2))
-
-    return match
 
 
 class TestSuiteConfig(unittest.TestCase):
@@ -70,8 +34,6 @@ class TestSuiteConfig(unittest.TestCase):
         url = '127.0.0.1:40000'
 
         self.tester = TransactionProcessorTester()
-        self.tester.register_comparator(Message.TP_STATE_SET_REQUEST,
-                                        compare_set_request)
 
         self.tester.listen(url)
         print('Test running in PID: {}'.format(os.getpid()))
