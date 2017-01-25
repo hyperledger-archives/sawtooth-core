@@ -43,6 +43,7 @@ Open up a terminal and run the following:
    % mkdir project
    % cd project
    % git clone https://github.com/IntelLedger/sawtooth-core.git
+   % cd sawtooth-core
    % git checkout 0-7
 
   Note that the last command switches to the 0.7 branch, which is the version
@@ -63,7 +64,7 @@ sawtooth-core/tools on the host and run:
 
    We have encountered an intermittent problem on Windows hosts which
    presents as an 'Operation not permitted' error in the vagrant startup
-   output. If you encounter this error, perform a 'vagrant destroy' and
+   output.  If you encounter this error, perform a 'vagrant destroy' and
    then run 'vagrant up' again.
 
 Downloading the Vagrant box file, booting the VM, and running through
