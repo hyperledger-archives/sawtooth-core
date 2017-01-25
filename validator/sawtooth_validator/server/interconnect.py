@@ -147,7 +147,8 @@ class Interconnect(object):
         processor = self._processors[processor_type]
         message.sender = processor.sender
 
-        fut = future.Future(message.correlation_id, message.content)
+        fut = future.Future(message.correlation_id, message.content,
+                            has_callback=True)
         self._futures.put(fut)
 
         self._send_receive_thread.send_message(message)
