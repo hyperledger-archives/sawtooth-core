@@ -17,7 +17,7 @@ from sawtooth_processor_test.message_factory import MessageFactory
 from sawtooth_config.protobuf.config_pb2 import ConfigPayload
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.config_pb2 import SettingEntry
+from sawtooth_config.protobuf.config_pb2 import Setting
 
 
 class ConfigMessageFactory(object):
@@ -85,7 +85,8 @@ class ConfigMessageFactory(object):
         address = self._key_to_address(setting)
 
         if value is not None:
-            data = SettingEntry(values={setting: value}).SerializeToString()
+            entry = Setting.Entry(key=setting, value=value)
+            data = Setting(entries=[entry]).SerializeToString()
         else:
             data = None
 
@@ -95,7 +96,8 @@ class ConfigMessageFactory(object):
         address = self._key_to_address(setting)
 
         if value is not None:
-            data = SettingEntry(values={setting: value}).SerializeToString()
+            entry = Setting.Entry(key=setting, value=value)
+            data = Setting(entries=[entry]).SerializeToString()
         else:
             data = None
 
