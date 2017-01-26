@@ -209,8 +209,14 @@ class TestMessageValidation(unittest.TestCase):
         try:
             self.verifier.start()
             blocks = self._create_blocks(1, 1)
-            msg = GossipMessage(content_type="Block",
-                                content=blocks[0].SerializeToString())
+            message = GossipMessage(content_type="Block",
+                                    content=blocks[0].SerializeToString())
+            content = message.SerializeToString()
+            msg = validator_pb2.Message(
+                message_type=validator_pb2.Message.GOSSIP_MESSAGE,
+                correlation_id=self._generate_id(),
+                content=content)
+
             with self._in_condition:
                 self._in.put_nowait(msg)
                 self._in_condition.notify_all()

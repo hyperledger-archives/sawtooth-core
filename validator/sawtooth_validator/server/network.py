@@ -113,7 +113,7 @@ class Stream(object):
         self._futures = future.FutureCollection()
         self._handlers = {}
 
-        self.add_handler('default', DefaultHandler())
+        self.add_handler(validator_pb2.Message.DEFAULT, DefaultHandler())
         self.add_handler(validator_pb2.Message.GOSSIP_MESSAGE,
                          GossipMessageHandler(ingest_message_func))
         self.add_handler(validator_pb2.Message.GOSSIP_PING,
@@ -198,7 +198,7 @@ class _ClientSendReceiveThread(Thread):
                 if message.message_type in self._handlers:
                     handler = self._handlers[message.message_type]
                 else:
-                    handler = self._handlers['default']
+                    handler = self._handlers[validator_pb2.Message.DEFAULT]
 
                 handler.handle(message, _Responder(self.send_message))
                 self._recv_queue.put_nowait(message)
@@ -319,7 +319,7 @@ class _ServerSendReceiveThread(Thread):
                 if message.message_type in self._handlers:
                     handler = self._handlers[message.message_type]
                 else:
-                    handler = self._handlers['default']
+                    handler = self._handlers[validator_pb2.Message.DEFAULT]
 
                 handler.handle(message, _Responder(self.send_message))
 
@@ -528,7 +528,7 @@ class Network(object):
             self._dispatcher_condition)
         self._dispatcher.set_incoming_msg_queue(self.outbound_queue)
         self._dispatcher.set_condition(self._dispatcher_condition)
-        self.add_handler('default', DefaultHandler())
+        self.add_handler(validator_pb2.Message.DEFAULT, DefaultHandler())
         self.add_handler(validator_pb2.Message.GOSSIP_REGISTER,
                          PeerRegisterHandler(self))
         self.add_handler(validator_pb2.Message.GOSSIP_UNREGISTER,
