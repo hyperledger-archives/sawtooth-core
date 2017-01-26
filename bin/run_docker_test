@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from subprocess import run, PIPE, CalledProcessError
+import os
 import sys
 import argparse
 import time
@@ -28,13 +29,15 @@ class RunDockerTestError(Exception):
 def main():
     args = parse_args()
 
+    compose_file = _get_compose_file(args.compose_file)
+
     if not args.prefix.isalnum():
         raise RunDockerTestError("Prefix must be alphanumeric")
 
     compose = [
         'docker-compose',
         '-p', args.prefix,
-        '-f', args.compose_file
+        '-f', compose_file
     ]
 
     compose_up = compose + [
@@ -49,14 +52,11 @@ def main():
         "{}_{}_1".format(args.prefix, args.test_service)
     ]
 
-    compose_dict = load_compose_file(args.compose_file)
+    compose_dict = load_compose_file(compose_file)
     if args.test_service not in compose_dict['services']:
         raise RunDockerTestError(
             "Test service '{}' does not exist in compose file: '{}'".format(
-                args.test_service, args.compose_file))
-
-    if not args.no_build:
-        docker_build_all(compose_dict)
+                args.test_service, compose_file))
 
     start_time = time.time()
     timeout = args.timeout
@@ -106,6 +106,7 @@ def main():
 
 
 def load_compose_file(compose_file):
+
     try:
         with open(compose_file) as fd:
             contents = fd.read()
@@ -116,22 +117,6 @@ def load_compose_file(compose_file):
         raise RunDockerTestError(
             "Docker compose file '{}' could not be opened. Make sure it "
             "exists and is readable.".format(compose_file))
-
-
-def docker_build_all(compose_dict):
-
-    for name, service in compose_dict['services'].items():
-        if 'image' in service:
-            print("Building {}...".format(name))
-            try:
-                run(
-                    ['sawtooth', 'docker', 'build', service['image']],
-                    check=True)
-
-            except CalledProcessError:
-                raise RunDockerTestError(
-                    "Sawtooth failed to build docker image '{}'. Does it "
-                    "exist?".format(service['image']))
 
 
 def parse_args():
@@ -166,6 +151,31 @@ def parse_args():
         default=300)
 
     return parser.parse_args()
+
+
+def _get_compose_dir():
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+        "integration", "sawtooth_integration", "docker"
+    )
+
+
+def _get_compose_file(compose_file):
+    # Try "as given"
+    if not os.path.exists(compose_file):
+        # If not, try in integration docker directory
+        compose_file = os.path.join(_get_compose_dir(), compose_file)
+    if not os.path.exists(compose_file):
+        # If not, try appending .yaml
+        compose_file = os.path.join(
+            _get_compose_dir(),
+            "{}.yaml".format(compose_file)
+        )
+    if not os.path.exists(compose_file):
+        raise RunDockerTestError(
+            "Docker compose file '{}' does not exist.".format(compose_file))
+
+    return compose_file
 
 
 if __name__ == "__main__":
