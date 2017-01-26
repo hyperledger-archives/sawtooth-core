@@ -2,4 +2,5 @@
 tools/ubuntu-xenial-16.04-cloudimg-console.log
 sdk/python/sawtooth_protobuf
 core_transactions/config/sawtooth_config/protobuf
+rest_api/sawtooth_rest_api/protobuf/
 validator/sawtooth_validator/protobuf
