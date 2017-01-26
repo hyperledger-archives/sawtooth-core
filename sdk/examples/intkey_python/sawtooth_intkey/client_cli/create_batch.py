@@ -21,7 +21,7 @@ import os
 import logging
 import random
 import string
-
+import time
 import cbor
 import bitcoin
 
@@ -95,11 +95,11 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
 
 
 def create_batch(transactions, private_key, public_key):
-    transaction_ids = [t.header_signature for t in transactions]
+    transaction_signatures = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
         signer_pubkey=public_key,
-        transaction_ids=transaction_ids)
+        transaction_ids=transaction_signatures)
 
     header_bytes = header.SerializeToString()
 
@@ -127,14 +127,13 @@ def generate_word_list(count):
         return [generate_word() for _ in range(0, count)]
 
 
-def do_populate(args):
+def do_populate(args, batches):
     private_key = bitcoin.random_key()
     public_key = bitcoin.encode_pubkey(
         bitcoin.privkey_to_pubkey(private_key), "hex")
 
     words = generate_word_list(args.pool_size)
 
-    batches = []
     total_txn_count = 0
     txns = []
     for i in range(0, len(words)):
@@ -154,23 +153,76 @@ def do_populate(args):
 
     batches.append(batch)
 
-    batch_list = batch_pb2.BatchList(batches=batches)
 
+def do_generate(args, batches):
+    private_key = bitcoin.random_key()
+    public_key = bitcoin.encode_pubkey(
+        bitcoin.privkey_to_pubkey(private_key), "hex")
+
+    words = generate_word_list(args.pool_size)
+
+    start = time.time()
+    total_txn_count = 0
+    for i in range(0, args.count):
+        txns = []
+        for _ in range(0, random.randint(1, args.batch_max_size)):
+            txn = create_intkey_transaction(
+                verb=random.choice(['inc', 'dec']),
+                name=random.choice(words),
+                value=1,
+                private_key=private_key,
+                public_key=public_key)
+            total_txn_count += 1
+            txns.append(txn)
+
+        batch = create_batch(
+            transactions=txns,
+            private_key=private_key,
+            public_key=public_key)
+
+        batches.append(batch)
+
+        if i % 100 == 0 and i != 0:
+            stop = time.time()
+
+            txn_count = 0
+            for batch in batches[-100:]:
+                txn_count += len(batch.transactions)
+
+            fmt = 'batches {}, batch/sec: {:.2f}, txns: {}, txns/sec: {:.2f}'
+            print(fmt.format(
+                str(i),
+                100 / (stop - start),
+                str(total_txn_count),
+                txn_count / (stop - start)))
+            start = stop
+
+
+def write_batch_file(args, batches):
+    batch_list = batch_pb2.BatchList(batches=batches)
     print("Writing to {}...".format(args.output))
     with open(args.output, "wb") as fd:
         fd.write(batch_list.SerializeToString())
 
 
-def add_populate_parser(subparsers, parent_parser):
+def do_create_batch(args):
+    batches = []
+    do_populate(args, batches)
+    do_generate(args, batches)
+    write_batch_file(args, batches)
+
+
+def add_create_batch_parser(subparsers, parent_parser):
 
     epilog = '''
-    deprecated:
-     use create_batch, which combines
-     the populate and generate commands.
+    details:
+     create sample batch of intkey transactions.
+     populates state with intkey word/value pairs
+     then generates inc and dec transactions.
     '''
 
     parser = subparsers.add_parser(
-        'populate',
+        'create_batch',
         parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=epilog)
@@ -179,10 +231,26 @@ def add_populate_parser(subparsers, parent_parser):
         '-o', '--output',
         type=str,
         help='location of output file',
-        default='batches.intkey')
+        default='batches.intkey',
+        metavar='')
+
+    parser.add_argument(
+        '-c', '--count',
+        type=int,
+        help='number of batches',
+        default=1000,
+        metavar='')
+
+    parser.add_argument(
+        '-B', '--batch-max-size',
+        type=int,
+        help='max size of the batch',
+        default=20,
+        metavar='')
 
     parser.add_argument(
         '-P', '--pool-size',
         type=int,
         help='size of the word pool',
-        default=100)
+        default=100,
+        metavar='')
