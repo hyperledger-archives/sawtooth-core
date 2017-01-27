@@ -137,7 +137,7 @@ class SignatureVerifier(Thread):
                                        "Batch, %s", e)
 
                 elif request.content_type == "BlockRequest":
-                    self.outgoing_msg_queue.put_notwait(request)
+                    self.outgoing_msg_queue.put_nowait(request)
                     with self.out_condition:
                         self.out_condition.notify_all()
 

@@ -45,7 +45,9 @@ class DefaultHandler(object):
 
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, peer_list):
-        db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
+        db_filename = os.path.join(os.path.expanduser('~'),
+                                   'merkle-{}.lmdb'.format(
+                                       network_endpoint[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
         lmdb = LMDBNoLockDatabase(db_filename, 'n')
@@ -84,7 +86,7 @@ class Validator(object):
             self._journal.on_batch_received
         dispatcher.on_block_received = \
             self._journal.on_block_received
-        dispatcher.on_block_request = \
+        dispatcher.on_block_requested = \
             self._journal.on_block_request
 
         self._service.add_handler(

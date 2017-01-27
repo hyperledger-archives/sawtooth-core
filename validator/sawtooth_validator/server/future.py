@@ -25,13 +25,14 @@ class FutureResult(object):
 
 
 class Future(object):
-    def __init__(self, correlation_id, request=None):
+    def __init__(self, correlation_id, request=None, has_callback=False):
         self.correlation_id = correlation_id
         self.request = request
         self._result = None
         self._condition = Condition()
         self._create_time = time.time()
         self._callback_func = None
+        self._has_callback = has_callback
         self._reconcile_time = None
 
     def done(self):
@@ -48,10 +49,11 @@ class Future(object):
             self._reconcile_time = time.time()
             self._result = result
             self._condition.notify()
-            if self._callback_func is None:
-                self._condition.wait()
-            Thread(target=self._callback_func, args=(
-                   self.request, result)).start()
+            if self._has_callback:
+                if self._callback_func is None:
+                    self._condition.wait()
+                Thread(target=self._callback_func, args=(
+                       self.request, result)).start()
 
     def add_callback(self, callback_func):
         """Add a callback to be executed on set_result.

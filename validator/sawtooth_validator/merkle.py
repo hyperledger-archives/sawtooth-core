@@ -138,7 +138,7 @@ class MerkleDatabase(object):
         return cbor.loads(encoded)
 
     def _encode(self, value):
-        return cbor.dumps(value)
+        return cbor.dumps(value, sort_keys=True)
 
     def _encode_and_hash(self, value):
         packed = self._encode(value)
