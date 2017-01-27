@@ -25,19 +25,21 @@ from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
+from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 
 LOGGER = logging.getLogger(__name__)
 
 
 class SignatureVerifier(Thread):
-    def __init__(self, incoming_msg_queue, outgoing_msg_queue,
-                 in_condition, out_condition):
+    def __init__(self, incoming_msg_queue, dispatcher_msg_queue,
+                 in_condition, dispatcher_condition, broadcast):
         super(SignatureVerifier, self).__init__()
         self._exit = False
         self.incoming_msg_queue = incoming_msg_queue
-        self.outgoing_msg_queue = outgoing_msg_queue
+        self.dispatcher_msg_queue = dispatcher_msg_queue
         self.in_condition = in_condition
-        self.out_condition = out_condition
+        self.dispatcher_condition = dispatcher_condition
+        self.broadcast = broadcast
 
     def validate_block(self, block):
         # validate block signature
@@ -103,18 +105,25 @@ class SignatureVerifier(Thread):
             if self._exit:
                 return
             try:
-                request = self.incoming_msg_queue.get(block=False)
+                message = self.incoming_msg_queue.get(block=False)
+                request = GossipMessage()
+                request.ParseFromString(message.content)
                 if request.content_type == "Block":
                     try:
                         block = Block()
                         block.ParseFromString(request.content)
                         status = self.validate_block(block)
                         if status:
-                            self.outgoing_msg_queue.put_nowait(request)
-                            with self.out_condition:
-                                self.out_condition.notify_all()
-                                LOGGER.info("Block signature is invalid: %s",
-                                            block.header_signature)
+                            LOGGER.debug("Pass block to dispatch %s",
+                                         block.header_signature)
+                            self.dispatcher_msg_queue.put_nowait(request)
+                            self.broadcast(message)
+                            with self.dispatcher_condition:
+                                self.dispatcher_condition.notify_all()
+
+                        else:
+                            LOGGER.debug("Block signature is invalid: %s",
+                                         block.header_signature)
                     except DecodeError as e:
                         # what to do with a bad msg
                         LOGGER.warning("Problem decoding GossipMessage for "
@@ -126,26 +135,28 @@ class SignatureVerifier(Thread):
                         batch.ParseFromString(request.content)
                         status = self.validate_batch(batch)
                         if status:
-                            self.outgoing_msg_queue.put_nowait(request)
-                            with self.out_condition:
-                                self.out_condition.notify_all()
+                            self.dispatcher_msg_queue.put_nowait(request)
+                            self.broadcast(message)
+                            with self.dispatcher_condition:
+                                self.dispatcher_condition.notify_all()
+
                         else:
-                            LOGGER.info("Batch signature is invalid: %s",
-                                        batch.header_signature)
+                            LOGGER.debug("Batch signature is invalid: %s",
+                                         batch.header_signature)
                     except DecodeError as e:
                         LOGGER.warning("Problem decoding GossipMessage for "
                                        "Batch, %s", e)
 
                 elif request.content_type == "BlockRequest":
-                    self.outgoing_msg_queue.put_nowait(request)
-                    with self.out_condition:
-                        self.out_condition.notify_all()
+                    self.dispatcher_msg_queue.put_notwait(request)
+                    with self.dispatcher_condition:
+                        self.dispatcher_condition.notify_all()
 
                 elif request.content_type == "Test":
                     LOGGER.debug("Verifier Handle Test")
-                    self.outgoing_msg_queue.put_nowait(request)
-                    with self.out_condition:
-                        self.out_condition.notify_all()
+                    self.dispatcher_msg_queue.put_nowait(request)
+                    with self.dispatcher_condition:
+                        self.dispatcher_condition.notify_all()
 
             except queue.Empty:
                 with self.in_condition:

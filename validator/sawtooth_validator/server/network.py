@@ -451,15 +451,14 @@ class GossipMessageHandler(object):
 
     def handle(self, message, peer):
         LOGGER.debug("GossipMessageHandler message: %s", message.sender)
-        request = GossipMessage()
-        request.ParseFromString(message.content)
 
         LOGGER.debug("Got gossip message %s "
                      "from %s. sending ack",
                      message.content,
                      message.sender)
 
-        self._ingest_message(request)
+        self._ingest_message(message)
+
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
 
@@ -502,7 +501,7 @@ class Network(object):
         self._handlers = {}
         self._peered_with_us = {}
         self.inbound_queue = queue.Queue()
-        self.outbound_queue = queue.Queue()
+        self.dispatcher_queue = queue.Queue()
         self._signature_condition = Condition()
         self._dispatcher_condition = Condition()
         self._futures = future.FutureCollection()
@@ -515,9 +514,10 @@ class Network(object):
         self._send_receive_thread.daemon = True
 
         self._signature_verifier = SignatureVerifier(
-            self.inbound_queue, self.outbound_queue, self._signature_condition,
-            self._dispatcher_condition)
-        self._dispatcher.set_incoming_msg_queue(self.outbound_queue)
+            self.inbound_queue, self.dispatcher_queue,
+            self._signature_condition, self._dispatcher_condition,
+            self.broadcast_message)
+        self._dispatcher.set_incoming_msg_queue(self.dispatcher_queue)
         self._dispatcher.set_condition(self._dispatcher_condition)
         self.add_handler(validator_pb2.Message.DEFAULT, DefaultHandler())
         self.add_handler(validator_pb2.Message.GOSSIP_REGISTER,
@@ -538,14 +538,14 @@ class Network(object):
             time.sleep(5)
 
             content = GossipMessage(content=bytes(
-                str("This is a gossip payload"), 'UTF-8')).SerializeToString()
+                str("This is a gossip payload"), 'UTF-8'),
+                content_type="Test").SerializeToString()
 
             for _ in range(1000):
                 message = validator_pb2.Message(
                     message_type=validator_pb2.Message.GOSSIP_MESSAGE,
                     correlation_id=_generate_id(),
                     content=content)
-
                 self.broadcast_message(message)
 
                 # If we transmit as fast as possible, we populate the
@@ -557,13 +557,17 @@ class Network(object):
                 time.sleep(0.01)
 
         # Send messages to :
-        # inbound queue -> SignatureVerifier -> outbound queue -> Dispatcher
+        # inbound queue -> SignatureVerifier -> dispatcher queue -> Dispatcher
         for _ in range(20):
             msg = GossipMessage(content=bytes(
                 str("This is a gossip payload"), 'UTF-8'),
                 content_type="Test")
+            message = validator_pb2.Message(
+                message_type=validator_pb2.Message.GOSSIP_MESSAGE,
+                correlation_id=_generate_id(),
+                content=msg.SerializeToString())
 
-            self._put_on_inbound(msg)
+            self._put_on_inbound(message)
             time.sleep(.01)
 
     def add_handler(self, message_type, handler):

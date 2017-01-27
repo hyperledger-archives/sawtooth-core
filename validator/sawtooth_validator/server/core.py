@@ -89,6 +89,8 @@ class Validator(object):
         dispatcher.on_block_requested = \
             self._journal.on_block_request
 
+        dispatcher.create_completer()
+
         self._service.add_handler(
             validator_pb2.Message.DEFAULT,
             DefaultHandler())

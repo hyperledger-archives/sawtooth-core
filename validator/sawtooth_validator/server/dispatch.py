@@ -18,11 +18,12 @@
 import queue
 import logging
 
-from threading import Thread
+from threading import Thread, Condition
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.server.completer import Completer
 LOGGER = logging.getLogger(__name__)
 
 
@@ -33,8 +34,17 @@ class Dispatcher(Thread):
         self.on_block_received = None
         self.on_block_requested = None
         self.incoming_msg_queue = None
+        self.completer_queue = queue.Queue()
+        self.completer_conditon = Condition()
         self.condition = None
         self._exit = False
+        self.completer = None
+
+    def create_completer(self):
+        self.completer = Completer(self.on_block_received,
+                                   self.completer_conditon,
+                                   self.completer_queue)
+        self.completer.start()
 
     def set_incoming_msg_queue(self, msg_queue):
         self.incoming_msg_queue = msg_queue
@@ -53,6 +63,9 @@ class Dispatcher(Thread):
 
     def stop(self):
         self._exit = True
+        self.completer.stop()
+        with self.completer_conditon:
+            self.completer_conditon.notify_all()
 
     def run(self):
         if self.incoming_msg_queue is None or self.condition is None:
@@ -70,7 +83,11 @@ class Dispatcher(Thread):
                     try:
                         block = Block()
                         block.ParseFromString(request.content)
-                        self.on_block_received(block)
+                        LOGGER.debug("Block given to Completer %s",
+                                     block.header_signature)
+                        self.completer_queue.put_nowait(block)
+                        with self.completer_conditon:
+                            self.completer_conditon.notify_all()
                     except DecodeError as e:
                         # what to do with a bad msg
                         LOGGER.warning("Problem decoding GossipMessage for "
@@ -80,6 +97,7 @@ class Dispatcher(Thread):
                     try:
                         batch = Batch()
                         batch.ParseFromString(request.content)
+                        self.completer.add_batch(batch)
                         self.on_batch_received(batch)
 
                     except DecodeError as e:
