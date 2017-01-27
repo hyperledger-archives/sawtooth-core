@@ -77,7 +77,7 @@ class Validator(object):
             consensus=dev_mode_consensus,
             block_store={},
             # -- need to serialize blocks to dicts
-            send_message=faux_network.send_message,
+            send_message=self._network.send_message,
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler(),
             first_state_root=context_manager.get_first_root())

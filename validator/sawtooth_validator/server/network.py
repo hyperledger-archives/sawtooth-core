@@ -31,14 +31,13 @@ import zmq.asyncio
 from sawtooth_validator.server import future
 from sawtooth_validator.server.signature_verifier import SignatureVerifier
 from sawtooth_validator.protobuf import validator_pb2
-import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
+from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
-from sawtooth_validator.server.messages \
-    import BlockRequestMessage, BlockMessage, BatchMessage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,14 +48,6 @@ class FauxNetwork(object):
 
     def _verify_batch(self, batch):
         pass
-
-    def send_message(self, msg):
-        if isinstance(msg, BlockRequestMessage):
-            self._dispatcher.on_block_request(msg.block_id)
-        elif isinstance(msg, BlockMessage):
-            self._dispatcher.on_block_received(msg.block)
-        elif isinstance(msg, BatchMessage):
-            self._dispatcher.on_batch_received(msg.batch)
 
     def load(self, data):
         batch_list = batch_pb2.BatchList()
@@ -584,6 +575,25 @@ class Network(object):
         self.inbound_queue.put_nowait(item)
         with self._signature_condition:
             self._signature_condition.notify_all()
+
+    def send_message(self, data):
+        if isinstance(data, str):
+            msg = GossipMessage(content_type="BlockRequest",
+                                content=data.encode("utf-8"))
+        elif isinstance(data, block_pb2.Block):
+            msg = GossipMessage(content_type="Block",
+                                content=data.SerializeToString())
+        elif isinstance(data, batch_pb2.Batch):
+            msg = GossipMessage(content_type="Batch",
+                                content=data.SerializeToString())
+
+        content = msg.SerializeToString()
+        message = validator_pb2.Message(
+            message_type=validator_pb2.Message.GOSSIP_MESSAGE,
+            correlation_id=_generate_id(),
+            content=content)
+
+        self._put_on_inbound(message)
 
     def broadcast_message(self, message):
         self._send_receive_thread.broadcast_message(message)

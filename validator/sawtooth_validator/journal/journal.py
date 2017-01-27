@@ -23,11 +23,9 @@ import copy
 import random
 import string
 
+from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.scheduler.serial import SchedulerError
-from sawtooth_validator.server.messages import BlockRequestMessage, \
-    BlockMessage
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import BlockState
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -95,7 +93,17 @@ class BlockPublisher(object):
         be added.
         """
         # Temp signature creation to use as identifier
-        block.set_signature(_generate_id())
+        temp_key = signing.generate_privkey()
+        public_key = signing.encode_pubkey(
+            signing.generate_pubkey(temp_key), "hex")
+
+        block.block_header.signer_pubkey = public_key
+        block_header = block.block_header
+        header_bytes = block_header.SerializeToString()
+        signature = signing.sign(
+            header_bytes,
+            temp_key)
+        block.set_signature(signature)
         return block
 
     def on_batch_received(self, batch):
@@ -202,8 +210,8 @@ class BlockPublisher(object):
                     LOGGER.info("No Valid batches added to block, dropping %s",
                                 candidate.header_signature)
                     return
-                msg = BlockMessage(candidate.get_block())
-                self._send_message(msg)
+
+                self._send_message(candidate.get_block())
 
                 LOGGER.info("Claimed Block: %s", candidate.header_signature)
 
@@ -216,7 +224,6 @@ class BlockPublisher(object):
                                      block_num=0)
 
         # Small hack here not asking consensus if it is happy.
-
         self._candidate_block = \
             self._finalize_block(BlockWrapper(genesis_header))
         return self._candidate_block
@@ -444,7 +451,7 @@ class ChainController(object):
     def _request_block(self, block_id, validator):
         # TBD add request time and time out
         self._blocks_requested[block_id] = validator
-        self._send_message(BlockRequestMessage(block_id))
+        self._send_message(block_id)
 
     def on_block_validated(self, validator):
         """
@@ -475,7 +482,7 @@ class ChainController(object):
 
                 pending_blocks = \
                     self._blocks_pending.pop(
-                        self._chain_head.block.previous_block_id, [])
+                        self._chain_head.block.header_signature, [])
                 for pending_block in pending_blocks:
                     self._verify_block(pending_block)
 
@@ -502,9 +509,11 @@ class ChainController(object):
                     self._verify_block(validator.new_block)
                 else:
                     self._executor.submit(validator.run)
-            elif block.previous_block_id in self._blocks_processing:
+            elif block.previous_block_id in self._blocks_processing or \
+                    block.previous_block_id in self._blocks_pending:
                 # if the previous block is being processed...put it in a wait
-                # queue
+                # queue, Also need to check if previous block is in a wait
+                # queue.
                 pending_blocks = \
                     self._blocks_pending.get(block.previous_block_id,
                                              [])
@@ -644,5 +653,4 @@ class Journal(object):
 
     def on_block_request(self, block_id):
         if block_id in self._block_store:
-            msg = BlockMessage(self._block_store[block_id].block)
-            self._send_message(msg)
+            self._send_message(self._block_store[block_id].block)

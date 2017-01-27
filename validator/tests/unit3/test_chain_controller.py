@@ -22,9 +22,6 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockVerifier as TestModeVerifier
 
-from sawtooth_validator.server.messages import BlockRequestMessage
-
-
 from tests.unit3.gossip_mock import GossipMock
 from tests.unit3.block_tree_manager import BlockTreeManager
 from tests.unit3.syncronous_executor import SynchronousExecutor
@@ -96,9 +93,8 @@ class TestChainController(unittest.TestCase):
         self.chain_ctrl.on_block_received(new_blocks[1].get_block())
         self.executor.process_all()
         assert(len(self.gossip.messages) == 1)
-        msg = self.gossip.messages[0]
-        assert (isinstance(msg, BlockRequestMessage))
-        assert (msg.block_signature == new_blocks[0].header_signature)
+        block_id = self.gossip.messages[0]
+        assert (block_id == new_blocks[0].header_signature)
         self.gossip.clear()
         self.chain_ctrl.on_block_received(new_blocks[0].get_block())
         self.executor.process_all()
@@ -115,9 +111,8 @@ class TestChainController(unittest.TestCase):
         self.chain_ctrl.on_block_received(new_blocks[1].get_block())
         self.executor.process_all()
         assert (len(self.gossip.messages) == 1)
-        msg = self.gossip.messages[0]
-        assert (isinstance(msg, BlockRequestMessage))
-        assert (msg.block_signature == new_blocks[0].header_signature)
+        block_id = self.gossip.messages[0]
+        assert (block_id == new_blocks[0].header_signature)
         self.gossip.clear()
         self.chain_ctrl.on_block_received(new_blocks[0].get_block())
         self.executor.process_all()

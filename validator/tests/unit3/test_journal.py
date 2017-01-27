@@ -78,7 +78,7 @@ class TestJournal(unittest.TestCase):
             LOGGER.info("Batches: %s", self.gossip.messages)
             self.assertTrue(len(self.gossip.messages) != 0)
 
-            block = self.gossip.messages[0].block
+            block = self.gossip.messages[0]
             # dispatch the message
             self.gossip.dispatch_messages()
 
