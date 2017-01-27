@@ -224,8 +224,10 @@ class BlockPublisher(object):
                                      block_num=0)
 
         # Small hack here not asking consensus if it is happy.
+        block = BlockWrapper(genesis_header)
+        block.set_signature("genesis")
         self._candidate_block = \
-            self._finalize_block(BlockWrapper(genesis_header))
+            self._finalize_block(block)
         return self._candidate_block
 
 

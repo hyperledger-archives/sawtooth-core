@@ -42,7 +42,7 @@ class BlockWrapper(object):
         if block is not None:
             self.block = block
             self._header_signature = block.header_signature
-            self._batches = block.batches
+            self.batches = block.batches
 
     def __str__(self):
         return str(self.block_header) + str(self.block)
