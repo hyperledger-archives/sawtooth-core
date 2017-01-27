@@ -1203,7 +1203,7 @@ class Journal(object):
                     if not txn.is_valid(txnstore):
                         return None
 
-                    txn.apply(txnstore)
+                    txn.apply_with_block(txnstore, tblock)
             except:
                 logger.exception('txnid: %s - unexpected exception '
                                  'when testing transaction block '
