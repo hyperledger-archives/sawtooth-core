@@ -21,7 +21,6 @@ import logging
 import random
 import hashlib
 import string
-import time
 from threading import Thread
 from threading import Condition
 
@@ -532,43 +531,6 @@ class Network(object):
         if peer_list is not None:
             for peer in peer_list:
                 self._send_receive_thread.add_connection(self._identity, peer)
-
-            LOGGER.info("Sleeping 5 seconds and then broadcasting messages "
-                        "to connected peers")
-            time.sleep(5)
-
-            content = GossipMessage(content=bytes(
-                str("This is a gossip payload"), 'UTF-8'),
-                content_type="Test").SerializeToString()
-
-            for _ in range(1000):
-                message = validator_pb2.Message(
-                    message_type=validator_pb2.Message.GOSSIP_MESSAGE,
-                    correlation_id=_generate_id(),
-                    content=content)
-                self.broadcast_message(message)
-
-                # If we transmit as fast as possible, we populate the
-                # buffers and get faster throughput but worse avg. message
-                # latency. If we sleep here or otherwise throttle input,
-                # the overall duration is longer, but the per message
-                # latency is low. The process is CPU bound on Vagrant VM
-                # core at ~0.001-0.01 duration sleeps.
-                time.sleep(0.01)
-
-        # Send messages to :
-        # inbound queue -> SignatureVerifier -> dispatcher queue -> Dispatcher
-        for _ in range(20):
-            msg = GossipMessage(content=bytes(
-                str("This is a gossip payload"), 'UTF-8'),
-                content_type="Test")
-            message = validator_pb2.Message(
-                message_type=validator_pb2.Message.GOSSIP_MESSAGE,
-                correlation_id=_generate_id(),
-                content=msg.SerializeToString())
-
-            self._put_on_inbound(message)
-            time.sleep(.01)
 
     def add_handler(self, message_type, handler):
         LOGGER.debug("Network service adding "
