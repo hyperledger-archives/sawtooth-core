@@ -127,12 +127,10 @@ def generate_word_list(count):
         return [generate_word() for _ in range(0, count)]
 
 
-def do_populate(args, batches):
+def do_populate(args, batches, words):
     private_key = bitcoin.random_key()
     public_key = bitcoin.encode_pubkey(
         bitcoin.privkey_to_pubkey(private_key), "hex")
-
-    words = generate_word_list(args.pool_size)
 
     total_txn_count = 0
     txns = []
@@ -154,12 +152,10 @@ def do_populate(args, batches):
     batches.append(batch)
 
 
-def do_generate(args, batches):
+def do_generate(args, batches, words):
     private_key = bitcoin.random_key()
     public_key = bitcoin.encode_pubkey(
         bitcoin.privkey_to_pubkey(private_key), "hex")
-
-    words = generate_word_list(args.pool_size)
 
     start = time.time()
     total_txn_count = 0
@@ -207,8 +203,9 @@ def write_batch_file(args, batches):
 
 def do_create_batch(args):
     batches = []
-    do_populate(args, batches)
-    do_generate(args, batches)
+    words = generate_word_list(args.pool_size)
+    do_populate(args, batches, words)
+    do_generate(args, batches, words)
     write_batch_file(args, batches)
 
 
