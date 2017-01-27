@@ -390,11 +390,17 @@ class TestRadixTree(unittest.TestCase):
         self.assertEqual(list(node.children.keys()), ['e8'])
 
         self.assertEqual(
-            tree.find_readers_and_writers(address_a),
-            ['txn1'])
+            tree.find_write_predecessors(address_a),
+            set(['txn1']))
         self.assertEqual(
-            tree.find_readers_and_writers(address_b),
-            ['txn3', 'txn2'])
+            tree.find_read_predecessors(address_a),
+            set(['txn1']))
+        self.assertEqual(
+            tree.find_write_predecessors(address_b),
+            set(['txn3', 'txn2']))
+        self.assertEqual(
+            tree.find_read_predecessors(address_b),
+            set(['txn3']))
 
 
 class TestTopologicalSorter(unittest.TestCase):
