@@ -280,8 +280,11 @@ class Journal(object):
         Returns:
             int: most recently committed block number.
         """
+        # If there is actually a committed block, we are going to return
+        # the last block number plus one as block numbers begin with zero
+        # (see the build_block() method where the block.BlockNum is assigned)
         if self.most_recent_committed_block is not None:
-            return self.most_recent_committed_block.BlockNum
+            return self.most_recent_committed_block.BlockNum + 1
         return 0
 
     @property
@@ -773,6 +776,11 @@ class Journal(object):
                      self.most_recent_committed_block_id[:8])
 
         # Create a new block from all of our pending transactions
+        #
+        # NOTE - since we are starting block numbers at zero, if the code
+        # is changed to start with one, then the committed_block_count
+        # property needs to be fixed as it is based upon the value
+        # most_recent_committed_block.BlockNum
         new_block.BlockNum = self.most_recent_committed_block.BlockNum \
             + 1 if self.most_recent_committed_block is not None else 0
         new_block.PreviousBlockID = self.most_recent_committed_block_id
@@ -1113,7 +1121,7 @@ class Journal(object):
             self.JournalStats.CommittedTxnCount.increment(len(
                 tblock.TransactionIDs))
             self.JournalStats.CommittedBlockCount.Value = \
-                self.committed_block_count + 1
+                self.committed_block_count
 
             # fire the event handler for block commit
             self.on_commit_block.fire(self, tblock)
@@ -1171,7 +1179,7 @@ class Journal(object):
 
             # update stats
             self.JournalStats.CommittedBlockCount.Value = \
-                self.committed_block_count - 1
+                self.committed_block_count
             self.JournalStats.CommittedTxnCount.increment(-len(
                 block.TransactionIDs))
 

@@ -223,8 +223,6 @@ class Update(object):
                 'revoked': None,
                 'updated-in-block-number': block.BlockNum if block else 0
             }
-
-            LOGGER.debug(store[self.validator_id])
         else:
             LOGGER.info('unknown verb %s', self.verb)
 
@@ -288,6 +286,23 @@ class ValidatorRegistryTransaction(transaction.Transaction):
                 signup_info)
 
         return regtxn
+
+    @staticmethod
+    def get_store(journal, block_id):
+        """Retrieves the validator registry transaction store associated with
+        the block referenced by the block ID provided.
+
+        Args:
+            journal: The journal object
+            block_id: The ID of the block for which store is being requested
+
+        Returns:
+            The validator registry store at the block requested
+        """
+        return \
+            journal.get_transaction_store(
+                family=ValidatorRegistryTransaction,
+                block_id=block_id)
 
     def __init__(self, minfo=None):
         if minfo is None:
