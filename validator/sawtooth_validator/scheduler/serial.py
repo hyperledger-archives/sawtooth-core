@@ -16,7 +16,7 @@
 import queue
 from threading import Condition
 
-from sawtooth_validator.scheduler.base import BatchStatus
+from sawtooth_validator.scheduler.base import BatchExecutionResult
 from sawtooth_validator.scheduler.base import TxnInformation
 from sawtooth_validator.scheduler.base import Scheduler
 from sawtooth_validator.scheduler.base import SchedulerIterator
@@ -51,7 +51,8 @@ class SerialScheduler(Scheduler):
     def __iter__(self):
         return SchedulerIterator(self, self._condition)
 
-    def set_status(self, txn_signature, status, context_id):
+    def set_transaction_execution_result(
+            self, txn_signature, is_valid, context_id):
         """the control flow is that on every valid txn a new state root is
         generated. If the txn is invalid the batch status is set,
         if the txn is the last txn in the batch, is valid, and no
@@ -68,21 +69,23 @@ class SerialScheduler(Scheduler):
             if txn_signature not in self._txn_to_batch:
                 raise ValueError("transaction not in any batches: {}".format(
                     txn_signature))
-            if status is True:
+            if is_valid:
                 # txn is valid, get a new state hash
                 state_hash = self._squash(self._last_state_hash, [context_id])
                 self._last_state_hash = state_hash
             else:
-                # txn is invalid, pre-emptively fail the batch
+                # txn is invalid, preemptively fail the batch
                 batch_signature = self._txn_to_batch[txn_signature]
-                batch_status = BatchStatus(status, None)
-                self._batch_statuses[batch_signature] = batch_status
+                self._batch_statuses[batch_signature] = \
+                    BatchExecutionResult(is_valid=is_valid, state_hash=None)
             if txn_signature in self._last_in_batch:
                 batch_signature = self._txn_to_batch[txn_signature]
                 if batch_signature not in self._batch_statuses:
                     # because of the else clause above, txn is valid here
-                    batch_status = BatchStatus(status, self._last_state_hash)
-                    self._batch_statuses[batch_signature] = batch_status
+                    self._batch_statuses[batch_signature] = \
+                        BatchExecutionResult(
+                            is_valid=is_valid,
+                            state_hash=self._last_state_hash)
 
             if self._final and self._txn_queue.empty():
                 self._complete = True
@@ -101,7 +104,7 @@ class SerialScheduler(Scheduler):
                 self._txn_to_batch[txn.header_signature] = batch_signature
                 self._txn_queue.put(txn)
 
-    def batch_status(self, batch_signature):
+    def get_batch_execution_result(self, batch_signature):
         with self._condition:
             return self._batch_statuses.get(batch_signature)
 

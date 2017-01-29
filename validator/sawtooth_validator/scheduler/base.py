@@ -38,20 +38,22 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def batch_status(self, batch_signature):
+    def get_batch_execution_result(self, batch_signature):
         """Signifies whether a particular batch is valid, returns
            None if the batch hasn't fully been processed.
 
         Args:
-            batch_signature (str): The batch signature
+            batch_signature (str): The signature of the batch, which must match
+                the header_signature field of the Batch.
 
         Returns:
-            BatchStatus: the status of the batch, see BatchStatus below
+            BatchExecutionResult: The result of batch execution.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    def set_status(self, txn_signature, status, context_id):
+    def set_transaction_execution_result(
+            self, txn_signature, is_valid, context_id):
         """Set the status of an executed transaction.
 
         Called by the executor after a transaction has been processed.
@@ -64,7 +66,7 @@ class Scheduler(object, metaclass=ABCMeta):
             txn_signature (str): The signature of the transaction, which
                 must match the header_signature field of the Transaction
                 object which was part of the added Batch.
-            status (bool): True if transaction applied successfully or False
+            is_valid (bool): True if transaction applied successfully or False
                 if the transaction failed and was not applied.
             context_id (str): If status is True, contains the context_id
                 associated with the state changes made by the transaction.
@@ -176,17 +178,18 @@ class SchedulerIterator(object):
                 self._condition.wait()
 
 
-class BatchStatus(object):
-    """BatchStatus to send to journal to inform about the
-    status of a batch
-    attributes:
-        valid (bool): whether the batch is valid
-        state_hash (str): the state hash after the batch
-                          and will be None if the batch is invalid.
-                         Could be a virtual state hash
+class BatchExecutionResult(object):
+    """The resulting execution data from running the batch's transactions
+    through the executor.
+
+    Attributes:
+        is_valid (bool): True if the batch is valid, False otherwise.
+        state_hash (str): the resulting state hash after all transactions in
+            the batch were successfully executed.  If is_valid is False, then
+            this field is set to None as final state was obtained.
     """
-    def __init__(self, valid, state_hash):
-        self.valid = valid
+    def __init__(self, is_valid, state_hash):
+        self.is_valid = is_valid
         self.state_hash = state_hash
 
 

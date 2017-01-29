@@ -51,11 +51,13 @@ class TransactionExecutorThread(threading.Thread):
         response = processor_pb2.TpProcessResponse()
         response.ParseFromString(result.content)
         if response.status == processor_pb2.TpProcessResponse.OK:
-            self._scheduler.set_status(req.signature, True, req.context_id)
+            self._scheduler.set_transaction_execution_result(
+                req.signature, True, req.context_id)
         else:
             self._context_manager.delete_context(
                 context_id_list=[req.context_id])
-            self._scheduler.set_status(req.signature, False, req.context_id)
+            self._scheduler.set_transaction_execution_result(
+                req.signature, False, req.context_id)
 
     def run(self):
         for txn_info in self._scheduler:

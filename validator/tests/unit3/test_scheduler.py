@@ -126,7 +126,8 @@ class TestSerialScheduler(unittest.TestCase):
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
-            scheduler.set_status(txn.header_signature, False, None)
+            scheduler.set_transaction_execution_result(
+                txn.header_signature, False, None)
 
         with self.assertRaises(StopIteration):
             next(iterable1)
@@ -181,9 +182,9 @@ class TestSerialScheduler(unittest.TestCase):
 
         self.assertIsNone(scheduler.next_transaction())
 
-        scheduler.set_status(
+        scheduler.set_transaction_execution_result(
             scheduled_txn_info.txn.header_signature,
-            status=False,
+            is_valid=False,
             context_id=None)
 
         scheduled_txn_info = scheduler.next_transaction()
@@ -243,13 +244,12 @@ class TestSerialScheduler(unittest.TestCase):
                                                   inputs_or_outputs,
                                                   inputs_or_outputs)
             if txn_header.payload_sha512 == invalid_payload:
-                scheduler.set_status(txn_info.txn.header_signature,
-                                     False, c_id)
+                scheduler.set_transaction_execution_result(
+                    txn_info.txn.header_signature, False, c_id)
             else:
                 context_manager.set(c_id, [{inputs_or_outputs[0]: 1}])
-                scheduler.set_status(txn_info.txn.header_signature,
-                                     True,
-                                     c_id)
+                scheduler.set_transaction_execution_result(
+                    txn_info.txn.header_signature, True, c_id)
 
         sched2 = iter(scheduler)
         # 3)
@@ -285,10 +285,12 @@ class TestSerialScheduler(unittest.TestCase):
         txn_info_c = next(sched2)
         self.assertEquals(txn_info_c.state_hash, state_root3)
         # 4)
-        batch1_status = scheduler.batch_status(batch_signatures[0])
-        self.assertTrue(batch1_status.valid)
-        self.assertEquals(batch1_status.state_hash, state_root3)
+        batch1_result = scheduler.get_batch_execution_result(
+            batch_signatures[0])
+        self.assertTrue(batch1_result.is_valid)
+        self.assertEquals(batch1_result.state_hash, state_root3)
 
-        batch2_status = scheduler.batch_status(batch_signatures[1])
-        self.assertFalse(batch2_status.valid)
-        self.assertIsNone(batch2_status.state_hash)
+        batch2_result = scheduler.get_batch_execution_result(
+            batch_signatures[1])
+        self.assertFalse(batch2_result.is_valid)
+        self.assertIsNone(batch2_result.state_hash)
