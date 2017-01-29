@@ -40,6 +40,7 @@ find_packages() {
         | grep -v /setup.py$ \
         | grep -v /integration/ \
         | grep -v /unit/ \
+        | grep -v /unit3/ \
         | grep -v /sawtooth_suites/ \
         | grep -v /navigator/ \
         | grep -v _pb2\.py$
