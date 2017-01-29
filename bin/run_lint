@@ -188,9 +188,9 @@ export PYTHONPATH
 lint "python -m pylint" validator "$SINCE" .pylintrc-validator 1 sawtooth_validator || retval=1
 lint "python -m pylint" validator/sawtooth_validator/consensus "$SINCE" .pylintrc-validator 1 || retval=1
 
-PYTHONPATH=$top_dir/core
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
 lint "python3 -m pylint" validator/sawtooth_validator "$SINCE" .pylintrc-strict 1 consensus || retval=1
 
 PYTHONPATH=$top_dir/core
