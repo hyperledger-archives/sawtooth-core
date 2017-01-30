@@ -21,7 +21,6 @@ import logging
 import random
 import hashlib
 import string
-import time
 from threading import Thread
 from threading import Condition
 
@@ -31,14 +30,13 @@ import zmq.asyncio
 from sawtooth_validator.server import future
 from sawtooth_validator.server.signature_verifier import SignatureVerifier
 from sawtooth_validator.protobuf import validator_pb2
-import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
+from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
-from sawtooth_validator.server.messages \
-    import BlockRequestMessage, BlockMessage, BatchMessage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,14 +47,6 @@ class FauxNetwork(object):
 
     def _verify_batch(self, batch):
         pass
-
-    def send_message(self, msg):
-        if isinstance(msg, BlockRequestMessage):
-            self._dispatcher.on_block_request(msg.block_id)
-        elif isinstance(msg, BlockMessage):
-            self._dispatcher.on_block_received(msg.block)
-        elif isinstance(msg, BatchMessage):
-            self._dispatcher.on_batch_received(msg.batch)
 
     def load(self, data):
         batch_list = batch_pb2.BatchList()
@@ -113,7 +103,7 @@ class Stream(object):
         self._futures = future.FutureCollection()
         self._handlers = {}
 
-        self.add_handler('default', DefaultHandler())
+        self.add_handler(validator_pb2.Message.DEFAULT, DefaultHandler())
         self.add_handler(validator_pb2.Message.GOSSIP_MESSAGE,
                          GossipMessageHandler(ingest_message_func))
         self.add_handler(validator_pb2.Message.GOSSIP_PING,
@@ -198,7 +188,7 @@ class _ClientSendReceiveThread(Thread):
                 if message.message_type in self._handlers:
                     handler = self._handlers[message.message_type]
                 else:
-                    handler = self._handlers['default']
+                    handler = self._handlers[validator_pb2.Message.DEFAULT]
 
                 handler.handle(message, _Responder(self.send_message))
                 self._recv_queue.put_nowait(message)
@@ -319,7 +309,7 @@ class _ServerSendReceiveThread(Thread):
                 if message.message_type in self._handlers:
                     handler = self._handlers[message.message_type]
                 else:
-                    handler = self._handlers['default']
+                    handler = self._handlers[validator_pb2.Message.DEFAULT]
 
                 handler.handle(message, _Responder(self.send_message))
 
@@ -460,15 +450,14 @@ class GossipMessageHandler(object):
 
     def handle(self, message, peer):
         LOGGER.debug("GossipMessageHandler message: %s", message.sender)
-        request = GossipMessage()
-        request.ParseFromString(message.content)
 
         LOGGER.debug("Got gossip message %s "
                      "from %s. sending ack",
                      message.content,
                      message.sender)
 
-        self._ingest_message(request)
+        self._ingest_message(message)
+
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
 
@@ -511,7 +500,7 @@ class Network(object):
         self._handlers = {}
         self._peered_with_us = {}
         self.inbound_queue = queue.Queue()
-        self.outbound_queue = queue.Queue()
+        self.dispatcher_queue = queue.Queue()
         self._signature_condition = Condition()
         self._dispatcher_condition = Condition()
         self._futures = future.FutureCollection()
@@ -524,11 +513,12 @@ class Network(object):
         self._send_receive_thread.daemon = True
 
         self._signature_verifier = SignatureVerifier(
-            self.inbound_queue, self.outbound_queue, self._signature_condition,
-            self._dispatcher_condition)
-        self._dispatcher.set_incoming_msg_queue(self.outbound_queue)
+            self.inbound_queue, self.dispatcher_queue,
+            self._signature_condition, self._dispatcher_condition,
+            self.broadcast_message)
+        self._dispatcher.set_incoming_msg_queue(self.dispatcher_queue)
         self._dispatcher.set_condition(self._dispatcher_condition)
-        self.add_handler('default', DefaultHandler())
+        self.add_handler(validator_pb2.Message.DEFAULT, DefaultHandler())
         self.add_handler(validator_pb2.Message.GOSSIP_REGISTER,
                          PeerRegisterHandler(self))
         self.add_handler(validator_pb2.Message.GOSSIP_UNREGISTER,
@@ -542,39 +532,6 @@ class Network(object):
             for peer in peer_list:
                 self._send_receive_thread.add_connection(self._identity, peer)
 
-            LOGGER.info("Sleeping 5 seconds and then broadcasting messages "
-                        "to connected peers")
-            time.sleep(5)
-
-            content = GossipMessage(content=bytes(
-                str("This is a gossip payload"), 'UTF-8')).SerializeToString()
-
-            for _ in range(1000):
-                message = validator_pb2.Message(
-                    message_type=validator_pb2.Message.GOSSIP_MESSAGE,
-                    correlation_id=_generate_id(),
-                    content=content)
-
-                self.broadcast_message(message)
-
-                # If we transmit as fast as possible, we populate the
-                # buffers and get faster throughput but worse avg. message
-                # latency. If we sleep here or otherwise throttle input,
-                # the overall duration is longer, but the per message
-                # latency is low. The process is CPU bound on Vagrant VM
-                # core at ~0.001-0.01 duration sleeps.
-                time.sleep(0.01)
-
-        # Send messages to :
-        # inbound queue -> SignatureVerifier -> outbound queue -> Dispatcher
-        for _ in range(20):
-            msg = GossipMessage(content=bytes(
-                str("This is a gossip payload"), 'UTF-8'),
-                content_type="Test")
-
-            self._put_on_inbound(msg)
-            time.sleep(.01)
-
     def add_handler(self, message_type, handler):
         LOGGER.debug("Network service adding "
                      "handler for %s", message_type)
@@ -584,6 +541,25 @@ class Network(object):
         self.inbound_queue.put_nowait(item)
         with self._signature_condition:
             self._signature_condition.notify_all()
+
+    def send_message(self, data):
+        if isinstance(data, str):
+            msg = GossipMessage(content_type="BlockRequest",
+                                content=data.encode("utf-8"))
+        elif isinstance(data, block_pb2.Block):
+            msg = GossipMessage(content_type="Block",
+                                content=data.SerializeToString())
+        elif isinstance(data, batch_pb2.Batch):
+            msg = GossipMessage(content_type="Batch",
+                                content=data.SerializeToString())
+
+        content = msg.SerializeToString()
+        message = validator_pb2.Message(
+            message_type=validator_pb2.Message.GOSSIP_MESSAGE,
+            correlation_id=_generate_id(),
+            content=content)
+
+        self._put_on_inbound(message)
 
     def broadcast_message(self, message):
         self._send_receive_thread.broadcast_message(message)

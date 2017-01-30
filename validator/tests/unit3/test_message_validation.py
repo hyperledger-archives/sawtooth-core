@@ -17,6 +17,7 @@ import cbor
 import hashlib
 import random
 import queue
+import string
 
 from threading import Condition
 from sawtooth_signing import pbct_nativerecover as signing
@@ -25,6 +26,7 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server.signature_verifier import SignatureVerifier
 from tests.unit3.utils import TimeOut
 
@@ -36,11 +38,17 @@ class TestMessageValidation(unittest.TestCase):
             signing.generate_pubkey(self.private_key), "hex")
         self._out = queue.Queue()
         self._in = queue.Queue()
+        self._broadcast = self.broadcast
         self._in_condition = Condition()
         self._out_condition = Condition()
-        self.verifier = SignatureVerifier(self._in, self._out,
+        self.verifier = SignatureVerifier(self._in,
+                                          self._out,
                                           self._in_condition,
-                                          self._out_condition)
+                                          self._out_condition,
+                                          self._broadcast)
+
+    def broadcast(self, msg):
+        pass
 
     def _create_transactions(self, count, valid=True, valid_batcher=True):
         txn_list = []
@@ -89,6 +97,11 @@ class TestMessageValidation(unittest.TestCase):
             txn_list.append(transaction)
 
         return txn_list
+
+    def _generate_id(self):
+        return hashlib.sha512(''.join(
+            [random.choice(string.ascii_letters)
+                for _ in range(0, 1024)]).encode()).hexdigest()
 
     def _create_batches(self, batch_count, txn_count,
                         valid_batch=True, valid_txn=True,
@@ -209,8 +222,14 @@ class TestMessageValidation(unittest.TestCase):
         try:
             self.verifier.start()
             blocks = self._create_blocks(1, 1)
-            msg = GossipMessage(content_type="Block",
-                                content=blocks[0].SerializeToString())
+            message = GossipMessage(content_type="Block",
+                                    content=blocks[0].SerializeToString())
+            content = message.SerializeToString()
+            msg = validator_pb2.Message(
+                message_type=validator_pb2.Message.GOSSIP_MESSAGE,
+                correlation_id=self._generate_id(),
+                content=content)
+
             with self._in_condition:
                 self._in.put_nowait(msg)
                 self._in_condition.notify_all()

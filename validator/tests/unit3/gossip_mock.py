@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_validator.server.messages import BatchMessage, \
-    BlockMessage, BlockRequestMessage
+from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf import block_pb2
 
 
 class GossipMock(object):
@@ -41,15 +41,15 @@ class GossipMock(object):
 
     def dispatch_message(self):
         msg = self.messages.pop()
-        if isinstance(msg, BlockRequestMessage):
+        if isinstance(msg, str):
             if self.on_block_request is not None:
-                self.on_block_request(msg.block_id)
-        elif isinstance(msg, BlockMessage):
+                self.on_block_request(msg)
+        elif isinstance(msg, block_pb2.Block):
             if self.on_block_received is not None:
-                self.on_block_received(msg.block)
-        elif isinstance(msg, BatchMessage):
+                self.on_block_received(msg)
+        elif isinstance(msg, batch_pb2.Batch):
             if self.on_batch_received is not None:
-                self.on_batch_received(msg.batch)
+                self.on_batch_received(msg)
 
     def clear(self):
         self.messages = []

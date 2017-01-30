@@ -76,7 +76,7 @@ class BlockTreeManager(object):
         self.set_chain_head(block)
 
     def _send_message(self, block):
-        self._new_block = block.block
+        self._new_block = block
 
     def _get_block_id(self, block):
         if (block is None):

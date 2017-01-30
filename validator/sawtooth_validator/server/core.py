@@ -77,7 +77,7 @@ class Validator(object):
             consensus=dev_mode_consensus,
             block_store={},
             # -- need to serialize blocks to dicts
-            send_message=faux_network.send_message,
+            send_message=self._network.send_message,
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler(),
             first_state_root=context_manager.get_first_root())
@@ -88,6 +88,8 @@ class Validator(object):
             self._journal.on_block_received
         dispatcher.on_block_requested = \
             self._journal.on_block_request
+
+        dispatcher.create_completer()
 
         self._service.add_handler(
             validator_pb2.Message.DEFAULT,
