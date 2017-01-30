@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import time
+
 from sawtooth_validator.journal.consensus.consensus import \
     BlockPublisherInterface, BlockVerifierInterface
 
@@ -26,6 +28,10 @@ class BlockPublisher(BlockPublisherInterface):
     other consensus algorithms
 
     """
+
+    def __init__(self, num_batches_per_block=1):
+        self._num_batches = num_batches_per_block
+        self._count = 0
 
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
@@ -50,7 +56,11 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             Boolean: True if the candidate block should be claimed.
         """
-        return True
+        if self._count >= self._num_batches:
+            self._count = 0
+            return True
+        self._count += 1
+        return False
 
     def finalize_block(self, block_header):
         """Finalize a block to be claimed. Provide any signatures and
@@ -63,6 +73,28 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             None
         """
+        pass
+
+
+class TimedBlockPublisher(BlockPublisherInterface):
+    """Provides a timed block claim mechanism based on
+    the number of seconds since that validator last claimed
+    a block"""
+
+    def __init__(self, wait_time=20):
+        self._wait_time = wait_time
+        self._last_block_time = time.time()
+
+    def initialize_block(self, block_header):
+        block_header.consensus = b"TimedDevmode"
+
+    def check_publish_block(self, block):
+        if time.time() - self._last_block_time > self._wait_time:
+            self._last_block_time = time.time()
+            return True
+        return False
+
+    def finalize_block(self, block_header):
         pass
 
 

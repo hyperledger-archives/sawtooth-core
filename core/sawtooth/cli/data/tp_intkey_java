@@ -24,6 +24,6 @@ ARG PROJECT_DIR="/project/sawtooth-core"
 
 RUN mkdir -p $PROJECT_DIR/sdk/examples/intkey_java
 
-WORKDIR $PROJECT_DIR/sdk/examples/intkey_java
+WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ["java", "-cp", "target/intkey_java-1.0-SNAPSHOT.jar", "sawtooth.examples.intkey.IntegerKeyTransactionProcessor", "validator:40000"]
+ENTRYPOINT ["bin/tp_intkey_java", "validator:40000"]

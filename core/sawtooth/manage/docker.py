@@ -84,12 +84,24 @@ class DockerNodeController(NodeController):
                 formatted_args.append(arg)
         return ' '.join(formatted_args)
 
+    def _find_peers(self):
+        peers = []
+        args = ['docker', 'inspect', self._prefix, '--format',
+                '{{range .Containers }}{{.IPv4Address}}{{end}}']
+        try:
+            output = subprocess.check_output(args)
+            peers = output.split(b"/16")
+        except subprocess.CalledProcessError as e:
+            raise CliException(str(e))
+        return ['tcp://' + str(p) + ':8800' for p in peers if len(p) > 4]
+
     def start(self, node_config):
         node_name = node_config.node_name
         http_port = node_config.http_port
 
         args = self._construct_start_args(node_name)
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
+        peers = self._find_peers()
 
         compose_dir = tempfile.mkdtemp()
         compose_dict = {
@@ -97,14 +109,20 @@ class DockerNodeController(NodeController):
             'services': {
                 'validator': {
                     'image': 'sawtooth-validator',
-                    'expose': ['40000'],
-                    'networks': [self._prefix, 'default'],
+                    'expose': ['40000', '8800'],
+                    'networks': {self._prefix: {},
+                                 'default': {'aliases': [node_name]}},
                     'volumes': ['/project:/project'],
-                    'container_name': self._prefix + '-' + node_name
+                    'container_name': self._prefix + '-' + node_name,
+                    'entrypoint': './bin/validator '
                 }
             },
             'networks': {self._prefix: {'external': True}}
         }
+        if len(peers) > 0:
+            compose_dict['services']['validator']['entrypoint'] += \
+                '--peers ' + " ".join(peers)
+        compose_dict['services']['validator']['entrypoint'] += ' -v'
 
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
         state = yaml.load(file(state_file_path))
@@ -117,7 +135,8 @@ class DockerNodeController(NodeController):
                 'expose': ['40000'],
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
-                'container_name': '-'.join([self._prefix, proc, node_num])
+                'container_name': '-'.join([self._prefix, proc, node_num]),
+                'entrypoint': 'bin/{} {}:40000'.format(proc, node_name)
             }
 
         # add the host:container port mapping for validator

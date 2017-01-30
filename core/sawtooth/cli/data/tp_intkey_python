@@ -36,4 +36,4 @@ ARG PROJECT_DIR="/project/sawtooth-core"
 
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ./bin/tp_intkey_python validator
+ENTRYPOINT ./bin/tp_intkey_python validator:40000
