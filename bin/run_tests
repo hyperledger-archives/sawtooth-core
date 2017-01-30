@@ -104,6 +104,7 @@ test_sdk() {
     echo "[---Running SDK tests---]"
     # intkey
     run_docker_test tp-intkey-python -s validator -p $ISOLATION_ID
+    run_docker_test intkey-smoke -s integration_test -p $ISOLATION_ID
 
     # xo
     run_docker_test tp-xo-python -s validator -p $ISOLATION_ID
