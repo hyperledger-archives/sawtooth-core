@@ -160,15 +160,16 @@ class BlockPublisher(object):
 
         state_hash = None
         for batch in pending_batches:
-            batch_status = self._scheduler.batch_status(batch.header_signature)
-            # if a batch_status is None, this means that the executor never
+            result = self._scheduler.get_batch_execution_result(
+                batch.header_signature)
+            # if a result is None, this means that the executor never
             # received the batch and it should be added to
             # the pending_batches
-            if batch_status is None:
+            if result is None:
                 self._pending_batches.append(batch)
-            elif batch_status.valid:
+            elif result.is_valid:
                 self._validated_batches.append(batch)
-                state_hash = batch_status.state_hash
+                state_hash = result.state_hash
 
         block.add_batches(self._validated_batches)
         self._validated_batches = []
@@ -281,12 +282,12 @@ class BlockValidator(object):
                     scheduler.complete(block=True)
                     state_hash = None
                     for i in range(len(block_state.block.batches)):
-                        batch_status = scheduler.batch_status(
+                        result = scheduler.get_batch_execution_result(
                             block_state.block.batches[i].header_signature)
-                        # If the batch_status is None, the executor did not
+                        # If the result is None, the executor did not
                         # receive the batch
-                        if (batch_status is not None) and batch_status.valid:
-                            state_hash = batch_status.state_hash
+                        if result is not None and result.is_valid:
+                            state_hash = result.state_hash
                         else:
                             valid = False
                     if block_state.block.state_root_hash != state_hash:

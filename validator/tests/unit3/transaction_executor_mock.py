@@ -14,15 +14,23 @@
 # ------------------------------------------------------------------------------
 
 
-class BatchStatus(object):
-    def __init__(self, status, state_hash):
-        self.valid = status
-        self.state_hash = state_hash
+from sawtooth_validator.scheduler.base import Scheduler
+from sawtooth_validator.scheduler.base import BatchExecutionResult
 
 
-class SchedulerMock(object):
+class SchedulerMock(Scheduler):
     def add_batch(self, batch, state_hash=None):
         pass
+
+    def get_batch_execution_result(self, batch_signature):
+        return BatchExecutionResult(is_valid=True, state_hash="0000000000")
+
+    def set_transaction_execution_result(
+            self, txn_signature, is_valid, context_id):
+        raise NotImplementedError()
+
+    def next_transaction(self):
+        raise NotImplementedError()
 
     def finalize(self):
         pass
@@ -30,9 +38,14 @@ class SchedulerMock(object):
     def complete(self, block):
         return True
 
-    def batch_status(self, batch_id):
-        return BatchStatus(True, "0000000000")
+    def __iter__(self):
+        raise NotImplementedError()
 
+    def get_transaction(self, index):
+        raise NotImplementedError()
+
+    def count(self):
+        raise NotImplementedError()
 
 class TransactionExecutorMock(object):
     def __init__(self):
