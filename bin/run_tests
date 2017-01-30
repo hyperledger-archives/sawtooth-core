@@ -15,126 +15,30 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+MODULES="core, rest_api, sdk, signing, validator"
 usage() {
     echo "Usage:"
     echo "  $0 [-m Module]"
     echo
     echo "Options:"
     echo "  -h          print usage and exit"
-    echo "  -m Module   only run tests of specified module <core, signing, validator, arcade>"
+    echo "  -m Module   only run tests of specified module {$MODULES}"
+    echo "  -m Prefix   "
 }
 
+# Exit on non-zero exit code from subcommand
 set -e
+# Set sawtooth-core project directory relative to this file
+PROJECT_DIR=$(cd $(dirname $(dirname $0)) && pwd)
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+# Make sawtooth scripts accessible
+export PATH=$PROJECT_DIR/bin:$PATH
 
-PATH=$top_dir/bin:$PATH
-export PATH
-
-test_core() {
-    PYTHONPATH=$top_dir/core
-    export PYTHONPATH
-    cd core
-    nose2 -v
-    cd ..
-}
-
-test_sdk_examples() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
-    PYTHONPATH=$PYTHONPATH:$top_dir/integration
-    export PYTHONPATH
-    cd integration/sawtooth_integration/test_suites
-    run_tp_test tp_intkey_python ts_tp_intkey.TestSuiteIntkey
-    run_tp_test tp_xo_python ts_tp_xo.TestSuiteXo
-    cd ../../../
-}
-
-test_docker() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-    export PYTHONPATH
-    cd integration/sawtooth_integration
-    run_docker_test docker/tp-intkey-python.yaml -s validator
-    run_docker_test docker/intkey-load-python.yaml -s integration_test
-    run_docker_test docker/tp-xo-python.yaml -s validator
-    run_docker_test docker/xo-smoke.yaml -s integration_test
-    cd ../../
-}
-
-test_tp_config() {
-    config_dir=$top_dir/core_transactions/config
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-    PYTHONPATH=$PYTHONPATH:$config_dir
-    PYTHONPATH=$PYTHONPATH:$config_dir/tests
-    export PYTHONPATH
-    echo $PYTHONPATH
-    nose2-3 -s $config_dir/tests sawtooth_config_test.ts_config.TestSuiteConfig
-}
-
-test_signing() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-    export PYTHONPATH
-    cd signing
-    nose2 -v
-    cd ..
-
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-    export PYTHONPATH
-    cd signing
-    nose2-3 -v
-    cd ..
-}
-
-test_validator() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
-    PYTHONPATH=$PYTHONPATH:$top_dir/core
-    PYTHONPATH=$PYTHONPATH:$top_dir/validator
-    export PYTHONPATH
-    cd validator
-    nose2 -v unit
-
-    export RUN_TEST_SUITES=1
-    nose2 -v sawtooth_suites.ts_pr_dev_mode.DevModeTestSuite
-    nose2 -v sawtooth_suites.ts_pr_poet1.Poet1TestSuite
-    unset RUN_TEST_SUITES
-
-    # Disable nose2-3 within docker container until bugs can be resolved.
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-    PYTHONPATH=$PYTHONPATH:$top_dir/core
-    PYTHONPATH=$PYTHONPATH:$top_dir/validator
-    export PYTHONPATH
-    if [ -e /.dockerenv ]; then
-        true
-    else
-        nose2-3 -v unit3
-    fi
-    cd ..
-}
-
-test_cli() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-    PYTHONPATH=$PYTHONPATH:$top_dir/cli
-    export PYTHONPATH
-    nose2-3 -s $top_dir/cli/tests
-}
-
-
+# Default args
 MODULE="all"
-while getopts :m:h opt
+ISOLATION_ID=test;
+
+while getopts :p:m:h opt
 do
     case $opt in
         h)
@@ -144,6 +48,9 @@ do
         m)
             MODULE=$OPTARG
             ;;
+        p)
+            ISOLATION_ID=$OPTARG
+            ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 2
@@ -151,34 +58,65 @@ do
     esac
 done
 
-case $MODULE in
-    all)
-        test_sdk_examples
-        test_tp_config
-        test_core
-        test_cli
-        test_signing
-        test_validator
-        ;;
-    core)
-        test_core
-        ;;
-    cli)
-        test_cli
-        ;;
-    signing)
-        test_signing
-        ;;
-    validator)
-        test_validator
-        ;;
-    sdk_examples)
-        test_sdk_examples
-        ;;
-    tp_config)
-        test_tp_config
-        ;;
-    docker)
-        test_docker
-        ;;
-esac
+main() {
+
+    # Start in project directory
+    cd $PROJECT_DIR
+
+    case $MODULE in
+        all)
+            test_core
+            test_rest_api
+            test_sdk
+            test_signing
+            test_validator
+            ;;
+        core)
+            test_core
+            ;;
+        rest_api)
+            test_rest_api
+            ;;
+        sdk)
+            test_sdk
+            ;;
+        signing)
+            test_signing
+            ;;
+        validator)
+            test_validator
+            ;;
+        *)
+            echo "Module '$MODULE' not found."
+            ;;
+    esac
+}
+
+test_core() {
+    echo "[---Running core tests---]"
+}
+
+test_rest_api() {
+    echo "[---Running REST API tests---]"
+}
+
+test_sdk() {
+    echo "[---Running SDK tests---]"
+    # intkey
+    run_docker_test tp-intkey-python -s validator -p $ISOLATION_ID
+
+    # xo
+    run_docker_test tp-xo-python -s validator -p $ISOLATION_ID
+    run_docker_test xo-smoke -s integration_test -p $ISOLATION_ID
+}
+
+test_signing() {
+    echo "[---Running signing tests---]"
+}
+
+test_validator() {
+    echo "[---Running validator tests---]"
+}
+
+
+main

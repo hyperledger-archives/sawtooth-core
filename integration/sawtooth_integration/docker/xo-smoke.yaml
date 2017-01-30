@@ -13,30 +13,36 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2"
+version: "2.1"
 
 services:
 
   tp_xo:
-    image: "tp_xo_python"
+    build:
+      context: ../../../core/sawtooth/cli/data
+      dockerfile: tp_xo_python
     volumes:
-      - /project/sawtooth-core:/project/sawtooth-core
+      - ../../../:/project/sawtooth-core
     expose:
       - 40000
     entrypoint: ./bin/tp_xo_python validator:40000
 
   validator:
-    image: "sawtooth-validator"
+    build:
+      context: ../../../core/sawtooth/cli/data
+      dockerfile: sawtooth-validator
     volumes:
-      - /project/sawtooth-core:/project/sawtooth-core
+      - ../../../:/project/sawtooth-core
     expose:
       - 40000
     entrypoint: ./bin/validator -vv
 
   rest_api:
-    image: "sawtooth-rest_api"
+    build:
+      context: ../../../core/sawtooth/cli/data
+      dockerfile: sawtooth-rest_api
     volumes:
-      - /project/sawtooth-core:/project/sawtooth-core
+      - ../../../:/project/sawtooth-core
     expose:
       - 40000
       - 8080
@@ -46,9 +52,11 @@ services:
       ./bin/rest_api --stream-url validator:40000\""
 
   integration_test:
-    image: "sawtooth-test-ubuntu-xenial"
+    build:
+      context: ../../../core/sawtooth/cli/data
+      dockerfile: sawtooth-test-ubuntu-xenial
     volumes:
-      - /project/sawtooth-core:/project/sawtooth-core
+      - ../../../:/project/sawtooth-core
     expose:
       - 8080
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
