@@ -21,7 +21,7 @@ from threading import Lock
 from threading import Condition
 from queue import Queue
 
-from sawtooth_validator.merkle import MerkleDatabase
+from sawtooth_validator.state.merkle import MerkleDatabase
 
 
 LOGGER = logging.getLogger(__name__)
