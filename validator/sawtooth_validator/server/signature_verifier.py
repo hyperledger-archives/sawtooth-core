@@ -43,13 +43,11 @@ class SignatureVerifier(Thread):
 
     def validate_block(self, block):
         # validate block signature
-        valid = True
-        recovered_pubkey = signing.recover_pubkey(block.header,
-                                                  block.header_signature)
         header = BlockHeader()
         header.ParseFromString(block.header)
-        if recovered_pubkey != header.signer_pubkey:
-            valid = False
+        valid = signing.verify(block.header,
+                               block.header_signature,
+                               header.signer_pubkey)
 
         # validate all batches in block. These are not all batches in the
         # batch_ids stored in the block header, only those sent with the block.
@@ -63,13 +61,11 @@ class SignatureVerifier(Thread):
 
     def validate_batch(self, batch):
         # validate batch signature
-        valid = True
-        recovered_pubkey = signing.recover_pubkey(batch.header,
-                                                  batch.header_signature)
         header = BatchHeader()
         header.ParseFromString(batch.header)
-        if recovered_pubkey != header.signer_pubkey:
-            valid = False
+        valid = signing.verify(batch.header,
+                               batch.header_signature,
+                               header.signer_pubkey)
 
         # validate all transactions in batch
         total = len(batch.transactions)
@@ -88,14 +84,12 @@ class SignatureVerifier(Thread):
 
     def validate_transaction(self, txn):
         # validate transactions signature
-        recovered_pubkey = signing.recover_pubkey(txn.header,
-                                                  txn.header_signature)
         header = TransactionHeader()
         header.ParseFromString(txn.header)
-        if recovered_pubkey == header.signer_pubkey:
-            return True
-        else:
-            return False
+        valid = signing.verify(txn.header,
+                               txn.header_signature,
+                               header.signer_pubkey)
+        return valid
 
     def stop(self):
         self._exit = True
