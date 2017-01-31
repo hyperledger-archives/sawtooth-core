@@ -18,7 +18,7 @@ import logging
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
-from sawtooth_validator.merkle import MerkleDatabase
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.state_context_pb2 import Entry
 from sawtooth_validator.protobuf import validator_pb2

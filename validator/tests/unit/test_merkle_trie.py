@@ -18,7 +18,7 @@ import unittest
 import random
 import string
 
-from sawtooth_validator.merkle import MerkleDatabase
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.database import lmdb_nolock_database
 
 RUN_MERKLE_TESTS = True \
