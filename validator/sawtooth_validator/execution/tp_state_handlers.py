@@ -64,8 +64,10 @@ class TpStateSetHandler(Handler):
         response = state_context_pb2.TpStateSetResponse()
         if return_value is True:
             address_list = [e.address for e in set_request.entries]
+            LOGGER.debug("SET: %s", address_list)
             response.addresses.extend(address_list)
         else:
+            LOGGER.debug("SET: No Values Set")
             response.addresses.extend([])
         return HandlerResult(
             HandlerStatus.RETURN,
