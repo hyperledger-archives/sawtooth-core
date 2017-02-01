@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 import threading
 
 from sawtooth_validator.protobuf import processor_pb2
@@ -23,13 +24,18 @@ from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.execution import processor_iterator
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class TransactionExecutorThread(threading.Thread):
-    def __init__(self, service, context_manager, scheduler, processors):
+    def __init__(self, service, context_manager, scheduler, processors,
+                 require_txn_processors=False):
         super(TransactionExecutorThread, self).__init__()
         self._service = service
         self._context_manager = context_manager
         self._scheduler = scheduler
         self._processors = processors
+        self._require_txn_processors = require_txn_processors
 
     def _future_done_callback(self, request, result):
         """
@@ -71,6 +77,19 @@ class TransactionExecutorThread(threading.Thread):
                 header.family_version,
                 header.payload_encoding)
 
+            # Currently we only check for the sawtooth_config txn family,
+            # as it is the only family we know to require.
+            if self._require_txn_processors and \
+                    header.family_name == 'sawtooth_config' and \
+                    processor_type not in self._processors:
+                # wait until required processor is registered:
+                LOGGER.info('Waiting for transaction processor (%s, %s, %s)',
+                            header.family_name,
+                            header.family_version,
+                            header.payload_encoding)
+
+                self._processors.wait_to_process(processor_type)
+
             if processor_type not in self._processors:
                 raise Exception("internal error, no processor available")
             processor = self._processors[processor_type]
@@ -94,9 +113,11 @@ class TransactionExecutor(object):
     def create_scheduler(self, squash_handler, first_state_root):
         return SerialScheduler(squash_handler, first_state_root)
 
-    def execute(self, scheduler):
-        t = TransactionExecutorThread(self._service,
-                                      self._context_manager,
-                                      scheduler,
-                                      self.processors)
+    def execute(self, scheduler, require_txn_processors=False):
+        t = TransactionExecutorThread(
+            self._service,
+            self._context_manager,
+            scheduler,
+            self.processors,
+            require_txn_processors=require_txn_processors)
         t.start()

@@ -17,13 +17,25 @@ version: "2.1"
 
 services:
 
+  tp_config:
+    image: sawtooth-tp_config:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 40000
+    entrypoint: "bash -c \"\
+        ./bin/tp_config -v validator:40000 \""
+    stop_signal: SIGKILL
+
   tp_intkey:
     image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_intkey_python -v validator:40000
+    entrypoint: "bash -c \"\
+        sleep 1 && \
+        ./bin/tp_intkey_python -v validator:40000\""
     stop_signal: SIGKILL
 
   validator:
@@ -32,7 +44,13 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/validator -v
+    depends_on:
+      - tp_intkey
+      - tp_config
+    # start the validator with an empty genesis batch
+    entrypoint: "bash -c \"\
+        ./bin/sawtooth-0.8 admin genesis && \
+        ./bin/validator -v\""
     stop_signal: SIGKILL
 
   rest_api:
@@ -42,9 +60,11 @@ services:
     expose:
       - 40000
       - 8080
+    depends_on:
+      - validator
     # Starting rest_api at the same time as tp_intkey breaks
     entrypoint: "bash -c \"\
-      sleep 1 && \
+      sleep 4 && \
       ./bin/rest_api --stream-url validator:40000\""
     stop_signal: SIGKILL
 
@@ -57,12 +77,11 @@ services:
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
     entrypoint: python3 -m http.server
     depends_on:
-      - tp_intkey
       - validator
       - rest_api
-    # Wait for rest_api
+    # Wait for rest_api and genesis
     entrypoint: "bash -c \"\
-      sleep 2 && \
+      sleep 8 && \
       nose2-3 -v test_intkey_smoke.TestIntkeySmoke\""
     stop_signal: SIGKILL
     environment:

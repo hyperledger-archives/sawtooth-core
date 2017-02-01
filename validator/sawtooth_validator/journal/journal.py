@@ -21,8 +21,6 @@ import time
 
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
-from sawtooth_validator.journal.block_wrapper import BlockState
-from sawtooth_validator.journal.block_wrapper import BlockStatus
 
 LOGGER = logging.getLogger(__name__)
 
@@ -88,53 +86,53 @@ class Journal(object):
                  block_store,
                  block_sender,
                  transaction_executor,
-                 squash_handler,
-                 first_state_root):
+                 squash_handler):
         self._consensus = consensus
         self._block_store = block_store
+        self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
         self._block_sender = block_sender
 
-        self._block_publisher = BlockPublisher(
-            consensus=consensus.BlockPublisher(),
-            transaction_executor=transaction_executor,
-            block_sender=block_sender,
-            squash_handler=squash_handler
-        )
+        self._block_publisher = None
         self._batch_queue = queue.Queue()
+        self._publisher_thread = None
+
+        self._chain_controller = None
+        self._block_queue = queue.Queue()
+        self._chain_thread = None
+
+    def _init_subprocesses(self):
+        chain_head = self._get_chain_head()
+        self._block_publisher = BlockPublisher(
+            consensus=self._consensus.BlockPublisher(),
+            transaction_executor=self._transaction_executor,
+            block_sender=self._block_sender,
+            squash_handler=self._squash_handler,
+            chain_head=chain_head
+        )
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
-        # HACK until genesis tool is working
-        if "chain_head_id" not in self._block_store:
-            genesis_block = BlockState(
-                block_wrapper=self._block_publisher.generate_genesis_block(),
-                weight=0,
-                status=BlockStatus.Valid)
-            genesis_block.block.set_state_hash(first_state_root)
-
-            self._block_store[genesis_block.block.header_signature] = \
-                genesis_block
-            self._block_store["chain_head_id"] = \
-                genesis_block.block.header_signature
-            self._block_publisher.on_chain_updated(genesis_block.block)
-            LOGGER.info("Journal created genesis block: %s",
-                        genesis_block.block.header_signature)
-
         self._chain_controller = ChainController(
-            consensus=consensus.BlockVerifier(),
-            block_store=block_store,
-            block_sender=block_sender,
+            consensus=self._consensus.BlockVerifier(),
+            block_store=self._block_store,
+            block_sender=self._block_sender,
             executor=ThreadPoolExecutor(1),
-            transaction_executor=transaction_executor,
+            transaction_executor=self._transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler
         )
-        self._block_queue = queue.Queue()
         self._chain_thread = self._ChainThread(self._chain_controller,
                                                self._block_queue)
 
+    def _get_chain_head(self):
+        if 'chain_head_id' in self._block_store:
+            return self._block_store[self._block_store["chain_head_id"]]
+
+        return None
+
     def get_current_root(self):
-        return self._chain_controller.chain_head.block.state_root_hash
+        chain_head = self._get_chain_head()
+        return chain_head.block.state_root_hash if chain_head else None
 
     def get_block_store(self):
         return self._block_store
@@ -143,14 +141,19 @@ class Journal(object):
         # TBD do load activities....
         # TBD transfer activities - request chain-head from
         # network
+        if self._publisher_thread is None and self._chain_thread is None:
+            self._init_subprocesses()
+
         self._publisher_thread.start()
         self._chain_thread.start()
 
     def stop(self):
         # time to murder the child threads. First ask politely for
         # suicide
-        self._publisher_thread.stop()
-        self._chain_thread.stop()
+        if self._publisher_thread is not None:
+            self._publisher_thread.stop()
+        if self._chain_thread is not None:
+            self._chain_thread.stop()
 
     def on_block_received(self, block):
         self._block_queue.put(block)

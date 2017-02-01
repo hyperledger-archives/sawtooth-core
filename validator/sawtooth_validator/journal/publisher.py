@@ -35,7 +35,8 @@ class BlockPublisher(object):
                  consensus,
                  transaction_executor,
                  block_sender,
-                 squash_handler):
+                 squash_handler,
+                 chain_head):
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
         self._consensus = consensus  # the consensus object.
@@ -44,18 +45,15 @@ class BlockPublisher(object):
         self._validated_batches = []
         self._block_sender = block_sender
         self._scheduler = None
-        self._chain_head = None
+        self._chain_head = chain_head
         self._squash_handler = squash_handler
 
     def _build_block(self, chain_head):
         """ Build a candidate block
         """
-        if self._chain_head is None:
-            block_header = self.generate_genesis_block()
-        else:
-            block_header = BlockHeader(
-                block_num=chain_head.block_num + 1,
-                previous_block_id=chain_head.header_signature)
+        block_header = BlockHeader(
+            block_num=chain_head.block_num + 1,
+            previous_block_id=chain_head.header_signature)
         self._consensus.initialize_block(block_header)
 
         # create a new scheduler
@@ -97,6 +95,10 @@ class BlockPublisher(object):
         :return:
         """
         with self._lock:
+            if self._chain_head is None:
+                # We are not ready to process batches
+                return
+
             self._pending_batches.append(batch)
             if self._scheduler:
                 try:
@@ -203,14 +205,3 @@ class BlockPublisher(object):
                 # create a new block based on this one -- opportunistically
                 # assume the published block is the valid block.
                 self.on_chain_updated(candidate)
-
-    def generate_genesis_block(self):
-        genesis_header = BlockHeader(previous_block_id=NULLIDENTIFIER,
-                                     block_num=0)
-
-        # Small hack here not asking consensus if it is happy.
-        block = BlockWrapper(genesis_header)
-        block.set_signature("genesis")
-        self._candidate_block = \
-            self._finalize_block(block)
-        return self._candidate_block

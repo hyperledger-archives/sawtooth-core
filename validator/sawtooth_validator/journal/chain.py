@@ -217,18 +217,12 @@ class ChainController(object):
         # is being processed. Once that completes this block will be
         # scheduled for validation.
 
-        try:
-            self._chain_head = \
-                self._block_store[self._block_store["chain_head_id"]]
+        self._chain_head = self._get_current_persisted_chain_head()
 
+        if self._chain_head is not None:
             LOGGER.info("Chain controller initialized with chain head: %s",
                         self._chain_head.block.header_signature)
-        except Exception as e:
-            LOGGER.error("Invalid block store. Head of the block chain cannot "
-                         "be determined: %s", e)
-            raise
-
-        self._notify_on_chain_updated(self._chain_head.block)
+            self._notify_on_chain_updated(self._chain_head.block)
 
     @property
     def chain_head(self):
@@ -270,7 +264,6 @@ class ChainController(object):
                 # the block validation work we have done is saved.
                 self._verify_block(validator.new_block)
             elif validator.commit_new_block():
-                print('****** commit the chain! ****')
                 self._chain_head = validator.new_block
                 self._block_store["chain_head_id"] = \
                     self._chain_head.block.header_signature
@@ -288,7 +281,6 @@ class ChainController(object):
     def on_block_received(self, block):
         with self._lock:
             if block.header_signature in self._block_store:
-                LOGGER.debug('already have block %s', block.header_signature)
                 # do we already have this block
                 return
             header = BlockHeader()
@@ -325,3 +317,9 @@ class ChainController(object):
             else:
                 # schedule this block for validation.
                 self._verify_block(block_state)
+
+    def _get_current_persisted_chain_head(self):
+        if 'chain_head_id' in self._block_store:
+            return self._block_store[self._block_store["chain_head_id"]]
+
+        return None

@@ -23,6 +23,7 @@ import time
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
+from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.execution import tp_state_handlers
@@ -50,7 +51,8 @@ LOGGER = logging.getLogger(__name__)
 
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, peer_list):
-        db_filename = os.path.join(os.path.expanduser('~'),
+        data_dir = os.path.expanduser('~')
+        db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
                                        network_endpoint[-2:]))
         LOGGER.debug('database file is %s', db_filename)
@@ -58,45 +60,45 @@ class Validator(object):
         lmdb = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(lmdb)
 
-        block_db_filename = os.path.join(os.path.expanduser('~'), 'block.lmdb')
+        block_db_filename = os.path.join(data_dir, 'block.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
+        block_store = {}
         # block_store = LMDBNoLockDatabase(block_db_filename, 'n')
         # this is not currently being used but will be something like this
         # in the future, when Journal takes a block_store that isn't a dict
 
         # setup network
-        dispatcher = Dispatcher()
-        dispatcher.start()
+        self._dispatcher = Dispatcher()
 
         completer = Completer()
 
         thread_pool = ThreadPoolExecutor(max_workers=10)
         process_pool = ProcessPoolExecutor(max_workers=3)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_GET_REQUEST,
             tp_state_handlers.TpStateGetHandler(context_manager),
             thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_SET_REQUEST,
             tp_state_handlers.TpStateSetHandler(context_manager),
             thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
             client_handlers.StateGetRequestHandler(lmdb),
             thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
             client_handlers.StateListRequestHandler(lmdb),
             thread_pool)
 
-        self._service = Interconnect(component_endpoint, dispatcher)
+        self._service = Interconnect(component_endpoint, self._dispatcher)
         executor = TransactionExecutor(self._service, context_manager)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.TP_REGISTER_REQUEST,
             ProcessorRegisterHandler(executor.processors),
             thread_pool)
@@ -106,12 +108,11 @@ class Validator(object):
 
         network_thread_pool = ThreadPoolExecutor(max_workers=10)
 
-        network_dispatcher = Dispatcher()
-        network_dispatcher.start()
+        self._network_dispatcher = Dispatcher()
 
         self._network = Interconnect(
             network_endpoint,
-            dispatcher=network_dispatcher,
+            dispatcher=self._network_dispatcher,
             identity=identity,
             peer_connections=peer_list)
 
@@ -119,35 +120,35 @@ class Validator(object):
 
         block_sender = BroadcastBlockSender(completer, self._gossip)
 
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_PING,
             PingHandler(),
             network_thread_pool)
 
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_REGISTER,
             PeerRegisterHandler(),
             network_thread_pool)
 
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_UNREGISTER,
             PeerUnregisterHandler(),
             network_thread_pool)
 
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipMessageHandler(),
             network_thread_pool)
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
             process_pool)
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipBroadcastHandler(
                 gossip=self._gossip),
             network_thread_pool)
-        network_dispatcher.add_handler(
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(
                 completer),
@@ -156,53 +157,67 @@ class Validator(object):
         # Create and configure journal
         self._journal = Journal(
             consensus=dev_mode_consensus,
-            block_store={},
-            # -- need to serialize blocks to dicts
+            block_store=block_store,
             block_sender=block_sender,
             transaction_executor=executor,
-            squash_handler=context_manager.get_squash_handler(),
-            first_state_root=context_manager.get_first_root())
+            squash_handler=context_manager.get_squash_handler())
+
+        self._genesis_controller = GenesisController(
+            context_manager=context_manager,
+            transaction_executor=executor,
+            completer=completer,
+            block_store=block_store,
+            data_dir=data_dir
+        )
 
         completer.set_on_batch_received(self._journal.on_batch_received)
         completer.set_on_block_received(self._journal.on_block_received)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             signature_verifier.BatchListSignatureVerifier(),
             process_pool)
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             CompleterBatchListBroadcastHandler(
                 completer, self._gossip),
             thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
             client_handlers.StateGetRequestHandler(lmdb),
             thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
             client_handlers.StateListRequestHandler(lmdb),
             thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
             client_handlers.BlockGetRequestHandler(
                 self._journal.get_block_store()), thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
             client_handlers.BlockListRequestHandler(
                 self._journal.get_block_store()), thread_pool)
 
-        dispatcher.add_handler(
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
             client_handlers.StateCurrentRequestHandler(
                 self._journal.get_current_root), thread_pool)
 
     def start(self):
+        self._dispatcher.start()
         self._service.start()
+        if self._genesis_controller.requires_genesis():
+            self._genesis_controller.start(self._start)
+        else:
+            self._start()
+
+    def _start(self):
+        self._network_dispatcher.start()
         self._network.start(daemon=True)
         self._gossip.start()
         self._journal.start()

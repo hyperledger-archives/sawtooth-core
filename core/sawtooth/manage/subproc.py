@@ -16,6 +16,7 @@
 import os
 import signal
 import subprocess
+import time
 import yaml
 
 from sawtooth.manage.node import NodeController
@@ -57,6 +58,8 @@ class SubprocessNodeController(NodeController):
         state['Nodes'][node_name]['pid'] = []
 
         commands = ['validator'] + state['Processors']
+        if node_args.genesis:
+            commands = ['sawtooth-0.8'] + commands
 
         for cmd in commands:
             # get_executable_script returns (path, executable)
@@ -67,6 +70,8 @@ class SubprocessNodeController(NodeController):
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
                 flags = component + network
+            elif cmd == 'sawtooth-0.8':
+                flags = 'admin', 'genesis'
             else:
                 flags = (url,)
 
@@ -76,6 +81,9 @@ class SubprocessNodeController(NodeController):
             state['Nodes'][node_name]['pid'] += [pid]
 
         self._save_state(state)
+
+        if node_args.genesis:
+            time.sleep(5)
 
     def _send_signal_to_node(self, signal_type, node_name):
         state = self._load_state()

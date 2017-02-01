@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-#
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,22 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import os
-import sys
-import sysconfig
 
-build_str = "lib.{}-{}.{}".format(
-    sysconfig.get_platform(),
-    sys.version_info.major, sys.version_info.minor)
+class GenesisError(Exception):
+    """
+    General Error thrown when an error occurs as a result of an incomplete
+    or erroneous genesis action.
+    """
+    pass
 
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'sdk', 'python'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'core_transactions', 'config'))
 
-from sawtooth_config.processor.main import main
-
-if __name__ == '__main__':
-    main()
+class InvalidGenesisStateError(GenesisError):
+    """
+    Error thrown when there is an invalid intial state during the genesis
+    block generation process.
+    """
+    pass
