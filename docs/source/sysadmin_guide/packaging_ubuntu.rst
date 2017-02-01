@@ -8,7 +8,7 @@ Prerequisites
 
 To create packages for Ubuntu, you need the following:
 
-* Ubuntu 14.04 LTS with Internet access
+* Ubuntu 16.04 LTS with Internet access
 * git Repository: sawtooth-core
 
 The remainder of these instructions assume a vanilla Ubuntu 14.04 installation
@@ -17,7 +17,7 @@ one with vagrant:
 
 .. code-block:: console
 
-  % vagrant init ubuntu/trusty64
+  % vagrant init ubuntu/xenial64
   % vagrant up
   % vagrant ssh
 
@@ -28,13 +28,13 @@ Apply the latest Ubuntu updates:
 
 .. code-block:: console
 
-  root@ubuntu # apt-get update -y
+  vagrant@ubuntu $ sudo apt-get update -y
 
 Install the prerequisite packages:
 
 .. code-block:: console
 
-  root@ubuntu # apt-get install -y -q \
+  vagrant@ubuntu $ sudo apt-get install -y -q \
       python-twisted \
       python-twisted-web \
       python-dev \
@@ -117,31 +117,36 @@ Clone or copy the repository into the VM environment:
    vagrant@ubuntu $ mkdir -p $HOME/projects
    vagrant@ubuntu $ cd $HOME/projects
    vagrant@ubuntu $ git clone https://github.com/IntelLedger/sawtooth-core.git
+   vagrant@ubuntu $ cd sawtooth-core
+   vagrant@ubuntu $ git checkout 0-7
+   vagrant@ubuntu $ cd $HOME
 
-.. note::
+Create Packages
+---------------
 
-  You will have to setup your SSH private key to directly clone the repository
-  directly into the VM.
-
-At this time, if you are using a branch other than master for any of the
-repositories, check out the appropriate branch.
-
-Create Package
---------------
-
-Create package from sawtooth repository:
+Create packages from sawtooth repository:
 
 .. code-block:: console
 
-  vagrant@ubuntu $ cd $HOME/projects/sawtooth-core/core
-  vagrant@ubuntu $ python setup.py --command-packages=stdeb.command bdist_deb
-  vagrant@ubuntu $ cp deb_dist/python-sawtooth-core*.deb $HOME/packages/
+    vagrant@ubuntu $ for pkg in signing core extensions/mktplace extensions/arcade extensions/bond
+    > do
+    >     dir=$HOME/projects/sawtooth-core/$pkg
+    >     if [ -d $dir ]; then
+    >         cd $dir
+    >         python setup.py --command-packages=stdeb.command bdist_deb
+    >         cp deb_dist/*.deb $HOME/packages/
+    >     fi
+    > done
+
+    vagrant@ubuntu $ cd $HOME/projects/sawtooth-core
+    vagrant@ubuntu $ ./bin/package_validator
+    vagrant@ubuntu $ cp python-sawtooth-validator*.deb $HOME/packages/
 
 
 Create tar File of Packages
 ===========================
 
-To make it trivial to deliver the Ubuntu deb files, create a tar file:
+To make it easy to deliver the Ubuntu deb files, create a tar file:
 
 .. code-block:: console
 
