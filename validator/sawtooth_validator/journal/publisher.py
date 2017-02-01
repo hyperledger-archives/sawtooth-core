@@ -19,7 +19,7 @@ from threading import RLock
 from sawtooth_signing import pbct_nativerecover as signing
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.scheduler.serial import SchedulerError
+from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 LOGGER = logging.getLogger(__name__)
 

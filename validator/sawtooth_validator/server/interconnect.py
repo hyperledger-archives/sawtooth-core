@@ -23,7 +23,7 @@ import zmq.asyncio
 from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_validator.server import future
-from sawtooth_validator.server import processor_iterator
+from sawtooth_validator.execution import processor_iterator
 
 
 class _SendReceiveThread(Thread):
