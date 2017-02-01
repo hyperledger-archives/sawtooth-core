@@ -17,10 +17,9 @@ import hashlib
 import unittest
 import bitcoin
 
-from sawtooth_validator.context_manager import ContextManager
+from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database import dict_database
-
-from sawtooth_validator.scheduler.serial import SerialScheduler
+from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2

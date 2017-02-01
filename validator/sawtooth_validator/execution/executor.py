@@ -22,7 +22,7 @@ from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
-from sawtooth_validator.scheduler.serial import SerialScheduler
+from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 
 
 def _generate_id():

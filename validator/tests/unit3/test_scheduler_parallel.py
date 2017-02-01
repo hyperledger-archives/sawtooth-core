@@ -15,8 +15,8 @@
 
 import unittest
 
-from sawtooth_validator.scheduler.parallel import RadixTree
-from sawtooth_validator.scheduler.parallel import TopologicalSorter
+from sawtooth_validator.execution.scheduler_parallel import RadixTree
+from sawtooth_validator.execution.scheduler_parallel import TopologicalSorter
 
 
 class TestRadixTree(unittest.TestCase):

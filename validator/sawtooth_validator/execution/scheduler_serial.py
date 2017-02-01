@@ -16,11 +16,11 @@
 import queue
 from threading import Condition
 
-from sawtooth_validator.scheduler.base import BatchExecutionResult
-from sawtooth_validator.scheduler.base import TxnInformation
-from sawtooth_validator.scheduler.base import Scheduler
-from sawtooth_validator.scheduler.base import SchedulerIterator
-from sawtooth_validator.scheduler.exceptions import SchedulerError
+from sawtooth_validator.execution.scheduler import BatchExecutionResult
+from sawtooth_validator.execution.scheduler import TxnInformation
+from sawtooth_validator.execution.scheduler import Scheduler
+from sawtooth_validator.execution.scheduler import SchedulerIterator
+from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 
 class SerialScheduler(Scheduler):

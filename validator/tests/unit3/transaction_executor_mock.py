@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 
-from sawtooth_validator.scheduler.base import Scheduler
-from sawtooth_validator.scheduler.base import BatchExecutionResult
+from sawtooth_validator.execution.scheduler import Scheduler
+from sawtooth_validator.execution.scheduler import BatchExecutionResult
 
 
 class SchedulerMock(Scheduler):
