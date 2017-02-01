@@ -23,7 +23,7 @@ from google.protobuf.message import DecodeError
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
-from sawtooth_validator.server.completer import Completer
+from sawtooth_validator.journal.completer import Completer
 LOGGER = logging.getLogger(__name__)
 
 
