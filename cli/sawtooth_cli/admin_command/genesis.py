@@ -32,7 +32,7 @@ def add_genesis_parser(subparsers, parent_parser):
 
     parser.add_argument(
         'input_file',
-        nargs='+',
+        nargs='*',
         type=str,
         help='input files of batches to add to the resulting GenesisData')
 

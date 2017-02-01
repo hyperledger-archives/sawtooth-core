@@ -62,6 +62,13 @@ class TestGenesisDependencyValidation(unittest.TestCase):
             output.ParseFromString(f.read())
             return output
 
+    def test_valiate_with_no_input_batches(self):
+        args = self._parse_command([])
+        genesis.do_genesis(args)
+
+        output = self._result_data()
+        self.assertEqual(0, len(output.batches))
+
     def test_validate_with_no_deps(self):
         batches = [self.make_batch('batch1',
                                    transaction('id1', []),
