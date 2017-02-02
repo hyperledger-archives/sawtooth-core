@@ -26,6 +26,7 @@ services:
     expose:
       - 40000
     entrypoint: ./bin/tp_intkey_python validator:40000
+    stop_signal: SIGKILL
 
   validator:
     build:
@@ -35,6 +36,7 @@ services:
       - ../../..:/project/sawtooth-core
     expose: 
       - 40000
+    stop_signal: SIGKILL
 
   integration_test:
     build:
@@ -49,3 +51,4 @@ services:
     depends_on:
       - tp_intkey
       - validator
+    stop_signal: SIGKILL
