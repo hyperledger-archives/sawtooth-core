@@ -111,6 +111,11 @@ test_rest_api() {
 
 test_sdk() {
     echo "[---Running SDK tests---]"
+    # config
+    run_docker_test \
+      core_transactions/config/tests/sawtooth_config_test/tp-config.yaml \
+      -s validator -p $ISOLATION_ID
+
     # intkey
     run_docker_test tp-intkey-python -s validator -p $ISOLATION_ID
     run_docker_test intkey-smoke -s integration_test -p $ISOLATION_ID
