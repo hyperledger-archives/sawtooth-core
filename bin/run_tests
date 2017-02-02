@@ -132,6 +132,7 @@ test_signing() {
 
 test_validator() {
     echo "[---Running validator tests---]"
+    run_docker_test ./validator/tests/unit_validator.yaml -s validator -p $ISOLATION_ID
 }
 
 
