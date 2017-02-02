@@ -43,4 +43,4 @@ VOLUME /project/sawtooth-core
 WORKDIR /project/sawtooth-core
 
 ENV PATH="/project/sawtooth-core/bin:$PATH"
-ENV PYTHONPATH="/project/sawtooth-core/sdk/python:/project/sawtooth-core/integration"
+ENV PYTHONPATH="/project/sawtooth-core/sdk/python:/project/sawtooth-core/integration:/project/sawtooth-core/signing:/project/sawtooth-core/signing/build/lib.linux-x86_64-3.5:/project/sawtooth-core/cli"

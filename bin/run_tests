@@ -15,7 +15,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-MODULES="core, rest_api, sdk, signing, validator"
+MODULES="cli, core, rest_api, sdk, signing, validator"
 usage() {
     echo "Usage:"
     echo "  $0 [-m Module]"
@@ -65,11 +65,15 @@ main() {
 
     case $MODULE in
         all)
+            test_cli
             test_core
             test_rest_api
             test_sdk
             test_signing
             test_validator
+            ;;
+        cli)
+            test_cli
             ;;
         core)
             test_core
@@ -90,6 +94,11 @@ main() {
             echo "Module '$MODULE' not found."
             ;;
     esac
+}
+
+test_cli() {
+    echo "[---Running cli tests---]"
+    run_docker_test ./cli/tests/unit_cli.yaml -s cli -p $ISOLATION_ID
 }
 
 test_core() {
