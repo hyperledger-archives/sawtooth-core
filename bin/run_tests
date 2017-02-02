@@ -127,6 +127,7 @@ test_sdk() {
 
 test_signing() {
     echo "[---Running signing tests---]"
+    run_docker_test ./signing/tests/unit_signing.yaml -s signing -p $ISOLATION_ID
 }
 
 test_validator() {
