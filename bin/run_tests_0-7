@@ -21,7 +21,7 @@ usage() {
     echo
     echo "Options:"
     echo "  -h          print usage and exit"
-    echo "  -m Module   only run tests of specified module <core, signing, validator, arcade>"
+    echo "  -m Module   only run tests of specified module <core, signing, validator>"
 }
 
 set -e
@@ -39,29 +39,6 @@ test_core() {
     cd ..
 }
 
-test_sdk_examples() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples
-    PYTHONPATH=$PYTHONPATH:$top_dir/integration
-    export PYTHONPATH
-    cd integration/sawtooth_integration/test_suites
-    run_tp_test tp_intkey_python ts_tp_intkey.TestSuiteIntkey
-    run_tp_test tp_xo_python ts_tp_xo.TestSuiteXo
-    cd ../../../
-}
-
-test_tp_config() {
-    config_dir=$top_dir/core_transactions/config
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-    PYTHONPATH=$PYTHONPATH:$config_dir
-    PYTHONPATH=$PYTHONPATH:$config_dir/tests
-    export PYTHONPATH
-    echo $PYTHONPATH
-    nose2-3 -s $config_dir/tests sawtooth_config_test.ts_config.TestSuiteConfig
-}
-
 test_signing() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/signing
@@ -69,14 +46,6 @@ test_signing() {
     export PYTHONPATH
     cd signing
     nose2 -v
-    cd ..
-
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-    export PYTHONPATH
-    cd signing
-    nose2-3 -v
     cd ..
 }
 
@@ -95,30 +64,7 @@ test_validator() {
     nose2 -v sawtooth_suites.ts_pr_poet1.Poet1TestSuite
     unset RUN_TEST_SUITES
 
-    # Disable nose2-3 within docker container until bugs can be resolved.
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-    PYTHONPATH=$PYTHONPATH:$top_dir/core
-    PYTHONPATH=$PYTHONPATH:$top_dir/validator
-    export PYTHONPATH
-    if [ -e /.dockerenv ]; then
-        true
-    else
-        nose2-3 -v unit3
-    fi
-    cd ..
 }
-
-test_cli() {
-    PYTHONPATH=$top_dir
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-3.5
-    PYTHONPATH=$PYTHONPATH:$top_dir/cli
-    export PYTHONPATH
-    nose2-3 -s $top_dir/cli/tests
-}
-
 
 MODULE="all"
 while getopts :m:h opt
@@ -140,29 +86,17 @@ done
 
 case $MODULE in
     all)
-        test_sdk_examples
-        test_tp_config
         test_core
-        test_cli
         test_signing
         test_validator
         ;;
     core)
         test_core
         ;;
-    cli)
-        test_cli
-        ;;
     signing)
         test_signing
         ;;
     validator)
         test_validator
-        ;;
-    sdk_examples)
-        test_sdk_examples
-        ;;
-    tp_config)
-        test_tp_config
         ;;
 esac
