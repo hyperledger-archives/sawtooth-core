@@ -25,3 +25,7 @@ services:
       - ../../:/project/sawtooth-core
     working_dir: /project/sawtooth-core/
     entrypoint: nose2-3 -s /project/sawtooth-core/cli/tests
+    environment:
+        PYTHONPATH: "/project/sawtooth-core/signing:\
+            /project/sawtooth-core/signing/build/lib.linux-x86_64-3.5:\
+            /project/sawtooth-core/cli"

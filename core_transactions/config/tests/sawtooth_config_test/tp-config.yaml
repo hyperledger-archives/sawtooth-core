@@ -39,3 +39,8 @@ services:
     working_dir: /project/sawtooth-core/core_transactions/config/tests
     entrypoint: nose2-3 sawtooth_config_test.ts_config.TestSuiteConfig
     stop_signal: SIGKILL
+    environment:
+        PYTHONPATH: "/project/sawtooth-core/core_transactions/config:\
+            /project/sawtooth-core/core_transactions/config/tests:\
+            /project/sawtooth-core/sdk/python:\
+            /project/sawtooth-core/integration"

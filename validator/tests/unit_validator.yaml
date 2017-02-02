@@ -25,3 +25,8 @@ services:
       - ../../:/project/sawtooth-core
     working_dir: /project/sawtooth-core/validator/tests/unit3
     entrypoint: nose2-3 -v
+    environment:
+        PYTHONPATH: "/project/sawtooth-core/signing:\
+            /project/sawtooth-core/signing/build/lib.linux-x86_64-3.5:\
+            /project/sawtooth-core/core:\
+            /project/sawtooth-core/validator"

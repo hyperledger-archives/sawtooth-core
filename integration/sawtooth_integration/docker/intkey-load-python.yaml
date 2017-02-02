@@ -52,3 +52,6 @@ services:
       - tp_intkey
       - validator
     stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration"

@@ -73,3 +73,6 @@ services:
       sleep 2 && \
       nose2-3 -v test_xo_smoke.TestXoSmoke\""
     stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration"
