@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y -q \
 
 RUN pip install sphinx && \
     pip install sphinxcontrib-httpdomain && \
+    pip install sphinxcontrib-openapi && \
     pip install nose2 && \
     pip install coverage && \
     pip install cov-core && \
@@ -63,7 +64,8 @@ RUN pip install sphinx && \
     pip install ipaddr && \
     pip install networkx && \
     pip install iso8601 && \
-    pip install psutil
+    pip install psutil && \
+    pip install secp256k1
 
 RUN ln -s /usr/bin/swig3.0 /usr/bin/swig
 
@@ -120,6 +122,7 @@ RUN apt-get update && apt-get install -y -q \
 
 
 RUN pip3 install bitcoin && \
-    pip3 install grpcio-tools
+    pip3 install grpcio-tools && \
+    pip3 install secp256k1
 
 USER build

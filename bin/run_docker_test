@@ -44,7 +44,9 @@ def main():
         'up', '--abort-on-container-exit', '--build'
     ]
 
-    compose_down = compose + ['down']
+    compose_down = compose + ['down', '--remove-orphans']
+
+    compose_kill = compose + ['kill']
 
     inspect = [
         'docker', 'inspect',
@@ -63,46 +65,51 @@ def main():
 
     # Run tests
     try:
-        print("Running: {}".format(compose_up))
-        run(compose_up, check=True, timeout=timeout)
-    except CalledProcessError:
-        raise RunDockerTestError(
-            "Failed to start all docker containers. Do `docker ps -a` to "
-            "list residual containers.")
+        try:
+            print("Running: {}".format(compose_up))
+            run(compose_up, check=True, timeout=timeout)
+        except CalledProcessError:
+            raise RunDockerTestError(
+                "Failed to start all docker containers. Do `docker ps -a` to "
+                "list residual containers.")
 
-    end_time = time.time()
-    delta_time = end_time - start_time
-    start_time = end_time
-    timeout = int(timeout - delta_time)
+        end_time = time.time()
+        delta_time = end_time - start_time
+        start_time = end_time
+        timeout = int(timeout - delta_time)
 
-    # Get success value of tests
-    try:
-        print("Running: {}".format(inspect))
-        success = run(
-            inspect, stdout=PIPE,
-            timeout=timeout, check=True
-        ).stdout.decode().strip()
-    except CalledProcessError:
-        raise RunDockerTestError(
-            "Aborting.. Could not inspect test services '{}'. Do "
-            "`docker ps -a` to list residual containers.".format(
-                args.test_service))
+        # Get success value of tests
+        try:
+            print("Running: {}".format(inspect))
+            success = run(
+                inspect, stdout=PIPE,
+                timeout=timeout, check=True
+            ).stdout.decode().strip()
+        except CalledProcessError:
+            raise RunDockerTestError(
+                "Aborting.. Could not inspect test services '{}'. Do "
+                "`docker ps -a` to list residual containers.".format(
+                    args.test_service))
 
-    end_time = time.time()
-    delta_time = end_time - start_time
-    start_time = end_time
-    timeout = int(timeout - delta_time)
+        end_time = time.time()
+        delta_time = end_time - start_time
+        start_time = end_time
+        timeout = int(timeout - delta_time)
 
-    # Clean up
-    try:
-        print("Running: {}".format(compose_down))
-        run(compose_down, check=True, timeout=timeout)
-    except CalledProcessError:
-        raise RunDockerTestError(
-            "Failed to remove all docker containers. Do `docker ps -a` to "
-            "list residual containers.")
+        # Clean up
+        try:
+            print("Running: {}".format(compose_down))
+            run(compose_down, check=True, timeout=timeout)
+        except CalledProcessError:
+            raise RunDockerTestError(
+                "Failed to remove all docker containers. Do `docker ps -a` to "
+                "list residual containers.")
 
-    exit(int(success))
+        exit(int(success))
+
+    except KeyboardInterrupt:
+        run(compose_down, check=True, timeout=5)
+        exit(1)
 
 
 def load_compose_file(compose_file):

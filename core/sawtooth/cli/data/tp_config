@@ -1,4 +1,4 @@
-# Copyright 2017 Intel Corporation
+# Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,16 +30,10 @@ RUN pip3 install \
     lmdb
 # --- End Common Header ---
 
-RUN apt-get update && apt-get install -y -q \
-    inetutils-ping \
-    python3-nose2
+RUN mkdir -p /project/sawtooth-core
 
-RUN pip3 install \
-    PyYAML
+ARG PROJECT_DIR="/project/sawtooth-core"
 
+WORKDIR $PROJECT_DIR
 
-VOLUME /project/sawtooth-core
-
-WORKDIR /project/sawtooth-core
-
-ENV PATH="/project/sawtooth-core/bin:$PATH"
+ENTRYPOINT ./bin/tp_config validator:40000

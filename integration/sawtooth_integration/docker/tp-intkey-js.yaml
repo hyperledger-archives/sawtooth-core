@@ -25,6 +25,7 @@ services:
       - ../../..:/project/sawtooth-core
     expose:
       - 40000
+    stop_signal: SIGKILL
 
   validator:
     build:
@@ -36,3 +37,7 @@ services:
       - 40000
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/test_suites
     entrypoint: nose2-3 -v ts_tp_intkey.TestSuiteIntkey
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration"

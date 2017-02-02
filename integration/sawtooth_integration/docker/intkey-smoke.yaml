@@ -26,6 +26,7 @@ services:
     expose:
       - 40000
     entrypoint: ./bin/tp_intkey_python -v validator:40000
+    stop_signal: SIGKILL
 
   validator:
     build:
@@ -36,6 +37,7 @@ services:
     expose:
       - 40000
     entrypoint: ./bin/validator -v
+    stop_signal: SIGKILL
 
   rest_api:
     build:
@@ -50,6 +52,7 @@ services:
     entrypoint: "bash -c \"\
       sleep 1 && \
       ./bin/rest_api --stream-url validator:40000\""
+    stop_signal: SIGKILL
 
   integration_test:
     build:
@@ -69,3 +72,7 @@ services:
     entrypoint: "bash -c \"\
       sleep 2 && \
       nose2-3 -v test_intkey_smoke.TestIntkeySmoke\""
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration"

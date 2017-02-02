@@ -13,33 +13,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM ubuntu:xenial
+version: "2.1"
 
-# --- Common Header ---
-RUN apt-get update && apt-get install -y -q \
-    python3 \
-    python3-zmq \
-    python3-pip \
-    python3-colorlog \
-    python3-cbor \
-    libcrypto++-dev
+services:
 
-RUN pip3 install \
-    grpcio-tools \
-    bitcoin \
-    lmdb
-# --- End Common Header ---
-
-RUN apt-get update && apt-get install -y -q \
-    inetutils-ping \
-    python3-nose2
-
-RUN pip3 install \
-    PyYAML
-
-
-VOLUME /project/sawtooth-core
-
-WORKDIR /project/sawtooth-core
-
-ENV PATH="/project/sawtooth-core/bin:$PATH"
+  cli:
+    build:
+      context: ../../core/sawtooth/cli/data
+      dockerfile: sawtooth-test-ubuntu-xenial
+    volumes:
+      - ../../:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/
+    entrypoint: nose2-3 -s /project/sawtooth-core/cli/tests
+    environment:
+        PYTHONPATH: "/project/sawtooth-core/signing:\
+            /project/sawtooth-core/signing/build/lib.linux-x86_64-3.5:\
+            /project/sawtooth-core/cli"
