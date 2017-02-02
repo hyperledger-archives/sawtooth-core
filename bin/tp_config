@@ -27,6 +27,10 @@ sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
             'core_transactions', 'config'))
 
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'sdk', 'python'))
+
 from sawtooth_config.processor.main import main
 
 if __name__ == '__main__':
