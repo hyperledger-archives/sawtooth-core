@@ -7,6 +7,7 @@ Table of Contents
    introduction.rst
    tutorial.rst
    txn_family_tutorial.rst
+   bond_family_guide.rst
    mktnav_users_guide.rst
    sawtooth_developers_guide.rst
    mktplace_developers_guide.rst

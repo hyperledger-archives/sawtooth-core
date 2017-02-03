@@ -1,0 +1,12 @@
+btp receipt list
+Timestamp           CouponDate   PaymentType   Amount    ObjectType  
+08/04/16 17:37:54   08/04/2016   Coupon        11986.3   receipt     
+08/04/16 17:37:54   08/04/2016   Coupon        11986.3   receipt     
+08/04/16 17:37:54   08/04/2016   Coupon        7707.81   receipt     
+08/04/16 17:37:54   08/04/2016   Coupon        11986.3   receipt     
+08/04/16 17:37:54   N/A          Redemption    1000000   receipt     
+08/04/16 17:37:54   N/A          Redemption    1000000   receipt     
+08/04/16 17:37:54   08/04/2016   Coupon        11986.3   receipt     
+08/04/16 17:37:54   08/04/2016   Coupon        11986.3   receipt     
+08/04/16 17:37:54   08/04/2016   Coupon        7707.81   receipt     
+...

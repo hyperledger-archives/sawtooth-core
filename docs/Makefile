@@ -53,6 +53,10 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/* source/sawtooth_api source/mktplace_api
+	rm -rf $(BUILDDIR)/* source/bond_family_guide/users_guide/cli_output/*usage.out
+
+genoutput:
+	./generate_cli_output
 
 sawtooth_apidoc:
 	$(SPHINXAPIDOC) -o source/sawtooth_api -M -f -e -H "Distributed Ledger Python API" $(SAWTOOTH_DIR) $(SAWTOOTH_DIR)/setup.py
@@ -60,7 +64,7 @@ sawtooth_apidoc:
 mktplace_apidoc:
 	$(SPHINXAPIDOC) -o source/mktplace_api -M -f -e -H "MarketPlace Python API" $(MKTPLACE_DIR) $(MKTPLACE_DIR)/setup.py
 
-html: sawtooth_apidoc mktplace_apidoc
+html: sawtooth_apidoc mktplace_apidoc genoutput
 	@mkdir -p source/_static
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo

@@ -19,11 +19,13 @@ USER root
 
 RUN apt-get update && apt-get install -y -q \
     python-ipaddr \
-    python-psutil
+    python-psutil \
+    python-bs4
 
 COPY core/deb_dist/*.deb /tmp
 COPY signing/deb_dist/*.deb /tmp
 COPY *.deb /tmp
+COPY extensions/bond/deb_dist/*.deb /tmp
 COPY extensions/mktplace/deb_dist/*.deb /tmp
 
 RUN dpkg -i /tmp/*.deb
