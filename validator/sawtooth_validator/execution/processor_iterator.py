@@ -55,12 +55,12 @@ class ProcessorIteratorCollection(object):
 
 
 class Processor(object):
-    def __init__(self, sender, namespaces):
-        self.sender = sender
+    def __init__(self, identity, namespaces):
+        self.identity = identity
         self.namespaces = namespaces
 
     def __repr__(self):
-        return "{}: {}".format(self.sender,
+        return "{}: {}".format(self.identity,
                                self.namespaces)
 
 

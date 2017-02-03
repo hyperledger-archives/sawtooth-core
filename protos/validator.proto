@@ -105,7 +105,4 @@ message Message {
     // CBOR.
     bytes content = 3;
 
-    // the zmq identity internal to Stream, _SendReceiveThread, and
-    // ValidatorServicer classes
-    string sender = 4;
 }
