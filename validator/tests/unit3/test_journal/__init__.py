@@ -13,20 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from concurrent.futures import Executor
-
-
-class SynchronousExecutor(Executor):
-    def __init__(self):
-        self._work_queue = []
-
-    def submit(self, job):
-        self._work_queue.append(job)
-
-    def process_next(self):
-        job = self._work_queue.pop()
-        job()
-
-    def process_all(self):
-        while len(self._work_queue):
-            self.process_next()
+__all__ = []
