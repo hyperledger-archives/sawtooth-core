@@ -131,7 +131,7 @@ class DockerNodeController(NodeController):
         node_num = node_name[len('validator-'):]
         for proc in state['Processors']:
             compose_dict['services'][proc] = {
-                'image': proc,
+                'image': 'sawtooth-{}'.format(proc),
                 'expose': ['40000'],
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
