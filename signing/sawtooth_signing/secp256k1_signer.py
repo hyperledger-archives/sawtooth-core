@@ -31,10 +31,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 def generate_privkey():
-    return secp256k1.PrivateKey()
+    return _encode_privkey(secp256k1.PrivateKey())
 
 
-def encode_privkey(privkey, encoding_format='wif'):
+def _encode_privkey(privkey, encoding_format='wif'):
     try:  # check python3
         priv = int.from_bytes(privkey.private_key, byteorder='big')
     except AttributeError:
@@ -42,7 +42,7 @@ def encode_privkey(privkey, encoding_format='wif'):
     return pybitcointools.encode_privkey(priv, encoding_format)
 
 
-def decode_privkey(encoded_privkey, encoding_format='wif'):
+def _decode_privkey(encoded_privkey, encoding_format='wif'):
     """
     Args:
         encoded_privkey: an encoded private key string
@@ -68,25 +68,30 @@ def decode_privkey(encoded_privkey, encoding_format='wif'):
 
 
 def generate_pubkey(privkey):
-    """ Expects a private key object created by this module """
-    return privkey.pubkey
+    """
+    Args:
+        privkey: a serialized private key string
+    Returns:
+        pubkey: a serialized public key string
+     """
+    return _encode_pubkey(_decode_privkey(privkey).pubkey, 'hex')
 
 
-def encode_pubkey(pubkey, encoding_format=''):
+def _encode_pubkey(pubkey, encoding_format='hex'):
     with warnings.catch_warnings() as enc:  # squelch secp256k1 warning
         warnings.simplefilter('ignore')
         enc = pubkey.serialize()
     if encoding_format == 'hex':
         enc = binascii.hexlify(enc).decode()
-    elif encoding_format != '':
+    elif encoding_format != 'bytes':
         raise ValueError("Unrecognized pubkey encoding format")
     return enc
 
 
-def decode_pubkey(serialized_pubkey, encoding_format=''):
+def _decode_pubkey(serialized_pubkey, encoding_format='hex'):
     if encoding_format == 'hex':
-        serialized_pubkey = bytes.fromhex(serialized_pubkey)
-    elif encoding_format != '':
+        serialized_pubkey = binascii.unhexlify(serialized_pubkey)
+    elif encoding_format != 'bytes':
         raise ValueError("Unrecognized pubkey encoding format")
     pub = secp256k1.PrivateKey().pubkey.deserialize(serialized_pubkey)
     return secp256k1.PublicKey(pub)
@@ -95,27 +100,27 @@ def decode_pubkey(serialized_pubkey, encoding_format=''):
 def generate_identifier(pubkey):
     """
     Args:
-        pubkey: a public key object produced by this module
+        pubkey: a serialized public key string
 
     Returns:
         Returns a 32 byte identifier
     """
-    s = ''
-    for i in range(len(pubkey.public_key.data)):
-        s += pubkey.public_key.data[i]
-    return hashlib.sha256(s.encode('utf-8')).hexdigest()
+    return hashlib.sha256(pubkey.encode('utf-8')).hexdigest()
 
 
 def sign(message, privkey):
     """
     Args:
         message: Message string
-        privkey: a private key object created by this module
+        privkey: A serialized private key string
 
     Returns:
         A DER encoded compact signature
     """
-    sig = privkey.ecdsa_sign(message.encode('utf-8'))
+    privkey = _decode_privkey(privkey)
+    if isinstance(message, str):
+        message = message.encode('utf-8')
+    sig = privkey.ecdsa_sign(message)
     sig = privkey.ecdsa_serialize_compact(sig)
     try:  # check python3
         sig = sig.hex()
@@ -129,18 +134,20 @@ def verify(message, signature, pubkey):
     Args:
         message: Message string
         signature: DER encoded compact signature
-        pubkey: Public Key object
+        pubkey: A serialized Public Key string
 
     Returns:
         boolean True / False
     """
-
+    pubkey = _decode_pubkey(pubkey, 'hex')
+    if isinstance(message, str):
+        message = message.encode('utf-8')
     try:  # check python3
         signature = bytes.fromhex(signature)
     except (ValueError, AttributeError):
         signature = binascii.unhexlify(signature)
     sig = secp256k1.PrivateKey().ecdsa_deserialize_compact(signature)
-    return pubkey.ecdsa_verify(message.encode('utf-8'), sig)
+    return pubkey.ecdsa_verify(message, sig)
 
 
 def recover_pubkey(message, signature):
