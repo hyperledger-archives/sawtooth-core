@@ -44,7 +44,7 @@ class Journal(object):
     class _ChainThread(Thread):
         def __init__(self, chain_controller, block_queue):
             Thread.__init__(self)
-            self._block_publisher = chain_controller
+            self._chain_controller = chain_controller
             self._block_queue = block_queue
             self._exit = False
 
@@ -52,7 +52,7 @@ class Journal(object):
             while True:
                 try:
                     block = self._block_queue.get(timeout=0.1)
-                    self._block_publisher.on_block_received(block)
+                    self._chain_controller.on_block_received(block)
                 except queue.Empty:
                     time.sleep(0.1)
                 if self._exit:
