@@ -34,7 +34,7 @@ node {
         // Use a docker container to build and protogen, so that the Jenkins
         // environment doesn't need all the dependencies.
         stage("Build Test Dependencies") {
-            docker.build('sawtooth-build:$BUILD_TAG', '-f core/sawtooth/cli/data/sawtooth-build-ubuntu-xenial .')
+            docker.build('sawtooth-build:$BUILD_TAG', '-f docker/sawtooth-build-ubuntu-xenial .')
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
                     sh './bin/build_all'
@@ -45,6 +45,7 @@ node {
         // Run the tests
         stage("Run 0-8 Tests"){
             // Required docker containers are built by the tests
+            sh './bin/docker_build_all -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
             sh './bin/run_tests -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
         }
 
@@ -72,7 +73,7 @@ node {
         }
 
         stage("Build docker build slave") {
-            docker.build('sawtooth-build:$BUILD_TAG', '-f core/sawtooth/cli/data/sawtooth-build-ubuntu-xenial .')
+            docker.build('sawtooth-build:$BUILD_TAG', '-f docker/sawtooth-build-ubuntu-xenial .')
         }
 
         stage("Run Tests"){
