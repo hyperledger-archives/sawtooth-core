@@ -157,8 +157,8 @@ class DockerNodeController(NodeController):
             if unbuilt:
                 raise CliException(
                     'Docker images not built: {}. Try running '
-                    '"sawtooth docker build {}"'.format(
-                        ', '.join(unbuilt), ' '.join(unbuilt)))
+                    '"docker_build_all"'.format(
+                        ', '.join(unbuilt)))
 
             invalid = self._check_invalid_processors(processors)
             if invalid:
