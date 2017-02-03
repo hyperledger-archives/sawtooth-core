@@ -9,12 +9,12 @@ function get_vagrant_user() {
     do
         if id $user > /dev/null 2>&1; then
             echo $user
-	    return
+            return
         fi
     done
 }
 
-if [[ -z "$VAGRANT_USER" ]]; then
+if [[ -e /vagrant ]] && [[ -z "$VAGRANT_USER" ]]; then
     export VAGRANT_USER=$(get_vagrant_user)
     if [ -z "$VAGRANT_USER" ]; then
         echo "Could not determine vagrant user." 1>&2
