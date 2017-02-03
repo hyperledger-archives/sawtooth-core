@@ -13,30 +13,81 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import pprint
+import logging
+import sys
 import unittest
+import pprint
+import time
 
-from sawtooth_validator.journal.journal import \
-    ChainController
+from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal.chain import ChainController
+from sawtooth_validator.journal.journal import Journal
+from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
+    import \
+    BlockPublisher as TestModePublisher
 from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockVerifier as TestModeVerifier
-
-from tests.unit3.gossip_mock import GossipMock
-from tests.unit3.block_tree_manager import BlockTreeManager
-from tests.unit3.syncronous_executor import SynchronousExecutor
-from tests.unit3.transaction_executor_mock import TransactionExecutorMock
-
+from sawtooth_validator.journal.consensus.test_mode \
+    import test_mode_consensus
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from test_journal.block_tree_manager import BlockTreeManager
+from test_journal.mock import MockNetwork
+from test_journal.mock import MockTransactionExecutor
+from test_journal.mock import SynchronousExecutor
+from test_journal. utils import TimeOut
+LOGGER = logging.getLogger(__name__)
 
 pp = pprint.PrettyPrinter(indent=4)
+
+
+class TestBlockPublisher(unittest.TestCase):
+    def setUp(self):
+        self.blocks = BlockTreeManager()
+
+    def test_publish(self, args=sys.argv[1:]):
+
+        gossip = MockNetwork()
+
+        LOGGER.info(self.blocks)
+        publisher = BlockPublisher(
+            consensus=TestModePublisher(),
+            transaction_executor=MockTransactionExecutor(),
+            send_message=gossip.send_message,
+            squash_handler=None)
+
+        LOGGER.info("1")
+
+        # initial load of existing state
+        publisher.on_chain_updated(self.blocks.chain_head.block, [], [])
+
+        LOGGER.info("2")
+        # repeat as necessary
+        batch = Batch()
+        publisher.on_batch_received(batch)
+        LOGGER.info("3")
+        # current dev_mode consensus always claims blocks when asked.
+        # this will be called on a polling every so often or possibly triggered
+        # by events in the consensus it's self ... TBD
+        publisher.on_check_publish_block()
+        LOGGER.info("4")
+        LOGGER.info(self.blocks)
+
+        # repeat as necessary
+        batch = Batch()
+        publisher.on_batch_received(batch)
+
+        publisher.on_check_publish_block()
+
+        LOGGER.info(self.blocks)
 
 
 class TestChainController(unittest.TestCase):
     def setUp(self):
         self.blocks = BlockTreeManager()
-        self.gossip = GossipMock()
+        self.gossip = MockNetwork()
         self.executor = SynchronousExecutor()
-        self.txn_executor = TransactionExecutorMock()
+        self.txn_executor = MockTransactionExecutor()
 
         def chain_updated(head):
             pass
@@ -46,7 +97,7 @@ class TestChainController(unittest.TestCase):
             block_store=self.blocks.block_store,
             send_message=self.gossip.send_message,
             executor=self.executor,
-            transaction_executor=TransactionExecutorMock(),
+            transaction_executor=MockTransactionExecutor(),
             on_chain_updated=chain_updated,
             squash_handler=None)
 
@@ -153,3 +204,67 @@ class TestChainController(unittest.TestCase):
     # early vs late binding ( class member of consensus BlockPublisher)
 
     # print(journal.chain_head, new_block)
+
+
+class TestJournal(unittest.TestCase):
+    def setUp(self):
+        self.gossip = MockNetwork()
+        self.txn_executor = MockTransactionExecutor()
+
+    def test_publish_block(self):
+        """
+        Test that the Journal will produce blocks and consume those blocks
+        to extend the chain.
+        :return:
+        """
+        # construction and wire the journal to the
+        # gossip layer.
+
+        LOGGER.info("test_publish_block")
+        block_store = {}
+        journal = None
+        try:
+            journal = Journal(
+                consensus=test_mode_consensus,
+                block_store=block_store,
+                send_message=self.gossip.send_message,
+                transaction_executor=self.txn_executor,
+                squash_handler=None,
+                first_state_root="000000")
+
+            self.gossip.on_batch_received = \
+                journal.on_batch_received
+            self.gossip.on_block_received = \
+                journal.on_block_received
+            self.gossip.on_block_request = \
+                journal.on_block_request
+
+            journal.start()
+
+            # feed it a batch
+            batch = Batch()
+            journal.on_batch_received(batch)
+
+            # wait for a block message to arrive should be soon
+            to = TimeOut(2)
+            while len(self.gossip.messages) == 0:
+                time.sleep(0.1)
+
+            LOGGER.info("Batches: %s", self.gossip.messages)
+            self.assertTrue(len(self.gossip.messages) != 0)
+
+            block = self.gossip.messages[0]
+            # dispatch the message
+            self.gossip.dispatch_messages()
+
+            # wait for the chain_head to be updated.
+            to = TimeOut(2)
+            while block_store['chain_head_id'] != block.header_signature:
+                time.sleep(0.1)
+
+            self.assertTrue(block_store['chain_head_id'] ==
+                            block.header_signature)
+
+        finally:
+            if journal is not None:
+                journal.stop()
