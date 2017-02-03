@@ -102,6 +102,9 @@ class BlockValidator(object):
                 self._consensus.compute_block_weight(block_state)
             block_state.status = BlockStatus.Valid if \
                 valid else BlockStatus.Invalid
+
+            LOGGER.debug('updating block store for %s',
+                         block_state.block.header_signature)
             self._block_store[block_state.block.header_signature] = block_state
             return valid
 
@@ -204,7 +207,7 @@ class ChainController(object):
         self._block_sender = block_sender
         self._executor = executor
         self._transaction_executor = transaction_executor
-        self._notifiy_on_chain_updated = on_chain_updated
+        self._notify_on_chain_updated = on_chain_updated
         self._sqaush_handler = squash_handler
 
         self._blocks_requested = {}  # a set of blocks that were requested.
@@ -225,7 +228,7 @@ class ChainController(object):
                          "be determined: %s", e)
             raise
 
-        self._notifiy_on_chain_updated(self._chain_head.block)
+        self._notify_on_chain_updated(self._chain_head.block)
 
     @property
     def chain_head(self):
@@ -267,13 +270,14 @@ class ChainController(object):
                 # the block validation work we have done is saved.
                 self._verify_block(validator.new_block)
             elif validator.commit_new_block():
+                print('****** commit the chain! ****')
                 self._chain_head = validator.new_block
                 self._block_store["chain_head_id"] = \
                     self._chain_head.block.header_signature
                 LOGGER.info("Chain head updated to: %s",
                             self._chain_head.block.header_signature)
                 # tell everyone else the chain is updated
-                self._notifiy_on_chain_updated(self._chain_head.block)
+                self._notify_on_chain_updated(self._chain_head.block)
 
                 pending_blocks = \
                     self._blocks_pending.pop(
@@ -284,12 +288,14 @@ class ChainController(object):
     def on_block_received(self, block):
         with self._lock:
             if block.header_signature in self._block_store:
+                LOGGER.debug('already have block %s', block.header_signature)
                 # do we already have this block
                 return
             header = BlockHeader()
             header.ParseFromString(block.header)
             block = BlockWrapper(header, block)
 
+            LOGGER.debug('inserting block %s', block.header_signature)
             block_state = BlockState(block_wrapper=block, weight=0,
                                      status=BlockStatus.Unknown)
             self._block_store[block.header_signature] = block_state
@@ -306,6 +312,7 @@ class ChainController(object):
                     self._executor.submit(validator.run)
             elif block.previous_block_id in self._blocks_processing or \
                     block.previous_block_id in self._blocks_pending:
+                LOGGER.debug('in blocks pending: %s', block.header_signature)
                 # if the previous block is being processed...put it in a wait
                 # queue, Also need to check if previous block is in a wait
                 # queue.
