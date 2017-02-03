@@ -59,6 +59,7 @@ do
 done
 
 main() {
+    docker_build_all
 
     # Start in project directory
     cd $PROJECT_DIR
