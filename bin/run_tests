@@ -36,7 +36,7 @@ export PATH=$PROJECT_DIR/bin:$PATH
 
 # Default args
 MODULE="all"
-ISOLATION_ID=test;
+export ISOLATION_ID="latest"
 
 while getopts :p:m:h opt
 do

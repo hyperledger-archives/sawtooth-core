@@ -41,7 +41,7 @@ def main():
     ]
 
     compose_up = compose + [
-        'up', '--abort-on-container-exit', '--build'
+        'up', '--abort-on-container-exit'
     ]
 
     compose_down = compose + ['down', '--remove-orphans']
@@ -62,6 +62,9 @@ def main():
 
     start_time = time.time()
     timeout = args.timeout
+
+    if 'ISOLATION_ID' not in os.environ:
+        os.environ['ISOLATION_ID'] = 'latest'
 
     # Run tests
     try:

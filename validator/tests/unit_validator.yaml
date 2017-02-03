@@ -18,9 +18,7 @@ version: "2.1"
 services:
 
   validator:
-    build:
-      context: ../../core/sawtooth/cli/data
-      dockerfile: sawtooth-test-ubuntu-xenial
+    image: sawtooth-test:$ISOLATION_ID
     volumes:
       - ../../:/project/sawtooth-core
     working_dir: /project/sawtooth-core/validator/tests/unit3
