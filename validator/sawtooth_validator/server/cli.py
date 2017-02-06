@@ -30,7 +30,7 @@ def parse_args(args):
                         type=str)
     parser.add_argument('--component-endpoint',
                         help='Validator component service endpoint',
-                        default='0.0.0.0:40000',
+                        default='tcp://0.0.0.0:40000',
                         type=str)
     parser.add_argument('--peers',
                         help='A list of peers to attempt to connect to '
