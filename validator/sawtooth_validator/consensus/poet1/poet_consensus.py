@@ -71,6 +71,11 @@ class PoetConsensus(Consensus):
     # from expected win frequency is checked
     __MINIMUM_WIN_OBSERVATIONS = 3
 
+    # The default number of blocks that a validator must wait after its
+    # validator registry entry was created/updated before it is allowed to
+    # claim a block.
+    __BLOCK_CLAIM_DELAY = 1
+
     def __init__(self, kwargs):
         """Constructor for the PoetJournal class.
 
@@ -130,10 +135,23 @@ class PoetConsensus(Consensus):
                         self.__MINIMUM_WIN_OBSERVATIONS)),
                 1)
         LOGGER.debug(
-            'A validator must win at least %d block elections before zTest is '
-            'used to check its win frequency is tested against the maximum '
-            'deviation',
+            'A validator must win at least %d block election(s) before zTest '
+            'is used to check its win frequency is tested against the '
+            'maximum deviation',
             self._minimum_win_observations)
+
+        self._block_claim_delay = \
+            max(
+                int(
+                    kwargs.get(
+                        'BlockClaimDelay',
+                        self.__BLOCK_CLAIM_DELAY)),
+                0)
+        LOGGER.debug(
+            'A validator must wait at least %d committed block(s) after its '
+            'keys are added/refreshed before it will be allowed to claim a '
+            'block.',
+            self._block_claim_delay)
 
         # We are going to sum up the numbers between the trigger and the
         # threshold (inclusive), shifting all numbers "left" by (trigger - 1)
@@ -164,8 +182,8 @@ class PoetConsensus(Consensus):
             # Retrieve the validator registry transaction store so we can query
             # information about a registration
             store = \
-                journal.get_transaction_store(
-                    family=val_reg.ValidatorRegistryTransaction,
+                val_reg.ValidatorRegistryTransaction.get_store(
+                    journal=journal,
                     block_id=block_id)
 
             registration = store.get(originator_id)
@@ -176,6 +194,14 @@ class PoetConsensus(Consensus):
                     originator_id))
 
         return registration
+
+    @staticmethod
+    def _number_of_registered_validators(journal, block_id):
+        return \
+            len(
+                val_reg.ValidatorRegistryTransaction.get_store(
+                    journal=journal,
+                    block_id=block_id))
 
     def _update_validator_claimed_block_count(self,
                                               journal,
@@ -446,6 +472,65 @@ class PoetConsensus(Consensus):
 
         return False
 
+    def _validator_has_claimed_too_soon(self, journal, block, registration):
+        # While having a block claim delay is nice, it turns out that in
+        # practice the claim delay should not be more than one less than
+        # the number of validators.  It helps to imagine the scenario
+        # where each validator hits their block claim limit in sequential
+        # blocks and their new validator registry information is updated
+        # in the following block by another validator, assuming that there
+        # were no forks.  If there are N validators, once all N validators
+        # have updated their validator registry information, there will
+        # have been N-1 block commits and the Nth validator will only be
+        # able to get its updated validator registry information updated
+        # if the first validator that kicked this off is no able to claim
+        # a block.
+        number_of_validators = \
+            self._number_of_registered_validators(
+                journal=journal,
+                block_id=journal.most_recent_committed_block_id)
+        block_claim_delay = \
+            min(self._block_claim_delay, number_of_validators - 1)
+
+        # While a validator network is starting up, we need to be careful
+        # about applying the block claim delay because if we are too
+        # aggressive we will get ourselves into a situation where the
+        # block claim delay will prevent any validators from claiming
+        # blocks.  So, until we get at least block_claim_delay blocks
+        # per validator, we are going to choose not to enforce the delay.
+        if journal.committed_block_count > \
+                number_of_validators * block_claim_delay:
+            blocks_since_registration = \
+                block.BlockNum - registration['updated-in-block-number'] - 1
+
+            if block_claim_delay > blocks_since_registration:
+                LOGGER.error(
+                    'Validator %s is trying to claim a block before waiting '
+                    'for the block claim delay. Registered %d block(s) ago. '
+                    'Claim delay is %d.',
+                    registration['validator-id'],
+                    blocks_since_registration,
+                    block_claim_delay)
+                return True
+
+            LOGGER.debug(
+                'There has(have) been %d block(s) claimed since Validator %s '
+                'was registered and block claim delay is %d block(s). '
+                'Check passed.',
+                blocks_since_registration,
+                registration['validator-id'],
+                block_claim_delay)
+        else:
+            LOGGER.info(
+                'Skipping block claim delay check as there is(are) only %d '
+                'block(s) in the chain and the claim delay is %d block(s) '
+                'and there is(are) %d validator(s) registered.',
+                journal.committed_block_count,
+                block_claim_delay,
+                number_of_validators)
+
+        return False
+
     def _validator_has_reached_claim_limit(self, originator_id, registration):
         # Get the statistics, creating them if they don't already
         # exist
@@ -624,6 +709,23 @@ class PoetConsensus(Consensus):
                                 "the globally-visible one.  Wait until "
                                 "another validator has added our new key to "
                                 "the validator registry.")
+
+                # Test to see if the validator has waited the required number
+                # of blocks between its keys being added to the blockchain and
+                # this block.
+                if self._validator_has_claimed_too_soon(
+                        journal=journal,
+                        block=block,
+                        registration=registration):
+                    raise \
+                        ValueError(
+                            'Validator {0} did not wait long enough before '
+                            'trying to claim a block.  Only waited {1} '
+                            'blocks instead of {2}'.format(
+                                originator_id,
+                                block.BlockNum -
+                                registration['updated-in-block-number'],
+                                self._block_claim_delay))
 
                 # Test to see if the validator has reached its claim limit
                 if self._validator_has_reached_claim_limit(

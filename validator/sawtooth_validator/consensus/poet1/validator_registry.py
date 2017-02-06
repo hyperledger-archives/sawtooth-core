@@ -182,7 +182,7 @@ class Update(object):
 
         return True
 
-    def apply(self, store, txn):
+    def apply(self, store, txn, block):
         """Applies the update to the validator entry in the store.
 
         Args:
@@ -210,6 +210,9 @@ class Update(object):
             except KeyError:
                 pass
 
+            # If we don't have a block, then we cannot get a block number
+            # from it.  In that case, a default of zero is fine.
+
             store[self.validator_id] = {
                 'object-type': 'poet-validator',
                 'object-id': self.validator_id,
@@ -217,7 +220,8 @@ class Update(object):
                 'validator-name': self.validator_name,
                 'poet-public-key': self.signup_info.poet_public_key,
                 'anti-sybil-id': self.signup_info.anti_sybil_id,
-                'revoked': None
+                'revoked': None,
+                'updated-in-block-number': block.BlockNum if block else 0
             }
         else:
             LOGGER.info('unknown verb %s', self.verb)
@@ -283,6 +287,23 @@ class ValidatorRegistryTransaction(transaction.Transaction):
 
         return regtxn
 
+    @staticmethod
+    def get_store(journal, block_id):
+        """Retrieves the validator registry transaction store associated with
+        the block referenced by the block ID provided.
+
+        Args:
+            journal: The journal object
+            block_id: The ID of the block for which store is being requested
+
+        Returns:
+            The validator registry store at the block requested
+        """
+        return \
+            journal.get_transaction_store(
+                family=ValidatorRegistryTransaction,
+                block_id=block_id)
+
     def __init__(self, minfo=None):
         if minfo is None:
             minfo = {}
@@ -317,7 +338,17 @@ class ValidatorRegistryTransaction(transaction.Transaction):
         Args:
             store (dict): Transaction store mapping.
         """
-        self.update.apply(store, self)
+        self.apply_with_block(store, None)
+
+    def apply_with_block(self, store, block):
+        """Applies all the updates in the transaction to the endpoint
+        in the transaction store.
+
+        Args:
+            store (dict): Transaction store mapping.
+            block: The containing block
+        """
+        self.update.apply(store, self, block)
 
     def dump(self):
         """Returns a dict with attributes from the transaction object.

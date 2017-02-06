@@ -565,6 +565,12 @@ class KeyValueStore(object):
         for k in self.keys():
             yield k, self.get(k)
 
+    def __len__(self):
+        """Returns the size (aka, the number of key/value pairs) of the
+        store.
+        """
+        return len(self.keys())
+
     def __contains__(self, key):
         """Determines whether a key occurs in the store.
 
