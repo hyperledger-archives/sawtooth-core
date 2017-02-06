@@ -26,7 +26,7 @@ from sawtooth_cli.protobuf.genesis_pb2 import GenesisData
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 
-from sawtooth_cli import genesis
+from sawtooth_cli.admin_command import genesis
 from sawtooth_cli.exceptions import CliException
 
 
