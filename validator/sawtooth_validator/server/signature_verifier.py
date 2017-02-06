@@ -13,145 +13,123 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=import-error,no-name-in-module
-# needed for google.protobuf import
-import queue
 import logging
 
-from threading import Thread
-from google.protobuf.message import DecodeError
-
 from sawtooth_signing import pbct as signing
+
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, BatchList
+from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.server.dispatch import HandlerResult
+from sawtooth_validator.server.dispatch import HandlerStatus
+from sawtooth_validator.server.dispatch import Handler
+
 
 LOGGER = logging.getLogger(__name__)
 
 
-class SignatureVerifier(Thread):
-    def __init__(self, incoming_msg_queue, dispatcher_msg_queue,
-                 in_condition, dispatcher_condition, broadcast):
-        super(SignatureVerifier, self).__init__()
-        self._exit = False
-        self.incoming_msg_queue = incoming_msg_queue
-        self.dispatcher_msg_queue = dispatcher_msg_queue
-        self.in_condition = in_condition
-        self.dispatcher_condition = dispatcher_condition
-        self.broadcast = broadcast
+def validate_block(block):
+    # validate block signature
+    header = BlockHeader()
+    header.ParseFromString(block.header)
+    valid = signing.verify(block.header,
+                           block.header_signature,
+                           header.signer_pubkey)
 
-    def validate_block(self, block):
-        # validate block signature
-        header = BlockHeader()
-        header.ParseFromString(block.header)
-        valid = signing.verify(block.header,
-                               block.header_signature,
-                               header.signer_pubkey)
+    # validate all batches in block. These are not all batches in the
+    # batch_ids stored in the block header, only those sent with the block.
+    total = len(block.batches)
+    index = 0
+    while valid and index < total:
+        valid = validate_batch(block.batches[index])
+        index += 1
 
-        # validate all batches in block. These are not all batches in the
-        # batch_ids stored in the block header, only those sent with the block.
-        total = len(block.batches)
-        index = 0
-        while valid and index < total:
-            valid = self.validate_batch(block.batches[index])
-            index += 1
+    return valid
 
-        return valid
 
-    def validate_batch(self, batch):
-        # validate batch signature
-        header = BatchHeader()
-        header.ParseFromString(batch.header)
-        valid = signing.verify(batch.header,
-                               batch.header_signature,
-                               header.signer_pubkey)
+def validate_batch_list(batch_list):
+    valid = False
+    for batch in batch_list.batches:
+        valid = validate_batch(batch)
+        if valid is False:
+            break
+    return valid
 
-        # validate all transactions in batch
-        total = len(batch.transactions)
-        index = 0
-        while valid and index < total:
-            txn = batch.transactions[index]
-            valid = self.validate_transaction(txn)
-            if valid:
-                txn_header = TransactionHeader()
-                txn_header.ParseFromString(txn.header)
-                if txn_header.batcher_pubkey != header.signer_pubkey:
-                    valid = False
-            index += 1
 
-        return valid
+def validate_batch(batch):
+    # validate batch signature
+    header = BatchHeader()
+    header.ParseFromString(batch.header)
+    valid = signing.verify(batch.header,
+                           batch.header_signature,
+                           header.signer_pubkey)
 
-    def validate_transaction(self, txn):
-        # validate transactions signature
-        header = TransactionHeader()
-        header.ParseFromString(txn.header)
-        valid = signing.verify(txn.header,
-                               txn.header_signature,
-                               header.signer_pubkey)
-        return valid
+    # validate all transactions in batch
+    total = len(batch.transactions)
+    index = 0
+    while valid and index < total:
+        txn = batch.transactions[index]
+        valid = validate_transaction(txn)
+        if valid:
+            txn_header = TransactionHeader()
+            txn_header.ParseFromString(txn.header)
+            if txn_header.batcher_pubkey != header.signer_pubkey:
+                valid = False
+        index += 1
 
-    def stop(self):
-        self._exit = True
+    return valid
 
-    def run(self):
-        while True:
-            if self._exit:
-                return
-            try:
-                message = self.incoming_msg_queue.get(block=False)
-                request = GossipMessage()
-                request.ParseFromString(message.content)
-                if request.content_type == "Block":
-                    try:
-                        block = Block()
-                        block.ParseFromString(request.content)
-                        status = self.validate_block(block)
-                        if status:
-                            LOGGER.debug("Pass block to dispatch %s",
-                                         block.header_signature)
-                            self.dispatcher_msg_queue.put_nowait(request)
-                            self.broadcast(message)
-                            with self.dispatcher_condition:
-                                self.dispatcher_condition.notify_all()
 
-                        else:
-                            LOGGER.debug("Block signature is invalid: %s",
-                                         block.header_signature)
-                    except DecodeError as e:
-                        # what to do with a bad msg
-                        LOGGER.warning("Problem decoding GossipMessage for "
-                                       "Block, %s", e)
+def validate_transaction(txn):
+    # validate transactions signature
+    header = TransactionHeader()
+    header.ParseFromString(txn.header)
+    valid = signing.verify(txn.header,
+                           txn.header_signature,
+                           header.signer_pubkey)
+    return valid
 
-                elif request.content_type == "Batch":
-                    try:
-                        batch = Batch()
-                        batch.ParseFromString(request.content)
-                        status = self.validate_batch(batch)
-                        if status:
-                            self.dispatcher_msg_queue.put_nowait(request)
-                            self.broadcast(message)
-                            with self.dispatcher_condition:
-                                self.dispatcher_condition.notify_all()
 
-                        else:
-                            LOGGER.debug("Batch signature is invalid: %s",
-                                         batch.header_signature)
-                    except DecodeError as e:
-                        LOGGER.warning("Problem decoding GossipMessage for "
-                                       "Batch, %s", e)
+class GossipMessageSignatureVerifier(Handler):
 
-                elif request.content_type == "BlockRequest":
-                    self.dispatcher_msg_queue.put_notwait(request)
-                    with self.dispatcher_condition:
-                        self.dispatcher_condition.notify_all()
+    def handle(self, identity, message_content):
 
-                elif request.content_type == "Test":
-                    LOGGER.debug("Verifier Handle Test")
-                    self.dispatcher_msg_queue.put_nowait(request)
-                    with self.dispatcher_condition:
-                        self.dispatcher_condition.notify_all()
+        gossip_message = GossipMessage()
+        gossip_message.ParseFromString(message_content)
+        if gossip_message.content_type == "BLOCK":
+            block = Block()
+            block.ParseFromString(gossip_message.content)
+            status = validate_block(block)
+            if status is True:
+                LOGGER.debug("block passes signature verification %s",
+                             block.header_signature)
+                return HandlerResult(status=HandlerStatus.PASS)
 
-            except queue.Empty:
-                with self.in_condition:
-                    self.in_condition.wait()
+            LOGGER.debug("block signature is invalid: %s",
+                         block.header_signature)
+            return HandlerResult(status=HandlerStatus.DROP)
+        elif gossip_message.content_type == "BATCH":
+            batch = Batch()
+            batch.ParseFromString(gossip_message.content)
+            status = validate_batch(batch)
+            if status is True:
+                LOGGER.debug("batch passes signature verification %s",
+                             batch.header_signature)
+                return HandlerResult(status=HandlerStatus.PASS)
+            LOGGER.debug("batch signature is invalid: %s",
+                         batch.header_signature)
+            return HandlerResult(status=HandlerStatus.DROP)
+
+
+class BatchListSignatureVerifier(Handler):
+
+    def handle(self, identity, message_content):
+        batch_list = BatchList()
+        batch_list.ParseFromString(message_content)
+        status = validate_batch_list(batch_list)
+        if status is True:
+            return HandlerResult(status=HandlerStatus.PASS)
+
+        return HandlerResult(status=HandlerStatus.RETURN)

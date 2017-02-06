@@ -19,6 +19,10 @@ import logging
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.server.dispatch import Handler
+from sawtooth_validator.server.dispatch import HandlerResult
+from sawtooth_validator.server.dispatch import HandlerStatus
+
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.state_context_pb2 import Entry
@@ -28,17 +32,17 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-class StateCurrentRequestHandler(object):
+class StateCurrentRequestHandler(Handler):
     def __init__(self, current_root_func):
         self._current_root_func = current_root_func
 
-    def handle(self, message, responder):
+    def handle(self, identity, message_content):
         request = client_pb2.ClientStateCurrentRequest()
         resp_proto = client_pb2.ClientStateCurrentResponse
         status = resp_proto.OK
 
         try:
-            request.ParseFromString(message.content)
+            request.ParseFromString(message_content)
             current_root = self._current_root_func()
         except DecodeError:
             LOGGER.info("Expected protobuf of class %s failed to "
@@ -50,24 +54,23 @@ class StateCurrentRequestHandler(object):
         else:
             response = resp_proto(status=status, merkle_root=current_root)
 
-        responder.send(validator_pb2.Message(
-            sender=message.sender,
-            message_type=validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE,
-            correlation_id=message.correlation_id,
-            content=response.SerializeToString()))
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=response,
+            message_type=validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
 
 
-class StateListRequestHandler(object):
+class StateListRequestHandler(Handler):
     def __init__(self, database):
         self._tree = MerkleDatabase(database)
 
-    def handle(self, message, responder):
+    def handle(self, identity, message_content):
         request = client_pb2.ClientStateListRequest()
         resp_proto = client_pb2.ClientStateListResponse
         status = resp_proto.OK
 
         try:
-            request.ParseFromString(message.content)
+            request.ParseFromString(message_content)
             self._tree.set_merkle_root(request.merkle_root)
         except KeyError as e:
             status = resp_proto.NORESOURCE
@@ -90,24 +93,23 @@ class StateListRequestHandler(object):
                 entries = [Entry(address=a, data=v) for a, v in leaves.items()]
                 response = resp_proto(status=status, entries=entries)
 
-        responder.send(validator_pb2.Message(
-            sender=message.sender,
-            message_type=validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE,
-            correlation_id=message.correlation_id,
-            content=response.SerializeToString()))
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=response,
+            message_type=validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE)
 
 
-class StateGetRequestHandler(object):
+class StateGetRequestHandler(Handler):
     def __init__(self, database):
         self._tree = MerkleDatabase(database)
 
-    def handle(self, message, responder):
+    def handle(self, identity, message_content):
         request = client_pb2.ClientStateGetRequest()
         resp_proto = client_pb2.ClientStateGetResponse
         status = resp_proto.OK
 
         try:
-            request.ParseFromString(message.content)
+            request.ParseFromString(message_content)
             self._tree.set_merkle_root(request.merkle_root)
         except KeyError as e:
             status = resp_proto.NORESOURCE
@@ -134,24 +136,22 @@ class StateGetRequestHandler(object):
             if status == resp_proto.OK:
                 response.value = value
 
-        responder.send(validator_pb2.Message(
-            sender=message.sender,
-            message_type=validator_pb2.Message.CLIENT_STATE_GET_RESPONSE,
-            correlation_id=message.correlation_id,
-            content=response.SerializeToString()))
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=response,
+            message_type=validator_pb2.Message.CLIENT_STATE_GET_RESPONSE)
 
 
-class BlockListRequestHandler(object):
+class BlockListRequestHandler(Handler):
     def __init__(self, block_store):
         self._block_store = block_store
 
-    def handle(self, message, responder):
+    def handle(self, identity, message_content):
         request = client_pb2.ClientBlockListRequest()
         resp_proto = client_pb2.ClientBlockListResponse
         status = resp_proto.OK
-
         try:
-            request.ParseFromString(message.content)
+            request.ParseFromString(message_content)
         except DecodeError:
             LOGGER.info("Expected protobuf of class %s failed to "
                         "deserialize", request)
@@ -162,11 +162,10 @@ class BlockListRequestHandler(object):
         else:
             response = resp_proto(status=status, blocks=self._list_blocks())
 
-        responder.send(validator_pb2.Message(
-            sender=message.sender,
-            message_type=validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE,
-            correlation_id=message.correlation_id,
-            content=response.SerializeToString()))
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=response,
+            message_type=validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE)
 
     def _list_blocks(self):
         blocks = []
@@ -184,17 +183,17 @@ class BlockListRequestHandler(object):
         return blocks
 
 
-class BlockGetRequestHandler(object):
+class BlockGetRequestHandler(Handler):
     def __init__(self, block_store):
         self._block_store = block_store
 
-    def handle(self, message, responder):
+    def handle(self, identity, message_content):
         request = client_pb2.ClientBlockGetRequest()
         resp_proto = client_pb2.ClientBlockGetResponse
         status = resp_proto.OK
 
         try:
-            request.ParseFromString(message.content)
+            request.ParseFromString(message_content)
             block = self._block_store[request.block_id].block.get_block()
         except DecodeError:
             LOGGER.info("Expected protobuf of class %s failed to "
@@ -209,8 +208,7 @@ class BlockGetRequestHandler(object):
         else:
             response = resp_proto(status=status, block=block)
 
-        responder.send(validator_pb2.Message(
-            sender=message.sender,
-            message_type=validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE,
-            correlation_id=message.correlation_id,
-            content=response.SerializeToString()))
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=response,
+            message_type=validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE)
