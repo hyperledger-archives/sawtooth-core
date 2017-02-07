@@ -27,7 +27,7 @@
                      ->int ->float]
              :refer-macros [handle-event handle-submit]]
             [bond.components.core
-             :refer [form-section divided-rows boot-row heading invalid-tip!
+             :refer [form-section divided-rows boot-row heading invalid-tip! header-note
                      isin-pattern isin-valid? cusip-pattern cusip-valid?]]
             [bond.transactions :as txns]
             [bond.routes :as routes]))
@@ -131,37 +131,48 @@
                               (static-field "Industry" (get org :industry "None Specified"))
                               (static-field "Ticker" (get org :ticker "None Specified")))))
 
-            (form-section "Credit Debt Ratings" "ratings"
+            (form-section (header-note "Credit Debt Ratings" "optional") "ratings"
                           (boot-row
                             (owner-field [:corporate-debt-ratings :moodys] "Moody's")
                             (owner-field [:corporate-debt-ratings :s-and-p] "S&P")
                             (owner-field [:corporate-debt-ratings :fitch] "Fitch")))
 
-            (form-section "Identifiers" "identifiers"
+            (form-section (header-note "Identifiers" "enter one") "identifiers"
                           (divided-rows
-                            (owner-field :cusip "CUSIP"
+                            (owner-field :cusip
+                                         (header-note
+                                           "CUSIP"
+                                           "what's this?"
+                                           "https://en.wikipedia.org/wiki/CUSIP")
                                          {:required (empty? (:isin state))
                                           :pattern cusip-pattern})
-                            (owner-field :isin "ISIN"
+                            (owner-field :isin
+                                         (header-note
+                                           "ISIN"
+                                           "what's this?"
+                                           "https://en.wikipedia.org/wiki/International_Securities_Identification_Number")
                                          {:required (empty? (:cusip state))
                                           :pattern isin-pattern})))
 
             (form-section "Bond Details" "details"
                           (divided-rows
-                            (owner-field :first-settlement-date "1st Settle Date"
+                            (owner-field :first-settlement-date
+                                         (header-note "1st Settle Date" "optional")
                                          {:type "date"})
 
                             (owner-field :maturity-date "Maturity Date"
                                          {:type "date"
                                           :required true}))
 
-                          (owner-field :face-value "Face Value"
+                          (owner-field :face-value
+                                       (header-note "Face Value" "typically $1000")
                                        {:type "number"
                                         :required true
                                         :min 0
                                         :parse-fn ->int})
 
-                          (owner-field :amount-outstanding "Amount Outstanding"
+                          (owner-field :amount-outstanding
+                                       (header-note "Amount Outstanding" "typically 1000000+")
                                        {:type "number"
                                         :required true
                                         :min 0
@@ -184,7 +195,11 @@
                                          {:type "date"
                                           :required true})
 
-                            (owner-field :coupon-rate "Rate"
+                            (owner-field :coupon-rate
+                                         (header-note
+                                           "Rate"
+                                           "what's this?"
+                                           "https://en.wikipedia.org/wiki/Coupon_(bond)")
                                          {:status (if-not (or (nil? coupon-rate) (->float coupon-rate)) :error)
                                           :required true })
                             (select-field owner :coupon-benchmark "Benchmark"

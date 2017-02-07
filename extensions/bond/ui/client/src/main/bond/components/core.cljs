@@ -198,6 +198,16 @@
 (defn heading [label & items]
   (into [:div.heading [:h1 label]] items))
 
+(defn header-note
+  ([label note] (header-note label note nil))
+  ([label note url]
+  [label " "
+   [:em [:small "("
+    (if url
+      [:a {:href url :target "_blank"} note]
+      note)
+    ")"]]]))
+
 (defn form-section
   "Creates sablono-ready code for a form section"
   [heading class-name & rows]

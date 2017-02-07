@@ -58,7 +58,9 @@
 
            [:div.panel.panel-primary
             [:div.panel-heading "Key Generated!"]
-            [:div.panel-body "Download or copy key to clipboard and keep it in a safe space!"]
+            [:div.panel-body "To continue, download your key or copy and paste
+                             it. There is no way to recover your identity if
+                             this key is lost. Keep it in a safe place!"]
             [:div.panel-footer
 
              (boot-row "text-center"

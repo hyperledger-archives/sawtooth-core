@@ -24,50 +24,32 @@
       [:p "Welcome to Intel’s proof-of-concept Bond Trading Platform, built on
           the Sawtooth Lake distributed ledger."]
       [:p "Real-world bond trading, clearing, and settlement is significantly
-          complex, so we have attempted to select a core set of functionality
-          that demonstrates how these platforms might be built on blockchain
+          complex, but we have selected a core set of functionality that
+          demonstrates how these platforms might be built on blockchain
           technology. Further investment would be required to move these
           concepts into production."]]
 
      [:div
-      [:h4 "Components:"]
-      [:ul
-       [:li "Bond Trading Platform Transaction Family"]
-       [:li "Bond Trading Platform Command Line Interface"]
-       [:li "Bond Trading Platform User Interface"]]]
-
-     [:div
       [:h4 "Capabilities:"]
       [:ul
-       [:li "Ability to create new participants with browser-managed private
+       [:li "Create new participants with browser-managed WIF
             keys and browser-side transaction signing."]
-       [:li "Ability to create new organizations — either issuers or trading
+       [:li "Create new organizations, both issuers and trading firms."]
+       [:li "Create new bonds, US Treasury or Corporate, denominated in USD,
+            with fixed or floating rates indexed on USD LIBOR."]
+       [:li "Represent a trading firm as a Market Maker to issue quotes
+            against bonds."]
+       [:li "Represent a trading firm as a Trader to place orders against
+            bonds, either market or limit."]
+       [:li "View your firm’s holdings, settlements, and redemptions."]
+       [:li "Quotes and orders automatically matched by the ledger itself."]
+       [:li "Traders can settle matched orders, transfering assets between
             firms."]
-       [:li "Ability to create new bonds — bonds can be US Treasury or
-            Corporate bonds, denominated in USD, with fixed or floating rates.
-            Floating rate bonds are indexed on USD LIBOR."]
-       [:li "Ability for participants to play a Market Maker role for a trading
-            firm and issue quotes against bonds with bid/ask prices and
-            quantities."]
-       [:li "Ability for participants to play a Trader role for a trading firm
-            and place market or limit orders against bonds."]
-       [:li "Ability for participants to view their firm’s holdings,
-            settlements, and redemptions."]
-       [:li "The system performs distributed automatic quote/order matching in
-            time-priority order on next block creation."]
-       [:li "Once orders are matched, they can be settled at any time based on
-            action by the Trader."]
-       [:li "Settlement of a matched order results in asset transfer of bonds
-            and USD between the ordering and quoting firms."]
-       [:li "If a coupon date or maturity date arrives, an automated receipt
-            transaction is generated resulting in USD transfer from issuer to
-            bond holder. For maturity redemptions, the face value is exchanged
-            for the bond holding."]
-       [:li "Real LIBOR rates are inserted as transactions on the blockchain."]
-       [:li "In order to simplify the coupon day counting calculations, bonds
-            can have coupon frequencies of “Quarterly”, “Monthly”, and “Daily”.
-            “Daily” can be used to demonstrate coupon functionality during the
-            PoC test period."]]
+       [:li "When coupon date or maturity date arrive, USD is automatically
+            transfered from issuer to holder."]
+       [:li "Bonds can have coupon frequencies of “Quarterly”, “Monthly”, and
+            “Daily”. Select “Daily” to demonstrate coupon functionality
+            during the test period."]]
 
        [:div
         [:p "We hope you enjoy exploring the capabilities of this proof-of-concept

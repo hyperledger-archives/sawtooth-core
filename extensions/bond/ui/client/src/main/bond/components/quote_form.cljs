@@ -154,10 +154,18 @@
 
             (core/form-section "Quote Details" "details"
                                (core/divided-rows
-                               (owner-field :bid-price "Bid Price" {:required true
-                                                                    :pattern core/price-pattern})
-                               (owner-field :ask-price "Ask Price" {:required true
-                                                                    :pattern core/price-pattern})
+                               (owner-field :bid-price
+                                            (core/header-note
+                                              "Bid Price"
+                                              "what's this?"
+                                              "http://www.investopedia.com/terms/b/bondquote.asp")
+                                            {:required true :pattern core/price-pattern})
+                               (owner-field :ask-price
+                                            (core/header-note
+                                              "Ask Price"
+                                              "what's this?"
+                                              "http://www.investopedia.com/terms/b/bondquote.asp")
+                                            {:required true :pattern core/price-pattern})
                                (num-field :bid-qty "Bid Quantity")
                                (num-field :ask-qty "Ask Quantity")))
 
