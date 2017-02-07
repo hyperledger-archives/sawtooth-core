@@ -17,6 +17,8 @@ import logging
 import os
 import socket
 
+import sawtooth_validator.server.client as client
+
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
@@ -30,9 +32,6 @@ from sawtooth_validator.server.network import FauxNetwork
 from sawtooth_validator.server.network import Network
 from sawtooth_validator.server.processor import ProcessorRegisterHandler
 from sawtooth_validator.server.interconnect import Interconnect
-from sawtooth_validator.server.client import ClientStateCurrentRequestHandler
-from sawtooth_validator.server.client import ClientStateGetRequestHandler
-from sawtooth_validator.server.client import ClientStateListRequestHandler
 
 
 LOGGER = logging.getLogger(__name__)
@@ -108,13 +107,19 @@ class Validator(object):
             SystemLoadHandler(faux_network))
         self._service.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-            ClientStateCurrentRequestHandler(self._journal.get_current_root))
+            client.StateCurrentRequestHandler(self._journal.get_current_root))
         self._service.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            ClientStateGetRequestHandler(lmdb))
+            client.StateGetRequestHandler(lmdb))
         self._service.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            ClientStateListRequestHandler(lmdb))
+            client.StateListRequestHandler(lmdb))
+        self._service.add_handler(
+            validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
+            client.BlockGetRequestHandler(self._journal.get_block_store()))
+        self._service.add_handler(
+            validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
+            client.BlockListRequestHandler(self._journal.get_block_store()))
 
     def start(self):
         self._service.start()

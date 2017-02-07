@@ -137,6 +137,9 @@ class Journal(object):
         # return self._block_publisher._chain_head.state_root_hash
         return self._chain_controller.chain_head.block.state_root_hash
 
+    def get_block_store(self):
+        return self._block_store
+
     def start(self):
         # TBD do load activities....
         # TBD transfer activities - request chain-head from

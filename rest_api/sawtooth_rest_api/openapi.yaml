@@ -5,41 +5,9 @@ info:
   title: Sawtooth Lake REST API
   description: |
     _This HTTP pragmatic REST API is built on top of Sawtooth
-    Lake's existing ZMQ infrastructure, and simplifies client
+    Lake's existing ZMQ/Protobuf infrastructure, simplifying client
     interaction with the blockchain by exposing endpoints that
     use common HTTP/JSON standards._
-
-    Note that although this API does completely replaces the need
-    for ZMQ, in order to preserve signatures most endpoints return
-    their _data_ property as a base64 bytestring encoded `Protobuf`
-    object, which clients will need to either use an SDK to decode,
-    or parse manually.
-
-    For convenience, this document will list out the properties
-    of fetched Protobufs, but it is important to remember
-    that any object labeled _"Protobuf"_ will not actually
-    appear this way until decoded. For example, the
-    following documented response:
-
-    ```
-    {
-      data: [
-        {foo: "bar"},
-        {foo: "baz"}
-      ]
-    }
-    ```
-
-    Would look something like this in the actual response:
-
-    ```
-    {
-      data: [
-        "eyJmb28iOiJiYXIifQ==",
-        "eyJmb28iOiJiYXoifQ=="
-      ]
-    }
-    ```
 
 paths:
   /batches:
@@ -59,7 +27,7 @@ paths:
           in: body
           description: A binary encoded protobuf BatchList
           schema:
-            $ref: "#/definitions/BatchListProtobuf"
+            $ref: "#/definitions/BatchList"
           required: true
         -
           name: callback
@@ -75,8 +43,6 @@ paths:
                 $ref: "#/definitions/Link"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         422:
           $ref: "#/responses/422UnprocessableEntity"
         500:
@@ -103,7 +69,7 @@ paths:
               data:
                 type: array
                 items:
-                  $ref: "#/definitions/BatchProtobuf"
+                  $ref: "#/definitions/Batch"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -112,8 +78,6 @@ paths:
                 $ref: "#/definitions/Paging"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -134,7 +98,7 @@ paths:
           schema:
             properties:
               data:
-                $ref: "#/definitions/BatchProtobuf"
+                $ref: "#/definitions/Batch"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -143,8 +107,6 @@ paths:
           $ref: "#/responses/400BadRequest"
         404:
           $ref: "#/responses/404NotFound"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -178,8 +140,6 @@ paths:
                 $ref: "#/definitions/Link"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -196,7 +156,7 @@ paths:
               data:
                 type: array
                 items:
-                  $ref: "#/definitions/LeafProtobuf"
+                  $ref: "#/definitions/Leaf"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -205,8 +165,6 @@ paths:
                 $ref: "#/definitions/Paging"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -236,7 +194,7 @@ paths:
               data:
                 type: array
                 items:
-                  $ref: "#/definitions/LeafProtobuf"
+                  $ref: "#/definitions/Leaf"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -247,8 +205,6 @@ paths:
           $ref: "#/responses/400BadRequest"
         404:
           $ref: "#/responses/404NotFound"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -276,7 +232,7 @@ paths:
               data:
                 type: array
                 items:
-                  - $ref: "#/definitions/BlockProtobuf"
+                  - $ref: "#/definitions/Block"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -285,8 +241,6 @@ paths:
                 $ref: "#/definitions/Paging"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -307,7 +261,7 @@ paths:
           schema:
             properties:
               data:
-                $ref: "#/definitions/BlockProtobuf"
+                $ref: "#/definitions/Block"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -317,8 +271,6 @@ paths:
           $ref: "#/responses/400BadRequest"
         404:
           $ref: "#/responses/404NotFound"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -346,7 +298,7 @@ paths:
               data:
                 type: array
                 items:
-                  - $ref: "#/definitions/TransactionProtobuf"
+                  - $ref: "#/definitions/Transaction"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -355,8 +307,6 @@ paths:
                 $ref: "#/definitions/Paging"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -377,7 +327,7 @@ paths:
           schema:
             properties:
               data:
-                $ref: "#/definitions/BlockProtobuf"
+                $ref: "#/definitions/Block"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -387,8 +337,6 @@ paths:
           $ref: "#/responses/400BadRequest"
         404:
           $ref: "#/responses/404NotFound"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -415,8 +363,6 @@ paths:
                 $ref: "#/definitions/ValidatorStats"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -443,8 +389,6 @@ paths:
                 $ref: "#/definitions/GossipStats"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -465,8 +409,6 @@ paths:
                 $ref: "#/definitions/ConfigStatus"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -487,8 +429,6 @@ paths:
                 $ref: "#/definitions/SystemStatus"
         400:
           $ref: "#/responses/400BadRequest"
-        406:
-          $ref: "#/responses/406NotAcceptable"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -501,10 +441,6 @@ responses:
       $ref: "#/definitions/ErrorList"
   404NotFound:
     description: Address, prefix, or root did not match any resource
-    schema:
-      $ref: "#/definitions/ErrorList"
-  406NotAcceptable:
-    description: Accept header specifies an unsupported media type
     schema:
       $ref: "#/definitions/ErrorList"
   422UnprocessableEntity:
@@ -622,7 +558,7 @@ definitions:
         items:
           $ref: "#/definitions/Error"
 
-  LeafProtobuf:
+  Leaf:
     properties:
       address:
         type: string
@@ -670,7 +606,7 @@ definitions:
       signer_pubkey:
         type: string
         example: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2
-  TransactionProtobuf:
+  Transaction:
     properties:
       header:
         $ref: "#/definitions/TransactionHeader"
@@ -691,7 +627,7 @@ definitions:
         items:
           type: string
           example: GwW07DtqHLEM0gEP/V7LkyGdcbHpAp9aAVSr6Kc3da7jKhqh7F4LVQcRMAstfEkr3gHqUovEg38TczxtBuctC8c=
-  BatchProtobuf:
+  Batch:
     properties:
       header:
         $ref: "#/definitions/BatchHeader"
@@ -701,13 +637,13 @@ definitions:
       transactions:
         type: array
         items:
-          $ref: "#/definitions/TransactionProtobuf"
-  BatchListProtobuf:
+          $ref: "#/definitions/Transaction"
+  BatchList:
     properties:
       batches:
         type: array
         items:
-          $ref: "#/definitions/BatchProtobuf"
+          $ref: "#/definitions/Batch"
   BatchStatus:
     properties:
       status:
@@ -740,7 +676,7 @@ definitions:
       state_root_hash:
         type: string
         example: 708ca7fbb701799bb387f2e50deaca402e8502abe229f705693d2d4f350e1ad6
-  BlockProtobuf:
+  Block:
     properties:
       header:
         $ref: "#/definitions/BlockHeader"
@@ -750,7 +686,7 @@ definitions:
       batches:
         type: array
         items:
-          $ref: "#/definitions/BatchProtobuf"
+          $ref: "#/definitions/Batch"
 
   Timestamp:
     properties:

@@ -15,7 +15,7 @@
 import argparse
 import sys
 from aiohttp import web
-from sawtooth_rest_api.routes import Routes
+from sawtooth_rest_api.routes import RouteHandler
 
 
 def parse_args(args):
@@ -44,15 +44,20 @@ async def logging_middleware(app, handler):
 
 
 def start_rest_api(host, port, stream_url):
-    handlers = Routes(stream_url)
+    handler = RouteHandler(stream_url)
 
     app = web.Application(middlewares=[logging_middleware])
     # Add routes to the web app
-    app.router.add_get('/', handlers.hello)
-    app.router.add_post('/batches', handlers.batches)
-    app.router.add_get('/state', handlers.state_current)
-    app.router.add_get('/state/{merkle_root}', handlers.state_list)
-    app.router.add_get('/state/{merkle_root}/{address}', handlers.state_get)
+    app.router.add_get('/', handler.hello)
+
+    app.router.add_post('/batches', handler.batches)
+
+    app.router.add_get('/state', handler.state_current)
+    app.router.add_get('/state/{merkle_root}', handler.state_list)
+    app.router.add_get('/state/{merkle_root}/{address}', handler.state_get)
+
+    app.router.add_get('/blocks', handler.block_list)
+    app.router.add_get('/blocks/{block_id}', handler.block_get)
 
     web.run_app(app, host=host, port=port)
 
