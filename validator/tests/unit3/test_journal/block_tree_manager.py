@@ -182,30 +182,3 @@ class BlockTreeManager(object):
 
     def __repr__(self):
         return repr(self.block_store)
-
-
-class GossipMock(object):
-    def __init__(self):
-        self.messages = []
-
-    def send_message(self, message):
-        self.messages.append(message)
-
-    def clear(self):
-        self.messages = []
-
-
-class SynchronousProcessor(Executor):
-    def __init__(self):
-        self._work_queue = []
-
-    def submit(self, job):
-        self._work_queue.append(job)
-
-    def process_next(self):
-        job = self._work_queue.pop()
-        job.run()
-
-    def process_all(self):
-        while len(self._work_queue):
-            self.process_next()
