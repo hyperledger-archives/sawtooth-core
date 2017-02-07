@@ -25,10 +25,10 @@ from colorlog import ColoredFormatter
 
 from sawtooth_cli.exceptions import CliException
 
+from sawtooth_cli.admin import add_admin_parser
+from sawtooth_cli.admin import do_admin
 from sawtooth_cli.keygen import add_keygen_parser
 from sawtooth_cli.keygen import do_keygen
-from sawtooth_cli.genesis import add_genesis_parser
-from sawtooth_cli.genesis import do_genesis
 from sawtooth_cli.config import add_config_parser
 from sawtooth_cli.config import do_config
 
@@ -86,7 +86,7 @@ def create_parser(prog_name):
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
     add_keygen_parser(subparsers, parent_parser)
-    add_genesis_parser(subparsers, parent_parser)
+    add_admin_parser(subparsers, parent_parser)
     add_config_parser(subparsers, parent_parser)
 
     return parser
@@ -104,10 +104,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.command == 'keygen':
+    if args.command == 'admin':
+        do_admin(args)
+    elif args.command == 'keygen':
         do_keygen(args)
-    elif args.command == 'genesis':
-        do_genesis(args)
     elif args.command == 'config':
         do_config(args)
     else:
