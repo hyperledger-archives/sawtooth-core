@@ -21,7 +21,7 @@ import logging
 from threading import Thread
 from google.protobuf.message import DecodeError
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block

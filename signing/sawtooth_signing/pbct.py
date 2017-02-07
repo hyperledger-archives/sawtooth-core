@@ -22,8 +22,6 @@ except ImportError:
     # Python 3
     import bitcoin as pybitcointools
 
-from sawtooth_signing.ECDSA import ECDSARecoverModule as nativeECDSA
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -66,32 +64,22 @@ def verify(message, signature, pubkey):
 def recover_pubkey(message, signature):
     v, r, s = pybitcointools.decode_sig(signature)
     msghash = pybitcointools.electrum_sig_hash(message)
-    z = pybitcointools.hash_to_int(msghash)
+    q = pybitcointools.ecdsa_raw_recover(msghash, (v, r, s))
+
+    # A prior implementation set the behavior that this
+    # method should return an encoded recovered pubkey or
+    # an empty string if there is a recovery error. This
+    # differs from the pybitcointools implementation of
+    # ecdsa_recover, which returns the recovered pubkey
+    # or False, if a recovery error occurs.
+    if not q:
+        return ""
 
     compress = True if v >= 31 else False
 
     if compress:
-        rec = v - 31
+        pubkey = pybitcointools.encode_pubkey(q, 'hex_compressed')
     else:
-        rec = v - 27
-
-    try:
-        pubkey = nativeECDSA.recover_pubkey(
-            str(z), str(r), str(s), int(rec))
-    except ValueError as ex:
-        LOGGER.warning(
-            'Unable to extract public key from signature' + ex.args[0])
-        return ""
-
-    try:
-        # pybitcointools package
-        pubkey = pubkey.translate(None, 'h')
-    except TypeError:
-        # bitcoin package
-        pubkey = pubkey.translate('h')
-    pubkey = '04' + pubkey
-
-    if compress:
-        pubkey = pybitcointools.compress(pubkey)
+        pubkey = pybitcointools.encode_pubkey(q, 'hex')
 
     return pubkey

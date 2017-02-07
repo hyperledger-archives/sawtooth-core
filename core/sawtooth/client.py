@@ -30,7 +30,7 @@ import cbor
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 from sawtooth.exceptions import MessageException
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 
 
 LOGGER = logging.getLogger(__name__)

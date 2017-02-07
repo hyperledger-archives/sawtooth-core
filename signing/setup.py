@@ -65,32 +65,6 @@ def version(default):
     return version
 
 
-if os.name == 'nt':
-    extra_compile_args = ['/EHsc']
-    libraries = ['json-c', 'cryptopp-static']
-    include_dirs = ['deps/include', 'deps/include/cryptopp']
-    library_dirs = ['deps/lib']
-elif sys.platform == 'darwin':
-    os.environ["CC"] = "clang++"
-    extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'cryptopp']
-    include_dirs = ['/usr/local/include']
-    library_dirs = ['/usr/local/lib']
-else:
-    extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'cryptopp']
-    include_dirs = []
-    library_dirs = []
-
-ecdsamod = Extension('_ECDSARecoverModule',
-                     ['sawtooth_signing/ECDSA/ECDSARecoverModule.i',
-                      'sawtooth_signing/ECDSA/ECDSARecover.cc'],
-                     swig_opts=['-c++'],
-                     extra_compile_args=extra_compile_args,
-                     include_dirs=include_dirs,
-                     libraries=libraries,
-                     library_dirs=library_dirs)
-
 setup(
     name='sawtooth-signing',
     version=version('0.8.1'),
@@ -99,10 +73,6 @@ setup(
     url='http://www.intel.com',
     packages=find_packages(),
     install_requires=['pybitcointools'],
-    ext_modules=[ecdsamod],
-    py_modules=[
-        'sawtooth_signing.ECDSA.ECDSARecoverModule'
-    ],
     data_files=[],
     entry_points={})
 
@@ -114,10 +84,7 @@ if "clean" in sys.argv and "--all" in sys.argv:
                 os.remove(os.path.join(root, fn))
     for filename in [
             ".coverage"
-            "_ECDSARecoverModule.so",
-            os.path.join("sawtooth_signing", "ECDSA", "ECDSARecoverModule.py"),
-            os.path.join("sawtooth_signing", "ECDSA",
-                         "ECDSARecoverModule_wrap.cpp")]:
+                    ]:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))
     shutil.rmtree(os.path.join(directory, "htmlcov"), ignore_errors=True)

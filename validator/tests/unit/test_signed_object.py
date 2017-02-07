@@ -17,7 +17,7 @@ import unittest
 
 import gossip.signed_object as SigObj
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from gossip.common import cbor2dict
 from gossip.signed_object import SignedObject
 from gossip.node import Node

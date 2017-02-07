@@ -15,7 +15,7 @@
 
 import unittest
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\
     enclave_wait_timer import EnclaveWaitTimer
 from sawtooth_validator.consensus.poet1.poet_enclave_simulator.\

@@ -25,7 +25,7 @@ from threading import Lock
 
 from heapq import heappop, heappush, heapify
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from gossip import stats
 from gossip import token_bucket
 

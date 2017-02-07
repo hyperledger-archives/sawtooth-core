@@ -26,7 +26,7 @@ import shutil
 
 from colorlog import ColoredFormatter
 
-import sawtooth_signing.pbct_nativerecover as signing
+import sawtooth_signing.pbct as signing
 
 from sawtooth_xo.xo_client import XoClient
 from sawtooth_xo.xo_exceptions import XoException

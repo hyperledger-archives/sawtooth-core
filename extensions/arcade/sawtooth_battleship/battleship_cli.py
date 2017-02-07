@@ -28,7 +28,7 @@ import sys
 
 from colorlog import ColoredFormatter
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 

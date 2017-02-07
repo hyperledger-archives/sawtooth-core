@@ -17,7 +17,7 @@ import tempfile
 import time
 import unittest
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth_validator.consensus.dev_mode.dev_mode_consensus \
     import DevModeConsensus
 from gossip import signed_object

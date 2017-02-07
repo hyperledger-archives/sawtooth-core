@@ -42,7 +42,6 @@ test_core() {
 test_signing() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
     export PYTHONPATH
     cd signing
     nose2 -v
@@ -52,7 +51,6 @@ test_signing() {
 test_validator() {
     PYTHONPATH=$top_dir
     PYTHONPATH=$PYTHONPATH:$top_dir/signing
-    PYTHONPATH=$PYTHONPATH:$top_dir/signing/build/lib.linux-x86_64-2.7
     PYTHONPATH=$PYTHONPATH:$top_dir/core
     PYTHONPATH=$PYTHONPATH:$top_dir/validator
     export PYTHONPATH

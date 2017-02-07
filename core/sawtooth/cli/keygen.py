@@ -20,7 +20,7 @@ import os
 import sys
 
 from sawtooth.exceptions import ClientException
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 
 
 def add_keygen_parser(subparsers, parent_parser):

@@ -18,7 +18,7 @@ import time
 
 import gossip.signed_object as SigObj
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from gossip.gossip_core import Gossip, GossipException
 from gossip.message import Packet, Message
 from gossip.node import Node
