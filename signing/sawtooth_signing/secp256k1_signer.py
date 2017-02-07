@@ -139,15 +139,24 @@ def verify(message, signature, pubkey):
     Returns:
         boolean True / False
     """
-    pubkey = _decode_pubkey(pubkey, 'hex')
-    if isinstance(message, str):
-        message = message.encode('utf-8')
-    try:  # check python3
-        signature = bytes.fromhex(signature)
-    except (ValueError, AttributeError):
-        signature = binascii.unhexlify(signature)
-    sig = secp256k1.PrivateKey().ecdsa_deserialize_compact(signature)
-    return pubkey.ecdsa_verify(message, sig)
+    verified = False
+    try:
+        pubkey = _decode_pubkey(pubkey, 'hex')
+        if isinstance(message, str):
+            message = message.encode('utf-8')
+        try:  # check python3
+            signature = bytes.fromhex(signature)
+        except (ValueError, AttributeError):
+            signature = binascii.unhexlify(signature)
+
+        sig = secp256k1.PrivateKey().ecdsa_deserialize_compact(signature)
+        verified = pubkey.ecdsa_verify(message, sig)
+
+    # Fail Securely (even if it's not pythonic)
+    # pylint: disable=broad-except
+    except Exception:
+        return False
+    return verified
 
 
 def recover_pubkey(message, signature):
