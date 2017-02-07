@@ -33,7 +33,7 @@ class TestXo(unittest.TestCase):
         tst = self.tester
         xomf = XoMessageFactory()
 
-        tst.send(xomf.create_transaction("game000", "create"))
+        tst.send(xomf.create_tp_process_request("game000", "create"))
         received = tst.expect(xomf.create_get_request("game000"))
 
         tst.respond(xomf.create_get_response("game000", None), received)
@@ -46,7 +46,7 @@ class TestXo(unittest.TestCase):
         tst = self.tester
         xomf = XoMessageFactory()
 
-        tst.send(xomf.create_transaction("game000", "take", 3))
+        tst.send(xomf.create_tp_process_request("game000", "take", 3))
         received = tst.expect(xomf.create_get_request("game000"))
 
         tst.respond(xomf.create_get_response("game000"), received)

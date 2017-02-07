@@ -46,7 +46,7 @@ class ConfigMessageFactory(object):
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def _create_transaction(self, setting, payload):
+    def _create_tp_process_request(self, setting, payload):
         inputs = [
             self._key_to_address('sawtooth.config.authorization_type'),
             self._key_to_address('sawtooth.config.vote.proposals'),
@@ -60,7 +60,7 @@ class ConfigMessageFactory(object):
             self._key_to_address(setting)
         ]
 
-        return self._factory.create_transaction(
+        return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
     def create_proposal_transaction(self, setting, value, nonce):
@@ -68,14 +68,14 @@ class ConfigMessageFactory(object):
         payload = ConfigPayload(action=ConfigPayload.PROPOSE,
                                 data=proposal.SerializeToString())
 
-        return self._create_transaction(setting, payload)
+        return self._create_tp_process_request(setting, payload)
 
     def create_vote_proposal(self, proposal_id, setting, vote):
         vote = ConfigVote(proposal_id=proposal_id, vote=vote)
         payload = ConfigPayload(action=ConfigPayload.VOTE,
                                 data=vote.SerializeToString())
 
-        return self._create_transaction(setting, payload)
+        return self._create_tp_process_request(setting, payload)
 
     def create_get_request(self, setting):
         addresses = [self._key_to_address(setting)]

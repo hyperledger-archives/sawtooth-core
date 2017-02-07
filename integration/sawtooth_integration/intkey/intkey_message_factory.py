@@ -48,14 +48,26 @@ class IntkeyMessageFactory:
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def create_transaction(self, verb, name, value):
+    def _create_txn(self, txn_function, verb, name, value):
         payload = self._dumps({"Verb": verb, "Name": name, "Value": value})
 
         addresses = [self._key_to_address(name)]
 
-        return self._factory.create_transaction(
-            payload, addresses, addresses, []
-        )
+        return txn_function(payload, addresses, addresses, [])
+
+    def create_tp_process_request(self, verb, name, value,):
+        txn_function = self._factory.create_tp_process_request
+        return self._create_txn(txn_function, verb, name, value)
+
+    def create_transaction(self, verb, name, value,):
+        txn_function = self._factory.create_transaction
+        return self._create_txn(txn_function, verb, name, value)
+
+    def create_batch(self, triples):
+        txns = [self.create_transaction(verb, name, value)
+                for verb, name, value in triples]
+
+        return self._factory.create_batch(txns)
 
     def create_get_request(self, name):
         addresses = [self._key_to_address(name)]

@@ -38,7 +38,7 @@ class TestIntkey(unittest.TestCase):
 
         # 1. -> Send a set transaction
         #    <- Expect a state get request
-        tst.send(imf.create_transaction("set", "a", 5))
+        tst.send(imf.create_tp_process_request("set", "a", 5))
         received = tst.expect(imf.create_get_request("a"))
 
         # 2. -> Send state get response of `None`
@@ -60,7 +60,7 @@ class TestIntkey(unittest.TestCase):
 
         # 1. -> Send an inc transaction
         #    <- Expect a state get request
-        tst.send(imf.create_transaction("inc", "c", 2))
+        tst.send(imf.create_tp_process_request("inc", "c", 2))
         received = tst.expect(imf.create_get_request("c"))
 
         # 2. -> Send state get response with the value
@@ -80,7 +80,7 @@ class TestIntkey(unittest.TestCase):
         tst = self.tester
         imf = IntkeyMessageFactory()
 
-        tst.send(imf.create_transaction("dec", "sawtooth", 1900000000))
+        tst.send(imf.create_tp_process_request("dec", "sawtooth", 1900000000))
         received = tst.expect(imf.create_get_request("sawtooth"))
 
         tst.respond(imf.create_get_response("sawtooth", 2000000000), received)
