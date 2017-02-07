@@ -28,7 +28,7 @@ from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.server.signature_verifier import SignatureVerifier
-from tests.unit3.utils import TimeOut
+from test_message_validation.utils import TimeOut
 
 
 class TestMessageValidation(unittest.TestCase):

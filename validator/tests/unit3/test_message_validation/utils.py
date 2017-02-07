@@ -12,21 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import time
 
-from concurrent.futures import Executor
 
+class TimeOut(object):
+    def __init__(self, wait):
+        self.WaitTime = wait
+        self.ExpireTime = time.time() + wait
 
-class SynchronousExecutor(Executor):
-    def __init__(self):
-        self._work_queue = []
+    def is_timed_out(self):
+        return time.time() > self.ExpireTime
 
-    def submit(self, job):
-        self._work_queue.append(job)
-
-    def process_next(self):
-        job = self._work_queue.pop()
-        job()
-
-    def process_all(self):
-        while len(self._work_queue):
-            self.process_next()
+    def __call__(self, *args, **kwargs):
+        return time.time() > self.ExpireTime

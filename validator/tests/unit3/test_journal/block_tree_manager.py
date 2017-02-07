@@ -31,7 +31,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import BlockState
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 
-from tests.unit3.transaction_executor_mock import TransactionExecutorMock
+from test_journal.mock import MockTransactionExecutor
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -67,7 +67,7 @@ class BlockTreeManager(object):
         self._new_block = None
         self.block_publisher = BlockPublisher(
             consensus=TestModePublisher(),
-            transaction_executor=TransactionExecutorMock(),
+            transaction_executor=MockTransactionExecutor(),
             send_message=self._send_message,
             squash_handler=None)
 
