@@ -138,41 +138,6 @@ class TestChainController(unittest.TestCase):
         # Bad due to transaction
         pass
 
-    def test_missing_block(self):
-        # TEST Missing block G->missing->B
-        head = self.blocks.chain_head
-        new_blocks = self.blocks.generate_chain(head, 2)
-        self.chain_ctrl.on_block_received(new_blocks[1].get_block())
-        self.executor.process_all()
-        assert(len(self.gossip.messages) == 1)
-        block_id = self.gossip.messages[0]
-        assert (block_id == new_blocks[0].header_signature)
-        self.gossip.clear()
-        self.chain_ctrl.on_block_received(new_blocks[0].get_block())
-        self.executor.process_all()
-        assert (self.chain_ctrl.chain_head.block.header_signature ==
-                new_blocks[1].header_signature)
-
-    def test_missing_block_invalid_head(self):
-        # TEST Missing block G->missing->B
-        #  B is invalid but Missing is valid
-        head = self.blocks.chain_head
-        new_blocks_def = self.blocks.generate_chain_definition(2)
-        new_blocks_def[1]["invalid_signature"] = True
-        new_blocks = self.blocks.generate_chain(head, new_blocks_def)
-        self.chain_ctrl.on_block_received(new_blocks[1].get_block())
-        self.executor.process_all()
-        assert (len(self.gossip.messages) == 1)
-        block_id = self.gossip.messages[0]
-        assert (block_id == new_blocks[0].header_signature)
-        self.gossip.clear()
-        self.chain_ctrl.on_block_received(new_blocks[0].get_block())
-        self.executor.process_all()
-
-        pp.pprint(new_blocks)
-        pp.pprint(self.blocks.block_store)
-        # TBD assert (self.chain_ctrl.chain_head.id == new_blocks[0].id)
-
     # TESTS TBD
     # TEST Missing block never sent G->missing->B
     # validate waiting time out....
