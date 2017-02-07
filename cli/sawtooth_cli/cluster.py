@@ -23,15 +23,15 @@ import time
 import yaml
 
 from sawtooth_cli.exceptions import CliException
-from sawtooth_manage.exceptions import ManagementError
+from sawtooth.exceptions import ManagementError
 
-from sawtooth_manage.node import NodeArguments
-from sawtooth_manage.simple import SimpleNodeCommandGenerator
-from sawtooth_manage.wrap import WrappedNodeController
-from sawtooth_manage.vnm import ValidatorNetworkManager
+from sawtooth.manage.node import NodeArguments
+from sawtooth.manage.simple import SimpleNodeCommandGenerator
+from sawtooth.manage.wrap import WrappedNodeController
+from sawtooth.manage.vnm import ValidatorNetworkManager
 
-from sawtooth_manage.docker import DockerNodeController
-from sawtooth_manage.subproc import SubprocessNodeController
+from sawtooth.manage.docker import DockerNodeController
+from sawtooth.manage.subproc import SubprocessNodeController
 
 
 LOGGER = logging.getLogger(__name__)
