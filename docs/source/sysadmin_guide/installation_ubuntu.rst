@@ -8,11 +8,17 @@ Prerequisites
 
 To install onto Ubuntu, you need the following:
 
-* Ubuntu 14.04 LTS
+* Ubuntu 16.04 LTS
 * SawtoothLake Distribution (sawtoothlake-x.y.z-ubuntu-packages.tar.gz)
 
 Dependency Installation
 =======================
+
+First, you will need to become root for all these commands:
+
+.. code-block:: console
+
+  vagrant@ubuntu $ sudo su
 
 Apply all Ubuntu updates:
 
@@ -24,11 +30,18 @@ As root, install the necessary dependecies with apt-get:
 
 .. code-block:: console
 
-  root@ubuntu # apt-get install -y -q \
-      python-twisted \
-      python-twisted-web \
-      libjson0 \
-      libcrypto++
+  root@ubuntu # apt-get install -y \
+        python-twisted \
+        python-twisted-web \
+        libjson0 \
+        libcrypto++ \
+        python-yaml \
+        python-bs4 \
+        python-ipaddr \
+        python-numpy \
+        python-psutil \
+        python-requests \
+        python-urllib3
 
 SawtoothLake Installation
 =========================
@@ -49,26 +62,26 @@ Install the SawtoothLake .deb files:
 Starting and Stopping the Validator
 ===================================
 
-The validator is run via Upstart and can be started and stopped with Upstart
+The validator is run via Systemd and can be started and stopped with Systemd
 commands.
 
 To start the validator:
 
 .. code-block:: console
 
-  root@ubuntu # start sawtooth-validator
+  root@ubuntu # systemctl start sawtooth-validator
 
 To stop the validator:
 
 .. code-block:: console
 
-  root@ubuntu # stop sawtooth-validator
+  root@ubuntu # systemctl stop sawtooth-validator
 
-You can also view the Upstart status with:
+You can also view the Systemd status with:
 
 .. code-block:: console
 
-  root@ubuntu # status sawtooth-validator
+  root@ubuntu # systemctl status sawtooth-validator
 
 The process name will be 'txnvalidator' and you can verify it is running
 with ps:
@@ -80,7 +93,7 @@ with ps:
 Configuring the Validator
 =========================
 
-When run via upstart, the txnvalidator options can be changed in
+When run via systemd, the txnvalidator options can be changed in
 /etc/defaults/sawtooth-validator with the TXNVALIDATOR_OPTIONS environment
 variable.  This includes specifying which configuration file the
 txnvalidator should use.
@@ -163,6 +176,8 @@ Log Files
 =========
 
 The primary directory for log files is /var/log/sawtooth-validator.  In
-addition, Upstart captures stdout and stderr and redirects them to
-/var/log/upstart/sawtooth-validator.log.
+addition, Systemd captures stdout and stderr. These can be viewed with:
 
+.. code-block:: none
+
+   vagrant@ubuntu $ sudo journalctl -u sawtooth-validator
