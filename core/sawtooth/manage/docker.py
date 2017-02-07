@@ -19,7 +19,6 @@ import subprocess
 import tempfile
 import yaml
 
-from sawtooth.cli.exceptions import CliException
 
 from sawtooth.manage.node import NodeController
 
@@ -132,7 +131,7 @@ class DockerNodeController(NodeController):
         }
 
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
-        state = yaml.load(file(state_file_path))
+        state = yaml.load(open(state_file_path))
 
         # add the processors
         node_num = node_name[len('validator-'):]
@@ -152,7 +151,7 @@ class DockerNodeController(NodeController):
             [str(http_port) + ":" + str(40000)]
 
         yaml.dump(compose_dict,
-                  file(os.path.join(compose_dir, 'docker-compose.yaml'),
+                  open(os.path.join(compose_dir, 'docker-compose.yaml'),
                        mode='w'))
         try:
             os.chdir(compose_dir)
@@ -180,7 +179,7 @@ class DockerNodeController(NodeController):
             else:
                 raise e
 
-        for line in output.split('\n'):
+        for line in output.decode('utf8').split('\n'):
             if len(line) < 1:
                 continue
             LOGGER.debug("command output: %s", str(line))
@@ -206,7 +205,8 @@ class DockerNodeController(NodeController):
 
     def _get_built_images(self):
         docker_img_cmd = ['docker', 'images', '--format', '{{.Repository}}']
-        return subprocess.check_output(docker_img_cmd).split('\n')
+        return subprocess.check_output(docker_img_cmd).decode('utf8')\
+            .split('\n')
 
     def _built_in_processor_types(self):
         image_data_dir = os.path.join(os.path.dirname(__file__),
@@ -216,7 +216,7 @@ class DockerNodeController(NodeController):
 
     def stop(self, node_name):
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
-        state = yaml.load(file(state_file_path))
+        state = yaml.load(open(state_file_path))
 
         node_num = node_name[len('validator-'):]
 
@@ -234,7 +234,7 @@ class DockerNodeController(NodeController):
             except subprocess.CalledProcessError as e:
                 raise CliException(str(e))
 
-            for line in output.split('\n'):
+            for line in output.decode('utf8').split('\n'):
                 if len(line) < 1:
                     continue
                 LOGGER.debug("command output: %s", str(line))
@@ -247,7 +247,7 @@ class DockerNodeController(NodeController):
             except subprocess.CalledProcessError as e:
                 raise CliException(str(e))
 
-            for line in output.split('\n'):
+            for line in output.decode('utf8').split('\n'):
                 if len(line) < 1:
                     continue
                 LOGGER.debug("command output: %s", str(line))
@@ -292,7 +292,7 @@ class DockerNodeController(NodeController):
                                                   args[0]))
 
         entries = []
-        for line in output.split('\n'):
+        for line in output.decode('utf8').split('\n'):
             if len(line) < 1:
                 continue
             parts = line.split(',')
@@ -315,3 +315,8 @@ class DockerNodeController(NodeController):
             if node_name == entry.name:
                 return entry.status.startswith("Up")
         return False
+
+
+class CliException(Exception):
+    def __init__(self, msg):
+        super(CliException, self).__init__(msg)
