@@ -21,7 +21,6 @@ import zmq.asyncio
 
 from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_protobuf.validator_pb2 import Message
-from sawtooth_protobuf.validator_pb2 import MessageList
 
 from sawtooth_processor_test.message_types import to_protobuf_class
 from sawtooth_processor_test.message_types import to_message_type
@@ -112,11 +111,11 @@ class TransactionProcessorTester(object):
         self._loop.close()
 
     def register_processor(self):
-        message = self.receive()
+        message, ident = self.receive()
         if message.message_type != Message.TP_REGISTER_REQUEST:
             return False
         else:
-            self._tp_ident = message.sender
+            self._tp_ident = ident
 
             request = TpRegisterRequest()
             request.ParseFromString(message.content)
@@ -139,7 +138,6 @@ class TransactionProcessorTester(object):
             message_type=to_message_type(message_content),
             content=message_content.SerializeToString(),
             correlation_id=correlation_id,
-            sender=self.__class__.__name__
         )
 
         return self._loop.run_until_complete(
@@ -160,8 +158,8 @@ class TransactionProcessorTester(object):
         ))
 
         return await self._socket.send_multipart([
-            bytes(ident, 'UTF-8'),
-            MessageList(messages=[message]).SerializeToString()
+            ident,
+            message.SerializeToString()
         ])
 
     def receive(self):
@@ -175,15 +173,14 @@ class TransactionProcessorTester(object):
         # Deconstruct the message
         message = Message()
         message.ParseFromString(result)
-        message.sender = ident
 
         print("Received {}({}) from {}".format(
             to_protobuf_class(message.message_type).__name__,
             message.message_type,
-            message.sender
+            ident
         ))
 
-        return message
+        return message, ident
 
     async def _receive(self):
         ident, result = await self._socket.recv_multipart()
@@ -202,7 +199,7 @@ class TransactionProcessorTester(object):
         """
 
         # Receive a message
-        message = self.receive()
+        message, _ = self.receive()
 
         # Parse the message content
         protobuf_class = to_protobuf_class(message.message_type)
@@ -226,7 +223,7 @@ class TransactionProcessorTester(object):
         with the message.
         """
 
-        message = self.receive()
+        message, _ = self.receive()
 
         # Parse the message content
         protobuf_class = to_protobuf_class(message.message_type)
