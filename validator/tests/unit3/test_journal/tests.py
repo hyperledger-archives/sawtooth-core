@@ -32,6 +32,7 @@ from sawtooth_validator.journal.consensus.test_mode \
     import test_mode_consensus
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from test_journal.block_tree_manager import BlockTreeManager
+from test_journal.mock  import MockBlockSender
 from test_journal.mock import MockNetwork
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import SynchronousExecutor
@@ -44,16 +45,15 @@ pp = pprint.PrettyPrinter(indent=4)
 class TestBlockPublisher(unittest.TestCase):
     def setUp(self):
         self.blocks = BlockTreeManager()
+        self.block_sender = MockBlockSender()
 
     def test_publish(self, args=sys.argv[1:]):
-
-        gossip = MockNetwork()
 
         LOGGER.info(self.blocks)
         publisher = BlockPublisher(
             consensus=TestModePublisher(),
             transaction_executor=MockTransactionExecutor(),
-            send_message=gossip.send_message,
+            block_sender=self.block_sender,
             squash_handler=None)
 
         LOGGER.info("1")
@@ -88,6 +88,7 @@ class TestChainController(unittest.TestCase):
         self.gossip = MockNetwork()
         self.executor = SynchronousExecutor()
         self.txn_executor = MockTransactionExecutor()
+        self.block_sender = MockBlockSender()
 
         def chain_updated(head):
             pass
@@ -95,7 +96,7 @@ class TestChainController(unittest.TestCase):
         self.chain_ctrl = ChainController(
             consensus=TestModeVerifier(),
             block_store=self.blocks.block_store,
-            send_message=self.gossip.send_message,
+            block_sender=self.block_sender,
             executor=self.executor,
             transaction_executor=MockTransactionExecutor(),
             on_chain_updated=chain_updated,
@@ -210,6 +211,7 @@ class TestJournal(unittest.TestCase):
     def setUp(self):
         self.gossip = MockNetwork()
         self.txn_executor = MockTransactionExecutor()
+        self.block_sender = MockBlockSender()
 
     def test_publish_block(self):
         """
@@ -227,7 +229,7 @@ class TestJournal(unittest.TestCase):
             journal = Journal(
                 consensus=test_mode_consensus,
                 block_store=block_store,
-                send_message=self.gossip.send_message,
+                block_sender = self.block_sender,
                 transaction_executor=self.txn_executor,
                 squash_handler=None,
                 first_state_root="000000")
@@ -247,12 +249,12 @@ class TestJournal(unittest.TestCase):
 
             # wait for a block message to arrive should be soon
             to = TimeOut(2)
-            while len(self.gossip.messages) == 0:
+            while (self.block_sender.new_block is None):
                 time.sleep(0.1)
 
-            LOGGER.info("Batches: %s", self.gossip.messages)
-            self.assertTrue(len(self.gossip.messages) != 0)
+            self.assertTrue(self.block_sender.new_block is not None)
 
+            self.gossip.messages.append(self.block_sender.new_block)
             block = self.gossip.messages[0]
             # dispatch the message
             self.gossip.dispatch_messages()

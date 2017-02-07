@@ -31,6 +31,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import BlockState
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 
+from test_journal.mock  import MockBlockSender
 from test_journal.mock import MockTransactionExecutor
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -64,19 +65,18 @@ class BlockTreeManager(object):
 
     def __init__(self):
         self.block_store = {}
-        self._new_block = None
+        self.block_sender = MockBlockSender()
         self.block_publisher = BlockPublisher(
             consensus=TestModePublisher(),
             transaction_executor=MockTransactionExecutor(),
-            send_message=self._send_message,
+            block_sender=self.block_sender,
             squash_handler=None)
 
         block = self.generate_block(add_to_store=True,
                                     status=BlockStatus.Valid)
         self.set_chain_head(block)
 
-    def _send_message(self, block):
-        self._new_block = block
+
 
     def _get_block_id(self, block):
         if (block is None):
@@ -133,12 +133,12 @@ class BlockTreeManager(object):
             self.block_store[previous.header_signature] = previous_block_state
             self.block_publisher.on_chain_updated(previous)
 
-        while self._new_block is None:
+        while self.block_sender.new_block is None:
             self.block_publisher.on_batch_received(Batch())
             self.block_publisher.on_check_publish_block(True)
 
-        block = self._new_block
-        self._new_block = None
+        block = self.block_sender.new_block
+        self.block_sender.new_block = None
 
         header = BlockHeader()
         header.ParseFromString(block.header)

@@ -17,6 +17,7 @@ from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
+from sawtooth_validator.journal.journal import BlockSender
 
 
 class SynchronousExecutor(Executor):
@@ -112,3 +113,11 @@ class MockTransactionExecutor(object):
 
     def execute(self, scheduler, state_hash=None):
         pass
+
+
+class MockBlockSender(BlockSender):
+    def __init__(self):
+        self.new_block = None
+
+    def send(self, block):
+         self.new_block = block
