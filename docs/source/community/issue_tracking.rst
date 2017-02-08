@@ -43,7 +43,7 @@ are any matches. If there is a match, comment with a +1, or "Also seeing this
 issue".  If any environment details differ, please add those with your comment
 to the matching issue.
 
-If you would like, you could also bring up the issue on :ref:`slack`
+If you would like, you could also bring up the issue on :ref:`chat`
 for initial feedback before submitting the issue in JIRA.
 
 When reporting an issue, please provide as much detail as possible about how
