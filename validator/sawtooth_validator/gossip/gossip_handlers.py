@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
 import logging
 
-from sawtooth_validator.server.dispatch import Handler
-from sawtooth_validator.server.dispatch import HandlerResult
-from sawtooth_validator.server.dispatch import HandlerStatus
+from sawtooth_validator.networking.dispatch import Handler
+from sawtooth_validator.networking.dispatch import HandlerResult
+from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
@@ -27,44 +26,7 @@ from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
-
 LOGGER = logging.getLogger(__name__)
-
-
-class Gossip(object):
-    def __init__(self, network):
-        self._network = network
-
-    def broadcast_block(self, block):
-        gossip_message = GossipMessage(
-            content_type="BLOCK",
-            content=block.SerializeToString())
-
-        self._broadcast(gossip_message)
-
-    def broadcast_batch(self, batch):
-        gossip_message = GossipMessage(
-            content_type="BATCH",
-            content=batch.SerializeToString())
-
-        self._broadcast(gossip_message)
-
-    def _broadcast(self, gossip_message):
-        message_type = validator_pb2.Message.GOSSIP_MESSAGE
-        for connection in self._network.connections:
-            connection.send(message_type, gossip_message.SerializeToString())
-
-    def broadcast_peer_request(self, message_type, message):
-        for connection in self._network.connections:
-            connection.send(message_type, message.SerializeToString())
-
-    def start(self):
-        for connection in self._network.connections:
-            connection.start(daemon=True)
-        register_request = PeerRegisterRequest()
-        self.broadcast_peer_request(
-            validator_pb2.Message.GOSSIP_REGISTER,
-            register_request)
 
 
 class PeerRegisterHandler(Handler):
