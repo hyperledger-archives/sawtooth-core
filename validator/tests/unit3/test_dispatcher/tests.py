@@ -16,7 +16,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import unittest
 
-from sawtooth_validator.server import dispatch
+from sawtooth_validator.networking import dispatch
 from sawtooth_validator.protobuf import validator_pb2
 
 from test_dispatcher.mock import MockSendMessage
@@ -65,7 +65,3 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
 
     def tearDown(self):
         self._dispatcher.stop()
-
-
-
-

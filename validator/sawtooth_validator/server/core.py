@@ -26,23 +26,24 @@ from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.journal import BlockSender
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server import state
+from sawtooth_validator.execution import tp_state_handlers
 from sawtooth_validator.journal.completer import CompleterGossipHandler
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
 from sawtooth_validator.journal.completer import Completer
-from sawtooth_validator.server.dispatch import Dispatcher
+from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.execution.executor import TransactionExecutor
-from sawtooth_validator.server.processor import ProcessorRegisterHandler
-from sawtooth_validator.server import client
-from sawtooth_validator.server import signature_verifier
-from sawtooth_validator.server.interconnect import Interconnect
-from sawtooth_validator.server.network import GossipBroadcastHandler
-from sawtooth_validator.server.network import Gossip
-from sawtooth_validator.server.network import GossipMessageHandler
-from sawtooth_validator.server.network import PeerRegisterHandler
-from sawtooth_validator.server.network import PeerUnregisterHandler
-from sawtooth_validator.server.network import PingHandler
+from sawtooth_validator.execution.processor_handlers import \
+    ProcessorRegisterHandler
+from sawtooth_validator.state import client_handlers
+from sawtooth_validator.gossip import signature_verifier
+from sawtooth_validator.networking.interconnect import Interconnect
+from sawtooth_validator.gossip.gossip import Gossip
+from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
+from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
+from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
+from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
+from sawtooth_validator.gossip.gossip_handlers import PingHandler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,22 +86,22 @@ class Validator(object):
 
         dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_GET_REQUEST,
-            state.TpStateGetHandler(context_manager),
+            tp_state_handlers.TpStateGetHandler(context_manager),
             thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_SET_REQUEST,
-            state.TpStateSetHandler(context_manager),
+            tp_state_handlers.TpStateSetHandler(context_manager),
             thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            client.StateGetRequestHandler(lmdb),
+            client_handlers.StateGetRequestHandler(lmdb),
             thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            client.StateListRequestHandler(lmdb),
+            client_handlers.StateListRequestHandler(lmdb),
             thread_pool)
 
         self._service = Interconnect(component_endpoint, dispatcher)
@@ -188,28 +189,28 @@ class Validator(object):
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            client.StateGetRequestHandler(lmdb),
+            client_handlers.StateGetRequestHandler(lmdb),
             thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            client.StateListRequestHandler(lmdb),
+            client_handlers.StateListRequestHandler(lmdb),
             thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
-            client.BlockGetRequestHandler(self._journal.get_block_store()),
-            thread_pool)
+            client_handlers.BlockGetRequestHandler(
+                self._journal.get_block_store()), thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
-            client.BlockListRequestHandler(self._journal.get_block_store()),
-            thread_pool)
+            client_handlers.BlockListRequestHandler(
+                self._journal.get_block_store()), thread_pool)
 
         dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-            client.StateCurrentRequestHandler(self._journal.get_current_root),
-            thread_pool)
+            client_handlers.StateCurrentRequestHandler(
+                self._journal.get_current_root), thread_pool)
 
     def start(self):
         self._service.start()
