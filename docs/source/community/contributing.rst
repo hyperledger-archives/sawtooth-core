@@ -22,7 +22,7 @@ the project.
 **Unassigned JIRA Issues**
 
 More specific items can be found in :ref:`jira`.  Any JIRA items which are
-unassigned are probably still open.  If in doubt, ask on :ref:`slack` about
+unassigned are probably still open.  If in doubt, ask on :ref:`chat` about
 the particular JIRA issue.
 
 ==============

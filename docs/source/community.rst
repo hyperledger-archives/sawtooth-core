@@ -4,7 +4,7 @@ Community
 
 Welcome to the Sawtooth Lake community!
 
-For help topics, we recommend joining us on Slack (link below).
+For help topics, we recommend joining us on Chat (link below).
 
 .. toctree::
    :maxdepth: 2
