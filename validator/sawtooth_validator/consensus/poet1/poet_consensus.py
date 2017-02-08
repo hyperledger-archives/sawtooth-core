@@ -22,7 +22,7 @@ import math
 
 from gossip import common
 from gossip import stats
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth_validator.consensus.consensus_base import Consensus
 from sawtooth_validator.consensus.poet1 import poet_transaction_block
 from sawtooth_validator.consensus.poet1 import validator_registry as val_reg

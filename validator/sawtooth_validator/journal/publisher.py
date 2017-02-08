@@ -16,7 +16,7 @@ import copy
 import logging
 from threading import RLock
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError

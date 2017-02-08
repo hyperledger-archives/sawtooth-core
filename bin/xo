@@ -25,7 +25,7 @@ build_str = "lib.{}-{}.{}".format(
 
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'signing', 'build', build_str))
+            'signing'))
 
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),

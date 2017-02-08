@@ -16,7 +16,7 @@ import hashlib
 import random
 import string
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 
 
 class AttrDict(dict):

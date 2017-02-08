@@ -18,7 +18,7 @@ import base64
 import urllib.request
 import yaml
 
-import sawtooth_signing.pbct_nativerecover as signing
+import sawtooth_signing.pbct as signing
 
 from sawtooth_protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_protobuf.transaction_pb2 import Transaction

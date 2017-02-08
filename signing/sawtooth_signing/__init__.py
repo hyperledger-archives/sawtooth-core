@@ -13,4 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 __all__ = [
-    'pbct_nativerecover']
+    'pbct']

@@ -20,7 +20,7 @@ import threading
 from collections import namedtuple
 from datetime import datetime
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from sawtooth.simulator_workload import SawtoothWorkload
 from txnintegration.integer_key_client import IntegerKeyClient
 

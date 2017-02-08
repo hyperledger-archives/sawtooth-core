@@ -16,7 +16,7 @@
 import logging
 import hashlib
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from journal import transaction
 from journal import object_store
 from journal.messages import transaction_message

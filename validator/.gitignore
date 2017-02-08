@@ -28,15 +28,4 @@ sawtooth_validator/consensus/poet*/poet_enclave_simulator/*.pyd
 sawtooth_validator/consensus/poet*/poet_enclave_simulator/poet_enclave_simulator_wrap.cpp
 _poet*_enclave_simulator.so
 
-_ECDSARecoverModule.pyd
-_ECDSARecoverModule.so
-gossip/ECDSA/build
-gossip/ECDSA/*.so
-gossip/ECDSA/*.pyd
-gossip/ECDSA/_*
-gossip/ECDSA/ECDSARecoverModule.py
-gossip/ECDSA/ECDSARecoverModule.pyc
-gossip/ECDSA/ECDSARecoverModule_wrap.cpp
-gossip/ECDSA/ECDSAPubKeyRecovery.*
-
 deps

@@ -28,7 +28,7 @@ import warnings
 from colorlog import ColoredFormatter
 import yaml
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from txnintegration.exceptions import ExitError
 from sawtooth.cli.main import main as sawtooth_cli_entry_point
 from sawtooth.client import SawtoothClient

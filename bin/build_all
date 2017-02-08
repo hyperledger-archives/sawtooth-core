@@ -19,7 +19,6 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 PYTHONPATH=$(pwd)/core
 PYTHONPATH=$PYTHONPATH:$(pwd)/signing
-PYTHONPATH=$PYTHONPATH:$(pwd)/signing/build/lib.linux-x86_64-2.7
 PYTHONPATH=$PYTHONPATH:$(pwd)/validator
 PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/arcade
 export PYTHONPATH
@@ -31,15 +30,10 @@ $top_dir/bin/protogen || exit 1
 
 pkgs="
     core
+    signing
     validator
     extensions/arcade
 "
-
-pkg="signing"
-echo -e "\033[0;32m--- Running clean in $pkg ---\n\033[0m"
-cd $top_dir/$pkg
-python setup.py clean --all
-python3 setup.py clean --all
 
 for pkg in $pkgs
 do
@@ -47,17 +41,6 @@ do
     cd $top_dir/$pkg
     python setup.py clean --all
 done
-
-pkg=signing
-echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
-cd $top_dir/$pkg
-python setup.py build
-python3 setup.py build
-if [ $pkg = "signing" ] || [ $pkg = "validator" ]; then
-    # Workaround for swig ordering bug.
-    python setup.py build
-    python3 setup.py build
-fi
 
 for pkg in $pkgs
 do

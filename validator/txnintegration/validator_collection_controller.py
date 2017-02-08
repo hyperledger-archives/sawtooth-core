@@ -20,7 +20,7 @@ import time
 import os
 from os import walk
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from txnintegration.exceptions import ExitError
 from txnintegration.exceptions import ValidatorManagerException
 from txnintegration.matrices import NodeController
