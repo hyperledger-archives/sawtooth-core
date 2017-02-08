@@ -193,7 +193,7 @@ class ChainController(object):
     def __init__(self,
                  consensus,
                  block_store,
-                 send_message,
+                 block_sender,
                  executor,
                  transaction_executor,
                  on_chain_updated,
@@ -201,7 +201,7 @@ class ChainController(object):
         self._lock = RLock()
         self._consensus = consensus
         self._block_store = block_store
-        self._send_message = send_message
+        self._block_sender = block_sender
         self._executor = executor
         self._transaction_executor = transaction_executor
         self._notifiy_on_chain_updated = on_chain_updated
@@ -247,7 +247,6 @@ class ChainController(object):
     def _request_block(self, block_id, validator):
         # TBD add request time and time out
         self._blocks_requested[block_id] = validator
-        self._send_message(block_id)
 
     def on_block_validated(self, validator):
         """

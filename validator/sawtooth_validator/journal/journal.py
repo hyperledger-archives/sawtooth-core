@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import abc
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
@@ -86,19 +87,19 @@ class Journal(object):
     def __init__(self,
                  consensus,
                  block_store,
-                 send_message,
+                 block_sender,
                  transaction_executor,
                  squash_handler,
                  first_state_root):
         self._consensus = consensus
         self._block_store = block_store
-        self._send_message = send_message
         self._squash_handler = squash_handler
+        self._block_sender = block_sender
 
         self._block_publisher = BlockPublisher(
             consensus=consensus.BlockPublisher(),
             transaction_executor=transaction_executor,
-            send_message=send_message,
+            block_sender=block_sender,
             squash_handler=squash_handler
         )
         self._batch_queue = queue.Queue()
@@ -123,7 +124,7 @@ class Journal(object):
         self._chain_controller = ChainController(
             consensus=consensus.BlockVerifier(),
             block_store=block_store,
-            send_message=send_message,
+            block_sender=block_sender,
             executor=ThreadPoolExecutor(1),
             transaction_executor=transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,
@@ -134,7 +135,6 @@ class Journal(object):
                                                self._block_queue)
 
     def get_current_root(self):
-        # return self._block_publisher._chain_head.state_root_hash
         return self._chain_controller.chain_head.block.state_root_hash
 
     def get_block_store(self):
@@ -161,4 +161,20 @@ class Journal(object):
 
     def on_block_request(self, block_id):
         if block_id in self._block_store:
-            self._send_message(self._block_store[block_id].block)
+            self._send_message.send(self._block_store[block_id].block)
+
+
+class BlockSender(object, metaclass=abc.ABCMeta):
+    """Implementations should take classes like completer,
+    and network, and implement a send method that gets called on
+    block publish.
+    """
+
+    @abc.abstractmethod
+    def send(self, block):
+        """Sends the block to the completer and also to the
+           gossip network.
+        :param block:
+        :return:
+        """
+        raise NotImplementedError()
