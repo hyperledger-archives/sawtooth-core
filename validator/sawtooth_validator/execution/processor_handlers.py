@@ -21,9 +21,9 @@ from sawtooth_validator.protobuf.processor_pb2 import TpRegisterResponse
 from sawtooth_validator.protobuf.processor_pb2 \
     import TpRegisterRequest
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server.dispatch import Handler
-from sawtooth_validator.server.dispatch import HandlerResult
-from sawtooth_validator.server.dispatch import HandlerStatus
+from sawtooth_validator.networking.dispatch import Handler
+from sawtooth_validator.networking.dispatch import HandlerResult
+from sawtooth_validator.networking.dispatch import HandlerStatus
 
 LOGGER = logging.getLogger(__name__)
 
