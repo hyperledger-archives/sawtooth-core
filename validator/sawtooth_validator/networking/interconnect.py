@@ -24,7 +24,7 @@ import zmq
 import zmq.asyncio
 
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server import future
+from sawtooth_validator.networking import future
 
 
 LOGGER = logging.getLogger(__name__)
