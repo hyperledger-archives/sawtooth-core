@@ -259,7 +259,8 @@
                                        :ref "sell-offer-form"}
 
                 (text-field owner :name "Name"
-                            {:help-text "An optional, human-readable name for the sell offer."})
+                            {:help-text "An optional, human-readable name for the sell offer.
+                                        Must beging with '/'"})
 
                 (text-field owner :description "Description"
                             {:help-text "Optional information about the sell offer."})
@@ -294,9 +295,9 @@
                              :parse-fn ->int})
 
                 (radio-buttons owner :execution
-                               [["Any" "Any"]
-                                ["Execute Once" "ExecuteOnce"]
-                                ["Execute Once per Participant" "ExecuteOncePerParticipant"]])
+                               [["Executeable multiple times" "Any"]
+                                ["Executeable once" "ExecuteOnce"]
+                                ["Executeable once per participant" "ExecuteOncePerParticipant"]])
 
                 (form-buttons owner initial-state
                               {:submit {:disabled (not (is-valid? state))}})]]

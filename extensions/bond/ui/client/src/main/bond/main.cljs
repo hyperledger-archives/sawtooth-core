@@ -68,10 +68,9 @@
          [:div.panel.panel-warning
           [:div.panel-heading "Creating and Authorizing Your Participant"]
           [:div.panel-body
-           "Transactions have been submitted to the validator to create your
-           participant and authorize it with your choosen firm. Once
-           everything is committed, you will be able to interact with
-           the Sawtooth Bond system."]])])))
+           "Transactions have been submitted to create your participant and
+           authorize it with your choosen firm. Once everything is committed,
+           you will be able to interact with the Sawtooth Bond system."]])])))
 
 (defn app [data owner]
   (om/component

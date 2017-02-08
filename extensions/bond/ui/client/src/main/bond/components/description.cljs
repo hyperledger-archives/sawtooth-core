@@ -21,8 +21,8 @@
     [:div
 
      [:div
-      [:p "Welcome to Intel’s proof-of-concept Bond Trading Platform, built on
-          the Sawtooth Lake distributed ledger."]
+      [:p "Welcome to Sawtooth’s proof-of-concept bond trading platform, built
+          on the Sawtooth Lake distributed ledger."]
       [:p "Real-world bond trading, clearing, and settlement is significantly
           complex, but we have selected a core set of functionality that
           demonstrates how these platforms might be built on blockchain
@@ -56,4 +56,4 @@
             platform."]]
 
        [:div
-        [:p "The Intel Sawtooth Lake Team"]]]]))
+        [:p "The Sawtooth Lake Team"]]]]))

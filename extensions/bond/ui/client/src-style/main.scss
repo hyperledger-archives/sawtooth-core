@@ -104,6 +104,10 @@ body {
     color: $inverse-text-color;
 }
 
+.history-container tr {
+    cursor: pointer;
+}
+
 @import "notification";
 @import "modal";
 @import "bonds";

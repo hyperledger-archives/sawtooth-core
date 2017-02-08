@@ -106,6 +106,10 @@ body {
     margin-left: 6px;
 }
 
+.history-container tr {
+    cursor: pointer;
+}
+
 @import "notification";
 @import "modal";
 @import "portfolio";

@@ -19,7 +19,8 @@
              :refer-macros [infof]]
             [sawtooth.ledger.keys :as keys]
             [sawtooth.components.core
-             :refer [glyph form-buttons text-field select-field check-box-field]
+             :refer [glyph form-buttons text-field select-field
+                     check-box-field header-note]
              :refer-macros [handle-event]]
             [mktplace.components.format :as fmt]
             [mktplace.transactions]))
@@ -104,17 +105,17 @@
                  [:div.panel-heading "Create Asset Type"]
                  [:div.panel-body
                   (text-field owner [:new-asset-type :name] "Name"
-                              {:help-text "An optional, human-readable name
-                                          for the asset type. Must begin with
-                                          '/'."
+                              {:help-text "An optional, human-readable name for
+                                          the asset type. Must begin with '/'."
                                :pattern fmt/object-name-pattern})
 
                   (text-field owner [:new-asset-type :description] "Description"
                               {:help-text "Optional information about the asset type."})
 
-                  (check-box-field owner [:new-asset-type :restricted ] "Restricted"
-                                   {:help-text "Only the creator of the asset type may
-                                               create assets of this type."})
+                  (check-box-field owner [:new-asset-type :restricted ]
+                                   (header-note
+                                     "Restricted"
+                                     "only the original creator can create assets of this type"))
 
                   [:div.form-button-group
                    [:button.btn.btn-default.pull-right
@@ -124,9 +125,18 @@
 
                   ]])
 
-              (check-box-field owner :restricted "Restricted")
-              (check-box-field owner :consumable "Consumable")
-              (check-box-field owner :divisible "Divisible")
+              (check-box-field owner :restricted
+                               (header-note
+                                 "Restricted"
+                                 "only the original creator can create holdings of this asset"))
+              (check-box-field owner :consumable
+                               (header-note
+                                 "Consumable"
+                                 "used when transfered, i.e. non-infinite"))
+              (check-box-field owner :divisible
+                               (header-note
+                                 "Divisible"
+                                 "can exist in fractional form"))
 
               (form-buttons owner initial-state
                             {:submit {:disabled (not (is-valid? state))}})]]))))))

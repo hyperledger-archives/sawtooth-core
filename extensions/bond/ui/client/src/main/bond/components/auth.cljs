@@ -40,7 +40,7 @@
         [:div.container.welcome
          [:div.page-header.text-center
           (heading "Welcome to Sawtooth Bond")
-          [:p "Welcome to Intel’s proof-of-concept Bond Trading Platform,
+          [:p "Sawtooth Bond is a proof-of-concept bond trading platform,
               built on the Sawtooth Lake distributed ledger."]
           [:p "To begin you will need to create an identity by generating a new
               Wallet Import Format (WIF) key or importing an existing one."]]

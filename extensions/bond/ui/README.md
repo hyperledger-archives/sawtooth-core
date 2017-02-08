@@ -2,7 +2,15 @@
 
 ## Setup
 
-For individual component prerequisites, see:
+Both the client and server can have their dependencies installed, and other
+setup code run by executing the script:
+
+  ```
+  > ./scripts/setup.sh
+  ```
+
+Additional information for running these two components can be found in
+their Readmes.
 
 ### Server
 
