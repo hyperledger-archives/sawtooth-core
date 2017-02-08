@@ -16,7 +16,7 @@ Transactions:
     FirstCouponDate: '07/01/2016'
     MaturityDate: '05/31/2021'
     Issuer: T
-    ObjectId: govtbond11111111111111111111111111111111111111111111111111111111
+    ObjectId: gvt1000000000000000000000000000000000000555339313238323852373730
   - UpdateType: CreateBond
     AmountOutstanding: '48201000000'
     CorporateDebtRatings:
@@ -33,7 +33,7 @@ Transactions:
     FirstCouponDate: '07/01/2016'
     MaturityDate: '05/15/2026'
     Issuer: T
-    ObjectId: govtbond22222222222222222222222222222222222222222222222222222222
+    ObjectId: gvt2000000000000000000000000000000000000555339313238323852373730
   - UpdateType: CreateBond
     AmountOutstanding: '30392000000'
     CorporateDebtRatings:

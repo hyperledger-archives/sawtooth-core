@@ -40,10 +40,12 @@
         [:div.container.welcome
          [:div.page-header.text-center
           (heading "Welcome to Sawtooth Bond")
-          "Welcome to Intel’s proof-of-concept Bond Trading Platform,
-          built on the Sawtooth Lake distributed ledger." ]
+          [:p "Welcome to Intel’s proof-of-concept Bond Trading Platform,
+              built on the Sawtooth Lake distributed ledger."]
+          [:p "To begin you will need to create an identity by generating a new
+              Wallet Import Format (WIF) key or importing an existing one."]]
          [:div.panel.panel-warning
-          [:div.panel-heading "You will need a WIF Key to continue:"]
+          [:div.panel-heading "Generate or import your WIF key:"]
           [:div.panel-footer
            (boot-row "text-center"
                      (link-button (routes/new-wif) "Generate WIF" {:btn-type :warning})

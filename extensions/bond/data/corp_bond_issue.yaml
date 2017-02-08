@@ -15,8 +15,8 @@ Transactions:
     FirstSettlementDate: '01/11/2012'
     FirstCouponDate: '01/12/2012'
     MaturityDate: '01/11/2022'
-    Issuer: CMP2
-    ObjectId: bond111111111111111111111111111111111111111111111111111111111111
+    Issuer: RES
+    ObjectId: bnd10000000000000000000000000000000000005553393139313154414d3533
   - UpdateType: CreateBond
     AmountOutstanding: '11000000000'
     CorporateDebtRatings:
@@ -31,8 +31,8 @@ Transactions:
     FirstSettlementDate: '01/25/2016'
     FirstCouponDate: '02/01/2016'
     MaturityDate: '02/01/2026'
-    Issuer: CMP3
-    ObjectId: bond222222222222222222222222222222222222222222222222222222222222
+    Issuer: TWRD
+    ObjectId: bnd2000000000000000000000000000000000000555330333532343241503133
   - UpdateType: CreateBond
     AmountOutstanding: '1200000000'
     CorporateDebtRatings:
@@ -47,8 +47,8 @@ Transactions:
     FirstSettlementDate: '12/07/2012'
     FirstCouponDate: '01/01/2013'
     MaturityDate: '12/15/2019'
-    Issuer: CMP3
-    ObjectId: bond333333333333333333333333333333333333333333333333333333333333
+    Issuer: SCS
+    ObjectId: bnd3000000000000000000000000000000000000555332323136304b41463231
   - UpdateType: CreateBond
     AmountOutstanding: '1500000000'
     CorporateDebtRatings:
@@ -65,8 +65,8 @@ Transactions:
     FirstSettlementDate: '05/20/2013'
     FirstCouponDate: '06/01/2013'
     MaturityDate: '01/15/2019'
-    Issuer: CMP4
-    ObjectId: bond444444444444444444444444444444444444444444444444444444444444
+    Issuer: CHE
+    ObjectId: bnd4000000000000000000000000000000000000555337313634374e41453934
   - UpdateType: CreateBond
     AmountOutstanding: '1200000000'
     CorporateDebtRatings:
@@ -81,5 +81,5 @@ Transactions:
     FirstSettlementDate: '12/07/2012'
     FirstCouponDate: '01/01/2013'
     MaturityDate: '07/20/2016'
-    Issuer: CMP5
-    ObjectId: bond555555555555555555555555555555555555555555555555555555555555
+    Issuer: TTT
+    ObjectId: bnd5000000000000000000000000000000000000555331323334354b41463231

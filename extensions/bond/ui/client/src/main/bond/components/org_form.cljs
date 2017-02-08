@@ -78,10 +78,11 @@
             (core/form-section "Organization Info" "org-info"
                                (core/divided-rows
                                  (owner-field :name "Name" {:required true})
-                                 (owner-field :industry "Industry")
+                                 (owner-field :industry (core/header-note "Industry" "optional"))
                                  (owner-field :ticker "Ticker" {:disabled (:pricing-source state)})
-                                 (owner-field :pricing-source "Pricing Source" {:disabled (:ticker state)
-                                                                                :pattern src-pattern})))
+                                 (owner-field :pricing-source
+                                              (core/header-note "Pricing Source" "e.g. BGDR")
+                                              {:disabled (:ticker state) :pattern src-pattern})))
 
             (saw/form-buttons owner {}
                               {:submit {:label "Create"
