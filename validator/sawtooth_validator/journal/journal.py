@@ -21,29 +21,29 @@ import time
 
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+
 
 LOGGER = logging.getLogger(__name__)
-
-
-NULLIDENTIFIER = "0000000000000000"
 
 
 class Journal(object):
     """
     Manages the block chain, This responsibility boils down
     1) to evaluating new blocks to determine if they should extend or replace
-    the current chain. Handled by the ChainController/
-    2) Claiming new blocks, handled by the BlockPublisher
-
+    the current chain. Handled by the ChainController
+    2) Claiming new blocks. Handled by the BlockPublisher.
     This object provides the threading and event queue for the processors.
-
     """
-
     class _ChainThread(Thread):
-        def __init__(self, chain_controller, block_queue):
+        def __init__(self, chain_controller, block_queue, block_cache):
             Thread.__init__(self)
             self._chain_controller = chain_controller
             self._block_queue = block_queue
+            self._block_cache = block_cache
+            self._block_cache_purge_time = time.time() + \
+                self._block_cache.keep_time
             self._exit = False
 
         def run(self):
@@ -54,12 +54,18 @@ class Journal(object):
                         self._chain_controller.on_block_received(block)
                     except queue.Empty:
                         time.sleep(0.1)
+
+                    if self._block_cache_purge_time < time.time():
+                        self._block_cache.purge_expired()
+                        self._block_cache_purge_time = time.time() + \
+                            self._block_cache.keep_time
+
                     if self._exit:
                         return
             # pylint: disable=broad-except
             except Exception as exc:
                 LOGGER.exception(exc)
-                LOGGER.critical("BlockPublisher thread exited.")
+                LOGGER.critical("ChainController thread exited with error.")
 
         def stop(self):
             self._exit = True
@@ -86,7 +92,7 @@ class Journal(object):
             # pylint: disable=broad-except
             except Exception as exc:
                 LOGGER.exception(exc)
-                LOGGER.critical("BlockPublisher thread exited.")
+                LOGGER.critical("BlockPublisher thread exited with error.")
 
         def stop(self):
             self._exit = True
@@ -96,9 +102,16 @@ class Journal(object):
                  block_store,
                  block_sender,
                  transaction_executor,
-                 squash_handler):
+                 squash_handler,
+                 block_cache=None  # not require, allows tests to inject a
+                 # prepopulated block cache.
+                 ):
         self._consensus = consensus
-        self._block_store = block_store
+        self._block_store = BlockStoreAdapter(block_store)
+        self._block_cache = block_cache
+        if self._block_cache is None:
+            self._block_cache = BlockCache(self._block_store)
+
         self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
         self._block_sender = block_sender
@@ -112,37 +125,31 @@ class Journal(object):
         self._chain_thread = None
 
     def _init_subprocesses(self):
-        chain_head = self._get_chain_head()
         self._block_publisher = BlockPublisher(
             consensus=self._consensus.BlockPublisher(),
             transaction_executor=self._transaction_executor,
             block_sender=self._block_sender,
             squash_handler=self._squash_handler,
-            chain_head=chain_head
+            chain_head=self._block_store.chain_head
         )
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
         self._chain_controller = ChainController(
             consensus=self._consensus.BlockVerifier(),
-            block_store=self._block_store,
             block_sender=self._block_sender,
+            block_cache=self._block_cache,
             executor=ThreadPoolExecutor(1),
             transaction_executor=self._transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler
         )
         self._chain_thread = self._ChainThread(self._chain_controller,
-                                               self._block_queue)
+                                               self._block_queue,
+                                               self._block_cache)
 
-    def _get_chain_head(self):
-        if 'chain_head_id' in self._block_store:
-            return self._block_store[self._block_store["chain_head_id"]]
-
-        return None
-
+    # FXM: this is an inaccurate name.
     def get_current_root(self):
-        chain_head = self._get_chain_head()
-        return chain_head.block.state_root_hash if chain_head else None
+        return self._chain_controller.chain_head.state_root_hash
 
     def get_block_store(self):
         return self._block_store
@@ -162,13 +169,24 @@ class Journal(object):
         # suicide
         if self._publisher_thread is not None:
             self._publisher_thread.stop()
+            self._publisher_thread = None
+
         if self._chain_thread is not None:
             self._chain_thread.stop()
+            self._chain_thread = None
 
     def on_block_received(self, block):
+        """
+        New block has been received, queue it with the chain controller
+        for processeing.
+        """
         self._block_queue.put(block)
 
     def on_batch_received(self, batch):
+        """
+        New batch has been received, queue it with the BlockPublisher for
+        inclusion in the next block.
+        """
         self._batch_queue.put(batch)
 
     def on_block_request(self, block_id):

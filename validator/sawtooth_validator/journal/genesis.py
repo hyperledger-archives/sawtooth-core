@@ -20,10 +20,10 @@ from pathlib import Path
 from sawtooth_signing import pbct as signing
 from sawtooth_validator.protobuf import genesis_pb2
 from sawtooth_validator.protobuf import block_pb2
+from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import BlockState
 from sawtooth_validator.journal.block_wrapper import BlockStatus
-from sawtooth_validator.journal.journal import NULLIDENTIFIER
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.exceptions import InvalidGenesisStateError
 
@@ -105,7 +105,7 @@ class GenesisController(object):
 
         initial_state_root = self._context_manager.get_first_root()
 
-        block = GenesisController._generate_genesis_block()
+        block_builder = GenesisController._generate_genesis_block()
         genesis_batches = [batch for batch in genesis_data.batches]
         if len(genesis_batches) > 0:
             scheduler = SerialScheduler(
@@ -135,22 +135,26 @@ class GenesisController(object):
         LOGGER.debug('Produced state hash %s for genesis block.',
                      state_hash)
 
-        block.add_batches(genesis_batches)
-        block.set_state_hash(state_hash)
+        block_builder.add_batches(genesis_batches)
+        block_builder.set_state_hash(state_hash)
 
-        GenesisController._sign_block(block)
+        GenesisController._sign_block(block_builder)
 
-        LOGGER.info('genesis block created: %s', block.header_signature)
-        self._completer.add_block(block.get_block())
-        self._block_store['chain_head_id'] = block.header_signature
+        block = block_builder.build_block()
+        blkw = BlockWrapper(block=block, status=BlockStatus.Valid)
+        LOGGER.info('Genesis block created: %s', blkw)
 
-        block_state = BlockState(block_wrapper=block, weight=0,
-                                 status=BlockStatus.Valid)
-        self._block_store[block.header_signature] = block_state
+        self._completer.add_block(block)
+        self._block_store['chain_head_id'] = blkw.identifier
+
+        self._block_store[blkw.identifier] = {
+            "block": blkw.block,
+            "weight": blkw.weight
+        }
 
         self._save_block_chain_id(block.header_signature)
 
-        LOGGER.debug('deleting genesis data')
+        LOGGER.debug('Deleting genesis data.')
         os.remove(genesis_file)
 
         if on_done is not None:
@@ -185,11 +189,9 @@ class GenesisController(object):
         Returns a blocker wrapper with the basics of the block header in place
         """
         genesis_header = block_pb2.BlockHeader(
-            previous_block_id=NULLIDENTIFIER, block_num=0)
+            previous_block_id=NULL_BLOCK_IDENTIFIER, block_num=0)
 
-        block = BlockWrapper(genesis_header)
-
-        return block
+        return BlockBuilder(genesis_header)
 
     @staticmethod
     def _sign_block(block):

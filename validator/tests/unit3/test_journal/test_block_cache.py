@@ -12,27 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+import logging
+import sys
 import time
+import unittest
+
+from sawtooth_validator.journal.block_cache import BlockCache
+
+LOGGER = logging.getLogger(__name__)
 
 
-class TimeOut(object):
-    def __init__(self, wait):
-        self.wait_time = wait
-        self.expire_time = time.time() + wait
+class TestBlockCache(unittest.TestCase):
+    def test_load_from_block_store(self):
+        """ Test that misses will load from the block store.
+        """
+        bs = {}
+        bs["test"] = "value"
+        bc = BlockCache(bs)
 
-    def is_timed_out(self):
-        return time.time() > self.expire_time
-
-    def __call__(self, *args, **kwargs):
-        return time.time() > self.expire_time
+        self.assertTrue("test" in bc)
+        self.assertTrue(bc["test"] == "value")
 
 
-def wait_until(lbd, time_out=None):
-    end_time = None
-    if time_out is not None:
-        end_time = time.time() + time_out
-
-    while (end_time is None or
-            time.time() < end_time) and \
-            not lbd():
-        time.sleep(0.1)

@@ -25,7 +25,7 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
-from sawtooth_validator.journal.journal import NULLIDENTIFIER
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class Completer(object):
     def __init__(self):
         # temp batch cache
         self.batch_store = {}
-        self.block_store = [NULLIDENTIFIER]
+        self.block_store = [NULL_BLOCK_IDENTIFIER]
         self._on_block_received = None
         self._on_batch_received = None
 

@@ -27,9 +27,12 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
 from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import BlockState
+from sawtooth_validator.journal.block_builder import BlockBuilder
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockTransactionExecutor
@@ -64,8 +67,11 @@ class BlockTreeManager(object):
         }
 
     def __init__(self):
-        self.block_store = {}
+
         self.block_sender = MockBlockSender()
+        self.block_store = BlockStoreAdapter({})
+        self.block_cache = BlockCache(self.block_store)
+        self._new_block = None
         self.block_publisher = BlockPublisher(
             consensus=TestModePublisher(),
             transaction_executor=MockTransactionExecutor(),
@@ -80,7 +86,7 @@ class BlockTreeManager(object):
     def _get_block_id(self, block):
         if (block is None):
             return None
-        elif isinstance(block, Block) or isinstance(block, BlockState) or \
+        elif isinstance(block, Block) or\
                 isinstance(block, BlockWrapper):
             return block.header_signature
         elif isinstance(block, basestring):
@@ -92,25 +98,24 @@ class BlockTreeManager(object):
         if (block is None):
             return None
         elif isinstance(block, Block):
-            return block
+            return BlockWrapper(block)
         elif isinstance(block, BlockWrapper):
             return block
-        elif isinstance(block, BlockState):
-            return block.block
         elif isinstance(block, str):
-            return self.block_store[block]
+            return self.block_cache[block]
         else:  # WTF try something crazy
-            return self.block_store[str(block)]
+            return self.block_cache[str(block)]
 
     def set_chain_head(self, block):
-        self.block_store["chain_head_id"] = self._get_block_id(block)
+        self.block_store.set_chain_head(self._get_block_id(block))
 
     @property
     def chain_head(self):
-        return self.block_store[self.block_store["chain_head_id"]]
+        return self.block_store.chain_head
 
     def generate_block(self, previous_block=None,
                        add_to_store=False,
+                       add_to_cache=False,
                        batch_count=0,
                        status=BlockStatus.Unknown,
                        invalid_consensus=False,
@@ -122,12 +127,12 @@ class BlockTreeManager(object):
         if previous is None:
             previous = self._generate_genesis_block(_generate_id())
             previous.set_signature(_generate_id())
-            previous_block_state = BlockState(
-                block_wrapper=previous,
+            previous_block = BlockWrapper(
+                block=previous.build_block(),
                 weight=0,
                 status=BlockStatus.Valid)
-            self.block_store[previous.header_signature] = previous_block_state
-            self.block_publisher.on_chain_updated(previous)
+            self.block_cache[previous_block.identifier] = previous_block
+            self.block_publisher.on_chain_updated(previous_block)
 
         while self.block_sender.new_block is None:
             self.block_publisher.on_batch_received(Batch())
@@ -136,17 +141,19 @@ class BlockTreeManager(object):
         block = self.block_sender.new_block
         self.block_sender.new_block = None
 
-        header = BlockHeader()
-        header.ParseFromString(block.header)
-        block = BlockWrapper(header, block)
+        block = BlockWrapper(block)
 
         if invalid_signature:
-            block.set_signature("BAD")
+            block.block.header_signature = "BAD"
+
+        block.weight = 0
+        block.status = status
+
+        if add_to_cache:
+            self.block_cache[block.identifier] = block
 
         if add_to_store:
-            block_state = BlockState(block_wrapper=block, weight=0)
-            block_state.status = status
-            self.block_store[block.header_signature] = block_state
+            self.block_store[block.identifier] = block
 
         return block
 
@@ -155,24 +162,22 @@ class BlockTreeManager(object):
             previous_block_id="0000000000000000",
             block_num=0)
 
-        # Small hack here not asking consensus if it is happy.
-        block = BlockWrapper(genesis_header)
+        block = BlockBuilder(genesis_header)
         block.set_signature(header_sig)
         return block
 
-    def generate_chain(self, root_block,
-                       blocks):
-        # block options
-        # valid/invalid how
-        # add to store
+    def generate_chain(self, root_block, blocks):
+        """
+        Generate a new chain based on the root block and place it in the
+        block cache.
+        """
         out = []
         if not isinstance(blocks, list):
             blocks = self.generate_chain_definition(int(blocks))
 
         previous = self._get_block(root_block)
-        for b in blocks:
-            new_block = self.generate_block(previous_block=previous,
-                                            **b)
+        for block in blocks:
+            new_block = self.generate_block(previous_block=previous, **block)
             out.append(new_block)
             previous = new_block
         return out
@@ -184,7 +189,7 @@ class BlockTreeManager(object):
         return out
 
     def __str__(self):
-        return str(self.block_store)
+        return str(self.block_cache)
 
     def __repr__(self):
-        return repr(self.block_store)
+        return repr(self.block_cache)

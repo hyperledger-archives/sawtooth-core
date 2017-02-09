@@ -17,13 +17,16 @@ import logging
 from threading import RLock
 
 from sawtooth_signing import pbct as signing
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
+
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
-LOGGER = logging.getLogger(__name__)
+from sawtooth_validator.journal.block_builder import BlockBuilder
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
-NULLIDENTIFIER = "0000000000000000"
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BlockPublisher(object):
@@ -41,11 +44,12 @@ class BlockPublisher(object):
         self._candidate_block = None  # the next block in potentia
         self._consensus = consensus  # the consensus object.
         self._transaction_executor = transaction_executor
-        self._pending_batches = []  # batches we are waiting for
-        self._validated_batches = []
         self._block_sender = block_sender
+        self._pending_batches = []  # batches we are waiting for validation
+        self._validated_batches = []  # batches that are valid and can be added
+        # to the next block.
         self._scheduler = None
-        self._chain_head = chain_head
+        self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
 
     def _build_block(self, chain_head):
@@ -66,8 +70,7 @@ class BlockPublisher(object):
         for batch in self._pending_batches:
             self._scheduler.add_batch(batch)
         self._pending_batches = []
-        block = BlockWrapper(block_header)
-        return block
+        return BlockBuilder(block_header)
 
     def _sign_block(self, block):
         """ The block should be complete and the final
@@ -123,15 +126,12 @@ class BlockPublisher(object):
         try:
             with self._lock:
                 LOGGER.info(
-                    'Chain updated, new head: num=%s id=%s state=%s prev=%s',
-                    chain_head.block_num,
-                    chain_head.header_signature,
-                    chain_head.state_root_hash,
-                    chain_head.previous_block_id)
+                    'Now building on top of block: %s',
+                    chain_head)
                 self._chain_head = chain_head
                 if self._candidate_block is not None and \
                         chain_head is not None and \
-                        chain_head.header_signature == \
+                        chain_head.identifier == \
                         self._candidate_block.previous_block_id:
                     # nothing to do. We are building of the current head.
                     # This can happen after we publish a block and
@@ -201,17 +201,18 @@ class BlockPublisher(object):
                     # if no batches are in the block, do not send it out
                     if len(candidate.batches) == 0:
                         LOGGER.info("No Valid batches added to block, " +
-                                    "dropping %s", candidate.header_signature)
+                                    " dropping %s",
+                                    candidate.identifier[:8])
                         return
 
-                    self._block_sender.send(candidate.get_block())
+                    block = BlockWrapper(candidate.build_block())
+                    self._block_sender.send(block.block)
 
-                    LOGGER.info("Claimed Block: %s",
-                                candidate.header_signature)
+                    LOGGER.info("Claimed Block: %s", block)
 
                     # create a new block based on this one -- opportunistically
                     # assume the published block is the valid block.
-                    self.on_chain_updated(candidate)
+                    self.on_chain_updated(block)
         # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.exception(exc)
