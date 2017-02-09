@@ -16,7 +16,6 @@ import logging
 from threading import RLock
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 
@@ -321,12 +320,9 @@ class ChainController(object):
                     # do we already have this block
                     return
 
-                block = BlockWrapper(block,
-                                     weight=0,
-                                     status=BlockStatus.Unknown)
                 self._block_cache[block.identifier] = block
                 self._blocks_pending[block.identifier] = []
-                LOGGER.debug("Block received : %s", block)
+                LOGGER.debug("Block received: %s", block)
                 if block.identifier in self._blocks_requested:
                     # is it a requested block
                     # route block to the validator that requested
@@ -339,8 +335,7 @@ class ChainController(object):
                         self._executor.submit(validator.run)
                 elif block.previous_block_id in self._blocks_processing or \
                         block.previous_block_id in self._blocks_pending:
-                    LOGGER.debug('in blocks pending: %s',
-                                 block.header_signature)
+                    LOGGER.debug('in blocks pending: %s', block)
                     # if the previous block is being processed, put it in a
                     # wait queue, Also need to check if previous block is
                     # in the wait queue.

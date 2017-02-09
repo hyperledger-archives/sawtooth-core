@@ -15,42 +15,49 @@
 
 import logging
 
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchList
 from sawtooth_validator.protobuf.block_pb2 import Block
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 LOGGER = logging.getLogger(__name__)
 
 
 class Completer(object):
-    def __init__(self):
-        # temp batch cache
-        self.batch_store = {}
-        self.block_store = [NULL_BLOCK_IDENTIFIER]
+    def __init__(self, block_store):
+        self.batch_cache = TimedCache()
+        self.block_cache = BlockCache(block_store)
         self._on_block_received = None
         self._on_batch_received = None
 
-    def _check_block(self, block, block_header):
+    def _check_block(self, block):
         # currently only accepting finalized blocks
         # in the future if the blocks will be built
 
-        if block_header.previous_block_id not in self.block_store:
+        if block.previous_block_id not in self.block_cache:
+            LOGGER.debug("Block discarded(Missing predecessor): %s",
+                         block.header_signature[:8])
             return False
-        if len(block.batches) != len(block_header.batch_ids):
+        if len(block.batches) != len(block.header.batch_ids):
+            LOGGER.debug("Block discarded(Missing batches): %s",
+                         block.header_signature[:8])
             return False
 
         for i in range(len(block.batches)):
-            if block.batches[i].header_signature != block_header.batch_ids[i]:
+            if block.batches[i].header_signature != block.header.batch_ids[i]:
+                LOGGER.debug("Block discarded(Missing batch): %s",
+                             block.header_signature[:8])
                 return False
 
+        self.block_cache[block.header_signature] = block
         return True
 
     def set_on_block_received(self, on_block_received_func):
@@ -60,14 +67,12 @@ class Completer(object):
         self._on_batch_received = on_batch_received_func
 
     def add_block(self, block):
-        header = BlockHeader()
-        header.ParseFromString(block.header)
-        if self._check_block(block, header):
-            self.block_store.append(block.header_signature)
-            self._on_block_received(block)
+        blkw = BlockWrapper(block)
+        if self._check_block(blkw):
+            self._on_block_received(blkw)
 
     def add_batch(self, batch):
-        self.batch_store[batch.header_signature] = batch
+        self.batch_cache[batch.header_signature] = batch
         self._on_batch_received(batch)
 
 

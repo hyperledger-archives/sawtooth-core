@@ -63,7 +63,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.blocks = BlockTreeManager()
         self.block_sender = MockBlockSender()
 
-    def test_publish(self, args=sys.argv[1:]):
+    def test_publish(self):
 
         LOGGER.info(self.blocks)
         publisher = BlockPublisher(
@@ -117,7 +117,7 @@ class TestChainController(unittest.TestCase):
     def test_simple_case(self):
         # TEST Run the simple case
         block_1 = self.blocks.generate_block(self.blocks.chain_head)
-        self.chain_ctrl.on_block_received(block_1.get_block())
+        self.chain_ctrl.on_block_received(block_1)
         self.executor.process_all()
         assert(self.chain_ctrl.chain_head.block.header_signature ==
                block_1.header_signature)
@@ -228,16 +228,8 @@ class TestJournal(unittest.TestCase):
             wait_until(lambda: self.block_sender.new_block is not None, 2)
             self.assertTrue(self.block_sender.new_block is not None)
 
-            self.gossip.messages.append(self.block_sender.new_block)
-
-            # wait for a block message to arrive
-            wait_until(lambda: len(self.gossip.messages) != 0, 2)
-            self.assertTrue(len(self.gossip.messages) != 0)
-
-            # grab the new block for comparison
-            block = BlockWrapper(self.gossip.messages[0])
-            # dispatch the message
-            self.gossip.dispatch_messages()
+            block = BlockWrapper(self.block_sender.new_block)
+            journal.on_block_received(block)
 
             # wait for the chain_head to be updated.
             wait_until(lambda: btm.chain_head.identifier ==

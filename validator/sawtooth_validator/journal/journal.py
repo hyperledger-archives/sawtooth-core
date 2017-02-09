@@ -155,9 +155,6 @@ class Journal(object):
         return self._block_store
 
     def start(self):
-        # TBD do load activities....
-        # TBD transfer activities - request chain-head from
-        # network
         if self._publisher_thread is None and self._chain_thread is None:
             self._init_subprocesses()
 
