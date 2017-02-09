@@ -39,16 +39,22 @@ class XoMessageFactory:
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def create_transaction(self, game, action, space=None):
+    def _create_txn(self, txn_function, game, action, space=None):
         payload = ",".join([
             str(game), str(action), str(space)
         ]).encode()
 
         addresses = [self._game_to_address(game)]
 
-        return self._factory.create_transaction(
-            payload, addresses, addresses, []
-        )
+        return txn_function(payload, addresses, addresses, [])
+
+    def create_tp_process_request(self, game, action, space=None):
+        txn_function = self._factory.create_tp_process_request
+        return self._create_txn(txn_function, game, action, space)
+
+    def create_transaction(self, game, action, space=None):
+        txn_function = self._factory.create_transaction
+        return self._create_txn(txn_function, game, action, space)
 
     def create_get_request(self, game):
         addresses = [self._game_to_address(game)]
