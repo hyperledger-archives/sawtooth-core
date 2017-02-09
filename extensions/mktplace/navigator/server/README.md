@@ -1,8 +1,21 @@
-# Ledger Explorer API Server
+# Marketplace Navigator Server
 
-The API server and static resource host.
+The API server and static resource host for Marketplace Navigator.
 
-# Environment Variables:
+
+# Development
+
+How to setup and run the app in development.
+
+## Prerequisites
+
+* [Node JS 6 or above](https://nodejs.org/en/download/current/)
+* [Yarn](https://yarnpkg.com/)
+* [RethinkDB](https://www.rethinkdb.com/)
+* [Python 2.7](https://www.python.org/downloads/release/python-2711/)
+* [pip](https://pypi.python.org/pypi/pip)
+
+## Environment Variables:
 
 * PORT - the server port; defaults to 3000
 * DB_HOST - the database host; defaults to `localhost`
@@ -12,31 +25,26 @@ The API server and static resource host.
 * LEDGER_PORT - The port for the ledger service; defaults to 8800
 * NODE_ENV - Set this to `production`
 
-# Development
- 
-How to setup and run the app in development.
- 
-## Prerequisites
- 
-* [Node JS 6 or above](https://nodejs.org/en/download/current/)
-* [Yarn](https://yarnpkg.com/)
-* [RethinkDB](https://www.rethinkdb.com/)
-* [Python 2.7](https://www.python.org/downloads/release/python-2711/)
-* [pip](https://pypi.python.org/pypi/pip)
-
 ## Setting Up Your Environment
 
-1. Install server dependencies
+To setup both the server and client, from the `/navigator` directory, run
+
+  ```
+  > ./scripts/setup.sh
+  ```
+
+_Or_, to just setup the server, from the `/server` directory, run:
+
+  1. Install server dependencies
 
     ```
-    > cd <ledger-explorer-root-dir>/server
-    > npm install
+    > ./scripts/bootstrap.sh
     ```
 
-2. Initialize the database
+  2. Initialize the database
 
     ```
-    > node scripts/bootstrap_db.js
+    > ./scripts/build.sh
     ```
 
     The database-related environment variables are used with this script, as
@@ -45,37 +53,23 @@ How to setup and run the app in development.
 
 ## Running Locally
 
-Simply start the server via
+With a validator and `ledger_sync` running, start the server with
 
-```
-> cd <ledger-explorer-root-dir>/server
-> npm start
-```
+  ```
+  > npm start
+  ```
 
-The site will be available at [localhost:3000](http://localhost:3000/").
+With defaults, the site will be available at [localhost:3000](http://localhost:3000/").
 
-All of the environment variables above are used with this script.
-
-
-# Production
-
-Before running, you'll need to be sure that the dependencies are up to date
-and the JS/CSS client code is built:
-
-```
-> cd <ledger-explorer-root-dir>/client
-> ./scripts/build.sh
-```
-
-All the environment variables are used by `server.js`.  Adjusting the
+All of the environment variables above are used with this script. Adjusting the
 environment variables for production might look like this:
 
 ```
-> cd <ledger-explorer-root-dir>/server
+> cd <navigator-dir>/server
 > PORT=80 \
   DB_HOST=someserver.someplace \
   DB_PORT=29000 \
   DB_NAME=custom_explorer_db \
   LEDGER_URL=http://someledgerserver.someplace:8800 \
-  node server.js
+  npm start
 ```

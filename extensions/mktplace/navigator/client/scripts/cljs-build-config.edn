@@ -23,8 +23,7 @@
              :asset-path "js/compiled/out"
              :optimizations :whitespace
              :pretty-print false
-             :verbose true
-             :source-map "resources/public/js/compiled/exchange.js.map"}}
+             :verbose true}}
 
  {:id "test"
   :figwheel {}

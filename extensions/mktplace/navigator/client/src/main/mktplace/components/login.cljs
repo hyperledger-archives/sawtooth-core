@@ -62,8 +62,9 @@
             (text-field owner :participant-name "Name"
                         {:required true})
 
-            (text-field owner :participant-description "Description"
-                        {:help-text "Optional information about the participant"})
+            (text-field owner
+                        :participant-description
+                        (components/header-note "Description" "optional"))
 
             (form-buttons owner {}
                           {:submit {:disabled (not (is-valid? state))}
@@ -77,9 +78,18 @@
       (html
         [:div.container
          [:div.text-center
-          [:h1 "Welcome to Marketplace Navigator"]]
+          [:h1 "Welcome to Marketplace Navigator"]
+          [:p "Marketplace Navigator is a simple proof-of-concept asset
+              exchange built on top of the Sawtooth Lake distrubted ledger,
+              and is "
+              [:a {:href "http://intelledger.github.io/mktnav_users_guide.html"
+                   :target "_blank"}
+               "documented here"]
+              "."]
+          [:p "To begin you will need to create an identity by generating a new
+              Wallet Import Format (WIF) key or importing an existing one."]]
          [:div.panel.panel-warning
-          [:div.panel-heading "You will need a WIF Key to continue:"]
+          [:div.panel-heading "Generate or import your WIF key:"]
           [:div.panel-footer
            (boot-row "text-center"
                      (link-button (routes/new-wif-path) "Generate WIF" {:btn-type :warning})
@@ -201,7 +211,9 @@
 
            [:div.panel.panel-primary
             [:div.panel-heading "Key Generated!"]
-            [:div.panel-body "Download or copy key to clipboard and keep it in a safe space!"]
+            [:div.panel-body "To continue, download your key or copy and paste
+                             it. There is no way to recover your identity if
+                             this key is lost, so keep it in a safe place!"]
             [:div.panel-footer
 
              (boot-row "text-center"

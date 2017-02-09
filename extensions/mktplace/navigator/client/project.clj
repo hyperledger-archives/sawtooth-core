@@ -24,7 +24,7 @@
     (run-eval script)))
 
 (defproject exchange "0.1.0-SNAPSHOT"
-  :description "Front-end client for the Ledger Explorer, using
+  :description "Front-end client for the Marketplace Navigator, using
                ClojureScript and Sass."
   :url "https://github.intel.com/maiden-lane/sawtooth-ledger-explorer"
   :license {:name "Eclipse Public License"

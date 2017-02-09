@@ -1,10 +1,10 @@
-# Ledger Explorer Client
+# Marketplace Navigator Client
 
-Front-end client for the Ledger Explorer, using ClojureScript and Sass.
+Front-end client for Marketplace Navigator, using ClojureScript and Sass.
 
 ## Development
 
-Getting up and running with development.  
+Getting up and running with development.
 
 ### Prerequisites
 
@@ -22,14 +22,14 @@ Getting up and running with development.
 
 ### Running Figwheel
 
-With a running backend server instance (instructions found in `../server`), 
+With a running backend server instance (instructions found in `../server`),
 start the following script:
 
 ```
 > scripts/figwheel.sh
 ```
 
-This will start the process of building the site live development.  Both the 
+This will start the process of building the site live development.  Both the
 ClojureScript source and the sass source files will be autocompiled and
 refreshed on the screen.
 
@@ -37,7 +37,7 @@ The client will be available [localhost:3449](http://localhost:3449).
 
 ### Running tests
 
-Tests can be run in two ways.  The first is via the command-line: 
+Tests can be run in two ways.  The first is via the command-line:
 
 ```
 > lein cljs:test
@@ -46,7 +46,7 @@ Tests can be run in two ways.  The first is via the command-line:
 If you'd like to run the tests from a clean build, run `lein cljs:clean-test`.
 
 The tests can also be run in the browser while running Figwheel.  After running
-starting Figwheel as in the section above, you can open your browser to 
+starting Figwheel as in the section above, you can open your browser to
 [http://localhost:3449/test.html](http://localhost:3449/test.html) and the test will
 automatically run between code changes.  The favicon will change between green and red
 for success and failure, respectively.

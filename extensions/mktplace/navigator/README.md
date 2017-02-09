@@ -1,8 +1,16 @@
-# Ledger Explorer
+# Marketplace Navigator
 
 ## Setup
 
-For individual component prerequisites, see:
+Both the client and server can have their dependencies installed, and other
+setup code run by executing the script:
+
+  ```
+  > ./scripts/setup.sh
+  ```
+
+Additional information for running these two components can be found in
+their Readmes.
 
 ### Server
 
@@ -12,12 +20,6 @@ See [Server Docs](server/README.md)
 
 See [Client Docs](client/README.md)
 
+### Ledger Sync
 
-## Installing Dependencies
-
-With your database running, execute
-
-```
-> cd <ledger-explorer-home>
-> scripts/bootstrap.sh
-```
+See [Ledger Sync Docs](ledger_sync/README.md)

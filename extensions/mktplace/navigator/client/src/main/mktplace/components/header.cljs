@@ -49,7 +49,7 @@
       (html [:nav.navbar.navbar-inverse.navbar-fixed-top
              [:div.navbar-header
               [:a.navbar-brand {:href (routes/dashboard-path link-args)}
-               "Ledger Explorer"]]
+               "Marketplace Navigator"]]
              [:div#navbar
               [:ul.nav.navbar-nav.navbar-right
                (when block

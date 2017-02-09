@@ -54,6 +54,22 @@ for success and failure, respectively.
 When adding test namespaces, they will need to be added explicitly to `exchange.test_suite`
 in order to be run.
 
+
+## Preseeding Data
+
+Using the Bond UI, new Participants cannot be created without a Firm, and the
+UI cannot be used without a valid Participant. For this reason, it is useful
+to preseed the validator with some data. One way to do this is to run the
+following executables within the the vagrant virtual machine:
+
+```
+> btp init
+> load_bond_data
+```
+
+These will send a number of transactions to the validator, creating a number of
+Firms and other mock data.
+
 ## Production
 
 Building the production materials uses the following script:

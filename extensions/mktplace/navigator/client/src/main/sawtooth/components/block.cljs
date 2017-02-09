@@ -171,10 +171,10 @@
              [:table.table.table-condensed
               [:thead
                [:tr
-                [:th "ID"]
+                [:th "Transaction Id"]
                 [:th "Transaction Type"]
                 [:th "Update Type"]
-                [:th "Status"]]]
+                [:th "Transaction Status"]]]
 
                [:tbody
                 (interleave (map (partial transaction-row on-row-select is-selected?) txns)
@@ -227,14 +227,14 @@
            [:div.row
              [:div.panel.panel-default
               [:div.panel-heading
-               [:div.panel-title "Block State"]]
+               [:div.panel-title "Current Block"]]
               [:div.panel-body
                [:table.table-basic
                 [:thead
                  [:tr
-                  [:th "Block ID"]
+                  [:th "Block Id"]
                   [:th "Block Number"]
-                  [:th "Block size"]]]
+                  [:th "Transaction Count"]]]
                 [:tbody
                  [:tr
                   [:td (get chain-info :blockid)]

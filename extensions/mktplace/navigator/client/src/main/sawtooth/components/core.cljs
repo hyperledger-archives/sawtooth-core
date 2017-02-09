@@ -492,6 +492,18 @@
   [class-name & items]
   (apply n-col-rows 2 class-name items))
 
+(defn header-note
+  "Adds a small note in parens to a header, with optional link"
+  ([label note] (header-note label note nil))
+  ([label note url]
+   (html
+     [label " "
+      [:em [:small "("
+            (if url
+              [:a {:href url :target "_blank"} note]
+              note)
+            ")"]]])))
+
 ; conversions
 
 (defn ->int
