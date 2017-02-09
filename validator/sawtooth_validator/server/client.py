@@ -179,7 +179,6 @@ class BlockListRequestHandler(Handler):
             header.ParseFromString(block.header)
             current_id = header.previous_block_id
 
-        blocks.reverse()
         return blocks
 
 
