@@ -18,7 +18,7 @@ import shutil
 import tempfile
 import tarfile
 
-from sawtooth.manage.node import NodeController
+from sawtooth_manage.node import NodeController
 
 LOGGER = logging.getLogger(__name__)
 

@@ -14,11 +14,11 @@
 # ------------------------------------------------------------------------------
 
 
-from sawtooth.manage.node import NodeCommandGenerator
-from sawtooth.manage.node import GenesisCommand
-from sawtooth.manage.node import StartCommand
-from sawtooth.manage.node import StopCommand
-from sawtooth.manage.node import KillCommand
+from sawtooth_manage.node import NodeCommandGenerator
+from sawtooth_manage.node import GenesisCommand
+from sawtooth_manage.node import StartCommand
+from sawtooth_manage.node import StopCommand
+from sawtooth_manage.node import KillCommand
 
 
 class SimpleNodeCommandGenerator(NodeCommandGenerator):
