@@ -614,6 +614,7 @@ class Journal(object):
             if block is None:
                 if self.pending_block is not None:
                     block = self.pending_block
+                    self.pending_block = None
                 else:
                     return  # No block to claim
 
