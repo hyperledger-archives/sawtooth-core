@@ -231,7 +231,8 @@ class SignedObject(object):
             recovered_id = self.OriginatorID
             if self.public_key is None and originatorid is None:
                 logger.warning("Identifier %s of SignedObject has no public "
-                    "key and addr used to verify signature", self.Identifier)
+                               "key and addr used to verify signature",
+                               self.Identifier)
             return (self.public_key is None or self.public_key ==
                     self.originator_public_key) and \
                 (originatorid is None or recovered_id == originatorid)
