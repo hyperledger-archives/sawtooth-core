@@ -12,26 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import queue
+
 import logging
-from threading import Thread
+
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchList
+from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import network_pb2
+from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.server.dispatch import Handler
+from sawtooth_validator.server.dispatch import HandlerResult
+from sawtooth_validator.server.dispatch import HandlerStatus
 
 LOGGER = logging.getLogger(__name__)
 
 
-class Completer(Thread):
-    def __init__(self, on_block_complete, condition, block_queue):
-        super(Completer, self).__init__()
-        self.on_block_complete = on_block_complete
-        self._exit = False
-        self.condition = condition
-        self.block_queue = block_queue
+class Completer(object):
+    def __init__(self):
         # temp batch cache
         self.batch_store = {}
         self.block_store = ["genesis"]
+        self._on_block_received = None
+        self._on_batch_received = None
 
-    def check_block(self, block, block_header):
+    def _check_block(self, block, block_header):
         # currently only accepting finalized blocks
         # in the future if the blocks will be built
 
@@ -47,27 +53,58 @@ class Completer(Thread):
         self.block_store.append(block.header_signature)
         return True
 
+    def set_on_block_received(self, on_block_received_func):
+        self._on_block_received = on_block_received_func
+
+    def set_on_batch_received(self, on_batch_received_func):
+        self._on_batch_received = on_batch_received_func
+
+    def add_block(self, block):
+        header = BlockHeader()
+        header.ParseFromString(block.header)
+        if self._check_block(block, header) is True:
+            self._on_block_received(block)
+
     def add_batch(self, batch):
         self.batch_store[batch.header_signature] = batch
+        self._on_batch_received(batch)
 
-    def stop(self):
-        self._exit = True
 
-    def run(self):
-        while True:
-            if self._exit:
-                return
-            try:
-                block = self.block_queue.get(block=False)
-                block_header = BlockHeader()
-                block_header.ParseFromString(block.header)
-                status = self.check_block(block, block_header)
-                if status:
-                    self.on_block_complete(block)
-                    LOGGER.debug("Block passed to journal %s",
-                                 block.header_signature)
-                else:
-                    self.block_queue.put(block)
-            except queue.Empty:
-                with self.condition:
-                    self.condition.wait()
+class CompleterBatchListBroadcastHandler(Handler):
+
+    def __init__(self, completer, gossip):
+        self._completer = completer
+        self._gossip = gossip
+
+    def handle(self, identity, message_content):
+        batch_list = BatchList()
+        batch_list.ParseFromString(message_content)
+        for batch in batch_list.batches:
+            self._completer.add_batch(batch)
+            self._gossip.broadcast_batch(batch)
+        message = client_pb2.ClientBatchSubmitResponse(
+            status=client_pb2.ClientBatchSubmitResponse.OK)
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=message,
+            message_type=validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
+
+class CompleterGossipHandler(Handler):
+
+    def __init__(self, completer):
+        self._completer = completer
+
+    def handle(self, identity, message_content):
+        gossip_message = network_pb2.GossipMessage()
+        gossip_message.ParseFromString(message_content)
+        if gossip_message.content_type == "BLOCK":
+            block = Block()
+            block.ParseFromString(gossip_message.content)
+            self._completer.add_block(block)
+        elif gossip_message.content_type == "BATCH":
+            batch = Batch()
+            batch.ParseFromString(gossip_message.content)
+            self._completer.add_batch(batch)
+        return HandlerResult(
+            status=HandlerStatus.PASS)

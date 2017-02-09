@@ -13,9 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
-import random
-import string
 import threading
 
 from sawtooth_validator.protobuf import processor_pb2
@@ -23,25 +20,19 @@ from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
-
-
-def _generate_id():
-    return hashlib.sha512(''.join(
-        [random.choice(string.ascii_letters)
-            for _ in range(0, 1024)]).encode()).hexdigest()
+from sawtooth_validator.execution import processor_iterator
 
 
 class TransactionExecutorThread(threading.Thread):
-    def __init__(self, service, context_manager, scheduler):
+    def __init__(self, service, context_manager, scheduler, processors):
         super(TransactionExecutorThread, self).__init__()
-
         self._service = service
         self._context_manager = context_manager
         self._scheduler = scheduler
+        self._processors = processors
 
     def _future_done_callback(self, request, result):
         """
-
         :param request (bytes):the serialized request
         :param result (FutureResult):
         """
@@ -75,12 +66,21 @@ class TransactionExecutorThread(threading.Thread):
                 signature=txn.header_signature,
                 context_id=context_id).SerializeToString()
 
-            message = validator_pb2.Message(
-                message_type=validator_pb2.Message.TP_PROCESS_REQUEST,
-                correlation_id=_generate_id(),
-                content=content)
+            processor_type = processor_iterator.ProcessorType(
+                header.family_name,
+                header.family_version,
+                header.payload_encoding)
 
-            future = self._service.send_txn(header=header, message=message)
+            if processor_type not in self._processors:
+                raise Exception("internal error, no processor available")
+            processor = self._processors[processor_type]
+            identity = processor.identity
+
+            future = self._service.send(
+                validator_pb2.Message.TP_PROCESS_REQUEST,
+                content,
+                identity=identity,
+                has_callback=True)
             future.add_callback(self._future_done_callback)
 
 
@@ -88,6 +88,8 @@ class TransactionExecutor(object):
     def __init__(self, service, context_manager):
         self._service = service
         self._context_manager = context_manager
+        self.processors = processor_iterator.ProcessorIteratorCollection(
+            processor_iterator.RoundRobinProcessorIterator)
 
     def create_scheduler(self, squash_handler, first_state_root):
         return SerialScheduler(squash_handler, first_state_root)
@@ -95,5 +97,6 @@ class TransactionExecutor(object):
     def execute(self, scheduler):
         t = TransactionExecutorThread(self._service,
                                       self._context_manager,
-                                      scheduler)
+                                      scheduler,
+                                      self.processors)
         t.start()

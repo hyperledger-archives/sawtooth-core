@@ -80,7 +80,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
         payload_encoding="application/cbor",
         payload_sha512=payload.sha512(),
         batcher_pubkey=public_key,
-        nonce=time.time().Hex().Encode())
+        nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
 

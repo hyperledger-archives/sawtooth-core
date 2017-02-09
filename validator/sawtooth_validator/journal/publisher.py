@@ -34,7 +34,7 @@ class BlockPublisher(object):
     def __init__(self,
                  consensus,
                  transaction_executor,
-                 send_message,
+                 block_sender,
                  squash_handler):
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
@@ -42,7 +42,7 @@ class BlockPublisher(object):
         self._transaction_executor = transaction_executor
         self._pending_batches = []  # batches we are waiting for
         self._validated_batches = []
-        self._send_message = send_message
+        self._block_sender = block_sender
         self._scheduler = None
         self._chain_head = None
         self._squash_handler = squash_handler
@@ -196,7 +196,7 @@ class BlockPublisher(object):
                                 candidate.header_signature)
                     return
 
-                self._send_message(candidate.get_block())
+                self._block_sender.send(candidate.get_block())
 
                 LOGGER.info("Claimed Block: %s", candidate.header_signature)
 

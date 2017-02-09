@@ -27,8 +27,7 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server.signature_verifier import SignatureVerifier
-from test_message_validation.utils import TimeOut
+from sawtooth_validator.server import signature_verifier as verifier
 
 
 class TestMessageValidation(unittest.TestCase):
@@ -36,16 +35,6 @@ class TestMessageValidation(unittest.TestCase):
         self.private_key = signing.generate_privkey()
         self.public_key = signing.encode_pubkey(
             signing.generate_pubkey(self.private_key), "hex")
-        self._out = queue.Queue()
-        self._in = queue.Queue()
-        self._broadcast = self.broadcast
-        self._in_condition = Condition()
-        self._out_condition = Condition()
-        self.verifier = SignatureVerifier(self._in,
-                                          self._out,
-                                          self._in_condition,
-                                          self._out_condition,
-                                          self._broadcast)
 
     def broadcast(self, msg):
         pass
@@ -166,82 +155,54 @@ class TestMessageValidation(unittest.TestCase):
     def test_valid_transaction(self):
         txn_list = self._create_transactions(1)
         txn = txn_list[0]
-        valid = self.verifier.validate_transaction(txn)
+        valid = verifier.validate_transaction(txn)
         self.assertTrue(valid)
 
     def test_invalid_transaction(self):
         # add invalid flag to _create transaction
         txn_list = self._create_transactions(1, valid=False)
         txn = txn_list[0]
-        valid = self.verifier.validate_transaction(txn)
+        valid = verifier.validate_transaction(txn)
         self.assertFalse(valid)
 
     def test_valid_batch(self):
         batch_list = self._create_batches(1, 10)
         batch = batch_list[0]
-        valid = self.verifier.validate_batch(batch)
+        valid = verifier.validate_batch(batch)
         self.assertTrue(valid)
 
     def test_invalid_batch(self):
         # add invalid flag to create_batches
         batch_list = self._create_batches(1, 1, valid_batch=False)
         batch = batch_list[0]
-        valid = self.verifier.validate_batch(batch)
+        valid = verifier.validate_batch(batch)
         self.assertFalse(valid)
 
         # create an invalid txn in the batch
         batch_list = self._create_batches(1, 1, valid_txn=False)
         batch = batch_list[0]
-        valid = self.verifier.validate_batch(batch)
+        valid = verifier.validate_batch(batch)
         self.assertFalse(valid)
 
         # create an invalid txn with bad batcher
         batch_list = self._create_batches(1, 1, valid_batcher=False)
         batch = batch_list[0]
-        valid = self.verifier.validate_batch(batch)
+        valid = verifier.validate_batch(batch)
         self.assertFalse(valid)
 
     def test_valid_block(self):
         block_list = self._create_blocks(1, 1)
         block = block_list[0]
-        valid = self.verifier.validate_block(block)
+        valid = verifier.validate_block(block)
         self.assertTrue(valid)
 
     def test_invalid_block(self):
         block_list = self._create_blocks(1, 1, valid_batch=False)
         block = block_list[0]
-        valid = self.verifier.validate_block(block)
+        valid = verifier.validate_block(block)
         self.assertFalse(valid)
 
         block_list = self._create_blocks(1, 1, valid_block=False)
         block = block_list[0]
-        valid = self.verifier.validate_block(block)
+        valid = verifier.validate_block(block)
         self.assertFalse(valid)
-
-    def test_signature_thread(self):
-        try:
-            self.verifier.start()
-            blocks = self._create_blocks(1, 1)
-            message = GossipMessage(content_type="Block",
-                                    content=blocks[0].SerializeToString())
-            content = message.SerializeToString()
-            msg = validator_pb2.Message(
-                message_type=validator_pb2.Message.GOSSIP_MESSAGE,
-                correlation_id=self._generate_id(),
-                content=content)
-
-            with self._in_condition:
-                self._in.put_nowait(msg)
-                self._in_condition.notify_all()
-
-            to = TimeOut(2)
-            while self._out.qsize() == 0:
-                if to.is_timed_out():
-                    break
-
-            self.assertEqual(self._out.qsize(), 1)
-
-        finally:
-            with self._in_condition:
-                self.verifier.stop()
-                self._in_condition.notify_all()

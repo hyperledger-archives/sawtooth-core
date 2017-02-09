@@ -15,22 +15,26 @@
 
 import logging
 
+from sawtooth_validator.execution import processor_iterator
+
 from sawtooth_validator.protobuf.processor_pb2 import TpRegisterResponse
 from sawtooth_validator.protobuf.processor_pb2 \
     import TpRegisterRequest
-
-from sawtooth_validator.protobuf.validator_pb2 import Message
+from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.server.dispatch import Handler
+from sawtooth_validator.server.dispatch import HandlerResult
+from sawtooth_validator.server.dispatch import HandlerStatus
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ProcessorRegisterHandler(object):
-    def __init__(self, service):
-        self._service = service
+class ProcessorRegisterHandler(Handler):
+    def __init__(self, processor_collection):
+        self._collection = processor_collection
 
-    def handle(self, message, responder):
+    def handle(self, identity, message_content):
         request = TpRegisterRequest()
-        request.ParseFromString(message.content)
+        request.ParseFromString(message_content)
 
         LOGGER.info(
             'registered transaction processor: family=%s, version=%s, '
@@ -40,18 +44,21 @@ class ProcessorRegisterHandler(object):
             request.encoding,
             request.namespaces)
 
-        self._service.register_transaction_processor(
-            message.sender,
+        processor_type = processor_iterator.ProcessorType(
             request.family,
             request.version,
-            request.encoding,
+            request.encoding)
+
+        processor = processor_iterator.Processor(
+            identity,
             request.namespaces)
+
+        self._collection[processor_type] = processor
 
         ack = TpRegisterResponse()
         ack.status = ack.OK
 
-        responder.send(Message(
-            sender=message.sender,
-            message_type=Message.TP_REGISTER_RESPONSE,
-            correlation_id=message.correlation_id,
-            content=ack.SerializeToString()))
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
