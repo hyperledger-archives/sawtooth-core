@@ -15,7 +15,7 @@
 import os
 import sys
 
-from sawtooth.exceptions import ManagementError
+from sawtooth_manage.exceptions import ManagementError
 
 
 def find_txnvalidator():
