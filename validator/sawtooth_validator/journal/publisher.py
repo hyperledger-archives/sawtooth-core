@@ -120,28 +120,32 @@ class BlockPublisher(object):
 
         :return:
         """
-        with self._lock:
-            LOGGER.info(
-                'Chain updated, new head: num=%s id=%s state=%s prev=%s',
-                chain_head.block_num,
-                chain_head.header_signature,
-                chain_head.state_root_hash,
-                chain_head.previous_block_id)
-            self._chain_head = chain_head
-            if self._candidate_block is not None and \
-                    chain_head is not None and \
-                    chain_head.header_signature == \
-                    self._candidate_block.previous_block_id:
-                # nothing to do. We are building of the current head.
-                # This can happen after we publish a block and speculatively
-                # create a new block.
-                return
-            else:
-                # TBD -- we need to rebuild the pending transaction queue --
-                # which could be an unknown set depending if we switched forks
-
-                # new head of the chain.
-                self._candidate_block = self._build_block(chain_head)
+        try:
+            with self._lock:
+                LOGGER.info(
+                    'Chain updated, new head: num=%s id=%s state=%s prev=%s',
+                    chain_head.block_num,
+                    chain_head.header_signature,
+                    chain_head.state_root_hash,
+                    chain_head.previous_block_id)
+                self._chain_head = chain_head
+                if self._candidate_block is not None and \
+                        chain_head is not None and \
+                        chain_head.header_signature == \
+                        self._candidate_block.previous_block_id:
+                    # nothing to do. We are building of the current head.
+                    # This can happen after we publish a block and
+                    # speculatively create a new block.
+                    return
+                else:
+                    # TBD -- we need to rebuild the pending transaction queue
+                    # which could be an unknown set depending if we switched
+                    # forks new head of the chain.
+                    self._candidate_block = self._build_block(chain_head)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
+            LOGGER.critical("BlockPublisher thread exited.")
 
     def _finalize_block(self, block):
         if self._scheduler:
@@ -181,27 +185,34 @@ class BlockPublisher(object):
             if it is then, claim it and tell the world about it.
         :return:
         """
-        with self._lock:
-            if self._candidate_block is None and len(self._pending_batches) \
-                    != 0:
-                self._candidate_block = self._build_block(self._chain_head)
+        try:
+            with self._lock:
+                if self._candidate_block is None and\
+                        len(self._pending_batches) != 0:
+                    self._candidate_block = self._build_block(self._chain_head)
 
-            if self._candidate_block and \
-                    (force or len(self._pending_batches) != 0) and \
-                    self._consensus.check_publish_block(self._candidate_block):
-                candidate = self._candidate_block
-                self._candidate_block = None
-                candidate = self._finalize_block(candidate)
-                # if no batches are in the block, do not send it out
-                if len(candidate.batches) == 0:
-                    LOGGER.info("No Valid batches added to block, dropping %s",
+                if self._candidate_block and \
+                        (force or len(self._pending_batches) != 0) and \
+                        self._consensus.check_publish_block(self.
+                                                            _candidate_block):
+                    candidate = self._candidate_block
+                    self._candidate_block = None
+                    candidate = self._finalize_block(candidate)
+                    # if no batches are in the block, do not send it out
+                    if len(candidate.batches) == 0:
+                        LOGGER.info("No Valid batches added to block, " +
+                                    "dropping %s", candidate.header_signature)
+                        return
+
+                    self._block_sender.send(candidate.get_block())
+
+                    LOGGER.info("Claimed Block: %s",
                                 candidate.header_signature)
-                    return
 
-                self._block_sender.send(candidate.get_block())
-
-                LOGGER.info("Claimed Block: %s", candidate.header_signature)
-
-                # create a new block based on this one -- opportunistically
-                # assume the published block is the valid block.
-                self.on_chain_updated(candidate)
+                    # create a new block based on this one -- opportunistically
+                    # assume the published block is the valid block.
+                    self.on_chain_updated(candidate)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
+            LOGGER.critical("BlockPublisher thread exited.")

@@ -47,14 +47,19 @@ class Journal(object):
             self._exit = False
 
         def run(self):
-            while True:
-                try:
-                    block = self._block_queue.get(timeout=0.1)
-                    self._chain_controller.on_block_received(block)
-                except queue.Empty:
-                    time.sleep(0.1)
-                if self._exit:
-                    return
+            try:
+                while True:
+                    try:
+                        block = self._block_queue.get(timeout=0.1)
+                        self._chain_controller.on_block_received(block)
+                    except queue.Empty:
+                        time.sleep(0.1)
+                    if self._exit:
+                        return
+            # pylint: disable=broad-except
+            except Exception as exc:
+                LOGGER.exception(exc)
+                LOGGER.critical("BlockPublisher thread exited.")
 
         def stop(self):
             self._exit = True
@@ -67,16 +72,21 @@ class Journal(object):
             self._exit = False
 
         def run(self):
-            while True:
-                try:
-                    batch = self._batch_queue.get(timeout=0.1)
-                    self._block_publisher.on_batch_received(batch)
-                except queue.Empty:
-                    time.sleep(0.1)
+            try:
+                while True:
+                    try:
+                        batch = self._batch_queue.get(timeout=0.1)
+                        self._block_publisher.on_batch_received(batch)
+                    except queue.Empty:
+                        time.sleep(0.1)
 
-                self._block_publisher.on_check_publish_block()
-                if self._exit:
-                    return
+                    self._block_publisher.on_check_publish_block()
+                    if self._exit:
+                        return
+            # pylint: disable=broad-except
+            except Exception as exc:
+                LOGGER.exception(exc)
+                LOGGER.critical("BlockPublisher thread exited.")
 
         def stop(self):
             self._exit = True

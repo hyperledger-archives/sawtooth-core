@@ -61,131 +61,141 @@ class BlockValidator(object):
         return self._chain_head
 
     def _validate_block(self, block_state):
-        if block_state.status == BlockStatus.Valid:
-            return True
-        elif block_state.status == BlockStatus.Invalid:
-            return False
-        else:
-            valid = True
-            # verify header_signature
+        try:
+            if block_state.status == BlockStatus.Valid:
+                return True
+            elif block_state.status == BlockStatus.Invalid:
+                return False
+            else:
+                valid = True
+                # verify header_signature
 
-            if valid:
-                if len(block_state.block.batches) > 0:
-                    scheduler = self._executor.create_scheduler(
-                        self._squash_handler,
-                        self.chain_head.block.state_root_hash)
-                    self._executor.execute(scheduler)
+                if valid:
+                    if len(block_state.block.batches) > 0:
+                        scheduler = self._executor.create_scheduler(
+                            self._squash_handler,
+                            self.chain_head.block.state_root_hash)
+                        self._executor.execute(scheduler)
 
-                    for i in range(len(block_state.block.batches) - 1):
-                        scheduler.add_batch(block_state.block.batches[i])
-                    scheduler.add_batch(block_state.block.batches[-1],
-                                        block_state.block.state_root_hash)
-                    scheduler.finalize()
-                    scheduler.complete(block=True)
-                    state_hash = None
-                    for i in range(len(block_state.block.batches)):
-                        result = scheduler.get_batch_execution_result(
-                            block_state.block.batches[i].header_signature)
-                        # If the result is None, the executor did not
-                        # receive the batch
-                        if result is not None and result.is_valid:
-                            state_hash = result.state_hash
-                        else:
+                        for i in range(len(block_state.block.batches) - 1):
+                            scheduler.add_batch(block_state.block.batches[i])
+                        scheduler.add_batch(block_state.block.batches[-1],
+                                            block_state.block.state_root_hash)
+                        scheduler.finalize()
+                        scheduler.complete(block=True)
+                        state_hash = None
+                        for i in range(len(block_state.block.batches)):
+                            result = scheduler.get_batch_execution_result(
+                                block_state.block.batches[i].header_signature)
+                            # If the result is None, the executor did not
+                            # receive the batch
+                            if result is not None and result.is_valid:
+                                state_hash = result.state_hash
+                            else:
+                                valid = False
+                        if block_state.block.state_root_hash != state_hash:
                             valid = False
-                    if block_state.block.state_root_hash != state_hash:
-                        valid = False
-            if valid:
-                valid = self._consensus.verify_block(block_state)
+                if valid:
+                    valid = self._consensus.verify_block(block_state)
 
-            # Update the block store
-            block_state.weight = \
-                self._consensus.compute_block_weight(block_state)
-            block_state.status = BlockStatus.Valid if \
-                valid else BlockStatus.Invalid
-
-            LOGGER.debug('updating block store for %s',
-                         block_state.block.header_signature)
-            self._block_store[block_state.block.header_signature] = block_state
-            return valid
+                # Update the block store
+                block_state.weight = \
+                    self._consensus.compute_block_weight(block_state)
+                block_state.status = BlockStatus.Valid if \
+                    valid else BlockStatus.Invalid
+                self._block_store[block_state.block.header_signature] =\
+                    block_state
+                return valid
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.error("Block Validation Failed: %s", block_state)
+            LOGGER.exception(exc)
+            return False
 
     def run(self):
-        LOGGER.info("Starting block validation of : %s",
-                    self._new_block.block.header_signature)
-        current_chain = []  # ordered list of the current chain
-        new_chain = []
+        try:
+            LOGGER.info("Starting block validation of : %s",
+                        self._new_block.block.header_signature)
+            current_chain = []  # ordered list of the current chain
+            new_chain = []
 
-        new_block_state = self._new_block
-        current_block_state = self._chain_head
-        # 1) find the common ancestor of this block in the current chain
-        # Walk back until we have both chains at the same length
-        while new_block_state.block.block_num > \
-                current_block_state.block.block_num\
-                and new_block_state.block.previous_block_id != \
-                NULLIDENTIFIER:
-            new_chain.append(new_block_state)
-            try:
+            new_block_state = self._new_block
+            current_block_state = self._chain_head
+            # 1) find the common ancestor of this block in the current chain
+            # Walk back until we have both chains at the same length
+            while new_block_state.block.block_num > \
+                    current_block_state.block.block_num\
+                    and new_block_state.block.previous_block_id != \
+                    NULLIDENTIFIER:
+                new_chain.append(new_block_state)
+                try:
+                    new_block_state = \
+                        self._block_store[
+                            new_block_state.block.previous_block_id]
+                except KeyError:
+                    # required block is missing
+                    self._request_block_cb(
+                        new_block_state.block.previous_block_id, self)
+                    return
+
+            while current_block_state.block.block_num > \
+                    new_block_state.block.block_num \
+                    and new_block_state.block.previous_block_id != \
+                    NULLIDENTIFIER:
+                current_chain.append(current_block_state)
+                current_block_state = \
+                    self._block_store[
+                        current_block_state.block.previous_block_id]
+
+            # 2) now we have both chain at the same block number
+            # continue walking back until we find a common block.
+            while current_block_state.block.header_signature != \
+                    new_block_state.block.header_signature:
+                if current_block_state.block.previous_block_id ==  \
+                        NULLIDENTIFIER or \
+                        new_block_state.block.previous_block_id == \
+                        NULLIDENTIFIER:
+                    # We are at a genesis block and the blocks are not the
+                    # same
+                    LOGGER.info("Block rejected due to wrong genesis : %s %s",
+                                current_block_state.block.header_signature,
+                                new_block_state.block.header_signature)
+
+                    self._done_cb(self)
+                    return
+                new_chain.append(new_block_state)
                 new_block_state = \
                     self._block_store[
                         new_block_state.block.previous_block_id]
-            except KeyError:
-                # required block is missing
-                self._request_block_cb(
-                    new_block_state.block.previous_block_id, self)
-                return
 
-        while current_block_state.block.block_num > \
-                new_block_state.block.block_num \
-                and new_block_state.block.previous_block_id != \
-                NULLIDENTIFIER:
-            current_chain.append(current_block_state)
-            current_block_state = \
-                self._block_store[
-                    current_block_state.block.previous_block_id]
+                current_chain.append(current_block_state)
+                current_block_state = \
+                    self._block_store[
+                        current_block_state.block.previous_block_id]
 
-        # 2) now we have both chain at the same block number
-        # continue walking back until we find a common block.
-        while current_block_state.block.header_signature != \
-                new_block_state.block.header_signature:
-            if current_block_state.block.previous_block_id ==  \
-                    NULLIDENTIFIER or \
-                    new_block_state.block.previous_block_id == \
-                    NULLIDENTIFIER:
-                # We are at a genesis block and the blocks are not the
-                # same
-                LOGGER.info("Block rejected due to wrong genesis : %s %s",
-                            current_block_state.block.header_signature,
-                            new_block_state.block.header_signature)
+            # 3) We now have the root of the fork.
+            # determine the validity of the new fork
+            for block in reversed(new_chain):
+                if not self._validate_block(block):
+                    LOGGER.info("Block validation failed: %s",
+                                block)
+                    self._done_cb(self)
+                    return
 
-                self._done_cb(self)
-                return
-            new_chain.append(new_block_state)
-            new_block_state = \
-                self._block_store[
-                    new_block_state.block.previous_block_id]
+            # 4) new chain is valid... should we switch to it?
+            LOGGER.info("Finished block validation of XXXX: %s, %s",
+                        new_chain[0].weight, self._chain_head.weight)
+            self._commit_new_block = new_chain[0].weight >\
+                self._chain_head.weight
 
-            current_chain.append(current_block_state)
-            current_block_state = \
-                self._block_store[
-                    current_block_state.block.previous_block_id]
-
-        # 3) We now have the root of the fork.
-        # determine the validity of the new fork
-        for block in reversed(new_chain):
-            if not self._validate_block(block):
-                LOGGER.info("Block validation failed: %s",
-                            block)
-                self._done_cb(self)
-                return
-
-        # 4) new chain is valid... should we switch to it?
-        LOGGER.info("Finished block validation of XXXX: %s, %s",
-                    new_chain[0].weight, self._chain_head.weight)
-        self._commit_new_block = new_chain[0].weight > self._chain_head.weight
-
-        # Tell the journal we are done
-        self._done_cb(self)
-        LOGGER.info("Finished block validation of : %s",
-                    self._new_block.block.header_signature)
+            # Tell the journal we are done
+            self._done_cb(self)
+            LOGGER.info("Finished block validation of : %s",
+                        self._new_block.block.header_signature)
+            # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.error("Block Validation Failed: %s", self._new_block)
+            LOGGER.exception(exc)
 
 
 class ChainController(object):
@@ -251,75 +261,84 @@ class ChainController(object):
         :param block:
         :return:
         """
-        with self._lock:
-            LOGGER.info("on_block_validated : %s",
-                        validator.new_block.block.header_signature)
-            # remove from the processing list
-            del self._blocks_processing[
-                validator.new_block.block.header_signature]
+        try:
+            with self._lock:
+                LOGGER.info("on_block_validated : %s",
+                            validator.new_block.block.header_signature)
+                # remove from the processing list
+                del self._blocks_processing[
+                    validator.new_block.block.header_signature]
 
-            # if the head has changed, since we started the work.
-            if validator.chain_head != self._chain_head:
-                # chain has advanced since work started.
-                # the block validation work we have done is saved.
-                self._verify_block(validator.new_block)
-            elif validator.commit_new_block():
-                self._chain_head = validator.new_block
-                self._block_store["chain_head_id"] = \
-                    self._chain_head.block.header_signature
-                LOGGER.info("Chain head updated to: %s",
-                            self._chain_head.block.header_signature)
-                # tell everyone else the chain is updated
+                # if the head has changed, since we started the work.
+                if validator.chain_head != self._chain_head:
+                    # chain has advanced since work started.
+                    # the block validation work we have done is saved.
+                    self._verify_block(validator.new_block)
+                elif validator.commit_new_block():
+                    self._chain_head = validator.new_block
+                    self._block_store["chain_head_id"] = \
+                        self._chain_head.block.header_signature
+                    LOGGER.info("Chain head updated to: %s",
+                                self._chain_head.block.header_signature)
+                    # tell everyone else the chain is updated
                 self._notify_on_chain_updated(self._chain_head.block)
 
-                pending_blocks = \
-                    self._blocks_pending.pop(
-                        self._chain_head.block.header_signature, [])
-                for pending_block in pending_blocks:
-                    self._verify_block(pending_block)
+                    pending_blocks = \
+                        self._blocks_pending.pop(
+                            self._chain_head.block.header_signature, [])
+                    for pending_block in pending_blocks:
+                        self._verify_block(pending_block)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
 
     def on_block_received(self, block):
-        with self._lock:
-            if block.header_signature in self._block_store:
-                # do we already have this block
-                return
-            header = BlockHeader()
-            header.ParseFromString(block.header)
-            block = BlockWrapper(header, block)
+        try:
+            with self._lock:
+                if block.header_signature in self._block_store:
+                    # do we already have this block
+                    return
+                header = BlockHeader()
+                header.ParseFromString(block.header)
+                block = BlockWrapper(header, block)
 
             LOGGER.debug('inserting block %s', block.header_signature)
-            block_state = BlockState(block_wrapper=block, weight=0,
-                                     status=BlockStatus.Unknown)
-            self._block_store[block.header_signature] = block_state
-            self._blocks_pending[block.header_signature] = []
-            if block.header_signature in self._blocks_requested:
-                # is it a requested block
-                # route block to the validator that requested
-                validator = self._blocks_requested.pop(block.header_signature)
-                if validator.chain_head.block.header_signature != \
-                        self._chain_head.block.header_signature:
-                    # the head of the chain has changed start over
-                    self._verify_block(validator.new_block)
+                block_state = BlockState(block_wrapper=block, weight=0,
+                                         status=BlockStatus.Unknown)
+                self._block_store[block.header_signature] = block_state
+                self._blocks_pending[block.header_signature] = []
+                if block.header_signature in self._blocks_requested:
+                    # is it a requested block
+                    # route block to the validator that requested
+                    validator = self._blocks_requested.\
+                        pop(block.header_signature)
+                    if validator.chain_head.block.header_signature != \
+                            self._chain_head.block.header_signature:
+                        # the head of the chain has changed start over
+                        self._verify_block(validator.new_block)
+                    else:
+                        self._executor.submit(validator.run)
+                elif block.previous_block_id in self._blocks_processing or \
+                        block.previous_block_id in self._blocks_pending:
+                    LOGGER.debug('in blocks pending: %s', block.header_signature)
+                    # if the previous block is being processed, put it in a
+                    # wait queue, Also need to check if previous block is in a
+                    # wait queue.
+                    pending_blocks = \
+                        self._blocks_pending.get(block.previous_block_id,
+                                                 [])
+                    pending_blocks.append(block_state)
+                    self._blocks_pending[block.previous_block_id] = \
+                        pending_blocks
                 else:
-                    self._executor.submit(validator.run)
-            elif block.previous_block_id in self._blocks_processing or \
-                    block.previous_block_id in self._blocks_pending:
-                LOGGER.debug('in blocks pending: %s', block.header_signature)
-                # if the previous block is being processed...put it in a wait
-                # queue, Also need to check if previous block is in a wait
-                # queue.
-                pending_blocks = \
-                    self._blocks_pending.get(block.previous_block_id,
-                                             [])
-                pending_blocks.append(block_state)
-                self._blocks_pending[block.previous_block_id] = \
-                    pending_blocks
-            else:
-                # schedule this block for validation.
-                self._verify_block(block_state)
-
-    def _get_current_persisted_chain_head(self):
-        if 'chain_head_id' in self._block_store:
+                    # schedule this block for validation.
+                    self._verify_block(block_state)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
             return self._block_store[self._block_store["chain_head_id"]]
 
         return None
+        
+    def _get_current_persisted_chain_head(self):
+        return self._block_store.chain_head
