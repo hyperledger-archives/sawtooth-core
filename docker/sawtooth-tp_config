@@ -1,4 +1,4 @@
-# Copyright 2017 Intel Corporation
+# Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,34 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM ubuntu:xenial
+FROM sawtooth-base
 
-# --- Common Header ---
-RUN apt-get update && apt-get install -y -q \
-    python3 \
-    python3-zmq \
-    python3-pip \
-    python3-colorlog \
-    python3-cbor \
-    libcrypto++-dev
+RUN mkdir -p /project/sawtooth-core
 
-RUN pip3 install \
-    grpcio-tools \
-    bitcoin \
-    secp256k1 \
-    lmdb
-# --- End Common Header ---
+ARG PROJECT_DIR="/project/sawtooth-core"
 
-RUN apt-get update && apt-get install -y -q \
-    inetutils-ping \
-    python3-nose2
+WORKDIR $PROJECT_DIR
 
-RUN pip3 install \
-    PyYAML
-
-
-VOLUME /project/sawtooth-core
-
-WORKDIR /project/sawtooth-core
-
-ENV PATH="/project/sawtooth-core/bin:$PATH"
+ENTRYPOINT ./bin/tp_config validator:40000

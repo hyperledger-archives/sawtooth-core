@@ -131,7 +131,7 @@ class DockerNodeController(NodeController):
         node_num = node_name[len('validator-'):]
         for proc in state['Processors']:
             compose_dict['services'][proc] = {
-                'image': proc,
+                'image': 'sawtooth-{}'.format(proc),
                 'expose': ['40000'],
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
@@ -157,8 +157,8 @@ class DockerNodeController(NodeController):
             if unbuilt:
                 raise CliException(
                     'Docker images not built: {}. Try running '
-                    '"sawtooth docker build {}"'.format(
-                        ', '.join(unbuilt), ' '.join(unbuilt)))
+                    '"docker_build_all"'.format(
+                        ', '.join(unbuilt)))
 
             invalid = self._check_invalid_processors(processors)
             if invalid:

@@ -18,9 +18,7 @@ version: "2.1"
 services:
 
   tp_xo:
-    build:
-      context: ../../../core/sawtooth/cli/data
-      dockerfile: tp_xo_python
+    image: sawtooth-tp_xo_python:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -29,9 +27,7 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    build:
-      context: ../../../core/sawtooth/cli/data
-      dockerfile: sawtooth-validator
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -40,9 +36,7 @@ services:
     stop_signal: SIGKILL
 
   rest_api:
-    build:
-      context: ../../../core/sawtooth/cli/data
-      dockerfile: sawtooth-rest_api
+    image: sawtooth-rest_api:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -55,9 +49,7 @@ services:
     stop_signal: SIGKILL
 
   integration_test:
-    build:
-      context: ../../../core/sawtooth/cli/data
-      dockerfile: sawtooth-test-ubuntu-xenial
+    image: sawtooth-test:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:

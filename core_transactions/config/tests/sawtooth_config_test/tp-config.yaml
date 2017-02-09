@@ -18,9 +18,7 @@ version: "2.1"
 services:
 
   tp_config:
-    build:
-      context: ../../../../core/sawtooth/cli/data
-      dockerfile: tp_config
+    image: sawtooth-tp_config:$ISOLATION_ID
     volumes:
       - ../../../..:/project/sawtooth-core
     expose:
@@ -29,9 +27,7 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    build:
-      context: ../../../../core/sawtooth/cli/data
-      dockerfile: sawtooth-test-ubuntu-xenial
+    image: sawtooth-test:$ISOLATION_ID
     volumes:
       - ../../../..:/project/sawtooth-core
     expose: 
