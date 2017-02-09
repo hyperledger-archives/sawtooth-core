@@ -19,8 +19,8 @@ import subprocess
 import time
 import yaml
 
-from sawtooth.manage.node import NodeController
-from sawtooth.manage.utils import get_executable_script
+from sawtooth_manage.node import NodeController
+from sawtooth_manage.utils import get_executable_script
 
 
 class SubprocessNodeController(NodeController):
