@@ -24,7 +24,6 @@ from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.journal import Journal
-from sawtooth_validator.journal.journal import BlockSender
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.execution import tp_state_handlers
 from sawtooth_validator.journal.completer import CompleterGossipHandler
@@ -32,6 +31,7 @@ from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.networking.dispatch import Dispatcher
+from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution.processor_handlers import \
     ProcessorRegisterHandler
@@ -46,17 +46,6 @@ from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PingHandler
 
 LOGGER = logging.getLogger(__name__)
-
-
-class BroadcastBlockSender(BlockSender):
-
-    def __init__(self, completer, gossip):
-        self._completer = completer
-        self._gossip = gossip
-
-    def send(self, block):
-        self._gossip.broadcast_block(block)
-        self._completer.add_block(block)
 
 
 class Validator(object):

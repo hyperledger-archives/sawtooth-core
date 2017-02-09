@@ -17,7 +17,7 @@ from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
-from sawtooth_validator.journal.journal import BlockSender
+from sawtooth_validator.journal.block_sender import BlockSender
 
 
 class SynchronousExecutor(Executor):

@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import abc
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
@@ -162,19 +161,3 @@ class Journal(object):
     def on_block_request(self, block_id):
         if block_id in self._block_store:
             self._send_message.send(self._block_store[block_id].block)
-
-
-class BlockSender(object, metaclass=abc.ABCMeta):
-    """Implementations should take classes like completer,
-    and network, and implement a send method that gets called on
-    block publish.
-    """
-
-    @abc.abstractmethod
-    def send(self, block):
-        """Sends the block to the completer and also to the
-           gossip network.
-        :param block:
-        :return:
-        """
-        raise NotImplementedError()
