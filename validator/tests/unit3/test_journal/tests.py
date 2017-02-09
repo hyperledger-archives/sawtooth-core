@@ -216,8 +216,6 @@ class TestJournal(unittest.TestCase):
                 journal.on_batch_received
             self.gossip.on_block_received = \
                 journal.on_block_received
-            self.gossip.on_block_request = \
-                journal.on_block_request
 
             journal.start()
 

@@ -32,7 +32,6 @@ class BlockValidator(object):
                  block_cache,
                  new_block,
                  chain_head,
-                 request_block_cb,
                  done_cb,
                  executor,
                  squash_handler):
@@ -40,7 +39,6 @@ class BlockValidator(object):
         self._block_cache = block_cache
         self._new_block = new_block
         self._chain_head = chain_head
-        self._request_block_cb = request_block_cb
         self._done_cb = done_cb
         self._executor = executor
         self._squash_handler = squash_handler
@@ -225,7 +223,6 @@ class ChainController(object):
         self._notify_on_chain_updated = on_chain_updated
         self._sqaush_handler = squash_handler
 
-        self._blocks_requested = {}  # a set of blocks that were requested.
         self._blocks_processing = {}  # a set of blocks that are
         # currently being processed.
         self._blocks_pending = {}  # set of blocks that the previous block
@@ -254,16 +251,11 @@ class ChainController(object):
             new_block=block_state,
             chain_head=self._chain_head,
             block_cache=self._block_cache,
-            request_block_cb=self._request_block,
             done_cb=self.on_block_validated,
             executor=self._transaction_executor,
             squash_handler=self._sqaush_handler)
         self._blocks_processing[block_state.block.header_signature] = validator
         self._executor.submit(validator.run)
-
-    def _request_block(self, block_id, validator):
-        # TBD add request time and time out
-        self._blocks_requested[block_id] = validator
 
     def on_block_validated(self,
                            commit_new_block,
@@ -323,17 +315,7 @@ class ChainController(object):
                 self._block_cache[block.identifier] = block
                 self._blocks_pending[block.identifier] = []
                 LOGGER.debug("Block received: %s", block)
-                if block.identifier in self._blocks_requested:
-                    # is it a requested block
-                    # route block to the validator that requested
-                    validator = self._blocks_requested.pop(block.identifier)
-                    if validator.chain_head.block.identifier != \
-                            self._chain_head.block.identifier:
-                        # the head of the chain has changed start over
-                        self._verify_block(validator.new_block)
-                    else:
-                        self._executor.submit(validator.run)
-                elif block.previous_block_id in self._blocks_processing or \
+                if block.previous_block_id in self._blocks_processing or \
                         block.previous_block_id in self._blocks_pending:
                     LOGGER.debug('in blocks pending: %s', block)
                     # if the previous block is being processed, put it in a

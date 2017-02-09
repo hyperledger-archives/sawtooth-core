@@ -185,7 +185,3 @@ class Journal(object):
         inclusion in the next block.
         """
         self._batch_queue.put(batch)
-
-    def on_block_request(self, block_id):
-        if block_id in self._block_store:
-            self._send_message.send(self._block_store[block_id].block)
