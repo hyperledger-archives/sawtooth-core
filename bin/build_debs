@@ -25,6 +25,8 @@ pkgs="
     sdk/python
     rest_api
     validator
+    extensions/arcade
+    manage
 "
 
 set -e
