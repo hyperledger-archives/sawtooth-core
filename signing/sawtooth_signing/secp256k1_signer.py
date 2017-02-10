@@ -28,10 +28,12 @@ except ImportError:
 
 
 LOGGER = logging.getLogger(__name__)
+__CONTEXTBASE__ = secp256k1.Base(ctx=None, flags=secp256k1.ALL_FLAGS)
+__CTX__ = __CONTEXTBASE__.ctx
 
 
 def generate_privkey():
-    return _encode_privkey(secp256k1.PrivateKey())
+    return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__))
 
 
 def _encode_privkey(privkey, encoding_format='wif'):
@@ -64,7 +66,7 @@ def _decode_privkey(encoded_privkey, encoding_format='wif'):
     else:
         raise TypeError("unsupported private key format")
 
-    return secp256k1.PrivateKey(priv)
+    return secp256k1.PrivateKey(priv, ctx=__CTX__)
 
 
 def generate_pubkey(privkey):
@@ -93,8 +95,9 @@ def _decode_pubkey(serialized_pubkey, encoding_format='hex'):
         serialized_pubkey = binascii.unhexlify(serialized_pubkey)
     elif encoding_format != 'bytes':
         raise ValueError("Unrecognized pubkey encoding format")
-    pub = secp256k1.PrivateKey().pubkey.deserialize(serialized_pubkey)
-    return secp256k1.PublicKey(pub)
+    pub = secp256k1.PrivateKey(
+        ctx=__CTX__).pubkey.deserialize(serialized_pubkey)
+    return secp256k1.PublicKey(pub, ctx=__CTX__)
 
 
 def generate_identifier(pubkey):
@@ -149,7 +152,7 @@ def verify(message, signature, pubkey):
         except (ValueError, AttributeError):
             signature = binascii.unhexlify(signature)
 
-        sig = secp256k1.PrivateKey().ecdsa_deserialize_compact(signature)
+        sig = pubkey.ecdsa_deserialize_compact(signature)
         verified = pubkey.ecdsa_verify(message, sig)
 
     # Fail Securely (even if it's not pythonic)
