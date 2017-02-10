@@ -13,19 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM ubuntu:xenial
 
-RUN apt-get update && apt-get install -y -q \
-    python3 \
-    python3-zmq \
-    python3-pip \
-    python3-colorlog \
-    python3-cbor \
-    python3-yaml \
-    libcrypto++-dev
+class GenesisError(Exception):
+    """
+    General Error thrown when an error occurs as a result of an incomplete
+    or erroneous genesis action.
+    """
+    pass
 
-RUN pip3 install \
-    grpcio-tools \
-    bitcoin \
-    secp256k1 \
-    lmdb
+
+class InvalidGenesisStateError(GenesisError):
+    """
+    Error thrown when there is an invalid intial state during the genesis
+    block generation process.
+    """
+    pass

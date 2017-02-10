@@ -25,6 +25,7 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.journal.journal import NULLIDENTIFIER
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class Completer(object):
     def __init__(self):
         # temp batch cache
         self.batch_store = {}
-        self.block_store = ["genesis"]
+        self.block_store = [NULLIDENTIFIER]
         self._on_block_received = None
         self._on_batch_received = None
 
@@ -50,7 +51,6 @@ class Completer(object):
             if block.batches[i].header_signature != block_header.batch_ids[i]:
                 return False
 
-        self.block_store.append(block.header_signature)
         return True
 
     def set_on_block_received(self, on_block_received_func):
@@ -62,7 +62,8 @@ class Completer(object):
     def add_block(self, block):
         header = BlockHeader()
         header.ParseFromString(block.header)
-        if self._check_block(block, header) is True:
+        if self._check_block(block, header):
+            self.block_store.append(block.header_signature)
             self._on_block_received(block)
 
     def add_batch(self, batch):

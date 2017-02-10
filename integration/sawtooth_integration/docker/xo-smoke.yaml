@@ -17,6 +17,16 @@ version: "2.1"
 
 services:
 
+  tp_config:
+    image: sawtooth-tp_config:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 40000
+    entrypoint: "bash -c \"\
+        ./bin/tp_config -v validator:40000 \""
+    stop_signal: SIGKILL
+
   tp_xo:
     image: sawtooth-tp_xo_python:$ISOLATION_ID
     volumes:
@@ -32,7 +42,9 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/validator -vv
+    entrypoint: "bash -c \"\
+        ./bin/sawtooth-0.8 admin genesis && \
+        ./bin/validator -v\""
     stop_signal: SIGKILL
 
   rest_api:

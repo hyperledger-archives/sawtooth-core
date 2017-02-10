@@ -103,7 +103,18 @@ class DockerNodeController(NodeController):
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
         peers = self._find_peers()
 
+        if node_config.genesis:
+            entrypoint = 'bash -c "./bin/sawtooth-0.8 admin genesis && \
+            ./bin/validator {} -v"'
+        else:
+            entrypoint = './bin/validator {} -v'
+        if len(peers) > 0:
+            entrypoint = entrypoint.format('--peers ' + " ".join(peers))
+        else:
+            entrypoint = entrypoint.format('')
+
         compose_dir = tempfile.mkdtemp()
+
         compose_dict = {
             'version': '2',
             'services': {
@@ -114,15 +125,11 @@ class DockerNodeController(NodeController):
                                  'default': {'aliases': [node_name]}},
                     'volumes': ['/project:/project'],
                     'container_name': self._prefix + '-' + node_name,
-                    'entrypoint': './bin/validator '
+                    'entrypoint': entrypoint
                 }
             },
             'networks': {self._prefix: {'external': True}}
         }
-        if len(peers) > 0:
-            compose_dict['services']['validator']['entrypoint'] += \
-                '--peers ' + " ".join(peers)
-        compose_dict['services']['validator']['entrypoint'] += ' -v'
 
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
         state = yaml.load(file(state_file_path))

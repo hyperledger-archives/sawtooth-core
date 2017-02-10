@@ -13,19 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM ubuntu:xenial
-
-RUN apt-get update && apt-get install -y -q \
-    python3 \
-    python3-zmq \
-    python3-pip \
-    python3-colorlog \
-    python3-cbor \
-    python3-yaml \
-    libcrypto++-dev
-
-RUN pip3 install \
-    grpcio-tools \
-    bitcoin \
-    secp256k1 \
-    lmdb
+__all__ = []

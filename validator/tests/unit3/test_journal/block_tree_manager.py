@@ -31,7 +31,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import BlockState
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 
-from test_journal.mock  import MockBlockSender
+from test_journal.mock import MockBlockSender
 from test_journal.mock import MockTransactionExecutor
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -70,13 +70,12 @@ class BlockTreeManager(object):
             consensus=TestModePublisher(),
             transaction_executor=MockTransactionExecutor(),
             block_sender=self.block_sender,
-            squash_handler=None)
+            squash_handler=None,
+            chain_head=self._generate_genesis_block())
 
         block = self.generate_block(add_to_store=True,
                                     status=BlockStatus.Valid)
         self.set_chain_head(block)
-
-
 
     def _get_block_id(self, block):
         if (block is None):
@@ -121,10 +120,7 @@ class BlockTreeManager(object):
 
         previous = self._get_block(previous_block)
         if previous is None:
-            previous = BlockWrapper(BlockHeader(
-                block_num=0,
-                previous_block_id="0000000000000000",
-            ))
+            previous = self._generate_genesis_block(_generate_id())
             previous.set_signature(_generate_id())
             previous_block_state = BlockState(
                 block_wrapper=previous,
@@ -152,6 +148,16 @@ class BlockTreeManager(object):
             block_state.status = status
             self.block_store[block.header_signature] = block_state
 
+        return block
+
+    def _generate_genesis_block(self, header_sig="genesis"):
+        genesis_header = BlockHeader(
+            previous_block_id="0000000000000000",
+            block_num=0)
+
+        # Small hack here not asking consensus if it is happy.
+        block = BlockWrapper(genesis_header)
+        block.set_signature(header_sig)
         return block
 
     def generate_chain(self, root_block,

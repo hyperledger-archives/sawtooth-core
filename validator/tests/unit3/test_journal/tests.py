@@ -31,12 +31,16 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
 from sawtooth_validator.journal.consensus.test_mode \
     import test_mode_consensus
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import BlockState
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 from test_journal.block_tree_manager import BlockTreeManager
-from test_journal.mock  import MockBlockSender
+from test_journal.mock import MockBlockSender
 from test_journal.mock import MockNetwork
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import SynchronousExecutor
-from test_journal. utils import TimeOut
+from test_journal.utils import TimeOut
 LOGGER = logging.getLogger(__name__)
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -54,7 +58,8 @@ class TestBlockPublisher(unittest.TestCase):
             consensus=TestModePublisher(),
             transaction_executor=MockTransactionExecutor(),
             block_sender=self.block_sender,
-            squash_handler=None)
+            squash_handler=None,
+            chain_head=_generate_genesis_block())
 
         LOGGER.info("1")
 
@@ -188,16 +193,22 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         LOGGER.info("test_publish_block")
-        block_store = {}
+        block_store = {
+            'chain_head_id': 'genesis',
+            'genesis':  BlockState(
+                block_wrapper=_generate_genesis_block(),
+                weight=0,
+                status=BlockStatus.Valid)
+        }
         journal = None
         try:
             journal = Journal(
                 consensus=test_mode_consensus,
                 block_store=block_store,
-                block_sender = self.block_sender,
+                block_sender=self.block_sender,
                 transaction_executor=self.txn_executor,
-                squash_handler=None,
-                first_state_root="000000")
+                squash_handler=None
+            )
 
             self.gossip.on_batch_received = \
                 journal.on_batch_received
@@ -235,3 +246,13 @@ class TestJournal(unittest.TestCase):
         finally:
             if journal is not None:
                 journal.stop()
+
+
+def _generate_genesis_block():
+    genesis_header = BlockHeader(
+        previous_block_id="0000000000000000",
+        block_num=0)
+
+    block = BlockWrapper(genesis_header)
+    block.set_signature("genesis")
+    return block

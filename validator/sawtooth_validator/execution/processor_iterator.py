@@ -17,6 +17,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 import itertools
 from threading import RLock
+from threading import Condition
 
 
 class ProcessorIteratorCollection(object):
@@ -24,6 +25,7 @@ class ProcessorIteratorCollection(object):
     def __init__(self, processor_iterator_class):
         self._processors = {}
         self._proc_iter_class = processor_iterator_class
+        self._condition = Condition()
 
     def __getitem__(self, item):
         """Get a particular ProcessorIterator
@@ -31,10 +33,12 @@ class ProcessorIteratorCollection(object):
         :param item (ProcessorType):
         :return: (Processor)
         """
-        return self._processors[item].next_processor()
+        with self._condition:
+            return self._processors[item].next_processor()
 
     def __contains__(self, item):
-        return item in self._processors
+        with self._condition:
+            return item in self._processors
 
     def __setitem__(self, key, value):
         """Set a ProcessorIterator to a ProcessorType,
@@ -43,15 +47,21 @@ class ProcessorIteratorCollection(object):
         :param key (ProcessorType):
         :param value (Processor):
         """
-        if key not in self._processors:
-            proc_iterator = self._proc_iter_class()
-            proc_iterator.add_processor(value)
-            self._processors[key] = proc_iterator
-        else:
-            self._processors[key].add_processor(value)
+        with self._condition:
+            if key not in self._processors:
+                proc_iterator = self._proc_iter_class()
+                proc_iterator.add_processor(value)
+                self._processors[key] = proc_iterator
+            else:
+                self._processors[key].add_processor(value)
+            self._condition.notify_all()
 
     def __repr__(self):
         return ",".join([repr(k) for k in self._processors.keys()])
+
+    def wait_to_process(self, item):
+        with self._condition:
+            self._condition.wait_for(lambda: item in self)
 
 
 class Processor(object):

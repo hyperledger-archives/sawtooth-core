@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import os
+
 from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
@@ -27,12 +29,11 @@ def add_genesis_parser(subparsers, parent_parser):
     parser.add_argument(
         '-o', '--output',
         type=str,
-        default='genesis.batch',
         help='the name of the file to ouput the GenesisData')
 
     parser.add_argument(
         'input_file',
-        nargs='+',
+        nargs='*',
         type=str,
         help='input files of batches to add to the resulting GenesisData')
 
@@ -55,10 +56,15 @@ def do_genesis(args):
         genesis_batches += input_data.batches
 
     _validate_depedencies(genesis_batches)
+    if args.output:
+        genesis_file = args.output
+    else:
+        data_dir = os.path.expanduser('~')
+        genesis_file = os.path.join(data_dir, 'genesis.batch')
 
-    print('Generating {}'.format(args.output))
+    print('Generating {}'.format(genesis_file))
     output_data = GenesisData(batches=genesis_batches)
-    with open(args.output, 'wb') as out_file:
+    with open(genesis_file, 'wb') as out_file:
         out_file.write(output_data.SerializeToString())
 
 
