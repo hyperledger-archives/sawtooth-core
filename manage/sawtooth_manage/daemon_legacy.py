@@ -21,8 +21,8 @@ import signal
 import time
 import psutil
 
-from sawtooth.manage.node import NodeController
-from sawtooth.manage.utils import get_executable_script
+from sawtooth_manage.node import NodeController
+from sawtooth_manage.utils import get_executable_script
 from sawtooth.validator_config import get_validator_configuration
 from sawtooth.exceptions import ManagementError
 from sawtooth.cli.exceptions import CliException

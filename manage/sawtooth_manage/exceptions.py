@@ -13,7 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+class SawtoothException(Exception):
+    def __init__(self, msg):
+        super(SawtoothException, self).__init__(msg)
 
 class ManagementError(SawtoothException):
     def __init__(self, msg):
         super(ManagementError, self).__init__(msg)
+
+

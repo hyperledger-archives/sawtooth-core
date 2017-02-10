@@ -21,7 +21,7 @@ import yaml
 
 from sawtooth.cli.exceptions import CliException
 
-from sawtooth.manage.node import NodeController
+from sawtooth_manage.node import NodeController
 
 LOGGER = logging.getLogger(__name__)
 

@@ -32,6 +32,9 @@ sys.path.insert(0, os.path.join(
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
     'signing'))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'manage'))
 
 from sawtooth.cli.main import main_wrapper
 
