@@ -23,7 +23,7 @@ import time
 import yaml
 
 from sawtooth_cli.exceptions import CliException
-from sawtooth.exceptions import ManagementError
+from sawtooth_manage.exceptions import ManagementError
 
 from sawtooth_manage.node import NodeArguments
 from sawtooth_manage.simple import SimpleNodeCommandGenerator
