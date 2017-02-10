@@ -25,16 +25,16 @@ import yaml
 from sawtooth.cli.exceptions import CliException
 from sawtooth.exceptions import ManagementError
 
-from sawtooth.manage.node import NodeArguments
-from sawtooth.manage.simple import SimpleNodeCommandGenerator
-from sawtooth.manage.wrap import WrappedNodeController
-from sawtooth.manage.vnm import ValidatorNetworkManager
+from sawtooth_manage.node import NodeArguments
+from sawtooth_manage.simple import SimpleNodeCommandGenerator
+from sawtooth_manage.wrap import WrappedNodeController
+from sawtooth_manage.vnm import ValidatorNetworkManager
 
-from sawtooth.manage.docker import DockerNodeController
-from sawtooth.manage.subproc import SubprocessNodeController
-from sawtooth.manage.daemon_legacy import DaemonLegacyNodeController
-from sawtooth.manage.docker_legacy import DockerLegacyNodeController
-from sawtooth.manage.subproc_legacy import SubprocessLegacyNodeController
+from sawtooth_manage.docker import DockerNodeController
+from sawtooth_manage.subproc import SubprocessNodeController
+from sawtooth_manage.daemon_legacy import DaemonLegacyNodeController
+from sawtooth_manage.docker_legacy import DockerLegacyNodeController
+from sawtooth_manage.subproc_legacy import SubprocessLegacyNodeController
 
 from sawtooth.cli.stats import run_stats
 
