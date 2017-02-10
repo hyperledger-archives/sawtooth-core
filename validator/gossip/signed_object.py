@@ -227,12 +227,13 @@ class SignedObject(object):
         """
 
         try:
-            # force validation of the signature
-            recovered_id = self.OriginatorID
             if self.public_key is None and originatorid is None:
                 logger.warning("Identifier %s of SignedObject has no public "
                                "key and addr used to verify signature",
                                self.Identifier)
+                return False
+            # force validation of the signature
+            recovered_id = self.OriginatorID
             return (self.public_key is None or self.public_key ==
                     self.originator_public_key) and \
                 (originatorid is None or recovered_id == originatorid)
@@ -257,7 +258,12 @@ class SignedObject(object):
             signingkey (str): hex encoded private key
         """
 
+        if self.public_key is None:
+            self.public_key = signing.encode_pubkey(
+                signing.generate_pubkey(signingkey), "hex")
+
         self._originator_id = None
+        self._originator_public_key = None
         serialized = self.serialize(signable=True)
         self.Signature = signing.sign(serialized, signingkey)
 
