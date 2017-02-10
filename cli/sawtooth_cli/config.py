@@ -15,8 +15,6 @@
 import datetime
 import hashlib
 
-import bitcoin
-
 from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.config_protobuf.config_pb2 import ConfigPayload
@@ -26,6 +24,8 @@ from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
+
+from sawtooth_signing import pbct as signing
 
 
 def add_config_parser(subparsers, parent_parser):
@@ -77,10 +77,10 @@ def _do_config_set(args):
 
     with open(args.key, 'r') as key_file:
         wif_key = key_file.read().strip()
-        signing_key = bitcoin.encode_privkey(
-            bitcoin.decode_privkey(wif_key, 'wif'), 'hex')
-        pubkey = bitcoin.encode_pubkey(
-            bitcoin.privkey_to_pubkey(signing_key), 'hex')
+        signing_key = signing.encode_privkey(
+            signing.decode_privkey(wif_key, 'wif'), 'hex')
+        pubkey = signing.encode_pubkey(
+            signing.generate_pubkey(signing_key), 'hex')
 
     txns = [_create_config_txn(pubkey, signing_key, setting)
             for setting in settings]
@@ -91,7 +91,7 @@ def _do_config_set(args):
 
     batch = Batch(
         header=batch_header,
-        header_signature=bitcoin.ecdsa_sign(batch_header, signing_key),
+        header_signature=signing.sign(batch_header, signing_key),
         transactions=txns
     )
 
@@ -130,7 +130,7 @@ def _create_config_txn(pubkey, signing_key, setting_key_value):
         batcher_pubkey=pubkey
     ).SerializeToString()
 
-    signature = bitcoin.ecdsa_sign(header, signing_key)
+    signature = signing.sign(header, signing_key)
 
     return Transaction(
         header=header,
