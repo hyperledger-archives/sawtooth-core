@@ -50,12 +50,12 @@ Settings
 
 Settings are namespaced using dots:
 
-=============================================				============
-Setting (Examples)												Value
-=============================================				============
-sawtooth.poet.target_wait_time	  				 			5
-sawtooth.validator.max_transactions_per_block				1000
-=============================================				============
+============================================= ============
+Setting (Examples)                            Value
+============================================= ============
+sawtooth.poet.target_wait_time                5
+sawtooth.validator.max_transactions_per_bloc  1000
+============================================= ============
 
 
 The config transaction family uses the following settings for its own configuration:
