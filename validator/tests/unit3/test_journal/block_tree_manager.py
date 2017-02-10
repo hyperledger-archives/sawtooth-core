@@ -23,6 +23,9 @@ from sawtooth_validator.journal.journal import \
 from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockPublisher as TestModePublisher
+from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
+    import \
+    BlockVerifier as TestModeVerifier
 
 from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
@@ -49,14 +52,16 @@ def _generate_id(length=16):
 class BlockTreeManager(object):
     def block_def(self,
                   add_to_store=False,
+                  add_to_cache=False,
                   batch_count=0,
                   status=BlockStatus.Unknown,
                   invalid_consensus=False,
                   invalid_batch=False,
                   invalid_signature=False,
-                  weight=1
+                  weight=None
                   ):
         return {
+            "add_to_cache": add_to_cache,
             "add_to_store": add_to_store,
             "batch_count": batch_count,
             "status": status,
@@ -72,16 +77,19 @@ class BlockTreeManager(object):
         self.block_store = BlockStoreAdapter({})
         self.block_cache = BlockCache(self.block_store)
         self._new_block = None
+        self.genesis_block = self._generate_genesis_block()
+        self.block_store[self.genesis_block.identifier] = self.genesis_block
+        self.set_chain_head(self.genesis_block)
+
         self.block_publisher = BlockPublisher(
             consensus=TestModePublisher(),
             transaction_executor=MockTransactionExecutor(),
             block_sender=self.block_sender,
             squash_handler=None,
-            chain_head=self._generate_genesis_block())
+            chain_head=self.genesis_block)
 
         block = self.generate_block(add_to_store=True,
                                     status=BlockStatus.Valid)
-        self.set_chain_head(block)
 
     def _get_block_id(self, block):
         if (block is None):
@@ -113,6 +121,9 @@ class BlockTreeManager(object):
     def chain_head(self):
         return self.block_store.chain_head
 
+    def set_chain_head(self, block):
+        self.block_store.set_chain_head(block.identifier)
+
     def generate_block(self, previous_block=None,
                        add_to_store=False,
                        add_to_cache=False,
@@ -121,18 +132,13 @@ class BlockTreeManager(object):
                        invalid_consensus=False,
                        invalid_batch=False,
                        invalid_signature=False,
-                       weight=1):
+                       weight=None):
 
         previous = self._get_block(previous_block)
         if previous is None:
-            previous = self._generate_genesis_block(_generate_id())
-            previous.set_signature(_generate_id())
-            previous_block = BlockWrapper(
-                block=previous.build_block(),
-                weight=0,
-                status=BlockStatus.Valid)
-            self.block_cache[previous_block.identifier] = previous_block
-            self.block_publisher.on_chain_updated(previous_block)
+            previous = self.chain_head
+
+        self.block_publisher.on_chain_updated(previous)
 
         while self.block_sender.new_block is None:
             self.block_publisher.on_batch_received(Batch())
@@ -146,46 +152,59 @@ class BlockTreeManager(object):
         if invalid_signature:
             block.block.header_signature = "BAD"
 
-        block.weight = 0
+        block.weight = weight
         block.status = status
 
         if add_to_cache:
             self.block_cache[block.identifier] = block
 
         if add_to_store:
+            if block.weight is None:
+                tmv = TestModeVerifier()
+                block.weight = tmv.compute_block_weight(block)
             self.block_store[block.identifier] = block
 
         return block
 
     def _generate_genesis_block(self, header_sig="genesis"):
         genesis_header = BlockHeader(
-            previous_block_id="0000000000000000",
+            previous_block_id=NULL_BLOCK_IDENTIFIER,
             block_num=0)
 
         block = BlockBuilder(genesis_header)
         block.set_signature(header_sig)
-        return block
+        return BlockWrapper(block.build_block())
 
-    def generate_chain(self, root_block, blocks):
+    def generate_chain(self, root_block, blocks, params=None):
         """
         Generate a new chain based on the root block and place it in the
         block cache.
         """
+        if params is None:
+            params = {}
+
         out = []
         if not isinstance(blocks, list):
-            blocks = self.generate_chain_definition(int(blocks))
+            blocks = self.generate_chain_definition(int(blocks), params)
 
-        previous = self._get_block(root_block)
+        if root_block is None:
+            previous = self._generate_genesis_block(_generate_id())
+            self.block_store[previous.identifier] = previous
+        else:
+            previous = self._get_block(root_block)
         for block in blocks:
             new_block = self.generate_block(previous_block=previous, **block)
             out.append(new_block)
             previous = new_block
         return out
 
-    def generate_chain_definition(self, count):
+    def generate_chain_definition(self, count, params=None):
+        if params is None:
+            params = {}
+
         out = []
         for _ in range(0, count):
-            out.append(self.block_def())
+            out.append(self.block_def(**params))
         return out
 
     def __str__(self):

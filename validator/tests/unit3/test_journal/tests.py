@@ -17,11 +17,13 @@ import logging
 import sys
 import unittest
 
-from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.chain import BlockValidator
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.journal import Journal
-from sawtooth_validator.journal.block_cache import BlockCache
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockPublisher as TestModePublisher
@@ -57,7 +59,6 @@ class TestBlockCache(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             bc["test-missing"]
-
 
 
 class TestBlockCache(unittest.TestCase):
@@ -108,6 +109,219 @@ class TestBlockPublisher(unittest.TestCase):
         LOGGER.info(self.blocks)
 
 
+class TestBlockValidator(unittest.TestCase):
+    def setUp(self):
+        self.btm = BlockTreeManager()
+
+    def create_block_validator(self, new_block, on_block_validated):
+        return BlockValidator(
+            consensus=TestModeVerifier(),
+            new_block=new_block,
+            chain_head=self.btm.chain_head,
+            block_cache=self.btm.block_cache,
+            done_cb=on_block_validated,
+            executor=MockTransactionExecutor(),
+            squash_handler=None)
+
+    class BlockValidationHandler(object):
+        def __init__(self):
+            self.result = None
+
+        def on_block_validated(self, commit_new_block, new_chain=None,
+                               cur_chain=None, chain_head=None, committed_batches=None,
+                               uncommitted_batches=None):
+            self.result = {
+                "commit_new_block": commit_new_block,
+                "new_chain": new_chain,
+                "cur_chain": cur_chain,
+                "chain_head": chain_head,
+                "committed_batches": committed_batches,
+                "uncommitted_batches": uncommitted_batches
+            }
+
+        def has_result(self):
+            return self.result is not None
+
+    # fork based tests
+    def test_fork_simple(self):
+        """
+        Test a simple case of a new block extending the current root.
+        """
+        bvh = self.BlockValidationHandler()
+        new_block = self.btm.generate_block(previous_block=self.btm.chain_head,
+                                            add_to_store=True)
+
+        bv = self.create_block_validator(new_block, bvh.on_block_validated)
+        bv.run()
+
+        self.assertTrue(bvh.has_result())
+        self.assertTrue(new_block.status == BlockStatus.Valid)
+        self.assertTrue(bvh.result["commit_new_block"])
+
+    def test_good_fork_lower(self):
+        """
+        Test case of a new block extending on a valid chain but not as long
+        as the current chain.
+        """
+        bvh = self.BlockValidationHandler()
+
+        root = self.btm.chain_head
+
+        # create a new valid chain 5 long from the current root
+        new_head = self.btm.generate_chain(root, 5,
+                                           {'add_to_store': True})
+        self.btm.set_chain_head(new_head[-1])
+        # generate candidate chain 3 long from the same root
+        new_block = self.btm.generate_chain(root, 3,
+                                            {'add_to_cache': True})
+
+        bv = self.create_block_validator(new_block[-1], bvh.on_block_validated)
+        bv.run()
+
+        self.assertTrue(bvh.has_result())
+        self.assertTrue(new_block[-1].status == BlockStatus.Valid)
+        self.assertFalse(bvh.result["commit_new_block"])
+
+    def test_good_fork_higher(self):
+        """
+        Test case of a new block extending on a valid chain but longer
+        than the current chain. ( similar to test_good_fork_lower but uses
+        a different code path when finding the common root )
+        """
+        bvh = self.BlockValidationHandler()
+
+        root = self.btm.chain_head
+
+        # create a new valid chain 5 long from the current root
+        new_head = self.btm.generate_chain(root, 5,
+                                           {'add_to_store': True})
+        self.btm.set_chain_head(new_head[-1])
+        # generate candidate chain 8 long from the same root
+        new_block = self.btm.generate_chain(root, 8,
+                                            {'add_to_cache': True})
+        bv = self.create_block_validator(new_block[-1], bvh.on_block_validated)
+        bv.run()
+
+        self.assertTrue(bvh.has_result())
+        self.assertTrue(new_block[-1].status == BlockStatus.Valid)
+        self.assertTrue(bvh.result["commit_new_block"])
+
+    def test_fork_different_genesis(self):
+        """"
+        Test the case where new block is from a different genesis
+        """
+        bvh = self.BlockValidationHandler()
+
+        # create a new valid chain 5 long from the current root
+        new_head = self.btm.generate_chain(self.btm.chain_head, 5,
+                                           {'add_to_store': True})
+        self.btm.set_chain_head(new_head[-1])
+
+        # generate candidate chain 5 long from it's own genesis
+        new_block = self.btm.generate_chain(None, 5,
+                                            {'add_to_cache': True})
+
+        bv = self.create_block_validator(new_block[-1], bvh.on_block_validated)
+        bv.run()
+
+        self.assertTrue(bvh.has_result())
+        self.assertTrue(new_block[-1].status == BlockStatus.Invalid)
+        self.assertFalse(bvh.result["commit_new_block"])
+
+    def test_fork_missing_predecessor(self):
+        """"
+        Test the case where new block is missing the a predecessor
+        """
+        bvh = self.BlockValidationHandler()
+
+        root = self.btm.chain_head
+
+        # generate candidate chain 3 long off the current head.
+        new_block = self.btm.generate_chain(root, 3,
+                                            {'add_to_cache': True})
+        # remove one of the new blocks
+        del self.btm.block_cache[new_block[1].identifier]
+
+        bv = self.create_block_validator(new_block[-1], bvh.on_block_validated)
+        bv.run()
+
+        self.assertTrue(bvh.has_result())
+        self.assertTrue(new_block[-1].status == BlockStatus.Invalid)
+        self.assertFalse(bvh.result["commit_new_block"])
+
+    def test_fork_invalid_predecessor(self):
+        """"
+        Test the case where new block has an invalid predecessor
+        """
+        bvh = self.BlockValidationHandler()
+
+        root = self.btm.chain_head
+
+        # generate candidate chain 3 long off the current head.
+        new_block = self.btm.generate_chain(root, 3,
+                                            {'add_to_cache': True})
+        # Mark a predecessor as invalid
+        new_block[1].status = BlockStatus.Invalid
+
+        bv = self.create_block_validator(new_block[-1], bvh.on_block_validated)
+        bv.run()
+
+        self.assertTrue(bvh.has_result())
+        self.assertTrue(new_block[-1].status == BlockStatus.Invalid)
+        self.assertFalse(bvh.result["commit_new_block"])
+
+    # block based tests
+    def test_block_bad_signature(self):
+        """
+        Test the case where the new block has a bad signature.
+        """
+        pass
+
+    def test_block_missing_batch(self):
+        """
+        Test the case where the new block is missing a batch.
+        """
+        pass
+
+    def test_block_extra_batch(self):
+        """
+        Test the case where the new block has a batch.
+        """
+        pass
+
+    def test_block_batches_order(self):
+        """
+        Test the case where the new block has batches that are
+        out of order.
+        """
+        pass
+
+    def test_block_bad_batch(self):
+        """
+        Test the case where the new block has a bad batch
+        """
+        pass
+
+    def test_block_missing_batch_dependency(self):
+        """
+        Test the case where the new block has a batch that is missing a
+        dependency.
+        """
+        pass
+
+    def test_block_bad_state(self):
+        """
+        Test the case where the new block has a bad batch
+        """
+        pass
+
+    def test_block_bad_consensus(self):
+        """
+        Test the case where the new block has a bad batch
+        """
+        pass
+
+
 class TestChainController(unittest.TestCase):
     def setUp(self):
         self.blocks = BlockTreeManager()
@@ -139,8 +353,8 @@ class TestChainController(unittest.TestCase):
     def test_alternate_genesis(self):
         # TEST Run generate and alternate genesis block
         head = self.chain_ctrl.chain_head
-        other_genesis = self.blocks.generate_block(add_to_store=True)
-        for b in self.blocks.generate_chain(other_genesis, 5):
+        for b in self.blocks.generate_chain(None, 5,
+                                            {"add_to_cache": True}):
             self.chain_ctrl.on_block_received(b)
             self.executor.process_all()
         assert(self.chain_ctrl.chain_head.block.header_signature ==
@@ -213,7 +427,6 @@ class TestJournal(unittest.TestCase):
         # construction and wire the journal to the
         # gossip layer.
 
-        LOGGER.info("test_publish_block")
         btm = BlockTreeManager()
         journal = None
         try:
@@ -226,10 +439,8 @@ class TestJournal(unittest.TestCase):
                 squash_handler=None
             )
 
-            self.gossip.on_batch_received = \
-                journal.on_batch_received
-            self.gossip.on_block_received = \
-                journal.on_block_received
+            self.gossip.on_batch_received = journal.on_batch_received
+            self.gossip.on_block_received = journal.on_block_received
 
             journal.start()
 
@@ -246,8 +457,7 @@ class TestJournal(unittest.TestCase):
             # wait for the chain_head to be updated.
             wait_until(lambda: btm.chain_head.identifier ==
                        block.identifier, 2)
-            self.assertTrue(btm.chain_head.identifier ==
-                            block.identifier)
+            self.assertTrue(btm.chain_head.identifier == block.identifier)
         finally:
             if journal is not None:
                 journal.stop()

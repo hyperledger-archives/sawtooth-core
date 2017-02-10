@@ -80,4 +80,3 @@ class BlockStoreAdapter(MutableMapping):
         Access to the underlying store dict.
         """
         return self._block_store
-
