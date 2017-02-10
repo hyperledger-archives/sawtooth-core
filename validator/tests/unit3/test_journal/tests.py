@@ -20,6 +20,7 @@ import unittest
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.journal import Journal
+from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
@@ -29,6 +30,7 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     BlockVerifier as TestModeVerifier
 from sawtooth_validator.journal.consensus.test_mode \
     import test_mode_consensus
+from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from test_journal.block_tree_manager import BlockTreeManager
@@ -56,6 +58,18 @@ class TestBlockCache(unittest.TestCase):
         with self.assertRaises(KeyError):
             bc["test-missing"]
 
+
+
+class TestBlockCache(unittest.TestCase):
+    def test_load_from_block_store(self):
+        """ Test that misses will load from the block store.
+        """
+        bs = {}
+        bs["test"] = "value"
+        bc = BlockCache(bs)
+
+        self.assertTrue("test" in bc)
+        self.assertTrue(bc["test"] == "value")
 
 
 class TestBlockPublisher(unittest.TestCase):
@@ -237,3 +251,57 @@ class TestJournal(unittest.TestCase):
         finally:
             if journal is not None:
                 journal.stop()
+
+
+class TestTimedCache(unittest.TestCase):
+    def test_cache(self):
+        bc = TimedCache(keep_time=1)
+
+        with self.assertRaises(KeyError):
+            bc["test"]
+
+        bc["test"] = "value"
+
+        self.assertEqual(len(bc), 1)
+
+        del bc["test"]
+        self.assertFalse("test" in bc)
+
+
+    def test_evict_expired(self):
+        """ Test that values will be evicted from the
+        cache as they time out.
+        """
+
+        # use an invasive technique so that we don't have to sleep for
+        # the item to expire
+
+        bc = TimedCache(keep_time=1)
+
+        bc["test"] = "value"
+        bc["test2"] = "value2"
+        self.assertEqual(len(bc), 2)
+
+        # test that expired item i
+        bc.cache["test"].timestamp = bc.cache["test"].timestamp - 2
+        bc.purge_expired()
+        self.assertEqual(len(bc), 1)
+        self.assertFalse("test" in bc)
+        self.assertTrue("test2" in bc)
+
+    def test_access_update(self):
+
+        bc = TimedCache(keep_time=1)
+
+        bc["test"] = "value"
+        bc["test2"] = "value2"
+        self.assertEqual(len(bc), 2)
+
+        bc["test"] = "value"
+        bc.cache["test"].timestamp = bc.cache["test"].timestamp - 2
+        bc["test"]  # access to update timestamp
+        bc.purge_expired()
+        self.assertEqual(len(bc), 2)
+        self.assertTrue("test" in bc)
+        self.assertTrue("test2" in bc)
+
