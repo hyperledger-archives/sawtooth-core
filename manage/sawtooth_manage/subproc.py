@@ -59,7 +59,7 @@ class SubprocessNodeController(NodeController):
 
         commands = ['validator'] + state['Processors']
         if node_args.genesis:
-            commands = ['sawtooth-0.8'] + commands
+            commands = ['sawtooth'] + commands
 
         for cmd in commands:
             # get_executable_script returns (path, executable)
@@ -70,7 +70,7 @@ class SubprocessNodeController(NodeController):
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
                 flags = component + network
-            elif cmd == 'sawtooth-0.8':
+            elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
             else:
                 flags = (url,)
