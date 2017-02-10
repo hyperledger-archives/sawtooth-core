@@ -51,16 +51,20 @@ class DevModeConsensus(Consensus):
         # initialize the block handlers
         dev_mode_transaction_block.register_message_handlers(journal)
 
-    def create_block(self):
+    def create_block(self, pub_key):
         """Build a new candidate transaction block.
 
-        :return:
+        Args:
+            pub_key: public key corresponding to the private key used to
+                sign the block
+        Returns:
             new transaction block.
         """
         if not self._block_publisher:
             return None
         self._next_block_time = time() + self._block_wait_time
-        return dev_mode_transaction_block.DevModeTransactionBlock()
+        minfo = {"PublicKey": pub_key}
+        return dev_mode_transaction_block.DevModeTransactionBlock(minfo)
 
     def initialize_block(self, journal, block):
         """Builds a transaction block that is specific to this particular

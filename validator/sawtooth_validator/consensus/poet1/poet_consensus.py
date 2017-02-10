@@ -141,15 +141,17 @@ class PoetConsensus(Consensus):
 
             journal.gossip.broadcast_message(message)
 
-    def create_block(self):
+    def create_block(self, pub_key):
         """Creates a candidate transaction block.
 
         Args:
-
+            pub_key: public key corresponding to the private key used to
+                sign the block
         Returns:
-            None
+            new transaction block.
         """
-        return poet_transaction_block.PoetTransactionBlock()
+        minfo = {"PublicKey": pub_key}
+        return poet_transaction_block.PoetTransactionBlock(minfo)
 
     def initialize_block(self, journal, block):
         """Builds a transaction block that is specific to this particular
