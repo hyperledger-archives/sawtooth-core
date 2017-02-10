@@ -27,7 +27,7 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server import signature_verifier as verifier
+from sawtooth_validator.gossip import signature_verifier as verifier
 
 
 class TestMessageValidation(unittest.TestCase):

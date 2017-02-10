@@ -19,9 +19,9 @@ import logging
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.server.dispatch import Handler
-from sawtooth_validator.server.dispatch import HandlerResult
-from sawtooth_validator.server.dispatch import HandlerStatus
+from sawtooth_validator.networking.dispatch import Handler
+from sawtooth_validator.networking.dispatch import HandlerResult
+from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader

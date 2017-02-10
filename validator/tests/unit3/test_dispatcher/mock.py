@@ -16,7 +16,7 @@
 from threading import RLock
 import time
 
-from sawtooth_validator.server import dispatch
+from sawtooth_validator.networking import dispatch
 from sawtooth_validator.protobuf import validator_pb2
 
 

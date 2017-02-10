@@ -22,7 +22,7 @@ from threading import Thread
 import queue
 import uuid
 
-from sawtooth_validator.server.interconnect import get_enum_name
+from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
