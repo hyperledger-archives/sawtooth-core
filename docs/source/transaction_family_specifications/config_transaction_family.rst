@@ -252,6 +252,62 @@ The encoding field must be set to "application/protobuf".
 Execution
 =========
 
+Initially, the transaction processor gets the current values of
+*sawtooth.config.vote.authorized_keys* and *sawtooth.config.authorization_type*
+from the state.
 
+The public key of the transaction signer is checked against the values in
+the list of authorized keys.  If it is empty, all public keys are allowed.
 
+The authorization type determines how to process the transaction payloads.
 
+In the case of authorization type "None":
+
+A Propose action (indicated by *ConfigPayload.PROPOSE*) is validated (more on
+validation in a moment). If it fails, it is considered an invalid transaction.
+If it passes, will be applied to the state; An *INFO*-level logging message
+similar to
+
+.. code-block:: python3
+
+    "Config setting {} changed from {} to {}".format(setting, old_value, new_value)
+
+will be logged.
+
+A Vote action (indicated by *ConfigPayload.VOTE*) is considered an invalid
+transaction.
+
+In the case of authorization type "Ballot":
+
+A Propose action is validated.  If it fails, it is considered an invalid
+transaction.  A *proposal_id* is calculated by taking the sha256 hash of
+the raw *ConfigProposal* bytes as they exist in the payload.  Duplicate
+*proposal_ids* causes an invalid transaction. The proposal will be
+recorded in the *ConfigProposals* stored in *sawtooth.config.vote.proposals*,
+with one "accept" vote counted.  The transaction processor outputs a
+*DEBUG*-level logging message similar to
+
+.. code-block:: python3
+
+    "Adding proposal {}: {}".format(proposal_id, repr(proposal_data).
+
+A Vote action is validated, checking to see if *proposal_id* exists, and
+the public key of the transaction has not already voted.  The value of
+*sawtooth.config.vote.approval_threshold* is read from the state.  If the
+"accept" vote count is equal to or above the approval threshold, the proposal
+is applied to the state. This results in the above INFO message being
+logged. The proposal is deleted from the *ConfigProposals* record.
+
+If the "reject" vote count is equal to or above the approval threshold, then it
+is deleted from *sawtooth.config.vote.proposals* and an appropriate debug
+logging message logged.
+
+Otherwise, the vote is recorded in the list of *sawtooth.config.vote.proposals*
+by the public key and vote pair.
+
+Validation of configuration settings is as follows:
+
+- *sawtooth.config.authorization_type* may only be set to either "None" or
+  "Ballot"
+- *sawtooth.config.vote.approval_threshold* must be a postive integer
+- *sawtooth.config.vote.proposals* may not be set by a proposal
