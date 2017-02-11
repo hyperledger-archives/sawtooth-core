@@ -75,10 +75,15 @@ class MockNetwork(object):
 
 
 class MockScheduler(Scheduler):
+    def __init__(self):
+        self.batches = {}
+
     def add_batch(self, batch, state_hash=None):
-        pass
+        self.batches[batch.header_signature] = batch
 
     def get_batch_execution_result(self, batch_signature):
+
+
         return BatchExecutionResult(is_valid=True, state_hash="0000000000")
 
     def set_transaction_execution_result(

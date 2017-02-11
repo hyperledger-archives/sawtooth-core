@@ -85,7 +85,7 @@ class BlockValidator(object):
 
     def _verify_block_signature(self, blkw):
         return signing.verify(blkw.block.header, blkw.block.header_signature,
-                       blkw.header.signer_pubkey)
+                              blkw.header.signer_pubkey)
 
     def _verify_block_batches(self, blkw):
         if len(blkw.block.batches) > 0:
