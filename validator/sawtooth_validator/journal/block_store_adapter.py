@@ -53,6 +53,12 @@ class BlockStoreAdapter(MutableMapping):
     def __len__(self):
         return len(self._block_store)
 
+    def __str__(self):
+        out = []
+        for v in self._block_store.values():
+            out.append(str(v))
+        return ','.join(out)
+
     def set_chain_head(self, block_id):
         """
         Set the current chain head, does not validate that the block
@@ -74,3 +80,4 @@ class BlockStoreAdapter(MutableMapping):
         Access to the underlying store dict.
         """
         return self._block_store
+

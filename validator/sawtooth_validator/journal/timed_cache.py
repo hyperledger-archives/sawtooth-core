@@ -65,6 +65,13 @@ class TimedCache(MutableMapping):
         with self._lock:
             return len(self._cache)
 
+    def __str__(self):
+        with self._lock:
+            out = []
+            for v in self._cache.values():
+                out.append(str(v.value))
+            return ','.join(out)
+
     @property
     def cache(self):
         return self._cache
@@ -80,7 +87,7 @@ class TimedCache(MutableMapping):
         with self._lock:
             time_horizon = time.time() - self._keep_time
             new_cache = {}
-            for k, v in self._cache.items():
+            for (k, v) in self._cache.items():
                 if v.timestamp > time_horizon:
                     new_cache[k] = v
             self._cache = new_cache
