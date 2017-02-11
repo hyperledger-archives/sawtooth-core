@@ -15,6 +15,8 @@
 import logging
 from threading import RLock
 
+from sawtooth_signing import pbct as signing
+
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
@@ -62,10 +64,28 @@ class BlockValidator(object):
         }
 
     def _is_block_complete(self, blkw):
+        """
+        Check that the block is formally complete.
+        - all batches are present and in the correct order
+        :param blkw:
+        :return:
+        """
+
+        batch_ids = blkw.header.batch_ids
+        batches = blkw.batches
+
+        if len(batch_ids) != len(batches):
+            return False
+
+        for i in range(0, len(batch_ids)):
+            if batch_ids[i] != batches[i].header_signature:
+                return False
+
         return True
 
     def _verify_block_signature(self, blkw):
-        return True
+        return signing.verify(blkw.block.header, blkw.block.header_signature,
+                       blkw.header.signer_pubkey)
 
     def _verify_block_batches(self, blkw):
         if len(blkw.block.batches) > 0:

@@ -14,9 +14,12 @@
 # ------------------------------------------------------------------------------
 
 from concurrent.futures import Executor
+import hashlib
 import pprint
 import random
 import string
+
+from sawtooth_signing import pbct as signing
 
 from sawtooth_validator.journal.journal import \
     BlockPublisher
@@ -27,8 +30,12 @@ from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
     import \
     BlockVerifier as TestModeVerifier
 
-from sawtooth_validator.protobuf.block_pb2 import Block, BlockHeader
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
@@ -72,11 +79,13 @@ class BlockTreeManager(object):
         }
 
     def __init__(self):
-
         self.block_sender = MockBlockSender()
         self.block_store = BlockStoreAdapter({})
         self.block_cache = BlockCache(self.block_store)
-        self._new_block = None
+
+        self.signing_key = signing.generate_privkey()
+        self.public_key = signing.encode_pubkey(
+            signing.generate_pubkey(self.signing_key), "hex")
         self.genesis_block = self._generate_genesis_block()
         self.block_store[self.genesis_block.identifier] = self.genesis_block
         self.set_chain_head(self.genesis_block)
@@ -87,9 +96,6 @@ class BlockTreeManager(object):
             block_sender=self.block_sender,
             squash_handler=None,
             chain_head=self.genesis_block)
-
-        block = self.generate_block(add_to_store=True,
-                                    status=BlockStatus.Valid)
 
     def _get_block_id(self, block):
         if (block is None):
@@ -166,13 +172,49 @@ class BlockTreeManager(object):
 
         return block
 
-    def _generate_genesis_block(self, header_sig="genesis"):
+    def _generate_batch(self, payload):
+        payload_encoded = payload.encode('utf-8')
+        hasher = hashlib.sha512()
+        hasher.update(payload_encoded)
+
+        header = TransactionHeader()
+        header.batcher_pubkey = self.public_key
+        # txn.dependencies not yet
+        header.family_name = 'test'
+        header.family_version = '1'
+        header.nonce = _generate_id(16)
+        header.payload_encoding = "text"
+        header.payload_sha512 = hasher.hexdigest().encode()
+        header.signer_pubkey = self.public_key
+
+        txn = Transaction()
+        header_bytes = header.SerializeToString()
+        txn.header = header_bytes
+        txn.header_signature = signing.sign(header_bytes, self.signing_key)
+        txn.payload = payload_encoded
+
+        batch_header = BatchHeader()
+        batch_header.signer_pubkey = self.public_key
+        batch_header.transaction_ids.extend([txn.header_signature])
+
+        batch = Batch()
+        header_bytes = batch_header.SerializeToString()
+        batch.header = header_bytes
+        batch.header_signature = signing.sign(header_bytes, self.signing_key)
+        batch.transactions.extend([txn])
+        return batch
+
+    def _generate_genesis_block(self):
         genesis_header = BlockHeader(
             previous_block_id=NULL_BLOCK_IDENTIFIER,
+            signer_pubkey=self.public_key,
             block_num=0)
 
         block = BlockBuilder(genesis_header)
-        block.set_signature(header_sig)
+        block.add_batches([self._generate_batch("Genesis")])
+        header_bytes = block.block_header.SerializeToString()
+        signature = signing.sign(header_bytes, self.signing_key)
+        block.set_signature(signature)
         return BlockWrapper(block.build_block())
 
     def generate_chain(self, root_block, blocks, params=None):
@@ -188,7 +230,7 @@ class BlockTreeManager(object):
             blocks = self.generate_chain_definition(int(blocks), params)
 
         if root_block is None:
-            previous = self._generate_genesis_block(_generate_id())
+            previous = self._generate_genesis_block()
             self.block_store[previous.identifier] = previous
         else:
             previous = self._get_block(root_block)
