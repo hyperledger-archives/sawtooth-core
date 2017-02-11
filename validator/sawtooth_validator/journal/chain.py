@@ -52,13 +52,14 @@ class BlockValidator(object):
         self._executor = executor
         self._squash_handler = squash_handler
 
-    @property
-    def new_block(self):
-        return self._new_block
-
-    @property
-    def chain_head(self):
-        return self._chain_head
+        self._result = {
+            'new_block': new_block,
+            'chain_head': chain_head,
+            'new_chain': [],
+            'cur_chain': [],
+            'committed_batches': [],
+            'uncommitted_batches': [],
+        }
 
     def _is_block_complete(self, blkw):
         return True
@@ -95,7 +96,6 @@ class BlockValidator(object):
 
     def _validate_block(self, blkw):
         try:
-
             if blkw.status == BlockStatus.Valid:
                 return True
             elif blkw.status == BlockStatus.Invalid:
@@ -156,7 +156,7 @@ class BlockValidator(object):
                                  " predecessor: %s", new_blkw)
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
-                    self._done_cb(False)
+                    self._done_cb(False, self._result)
                     raise BlockValidationAborted()
         elif new_blkw.block_num < cur_blkw.block_num:
             # current chain is longer
@@ -186,7 +186,7 @@ class BlockValidator(object):
                             cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                self._done_cb(False)
+                self._done_cb(False, self._result)
                 raise BlockValidationAborted()
             new_chain.append(new_blkw)
             new_blkw = \
@@ -219,8 +219,10 @@ class BlockValidator(object):
         try:
             LOGGER.info("Starting block validation of : %s",
                         self._new_block)
-            cur_chain = []  # ordered list of the current chain
-            new_chain = []  # ordered list of the new chain
+            cur_chain = self._result["cur_chain"]  # ordered list of the
+            # current chain blocks
+            new_chain = self._result["new_chain"]  # ordered list of the new
+            # chain blocks
 
             # 1) Find the common ancestor block, the root of the fork.
             # walk back till both chains are the same height
@@ -245,7 +247,7 @@ class BlockValidator(object):
                     block.status = BlockStatus.Invalid
 
             if not valid:
-                self._done_cb(False)
+                self._done_cb(False, self._result)
                 return
 
             # 4) Evaluate the 2 chains to see which is the one true chain.
@@ -253,19 +255,14 @@ class BlockValidator(object):
                                                    cur_chain)
 
             # 5) Consensus to compute batch sets (only if we are switching).
-            committed_batches = []
-            uncommitted_batches = []
             if commit_new_chain:
-                (committed_batches, uncommitted_batches) =\
+                (self._result["committed_batches"],
+                 self._result["uncommitted_batches"]) =\
                     self._compute_batch_change(new_chain, cur_chain)
 
             # 6) Tell the journal we are done.
             self._done_cb(commit_new_chain,
-                          self._chain_head,
-                          new_chain,
-                          cur_chain,
-                          committed_batches,
-                          uncommitted_batches)
+                          self._result)
             LOGGER.info("Finished block validation of: %s",
                         self._new_block)
         except BlockValidationAborted:
@@ -336,13 +333,7 @@ class ChainController(object):
         self._blocks_processing[blkw.block.header_signature] = validator
         self._executor.submit(validator.run)
 
-    def on_block_validated(self,
-                           commit_new_block,
-                           chain_head=None,
-                           new_chain=None,
-                           cur_chain=None,
-                           committed_batches=None,
-                           uncommitted_batches=None):
+    def on_block_validated(self, commit_new_block, result):
         """
         Message back from the block validator,
         :param block:
@@ -350,14 +341,14 @@ class ChainController(object):
         """
         try:
             with self._lock:
-                new_block = new_chain[0]
-                LOGGER.info("on_block_validated : %s", new_block)
+                new_block = result["new_block"]
+                LOGGER.info("on_block_validated: %s", new_block)
 
                 # remove from the processing list
                 del self._blocks_processing[new_block.identifier]
 
                 # if the head has changed, since we started the work.
-                if chain_head != self._chain_head:
+                if result["chain_head"] != self._chain_head:
                     # chain has advanced since work started.
                     # the block validation work we have done is saved.
                     self._verify_block(new_block)
@@ -365,28 +356,28 @@ class ChainController(object):
                     self._chain_head = new_block
 
                     # update the logic in the block store.
-                    for b in new_chain:
+                    for b in result["new_chain"]:
                         self._block_store[b.identifier] = b
 
                     self._block_store.set_chain_head(new_block.identifier)
 
-                    for b in cur_chain:
+                    for b in result["cur_chain"]:
                         del self._block_store[b.identifier]
 
-                    LOGGER.info("Chain head updated to: %s",
-                                self._chain_head)
+                    LOGGER.info("Chain head updated to: %s", self._chain_head)
 
                     # tell the BlockPublisher else the chain is updated
                     self._notify_on_chain_updated(self._chain_head,
-                                                  committed_batches,
-                                                  uncommitted_batches)
+                                                  result["committed_batches"],
+                                                  result["uncommitted_batches"]
+                                                  )
 
                     pending_blocks = \
                         self._blocks_pending.pop(
                             self._chain_head.block.header_signature, [])
                     for pending_block in pending_blocks:
                         self._verify_block(pending_block)
-            # pylint: disable=broad-except
+        # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.exception(exc)
 
@@ -402,7 +393,7 @@ class ChainController(object):
                 LOGGER.debug("Block received: %s", block)
                 if block.previous_block_id in self._blocks_processing or \
                         block.previous_block_id in self._blocks_pending:
-                    LOGGER.debug('in blocks pending: %s', block)
+                    LOGGER.debug('Block pending: %s', block)
                     # if the previous block is being processed, put it in a
                     # wait queue, Also need to check if previous block is
                     # in the wait queue.

@@ -127,17 +127,9 @@ class TestBlockValidator(unittest.TestCase):
         def __init__(self):
             self.result = None
 
-        def on_block_validated(self, commit_new_block, new_chain=None,
-                               cur_chain=None, chain_head=None, committed_batches=None,
-                               uncommitted_batches=None):
-            self.result = {
-                "commit_new_block": commit_new_block,
-                "new_chain": new_chain,
-                "cur_chain": cur_chain,
-                "chain_head": chain_head,
-                "committed_batches": committed_batches,
-                "uncommitted_batches": uncommitted_batches
-            }
+        def on_block_validated(self, commit_new_block, result):
+            result["commit_new_block"] = commit_new_block
+            self.result = result
 
         def has_result(self):
             return self.result is not None
@@ -330,7 +322,8 @@ class TestChainController(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
 
-        def chain_updated(head):
+        def chain_updated(head, committed_batches=None,
+                          uncommitted_batches=None):
             pass
 
         self.chain_ctrl = ChainController(
