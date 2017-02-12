@@ -17,7 +17,7 @@ from ast import literal_eval
 from collections import deque
 
 
-class RadixNode:
+class PredecessorTreeNode:
     def __init__(self, children=None, readers=None, writer=None):
         self.children = children if children is not None else {}
         self.readers = readers if readers is not None else []
@@ -37,10 +37,10 @@ class RadixNode:
         return repr(retval)
 
 
-class RadixTree:
+class PredecessorTree:
     def __init__(self, token_size=2):
         self._token_size = token_size
-        self._root = RadixNode()
+        self._root = PredecessorTreeNode()
 
     def __repr__(self):
         return repr(self._root)
@@ -59,7 +59,7 @@ class RadixTree:
             else:
                 if not create:
                     return None
-                child = RadixNode()
+                child = PredecessorTreeNode()
                 node.children[token] = child
                 node = child
 

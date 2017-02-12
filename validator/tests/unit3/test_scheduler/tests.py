@@ -21,7 +21,7 @@ import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
 from sawtooth_validator.execution.context_manager import ContextManager
-from sawtooth_validator.execution.scheduler_parallel import RadixTree
+from sawtooth_validator.execution.scheduler_parallel import PredecessorTree
 from sawtooth_validator.execution.scheduler_parallel import TopologicalSorter
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.database import dict_database
@@ -299,9 +299,9 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertIsNone(batch2_result.state_hash)
 
 
-class TestRadixTree(unittest.TestCase):
+class TestPredecessorTree(unittest.TestCase):
 
-    def test_radix_tree(self):
+    def test_predecessor_tree(self):
         """Tests basic functionality of the scheduler's radix tree.
         """
         address_a = \
@@ -309,7 +309,7 @@ class TestRadixTree(unittest.TestCase):
         address_b = \
             '3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d'
 
-        tree = RadixTree()
+        tree = PredecessorTree()
         tree.add_reader(address_a, 'txn1')
         tree.add_reader(address_b, 'txn2')
 
