@@ -181,6 +181,7 @@ class MerkleDatabase(object):
         """
         path_map = {}
         batch = []
+        key_hash = None
 
         for set_address in set_items:
             path_map.update(self._get_path_by_addr(set_address,
