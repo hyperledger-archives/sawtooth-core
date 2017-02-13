@@ -64,7 +64,7 @@ class MissingHead(_ErrorTrap):
 class MissingLeaf(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientStateGetResponse.NORESOURCE,
+            trigger=client.ClientStateGetResponse.NO_RESOURCE,
             error=web.HTTPNotFound,
             message='There is no leaf at that address')
 
@@ -72,7 +72,7 @@ class MissingLeaf(_ErrorTrap):
 class MissingBlock(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientBlockGetResponse.NORESOURCE,
+            trigger=client.ClientBlockGetResponse.NO_RESOURCE,
             error=web.HTTPNotFound,
             message='There is no block with that id')
 
@@ -80,6 +80,6 @@ class MissingBlock(_ErrorTrap):
 class BadAddress(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientStateGetResponse.NONLEAF,
+            trigger=client.ClientStateGetResponse.INVALID_ADDRESS,
             error=web.HTTPBadRequest,
             message='Expected a leaf address, but received a subtree instead')

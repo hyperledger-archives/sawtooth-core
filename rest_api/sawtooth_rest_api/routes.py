@@ -61,16 +61,17 @@ class RouteHandler(object):
         """
         Fetch a list of data leaves from the validator's state merkle-tree
         """
+        head = request.url.query.get('head', '')
         address = request.url.query.get('address', '')
 
         response = self._query_validator(
             Message.CLIENT_STATE_LIST_REQUEST,
             client.ClientStateListResponse,
-            client.ClientStateListRequest(subtree=address))
+            client.ClientStateListRequest(head_id=head, address=address))
 
         return RouteHandler._wrap_response(
-            data=response.get('entries', []),
-            metadata={'link': str(request.url)})
+            data=response.get('leaves', []),
+            metadata=RouteHandler._get_metadata(request, response))
 
     @asyncio.coroutine
     def state_get(self, request):
@@ -82,31 +83,34 @@ class RouteHandler(object):
             error_handlers.BadAddress()]
 
         address = request.match_info.get('address', '')
+        head = request.url.query.get('head', '')
 
         response = self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
             client.ClientStateGetResponse,
-            client.ClientStateGetRequest(address=address),
+            client.ClientStateGetRequest(head_id=head, address=address),
             error_traps)
 
         return RouteHandler._wrap_response(
             data=response['value'],
-            metadata={'link': str(request.url)})
+            metadata=RouteHandler._get_metadata(request, response))
 
     @asyncio.coroutine
     def block_list(self, request):
         """
         Fetch a list of blocks from the validator
         """
+        head = request.url.query.get('head', '')
+
         response = self._query_validator(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client.ClientBlockListResponse,
-            client.ClientBlockListRequest())
+            client.ClientBlockListRequest(head_id=head))
 
         blocks = [RouteHandler._expand_block(b) for b in response['blocks']]
         return RouteHandler._wrap_response(
             data=blocks,
-            metadata={'link': str(request.url)})
+            metadata=RouteHandler._get_metadata(request, response))
 
     @asyncio.coroutine
     def block_get(self, request):
@@ -129,7 +133,7 @@ class RouteHandler(object):
 
         return RouteHandler._wrap_response(
             data=RouteHandler._expand_block(response['block']),
-            metadata={'link': str(request.url)})
+            metadata=RouteHandler._get_metadata(request, response))
 
     def _query_validator(self, req_type, resp_proto, content, traps=None):
         """
@@ -168,16 +172,16 @@ class RouteHandler(object):
         traps = traps or []
 
         try:
-            traps.append(error_handlers.Unknown(proto.ERROR))
+            traps.append(error_handlers.Unknown(proto.INTERNAL_ERROR))
         except AttributeError:
             # Not every protobuf has every status enum, so pass AttributeErrors
             pass
         try:
-            traps.append(error_handlers.NotReady(proto.NOGENESIS))
+            traps.append(error_handlers.NotReady(proto.NOT_READY))
         except AttributeError:
             pass
         try:
-            traps.append(error_handlers.MissingHead(proto.NOROOT))
+            traps.append(error_handlers.MissingHead(proto.NO_ROOT))
         except AttributeError:
             pass
 
@@ -203,6 +207,25 @@ class RouteHandler(object):
                 indent=2,
                 separators=(',', ': '),
                 sort_keys=True))
+
+    @staticmethod
+    def _get_metadata(request, response):
+        head = response.get('head_id', None)
+        if not head:
+            return {'link': str(request.url)}
+
+        link = '{}://{}{}?head={}'.format(
+            request.scheme,
+            request.host,
+            request.path,
+            head)
+
+        headless = filter(lambda i: i[0] != 'head', request.url.query.items())
+        queries = ['{}={}'.format(k, v) for k, v in headless]
+        if len(queries) > 0:
+            link += '&' + '&'.join(queries)
+
+        return {'head': head, 'link': link}
 
     @staticmethod
     def _expand_block(block):

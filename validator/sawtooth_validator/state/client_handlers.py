@@ -51,8 +51,9 @@ class StateCurrentRequest(Handler):
 
 
 class StateListRequest(Handler):
-    def __init__(self, database):
+    def __init__(self, database, block_store):
         self._tree = MerkleDatabase(database)
+        self._block_store = block_store
 
     def handle(self, identity, message_content):
         helper = _ClientHelper(
@@ -60,7 +61,8 @@ class StateListRequest(Handler):
             client_pb2.ClientStateListRequest,
             client_pb2.ClientStateListResponse,
             validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE,
-            tree=self._tree)
+            tree=self._tree,
+            block_store=self._block_store)
 
         helper.set_root()
         if helper.has_response():
@@ -74,9 +76,12 @@ class StateListRequest(Handler):
         if leaves:
             helper.set_response(
                 helper.status.OK,
+                head_id=helper.head_id,
                 leaves=leaves)
         else:
-            helper.set_response(helper.status.NORESOURCE)
+            helper.set_response(
+                helper.status.NO_RESOURCE,
+                head_id=helper.head_id)
 
         return helper.result
 
@@ -84,6 +89,7 @@ class StateListRequest(Handler):
 class StateGetRequest(Handler):
     def __init__(self, database, block_store):
         self._tree = MerkleDatabase(database)
+        self._block_store = block_store
 
     def handle(self, identity, message_content):
         helper = _ClientHelper(
@@ -91,7 +97,8 @@ class StateGetRequest(Handler):
             client_pb2.ClientStateGetRequest,
             client_pb2.ClientStateGetResponse,
             validator_pb2.Message.CLIENT_STATE_GET_RESPONSE,
-            tree=self._tree)
+            tree=self._tree,
+            block_store=self._block_store)
 
         helper.set_root()
         if helper.has_response():
@@ -103,15 +110,16 @@ class StateGetRequest(Handler):
             value = self._tree.get(address)
         except KeyError:
             LOGGER.debug('Unable to find entry at address %s', address)
-            helper.set_response(helper.status.NORESOURCE)
+            helper.set_response(helper.status.NO_RESOURCE)
         except ValueError as e:
             LOGGER.debug('Address %s is a nonleaf', address)
             LOGGER.debug(e)
-            helper.set_response(helper.status.NONLEAF)
+            helper.set_response(helper.status.MISSING_ADDRESS)
 
         if not helper.has_response():
             helper.set_response(
                 helper.status.OK,
+                head_id=helper.head_id,
                 value=value)
 
         return helper.result
@@ -146,9 +154,10 @@ class BlockListRequest(Handler):
         if blocks:
             helper.set_response(
                 helper.status.OK,
+                head_id=helper.head_id,
                 blocks=blocks)
         else:
-            helper.set_response(helper.status.NOROOT)
+            helper.set_response(helper.status.NO_ROOT)
 
         return helper.result
 
@@ -174,7 +183,7 @@ class BlockGetRequest(Handler):
                 block=self._block_store[block_id].block)
         else:
             LOGGER.debug('Unable to find block "%s" in store', block_id)
-            helper.set_response(helper.status.NORESOURCE)
+            helper.set_response(helper.status.NO_RESOURCE)
 
         return helper.result
 
@@ -209,7 +218,7 @@ class _ClientHelper(object):
             self.request.ParseFromString(content)
         except DecodeError:
             LOGGER.info('Protobuf %s failed to deserialize', self.request)
-            self.set_response(self.status.ERROR)
+            self.set_response(self.status.INTERNAL_ERROR)
 
     def has_response(self):
         return self.result.message_out is not None
@@ -227,7 +236,7 @@ class _ClientHelper(object):
 
         if not self._block_store.chain_head:
             LOGGER.debug('Unable to get chain head from block store')
-            self.set_response(self.status.NOGENESIS)
+            self.set_response(self.status.NOT_READY)
 
         return self._block_store.chain_head.block
 
@@ -248,3 +257,21 @@ class _ClientHelper(object):
 
         if self.request.merkle_root:
             self._tree.set_merkle_root(self.request.merkle_root)
+            return
+
+        if self.request.head_id:
+            try:
+                head = self._block_store[self.request.head_id].block
+            except KeyError as e:
+                LOGGER.debug('Unable to find block "%s" in store', e)
+                self.set_response(self.status.NO_ROOT)
+        else:
+            head = self.get_genesis()
+
+        if self.has_response():
+            return
+
+        header = BlockHeader()
+        header.ParseFromString(head.header)
+        self._tree.set_merkle_root(header.state_root_hash)
+        self.head_id = head.header_signature
