@@ -74,12 +74,6 @@ def add_block_parser(subparsers, parent_parser):
 
 
 def do_block(args):
-    subcommands = ['list', 'show']
-    if args.subcommand not in subcommands:
-        print('Unknown sub-command, expecting one of {0}'.format(
-            subcommands))
-        return
-
     rest_client = RestClient(args.url)
 
     def print_json(data):
@@ -114,7 +108,6 @@ def do_block(args):
 
         if args.format == 'default':
             print('{:<3}  {:88.88}  {:<7}  {:<4}  {:20.20}'.format(*headers))
-
             for block in blocks:
                 print('{:<3}  {:88.88}  {:<7}  {:<4}  {:17.17}...'.format(
                     *get_block_data(block)))
@@ -142,7 +135,7 @@ def do_block(args):
         else:
             raise CliException('unknown format: {}'.format(args.format))
 
-    elif args.subcommand == 'show':
+    if args.subcommand == 'show':
         block = rest_client.get_block(args.block_id)
 
         if args.key:

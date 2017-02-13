@@ -15,6 +15,7 @@
 
 import json
 import urllib.request as urllib
+from urllib.parse import urlencode
 from urllib.error import URLError, HTTPError
 
 from sawtooth_cli.exceptions import CliException
@@ -31,9 +32,19 @@ class RestClient(object):
         safe_id = urllib.quote(block_id, safe='')
         return self._get('/blocks/' + safe_id)['data']
 
-    def _get(self, path):
+    def list_state(self, subtree=None, head=None):
+        queries = RestClient._remove_nones(address=subtree, head=head)
+        return self._get('/state', queries)
+
+    def get_leaf(self, address, head=None):
+        queries = RestClient._remove_nones(head=head)
+        return self._get('/state/' + address, queries)
+
+    def _get(self, path, queries=None):
+        query_string = '?' + urlencode(queries) if queries else ''
+
         try:
-            response = urllib.urlopen(self._base_url + path)
+            response = urllib.urlopen(self._base_url + path + query_string)
         except HTTPError as e:
             raise CliException('({}) {}'.format(e.code, e.msg))
         except URLError as e:
@@ -42,3 +53,7 @@ class RestClient(object):
                  'make sure URL is correct').format(self._base_url))
         result = response.read().decode('utf-8')
         return json.loads(result)
+
+    @staticmethod
+    def _remove_nones(**kwargs):
+        return {k: v for k, v in kwargs.items() if v is not None}
