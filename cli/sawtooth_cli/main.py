@@ -33,6 +33,8 @@ from sawtooth_cli.config import add_config_parser
 from sawtooth_cli.config import do_config
 from sawtooth_cli.block import add_block_parser
 from sawtooth_cli.block import do_block
+from sawtooth_cli.state import add_state_parser
+from sawtooth_cli.state import do_state
 
 
 def create_console_handler(verbose_level):
@@ -91,6 +93,7 @@ def create_parser(prog_name):
     add_admin_parser(subparsers, parent_parser)
     add_config_parser(subparsers, parent_parser)
     add_block_parser(subparsers, parent_parser)
+    add_state_parser(subparsers, parent_parser)
 
     return parser
 
@@ -115,6 +118,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_config(args)
     elif args.command == 'block':
         do_block(args)
+    elif args.command == 'state':
+        do_state(args)
     else:
         raise AssertionError("invalid command: {}".format(args.command))
 
