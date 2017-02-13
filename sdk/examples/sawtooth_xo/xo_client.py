@@ -54,14 +54,13 @@ class XoClient:
         return self._send_xo_txn(name, "take", space)
 
     def list(self):
-        merkle_root = self._get_merkle_root()
         xo_prefix = self._get_prefix()
 
-        result = self._send_request("state/{}?prefix={}".format(
-            merkle_root, xo_prefix))
+        result = self._send_request("state?address={}".format(xo_prefix))
 
         try:
-            encoded_entries = yaml.load(result)["entries"]
+            encoded_entries = yaml.load(result)["data"]
+
             return [
                 base64.b64decode(entry["data"]) for entry in encoded_entries
             ]
@@ -70,23 +69,15 @@ class XoClient:
             return None
 
     def show(self, name):
-        merkle_root = self._get_merkle_root()
         address = self._get_address(name)
 
-        result = self._send_request("state/{}/{}".format(merkle_root, address))
+        result = self._send_request("state/{}".format(address))
 
         try:
-            return base64.b64decode(yaml.load(result)["value"])
+            return base64.b64decode(yaml.load(result)["data"])
 
         except urllib.error.HTTPError:
             return None
-
-    def _get_merkle_root(self):
-        result = self._send_request("state")
-        try:
-            return yaml.load(result)['merkleRoot']
-        except BaseException:
-            raise XoException("Could not retrieve merkle root.")
 
     def _get_prefix(self):
         return _sha512('xo'.encode('utf-8'))[0:6]
