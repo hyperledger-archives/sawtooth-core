@@ -17,7 +17,7 @@ from sawtooth_processor_test.message_factory import MessageFactory
 from sawtooth_config.protobuf.config_pb2 import ConfigPayload
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.config_pb2 import Setting
+from sawtooth_config.protobuf.setting_pb2 import Setting
 
 
 class ConfigMessageFactory(object):

@@ -69,18 +69,6 @@ message ConfigVote {
     Vote vote = 2;
 }
 
-// Setting Container for the resulting state
-message Setting {
-    // Contains a setting entry (or entries, in the case of collisions).
-    message Entry {
-        string key = 1;
-        string value = 2;
-    }
-
-    // List of setting entries - more than one implies a state key collision
-    repeated Entry entries = 1;
-}
-
 // Contains the vote counts for a given proposal.
 message ConfigCandidate {
     // An individual vote record
