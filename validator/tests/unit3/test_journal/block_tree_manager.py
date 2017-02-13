@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from concurrent.futures import Executor
 import hashlib
 import pprint
 import random
@@ -23,12 +22,6 @@ from sawtooth_signing import pbct as signing
 
 from sawtooth_validator.journal.journal import \
     BlockPublisher
-from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
-    import \
-    BlockPublisher as TestModePublisher
-from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
-    import \
-    BlockVerifier as TestModeVerifier
 
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -46,6 +39,11 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockTransactionExecutor
+from test_journal.mock_consensus \
+    import BlockPublisher as MockBlockPublisher
+from test_journal.mock_consensus \
+    import BlockVerifier as MockBlockVerifier
+
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -91,7 +89,7 @@ class BlockTreeManager(object):
         self.set_chain_head(self.genesis_block)
 
         self.block_publisher = BlockPublisher(
-            consensus=TestModePublisher(),
+            consensus=MockBlockPublisher(),
             transaction_executor=MockTransactionExecutor(),
             block_sender=self.block_sender,
             squash_handler=None,
@@ -166,7 +164,7 @@ class BlockTreeManager(object):
 
         if add_to_store:
             if block.weight is None:
-                tmv = TestModeVerifier()
+                tmv = MockBlockVerifier()
                 block.weight = tmv.compute_block_weight(block)
             self.block_store[block.identifier] = block
 
