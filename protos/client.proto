@@ -50,72 +50,80 @@ message ClientStateCurrentResponse {
     }
     Status status = 1;
     string merkle_root = 2;
-
 }
 
-// A request from a client for a particular address's data, for a given merkle root
-message ClientStateGetRequest {
-    string merkle_root = 1;
-    string address = 2;
-}
-
-// The response to a GetRequest from the client. NORESOURCE means that either the
-// merkle root is not a merkle root in State or the address doesn't exist
-// under a valid merkle root. NONLEAF means that the address isn't a valid
-// leaf address in the merkle tree, this would probably mean that the address
-// is a prefix (truncated). ERROR is a general internal error, like the protobuf
-// sent by the client didn't deserialize correctly.
-message ClientStateGetResponse {
-    enum Status {
-        OK = 0;
-        NORESOURCE = 1;
-        NONLEAF = 2;
-        ERROR = 3;
-    }
-    Status status = 1;
-    bytes value = 2;
-}
-
-// A request to list the Entries under a given prefix (could be the root prefix ('')
-// which would give everything in State under a given merkle root) or (since the
-// merkle trie implementation requires addresses and prefixes to be length % 2 == 0)
-// any length % 2 == 0 prefix namespace.
+// A request to list every entry under a given merkle root or head block.
 message ClientStateListRequest {
     string merkle_root = 1;
-    string prefix = 2;
+    string subtree = 2;
 }
 
-// A response that lists the Entries under a given prefix (subtree). NORESOURCE means
-// that the merkle_root supplied isn't in the merkle trie or there aren't any leaves
-// under the given prefix. ERROR is a general internal error, like the protobuf sent
-// by the client didn't deserialize correctly.
+// A response that lists the Entries under a given merkle root.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * ERROR - general internal error, such as protobuf failing to deserialize
+//   * NOGENESIS - the validate has not been configrued with a genesis block
+//   * NOROOT - the merkle_root specified was not found
+//   * NORESOURCE - the root sprecidied is valid, but contains no data
+
 message ClientStateListResponse {
     enum Status {
         OK = 0;
-        NORESOURCE = 1;
-        ERROR = 2;
+        ERROR = 1;
+        NOROOT = 3;
+        NORESOURCE = 2;
+        NOGENESIS = 4;
     }
     Status status = 1;
     repeated Entry entries = 2;
 }
 
-// A request to return a list of blocks from the validator
-// May include the id of a particular block to be the `head` of the chain being
-// requested. In that case the list will include that block (if found), and all
-// blocks previous to it on the chain.
+// A request from a client for a particular address's data, or for a given
+// merkle root or head block
+message ClientStateGetRequest {
+    string merkle_root = 1;
+    string address = 2;
+}
+
+// The response to a GetRequest from the client.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * ERROR - general internal error, such as protobuf failing to deserialize
+//   * NOGENESIS - the validate has not been configrued with a genesis block
+//   * NOROOT - the head block or merkle_root specified was not found
+//   * NORESOURCE - the address specified doesn't exist
+//   * NONLEAF - the address isn't a valid, i.e. it is a subtree (truncated)
+message ClientStateGetResponse {
+    enum Status {
+        OK = 0;
+        ERROR = 1;
+        NORESOURCE = 2;
+        NOROOT = 3;
+        NOGENESIS = 4;
+        NONLEAF = 5;
+    }
+    Status status = 1;
+    bytes value = 2;
+}
+
+// A request to return a list of blocks from the validator.
 message ClientBlockListRequest {
-    string head = 1;
 }
 
 // A response that lists a chain of blocks with the newest at the end, and the
-// oldest (genesis) block at the beginning. NORESOURCE indicates that no blocks
-// were found, likely because the id specified in the `head` of the request was
-// not found on the chain.
+// oldest (genesis) block at the beginning.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * ERROR - general internal error, such as protobuf failing to deserialize
+//   * NOGENESIS - the validate has not been configrued with a genesis block
 message ClientBlockListResponse {
     enum Status {
         OK = 0;
-        NORESOURCE = 1;
-        ERROR = 2;
+        ERROR = 1;
+        NOGENESIS = 3;
     }
     Status status = 1;
     repeated Block blocks = 2;
@@ -129,15 +137,16 @@ message ClientBlockGetRequest {
 }
 
 // A response that returns the block specified by a ClientBlockGetRequest.
-// NORESOURCE indicates that no block with the specified id was found.
-// ERROR indicates that there was some sort of internal error, such as the
-// Protobuf failing to deserialize. OK indicates the block has been returned
-// successfully.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * ERROR - general internal error, such as protobuf failing to deserialize
+//   * NORESOURCE - no block with the specified id exists
 message ClientBlockGetResponse {
     enum Status {
         OK = 0;
-        NORESOURCE = 1;
-        ERROR = 2;
+        ERROR = 1;
+        NORESOURCE = 2;
     }
     Status status = 1;
     Block block = 2;
