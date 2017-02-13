@@ -233,7 +233,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                     certificates=journal.consensus.build_certificate_list(
                         journal.block_store, self),
                     poet_public_key=poet_public_key)
-            except (ValueError, TypeError), err:
+            except (ValueError, TypeError) as err:
                 LOGGER.error('Wait certificate is not valid: %s', err)
                 return False
 

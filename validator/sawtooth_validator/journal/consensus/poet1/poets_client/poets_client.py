@@ -13,12 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from collections import OrderedDict
 import logging
 from urlparse import urljoin
 
 import requests
 
-from gossip.common import ascii_encode_dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +26,22 @@ LOGGER = logging.getLogger(__name__)
 """
 Reference Client for PoET as a Service(PoETS) Server.
 """
+
+def ascii_encode_dict(item):
+    """
+    Support method to ensure that JSON is converted to ascii since unicode
+    identifiers, in particular, can cause problems
+    """
+    if isinstance(item, dict):
+        return OrderedDict(
+            (ascii_encode_dict(key), ascii_encode_dict(item[key]))
+            for key in sorted(item.keys()))
+    elif isinstance(item, list):
+        return [ascii_encode_dict(element) for element in item]
+    elif isinstance(item, unicode):
+        return item.encode('ascii')
+    else:
+        return item
 
 
 class PoetsClient(object):

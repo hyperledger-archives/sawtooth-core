@@ -17,8 +17,8 @@ import logging
 from requests import ConnectionError
 from requests import Timeout
 
-from sawtooth.exceptions import NotAvailableException
-from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
+from sawtooth_validator.exceptions import NotAvailableException
+from sawtooth_validator.journal.consensus.poet1.wait_timer import WaitTimer
 
 LOGGER = logging.getLogger(__name__)
 

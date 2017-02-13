@@ -14,8 +14,10 @@
 # ------------------------------------------------------------------------------
 import logging
 
-from gossip.common import json2dict
-from gossip.common import dict2json
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+    import json2dict
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+    import dict2json
 
 LOGGER = logging.getLogger(__name__)
 

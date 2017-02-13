@@ -32,7 +32,15 @@ class GenesisError(Exception):
 
 class InvalidGenesisStateError(GenesisError):
     """
-    Error thrown when there is an invalid intial state during the genesis
+    Error thrown when there is an invalid initial state during the genesis
     block generation process.
+    """
+    pass
+
+
+class NotAvailableException(Exception):
+    """
+    Indicates a required service is not available and the action should be
+    tried again later.
     """
     pass

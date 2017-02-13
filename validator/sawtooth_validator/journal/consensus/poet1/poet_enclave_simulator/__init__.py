@@ -13,13 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sawtooth_validator.consensus.poet1.poet_consensus
-import sawtooth_validator.consensus.poet1.poet_transaction_block
-import sawtooth_validator.consensus.poet1.wait_certificate
-import sawtooth_validator.consensus.poet1.wait_timer
-
-__all__ = [
-    'poet_consensus',
-    'poet_transaction_block',
-    'wait_certificate',
-    'wait_timer']
+__all__ = []

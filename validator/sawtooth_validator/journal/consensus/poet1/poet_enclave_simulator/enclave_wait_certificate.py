@@ -17,9 +17,12 @@ import logging
 import hashlib
 import base64
 
-from gossip.common import dict2json
-from gossip.common import json2dict
-from gossip.common import NullIdentifier
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+    import dict2json
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+    import json2dict
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -109,7 +112,7 @@ class EnclaveWaitCertificate(object):
 
     @property
     def identifier(self):
-        my_id = NullIdentifier
+        my_id = NULL_BLOCK_IDENTIFIER
         if self.signature is not None:
             my_id = \
                 base64.b32encode(
