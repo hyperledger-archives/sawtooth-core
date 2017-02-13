@@ -104,4 +104,4 @@ class BlockVerifier(BlockVerifierInterface):
 
     def compute_block_weight(self, block_state):
         # longest chain wins
-        return block_state.block.block_num
+        return block_state.block_num

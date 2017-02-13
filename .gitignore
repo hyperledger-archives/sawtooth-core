@@ -6,3 +6,5 @@ rest_api/sawtooth_rest_api/protobuf/
 cli/sawtooth_cli/protobuf
 cli/sawtooth_cli/config_protobuf
 validator/sawtooth_validator/protobuf
+
+bin/sdk/python/sawtooth_protobuf/__init__.py

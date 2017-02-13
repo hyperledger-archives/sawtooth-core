@@ -64,13 +64,14 @@ class Validator(object):
         LOGGER.debug('block store file is %s', block_db_filename)
         block_store = {}
         # block_store = LMDBNoLockDatabase(block_db_filename, 'n')
+        block_store = {}
         # this is not currently being used but will be something like this
         # in the future, when Journal takes a block_store that isn't a dict
 
         # setup network
         self._dispatcher = Dispatcher()
 
-        completer = Completer()
+        completer = Completer(block_store)
 
         thread_pool = ThreadPoolExecutor(max_workers=10)
         process_pool = ProcessPoolExecutor(max_workers=3)

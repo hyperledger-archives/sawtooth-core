@@ -13,8 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import hashlib
-import time
-
 
 from sawtooth_validator.journal.consensus.consensus import \
     BlockPublisherInterface, BlockVerifierInterface
@@ -66,16 +64,16 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             None
         """
-        hash = hashlib.sha256()
-        hash.update(block_header.consensus)
-        block_header.consensus = hash.hexdigest().encode()
+        hasher = hashlib.sha256()
+        hasher.update(block_header.consensus)
+        block_header.consensus = hasher.hexdigest().encode()
 
 
 class BlockVerifier(BlockVerifierInterface):
     def verify_block(self, block_state):
-        hash = hashlib.sha256()
-        hash.update(b"test_mode")
-        return block_state.block.consensus == hash.hexdigest().encode()
+        hasher = hashlib.sha256()
+        hasher.update(b"test_mode")
+        return block_state.consensus == hasher.hexdigest().encode()
 
     def compute_block_weight(self, block_state):
-        return block_state.block.block_num
+        return block_state.block_num
