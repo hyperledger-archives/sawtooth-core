@@ -62,7 +62,7 @@ class Validator(object):
 
         block_db_filename = os.path.join(data_dir, 'block.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
-        block_store = {}
+
         # block_store = LMDBNoLockDatabase(block_db_filename, 'n')
         block_store = {}
         # this is not currently being used but will be something like this
@@ -84,16 +84,6 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_SET_REQUEST,
             tp_state_handlers.TpStateSetHandler(context_manager),
-            thread_pool)
-
-        self._dispatcher.add_handler(
-            validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            client_handlers.StateGetRequestHandler(lmdb),
-            thread_pool)
-
-        self._dispatcher.add_handler(
-            validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            client_handlers.StateListRequestHandler(lmdb),
             thread_pool)
 
         self._service = Interconnect(component_endpoint,
@@ -198,28 +188,32 @@ class Validator(object):
             thread_pool)
 
         self._dispatcher.add_handler(
-            validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            client_handlers.StateGetRequestHandler(lmdb),
+            validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
+            client_handlers.StateListRequest(
+                lmdb,
+                self._journal.get_block_store()),
             thread_pool)
 
         self._dispatcher.add_handler(
-            validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            client_handlers.StateListRequestHandler(lmdb),
+            validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
+            client_handlers.StateGetRequest(
+                lmdb,
+                self._journal.get_block_store()),
             thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
-            client_handlers.BlockGetRequestHandler(
-                self._journal.get_block_store()), thread_pool)
+            client_handlers.BlockGetRequest(self._journal.get_block_store()),
+            thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
-            client_handlers.BlockListRequestHandler(
-                self._journal.get_block_store()), thread_pool)
+            client_handlers.BlockListRequest(self._journal.get_block_store()),
+            thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-            client_handlers.StateCurrentRequestHandler(
+            client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
 
     def start(self):

@@ -72,6 +72,8 @@ class BlockStoreAdapter(MutableMapping):
         """
         Return the head block of the current chain.
         """
+        if "chain_head_id" not in self._block_store:
+            return None
         return self.__getitem__(self._block_store["chain_head_id"])
 
     @property
