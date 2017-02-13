@@ -13,4 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = ['poet_enclave_simulator']
+__all__ = []

@@ -15,11 +15,12 @@
 
 import unittest
 
-from gossip.common import NullIdentifier
-from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
-from sawtooth_validator.consensus.poet1.poet_enclave_simulator \
+from sawtooth_validator.journal.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
-from utils import create_random_public_key_hash
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+
+from test_poet1.utils import create_random_public_key_hash
 
 
 class TestSignupInfo(unittest.TestCase):
@@ -46,7 +47,7 @@ class TestSignupInfo(unittest.TestCase):
             SignupInfo.create_signup_info(
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         self.assertIsNotNone(signup_info.poet_public_key)
         self.assertIsNotNone(signup_info.proof_data)
@@ -58,7 +59,7 @@ class TestSignupInfo(unittest.TestCase):
             SignupInfo.create_signup_info(
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
         serialized = signup_info.serialize()
         copy_signup_info = SignupInfo.signup_info_from_serialized(serialized)
 
@@ -76,7 +77,7 @@ class TestSignupInfo(unittest.TestCase):
             SignupInfo.create_signup_info(
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
         poet_public_key = \
             SignupInfo.unseal_signup_data(
                 validator_address='1660 Pennsylvania Avenue NW',
@@ -92,12 +93,12 @@ class TestSignupInfo(unittest.TestCase):
             SignupInfo.create_signup_info(
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         try:
             signup_info.check_valid(
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
         except ValueError as e:
             self.fail('Error with SignupInfo: {}'.format(e))
 
@@ -106,19 +107,19 @@ class TestSignupInfo(unittest.TestCase):
             SignupInfo.create_signup_info(
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         with self.assertRaises(ValueError):
             signup_info.check_valid(
                 originator_public_key_hash=self._another_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
     def test_non_matching_most_recent_wait_certificate_id(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NullIdentifier)
+                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         # NOTE - this requires that the signup information check for validity
         #        actually make this check.  Currently the check is not done.

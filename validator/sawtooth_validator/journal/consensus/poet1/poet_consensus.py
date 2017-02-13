@@ -23,12 +23,13 @@ import math
 from gossip import common
 from gossip import stats
 from sawtooth_signing import pbct as signing
-from sawtooth_validator.consensus.consensus_base import Consensus
-from sawtooth_validator.consensus.poet1 import poet_transaction_block
-from sawtooth_validator.consensus.poet1 import validator_registry as val_reg
-from sawtooth_validator.consensus.poet1.signup_info import SignupInfo
-from sawtooth_validator.consensus.poet1.wait_timer import WaitTimer
-from sawtooth_validator.consensus.poet1.wait_certificate import WaitCertificate
+from sawtooth_validator.journal.consensus.poet1 import poet_transaction_block
+from sawtooth_validator.journal.consensus.poet1\
+    import validator_registry as val_reg
+from sawtooth_validator.journal.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.journal.consensus.poet1.wait_timer import WaitTimer
+from sawtooth_validator.journal.consensus.poet1.wait_certificate\
+    import WaitCertificate
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ BlockInformation = collections.namedtuple('BlockInformation',
                                            'population_estimate'])
 
 
-class PoetConsensus(Consensus):
+class PoetConsensus(object):
     """Implements a journal based on the proof of elapsed time
     consensus mechanism.
 
@@ -290,7 +291,7 @@ class PoetConsensus(Consensus):
                     default_initial_value=0,
                     sync_local_store=False,
                     reset_on_different_key=False)
-            except ValueError, error:
+            except ValueError as error:
                 LOGGER.error('Caught Exception: %s', str(error))
 
         for originator, statistics in self._validator_statistics.iteritems():
@@ -747,7 +748,7 @@ class PoetConsensus(Consensus):
                             'Validator {} is winning elections to '
                             'frequently'.format(
                                 originator_id))
-            except ValueError, error:
+            except ValueError as error:
                 LOGGER.error('Block cannot be claimed: %s', error)
                 return False
 

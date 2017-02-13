@@ -15,12 +15,12 @@
 
 import logging
 
-from sawtooth_validator.consensus.poet1.poets_client.poets_client \
+from sawtooth_validator.journal.consensus.poet1.poets_client.poets_client \
     import PoetsClient
-from sawtooth_validator.consensus.poet1.poets_client.wait_certificate \
+from sawtooth_validator.journal.consensus.poet1.poets_client.wait_certificate \
     import WaitCertificate
 
-from sawtooth_validator.consensus.poet1.poets_client.wait_timer \
+from sawtooth_validator.journal.consensus.poet1.poets_client.wait_timer \
     import WaitTimer
 
 LOGGER = logging.getLogger(__name__)
@@ -32,10 +32,6 @@ Client for PoET Enclave Server.
 
 # pylint: disable=invalid-name
 poets_client = None
-
-NULL_IDENTIFIER = "0000000000000000"
-IDENTIFIER_LENGTH = 16
-MINIMUM_WAIT_TIME = 1.0
 
 
 def initialize(**kwargs):

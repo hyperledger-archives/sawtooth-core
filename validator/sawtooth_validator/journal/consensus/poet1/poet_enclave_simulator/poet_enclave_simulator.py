@@ -22,16 +22,22 @@ import hashlib
 import base64
 import time
 
-from gossip.common import json2dict
-from gossip.common import dict2json
-from gossip.common import NullIdentifier
 from sawtooth_signing import pbct as signing
-from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
+
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+    import json2dict
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+    import dict2json
+
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator\
     .enclave_signup_info import EnclaveSignupInfo
-from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator\
     .enclave_wait_timer import EnclaveWaitTimer
-from sawtooth_validator.consensus.poet1.poet_enclave_simulator\
+from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator\
     .enclave_wait_certificate import EnclaveWaitCertificate
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -418,7 +424,7 @@ class _PoetEnclaveSimulator(object):
 
             is_not_genesis_block = \
                 (cls._active_wait_timer.previous_certificate_id !=
-                 NullIdentifier)
+                 NULL_BLOCK_IDENTIFIER)
 
             now = time.time()
             expire_time = \
