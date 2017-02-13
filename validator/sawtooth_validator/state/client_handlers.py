@@ -25,189 +25,222 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf.state_context_pb2 import Entry
 from sawtooth_validator.protobuf import validator_pb2
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class StateCurrentRequestHandler(Handler):
+class _ClientHandler(Handler):
+    """
+    Base Client Handler, with some useful helper methods to standardize
+    building results, and setting up the merkle tree.
+
+    "Try" methods may fail, and will return an enum status in that case.
+    This can be checked for with _is_status.
+
+    Args:
+        request_proto - protobuf class for the request
+        response_proto - protobuf class for the response
+        result_type - the Message enum for the response
+    """
+    def __init__(self, request_proto, response_proto, result_type):
+        self._request_proto = request_proto
+        self._response_proto = response_proto
+        self._result_type = result_type
+
+    def _init_result(self):
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_type=self._result_type)
+
+    def _finish_result(self, result, status, **kwargs):
+        result.message_out = self._response_proto(status=status, **kwargs)
+        return result
+
+    def _try_parse_request(self, content):
+        try:
+            request = self._request_proto()
+            request.ParseFromString(content)
+        except DecodeError:
+            LOGGER.info('Protobuf %s failed to deserialize', request)
+            return self._response_proto.INTERNAL_ERROR
+
+        return request
+
+    def _is_status(self, obj):
+        return type(obj) == int
+
+    def _set_root(self, request):
+        """
+        Used by handlers that fetch data from the merkle tree. Sets the tree
+        with the proper root.
+        """
+        assert hasattr(self, '_tree'), '_set_root missing _tree attribute'
+        self._tree.set_merkle_root(request.merkle_root)
+
+
+class StateCurrentRequest(_ClientHandler):
     def __init__(self, current_root_func):
         self._current_root_func = current_root_func
+        super().__init__(
+            client_pb2.ClientStateCurrentRequest,
+            client_pb2.ClientStateCurrentResponse,
+            validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
 
     def handle(self, identity, message_content):
-        request = client_pb2.ClientStateCurrentRequest()
-        resp_proto = client_pb2.ClientStateCurrentResponse
-        status = resp_proto.OK
+        result = self._init_result()
 
-        try:
-            request.ParseFromString(message_content)
-            current_root = self._current_root_func()
-        except DecodeError:
-            LOGGER.info("Expected protobuf of class %s failed to "
-                        "deserialize.", request)
-            status = resp_proto.ERROR
+        request = self._try_parse_request(message_content)
+        if self._is_status(request):
+            return self._finish_result(result, request)
 
-        if status != resp_proto.OK:
-            response = resp_proto(status=resp_proto.ERROR)
-        else:
-            response = resp_proto(status=status, merkle_root=current_root)
-
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=response,
-            message_type=validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
+        return self._finish_result(
+            result,
+            self._response_proto.OK,
+            merkle_root=self._current_root_func())
 
 
-class StateListRequestHandler(Handler):
-    def __init__(self, database):
+class StateListRequest(_ClientHandler):
+    def __init__(self, database, block_store):
         self._tree = MerkleDatabase(database)
+        self._block_store = block_store
+        super().__init__(
+            client_pb2.ClientStateListRequest,
+            client_pb2.ClientStateListResponse,
+            validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE)
 
     def handle(self, identity, message_content):
-        request = client_pb2.ClientStateListRequest()
-        resp_proto = client_pb2.ClientStateListResponse
-        status = resp_proto.OK
+        result = self._init_result()
 
-        try:
-            request.ParseFromString(message_content)
-            self._tree.set_merkle_root(request.merkle_root)
-        except KeyError as e:
-            status = resp_proto.NORESOURCE
-            LOGGER.debug(e)
-        except DecodeError:
-            status = resp_proto.ERROR
-            LOGGER.info("Expected protobuf of class %s failed to "
-                        "deserialize", request)
+        request = self._try_parse_request(message_content)
+        if self._is_status(request):
+            return self._finish_result(result, request)
 
-        if status != resp_proto.OK:
-            response = resp_proto(status=status)
-        else:
-            prefix = request.prefix
-            leaves = self._tree.leaves(prefix)
+        self._set_root(request)
 
-            if len(leaves) == 0:
-                status = resp_proto.NORESOURCE
-                response = resp_proto(status=status)
-            else:
-                entries = [Entry(address=a, data=v) for a, v in leaves.items()]
-                response = resp_proto(status=status, entries=entries)
+        # Fetch leaves and encode as protobuf
+        leaves = [
+            client_pb2.Leaf(address=a, data=v) for a, v in \
+            self._tree.leaves(request.address or '').items()]
 
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=response,
-            message_type=validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE)
+        if not leaves:
+            return self._finish_result(
+                result,
+                self._response_proto.NO_RESOURCE,
+                head_id=head_id)
+
+        return self._finish_result(
+            result,
+            self._response_proto.OK,
+            head_id=head_id,
+            leaves=leaves)
 
 
-class StateGetRequestHandler(Handler):
-    def __init__(self, database):
+class StateGetRequest(_ClientHandler):
+    def __init__(self, database, block_store):
         self._tree = MerkleDatabase(database)
+        self._block_store = block_store
+        super().__init__(
+            client_pb2.ClientStateGetRequest,
+            client_pb2.ClientStateGetResponse,
+            validator_pb2.Message.CLIENT_STATE_GET_RESPONSE)
 
     def handle(self, identity, message_content):
-        request = client_pb2.ClientStateGetRequest()
-        resp_proto = client_pb2.ClientStateGetResponse
-        status = resp_proto.OK
+        result = self._init_result()
 
+        request = self._try_parse_request(message_content)
+        if self._is_status(request):
+            return self._finish_result(result, request)
+
+        self._set_root(request)
+
+        # Fetch leaf value
+        value = None
+        address = request.address
         try:
-            request.ParseFromString(message_content)
-            self._tree.set_merkle_root(request.merkle_root)
-        except KeyError as e:
-            status = resp_proto.NORESOURCE
+            value = self._tree.get(address)
+        except KeyError:
+            LOGGER.debug('Unable to find entry at address %s', address)
+            return self._finish_result(
+                result,
+                self._response_proto.NO_RESOURCE)
+        except ValueError as e:
+            LOGGER.debug('Address %s is a nonleaf', address)
             LOGGER.debug(e)
-        except DecodeError:
-            status = resp_proto.ERROR
-            LOGGER.info("Expected protobuf of class %s failed to "
-                        "deserialize", request)
+            return self._finish_result(
+                result,
+                self._response_proto.INVALID_ADDRESS)
 
-        if status != resp_proto.OK:
-            response = resp_proto(status=status)
-        else:
-            address = request.address
-            try:
-                value = self._tree.get(address)
-            except KeyError:
-                status = resp_proto.NORESOURCE
-                LOGGER.debug("No entry at state address %s", address)
-            except ValueError:
-                status = resp_proto.NONLEAF
-                LOGGER.debug("Node at state address %s is a nonleaf", address)
-
-            response = resp_proto(status=status)
-            if status == resp_proto.OK:
-                response.value = value
-
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=response,
-            message_type=validator_pb2.Message.CLIENT_STATE_GET_RESPONSE)
+        return self._finish_result(
+            result,
+            self._response_proto.OK,
+            value=value)
 
 
-class BlockListRequestHandler(Handler):
+class BlockListRequest(_ClientHandler):
     def __init__(self, block_store):
         self._block_store = block_store
+        super().__init__(
+            client_pb2.ClientBlockListRequest,
+            client_pb2.ClientBlockListResponse,
+            validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE)
 
     def handle(self, identity, message_content):
-        request = client_pb2.ClientBlockListRequest()
-        resp_proto = client_pb2.ClientBlockListResponse
-        status = resp_proto.OK
-        try:
-            request.ParseFromString(message_content)
-        except DecodeError:
-            LOGGER.info("Expected protobuf of class %s failed to "
-                        "deserialize", request)
-            status = resp_proto.ERROR
+        result = self._init_result()
 
-        if status != resp_proto.OK:
-            response = resp_proto(status=status)
-        else:
-            response = resp_proto(status=status, blocks=self._list_blocks())
+        request = self._try_parse_request(message_content)
+        if self._is_status(request):
+            return self._finish_result(result, request)
 
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=response,
-            message_type=validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE)
+        if not self._block_store.chain_head:
+            LOGGER.debug('Unable to get chain head from block store')
+            return self._finish_result(result, self._response_proto.NO_GENESIS)
 
-    def _list_blocks(self):
+        current_id = self._block_store.chain_head.header_signature
         blocks = []
-        current_id = self._block_store['chain_head_id']
 
+        # Build block list
         while current_id in self._block_store:
-            block = self._block_store[current_id].block.get_block()
+            block = self._block_store[current_id].block
             blocks.append(block)
-
             header = BlockHeader()
             header.ParseFromString(block.header)
             current_id = header.previous_block_id
 
-        return blocks
+        if not blocks:
+            return self._finish_result(result, self._response_proto.NO_ROOT)
+
+        return self._finish_result(
+            result,
+            self._response_proto.OK,
+            blocks=blocks)
 
 
-class BlockGetRequestHandler(Handler):
+class BlockGetRequest(_ClientHandler):
     def __init__(self, block_store):
         self._block_store = block_store
+        super().__init__(
+            client_pb2.ClientBlockGetRequest,
+            client_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE)
 
     def handle(self, identity, message_content):
-        request = client_pb2.ClientBlockGetRequest()
-        resp_proto = client_pb2.ClientBlockGetResponse
-        status = resp_proto.OK
+        result = self._init_result()
 
-        try:
-            request.ParseFromString(message_content)
-            block = self._block_store[request.block_id].block.get_block()
-        except DecodeError:
-            LOGGER.info("Expected protobuf of class %s failed to "
-                        "deserialize", request)
-            status = resp_proto.ERROR
-        except KeyError as e:
-            status = client_pb2.ClientStateListResponse.NORESOURCE
-            LOGGER.info(e)
+        request = self._try_parse_request(message_content)
+        if self._is_status(request):
+            return self._finish_result(result, request)
 
-        if status != resp_proto.OK:
-            response = resp_proto(status=status)
-        else:
-            response = resp_proto(status=status, block=block)
+        block_id = request.block_id
 
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=response,
-            message_type=validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE)
+        if block_id not in self._block_store:
+            LOGGER.debug('Unable to find block "%s" in store', block_id)
+            return self._finish_result(
+                result,
+                self._response_proto.NO_RESOURCE)
+
+        return self._finish_result(
+            result,
+            self._response_proto.OK,
+            block=self._block_store[block_id].block)
