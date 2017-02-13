@@ -36,7 +36,7 @@ paths:
           description: Callback url
       responses:
         202:
-          description: Successfully submitted the BatchList
+          description: Successfully submitted BatchList
           schema:
             properties:
               link:
@@ -63,7 +63,7 @@ paths:
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully retrieved the list of batches
+          description: Successfully retrieved batches
           schema:
             properties:
               data:
@@ -87,14 +87,13 @@ paths:
     parameters:
       - $ref: "#/parameters/batch_id"
     get:
-      summary: Fetches the protobuf representation of a particular batch
+      summary: Fetches a particular batch
       parameters:
-        - $ref: "#/parameters/head"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully retrieved the batch
+          description: Successfully retrieved batch
           schema:
             properties:
               data:
@@ -117,7 +116,7 @@ paths:
       summary: Fetches a list of the committed statuses for a set of batches
       description: >
         Fetches a list of statuses for a batch or batches. The
-        batch(es) you want to check on are specified using the
+        batch(es) you want to check can be specified using the
         `id` filter parameter. Note that this route does not
         return a full resource, and the response body will
         _not_ include the `head` or `paging` properties.
@@ -129,7 +128,7 @@ paths:
           required: true
       responses:
         200:
-          description: Successfully retrieved the list of statuses
+          description: Successfully retrieved statuses
           schema:
             properties:
               data:
@@ -147,7 +146,24 @@ paths:
 
   /state:
     get:
-      summary: Fetches the current state, or state for a particular head block
+      summary: Fetches the data for the current state
+      description: >
+        Fetches a paginated list of leaves for the current state, or relative
+        to a particular head block. Using the `address` filter parameter, will
+        narrow the list to any leaves that have an address beginning with the
+        characters specified.
+      parameters:
+        - $ref: "#/parameters/head"
+        - name: address
+          in: query
+          type: string
+          description: A partial address to filter leaves by
+        - $ref: "#/parameters/count"
+        - $ref: "#/parameters/min_position"
+        - $ref: "#/parameters/max_position"
+        - $ref: "#/parameters/sort"
+        - $ref: "#/parameters/fields"
+        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved state data
@@ -174,21 +190,14 @@ paths:
     parameters:
       - $ref: "#/parameters/address"
     get:
-      summary: Lists data from the blockchain
-      description: >
-        Fetches a paginated list of leaves for a given
-        address or address prefix on the merkel tree.
+      summary: Fetches a particular leaf from the current state
       parameters:
         - $ref: "#/parameters/head"
-        - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min_position"
-        - $ref: "#/parameters/max_position"
-        - $ref: "#/parameters/sort"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully fetched the list of leaves
+          description: Successfully fetched leaves
           schema:
             properties:
               data:
@@ -214,8 +223,7 @@ paths:
     get:
       summary: Fetches a list of blocks
       description: >
-        Fetches a paginated list of protobuf formatted blocks
-        from the validator.
+        Fetches a paginated list of blocks from the validator.
       parameters:
         - $ref: "#/parameters/head"
         - $ref: "#/parameters/count"
@@ -226,7 +234,7 @@ paths:
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully fetched the list of blocks
+          description: Successfully retrieved blocks
           schema:
             properties:
               data:
@@ -250,14 +258,13 @@ paths:
     parameters:
       - $ref: "#/parameters/block_id"
     get:
-      summary: Fetches a particlar protobuf formatted block
+      summary: Fetches a particlar block
       parameters:
-        - $ref: "#/parameters/head"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully retrieved the block
+          description: Successfully retrieved block
           schema:
             properties:
               data:
@@ -280,8 +287,7 @@ paths:
     get:
       summary: Fetches a list of transactions
       description: >
-        Fetches a paginated list of protobuf formatted transactions
-        from the validator.
+        Fetches a paginated list of transactions from the validator.
       parameters:
         - $ref: "#/parameters/head"
         - $ref: "#/parameters/count"
@@ -292,7 +298,7 @@ paths:
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully fetched the list of transactions
+          description: Successfully retrieved transactions
           schema:
             properties:
               data:
@@ -316,14 +322,13 @@ paths:
     parameters:
       - $ref: "#/parameters/transaction_id"
     get:
-      summary: Fetches a particular protobuf transaction
+      summary: Fetches a particular transaction
       parameters:
-        - $ref: "#/parameters/head"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
       responses:
         200:
-          description: Successfully retrieved the transaction
+          description: Successfully retrieved transaction
           schema:
             properties:
               data:

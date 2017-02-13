@@ -31,176 +31,111 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-class _ClientHandler(Handler):
-    """
-    Base Client Handler, with some useful helper methods to standardize
-    building results, and setting up the merkle tree.
-
-    "Try" methods may fail, and will return an enum status in that case.
-    This can be checked for with _is_status.
-
-    Args:
-        request_proto - protobuf class for the request
-        response_proto - protobuf class for the response
-        result_type - the Message enum for the response
-    """
-    def __init__(self, request_proto, response_proto, result_type):
-        self._request_proto = request_proto
-        self._response_proto = response_proto
-        self._result_type = result_type
-
-    def _init_result(self):
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_type=self._result_type)
-
-    def _finish_result(self, result, status, **kwargs):
-        result.message_out = self._response_proto(status=status, **kwargs)
-        return result
-
-    def _try_parse_request(self, content):
-        try:
-            request = self._request_proto()
-            request.ParseFromString(content)
-        except DecodeError:
-            LOGGER.info('Protobuf %s failed to deserialize', request)
-            return self._response_proto.INTERNAL_ERROR
-
-        return request
-
-    def _is_status(self, obj):
-        return type(obj) == int
-
-    def _set_root(self, request):
-        """
-        Used by handlers that fetch data from the merkle tree. Sets the tree
-        with the proper root.
-        """
-        assert hasattr(self, '_tree'), '_set_root missing _tree attribute'
-        self._tree.set_merkle_root(request.merkle_root)
-
-
-class StateCurrentRequest(_ClientHandler):
+class StateCurrentRequest(Handler):
     def __init__(self, current_root_func):
         self._current_root_func = current_root_func
-        super().__init__(
+
+    def handle(self, identity, message_content):
+        helper = _ClientHelper(
+            message_content,
             client_pb2.ClientStateCurrentRequest,
             client_pb2.ClientStateCurrentResponse,
             validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
 
-    def handle(self, identity, message_content):
-        result = self._init_result()
+        if not helper.has_response():
+            helper.set_response(
+                helper.status.OK,
+                merkle_root=self._current_root_func())
 
-        request = self._try_parse_request(message_content)
-        if self._is_status(request):
-            return self._finish_result(result, request)
-
-        return self._finish_result(
-            result,
-            self._response_proto.OK,
-            merkle_root=self._current_root_func())
+        return helper.result
 
 
-class StateListRequest(_ClientHandler):
-    def __init__(self, database, block_store):
+class StateListRequest(Handler):
+    def __init__(self, database):
         self._tree = MerkleDatabase(database)
-        self._block_store = block_store
-        super().__init__(
+
+    def handle(self, identity, message_content):
+        helper = _ClientHelper(
+            message_content,
             client_pb2.ClientStateListRequest,
             client_pb2.ClientStateListResponse,
-            validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE)
+            validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE,
+            tree=self._tree)
 
-    def handle(self, identity, message_content):
-        result = self._init_result()
-
-        request = self._try_parse_request(message_content)
-        if self._is_status(request):
-            return self._finish_result(result, request)
-
-        self._set_root(request)
+        helper.set_root()
+        if helper.has_response():
+            return helper.result
 
         # Fetch leaves and encode as protobuf
         leaves = [
-            client_pb2.Leaf(address=a, data=v) for a, v in \
-            self._tree.leaves(request.address or '').items()]
+            client_pb2.Leaf(address=a, data=v) for a, v in
+            self._tree.leaves(helper.request.address or '').items()]
 
-        if not leaves:
-            return self._finish_result(
-                result,
-                self._response_proto.NO_RESOURCE,
-                head_id=head_id)
+        if leaves:
+            helper.set_response(
+                helper.status.OK,
+                leaves=leaves)
+        else:
+            helper.set_response(helper.status.NORESOURCE)
 
-        return self._finish_result(
-            result,
-            self._response_proto.OK,
-            head_id=head_id,
-            leaves=leaves)
+        return helper.result
 
 
-class StateGetRequest(_ClientHandler):
+class StateGetRequest(Handler):
     def __init__(self, database, block_store):
         self._tree = MerkleDatabase(database)
-        self._block_store = block_store
-        super().__init__(
-            client_pb2.ClientStateGetRequest,
-            client_pb2.ClientStateGetResponse,
-            validator_pb2.Message.CLIENT_STATE_GET_RESPONSE)
 
     def handle(self, identity, message_content):
-        result = self._init_result()
+        helper = _ClientHelper(
+            message_content,
+            client_pb2.ClientStateGetRequest,
+            client_pb2.ClientStateGetResponse,
+            validator_pb2.Message.CLIENT_STATE_GET_RESPONSE,
+            tree=self._tree)
 
-        request = self._try_parse_request(message_content)
-        if self._is_status(request):
-            return self._finish_result(result, request)
-
-        self._set_root(request)
+        helper.set_root()
+        if helper.has_response():
+            return helper.result
 
         # Fetch leaf value
-        value = None
-        address = request.address
+        address = helper.request.address
         try:
             value = self._tree.get(address)
         except KeyError:
             LOGGER.debug('Unable to find entry at address %s', address)
-            return self._finish_result(
-                result,
-                self._response_proto.NO_RESOURCE)
+            helper.set_response(helper.status.NORESOURCE)
         except ValueError as e:
             LOGGER.debug('Address %s is a nonleaf', address)
             LOGGER.debug(e)
-            return self._finish_result(
-                result,
-                self._response_proto.INVALID_ADDRESS)
+            helper.set_response(helper.status.NONLEAF)
 
-        return self._finish_result(
-            result,
-            self._response_proto.OK,
-            value=value)
+        if not helper.has_response():
+            helper.set_response(
+                helper.status.OK,
+                value=value)
+
+        return helper.result
 
 
-class BlockListRequest(_ClientHandler):
+class BlockListRequest(Handler):
     def __init__(self, block_store):
         self._block_store = block_store
-        super().__init__(
-            client_pb2.ClientBlockListRequest,
-            client_pb2.ClientBlockListResponse,
-            validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE)
 
     def handle(self, identity, message_content):
-        result = self._init_result()
+        helper = _ClientHelper(
+            message_content,
+            client_pb2.ClientBlockListRequest,
+            client_pb2.ClientBlockListResponse,
+            validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE,
+            block_store=self._block_store)
 
-        request = self._try_parse_request(message_content)
-        if self._is_status(request):
-            return self._finish_result(result, request)
-
-        if not self._block_store.chain_head:
-            LOGGER.debug('Unable to get chain head from block store')
-            return self._finish_result(result, self._response_proto.NO_GENESIS)
-
-        current_id = self._block_store.chain_head.header_signature
-        blocks = []
+        helper.set_head_id()
+        if helper.has_response():
+            return helper.result
 
         # Build block list
+        current_id = helper.head_id
+        blocks = []
         while current_id in self._block_store:
             block = self._block_store[current_id].block
             blocks.append(block)
@@ -208,39 +143,108 @@ class BlockListRequest(_ClientHandler):
             header.ParseFromString(block.header)
             current_id = header.previous_block_id
 
-        if not blocks:
-            return self._finish_result(result, self._response_proto.NO_ROOT)
+        if blocks:
+            helper.set_response(
+                helper.status.OK,
+                blocks=blocks)
+        else:
+            helper.set_response(helper.status.NOROOT)
 
-        return self._finish_result(
-            result,
-            self._response_proto.OK,
-            blocks=blocks)
+        return helper.result
 
 
-class BlockGetRequest(_ClientHandler):
+class BlockGetRequest(Handler):
     def __init__(self, block_store):
         self._block_store = block_store
-        super().__init__(
+
+    def handle(self, identity, message_content):
+        helper = _ClientHelper(
+            message_content,
             client_pb2.ClientBlockGetRequest,
             client_pb2.ClientBlockGetResponse,
             validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE)
 
-    def handle(self, identity, message_content):
-        result = self._init_result()
+        if helper.has_response():
+            return helper.result
 
-        request = self._try_parse_request(message_content)
-        if self._is_status(request):
-            return self._finish_result(result, request)
-
-        block_id = request.block_id
-
-        if block_id not in self._block_store:
+        block_id = helper.request.block_id
+        if block_id in self._block_store:
+            helper.set_response(
+                helper.status.OK,
+                block=self._block_store[block_id].block)
+        else:
             LOGGER.debug('Unable to find block "%s" in store', block_id)
-            return self._finish_result(
-                result,
-                self._response_proto.NO_RESOURCE)
+            helper.set_response(helper.status.NORESOURCE)
 
-        return self._finish_result(
-            result,
-            self._response_proto.OK,
-            block=self._block_store[block_id].block)
+        return helper.result
+
+
+class _ClientHelper(object):
+    """
+    Utility class for Client Handlers that simplifies message handling by
+    providing a response that can be set only once, and a single source
+    of frequently used methods.
+
+    Args:
+        handler - the Client Handler using the helper
+        content - the message_content being handled
+        req_proto - protobuf class for the request
+        resp_proto - protobuf class for the response
+        result_type - the Message enum for the response
+    """
+    def __init__(self, content, req_proto, resp_proto, result_type,
+                 tree=None, block_store=None):
+        self._tree = tree
+        self._block_store = block_store
+        self._resp_proto = resp_proto
+        self.status = resp_proto
+        self.head_id = None
+
+        self.result = HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_type=result_type)
+
+        try:
+            self.request = req_proto()
+            self.request.ParseFromString(content)
+        except DecodeError:
+            LOGGER.info('Protobuf %s failed to deserialize', self.request)
+            self.set_response(self.status.ERROR)
+
+    def has_response(self):
+        return self.result.message_out is not None
+
+    def set_response(self, status, **kwargs):
+        if not self.has_response():
+            self.result.message_out = self._resp_proto(status=status, **kwargs)
+
+    def get_genesis(self):
+        """
+        Attempts to fetch the chain head from the block store
+        """
+        if self.has_response():
+            return
+
+        if not self._block_store.chain_head:
+            LOGGER.debug('Unable to get chain head from block store')
+            self.set_response(self.status.NOGENESIS)
+
+        return self._block_store.chain_head.block
+
+    def set_head_id(self):
+        if self.has_response():
+            return
+
+        head = self.get_genesis()
+        self.head_id = head.header_signature
+
+    def set_root(self):
+        """
+        Used by handlers that fetch data from the merkle tree. Sets the tree
+        with the proper root, and returns the chain head id if used.
+        """
+        if self.has_response():
+            return
+
+        if self.request.merkle_root:
+            self._tree.set_merkle_root(self.request.merkle_root)

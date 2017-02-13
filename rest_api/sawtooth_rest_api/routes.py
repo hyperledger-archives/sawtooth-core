@@ -15,6 +15,7 @@
 import asyncio
 import json
 import base64
+from urllib.parse import unquote
 from aiohttp import web
 from aiohttp.helpers import parse_mimetype
 # pylint: disable=no-name-in-module,import-error
@@ -26,6 +27,8 @@ from sawtooth_sdk.client.future import FutureTimeoutError
 from sawtooth_sdk.client.stream import Stream
 from sawtooth_protobuf.validator_pb2 import Message
 
+import sawtooth_rest_api.exceptions as errors
+import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.protobuf import client_pb2 as client
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
@@ -37,84 +40,58 @@ class RouteHandler(object):
         self._stream = Stream(stream_url)
 
     @asyncio.coroutine
-    def hello(self, request):
-        text = "Hello World \n"
-        return web.Response(text=text)
-
-    @asyncio.coroutine
-    def batches(self, request):
+    def batches_post(self, request):
         """
         Takes protobuf binary from HTTP POST, and sends it to the validator
         """
-        mime_type = 'application/octet-stream'
-        type_msg = 'Expected an octet-stream encoded Protobuf binary'
-        type_error = web.HTTPBadRequest(reason=type_msg)
-
-        if request.headers['Content-Type'] != mime_type:
-            return type_error
+        if request.headers['Content-Type'] != 'application/octet-stream':
+            return errors.WrongBodyType()
 
         payload = yield from request.read()
         validator_response = self._try_validator_request(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            payload
-        )
+            payload)
+
         response = client.ClientBatchSubmitResponse()
         response.ParseFromString(validator_response)
         return RouteHandler._try_client_response(request.headers, response)
 
     @asyncio.coroutine
-    def state_current(self, request):
-        # CLIENT_STATE_CURRENT_REQUEST
-        return self._generic_get(
-            web_request=request,
-            msg_type=Message.CLIENT_STATE_CURRENT_REQUEST,
-            msg_content=client.ClientStateCurrentRequest(),
-            resp_proto=client.ClientStateCurrentResponse,
-        )
-
-    @asyncio.coroutine
     def state_list(self, request):
-        # CLIENT_STATE_LIST_REQUEST
-        root = RouteHandler._safe_get(request.match_info, 'merkle_root')
-        # if no prefix is defined return all
-        prefix = RouteHandler._safe_get(request.rel_url.query, 'prefix')
-        client_request = client.ClientStateListRequest(merkle_root=root,
-                                                       prefix=prefix)
-        return self._generic_get(
-            web_request=request,
-            msg_type=Message.CLIENT_STATE_LIST_REQUEST,
-            msg_content=client_request,
-            resp_proto=client.ClientStateListResponse,
-        )
+        """
+        Fetch a list of data leaves from the validator's state merkle-tree
+        """
+        address = request.url.query.get('address', '')
+
+        response = self._query_validator(
+            Message.CLIENT_STATE_LIST_REQUEST,
+            client.ClientStateListResponse,
+            client.ClientStateListRequest(subtree=address))
+
+        return RouteHandler._wrap_response(
+            data=response.get('entries', []),
+            metadata={'link': str(request.url)})
 
     @asyncio.coroutine
     def state_get(self, request):
-        # CLIENT_STATE_GET_REQUEST
-        nonleaf_msg = 'Expected a specific leaf address, ' \
-                      'but received a prefix instead'
+        """
+        Fetch a specific data leaf from the validator's state merkle-tree
+        """
+        error_traps = [
+            error_handlers.MissingLeaf(),
+            error_handlers.BadAddress()]
 
-        root = RouteHandler._safe_get(request.match_info, 'merkle_root')
-        addr = RouteHandler._safe_get(request.match_info, 'address')
-        client_request = client.ClientStateGetRequest(merkle_root=root,
-                                                      address=addr)
+        address = request.match_info.get('address', '')
 
-        validator_response = self._try_validator_request(
+        response = self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
-            client_request
-        )
-
-        parsed_response = RouteHandler._old_response_parse(
             client.ClientStateGetResponse,
-            validator_response
-        )
+            client.ClientStateGetRequest(address=address),
+            error_traps)
 
-        if parsed_response.status == client.ClientStateGetResponse.NONLEAF:
-            raise web.HTTPBadRequest(reason=nonleaf_msg)
-
-        return RouteHandler._try_client_response(
-            request.headers,
-            parsed_response
-        )
+        return RouteHandler._wrap_response(
+            data=response['value'],
+            metadata={'link': str(request.url)})
 
     @asyncio.coroutine
     def block_list(self, request):
@@ -124,43 +101,42 @@ class RouteHandler(object):
         response = self._query_validator(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client.ClientBlockListResponse,
-            client.ClientBlockListRequest()
-        )
+            client.ClientBlockListRequest())
 
         blocks = [RouteHandler._expand_block(b) for b in response['blocks']]
-        return RouteHandler._wrap_response(data=blocks)
+        return RouteHandler._wrap_response(
+            data=blocks,
+            metadata={'link': str(request.url)})
 
     @asyncio.coroutine
     def block_get(self, request):
         """
         Fetch a list of blocks from the validator
         """
-        block_id = RouteHandler._safe_get(request.match_info, 'block_id')
-        request = client.ClientBlockGetRequest(block_id=block_id)
+        error_traps = [error_handlers.MissingBlock()]
+
+        # aiohttp parses both "+" and "%2B" as " ", so we grab the last segment
+        # of the URL and parse it manually, rather than use `match_info`
+        block_id = unquote(request.url.raw_name)
+
+        print('BLOCK ID', block_id)
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_GET_REQUEST,
             client.ClientBlockGetResponse,
-            request
-        )
+            client.ClientBlockGetRequest(block_id=block_id),
+            error_traps)
 
-        block = RouteHandler._expand_block(response['block'])
-        return RouteHandler._wrap_response(data=block)
+        return RouteHandler._wrap_response(
+            data=RouteHandler._expand_block(response['block']),
+            metadata={'link': str(request.url)})
 
-    @staticmethod
-    def _safe_get(obj, key, default=''):
-        """
-        aiohttp very helpfully parses param strings to replace '+' with ' '
-        This is very bad when your block ids contain meaningful +'s
-        """
-        return obj.get(key, default).replace(' ', '+')
-
-    def _query_validator(self, request_type, response_proto, content):
+    def _query_validator(self, req_type, resp_proto, content, traps=None):
         """
         Sends a request to the validator and parses the response
         """
-        response = self._try_validator_request(request_type, content)
-        return RouteHandler._try_response_parse(response_proto, response)
+        response = self._try_validator_request(req_type, content)
+        return RouteHandler._try_response_parse(resp_proto, response, traps)
 
     def _try_validator_request(self, message_type, content):
         """
@@ -168,7 +144,6 @@ class RouteHandler(object):
         Handles a possible timeout if validator is unresponsive
         """
         timeout = 300
-        timeout_msg = 'Could not reach validator, validator timed out'
 
         if isinstance(content, BaseMessage):
             content = content.SerializeToString()
@@ -178,46 +153,48 @@ class RouteHandler(object):
         try:
             response = future.result(timeout=timeout)
         except FutureTimeoutError:
-            raise web.HTTPServiceUnavailable(reason=timeout_msg)
+            raise errors.ValidatorUnavailable()
 
         return response.content
 
     @staticmethod
-    def _try_response_parse(proto, response):
+    def _try_response_parse(proto, response, traps=None):
         """
         Parses a protobuf response from the validator
         Raises common validator error statuses as HTTP errors
         """
-        unknown_msg = 'An unknown error occured with your request'
-        notfound_msg = 'There is no resource at that root, address or prefix'
-
         parsed = proto()
         parsed.ParseFromString(response)
+        traps = traps or []
 
         try:
-            if parsed.status == proto.ERROR:
-                raise web.HTTPInternalServerError(reason=unknown_msg)
-            if parsed.status == proto.NORESOURCE:
-                raise web.HTTPNotFound(reason=notfound_msg)
+            traps.append(error_handlers.Unknown(proto.ERROR))
         except AttributeError:
-            # Not every protobuf has every status, so pass AttributeErrors
+            # Not every protobuf has every status enum, so pass AttributeErrors
             pass
+        try:
+            traps.append(error_handlers.NotReady(proto.NOGENESIS))
+        except AttributeError:
+            pass
+        try:
+            traps.append(error_handlers.MissingHead(proto.NOROOT))
+        except AttributeError:
+            pass
+
+        for trap in traps:
+            trap.check(parsed.status)
 
         return MessageToDict(parsed, preserving_proto_field_name=True)
 
     @staticmethod
-    def _wrap_response(data=None, head=None, link=None):
+    def _wrap_response(data=None, metadata=None):
         """
         Creates a JSON response envelope and sends it back to the client
         """
-        envelope = {}
+        envelope = metadata or {}
 
-        if data:
+        if data is not None:
             envelope['data'] = data
-        if head:
-            envelope['head'] = head
-        if link:
-            envelope['link'] = link
 
         return web.Response(
             content_type='application/json',
@@ -225,9 +202,7 @@ class RouteHandler(object):
                 envelope,
                 indent=2,
                 separators=(',', ': '),
-                sort_keys=True
-            )
-        )
+                sort_keys=True))
 
     @staticmethod
     def _expand_block(block):
@@ -263,43 +238,11 @@ class RouteHandler(object):
         obj['header'] = MessageToDict(header, preserving_proto_field_name=True)
         return obj
 
-    def _generic_get(self, web_request, msg_type, msg_content, resp_proto):
-        """
-        Used by pre-spec /state routes
-        Should be removed when routes are updated to spec
-        """
-        response = self._try_validator_request(msg_type, msg_content)
-        parsed = RouteHandler._old_response_parse(resp_proto, response)
-        return RouteHandler._try_client_response(web_request.headers, parsed)
-
-    @staticmethod
-    def _old_response_parse(proto, response):
-        """
-        Used by pre-spec /state routes
-        Should be removed when routes are updated to spec
-        """
-        unknown_msg = 'An unknown error occured with your request'
-        notfound_msg = 'There is no resource at that root, address or prefix'
-
-        parsed = proto()
-        parsed.ParseFromString(response)
-
-        try:
-            if parsed.status == proto.ERROR:
-                raise web.HTTPInternalServerError(reason=unknown_msg)
-            if parsed.status == proto.NORESOURCE:
-                raise web.HTTPNotFound(reason=notfound_msg)
-        except AttributeError:
-            # Not every protobuf has every status, so pass AttributeErrors
-            pass
-
-        return parsed
-
     @staticmethod
     def _try_client_response(headers, parsed):
         """
-        Used by pre-spec /state and /batches routes
-        Should be removed when routes are updated to spec
+        Used by pre-spec /batches route,
+        Should be removed when updated to spec
         """
         media_msg = 'The requested media type is unsupported'
         mime_type = None
@@ -314,14 +257,12 @@ class RouteHandler(object):
         if mime_type == 'application' and sub_type == 'octet-stream':
             return web.Response(
                 content_type='application/octet-stream',
-                body=parsed.SerializeToString()
-            )
+                body=parsed.SerializeToString())
 
         if ((mime_type in ['application', '*'] or mime_type is None)
                 and (sub_type in ['json', '*'] or sub_type is None)):
             return web.Response(
                 content_type='application/json',
-                text=MessageToJson(parsed)
-            )
+                text=MessageToJson(parsed))
 
         raise web.HTTPUnsupportedMediaType(reason=media_msg)

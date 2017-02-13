@@ -48,13 +48,10 @@ def start_rest_api(host, port, stream_url):
 
     app = web.Application(middlewares=[logging_middleware])
     # Add routes to the web app
-    app.router.add_get('/', handler.hello)
+    app.router.add_post('/batches', handler.batches_post)
 
-    app.router.add_post('/batches', handler.batches)
-
-    app.router.add_get('/state', handler.state_current)
-    app.router.add_get('/state/{merkle_root}', handler.state_list)
-    app.router.add_get('/state/{merkle_root}/{address}', handler.state_get)
+    app.router.add_get('/state', handler.state_list)
+    app.router.add_get('/state/{address}', handler.state_get)
 
     app.router.add_get('/blocks', handler.block_list)
     app.router.add_get('/blocks/{block_id}', handler.block_get)

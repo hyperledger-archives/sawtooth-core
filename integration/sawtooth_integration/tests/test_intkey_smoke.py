@@ -100,7 +100,7 @@ class TestIntkeySmoke(unittest.TestCase):
 
     def verify_empty_state(self):
         LOGGER.debug('Verifying empty state')
-        self.assertRaises(urllib.error.HTTPError, _get_state)
+        self.assertEqual([], _get_state())
 
     # utilities
 
@@ -124,22 +124,14 @@ def _get_data():
     return data
 
 def _get_state():
-    root = _get_root()
-    response = _query_rest_api('/state/{}'.format(root))
-    state = json.loads(response)['entries']
-    return state
-
-def _get_root():
     response = _query_rest_api('/state')
-    data = json.loads(response)
-    root = data['merkleRoot']
-    return root
+    return response['data']
 
 def _query_rest_api(suffix='', data=None, headers={}):
     url = 'http://rest_api:8080' + suffix
     request = urllib.request.Request(url, data, headers)
     response = urllib.request.urlopen(request).read().decode('utf-8')
-    return response
+    return json.loads(response)
 
 # separate file?
 
