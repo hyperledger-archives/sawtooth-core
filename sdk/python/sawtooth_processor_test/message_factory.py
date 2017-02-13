@@ -20,7 +20,12 @@ from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_protobuf.processor_pb2 import TpProcessResponse
 from sawtooth_protobuf.processor_pb2 import TpProcessRequest
 
+from sawtooth_protobuf.transaction_pb2 import Transaction
 from sawtooth_protobuf.transaction_pb2 import TransactionHeader
+
+from sawtooth_protobuf.batch_pb2 import Batch
+from sawtooth_protobuf.batch_pb2 import BatchList
+from sawtooth_protobuf.batch_pb2 import BatchHeader
 
 from sawtooth_protobuf.state_context_pb2 import TpStateGetResponse
 from sawtooth_protobuf.state_context_pb2 import TpStateGetRequest
@@ -44,10 +49,8 @@ def _sign(content, private):
 
 
 class MessageFactory(object):
-    def __init__(
-        self, encoding, family_name, family_version, namespace,
-        private=None, public=None
-    ):
+    def __init__(self, encoding, family_name, family_version,
+                 namespace, private=None, public=None):
         self.encoding = encoding
         self.family_name = family_name
         self.family_version = family_version
@@ -80,7 +83,7 @@ class MessageFactory(object):
         )
 
     def create_tp_response(self, status):
-        d = {
+        responses = {
             "OK":
                 TpProcessResponse.OK,
             "INVALID_TRANSACTION":
@@ -88,29 +91,71 @@ class MessageFactory(object):
             "INTERNAL_ERROR":
                 TpProcessResponse.INTERNAL_ERROR
         }
-        return TpProcessResponse(status=d[status])
+        return TpProcessResponse(status=responses[status])
 
-    def create_transaction(self, payload, inputs, outputs, dependencies):
-
-        header = TransactionHeader(
+    def _create_transaction_header(self, payload, inputs, outputs, deps):
+        return TransactionHeader(
             signer_pubkey=self._public,
             family_name=self.family_name,
             family_version=self.family_version,
             inputs=inputs,
             outputs=outputs,
-            dependencies=dependencies,
+            dependencies=deps,
             payload_encoding=self.encoding,
             payload_sha512=self.sha512(payload),
             batcher_pubkey=self._public
         ).SerializeToString()
 
-        signature = _sign(header, self._private)
+    def _create_signature(self, header):
+        return _sign(header, self._private)
+
+    def _create_header_and_sig(self, payload, inputs, outputs, deps):
+        header = self._create_transaction_header(
+            payload, inputs, outputs, deps)
+        signature = self._create_signature(header)
+        return header, signature
+
+    def create_transaction(self, payload, inputs, outputs, deps):
+        header, signature = self._create_header_and_sig(
+            payload, inputs, outputs, deps)
+
+        return Transaction(
+            header=header,
+            payload=payload,
+            header_signature=signature)
+
+    def create_tp_process_request(self, payload, inputs, outputs, deps):
+        header, signature = self._create_header_and_sig(
+            payload, inputs, outputs, deps)
 
         return TpProcessRequest(
             header=header,
             payload=payload,
-            signature=signature
-        )
+            signature=signature)
+
+    def create_batch(self, transactions):
+        # Transactions have a header_signature;
+        # TpProcessRequests have a signature
+        try:
+            txn_signatures = [txn.header_signature for txn in transactions]
+        except AttributeError:
+            txn_signatures = [txn.signature for txn in transactions]
+
+        header = BatchHeader(
+            signer_pubkey=self._public,
+            transaction_ids=txn_signatures
+        ).SerializeToString()
+
+        signature = _sign(header, self._private)
+
+        batch = Batch(
+            header=header,
+            transactions=transactions,
+            header_signature=signature)
+
+        batch_list = BatchList(batches=[batch])
+
+        return batch_list.SerializeToString()
 
     def create_get_request(self, addresses):
         return TpStateGetRequest(

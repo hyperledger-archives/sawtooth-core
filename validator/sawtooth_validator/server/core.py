@@ -13,109 +13,217 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
+import hashlib
 import logging
 import os
-import socket
+import time
 
-from sawtooth_validator.context_manager import ContextManager
+from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
+from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.server import state
-from sawtooth_validator.server.dispatch import Dispatcher
-from sawtooth_validator.server.executor import TransactionExecutor
-from sawtooth_validator.server.loader import SystemLoadHandler
-from sawtooth_validator.server.network import FauxNetwork
-from sawtooth_validator.server.network import Network
-from sawtooth_validator.server.processor import ProcessorRegisterHandler
-from sawtooth_validator.server.interconnect import Interconnect
-from sawtooth_validator.server.client import ClientStateCurrentRequestHandler
-from sawtooth_validator.server.client import ClientStateGetRequestHandler
-from sawtooth_validator.server.client import ClientStateListRequestHandler
-
+from sawtooth_validator.execution import tp_state_handlers
+from sawtooth_validator.journal.completer import CompleterGossipHandler
+from sawtooth_validator.journal.completer import \
+    CompleterBatchListBroadcastHandler
+from sawtooth_validator.journal.completer import Completer
+from sawtooth_validator.networking.dispatch import Dispatcher
+from sawtooth_validator.journal.block_sender import BroadcastBlockSender
+from sawtooth_validator.execution.executor import TransactionExecutor
+from sawtooth_validator.execution.processor_handlers import \
+    ProcessorRegisterHandler
+from sawtooth_validator.state import client_handlers
+from sawtooth_validator.gossip import signature_verifier
+from sawtooth_validator.networking.interconnect import Interconnect
+from sawtooth_validator.gossip.gossip import Gossip
+from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
+from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
+from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
+from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
+from sawtooth_validator.gossip.gossip_handlers import PingHandler
 
 LOGGER = logging.getLogger(__name__)
 
 
-class DefaultHandler(object):
-    def handle(self, message, responder):
-        print("invalid message {}".format(message.message_type))
-
-
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, peer_list):
-        db_filename = os.path.join(os.path.expanduser('~'), 'merkle.lmdb')
+        data_dir = os.path.expanduser('~')
+        db_filename = os.path.join(data_dir,
+                                   'merkle-{}.lmdb'.format(
+                                       network_endpoint[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
         lmdb = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(lmdb)
 
-        block_db_filename = os.path.join(os.path.expanduser('~'), 'block.lmdb')
+        block_db_filename = os.path.join(data_dir, 'block.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
+        block_store = {}
         # block_store = LMDBNoLockDatabase(block_db_filename, 'n')
+        block_store = {}
         # this is not currently being used but will be something like this
         # in the future, when Journal takes a block_store that isn't a dict
-        self._service = Interconnect(component_endpoint)
 
         # setup network
-        dispatcher = Dispatcher()
-        faux_network = FauxNetwork(dispatcher=dispatcher)
+        self._dispatcher = Dispatcher()
 
-        identity = "{}-{}".format(socket.gethostname(),
-                                  os.getpid()).encode('ascii')
-        self._network = Network(identity,
-                                network_endpoint,
-                                peer_list,
-                                dispatcher=dispatcher)
+        completer = Completer(block_store)
+
+        thread_pool = ThreadPoolExecutor(max_workers=10)
+        process_pool = ProcessPoolExecutor(max_workers=3)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_STATE_GET_REQUEST,
+            tp_state_handlers.TpStateGetHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_STATE_SET_REQUEST,
+            tp_state_handlers.TpStateSetHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
+            client_handlers.StateGetRequestHandler(lmdb),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
+            client_handlers.StateListRequestHandler(lmdb),
+            thread_pool)
+
+        self._service = Interconnect(component_endpoint, self._dispatcher)
+        executor = TransactionExecutor(self._service, context_manager)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_REGISTER_REQUEST,
+            ProcessorRegisterHandler(executor.processors),
+            thread_pool)
+
+        identity = hashlib.sha512(
+            time.time().hex().encode()).hexdigest()[:23]
+
+        network_thread_pool = ThreadPoolExecutor(max_workers=10)
+
+        self._network_dispatcher = Dispatcher()
+
+        self._network = Interconnect(
+            network_endpoint,
+            dispatcher=self._network_dispatcher,
+            identity=identity,
+            peer_connections=peer_list)
+
+        self._gossip = Gossip(self._network)
+
+        block_sender = BroadcastBlockSender(completer, self._gossip)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_PING,
+            PingHandler(),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_REGISTER,
+            PeerRegisterHandler(),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_UNREGISTER,
+            PeerUnregisterHandler(),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            GossipMessageHandler(),
+            network_thread_pool)
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            signature_verifier.GossipMessageSignatureVerifier(),
+            process_pool)
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            GossipBroadcastHandler(
+                gossip=self._gossip),
+            network_thread_pool)
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            CompleterGossipHandler(
+                completer),
+            network_thread_pool)
 
         # Create and configure journal
-        executor = TransactionExecutor(self._service, context_manager)
         self._journal = Journal(
             consensus=dev_mode_consensus,
-            block_store={},
-            # -- need to serialize blocks to dicts
-            send_message=faux_network.send_message,
+            block_store=block_store,
+            block_sender=block_sender,
             transaction_executor=executor,
-            squash_handler=context_manager.get_squash_handler(),
-            first_state_root=context_manager.get_first_root())
+            squash_handler=context_manager.get_squash_handler())
 
-        dispatcher.on_batch_received = \
-            self._journal.on_batch_received
-        dispatcher.on_block_received = \
-            self._journal.on_block_received
-        dispatcher.on_block_request = \
-            self._journal.on_block_request
+        self._genesis_controller = GenesisController(
+            context_manager=context_manager,
+            transaction_executor=executor,
+            completer=completer,
+            block_store=block_store,
+            data_dir=data_dir
+        )
 
-        self._service.add_handler(
-            validator_pb2.Message.DEFAULT,
-            DefaultHandler())
-        self._service.add_handler(
-            validator_pb2.Message.TP_STATE_GET_REQUEST,
-            state.GetHandler(context_manager))
-        self._service.add_handler(
-            validator_pb2.Message.TP_STATE_SET_REQUEST,
-            state.SetHandler(context_manager))
-        self._service.add_handler(
-            validator_pb2.Message.TP_REGISTER_REQUEST,
-            ProcessorRegisterHandler(self._service))
-        self._service.add_handler(
+        completer.set_on_batch_received(self._journal.on_batch_received)
+        completer.set_on_block_received(self._journal.on_block_received)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            SystemLoadHandler(faux_network))
-        self._service.add_handler(
-            validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-            ClientStateCurrentRequestHandler(self._journal.get_current_root))
-        self._service.add_handler(
+            signature_verifier.BatchListSignatureVerifier(),
+            process_pool)
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            CompleterBatchListBroadcastHandler(
+                completer, self._gossip),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
-            ClientStateGetRequestHandler(lmdb))
-        self._service.add_handler(
+            client_handlers.StateGetRequestHandler(lmdb),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
-            ClientStateListRequestHandler(lmdb))
+            client_handlers.StateListRequestHandler(lmdb),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
+            client_handlers.BlockGetRequestHandler(
+                self._journal.get_block_store()), thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
+            client_handlers.BlockListRequestHandler(
+                self._journal.get_block_store()), thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
+            client_handlers.StateCurrentRequestHandler(
+                self._journal.get_current_root), thread_pool)
 
     def start(self):
+        self._dispatcher.start()
         self._service.start()
+        if self._genesis_controller.requires_genesis():
+            self._genesis_controller.start(self._start)
+        else:
+            self._start()
+
+    def _start(self):
+        self._network_dispatcher.start()
+        self._network.start(daemon=True)
+        self._gossip.start()
         self._journal.start()
 
     def stop(self):
         self._service.stop()
+        self._network.stop()
         self._journal.stop()

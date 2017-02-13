@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,16 +17,25 @@
 
 import os
 import sys
+import sysconfig
 
-# Temporary fix for 2.7 signing path
-TWO_SEVEN = '/project/sawtooth-core/signing/build/lib.linux-x86_64-2.7'
-THREE_FIVE = '/project/sawtooth-core/signing/build/lib.linux-x86_64-3.5'
+build_str = "lib.{}-{}.{}".format(
+    sysconfig.get_platform(),
+    sys.version_info.major, sys.version_info.minor)
 
-if TWO_SEVEN in sys.path:
-    idx = sys.path.index(TWO_SEVEN)
-    sys.path[idx] = THREE_FIVE
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'signing'))
 
-from arcade.sawtooth_xo.xo_cli import main_wrapper
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'sdk', 'python'))
+
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'sdk', 'examples'))
+
+from sawtooth_xo.xo_cli import main_wrapper
 
 if __name__ == '__main__':
 

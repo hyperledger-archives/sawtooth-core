@@ -69,22 +69,41 @@ message ConfigVote {
     Vote vote = 2;
 }
 
-// Contains a setting entry (or entries, in the case of collisions).
-message SettingEntry {
-   // Map of (setting, value) pairs
-   map<string, string> values = 1;
+// Setting Container for the resulting state
+message Setting {
+    // Contains a setting entry (or entries, in the case of collisions).
+    message Entry {
+        string key = 1;
+        string value = 2;
+    }
+
+    // List of setting entries - more than one implies a state key collision
+    repeated Entry entries = 1;
 }
 
 // Contains the vote counts for a given proposal.
 message ConfigCandidate {
-    ConfigProposal proposal = 1;
+    // An individual vote record
+    message VoteRecord {
+        // The public key of the voter
+        string public_key = 1;
 
-    // Map of (public key, Vote) pairs
-    map<string, ConfigVote.Vote> votes = 2;
+        // The voter's actual vote
+        ConfigVote.Vote vote = 2;
+
+    }
+
+    // The proposal id, a hash of the original proposal
+    string proposal_id = 1;
+
+    // The active propsal
+    ConfigProposal proposal = 2;
+
+    // list of votes
+    repeated VoteRecord votes = 3;
 }
 
 // Contains all the configuration candiates up for vote.
 message ConfigCandidates {
-    // Map of (proposal_id, ConfigCandidate) pairs
-    map<string, ConfigCandidate> candidates = 1;
+    repeated ConfigCandidate candidates = 1;
 }

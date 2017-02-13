@@ -2,24 +2,21 @@
 Join the Discussion
 *******************
 
-.. _slack:
+.. _chat:
 
-Slack
-=====
+Chat
+====
 
-Slack is the place to go for real-time chat about everything from quick help to
+Chat is the place to go for real-time chat about everything from quick help to
 involved discussion.
 
-You can find us on the Hyperledger Project's Slack instance, in the #sawtooth
+You can find us on the Hyperledger Project's Chat server, in the #sawtoothlake
 channel.
 
-If you need an invite, go to the `Hyperledger Project Slack Invitition
-Request Page <https://slack.hyperledger.org/>`_.
+The chat server is at:
 
-The slack instance is at:
-
-    `Hyperledger Project Slack <http://hyperledgerproject.slack.com/>`_
-    *#sawtooth*
+    `Hyperledger Project Chat <https://chat.hyperledger.org/>`_
+    *#sawtoothlake*
 
 Mailing Lists
 =============

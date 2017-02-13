@@ -36,8 +36,6 @@ from sawtooth.cli.keygen import add_keygen_parser
 from sawtooth.cli.keygen import do_keygen
 from sawtooth.cli.cluster import add_cluster_parser
 from sawtooth.cli.cluster import do_cluster
-from sawtooth.cli.docker import add_docker_parser
-from sawtooth.cli.docker import do_docker
 from sawtooth.cli.store import add_store_parser
 from sawtooth.cli.store import do_store
 from sawtooth.cli.stats import add_stats_parser
@@ -104,7 +102,6 @@ def create_parser(prog_name):
 
     add_keygen_parser(subparsers, parent_parser)
     add_cluster_parser(subparsers, parent_parser)
-    add_docker_parser(subparsers, parent_parser)
     add_submit_parser(subparsers, parent_parser)
     add_block_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
@@ -132,8 +129,6 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_keygen(args)
     elif args.command == 'cluster':
         do_cluster(args)
-    elif args.command == 'docker':
-        do_docker(args)
     elif args.command == 'submit':
         do_submit(args)
     elif args.command == 'block':

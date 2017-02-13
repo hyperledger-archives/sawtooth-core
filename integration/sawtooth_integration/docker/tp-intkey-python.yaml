@@ -13,23 +13,28 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2"
+version: "2.1"
 
 services:
 
   tp_intkey:
-    image: "tp_intkey_python"
+    image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
-      - /project/sawtooth-core:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 40000
     entrypoint: ./bin/tp_intkey_python validator:40000
+    stop_signal: SIGKILL
 
   validator:
-    image: "sawtooth-test-ubuntu-xenial"
+    image: sawtooth-test:$ISOLATION_ID
     volumes:
-      - /project/sawtooth-core:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose: 
       - 40000
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/test_suites
     entrypoint: nose2-3 -v ts_tp_intkey.TestSuiteIntkey
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration"

@@ -15,7 +15,7 @@
 
 import logging
 import hashlib
-from binascii import hexlify, unhexlify
+import base64
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.client.future import FutureTimeoutError
@@ -26,17 +26,30 @@ from sawtooth_protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_config.protobuf.config_pb2 import ConfigPayload
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
+from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_config.protobuf.config_pb2 import SettingEntry
+from sawtooth_config.protobuf.config_pb2 import Setting
 
 LOGGER = logging.getLogger(__name__)
 
 
+# The config namespace is special: it is not derived from a hash.
 CONFIG_NAMESPACE = '000000'
+
+# Number of seconds to wait for state operations to succeed
+STATE_TIMEOUT_SEC = 10
 
 
 def _to_hash(value):
     return hashlib.sha256(value.encode('utf-8')).hexdigest()
+
+
+def _first(a_list, pred):
+    return next((x for x in a_list if pred(x)), None)
+
+
+def _index_of(iterable, obj):
+    return next((i for i, x in enumerate(iterable) if x == obj), -1)
 
 
 def _make_config_key(key):
@@ -44,48 +57,59 @@ def _make_config_key(key):
 
 
 def _get_setting_entry(state, address):
-    setting_entry = SettingEntry()
+    setting = Setting()
 
     try:
-        entries_list = state.get([address], timeout=5)
+        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
+        LOGGER.warning('Timeout occured on state.get([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
     if len(entries_list) != 0:
-        setting_entry.ParseFromString(entries_list[0].data)
+        setting.ParseFromString(entries_list[0].data)
 
-    return setting_entry
+    return setting
 
 
 def _get_config_value(state, key, default_value=None):
     address = _make_config_key(key)
-    setting_entry = _get_setting_entry(state, address)
-    if key in setting_entry.values:
-        return setting_entry.values[key]
-    else:
-        return default_value
+    setting = _get_setting_entry(state, address)
+    for entry in setting.entries:
+        if key == entry.key:
+            return entry.value
+
+    return default_value
 
 
 def _set_config_value(state, key, value):
     address = _make_config_key(key)
-    setting_entry = _get_setting_entry(state, address)
+    setting = _get_setting_entry(state, address)
 
     old_value = None
-    if key in setting_entry.values:
-        old_value = setting_entry.values[key]
-        del setting_entry.values[key]
+    old_entry_index = None
+    for i, entry in enumerate(setting.entries):
+        if key == entry.key:
+            old_value = entry.value
+            old_entry_index = i
 
-    setting_entry.values[key] = value
+    if old_entry_index is not None:
+        setting.entries[old_entry_index].value = value
+    else:
+        setting.entries.add(key=key, value=value)
 
     try:
         addresses = list(state.set(
             [StateEntry(address=address,
-                        data=setting_entry.SerializeToString())],
-            timeout=5))
+                        data=setting.SerializeToString())],
+            timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on state.set([%s, <value>])', address)
         raise InternalError('Unable to set {}'.format(key))
 
     if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save value on address %s', address)
         raise InternalError(
             'Unable to save config value {}'.format(key))
     LOGGER.info('Config setting %s changed from %s to %s',
@@ -98,14 +122,14 @@ def _get_config_candidates(state):
         return ConfigCandidates(candidates={})
     else:
         config_candidates = ConfigCandidates()
-        config_candidates.ParseFromString(unhexlify(value))
+        config_candidates.ParseFromString(base64.b64decode(value))
         return config_candidates
 
 
 def _save_config_candidates(state, config_candidates):
     _set_config_value(state,
                       'sawtooth.config.vote.proposals',
-                      hexlify(config_candidates.SerializeToString()))
+                      base64.b64encode(config_candidates.SerializeToString()))
 
 
 def _get_auth_type(state):
@@ -186,6 +210,8 @@ class ConfigurationTransactionHandler(object):
                                              config_payload,
                                              state)
         else:
+            LOGGER.error(
+                'auth_type %s should not have been allowed', auth_type)
             raise InternalError(
                 'auth_type {} should not have been allowed'.format(auth_type))
 
@@ -222,16 +248,24 @@ class ConfigurationTransactionHandler(object):
 
         if approval_threshold >= 1:
             config_candidates = _get_config_candidates(state)
-            if proposal_id in config_candidates.candidates:
+
+            existing_candidate = _first(
+                config_candidates.candidates,
+                lambda candidate: candidate.proposal_id == proposal_id)
+
+            if existing_candidate is not None:
                 raise InvalidTransaction(
                     'Duplicate proposal for {}'.format(
                         config_proposal.setting))
 
-            candidates = config_candidates.candidates
-            candidates[proposal_id].votes[pubkey] = ConfigVote.ACCEPT
-            candidates[proposal_id].proposal.setting = config_proposal.setting
-            candidates[proposal_id].proposal.value = config_proposal.value
-            candidates[proposal_id].proposal.nonce = config_proposal.nonce
+            record = ConfigCandidate.VoteRecord(
+                public_key=pubkey,
+                vote=ConfigVote.ACCEPT)
+            config_candidates.candidates.add(
+                proposal_id=proposal_id,
+                proposal=config_proposal,
+                votes=[record]
+            )
 
             LOGGER.debug('Proposal made to set %s to %s',
                          config_proposal.setting,
@@ -248,38 +282,47 @@ class ConfigurationTransactionHandler(object):
         proposal_id = config_vote.proposal_id
 
         config_candidates = _get_config_candidates(state)
-        if proposal_id not in config_candidates.candidates:
+        candidate = _first(
+            config_candidates.candidates,
+            lambda candidate: candidate.proposal_id == proposal_id)
+
+        if candidate is None:
             raise InvalidTransaction(
                 "Proposal {} does not exist.".format(proposal_id))
 
-        approval_threshold = _get_approval_threshold(state)
-        config_candidate = config_candidates.candidates[proposal_id]
+        candidate_index = _index_of(config_candidates.candidates, candidate)
 
-        if pubkey in config_candidate.votes:
+        approval_threshold = _get_approval_threshold(state)
+
+        vote_record = _first(candidate.votes,
+                             lambda record: record.public_key == pubkey)
+        if vote_record is not None:
             raise InvalidTransaction(
                 '{} has already voted'.format(pubkey))
 
-        config_candidate.votes[pubkey] = config_vote.vote
+        candidate.votes.add(
+            public_key=pubkey,
+            vote=config_vote.vote)
 
         accepted_count = 0
         rejected_count = 0
-        for _, vote in config_candidate.votes.items():
-            if vote == ConfigVote.ACCEPT:
+        for vote_record in candidate.votes:
+            if vote_record.vote == ConfigVote.ACCEPT:
                 accepted_count += 1
-            elif vote == ConfigVote.REJECT:
+            elif vote_record.vote == ConfigVote.REJECT:
                 rejected_count += 1
 
         if accepted_count >= approval_threshold:
             _set_config_value(state,
-                              config_candidate.proposal.setting,
-                              config_candidate.proposal.value)
-            del config_candidates.candidates[proposal_id]
+                              candidate.proposal.setting,
+                              candidate.proposal.value)
+            del config_candidates.candidates[candidate_index]
         elif rejected_count >= approval_threshold:
             LOGGER.debug('Proposal for %s was rejected',
-                         config_candidate.proposal.setting)
-            del config_candidates.candidates[proposal_id]
+                         candidate.proposal.setting)
+            del config_candidates.candidates[candidate_index]
         else:
             LOGGER.debug('Vote recorded for %s',
-                         config_candidate.proposal.setting)
+                         candidate.proposal.setting)
 
         _save_config_candidates(state, config_candidates)

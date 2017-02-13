@@ -12,94 +12,110 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
 from enum import Enum
-from sawtooth_validator.protobuf.block_pb2 import Block
 
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
-NULLIDENTIER = "0000000000000000"
+NULL_BLOCK_IDENTIFIER = "0000000000000000"
 
 
 class BlockStatus(Enum):
-    Unknown = 0,
-    Invalid = 1,
-    Valid = 2,
-
-
-class BlockState(object):
-    def __init__(self, block_wrapper, weight=0, status=BlockStatus.Unknown):
-        self.block = block_wrapper
-        self.weight = weight
-        self.status = status
+    """
+        The status of a block as the journal is concerned.
+    """
+    Unknown = 0,  # Block is present but not yet validated
+    Invalid = 1,  # Block failed block validation.
+    Valid = 2,  # Block has been validated and id valid to appear in a chain.
+    Missing = 3  # we know about the block, possibly by a successor, but
+    # we do not have it.
 
 
 class BlockWrapper(object):
-    def __init__(self, block_header, block=None):
-        self._header_signature = None
-        self.batches = []
-        self.block_header = block_header
-        self.block = None
-        if block is not None:
-            self.block = block
-            self._header_signature = block.header_signature
-            self._batches = block.batches
-
-    def __str__(self):
-        return str(self.block_header) + str(self.block)
-
-    def add_batches(self, batches):
-        # need to update block_header and block.batches
-        batch_id_list = [batch.header_signature for batch in batches]
-        self.block_header.batch_ids.extend(batch_id_list)
-        self.batches = self.batches + batches
-
-    def set_state_hash(self, state_hash):
-        self.block_header.state_root_hash = state_hash
-
-    def get_block(self):
-        if self.block is None:
-            header_bytes = self.block_header.SerializeToString()
-            block = Block(header=header_bytes,
-                          header_signature=self._header_signature)
-            block.batches.extend(self.batches)
-        else:
-            block = self.block
-
-        return block
-
-    def set_signature(self, sig):
-        if self._header_signature is None:
-            self._header_signature = sig
+    """
+    Utility class to make accessing block members more convenient.
+    This also add storage of the weight and status used by the Journal
+    components to track the state of a block. This is the object type
+    stored in the Block Cache.
+    """
+    def __init__(self, block, weight=0, status=BlockStatus.Unknown):
+        self.block = block
+        self._block_header = None
+        self.weight = weight  # the block weight calculated by the
+        # consensus algorithm.
+        self.status = status  # One of the BlockStatus types.
 
     @property
-    def header_signature(self):
-        return self._header_signature
-
-    @property
-    def block_num(self):
-        if bool(self.block_header.block_num) or \
-                self.block_header.block_num == 0:
-            return self.block_header.block_num
-        else:
-            return None
-
-    @property
-    def state_root_hash(self):
-        if bool(self.block_header.state_root_hash):
-            return self.block_header.state_root_hash
-        else:
-            return None
-
-    @property
-    def previous_block_id(self):
-        if bool(self.block_header.previous_block_id):
-            return self.block_header.previous_block_id
-        else:
-            return None
+    def batches(self):
+        """
+        Returns the consensus object of the block.
+        """
+        return self.block.batches
 
     @property
     def consensus(self):
-        if bool(self.block_header.consensus):
-            return self.block_header.consensus
-        else:
-            return None
+        """
+        Returns the consensus object of the block.
+        """
+        return self.header.consensus
+
+    def get_block(self):
+        """
+            Return the wrapped block object.
+        """
+        return self.block
+
+    @property
+    def header(self):
+        """
+        Returns the header of the block
+        """
+        if self._block_header is None:
+            self._block_header = BlockHeader()
+            self._block_header.ParseFromString(self.block.header)
+        return self._block_header
+
+    @property
+    def header_signature(self):
+        """
+        Returns the header signature of the block
+        """
+        return self.block.header_signature
+
+    @property
+    def identifier(self):
+        """
+        Returns the identifier of the block, currently the
+        header signature
+        """
+        return self.block.header_signature
+
+    @property
+    def block_num(self):
+        """
+        Returns the depth or block_number
+        """
+        return self.header.block_num
+
+    @property
+    def state_root_hash(self):
+        """
+        Returns the state root hash
+        """
+        return self.header.state_root_hash
+
+    @property
+    def previous_block_id(self):
+        """
+        Returns the identifier of the previous block.
+        """
+        return self.header.previous_block_id
+
+    def __repr__(self):
+        return "{}({}, S:{}, P:{})". \
+            format(self.identifier[:8], self.block_num,
+                   self.state_root_hash[:8], self.previous_block_id[:8])
+
+    def __str__(self):
+        return "{}({}, S:{}, P:{})". \
+            format(self.identifier[:8], self.block_num,
+                   self.state_root_hash[:8], self.previous_block_id[:8])

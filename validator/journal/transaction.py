@@ -151,6 +151,25 @@ class Transaction(signed_object.SignedObject):
     def apply(self, store):
         pass
 
+    def apply_with_block(self, store, block):
+        """Request to apply the transaction that is contained within the block
+        provided.  This will be called when the journal is committing a block
+        that it wants to use to extend the blockchain.  When locally preparing
+        transactions that are not contained in a block yet, the method apply()
+        will be called.
+
+        NOTE - defaults to calling apply().  Transactions that care about the
+        containing block should override this method.
+
+        Args:
+            store: Transaction store mapping.
+            block: The block that contains the transaction.
+
+        Returns:
+            Nothing.
+        """
+        self.apply(store)
+
     def add_to_pending(self):
         """Predicate to note that a transaction should be added to pending
         transactions.

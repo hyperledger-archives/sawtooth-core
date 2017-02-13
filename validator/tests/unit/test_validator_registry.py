@@ -16,7 +16,7 @@
 import unittest
 import hashlib
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from gossip import signed_object
 from journal.object_store import ObjectStore
 from sawtooth_validator.consensus.poet1.validator_registry \

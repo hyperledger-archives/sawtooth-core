@@ -70,17 +70,17 @@ class _SendReceiveThread(Thread):
             self._condition.wait_for(lambda: self._sock is not None)
         while True:
             msg_bytes = yield from self._sock.recv()
-            message_list = validator_pb2.MessageList()
-            message_list.ParseFromString(msg_bytes)
-            for message in message_list.messages:
-                try:
-                    self._futures.set_result(
-                        message.correlation_id,
-                        FutureResult(message_type=message.message_type,
-                                     content=message.content))
-                except FutureCollectionKeyError:
-                    # if we are getting an initial message, not a response
-                    self._recv_queue.put_nowait(message)
+            message = validator_pb2.Message()
+            message.ParseFromString(msg_bytes)
+            try:
+                self._futures.set_result(
+                    message.correlation_id,
+                    FutureResult(message_type=message.message_type,
+                                 content=message.content))
+                self._futures.remove(message.correlation_id)
+            except FutureCollectionKeyError:
+                # if we are getting an initial message, not a response
+                self._recv_queue.put_nowait(message)
 
     @asyncio.coroutine
     def _send_message(self):
@@ -151,8 +151,8 @@ class _SendReceiveThread(Thread):
         self._sock.identity = "{}-{}".format(self.__class__.__name__,
                                              os.getpid()).encode('ascii')
         self._sock.connect('tcp://' + self._url)
-        self._send_queue = asyncio.Queue()
-        self._recv_queue = asyncio.Queue()
+        self._send_queue = asyncio.Queue(loop=self._event_loop)
+        self._recv_queue = asyncio.Queue(loop=self._event_loop)
         with self._condition:
             self._condition.notify_all()
         asyncio.ensure_future(self._send_message(), loop=self._event_loop)

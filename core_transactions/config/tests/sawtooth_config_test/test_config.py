@@ -16,7 +16,7 @@
 
 import unittest
 import hashlib
-import binascii
+import base64
 
 from sawtooth_config_test.config_message_factory import ConfigMessageFactory
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
@@ -29,17 +29,7 @@ def _to_hash(value):
     return hashlib.sha256(value).hexdigest()
 
 
-def _get(tst, factory, key, value=None):
-    received = tst.expect(
-        factory.create_get_request(key))
-    tst.respond(
-        factory.create_get_response(key, value),
-        received)
-
-
-def _set(tst, factory, key, expected_value):
-    received = tst.expect(factory.create_set_request(key, expected_value))
-    tst.respond(factory.create_set_response(key), received)
+EMPTY_CANDIDATES = ConfigCandidates(candidates=[]).SerializeToString()
 
 
 class TestConfig(unittest.TestCase):
@@ -51,90 +41,115 @@ class TestConfig(unittest.TestCase):
     def __init__(self, test_name, tester):
         super().__init__(test_name)
         self.tester = tester
+        self.factory = ConfigMessageFactory()
+
+    def _expect_get(self, key, value=None):
+        received = self.tester.expect(
+            self.factory.create_get_request(key))
+        self.tester.respond(
+            self.factory.create_get_response(key, value),
+            received)
+
+    def _expect_set(self, key, expected_value):
+        received = self.tester.expect(
+            self.factory.create_set_request(key, expected_value))
+        print('sending set response...')
+        self.tester.respond(
+            self.factory.create_set_response(key), received)
+
+    def _expect_ok(self):
+        self.tester.expect(self.factory.create_tp_response("OK"))
+
+    def _expect_invalid_transaction(self):
+        self.tester.expect(
+            self.factory.create_tp_response("INVALID_TRANSACTION"))
+
+    def _expect_internal_error(self):
+        self.tester.expect(
+            self.factory.create_tp_response("INTERNAL_ERROR"))
+
+    def _propose(self, key, value):
+        self.tester.send(self.factory.create_proposal_transaction(
+            key, value, "somenonce"))
+
+    def _vote(self, proposal_id, setting, vote):
+        self.tester.send(self.factory.create_vote_proposal(
+            proposal_id, setting, vote))
+
+    @property
+    def _public_key(self):
+        return self.factory.public_key
 
     def test_set_value_no_auth(self):
         """
         Tests setting a value with no auth and no approvale type
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose("foo.bar.count", "1")
 
-        tst.send(factory.create_proposal_transaction(
-            "foo.bar.count", "1", "somenonce"))
-
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'None')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.authorization_type', 'None')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
 
         # check the old value and set the new one
-        _get(tst, factory, 'foo.bar.count')
-        _set(tst, factory, 'foo.bar.count', '1')
+        self._expect_get('foo.bar.count')
+        self._expect_set('foo.bar.count', '1')
 
-        tst.expect(factory.create_tp_response("OK"))
+        self._expect_ok()
 
     def test_set_value_bad_auth_type(self):
         """
         Tests setting an invalid authorization_type setting
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose("sawtooth.config.authorization_type", "foo")
 
-        tst.send(factory.create_proposal_transaction(
-            "sawtooth.config.authorization_type", "foo", "somenonce"))
+        self._expect_get('sawtooth.config.authorization_type', 'None')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'None')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
+        self._expect_invalid_transaction()
 
-        tst.expect(factory.create_tp_response("INVALID_TRANSACTION"))
+    def test_error_on_bad_auth_type(self):
+        """
+        Sanity test that we get back an internal error for a bad auth type.
+        """
+        self._propose("foo.bar.count", "1")
+
+        self._expect_get('sawtooth.config.authorization_type', 'CrazyType')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+
+        self._expect_internal_error()
 
     def test_set_value_bad_approval_threshold(self):
         """
         Tests setting an invalid approval_threshold.
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose("sawtooth.config.vote.approval_threshold", "foo")
 
-        tst.send(factory.create_proposal_transaction(
-            "sawtooth.config.vote.approval_threshold", "foo", "somenonce"))
+        self._expect_get('sawtooth.config.authorization_type', 'None')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'None')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
-
-        tst.expect(factory.create_tp_response("INVALID_TRANSACTION"))
+        self._expect_invalid_transaction()
 
     def test_set_value_proposals(self):
         """
         Tests setting the value of sawtooth.config.vote.proposals, which is
         only an internally set structure.
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose('sawtooth.config.vote.proposals', EMPTY_CANDIDATES)
 
-        tst.send(factory.create_proposal_transaction(
-            'sawtooth.config.vote.proposals',
-            ConfigCandidates(candidates={}).SerializeToString(),
-            'somenonce'))
+        self._expect_get('sawtooth.config.authorization_type', 'None')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'None')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
-
-        tst.expect(factory.create_tp_response("INVALID_TRANSACTION"))
+        self._expect_invalid_transaction()
 
     def test_propose_in_ballot_mode(self):
         """
         Tests proposing a value in ballot mode.
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose('my.config.setting', 'myvalue')
 
-        tst.send(factory.create_proposal_transaction(
-            'my.config.setting',
-            'myvalue',
-            'somenonce'))
-
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'Ballot')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
-        _get(tst, factory, 'sawtooth.config.vote.approval_threshold', '2')
-        _get(tst, factory, 'sawtooth.config.vote.proposals')
+        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.approval_threshold', '2')
+        self._expect_get('sawtooth.config.vote.proposals')
 
         proposal = ConfigProposal(
             setting='my.config.setting',
@@ -142,106 +157,117 @@ class TestConfig(unittest.TestCase):
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
+        record = ConfigCandidate.VoteRecord(
+            public_key=self._public_key,
+            vote=ConfigVote.ACCEPT)
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={factory.public_key: ConfigVote.ACCEPT})
+            votes=[record])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
         # Get's again to update the entry
-        _get(tst, factory, 'sawtooth.config.vote.proposals')
-        _set(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
+        self._expect_get('sawtooth.config.vote.proposals')
+        self._expect_set('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
 
-        tst.expect(factory.create_tp_response("OK"))
+        self._expect_ok()
 
     def test_vote_in_ballot_mode_approved(self):
         """
         Tests voting on a given setting, where the setting is approved
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
-
         proposal = ConfigProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
+        record = ConfigCandidate.VoteRecord(
+            public_key="some_other_pubkey",
+            vote=ConfigVote.ACCEPT)
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={'some_other_pubkey': ConfigVote.ACCEPT})
+            votes=[record])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
-        tst.send(factory.create_vote_proposal(
-            proposal_id, 'my.config.setting', ConfigVote.ACCEPT))
+        self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'Ballot')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
-        _get(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
-        _get(tst, factory, 'sawtooth.config.vote.approval_threshold', '2')
+        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_get('sawtooth.config.vote.approval_threshold', '2')
 
         # the vote should pass
-        _get(tst, factory, 'my.config.setting')
-        _set(tst, factory, 'my.config.setting', 'myvalue')
+        self._expect_get('my.config.setting')
+        self._expect_set('my.config.setting', 'myvalue')
 
         # expect to update the proposals
-        _get(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
-        _set(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(
-                 ConfigCandidates(candidates={}).SerializeToString()))
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_set('sawtooth.config.vote.proposals',
+                         base64.b64encode(EMPTY_CANDIDATES))
 
-        tst.expect(factory.create_tp_response("OK"))
+        self._expect_ok()
 
     def test_vote_in_ballot_mode_counted(self):
         """
         Tests voting on a given setting, where the vote is counted only.
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
-
         proposal = ConfigProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
+        record = ConfigCandidate.VoteRecord(
+            public_key="some_other_pubkey",
+            vote=ConfigVote.ACCEPT)
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={'some_other_pubkey': ConfigVote.ACCEPT})
+            votes=[record])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
-        tst.send(factory.create_vote_proposal(
-            proposal_id, 'my.config.setting', ConfigVote.ACCEPT))
+        self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'Ballot')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
-        _get(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
-        _get(tst, factory, 'sawtooth.config.vote.approval_threshold', '3')
+        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_get('sawtooth.config.vote.approval_threshold', '3')
 
         # expect to update the proposals
-        _get(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
 
-        candidates.candidates[proposal_id].votes[factory.public_key] = \
-            ConfigVote.ACCEPT
-        _set(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
+        record = ConfigCandidate.VoteRecord(
+            public_key="some_other_pubkey",
+            vote=ConfigVote.ACCEPT)
+        new_record = ConfigCandidate.VoteRecord(
+            public_key=self._public_key,
+            vote=ConfigVote.ACCEPT)
+        candidate = ConfigCandidate(
+            proposal_id=proposal_id,
+            proposal=proposal,
+            votes=[record, new_record])
 
-        tst.expect(factory.create_tp_response("OK"))
+        updated_candidates = ConfigCandidates(candidates=[candidate])
+        self._expect_set(
+            'sawtooth.config.vote.proposals',
+            base64.b64encode(updated_candidates.SerializeToString()))
 
-    def test_vote_in_ballot_mode_rejeceted(self):
+        self._expect_ok()
+
+    def test_vote_in_ballot_mode_rejected(self):
         """
         Tests voting on a given setting, where the setting is rejected.
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
-
         proposal = ConfigProposal(
             setting='my.config.setting',
             value='myvalue',
@@ -249,62 +275,59 @@ class TestConfig(unittest.TestCase):
         )
         proposal_id = _to_hash(proposal.SerializeToString())
         candidate = ConfigCandidate(
+            proposal_id=proposal_id,
             proposal=proposal,
-            votes={'some_other_pubkey': ConfigVote.ACCEPT,
-                   'a_rejectors_pubkey': ConfigVote.REJECT})
+            votes=[
+                ConfigCandidate.VoteRecord(
+                    public_key='some_other_pubkey',
+                    vote=ConfigVote.ACCEPT),
+                ConfigCandidate.VoteRecord(
+                    public_key='a_rejectors_pubkey',
+                    vote=ConfigVote.REJECT)
+            ])
 
-        candidates = ConfigCandidates(candidates={proposal_id: candidate})
+        candidates = ConfigCandidates(candidates=[candidate])
 
-        tst.send(factory.create_vote_proposal(
-            proposal_id, 'my.config.setting', ConfigVote.REJECT))
+        self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'Ballot')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys', '')
-        _get(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
-        _get(tst, factory, 'sawtooth.config.vote.approval_threshold', '2')
+        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_get('sawtooth.config.vote.approval_threshold', '2')
 
         # expect to update the proposals
-        _get(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(candidates.SerializeToString()))
-        _set(tst, factory, 'sawtooth.config.vote.proposals',
-             binascii.hexlify(
-                 ConfigCandidates(candidates={}).SerializeToString()))
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_set('sawtooth.config.vote.proposals',
+                         base64.b64encode(EMPTY_CANDIDATES))
 
-        tst.expect(factory.create_tp_response("OK"))
+        self._expect_ok()
 
     def test_authorized_keys_accept_no_approval(self):
         """
         Tests setting a value with auth keys and no approval type
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose("foo.bar.count", "1")
 
-        tst.send(factory.create_proposal_transaction(
-            "foo.bar.count", "1", "somenonce"))
-
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'None')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys',
-             'some_key,' + factory.public_key)
+        self._expect_get('sawtooth.config.authorization_type', 'None')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         'some_key,' + self._public_key)
 
         # check the old value and set the new one
-        _get(tst, factory, 'foo.bar.count')
-        _set(tst, factory, 'foo.bar.count', '1')
+        self._expect_get('foo.bar.count')
+        self._expect_set('foo.bar.count', '1')
 
-        tst.expect(factory.create_tp_response("OK"))
+        self._expect_ok()
 
     def test_authorized_keys_wrong_key_no_approval(self):
         """
         Tests setting a value with a non-authorized key and no approval type
         """
-        tst = self.tester
-        factory = ConfigMessageFactory()
+        self._propose("foo.bar.count", "1")
 
-        tst.send(factory.create_proposal_transaction(
-            "foo.bar.count", "1", "somenonce"))
+        self._expect_get('sawtooth.config.authorization_type', 'None')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         'some_key,some_other_key')
 
-        _get(tst, factory, 'sawtooth.config.authorization_type', 'None')
-        _get(tst, factory, 'sawtooth.config.vote.authorized_keys',
-             'some_key,some_other_key')
-
-        tst.expect(factory.create_tp_response("INVALID_TRANSACTION"))
+        self._expect_invalid_transaction()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,27 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import run, PIPE
+from subprocess import run, PIPE, CalledProcessError
+import os
+import sys
 import argparse
+import time
 import yaml
 
-TIMEOUT = 60
+
+class RunDockerTestError(Exception):
+    pass
 
 
 def main():
     args = parse_args()
 
+    compose_file = _get_compose_file(args.compose_file)
+
+    if not args.prefix.isalnum():
+        raise RunDockerTestError("Prefix must be alphanumeric")
+
     compose = [
         'docker-compose',
         '-p', args.prefix,
-        '-f', args.compose_file
+        '-f', compose_file
     ]
 
     compose_up = compose + [
-        'up', '--abort-on-container-exit', '--build'
+        'up', '--abort-on-container-exit'
     ]
 
-    compose_down = compose + ['down']
+    compose_down = compose + ['down', '--remove-orphans']
+
+    compose_kill = compose + ['kill']
 
     inspect = [
         'docker', 'inspect',
@@ -42,63 +54,144 @@ def main():
         "{}_{}_1".format(args.prefix, args.test_service)
     ]
 
-    docker_build_all(args.compose_file)
+    compose_dict = load_compose_file(compose_file)
+    if args.test_service not in compose_dict['services']:
+        raise RunDockerTestError(
+            "Test service '{}' does not exist in compose file: '{}'".format(
+                args.test_service, compose_file))
+
+    start_time = time.time()
+    timeout = args.timeout
+
+    if 'ISOLATION_ID' not in os.environ:
+        os.environ['ISOLATION_ID'] = 'latest'
 
     # Run tests
-    print("Running: {}".format(compose_up))
-    run(compose_up)
+    try:
+        try:
+            print("Running: {}".format(compose_up))
+            run(compose_up, check=True, timeout=timeout)
+        except CalledProcessError:
+            raise RunDockerTestError(
+                "Failed to start all docker containers. Do `docker ps -a` to "
+                "list residual containers.")
 
-    # Get success value of tests
-    print("Running: {}".format(inspect))
-    success = run(
-        inspect,
-        stdout=PIPE,
-        timeout=TIMEOUT
-    ).stdout.decode().strip()
+        end_time = time.time()
+        delta_time = end_time - start_time
+        start_time = end_time
+        timeout = int(timeout - delta_time)
 
-    # Clean up
-    print("Running: {}".format(compose_down))
-    run(compose_down)
+        # Get success value of tests
+        try:
+            print("Running: {}".format(inspect))
+            success = run(
+                inspect, stdout=PIPE,
+                timeout=timeout, check=True
+            ).stdout.decode().strip()
+        except CalledProcessError:
+            raise RunDockerTestError(
+                "Aborting.. Could not inspect test services '{}'. Do "
+                "`docker ps -a` to list residual containers.".format(
+                    args.test_service))
 
-    exit(int(success))
+        end_time = time.time()
+        delta_time = end_time - start_time
+        start_time = end_time
+        timeout = int(timeout - delta_time)
+
+        # Clean up
+        try:
+            print("Running: {}".format(compose_down))
+            run(compose_down, check=True, timeout=timeout)
+        except CalledProcessError:
+            raise RunDockerTestError(
+                "Failed to remove all docker containers. Do `docker ps -a` to "
+                "list residual containers.")
+
+        exit(int(success))
+
+    except KeyboardInterrupt:
+        run(compose_down, check=True, timeout=5)
+        exit(1)
 
 
-def docker_build_all(compose_file):
-    fd = open(compose_file)
-    contents = fd.read()
-    fd.close()
+def load_compose_file(compose_file):
 
-    compose = yaml.load(contents)
-    print(compose['services'])
+    try:
+        with open(compose_file) as fd:
+            contents = fd.read()
+        compose = yaml.load(contents)
+        return compose
 
-    for name, service in compose['services'].items():
-        if 'image' in service:
-            print("Building {}...".format(name))
-            run(['sawtooth', 'docker', 'build', service['image']])
+    except OSError:
+        raise RunDockerTestError(
+            "Docker compose file '{}' could not be opened. Make sure it "
+            "exists and is readable.".format(compose_file))
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "compose_file",
+        help="docker-compose.yaml file that contains the test")
+
     # Allow passing in a prefix to docker compose.
     # This can be used to run multiple isolated instances of the test.
-    parser.add_argument("-p", "--prefix", 
-        help="id tests running in parallel, must contain only alphanumeric characters", 
-        default="intkey")
-
-    # Allow specifying a docker compose file
     parser.add_argument(
-        "-f", "--compose-file", 
-        help="docker-compose.yaml file that contains the test", 
-        default="docker-compose.yaml")
+        "-p", "--prefix",
+        help="id tests running in parallel, must be alphanumeric",
+        default="test")
 
     parser.add_argument(
-        "-t", "--test-service",
+        "-s", "--test-service",
         help="service in docker-compose.yaml that runs the test",
         default="integration_test")
+
+    parser.add_argument(
+        "-n", "--no-build",
+        help="don't build docker images",
+        action='store_true',
+        default=False)
+
+    parser.add_argument(
+        "-t", "--timeout",
+        help="how long to wait before timing out",
+        type=int,
+        default=300)
 
     return parser.parse_args()
 
 
+def _get_compose_dir():
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+        "integration", "sawtooth_integration", "docker"
+    )
+
+
+def _get_compose_file(compose_file):
+    # Try "as given"
+    if not os.path.exists(compose_file):
+        # If not, try in integration docker directory
+        compose_file = os.path.join(_get_compose_dir(), compose_file)
+    if not os.path.exists(compose_file):
+        # If not, try appending .yaml
+        compose_file = os.path.join(
+            _get_compose_dir(),
+            "{}.yaml".format(compose_file)
+        )
+    if not os.path.exists(compose_file):
+        raise RunDockerTestError(
+            "Docker compose file '{}' does not exist.".format(compose_file))
+
+    return compose_file
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+
+    except RunDockerTestError as err:
+        print(err, file=sys.stderr)
+        exit(1)

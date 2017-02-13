@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,44 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-sawtooth docker build sawtooth-test-ubuntu-xenial
-sawtooth docker build sawtooth-validator
-sawtooth docker build tp_intkey_python
-sawtooth docker build tp_intkey_java
-build_all
-./tools/plugins/install_jdk.sh
-build_java_sdk
-build_java_intkey
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+path_to_docker=$top_dir/docker
+
+cd $path_to_docker
+
+set -e
+
+while getopts :p:h opt
+do
+    case $opt in
+        h)
+            echo "Add a prefix with -p"
+            exit 0
+            ;;
+        p)
+            ISOLATION_ID=$OPTARG
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 2
+            ;;
+    esac
+done
+
+for image in \
+  sawtooth-base \
+  sawtooth-rest_api \
+  sawtooth-test \
+  sawtooth-tp_config \
+  sawtooth-tp_intkey_java \
+  sawtooth-tp_intkey_python \
+  sawtooth-tp_xo_python \
+  sawtooth-validator
+do
+    echo "[ Building $image... ]"
+    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
+      docker build -f $image -t $image .
+    else
+      docker build -f $image -t $image:$ISOLATION_ID .
+   fi
+done

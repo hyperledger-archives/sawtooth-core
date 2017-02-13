@@ -84,23 +84,48 @@ class DockerNodeController(NodeController):
                 formatted_args.append(arg)
         return ' '.join(formatted_args)
 
+    def _find_peers(self):
+        peers = []
+        args = ['docker', 'inspect', self._prefix, '--format',
+                '{{range .Containers }}{{.IPv4Address}}{{end}}']
+        try:
+            output = subprocess.check_output(args)
+            peers = output.split(b"/16")
+        except subprocess.CalledProcessError as e:
+            raise CliException(str(e))
+        return ['tcp://' + str(p) + ':8800' for p in peers if len(p) > 4]
+
     def start(self, node_config):
         node_name = node_config.node_name
         http_port = node_config.http_port
 
         args = self._construct_start_args(node_name)
         LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
+        peers = self._find_peers()
+
+        if node_config.genesis:
+            entrypoint = 'bash -c "./bin/sawtooth-0.8 admin genesis && \
+            ./bin/validator {} -v"'
+        else:
+            entrypoint = './bin/validator {} -v'
+        if len(peers) > 0:
+            entrypoint = entrypoint.format('--peers ' + " ".join(peers))
+        else:
+            entrypoint = entrypoint.format('')
 
         compose_dir = tempfile.mkdtemp()
+
         compose_dict = {
             'version': '2',
             'services': {
                 'validator': {
                     'image': 'sawtooth-validator',
-                    'expose': ['40000'],
-                    'networks': [self._prefix, 'default'],
+                    'expose': ['40000', '8800'],
+                    'networks': {self._prefix: {},
+                                 'default': {'aliases': [node_name]}},
                     'volumes': ['/project:/project'],
-                    'container_name': self._prefix + '-' + node_name
+                    'container_name': self._prefix + '-' + node_name,
+                    'entrypoint': entrypoint
                 }
             },
             'networks': {self._prefix: {'external': True}}
@@ -113,11 +138,12 @@ class DockerNodeController(NodeController):
         node_num = node_name[len('validator-'):]
         for proc in state['Processors']:
             compose_dict['services'][proc] = {
-                'image': proc,
+                'image': 'sawtooth-{}'.format(proc),
                 'expose': ['40000'],
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
-                'container_name': '-'.join([self._prefix, proc, node_num])
+                'container_name': '-'.join([self._prefix, proc, node_num]),
+                'entrypoint': 'bin/{} {}:40000'.format(proc, node_name)
             }
 
         # add the host:container port mapping for validator
@@ -138,8 +164,8 @@ class DockerNodeController(NodeController):
             if unbuilt:
                 raise CliException(
                     'Docker images not built: {}. Try running '
-                    '"sawtooth docker build {}"'.format(
-                        ', '.join(unbuilt), ' '.join(unbuilt)))
+                    '"docker_build_all"'.format(
+                        ', '.join(unbuilt)))
 
             invalid = self._check_invalid_processors(processors)
             if invalid:

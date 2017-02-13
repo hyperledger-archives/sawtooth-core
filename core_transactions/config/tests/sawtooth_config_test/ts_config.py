@@ -17,7 +17,6 @@
 import os
 import unittest
 import traceback
-from subprocess import Popen
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
@@ -31,24 +30,17 @@ class TestSuiteConfig(unittest.TestCase):
         self.tp_process = None
 
     def _set_up(self):
-        url = '127.0.0.1:40000'
+        url = '0.0.0.0:40000'
 
         self.tester = TransactionProcessorTester()
 
         self.tester.listen(url)
         print('Test running in PID: {}'.format(os.getpid()))
 
-        self.tp_process = Popen(['tp_config', url])
-        print('Started processor in PID: {}'.format(self.tp_process.pid))
-
         if not self.tester.register_processor():
             raise Exception('Failed to register processor')
 
     def _tear_down(self):
-
-        if self.tp_process is not None:
-            self.tp_process.terminate()
-            self.tp_process.wait()
 
         if self.tester is not None:
             self.tester.close()
@@ -65,6 +57,8 @@ class TestSuiteConfig(unittest.TestCase):
             suite.addTest(TestConfig('test_set_value_no_auth', self.tester))
             suite.addTest(TestConfig('test_set_value_bad_auth_type',
                                      self.tester))
+            suite.addTest(TestConfig('test_error_on_bad_auth_type',
+                                     self.tester))
             suite.addTest(TestConfig('test_set_value_bad_approval_threshold',
                                      self.tester))
             suite.addTest(TestConfig('test_set_value_proposals',
@@ -75,7 +69,7 @@ class TestSuiteConfig(unittest.TestCase):
                                      self.tester))
             suite.addTest(TestConfig('test_vote_in_ballot_mode_counted',
                                      self.tester))
-            suite.addTest(TestConfig('test_vote_in_ballot_mode_rejeceted',
+            suite.addTest(TestConfig('test_vote_in_ballot_mode_rejected',
                                      self.tester))
             suite.addTest(TestConfig('test_authorized_keys_accept_no_approval',
                                      self.tester))

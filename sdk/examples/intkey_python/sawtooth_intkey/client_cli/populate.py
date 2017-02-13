@@ -21,6 +21,7 @@ import os
 import logging
 import random
 import string
+import time
 
 import cbor
 import bitcoin
@@ -78,7 +79,8 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
         dependencies=[],
         payload_encoding="application/cbor",
         payload_sha512=payload.sha512(),
-        batcher_pubkey=public_key)
+        batcher_pubkey=public_key,
+        nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
 
@@ -136,7 +138,6 @@ def do_populate(args):
 
     batches = []
     total_txn_count = 0
-
     txns = []
     for i in range(0, len(words)):
         txn = create_intkey_transaction(
@@ -163,10 +164,18 @@ def do_populate(args):
 
 
 def add_populate_parser(subparsers, parent_parser):
+
+    epilog = '''
+    deprecated:
+     use create_batch, which combines
+     the populate and generate commands.
+    '''
+
     parser = subparsers.add_parser(
         'populate',
         parents=[parent_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=epilog)
 
     parser.add_argument(
         '-o', '--output',

@@ -79,6 +79,14 @@ message Message {
         CLIENT_STATE_GET_RESPONSE = 29;
         // Further messages from the stats client through the web api
 
+
+        // Temp message types until a discusion can be had about gossip msg
+        GOSSIP_MESSAGE = 30;
+        GOSSIP_REGISTER = 31;
+        GOSSIP_UNREGISTER = 32;
+        GOSSIP_ACK = 33;
+        GOSSIP_PING = 34;
+
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
@@ -97,7 +105,4 @@ message Message {
     // CBOR.
     bytes content = 3;
 
-    // the zmq identity internal to Stream, _SendReceiveThread, and
-    // ValidatorServicer classes
-    string sender = 4;
 }

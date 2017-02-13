@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ def main():
     tp_bin = sys.argv[1]
     test_suite = sys.argv[2]
 
-    tp_intkey = [tp_bin, '0.0.0.0:40000']
+    tp_args = [tp_bin, '127.0.0.1:40000']
 
     tp_tester = ['nose2-3', '-v', test_suite]
 
-    tp_proc = subprocess.Popen(tp_intkey)
+    tp_proc = subprocess.Popen(tp_args)
     try:
         tester_proc = subprocess.run(tp_tester, timeout=TIMEOUT)
 

@@ -18,6 +18,7 @@ import argparse
 
 from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.log import init_console_logging
+from sawtooth_validator.exceptions import GenesisError
 
 
 def parse_args(args):
@@ -30,7 +31,7 @@ def parse_args(args):
                         type=str)
     parser.add_argument('--component-endpoint',
                         help='Validator component service endpoint',
-                        default='0.0.0.0:40000',
+                        default='tcp://0.0.0.0:40000',
                         type=str)
     parser.add_argument('--peers',
                         help='A list of peers to attempt to connect to '
@@ -57,6 +58,8 @@ def main(args=sys.argv[1:]):
     try:
         validator.start()
     except KeyboardInterrupt:
-        print(sys.stderr, "Interrupted!")
+        print("Interrupted!", file=sys.stderr)
+    except GenesisError as genesis_err:
+        print(genesis_err, file=sys.stderr)
     finally:
         validator.stop()

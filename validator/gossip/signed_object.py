@@ -23,7 +23,7 @@ import hashlib
 import logging
 from threading import Lock
 
-from sawtooth_signing import pbct_nativerecover as signing
+from sawtooth_signing import pbct as signing
 from gossip.common import dict2cbor
 
 logger = logging.getLogger(__name__)

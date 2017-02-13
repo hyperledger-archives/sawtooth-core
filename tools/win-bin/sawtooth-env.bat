@@ -55,6 +55,7 @@ pip install enum34 setuptools colorlog pybitcointools cbor
 pip install twisted requests nose2 coverage cov-core pypiwin32
 pip install pylint setuptools-lint pep8
 pip install psutil pyyaml
+pip install ecdsa cryptography
 
 :EXIT
 POPD
