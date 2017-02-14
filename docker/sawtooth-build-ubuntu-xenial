@@ -116,6 +116,7 @@ RUN apt-get update && apt-get install -y -q \
     python3-nose2 \
     python3-nose2-cov \
     python3-stdeb \
+    python3-yaml \
     python3-zmq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -123,6 +124,8 @@ RUN apt-get update && apt-get install -y -q \
 
 RUN pip3 install bitcoin && \
     pip3 install grpcio-tools && \
-    pip3 install secp256k1
+    pip3 install secp256k1 && \
+    pip3 install pylint && \
+    pip3 install aiohttp
 
 USER build

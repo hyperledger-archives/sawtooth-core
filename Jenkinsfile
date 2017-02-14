@@ -25,6 +25,7 @@ node ('master') {
         stage("Verify Scripts") {
             readTrusted 'bin/build_all'
             readTrusted 'bin/run_tests'
+            readTrusted 'bin/run_lint'
             readTrusted 'core/setup.py'
             readTrusted 'extensions/arcade/setup.py'
             readTrusted 'signing/setup.py'
@@ -38,6 +39,14 @@ node ('master') {
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
                     sh './bin/build_all'
+                }
+            }
+        }
+
+        stage("Run Lint") {
+            docker.withServer('tcp://0.0.0.0:4243'){
+                docker.image('sawtooth-build:$BUILD_TAG').inside {
+                    sh './bin/run_lint'
                 }
             }
         }
