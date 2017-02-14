@@ -121,7 +121,7 @@ class CreateLIBORUpdate(Update):
                  update_type,
                  date,
                  rates,
-                 libor_public_key=None,
+                 public_key=None,
                  signature=None,
                  object_id=None):
         """
@@ -154,7 +154,7 @@ class CreateLIBORUpdate(Update):
             self._object_id = object_id
         self.__libor_object__ = LIBORObject(date,
                                             rates,
-                                            libor_public_key,
+                                            public_key,
                                             signature)
         self._rates = self.__libor_object__.rates
 

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ -z $1 ] || [ -z $2 ]; then
+  echo "Usage: $0 [path_to_sawtooth] [validator_ip]"
+  exit 0
+fi
+
+SAWTOOTH=$(cd $1; pwd)
+
+export PATH=$SAWTOOTH/bin:$PATH
+export PYTHONPATH=:$SAWTOOTH/validator:$SAWTOOTH/signing:$PYTHONPATH
+
+PYTHONPATH=$SAWTOOTH/core:$SAWTOOTH/extensions/bond
+PYTHONPATH=$PYTHONPATH:$SAWTOOTH/core/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$SAWTOOTH/signing
+PYTHONPATH=$PYTHONPATH:$SAWTOOTH/signing/build/lib.linux-x86_64-2.7
+PYTHONPATH=$PYTHONPATH:$SAWTOOTH/validator
+PYTHONPATH=$PYTHONPATH:$SAWTOOTH/extensions/mktplace
+PYTHONPATH=$PYTHONPATH:$SAWTOOTH/extensions/arcade
+export PYTHONPATH
+
+btp init --url http://$2:8800 --username loader
+cd $SAWTOOTH
+./bin/load_bond_data
