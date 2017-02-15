@@ -15,7 +15,7 @@
 // limitations under the License.
 // ------------------------------------------------------------------------------
 
-node {
+node ('master') {
     // Create a unique workspace so Jenkins doesn't reuse an existing one
     ws("workspace/${env.BUILD_TAG}_0-8") {
 
