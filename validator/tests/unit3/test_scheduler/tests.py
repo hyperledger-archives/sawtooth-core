@@ -21,8 +21,7 @@ import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
 from sawtooth_validator.execution.context_manager import ContextManager
-from sawtooth_validator.execution.scheduler_parallel import RadixTree
-from sawtooth_validator.execution.scheduler_parallel import TopologicalSorter
+from sawtooth_validator.execution.scheduler_parallel import PredecessorTree
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.database import dict_database
 
@@ -299,9 +298,9 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertIsNone(batch2_result.state_hash)
 
 
-class TestRadixTree(unittest.TestCase):
+class TestPredecessorTree(unittest.TestCase):
 
-    def test_radix_tree(self):
+    def test_predecessor_tree(self):
         """Tests basic functionality of the scheduler's radix tree.
         """
         address_a = \
@@ -309,7 +308,7 @@ class TestRadixTree(unittest.TestCase):
         address_b = \
             '3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d'
 
-        tree = RadixTree()
+        tree = PredecessorTree()
         tree.add_reader(address_a, 'txn1')
         tree.add_reader(address_b, 'txn2')
 
@@ -390,27 +389,14 @@ class TestRadixTree(unittest.TestCase):
         self.assertEqual(list(node.children.keys()), ['e8'])
 
         self.assertEqual(
-            tree.find_readers_and_writers(address_a),
-            ['txn1'])
+            tree.find_write_predecessors(address_a),
+            set(['txn1']))
         self.assertEqual(
-            tree.find_readers_and_writers(address_b),
-            ['txn3', 'txn2'])
-
-
-class TestTopologicalSorter(unittest.TestCase):
-
-    def test_topological_sorter(self):
-        sorter = TopologicalSorter()
-        sorter.add_relation('9', '2')
-        sorter.add_relation('3', '7')
-        sorter.add_relation('7', '5')
-        sorter.add_relation('5', '8')
-        sorter.add_relation('8', '6')
-        sorter.add_relation('4', '6')
-        sorter.add_relation('1', '3')
-        sorter.add_relation('7', '4')
-        sorter.add_relation('9', '5')
-        sorter.add_relation('2', '8')
+            tree.find_read_predecessors(address_a),
+            set(['txn1']))
         self.assertEqual(
-            sorter.order(),
-            ['9', '2', '1', '3', '7', '5', '8', '4', '6'])
+            tree.find_write_predecessors(address_b),
+            set(['txn3', 'txn2']))
+        self.assertEqual(
+            tree.find_read_predecessors(address_b),
+            set(['txn3']))
