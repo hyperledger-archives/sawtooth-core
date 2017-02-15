@@ -54,7 +54,7 @@ class TransactionProcessor(object):
                     futures.append(future)
 
         for future in futures:
-            LOGGER.debug("future result: %s", repr(future.result))
+            LOGGER.debug("future result: %s", repr(future.result()))
 
         while True:
             if self._stop:

@@ -20,6 +20,7 @@ import zmq
 import zmq.asyncio
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterResponse
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 from sawtooth_processor_test.message_types import to_protobuf_class
@@ -123,7 +124,9 @@ class TransactionProcessorTester(object):
                 request.family, request.version,
                 request.encoding, request.namespaces
             ))
-
+            response = TpRegisterResponse(
+                status=TpRegisterResponse.OK)
+            self.send(response, message.correlation_id)
             return True
 
     def send(self, message_content, correlation_id=None):
