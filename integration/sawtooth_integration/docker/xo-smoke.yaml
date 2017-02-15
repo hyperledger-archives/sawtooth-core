@@ -23,8 +23,9 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: "bash -c \"\
-        ./bin/tp_config -v validator:40000 \""
+    depends_on:
+      - validator
+    entrypoint: ./bin/tp_config -vv validator:40000
     stop_signal: SIGKILL
 
   tp_xo:
@@ -33,7 +34,9 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_xo_python validator:40000
+    depends_on:
+      - validator
+    entrypoint: ./bin/tp_xo_python -vv validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -44,7 +47,7 @@ services:
       - 40000
     entrypoint: "bash -c \"\
         ./bin/sawtooth-0.8 admin genesis && \
-        ./bin/validator -v\""
+        ./bin/validator -vv\""
     stop_signal: SIGKILL
 
   rest_api:
@@ -54,10 +57,9 @@ services:
     expose:
       - 40000
       - 8080
-    # Starting rest_api at the same time as tp_xo breaks
-    entrypoint: "bash -c \"\
-      sleep 1 && \
-      ./bin/rest_api --stream-url validator:40000\""
+    depends_on:
+     - validator
+    entrypoint: ./bin/rest_api --stream-url validator:40000
     stop_signal: SIGKILL
 
   integration_test:
@@ -74,7 +76,7 @@ services:
       - rest_api
     # Wait for rest_api
     entrypoint: "bash -c \"\
-      sleep 2 && \
+      sleep 30 && \
       nose2-3 -v test_xo_smoke.TestXoSmoke\""
     stop_signal: SIGKILL
     environment:

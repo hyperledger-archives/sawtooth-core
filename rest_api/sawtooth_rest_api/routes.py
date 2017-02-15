@@ -167,7 +167,7 @@ class RouteHandler(object):
         Sends a protobuf message to the validator
         Handles a possible timeout if validator is unresponsive
         """
-        timeout = 5
+        timeout = 300
         timeout_msg = 'Could not reach validator, validator timed out'
 
         if isinstance(content, BaseMessage):

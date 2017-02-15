@@ -16,7 +16,6 @@
 import asyncio
 import hashlib
 import logging
-import os
 import random
 import string
 from threading import Thread
@@ -148,8 +147,7 @@ class _SendReceiveThread(Thread):
         asyncio.set_event_loop(self._event_loop)
         self._context = zmq.asyncio.Context()
         self._sock = self._context.socket(zmq.DEALER)
-        self._sock.identity = "{}-{}".format(self.__class__.__name__,
-                                             os.getpid()).encode('ascii')
+        self._sock.identity = _generate_id()[0:16].encode('ascii')
         self._sock.connect('tcp://' + self._url)
         self._send_queue = asyncio.Queue(loop=self._event_loop)
         self._recv_queue = asyncio.Queue(loop=self._event_loop)

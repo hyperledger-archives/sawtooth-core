@@ -23,8 +23,9 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: "bash -c \"\
-        ./bin/tp_config -v validator:40000 \""
+    depends_on:
+      - validator
+    entrypoint: ./bin/tp_config -vv validator:40000
     stop_signal: SIGKILL
 
   tp_intkey:
@@ -33,9 +34,9 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: "bash -c \"\
-        sleep 1 && \
-        ./bin/tp_intkey_python -v validator:40000\""
+    depends_on:
+      - validator
+    entrypoint: ./bin/tp_intkey_python -vv validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -44,13 +45,10 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
-    depends_on:
-      - tp_intkey
-      - tp_config
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         ./bin/sawtooth-0.8 admin genesis && \
-        ./bin/validator -v\""
+        ./bin/validator -vv\""
     stop_signal: SIGKILL
 
   rest_api:
@@ -63,9 +61,7 @@ services:
     depends_on:
       - validator
     # Starting rest_api at the same time as tp_intkey breaks
-    entrypoint: "bash -c \"\
-      sleep 4 && \
-      ./bin/rest_api --stream-url validator:40000\""
+    entrypoint: ./bin/rest_api --stream-url validator:40000
     stop_signal: SIGKILL
 
   integration_test:
@@ -81,7 +77,7 @@ services:
       - rest_api
     # Wait for rest_api and genesis
     entrypoint: "bash -c \"\
-      sleep 8 && \
+      sleep 30 && \
       nose2-3 -v test_intkey_smoke.TestIntkeySmoke\""
     stop_signal: SIGKILL
     environment:
