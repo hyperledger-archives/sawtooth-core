@@ -31,8 +31,9 @@ node ('master') {
             readTrusted 'bin/build_all'
             readTrusted 'bin/run_tests'
             readTrusted 'bin/run_lint'
-            readTrusted 'core/setup.py'
-            readTrusted 'extensions/arcade/setup.py'
+            readTrusted 'cli/setup.py'
+            readTrusted 'rest_api/setup.py'
+            readTrusted 'sdk/python/setup.py'
             readTrusted 'signing/setup.py'
             readTrusted 'validator/setup.py'
         }
