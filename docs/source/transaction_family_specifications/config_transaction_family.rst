@@ -84,7 +84,7 @@ Definition of Setting Entries
 The following protocol buffers definition defines setting entries:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/core_transactions/config/protos/config.proto
+	:caption: File: sawtooth-core/protos/setting.proto
 
 	// Setting Container for the resulting state
 	message Setting {
@@ -106,6 +106,7 @@ following protocol buffers definition. The value returned by this  setting is
 a base64 encoded *ConfigCandidates* message:
 
 .. code-block:: protobuf
+	:caption: File: sawtooth-core/core_transactions/config/protos/config.proto
 
 	// Contains the vote counts for a given proposal.
 	message ConfigCandidate {

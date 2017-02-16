@@ -28,7 +28,7 @@ from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_config.protobuf.config_pb2 import Setting
+from sawtooth_config.protobuf.setting_pb2 import Setting
 
 LOGGER = logging.getLogger(__name__)
 
