@@ -19,6 +19,7 @@ import argparse
 from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.exceptions import GenesisError
+from sawtooth_validator.exceptions import LocalConfigurationError
 
 
 def parse_args(args):
@@ -59,6 +60,8 @@ def main(args=sys.argv[1:]):
         validator.start()
     except KeyboardInterrupt:
         print("Interrupted!", file=sys.stderr)
+    except LocalConfigurationError as local_config_err:
+        print(local_config_err, file=sys.stderr)
     except GenesisError as genesis_err:
         print(genesis_err, file=sys.stderr)
     finally:

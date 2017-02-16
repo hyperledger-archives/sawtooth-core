@@ -14,6 +14,14 @@
 # ------------------------------------------------------------------------------
 
 
+class LocalConfigurationError(Exception):
+    """
+    General error thrown when a local configuration issue should prevent
+    the validator from starting.
+    """
+    pass
+
+
 class GenesisError(Exception):
     """
     General Error thrown when an error occurs as a result of an incomplete

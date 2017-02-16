@@ -96,7 +96,9 @@ class Validator(object):
             client_handlers.StateListRequestHandler(lmdb),
             thread_pool)
 
-        self._service = Interconnect(component_endpoint, self._dispatcher)
+        self._service = Interconnect(component_endpoint,
+                                     self._dispatcher,
+                                     secured=False)
         executor = TransactionExecutor(self._service, context_manager)
 
         self._dispatcher.add_handler(
@@ -111,11 +113,22 @@ class Validator(object):
 
         self._network_dispatcher = Dispatcher()
 
+        # Server public and private keys are hardcoded here due to
+        # the decision to avoid having separate identities for each
+        # validator's server socket. This is appropriate for a public
+        # network. For a permissioned network with requirements for
+        # server endpoint authentication at the network level, this can
+        # be augmented with a local lookup service for side-band provided
+        # endpoint, public_key pairs and a local configuration option
+        # for 'server' side private keys.
         self._network = Interconnect(
             network_endpoint,
             dispatcher=self._network_dispatcher,
             identity=identity,
-            peer_connections=peer_list)
+            peer_connections=peer_list,
+            secured=True,
+            server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
+            server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*')
 
         self._gossip = Gossip(self._network)
 
