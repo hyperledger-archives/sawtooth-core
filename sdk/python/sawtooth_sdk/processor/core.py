@@ -21,10 +21,10 @@ from sawtooth_sdk.processor.state import State
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
-from sawtooth_protobuf.processor_pb2 import TpProcessRequest
-from sawtooth_protobuf.processor_pb2 import TpProcessResponse
-from sawtooth_protobuf.validator_pb2 import Message
+from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpProcessRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 
 LOGGER = logging.getLogger(__name__)

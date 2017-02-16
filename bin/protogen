@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ top_dir=$(dirname $(dirname $0))
 protos_dir=$top_dir/protos
 
 sdk_dir=$top_dir/sdk/python
-sdk_pkg=sawtooth_protobuf
+sdk_pkg=sawtooth_sdk/protobuf
 
 cli_dir=$top_dir/cli
 cli_pkg=sawtooth_cli/protobuf
@@ -72,6 +72,4 @@ run_protoc $config_dir $config_pkg
 # Config txn family protos, included in the cli, as well
 protos_dir=$config_dir/protos
 run_protoc $config_dir $config_pkg
-
-config_pkg=sawtooth_cli/config_protobuf
-run_protoc $cli_dir $config_pkg
+run_protoc $cli_dir $cli_pkg

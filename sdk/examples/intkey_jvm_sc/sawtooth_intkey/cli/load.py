@@ -20,7 +20,7 @@ import sys
 import time
 import argparse
 import cbor
-import sawtooth_protobuf.batch_pb2 as batch_pb2
+import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 from sawtooth_sdk.client.stream import Stream
 
 sys.path.insert(0, os.path.join(

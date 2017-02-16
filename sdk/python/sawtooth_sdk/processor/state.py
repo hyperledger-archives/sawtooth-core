@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_protobuf.validator_pb2 import Message
-from sawtooth_protobuf import state_context_pb2
+from sawtooth_sdk.protobuf.validator_pb2 import Message
+from sawtooth_sdk.protobuf import state_context_pb2
 
 
 class StateEntry(object):

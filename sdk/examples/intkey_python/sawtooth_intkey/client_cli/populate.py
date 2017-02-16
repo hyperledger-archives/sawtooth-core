@@ -26,8 +26,8 @@ import time
 import cbor
 import bitcoin
 
-import sawtooth_protobuf.batch_pb2 as batch_pb2
-import sawtooth_protobuf.transaction_pb2 as transaction_pb2
+import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
+import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 
 
 LOGGER = logging.getLogger(__name__)

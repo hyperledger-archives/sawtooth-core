@@ -19,8 +19,8 @@ import asyncio
 import zmq
 import zmq.asyncio
 
-from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
-from sawtooth_protobuf.validator_pb2 import Message
+from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 from sawtooth_processor_test.message_types import to_protobuf_class
 from sawtooth_processor_test.message_types import to_message_type
@@ -147,7 +147,7 @@ class TransactionProcessorTester(object):
     async def _send(self, ident, message):
         """
         (asyncio coroutine) Send the message and wait for a response.
-        :param message (sawtooth_protobuf.Message)
+        :param message (sawtooth_sdk.protobuf.Message)
         :param ident (str) the identity of the zmq.DEALER to send to
         """
 

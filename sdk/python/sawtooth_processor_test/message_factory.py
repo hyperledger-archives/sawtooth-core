@@ -16,22 +16,22 @@
 import hashlib
 import bitcoin
 
-from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
-from sawtooth_protobuf.processor_pb2 import TpProcessResponse
-from sawtooth_protobuf.processor_pb2 import TpProcessRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_sdk.protobuf.processor_pb2 import TpProcessRequest
 
-from sawtooth_protobuf.transaction_pb2 import Transaction
-from sawtooth_protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
+from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_protobuf.batch_pb2 import Batch
-from sawtooth_protobuf.batch_pb2 import BatchList
-from sawtooth_protobuf.batch_pb2 import BatchHeader
+from sawtooth_sdk.protobuf.batch_pb2 import Batch
+from sawtooth_sdk.protobuf.batch_pb2 import BatchList
+from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 
-from sawtooth_protobuf.state_context_pb2 import TpStateGetResponse
-from sawtooth_protobuf.state_context_pb2 import TpStateGetRequest
-from sawtooth_protobuf.state_context_pb2 import TpStateSetResponse
-from sawtooth_protobuf.state_context_pb2 import TpStateSetRequest
-from sawtooth_protobuf.state_context_pb2 import Entry
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import Entry
 
 
 def _private():

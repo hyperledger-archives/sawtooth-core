@@ -17,8 +17,8 @@ import hashlib
 
 from sawtooth_cli.exceptions import CliException
 
-from sawtooth_cli.config_protobuf.config_pb2 import ConfigPayload
-from sawtooth_cli.config_protobuf.config_pb2 import ConfigProposal
+from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
+from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader

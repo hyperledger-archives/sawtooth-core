@@ -22,9 +22,9 @@ import sys
 import time
 import cProfile
 import argparse
-import sawtooth_protobuf.transaction_pb2 as transaction_pb2
-import sawtooth_protobuf.batch_pb2 as batch_pb2
-from sawtooth_protobuf import jvm_sc_pb2
+import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
+import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
+from sawtooth_sdk.protobuf import jvm_sc_pb2
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(

@@ -24,7 +24,7 @@ from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.client.future import FutureTimeoutError
 from sawtooth_sdk.client.stream import Stream
-from sawtooth_protobuf.validator_pb2 import Message
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 from sawtooth_rest_api.protobuf import client_pb2 as client
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader

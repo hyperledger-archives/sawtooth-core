@@ -13,15 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_protobuf.processor_pb2 import TpRegisterRequest
-from sawtooth_protobuf.processor_pb2 import TpProcessResponse
-from sawtooth_protobuf.processor_pb2 import TpProcessRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_sdk.protobuf.processor_pb2 import TpProcessRequest
 
-from sawtooth_protobuf.state_context_pb2 import TpStateGetResponse
-from sawtooth_protobuf.state_context_pb2 import TpStateGetRequest
-from sawtooth_protobuf.state_context_pb2 import TpStateSetResponse
-from sawtooth_protobuf.state_context_pb2 import TpStateSetRequest
-from sawtooth_protobuf.validator_pb2 import Message
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 _TYPE_TO_PROTO = {
     Message.TP_REGISTER_REQUEST: TpRegisterRequest,

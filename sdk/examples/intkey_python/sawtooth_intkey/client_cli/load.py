@@ -19,8 +19,8 @@ import time
 
 from sawtooth_sdk.client.stream import Stream
 
-import sawtooth_protobuf.batch_pb2 as batch_pb2
-from sawtooth_protobuf.validator_pb2 import Message
+import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 
 LOGGER = logging.getLogger(__file__)
