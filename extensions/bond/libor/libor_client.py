@@ -68,7 +68,7 @@ class LIBORClient(SawtoothClient):
         # source of information
         signed_update = LIBORObject(date=effective_date,
                                     rates=rates,
-                                    public_key=libor_public_key)
+                                    libor_public_key=libor_public_key)
         signed_update.sign_object(signing_key)
 
         # Create the update and the submit the transaction
