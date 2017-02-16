@@ -2,7 +2,7 @@
 
 set -e
 
-pip install sphinx
-pip install sphinx_rtd_theme
-pip install sphinxcontrib-httpdomain
-pip install sphinxcontrib-openapi
+pip3 install sphinx
+pip3 install sphinx_rtd_theme
+pip3 install sphinxcontrib-httpdomain
+pip3 install sphinxcontrib-openapi

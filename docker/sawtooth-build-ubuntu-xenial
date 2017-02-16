@@ -51,16 +51,12 @@ RUN apt-get update && apt-get install -y -q \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install sphinx && \
-    pip install sphinxcontrib-httpdomain && \
-    pip install sphinxcontrib-openapi && \
-    pip install nose2 && \
+RUN pip install nose2 && \
     pip install coverage && \
     pip install cov-core && \
     pip install pep8 && \
     pip install pylint && \
     pip install setuptools-lint && \
-    pip install sphinx_rtd_theme && \
     pip install ipaddr && \
     pip install networkx && \
     pip install iso8601 && \
@@ -126,6 +122,11 @@ RUN pip3 install bitcoin && \
     pip3 install grpcio-tools && \
     pip3 install secp256k1 && \
     pip3 install pylint && \
-    pip3 install aiohttp
+    pip3 install aiohttp && \
+    pip3 install sphinx && \
+    pip3 install sphinxcontrib-httpdomain && \
+    pip3 install sphinxcontrib-openapi && \
+    pip3 install sphinx_rtd_theme
+
 
 USER build
