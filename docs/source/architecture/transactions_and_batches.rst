@@ -67,15 +67,17 @@ define a transaction family called "xo" which defines a set of transactions for
 playing tic-tac-toe.
 
 In addition to the name of the transaction family (family_name), each
-transaction specifies a family version string (family_version).  The
-payload_encoding field allows the transaction family to support multiple
-serialization mechanisms (for example, json or cbor).
+transaction specifies a family version string (family_version).  The version
+string enables upgrading a transaction family while coordinating the nodes
+in the network to upgrade.  The payload_encoding field allows the transaction
+family to support multiple serialization mechanisms (for example, json or
+cbor).
 
 Dependencies and Input/Output Addresses
 ---------------------------------------
 
 Transactions can depend upon other transactions, which is to say a dependent
-transaction cannot be applied prior the transaction upon which it depends.
+transaction cannot be applied prior to the transaction upon which it depends.
 
 The dependencies field of a transaction allows explicitly specifying the
 transactions which must be applied prior to the current transaction.  Explicit
@@ -101,11 +103,12 @@ which should be applied to state.  Only the transaction family processing the
 transaction will deserialize the payload; to all other components of the
 system, payload is just a sequence of bytes.  The transaction family processing
 the transaction will deserialize the bytes using payload_encoding as a hint to
-determine the appropriate technique.
+determine the appropriate technique.  The payload_encoding string is defined
+by the transaction family itself.
 
-The payload_sha512 field contains a sha 512 hash of the payload bytes.  As part
+The payload_sha512 field contains a SHA-512 hash of the payload bytes.  As part
 of the header, payload_sha512 is signed and later verified, while the payload
-field is not.  To verify the payload field matches the header, a sha512 of the
+field is not.  To verify the payload field matches the header, a SHA-512 of the
 payload field can be compared to payload_sha512.
 
 Nonce
@@ -163,12 +166,13 @@ in the dependencies field on a Transaction) are constrained to dependencies
 where the transactions cannot be placed in the same batch.
 
 Batches solve an important problem which cannot be solved with explicit
-dependencies.  Suppose we have transactions A, B, and C with the following
-relationship: C depends on B, B depends on A, and A depends on C.  The desired
+dependencies.  Suppose we have transactions A, B, and C and that the desired
 behavior is A, B, C be applied in that order, and if any of them are invalid,
-none of them should be applied.  The dependencies field can not be used to
-represent this relationship, since dependencies enforce order and the above is
-cyclic (and thus cannot be ordered).
+none of them should be applied.  If we attempted to solve this using only
+dependencies, we might attempt a relationship between them such as: C depends
+on B, B depends on A, and A depends on C.  However, the dependencies field
+cannot be used to represent this relationship, since dependencies enforce order
+and the above is cyclic (and thus cannot be ordered).
 
 Transactions from multiple transaction families can also be batched together,
 which further encourages reuse of transaction families.  For example,
