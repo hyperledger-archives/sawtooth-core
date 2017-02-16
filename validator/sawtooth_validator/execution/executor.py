@@ -92,7 +92,7 @@ class TransactionExecutorThread(threading.Thread):
 
             if processor_type not in self._processors:
                 raise Exception("internal error, no processor available")
-            processor = self._processors[processor_type]
+            processor = self._processors.get_next_of_type(processor_type)
             identity = processor.identity
 
             future = self._service.send(

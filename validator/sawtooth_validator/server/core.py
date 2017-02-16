@@ -34,8 +34,7 @@ from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.execution.executor import TransactionExecutor
-from sawtooth_validator.execution.processor_handlers import \
-    ProcessorRegisterHandler
+from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -101,8 +100,14 @@ class Validator(object):
 
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_REGISTER_REQUEST,
-            ProcessorRegisterHandler(executor.processors),
+            processor_handlers.ProcessorRegisterHandler(executor.processors),
             thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_UNREGISTER_REQUEST,
+            processor_handlers.ProcessorUnRegisterHandler(executor.processors),
+            thread_pool
+        )
 
         identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
