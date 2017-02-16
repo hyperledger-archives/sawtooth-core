@@ -154,15 +154,7 @@ retval=0
 
 PYTHONPATH=$top_dir/signing
 export PYTHONPATH
-lint "python -m pylint" signing "$SINCE" .pylintrc-strict 1 || retval=1
 lint "python3 -m pylint" signing "$SINCE" .pylintrc-strict 1 || retval=1
-
-PYTHONPATH=$top_dir/core
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-export PYTHONPATH
-lint "python -m pylint" core "$SINCE" .pylintrc-core 1 || retval=1
-lint "python -m pylint" core/sawtooth "$SINCE" .pylintrc-strict 0 || retval=1
 
 PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
@@ -178,23 +170,9 @@ PYTHONPATH=$top_dir/sdk/python
 export PYTHONPATH
 lint "python3 -m pylint" core_transactions/config "$SINCE" .pylintrc-strict 1 || retval=1
 
-PYTHONPATH=$top_dir/core
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-export PYTHONPATH
-lint "python -m pylint" validator "$SINCE" .pylintrc-validator 1 sawtooth_validator || retval=1
-lint "python -m pylint" validator/sawtooth_validator/consensus "$SINCE" .pylintrc-validator 1 || retval=1
-
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 lint "python3 -m pylint" validator/sawtooth_validator "$SINCE" .pylintrc-strict 1 consensus || retval=1
-
-PYTHONPATH=$top_dir/core
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-PYTHONPATH=$PYTHONPATH:$top_dir/extensions/arcade
-export PYTHONPATH
-lint "python -m pylint" extensions/arcade "$SINCE" .pylintrc-arcade 1 || retval=1
 
 PYTHONPATH=$top_dir/cli
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
