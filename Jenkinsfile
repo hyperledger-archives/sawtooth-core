@@ -98,7 +98,7 @@ node ('master') {
         stage("Build the packages"){
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
-                    sh './bin/build_debs'
+                    sh 'VERSION=AUTO_STRICT ./bin/build_debs'
                     stash name: 'debs', includes: 'core/deb_dist/*.deb,signing/deb_dist/*.deb,*.deb'
                 }
             }
