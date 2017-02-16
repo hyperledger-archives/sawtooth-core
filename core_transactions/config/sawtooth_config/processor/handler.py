@@ -21,7 +21,7 @@ from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.client.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
-from sawtooth_protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_config.protobuf.config_pb2 import ConfigPayload
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal

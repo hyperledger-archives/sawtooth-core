@@ -20,11 +20,11 @@ import yaml
 
 import sawtooth_signing.pbct as signing
 
-from sawtooth_protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_protobuf.transaction_pb2 import Transaction
-from sawtooth_protobuf.batch_pb2 import BatchList
-from sawtooth_protobuf.batch_pb2 import BatchHeader
-from sawtooth_protobuf.batch_pb2 import Batch
+from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
+from sawtooth_sdk.protobuf.batch_pb2 import BatchList
+from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
+from sawtooth_sdk.protobuf.batch_pb2 import Batch
 
 from sawtooth_xo.xo_exceptions import XoException
 

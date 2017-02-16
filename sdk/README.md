@@ -39,7 +39,7 @@ After running vagrant ssh you will need to install grpc in the VM:
 Now that grpc is installed, the protobuf files need to be generated. The
 protogen script generates python classes based on the proto files found in the
 protos directory and writes them into
-sawtooth-core/sdk/python/sawtooth_protobuf and
+sawtooth-core/sdk/python/sawtooth_sdk.protobuf and
 sawtooth-core/validator/sawtooth_validator/protobuf:
 
 ```

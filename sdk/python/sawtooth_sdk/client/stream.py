@@ -24,7 +24,7 @@ from threading import Condition
 import zmq
 import zmq.asyncio
 
-import sawtooth_protobuf.validator_pb2 as validator_pb2
+import sawtooth_sdk.protobuf.validator_pb2 as validator_pb2
 
 from sawtooth_sdk.client.future import Future
 from sawtooth_sdk.client.future import FutureCollection
