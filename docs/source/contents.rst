@@ -8,6 +8,7 @@ Table of Contents
    tutorial.rst
    transaction_family_specifications.rst
    txn_family_tutorial.rst
+   architecture.rst
    sawtooth_developers_guide.rst
    rest_api.rst
    sysadmin_guide.rst
