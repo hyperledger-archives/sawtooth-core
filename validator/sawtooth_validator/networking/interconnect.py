@@ -21,8 +21,11 @@ from threading import Thread
 import uuid
 
 import zmq
+import zmq.auth
+from zmq.auth.asyncio import AsyncioAuthenticator
 import zmq.asyncio
 
+from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
 
@@ -39,11 +42,28 @@ def get_enum_name(enum_value):
 
 
 class _SendReceive(object):
-    def __init__(self, address, futures, identity=None, dispatcher=None):
+    def __init__(self, address, futures, identity=None,
+                 dispatcher=None, secured=False,
+                 server_public_key=None, server_private_key=None):
+        """
+        Constructor for _SendReceive.
+
+        Args:
+            secured (bool): Whether or not to start the socket in
+                secure mode -- using zmq auth.
+            server_public_key (bytes): A public key to use in verifying
+                server identity as part of the zmq auth handshake.
+            server_private_key (bytes): A private key corresponding to
+                server_public_key used by the server socket to sign
+                messages are part of the zmq auth handshake.
+        """
         self._dispatcher = dispatcher
         self._futures = futures
         self._address = address
         self._identity = identity
+        self._secured = secured
+        self._server_public_key = server_public_key
+        self._server_private_key = server_private_key
         self._event_loop = None
         self._context = None
         self._recv_queue = None
@@ -113,19 +133,49 @@ class _SendReceive(object):
         """
         :param socket_type: zmq.DEALER or zmq.ROUTER
         """
+        if self._secured:
+            if self._server_public_key is None or \
+                    self._server_private_key is None:
+                raise LocalConfigurationError("Attempting to start socket "
+                                              "in secure mode, but complete "
+                                              "server keys were not provided")
+
         self._event_loop = zmq.asyncio.ZMQEventLoop()
         asyncio.set_event_loop(self._event_loop)
         self._context = zmq.asyncio.Context()
-        self._socket = self._context.socket(socket_type)
+
         if socket_type == zmq.DEALER:
+            self._socket = self._context.socket(socket_type)
+
             self._socket.identity = "{}-{}".format(
                 self._identity,
                 hashlib.sha512(uuid.uuid4().hex.encode()
                                ).hexdigest()[:23]).encode('ascii')
+
+            if self._secured:
+                # Generate ephemeral certificates for this connection
+                self._socket.curve_publickey, self._socket.curve_secretkey = \
+                    zmq.curve_keypair()
+
+                self._socket.curve_serverkey = self._server_public_key
+
             self._socket.connect(self._address)
         elif socket_type == zmq.ROUTER:
+            self._socket = self._context.socket(socket_type)
+
+            if self._secured:
+                auth = AsyncioAuthenticator(self._context)
+                auth.start()
+                auth.configure_curve(domain='*',
+                                     location=zmq.auth.CURVE_ALLOW_ANY)
+
+                self._socket.curve_secretkey = self._server_private_key
+                self._socket.curve_publickey = self._server_public_key
+                self._socket.curve_server = True
+
             self._dispatcher.set_send_message(self.send_message)
             self._socket.bind(self._address)
+
         self._recv_queue = asyncio.Queue()
         asyncio.ensure_future(self._receive_message(), loop=self._event_loop)
         with self._condition:
@@ -143,12 +193,31 @@ class Interconnect(object):
                  endpoint,
                  dispatcher,
                  identity=None,
-                 peer_connections=None):
+                 peer_connections=None,
+                 secured=False,
+                 server_public_key=None,
+                 server_private_key=None):
+        """
+        Constructor for Interconnect.
+
+        Args:
+            secured (bool): Whether or not to start the 'server' socket
+                and associated Connection sockets in secure mode --
+                using zmq auth.
+            server_public_key (bytes): A public key to use in verifying
+                server identity as part of the zmq auth handshake.
+            server_private_key (bytes): A private key corresponding to
+                server_public_key used by the server socket to sign
+                messages are part of the zmq auth handshake.
+        """
         self._futures = future.FutureCollection()
         self._send_receive_thread = _SendReceive(
             address=endpoint,
             dispatcher=dispatcher,
-            futures=self._futures)
+            futures=self._futures,
+            secured=secured,
+            server_public_key=server_public_key,
+            server_private_key=server_private_key)
 
         self._thread = None
 
@@ -156,7 +225,11 @@ class Interconnect(object):
             self.connections = [
                 Connection(
                     endpoint=addr,
-                    identity=identity) for addr in peer_connections]
+                    identity=identity,
+                    secured=secured,
+                    server_public_key=server_public_key,
+                    server_private_key=server_private_key)
+                for addr in peer_connections]
         else:
             self.connections = []
 
@@ -194,14 +267,23 @@ class Interconnect(object):
 class Connection(object):
     def __init__(self,
                  endpoint,
-                 identity):
+                 identity,
+                 secured,
+                 server_public_key,
+                 server_private_key):
         self._futures = future.FutureCollection()
         self._identity = identity
         self._endpoint = endpoint
+        self._secured = secured
+        self._server_public_key = server_public_key
+        self._server_private_key = server_private_key
         self._send_receive_thread = _SendReceive(
             endpoint,
             futures=self._futures,
-            identity=identity)
+            identity=identity,
+            secured=secured,
+            server_public_key=server_public_key,
+            server_private_key=server_private_key)
 
         self._thread = None
 
