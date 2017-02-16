@@ -31,61 +31,70 @@ message Message {
         DEFAULT = 0;
         // Registration request from the transaction processor to the validator
         TP_REGISTER_REQUEST = 1;
-        // Registration response from the validator to the transaction processor
+        // Registration response from the validator to the
+        // transaction processor
         TP_REGISTER_RESPONSE = 2;
-        // Process Request from the validator/executor to the transaction processor
-        TP_PROCESS_REQUEST = 3;
+        // Tell the validator that the transaction processor
+        // won't take any more transactions
+        TP_UNREGISTER_REQUEST = 3;
+        // Response from the validator to the tp that it won't
+        // send any more transactions
+        TP_UNREGISTER_RESPONSE = 4;
+        // Process Request from the validator/executor to the
+        // transaction processor
+        TP_PROCESS_REQUEST = 5;
         // Process response from the transaction processor to the validator/executor
-        TP_PROCESS_RESPONSE = 4;
+        TP_PROCESS_RESPONSE = 6;
         // State get request from the transaction processor to validator/context_manager
-        TP_STATE_GET_REQUEST = 5;
+        TP_STATE_GET_REQUEST = 7;
         // State get response from the validator/context_manager to the transaction processor
-        TP_STATE_GET_RESPONSE = 6;
+        TP_STATE_GET_RESPONSE = 8;
         // State set request from the transaction processor to the validator/context_manager
-        TP_STATE_SET_REQUEST = 7;
+        TP_STATE_SET_REQUEST = 9;
         // State set response from the validator/context_manager to the transaction processor
-        TP_STATE_SET_RESPONSE = 8;
+        TP_STATE_SET_RESPONSE = 10;
         // State delete request from the transaction processor to the validator/context_manager
-        TP_STATE_DEL_REQUEST = 9;
+        TP_STATE_DEL_REQUEST = 11;
         // State delete response from the validator/context_manager to the transaction processor
-        TP_STATE_DEL_RESPONSE = 10;
+        TP_STATE_DEL_RESPONSE = 12;
         // Submission of a batchlist from the web api or another client to the validator
-        CLIENT_BATCH_SUBMIT_REQUEST = 11;
+        CLIENT_BATCH_SUBMIT_REQUEST = 100;
         // Response from the validator to the web api/client that the submission was accepted
-        CLIENT_BATCH_SUBMIT_RESPONSE = 12;
+        CLIENT_BATCH_SUBMIT_RESPONSE = 101;
         // A request to list blocks from the web api/client to the validator
-        CLIENT_BLOCK_LIST_REQUEST = 13;
-        CLIENT_BLOCK_LIST_RESPONSE = 14;
-        CLIENT_BLOCK_GET_REQUEST = 15;
-        CLIENT_BLOCK_GET_RESPONSE = 16;
-        CLIENT_BATCH_LIST_REQUEST = 17;
-        CLIENT_BATCH_LIST_RESPONSE = 18;
-        CLIENT_BATCH_GET_REQUEST = 19;
-        CLIENT_BATCH_GET_RESPONSE = 20;
-        CLIENT_TRANSACTION_LIST_REQUEST = 21;
-        CLIENT_TRANSACTION_LIST_RESPONSE = 22;
-        CLIENT_TRANSACTION_GET_RESPONSE = 23;
+        CLIENT_BLOCK_LIST_REQUEST = 102;
+        CLIENT_BLOCK_LIST_RESPONSE = 103;
+        CLIENT_BLOCK_GET_REQUEST = 104;
+        CLIENT_BLOCK_GET_RESPONSE = 105;
+        CLIENT_BATCH_LIST_REQUEST = 106;
+        CLIENT_BATCH_LIST_RESPONSE = 107;
+        CLIENT_BATCH_GET_REQUEST = 108;
+        CLIENT_BATCH_GET_RESPONSE = 109;
+        CLIENT_TRANSACTION_LIST_REQUEST = 110;
+        CLIENT_TRANSACTION_LIST_RESPONSE = 111;
+        CLIENT_TRANSACTION_GET_REQUEST = 112;
+        CLIENT_TRANSACTION_GET_RESPONSE = 113;
         // Client state request of the current state hash to be retrieved from the journal
-        CLIENT_STATE_CURRENT_REQUEST = 24;
+        CLIENT_STATE_CURRENT_REQUEST = 114;
         // Response with the current state hash
-        CLIENT_STATE_CURRENT_RESPONSE = 25;
+        CLIENT_STATE_CURRENT_RESPONSE = 115;
         // A request of all the addresses under a particular prefix, for a state hash.
-        CLIENT_STATE_LIST_REQUEST = 26;
+        CLIENT_STATE_LIST_REQUEST = 116;
         // The response of the addresses
-        CLIENT_STATE_LIST_RESPONSE = 27;
+        CLIENT_STATE_LIST_RESPONSE = 117;
         // Get the address:data entry at a particular address
-        CLIENT_STATE_GET_REQUEST = 28;
+        CLIENT_STATE_GET_REQUEST = 118;
         // The response with the entry
-        CLIENT_STATE_GET_RESPONSE = 29;
+        CLIENT_STATE_GET_RESPONSE = 119;
         // Further messages from the stats client through the web api
 
 
         // Temp message types until a discusion can be had about gossip msg
-        GOSSIP_MESSAGE = 30;
-        GOSSIP_REGISTER = 31;
-        GOSSIP_UNREGISTER = 32;
-        GOSSIP_ACK = 33;
-        GOSSIP_PING = 34;
+        GOSSIP_MESSAGE = 200;
+        GOSSIP_REGISTER = 201;
+        GOSSIP_UNREGISTER = 202;
+        GOSSIP_ACK = 203;
+        GOSSIP_PING = 204;
 
     }
     // The type of message, used to determine how to 'route' the message
