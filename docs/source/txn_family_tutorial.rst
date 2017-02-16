@@ -1,3 +1,5 @@
+.. _transaction-family-tutorial:
+
 ***************************
 Transaction Family Tutorial
 ***************************
