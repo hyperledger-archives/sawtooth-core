@@ -114,20 +114,25 @@ class SignedObject(object):
     """
     signature_cache = LruCache()
 
-    def __init__(self, minfo=None, sig_dict_key='Signature'):
+    def __init__(self, minfo=None, sig_dict_key='Signature', pubkey_dict_key='PublicKey'):
         """Constructor for the SignedObject class.
 
         Args:
             minfo (dict): object data
             sig_dict_key (str): the field name for the signature within the
                 object data
+            pubkey_dict_key (str): the field name for the public key within
+            the object data
         """
         if minfo is None:
             minfo = {}
 
         self.Signature = minfo.get(sig_dict_key)
         self.SignatureDictKey = sig_dict_key
-        self.public_key = minfo.get("PublicKey")
+
+        self.public_key = minfo.get(pubkey_dict_key)
+        self.PubkeyDictKey = pubkey_dict_key
+
         self._identifier = hashlib.sha256(
             self.Signature).hexdigest() if self.Signature else None
         self._originator_id = None
@@ -295,6 +300,8 @@ class SignedObject(object):
         Returns:
             dict: a map containing SignatureDictKey:Signature.
         """
-        result = {self.SignatureDictKey: self.Signature}
-        result["PublicKey"] = self.public_key
+        result = {
+            self.SignatureDictKey: self.Signature,
+            self.PubkeyDictKey:  self.public_key
+        }
         return result
