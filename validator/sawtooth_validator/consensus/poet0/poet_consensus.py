@@ -64,15 +64,17 @@ class PoetConsensus(Consensus):
         # initialize the block handlers
         poet_transaction_block.register_message_handlers(journal)
 
-    def create_block(self):
+    def create_block(self, pub_key):
         """Create candidate transaction block.
 
         Args:
-
+            pub_key: public key corresponding to the private key used to
+                sign the block
         Returns:
-            None
+            new transaction block.
         """
-        return poet_transaction_block.PoetTransactionBlock()
+        minfo = {"PublicKey": pub_key}
+        return poet_transaction_block.PoetTransactionBlock(minfo)
 
     def initialize_block(self, journal, block):
         """Creates a wait certificate for a candidate transaction block.

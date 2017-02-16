@@ -110,6 +110,7 @@ def _claim_block(journal, block):
         msg.Transaction = txn
         msg.SenderID = journal.local_node.Identifier
         msg.sign_from_node(journal.local_node)
+        msg.IsForward = True
         journal.gossip.broadcast_message(msg, initialize=False)
         if txn.Identifier not in journal.transaction_store:
             journal.transaction_store[txn.Identifier] = txn
