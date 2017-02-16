@@ -6,6 +6,12 @@ rest_api/sawtooth_rest_api/protobuf/
 cli/sawtooth_cli/protobuf
 validator/sawtooth_validator/protobuf
 
+/build/
+/cli/build/
+/rest_api/build/
+/sdk/python/build/
+/validator/build/
+
 .idea
 *.sublime*
 tools/conf-local.sh
