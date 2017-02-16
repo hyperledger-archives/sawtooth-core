@@ -39,14 +39,14 @@ class BlockValidator(object):
     the information necessary to do the switch if necessary.
     """
 
-    def __init__(self, consensus,
+    def __init__(self, consensus_module,
                  block_cache,
                  new_block,
                  chain_head,
                  done_cb,
                  executor,
                  squash_handler):
-        self._consensus = consensus
+        self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._new_block = new_block
         self._chain_head = chain_head
@@ -122,6 +122,7 @@ class BlockValidator(object):
                 return False
             else:
                 valid = True
+                consensus = self._consensus_module.BlockVerifier()
 
                 if valid:
                     valid = self._is_block_complete(blkw)
@@ -133,11 +134,10 @@ class BlockValidator(object):
                     valid = self._verify_block_batches(blkw)
 
                 if valid:
-                    valid = self._consensus.verify_block(blkw)
+                    valid = consensus.verify_block(blkw)
 
                 # Update the block store
-                # FXM change weight to be an opaque object
-                blkw.weight = self._consensus.compute_block_weight(blkw)
+                blkw.weight = consensus.compute_block_weight(blkw)
                 blkw.status = BlockStatus.Valid if \
                     valid else BlockStatus.Invalid
                 return valid
@@ -302,7 +302,7 @@ class ChainController(object):
     the current chain. If they are valid extend the chain.
     """
     def __init__(self,
-                 consensus,
+                 consensus_module,
                  block_cache,
                  block_sender,
                  executor,
@@ -310,7 +310,7 @@ class ChainController(object):
                  on_chain_updated,
                  squash_handler):
         self._lock = RLock()
-        self._consensus = consensus
+        self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
         self._block_sender = block_sender
@@ -343,7 +343,7 @@ class ChainController(object):
 
     def _verify_block(self, blkw):
         validator = BlockValidator(
-            consensus=self._consensus,
+            consensus_module=self._consensus_module,
             new_block=blkw,
             chain_head=self._chain_head,
             block_cache=self._block_cache,

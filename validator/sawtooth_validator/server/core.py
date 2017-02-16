@@ -168,7 +168,7 @@ class Validator(object):
 
         # Create and configure journal
         self._journal = Journal(
-            consensus=dev_mode_consensus,
+            consensus_module=dev_mode_consensus,
             block_store=block_store,
             block_sender=block_sender,
             transaction_executor=executor,

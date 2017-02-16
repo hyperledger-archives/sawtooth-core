@@ -98,7 +98,7 @@ class Journal(object):
             self._exit = True
 
     def __init__(self,
-                 consensus,
+                 consensus_module,
                  block_store,
                  block_sender,
                  transaction_executor,
@@ -106,7 +106,7 @@ class Journal(object):
                  block_cache=None  # not require, allows tests to inject a
                  # prepopulated block cache.
                  ):
-        self._consensus = consensus
+        self._consensus_module = consensus_module
         self._block_store = BlockStoreAdapter(block_store)
         self._block_cache = block_cache
         if self._block_cache is None:
@@ -126,7 +126,7 @@ class Journal(object):
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
-            consensus=self._consensus.BlockPublisher(),
+            consensus_module=self._consensus_module,
             transaction_executor=self._transaction_executor,
             block_sender=self._block_sender,
             squash_handler=self._squash_handler,
@@ -135,7 +135,7 @@ class Journal(object):
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
         self._chain_controller = ChainController(
-            consensus=self._consensus.BlockVerifier(),
+            consensus_module=self._consensus_module,
             block_sender=self._block_sender,
             block_cache=self._block_cache,
             executor=ThreadPoolExecutor(1),
@@ -175,7 +175,7 @@ class Journal(object):
     def on_block_received(self, block):
         """
         New block has been received, queue it with the chain controller
-        for processeing.
+        for processing.
         """
         self._block_queue.put(block)
 

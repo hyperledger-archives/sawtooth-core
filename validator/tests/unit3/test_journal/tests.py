@@ -40,6 +40,8 @@ from test_journal import mock_consensus
 
 LOGGER = logging.getLogger(__name__)
 
+
+
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
         """ Test that misses will load from the block store.
@@ -76,7 +78,7 @@ class TestBlockPublisher(unittest.TestCase):
 
         LOGGER.info(self.blocks)
         publisher = BlockPublisher(
-            consensus=mock_consensus.BlockPublisher(),
+            consensus_module=mock_consensus,
             transaction_executor=MockTransactionExecutor(),
             block_sender=self.block_sender,
             squash_handler=None,
@@ -109,7 +111,7 @@ class TestBlockValidator(unittest.TestCase):
 
     def create_block_validator(self, new_block, on_block_validated):
         return BlockValidator(
-            consensus=mock_consensus.BlockVerifier(),
+            consensus_module=mock_consensus,
             new_block=new_block,
             chain_head=self.btm.chain_head,
             block_cache=self.btm.block_cache,
@@ -321,7 +323,7 @@ class TestChainController(unittest.TestCase):
             pass
 
         self.chain_ctrl = ChainController(
-            consensus=mock_consensus.BlockVerifier(),
+            consensus_module=mock_consensus,
             block_cache=self.blocks.block_cache,
             block_sender=self.block_sender,
             executor=self.executor,
@@ -418,7 +420,7 @@ class TestJournal(unittest.TestCase):
         journal = None
         try:
             journal = Journal(
-                consensus=mock_consensus,
+                consensus_module=mock_consensus,
                 block_store=btm.block_store.store,
                 block_cache=btm.block_cache,
                 block_sender=self.block_sender,

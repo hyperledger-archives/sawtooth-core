@@ -39,11 +39,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockTransactionExecutor
-from test_journal.mock_consensus \
-    import BlockPublisher as MockBlockPublisher
-from test_journal.mock_consensus \
-    import BlockVerifier as MockBlockVerifier
-
+from test_journal import mock_consensus
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -89,7 +85,7 @@ class BlockTreeManager(object):
         self.set_chain_head(self.genesis_block)
 
         self.block_publisher = BlockPublisher(
-            consensus=MockBlockPublisher(),
+            consensus_module=mock_consensus,
             transaction_executor=MockTransactionExecutor(),
             block_sender=self.block_sender,
             squash_handler=None,
@@ -164,7 +160,7 @@ class BlockTreeManager(object):
 
         if add_to_store:
             if block.weight is None:
-                tmv = MockBlockVerifier()
+                tmv = mock_consensus.BlockVerifier()
                 block.weight = tmv.compute_block_weight(block)
             self.block_store[block.identifier] = block
 

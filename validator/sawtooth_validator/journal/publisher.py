@@ -35,14 +35,15 @@ class BlockPublisher(object):
     Consensus deems it appropriate.
     """
     def __init__(self,
-                 consensus,
+                 consensus_module,
                  transaction_executor,
                  block_sender,
                  squash_handler,
                  chain_head):
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
-        self._consensus = consensus  # the consensus object.
+        self._consensus_module = consensus_module  # the consensus module.
+        self._consensus = None
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._pending_batches = []  # batches we are waiting for validation
@@ -53,8 +54,11 @@ class BlockPublisher(object):
         self._squash_handler = squash_handler
 
     def _build_block(self, chain_head):
-        """ Build a candidate block
+        """ Build a candidate block and construct the consensus object to
+        validate it.
         """
+        self._consensus = self._consensus_module.BlockPublisher()
+
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
             previous_block_id=chain_head.header_signature)
@@ -177,6 +181,8 @@ class BlockPublisher(object):
         if state_hash is not None:
             block.set_state_hash(state_hash)
         self._sign_block(block)
+        self._consensus = None
+
         return block
 
     def on_check_publish_block(self, force=False):

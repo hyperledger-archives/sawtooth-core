@@ -27,7 +27,6 @@ class BlockPublisher(BlockPublisherInterface):
     other consensus algorithms
 
     """
-
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activates, starting proof of work
