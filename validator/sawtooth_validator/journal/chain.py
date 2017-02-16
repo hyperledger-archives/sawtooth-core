@@ -287,8 +287,8 @@ class BlockValidator(object):
                         self._new_block)
         except BlockValidationAborted:
             return
-        # pylint: disable=broad-except
-        except Exception as exc:
+
+        except Exception as exc:  # pylint: disable=broad-except
             LOGGER.error("Block validation failed with unexpected error: %s",
                          self._new_block)
             LOGGER.exception(exc)
