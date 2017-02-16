@@ -114,7 +114,8 @@ class SignedObject(object):
     """
     signature_cache = LruCache()
 
-    def __init__(self, minfo=None, sig_dict_key='Signature', pubkey_dict_key='PublicKey'):
+    def __init__(self, minfo=None, sig_dict_key='Signature',
+                 pubkey_dict_key='PublicKey'):
         """Constructor for the SignedObject class.
 
         Args:
@@ -302,6 +303,6 @@ class SignedObject(object):
         """
         result = {
             self.SignatureDictKey: self.Signature,
-            self.PubkeyDictKey:  self.public_key
+            self.PubkeyDictKey: self.public_key
         }
         return result

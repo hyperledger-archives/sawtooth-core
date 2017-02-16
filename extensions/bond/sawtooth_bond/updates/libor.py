@@ -21,6 +21,7 @@ from datetime import datetime
 from gossip import signed_object
 from sawtooth.exceptions import InvalidTransactionError
 from journal.transaction import Update
+from sawtooth_signing import pbct_nativerecover as signing
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class LIBORObject(signed_object.SignedObject):
     LIBOR data to make verifying signatures more convenient.
     """
 
-    def __init__(self, date, rates, public_key, signature=None):
+    def __init__(self, date, rates, libor_public_key, libor_signature=None):
         """
 
         Args:
@@ -49,8 +50,11 @@ class LIBORObject(signed_object.SignedObject):
                         sign the LIBOR data.
             signature: A signature over the LIBOR data (date and rates)
         """
-        super(LIBORObject, self).__init__(minfo={'PublicKey': public_key,
-                                                 'Signature': signature})
+        super(LIBORObject, self).__init__(
+            minfo={
+                'LiborPublicKey': libor_public_key,
+                'LiborSignature': libor_signature
+            }, sig_dict_key='LiborSignature', pubkey_dict_key='LiborPublicKey')
 
         self._date = date
 
@@ -110,19 +114,15 @@ class LIBORObject(signed_object.SignedObject):
 
 
 class CreateLIBORUpdate(Update):
-    # For now, we are going to use the address that corresponds to the key
-    # generated a priori for LIBOR data.  At some date in the future, if we
-    # get LIBOR data signed by a trusted publisher we will replace this with
-    # said publisher's public key and will then verify that the data has been
-    # signed with the corresponding private key.
-    __LIBOR_PUBLISHER_ADDR__ = None
 
     def __init__(self,
                  update_type,
                  date,
                  rates,
-                 libor_public_key=None,
+                 public_key=None,
                  signature=None,
+                 libor_public_key=None,
+                 libor_signature=None,
                  object_id=None):
         """
         Create a LIBOR update object.
@@ -155,7 +155,9 @@ class CreateLIBORUpdate(Update):
         self.__libor_object__ = LIBORObject(date,
                                             rates,
                                             libor_public_key,
-                                            signature)
+                                            libor_signature)
+        self.__public_key = public_key
+        self.__signature = signature
         self._rates = self.__libor_object__.rates
 
     @property
@@ -164,7 +166,19 @@ class CreateLIBORUpdate(Update):
 
     @property
     def _signature(self):
+        return self.__signature
+
+    @property
+    def _public_key(self):
+        return self.__public_key
+
+    @property
+    def _libor_signature(self):
         return self.__libor_object__.Signature
+
+    @property
+    def _libor_public_key(self):
+        return self.__libor_object__.public_key
 
     def sign_update_object(self, signingkey):
         """Generates a string signature for the LIBOR data using the signing
@@ -221,8 +235,12 @@ class CreateLIBORUpdate(Update):
         #    that provides the LIBORs.
         if self.__libor_object__.Signature is None:
             raise InvalidTransactionError('LIBOR data has not been signed')
+
+        libor_publisher_addr = \
+            signing.generate_identifier(self._libor_public_key)
+
         if not self.__libor_object__.verify_signature(
-                self.__LIBOR_PUBLISHER_ADDR__):
+                libor_publisher_addr):
             raise InvalidTransactionError(
                 'Key used to sign LIBOR data does not match publisher')
 
