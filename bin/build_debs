@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,41 +17,73 @@
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-PYTHONPATH=$(pwd)/core
-PYTHONPATH=$PYTHONPATH:$(pwd)/core/build/lib.linux-x86_64-2.7
-PYTHONPATH=$PYTHONPATH:$(pwd)/signing
-PYTHONPATH=$PYTHONPATH:$(pwd)/validator
-PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/mktplace
-PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/arcade
-export PYTHONPATH
-
-pip list --no-index | grep grpc > /dev/null 2>&1
-if [ $? = 0 ]; then
-    echo -e "\033[0;32m--- Found GRPC ---\n\033[0m"
-    $top_dir/bin/protogen || exit 1
-fi
-
-set -e
+unset PYTHONPATH
 
 pkgs="
     signing
-    core
+    cli
+    sdk/python
+    rest_api
     validator
-    extensions/arcade
 "
+
+set -e
+
+echo -e "\033[0;32m--- Found protogen ---\n\033[0m"
+$top_dir/bin/protogen
+
+pkg_dir=$top_dir/build/debs
+mkdir -p $pkg_dir
+rm -f $top_dir/build/debs/*.deb
+
+build_dir=/tmp/build-debs
+rm -rf $build_dir
+mkdir -p $build_dir
+
+# Needed when VERSION=AUTO_STRICT
+rsync -aH $top_dir/.git/ $build_dir/.git/
 
 for pkg in $pkgs
 do
     echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
-    cd $top_dir/$pkg
+
+    mkdir -p $build_dir/$pkg
+    rsync -aH \
+        --exclude=debian \
+        --exclude=tests/unit \
+        --exclude=tests/integration \
+        --exclude=sawtooth_validator/consensus \
+        --exclude=gossip \
+        --exclude=journal \
+        --exclude=ledger \
+        --exclude=txnintegration \
+        --exclude=txnserver \
+        $top_dir/$pkg/ \
+        $build_dir/$pkg/ \
+
+    cd $build_dir/$pkg
     if [ $pkg = "validator" ]; then
-        cd $top_dir
-        ./bin/package_validator
+        python3 setup.py clean --all
+        python3 setup.py --command-packages=stdeb.command debianize
+
+        cp $top_dir/validator/packaging/postinst debian
+
+        dpkg-buildpackage -b -rfakeroot -us -uc
     else
-        python setup.py --command-packages=stdeb.command bdist_deb
+        python3 setup.py --command-packages=stdeb.command bdist_deb
     fi
     if [ $pkg = "signing" ]; then
         # Workaround for swig ordering bug.
-        python setup.py --command-packages=stdeb.command bdist_deb
+        python3 setup.py --command-packages=stdeb.command bdist_deb
     fi
+done
+
+find $build_dir -name \*.deb -exec cp {} $pkg_dir/ \;
+
+cd $top_dir
+for pkg in build/debs/*.deb
+do
+    echo
+    echo "Package $pkg:"
+    dpkg -I $pkg | sed -e 's/^/    /'
 done
