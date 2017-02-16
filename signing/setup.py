@@ -72,7 +72,9 @@ setup(
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['pybitcointools'],
+    install_requires=[
+        'bitcoin',
+        'secp256k1'],
     data_files=[],
     entry_points={})
 

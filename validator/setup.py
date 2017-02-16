@@ -128,10 +128,15 @@ setup(
     author='Mic Bowman, Intel Labs',
     url='http://www.intel.com',
     packages=find_packages(),
-    install_requires=['sawtooth-core', 'sawtooth-signing',
-                      'cbor>=0.1.23', 'colorlog', 'twisted',
-                      'PyYAML', 'psutil', 'numpy', 'requests',
-                      'pybitcointools', 'ipaddr'],
+    install_requires=[
+        'sawtooth-signing',
+        'cbor>=0.1.23',
+        'colorlog',
+        'PyYAML',
+        'protobuf',
+        'requests',
+        'pyzmq'
+        ],
     data_files=data_files,
     entry_points={
         'console_scripts': [

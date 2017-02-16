@@ -72,7 +72,11 @@ setup(name='sawtooth-cli',
       author='Intel Corporation',
       url='http://www.intel.com',
       packages=find_packages(),
-      install_requires=['colorlog'],
+      install_requires=[
+          'sawtooth-signing',
+          'colorlog',
+          'protobuf'
+          ],
       entry_points={
           'console_scripts': [
               'sawtooth = sawtooth.cli.main:main_wrapper'
