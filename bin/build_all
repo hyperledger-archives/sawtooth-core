@@ -17,11 +17,7 @@
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-PYTHONPATH=$(pwd)/core
-PYTHONPATH=$PYTHONPATH:$(pwd)/signing
-PYTHONPATH=$PYTHONPATH:$(pwd)/validator
-PYTHONPATH=$PYTHONPATH:$(pwd)/extensions/arcade
-export PYTHONPATH
+unset PYTHONPATH
 
 set -e
 
@@ -29,26 +25,27 @@ echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
 $top_dir/bin/protogen || exit 1
 
 pkgs="
-    core
     signing
+    cli
+    sdk/python
+    rest_api
     validator
-    extensions/arcade
 "
 
 for pkg in $pkgs
 do
     echo -e "\033[0;32m--- Running clean in $pkg ---\n\033[0m"
     cd $top_dir/$pkg
-    python setup.py clean --all
+    python3 setup.py clean --all
 done
 
 for pkg in $pkgs
 do
     echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
     cd $top_dir/$pkg
-    python setup.py build
-    if [ $pkg = "signing" ] || [ $pkg = "validator" ]; then
+    python3 setup.py build
+    if [ $pkg = "signing" ]; then
         # Workaround for swig ordering bug.
-        python setup.py build
+        python3 setup.py build
     fi
 done
