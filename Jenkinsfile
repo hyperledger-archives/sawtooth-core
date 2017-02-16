@@ -68,7 +68,7 @@ node ('master') {
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
                     sh 'VERSION=AUTO_STRICT ./bin/build_debs'
-                    stash name: 'debs', includes: 'core/deb_dist/*.deb,signing/deb_dist/*.deb,*.deb'
+                    stash name: 'debs', includes: 'build/debs/*.deb'
                 }
             }
         }
@@ -92,7 +92,7 @@ node ('master') {
         }
 
         stage("Archive Build artifacts") {
-            archiveArtifacts artifacts: 'core/deb_dist/*.deb, signing/deb_dist/*.deb, *.deb'
+            archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
     }
