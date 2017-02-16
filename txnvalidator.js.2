@@ -1,0 +1,88 @@
+{
+    "Listen" : [
+        "0.0.0.0:5500/UDP gossip",
+        "0.0.0.0:8800/TCP http"
+    ],
+
+    ## only needed if running behind a NAT firewall
+    "Endpoint" : {
+        "Host" : "54.173.239.171",
+        "Port" : 5500,
+        "HttpPort" : 8800
+     },
+
+    "NodeName" : "atlas-node0",
+
+    "LedgerURL" : [
+         "http://54.173.188.166:8800/",
+         "http://54.173.239.171:8800/",
+         "http://52.90.13.107:8800/",
+         "http://52.91.119.136:8800/",
+         "http://107.22.146.239:8800/",
+         "http://54.237.210.50:8800/",
+         "http://54.83.129.9:8800/",
+         "http://52.86.122.119:8800/",
+         "http://52.86.139.222:8800/",
+         "http://54.83.140.98:8800/"
+    ],
+
+    "Peers" : [
+         "atlas-node8",
+         "atlas-node0",
+         "atlas-node6",
+         "atlas-node3",
+         "atlas-node7",
+         "atlas-node1",
+         "atlas-node5",
+         "atlas-node4",
+         "atlas-node9",
+         "atlas-node2"
+    ],
+
+    ## pick the ledger type
+    "LedgerType" : "poet1",
+    "InitialConnectivity" : 0,
+
+    ## backing store
+    "StoreType" : "lmdb",
+
+    ## Worker Limits
+    "WebPoolSize" : 32,
+    "MaxWebWorkers" : 31,
+
+    ## configuration of the ledger wait time certificate
+    "TargetWaitTime" : 20.0,
+    "InitialWaitTime" : 150.0,
+    "CertificateSampleLength" : 30,
+
+    ## configuration of the block sizes
+    "MinTransactionsPerBlock" : 1,
+    "MaxTransactionsPerBlock" : 1000,
+
+    ## configuration of the topology
+    "TopologyAlgorithm" : "RandomWalk",
+    "TargetConnectivity" : 3,
+
+    ## Logging config
+    "LogConfigFile" : "/etc/sawtooth-validator/txnvalidator-logging.yaml",
+
+    ## configuration of the network flow control
+    "NetworkFlowRate" : 96000,
+    "NetworkBurstRate" : 128000,
+    "NetworkDelayRange" : [ 0.00, 0.10 ],
+    "UseFixedDelay" : true,
+
+    ## configuration of the transaction families to include
+    ## in the validator
+    "TransactionFamilies" : [
+        "ledger.transaction.integer_key",
+        "sawtooth_bond"
+    ],
+
+    ## administration node, the only node identifier from which
+    ## we will accept shutdown messages
+    "AdministrationNode" : "NOT_SET",
+
+    ## key file
+    "KeyFile" : "{key_dir}/{node}.wif"
+}
