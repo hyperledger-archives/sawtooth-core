@@ -15,6 +15,7 @@
 
 import sys
 import argparse
+import os
 
 from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.log import init_console_logging
@@ -52,9 +53,21 @@ def main(args=sys.argv[1:]):
 
     init_console_logging(verbose_level=verbose_level)
 
+    if 'SAWTOOTH_HOME' in os.environ:
+        data_dir = os.path.join(os.environ['SAWTOOTH_HOME'], 'data')
+    else:
+        data_dir = '/var/lib/sawtooth'
+
+    try:
+        os.makedirs(data_dir, exist_ok=True)
+    except OSError as e:
+        print('Unable to create {}: {}'.format(data_dir, e), file=sys.stderr)
+        return
+
     validator = Validator(opts.network_endpoint,
                           opts.component_endpoint,
-                          opts.peers)
+                          opts.peers,
+                          data_dir)
 
     try:
         validator.start()
