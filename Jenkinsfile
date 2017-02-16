@@ -22,7 +22,7 @@ properties([[$class: 'BuildDiscarderProperty', strategy:
 
 node ('master') {
     // Create a unique workspace so Jenkins doesn't reuse an existing one
-    ws("workspace/${env.BUILD_TAG}_0-8") {
+    ws("workspace/${env.BUILD_TAG}") {
 
         stage("Clone Repo") {
             checkout scm
@@ -57,47 +57,10 @@ node ('master') {
         }
 
         // Run the tests
-        stage("Run 0-8 Tests"){
+        stage("Run Tests") {
             // Required docker containers are built by the tests
             sh './bin/docker_build_all -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
             sh './bin/run_tests -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
-        }
-
-        stage("Remove Docker Images") {
-            sh 'docker rmi sawtooth-build:$BUILD_TAG'
-        }
-    }
-
-    // Create a second unique workspace for 0-7 to avoid permission errors
-    // built files and __pycache__ files.
-    ws("workspace/${env.BUILD_TAG}_0-7") {
-        stage("Clone repo") {
-            checkout scm
-        }
-
-        stage("Verify scripts") {
-            readTrusted 'bin/build_all'
-            readTrusted 'bin/build_debs'
-            readTrusted 'bin/package_validator'
-            readTrusted 'bin/run_tests_0-7'
-            readTrusted 'core/setup.py'
-            readTrusted 'extensions/arcade/setup.py'
-            readTrusted 'signing/setup.py'
-            readTrusted 'validator/setup.py'
-        }
-
-        stage("Build docker build slave") {
-            docker.build('sawtooth-build:$BUILD_TAG', '-f docker/sawtooth-build-ubuntu-xenial .')
-        }
-
-        stage("Run Tests"){
-            docker.withServer('tcp://0.0.0.0:4243'){
-                docker.image('sawtooth-build:$BUILD_TAG').inside {
-                    sh './bin/build_all'
-                    sh './bin/run_tests_0-7'
-                    sh './bin/build_all'
-                }
-            }
         }
 
         stage("Build the packages"){
