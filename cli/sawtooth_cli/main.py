@@ -95,11 +95,8 @@ def create_parser(prog_name):
     add_admin_parser(subparsers, parent_parser)
     add_config_parser(subparsers, parent_parser)
     add_block_parser(subparsers, parent_parser)
-<<<<<<< 8a234e6efe39c7de9acfd8f30978e795f0d7e38c
     add_state_parser(subparsers, parent_parser)
-=======
     add_cluster_parser(subparsers, parent_parser)
->>>>>>> Move 'sawtooth cluster' to new CLI
 
     return parser
 
@@ -124,13 +121,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_config(args)
     elif args.command == 'block':
         do_block(args)
-<<<<<<< 8a234e6efe39c7de9acfd8f30978e795f0d7e38c
     elif args.command == 'state':
         do_state(args)
-=======
     elif args.command == 'cluster':
         do_cluster(args)
->>>>>>> Move 'sawtooth cluster' to new CLI
     else:
         raise AssertionError("invalid command: {}".format(args.command))
 
