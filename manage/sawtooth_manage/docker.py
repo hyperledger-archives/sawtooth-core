@@ -57,7 +57,7 @@ class DockerNodeController(NodeController):
             network_output = subprocess.check_output(
                 network_ls_args).splitlines()
         except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
+            raise ManagementError(str(e))
 
         if len(network_output) == 0:
             try:
@@ -67,7 +67,7 @@ class DockerNodeController(NodeController):
                 for l in n_output.splitlines():
                     LOGGER.info(l)
             except subprocess.CalledProcessError as e:
-                raise CliException(str(e))
+                raise ManagementError(str(e))
         args = ['docker-compose', '-p',
                 self._prefix.replace('-', '') + node_name,
                 'up', '-d']
@@ -91,7 +91,7 @@ class DockerNodeController(NodeController):
             output = subprocess.check_output(args)
             peers = output.split(b"/16")
         except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
+            raise ManagementError(str(e))
         return ['tcp://' + str(p) + ':8800' for p in peers if len(p) > 4]
 
     def start(self, node_config):
@@ -161,21 +161,21 @@ class DockerNodeController(NodeController):
             # check if the docker image is built
             unbuilt = self._get_unbuilt_images(processors)
             if unbuilt:
-                raise CliException(
+                raise ManagementError(
                     'Docker images not built: {}. Try running '
                     '"docker_build_all"'.format(
                         ', '.join(unbuilt)))
 
             invalid = self._check_invalid_processors(processors)
             if invalid:
-                raise CliException(
+                raise ManagementError(
                     'No such processor: {}'.format(', '.join(invalid)))
 
-            raise CliException(str(e))
+            raise ManagementError(str(e))
 
         except OSError as e:
             if e.errno == 2:
-                raise CliException("{}:{}".format(str(e), args[0]))
+                raise ManagementError("{}:{}".format(str(e), args[0]))
             else:
                 raise e
 
@@ -232,7 +232,7 @@ class DockerNodeController(NodeController):
             try:
                 output = subprocess.check_output(args)
             except subprocess.CalledProcessError as e:
-                raise CliException(str(e))
+                raise ManagementError(str(e))
 
             for line in output.decode('utf8').split('\n'):
                 if len(line) < 1:
@@ -245,7 +245,7 @@ class DockerNodeController(NodeController):
             try:
                 output = subprocess.check_output(args)
             except subprocess.CalledProcessError as e:
-                raise CliException(str(e))
+                raise ManagementError(str(e))
 
             for line in output.decode('utf8').split('\n'):
                 if len(line) < 1:
@@ -257,7 +257,7 @@ class DockerNodeController(NodeController):
                 try:
                     output = subprocess.check_output(args)
                 except subprocess.CalledProcessError as e:
-                    raise CliException(str(e))
+                    raise ManagementError(str(e))
 
                 for line in output.splitlines():
                     if len(line) < 1:
@@ -285,10 +285,10 @@ class DockerNodeController(NodeController):
         try:
             output = subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
-            raise CliException(str(e))
+            raise ManagementError(str(e))
         except OSError as e:
             if e.errno == 2:
-                raise CliException("{}:{}".format(str(e),
+                raise ManagementError("{}:{}".format(str(e),
                                                   args[0]))
 
         entries = []
@@ -316,7 +316,3 @@ class DockerNodeController(NodeController):
                 return entry.status.startswith("Up")
         return False
 
-
-class CliException(Exception):
-    def __init__(self, msg):
-        super(CliException, self).__init__(msg)
