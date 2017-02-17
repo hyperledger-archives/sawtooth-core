@@ -38,7 +38,7 @@ def add_genesis_parser(subparsers, parent_parser):
         help='input files of batches to add to the resulting GenesisData')
 
 
-def do_genesis(args):
+def do_genesis(args, data_dir):
     """Given the command args, take an series of input files containing
     GenesisData, combine all the batches into one GenesisData, and output the
     result into a new file.
@@ -59,7 +59,6 @@ def do_genesis(args):
     if args.output:
         genesis_file = args.output
     else:
-        data_dir = os.path.expanduser('~')
         genesis_file = os.path.join(data_dir, 'genesis.batch')
 
     print('Generating {}'.format(genesis_file))

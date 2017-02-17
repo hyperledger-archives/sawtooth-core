@@ -50,8 +50,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    def __init__(self, network_endpoint, component_endpoint, peer_list):
-        data_dir = os.path.expanduser('~')
+    def __init__(self, network_endpoint, component_endpoint, peer_list,
+                 data_dir):
+        """Constructs a validator instance.
+
+        Args:
+            network_endpoint (str): the network endpoint
+            component_endpoint (str): the component endpoint
+            peer_list (list of str): a list of peer addresses
+            data_dir (str): path to the data directory
+        """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
                                        network_endpoint[-2:]))

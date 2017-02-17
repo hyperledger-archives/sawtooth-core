@@ -35,10 +35,12 @@ class TestGenesisDependencyValidation(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
         self._temp_dir = None
+        self._temp_data_dir = None
         self._parser = None
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
+        self._temp_data_dir = tempfile.mkdtemp()
 
         self._parser = argparse.ArgumentParser()
         subparsers = self._parser.add_subparsers(title='subcommands',
@@ -48,25 +50,41 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
+        shutil.rmtree(self._temp_data_dir)
 
-    def _parse_command(self, batch_filenames):
-        cmd_args = ['genesis', '-o',
-                    os.path.join(self._temp_dir, 'genesis.batch')]
+    def _parse_command(self, batch_filenames, with_default_output=False):
+        cmd_args = ['genesis']
+
+        if not with_default_output:
+            cmd_args += ['-o', os.path.join(self._temp_dir, 'genesis.batch')]
+
         cmd_args += batch_filenames
 
         return self._parser.parse_args(cmd_args)
 
-    def _result_data(self):
-        with open(os.path.join(self._temp_dir, "genesis.batch"), "rb") as f:
+    def _result_data(self, target_dir=None):
+        target_dir = target_dir if target_dir else self._temp_dir
+        with open(os.path.join(target_dir, "genesis.batch"), "rb") as f:
             output = GenesisData()
             output.ParseFromString(f.read())
             return output
 
-    def test_valiate_with_no_input_batches(self):
+    def test_validate_with_no_input_batches(self):
         args = self._parse_command([])
-        genesis.do_genesis(args)
+        genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
+        self.assertEqual(0, len(output.batches))
+
+    def test_validate_with_default_output(self):
+        """Tests that the genesis batch is created and placed in the data dir,
+        which is the default location, when no output file is specified in the
+        command args..
+        """
+        args = self._parse_command([], with_default_output=True)
+        genesis.do_genesis(args, self._temp_data_dir)
+
+        output = self._result_data(target_dir=self._temp_data_dir)
         self.assertEqual(0, len(output.batches))
 
     def test_validate_with_no_deps(self):
@@ -78,7 +96,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
                                    transaction('id4', []))]
 
         args = self._parse_command(batches)
-        genesis.do_genesis(args)
+        genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
         self.assertEqual(2, len(output.batches))
@@ -93,7 +111,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
                                    transaction('id4', []))]
 
         args = self._parse_command(batches)
-        genesis.do_genesis(args)
+        genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
         self.assertEqual(3, len(output.batches))
@@ -107,7 +125,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
                                    transaction('id4', ['id1', 'id2']))]
 
         args = self._parse_command(batches)
-        genesis.do_genesis(args)
+        genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
         self.assertEqual(2, len(output.batches))
@@ -122,7 +140,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
         args = self._parse_command(batches)
         with self.assertRaises(CliException):
-            genesis.do_genesis(args)
+            genesis.do_genesis(args, self._temp_data_dir)
 
     def test_validation_fails_self_dep(self):
         batches = [self.make_batch('batch1',
@@ -134,7 +152,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
         args = self._parse_command(batches)
         with self.assertRaises(CliException):
-            genesis.do_genesis(args)
+            genesis.do_genesis(args, self._temp_data_dir)
 
     def test_validation_fails_out_of_order(self):
         batches = [self.make_batch('batch1',
@@ -146,7 +164,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
         args = self._parse_command(batches)
         with self.assertRaises(CliException):
-            genesis.do_genesis(args)
+            genesis.do_genesis(args, self._temp_data_dir)
 
     def make_batch(self, batch_sig, *txns):
         txn_ids = [txn.header_signature for txn in txns]

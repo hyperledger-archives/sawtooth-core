@@ -13,3 +13,5 @@ export PYTHONPATH
 
 PATH=$PATH:/project/sawtooth-core/bin
 export PATH
+
+export SAWTOOTH_HOME=/home/ubuntu/sawtooth
