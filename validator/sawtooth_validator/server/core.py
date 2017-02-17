@@ -197,6 +197,7 @@ class Validator(object):
             transaction_executor=executor,
             completer=completer,
             block_store=block_store,
+            identity_key=identity_signing_key,
             data_dir=data_dir
         )
 
