@@ -176,6 +176,7 @@ lint "python3 -m pylint" validator/sawtooth_validator "$SINCE" .pylintrc-strict 
 
 PYTHONPATH=$top_dir/cli
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/manage
 export PYTHONPATH
 lint "python3 -m pylint" cli  "$SINCE" .pylintrc-strict 1 || retval=1
 
