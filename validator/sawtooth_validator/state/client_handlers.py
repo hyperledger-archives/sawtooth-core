@@ -137,27 +137,23 @@ class BlockListRequest(Handler):
             validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE,
             block_store=self._block_store)
 
-        helper.set_head_id()
+        blocks = [helper.get_head_block()]
         if helper.has_response():
             return helper.result
 
         # Build block list
-        current_id = helper.head_id
-        blocks = []
-        while current_id in self._block_store:
-            block = self._block_store[current_id].block
-            blocks.append(block)
+        while True:
             header = BlockHeader()
-            header.ParseFromString(block.header)
-            current_id = header.previous_block_id
+            header.ParseFromString(blocks[-1].header)
+            previous_id = header.previous_block_id
+            if previous_id not in self._block_store:
+                break
+            blocks.append(self._block_store[previous_id].block)
 
-        if blocks:
-            helper.set_response(
-                helper.status.OK,
-                head_id=helper.head_id,
-                blocks=blocks)
-        else:
-            helper.set_response(helper.status.NO_ROOT)
+        helper.set_response(
+            helper.status.OK,
+            head_id=helper.head_id,
+            blocks=blocks)
 
         return helper.result
 
@@ -227,25 +223,29 @@ class _ClientHelper(object):
         if not self.has_response():
             self.result.message_out = self._resp_proto(status=status, **kwargs)
 
-    def get_genesis(self):
+    def get_head_block(self):
         """
-        Attempts to fetch the chain head from the block store
+        Sets the helper's 'head_id' property, and returns the head block.
+        Uses either a specified head id or the current chain head.
         """
         if self.has_response():
             return
 
-        if not self._block_store.chain_head:
+        if self.request.head_id:
+            self.head_id = self.request.head_id
+            try:
+                return self._block_store[self.request.head_id].block
+            except KeyError as e:
+                LOGGER.debug('Unable to find block "%s" in store', e)
+                self.set_response(self.status.NO_ROOT)
+
+        elif self._block_store.chain_head:
+            self.head_id = self._block_store.chain_head.block.header_signature
+            return self._block_store.chain_head.block
+
+        else:
             LOGGER.debug('Unable to get chain head from block store')
             self.set_response(self.status.NOT_READY)
-
-        return self._block_store.chain_head.block
-
-    def set_head_id(self):
-        if self.has_response():
-            return
-
-        head = self.get_genesis()
-        self.head_id = head.header_signature
 
     def set_root(self):
         """
@@ -256,22 +256,17 @@ class _ClientHelper(object):
             return
 
         if self.request.merkle_root:
-            self._tree.set_merkle_root(self.request.merkle_root)
+            try:
+                self._tree.set_merkle_root(self.request.merkle_root)
+            except KeyError as e:
+                LOGGER.debug('Unable to find root "%s" in database', e)
+                self.set_response(self.status.NO_ROOT)
             return
 
-        if self.request.head_id:
-            try:
-                head = self._block_store[self.request.head_id].block
-            except KeyError as e:
-                LOGGER.debug('Unable to find block "%s" in store', e)
-                self.set_response(self.status.NO_ROOT)
-        else:
-            head = self.get_genesis()
-
+        head = self.get_head_block()
         if self.has_response():
             return
 
         header = BlockHeader()
         header.ParseFromString(head.header)
         self._tree.set_merkle_root(header.state_root_hash)
-        self.head_id = head.header_signature
