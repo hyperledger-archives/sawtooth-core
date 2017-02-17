@@ -16,11 +16,29 @@
 from threading import Condition
 from threading import RLock
 
+from sawtooth_sdk.client.exceptions import ValidatorConnectionError
+
 
 class FutureResult(object):
     def __init__(self, message_type, content):
         self.message_type = message_type
         self.content = content
+
+
+class FutureError(object):
+    """Used when resolving a future, to
+    set the FutureResult to an error result.
+    Specifically this raises ValidatorConnectionError
+    when accessing attributes, but can be made more general.
+    """
+
+    @property
+    def content(self):
+        raise ValidatorConnectionError()
+
+    @property
+    def message_type(self):
+        raise ValidatorConnectionError()
 
 
 class Future(object):
@@ -80,3 +98,7 @@ class FutureCollection(object):
                 raise FutureCollectionKeyError(
                     "no such correlation id: {}".format(correlation_id))
             del self._futures[correlation_id]
+
+    def future_values(self):
+        with self._lock:
+            return self._futures.values()
