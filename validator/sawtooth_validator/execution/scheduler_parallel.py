@@ -152,7 +152,7 @@ class PredecessorTree:
             predecessors.update(node.readers)
             if node.writer is not None:
                 predecessors.add(node.writer)
-            to_process.extendleft(address_node.children.values())
+            to_process.extendleft(node.children.values())
 
         return predecessors
 
@@ -220,6 +220,6 @@ class PredecessorTree:
             node = to_process.pop()
             if node.writer is not None:
                 predecessors.add(node.writer)
-            to_process.extendleft(address_node.children.values())
+            to_process.extendleft(node.children.values())
 
         return predecessors
