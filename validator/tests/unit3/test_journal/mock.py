@@ -126,3 +126,73 @@ class MockBlockSender(BlockSender):
 
     def send(self, block):
          self.new_block = block
+
+
+class MockStateViewFactory(object):
+    """The StateViewFactory produces StateViews for a particular merkle root.
+
+    This factory produces read-only views of a merkle tree. For a given
+    database, these views are considered immutable.
+    """
+
+    def __init__(self, database=None):
+        """Initializes the factory with a given database.
+
+        Args:
+            database (:obj:`Database`): the database containing the merkle
+                tree.
+        """
+        self._database = database
+        if self._database is None:
+            self._database = {}
+
+
+    def create_view(self, state_root_hash):
+        """Creates a StateView for the given state root hash.
+
+        Returns:
+            StateView: state view locked to the given root hash.
+        """
+        return MockStateView(self._database)
+
+
+class MockStateView(object):
+    """The StateView provides read-only access to a particular merkle tree root.
+
+    The StateView is a read-only view of a merkle tree. Access is limited to
+    available addresses, collections of leaf nodes, and specific leaf nodes.
+    The view is lock to a single merkle root, effectively making it an
+    immutable snapshot.
+    """
+
+    def __init__(self, tree):
+        """Creates a StateView with a given merkle tree.
+
+        Args:
+            tree (:obj:`MerkleDatabase`): the merkle tree for this view
+        """
+        self._database = tree
+
+    def get(self, address):
+        """
+        Returns:
+            bytes the state entry at the given address
+        """
+        return self._database[address]
+
+    def addresses(self):
+        """
+        Returns:
+            list of str: the list of addresses available in this view
+        """
+        return []
+
+    def leaves(self, prefix):
+        """
+        Args:
+            prefix (str): an address prefix under which to look for leaves
+
+        Returns:
+            dict of str,bytes: the state entries at the leaves
+        """
+        return []

@@ -24,7 +24,6 @@ from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -100,6 +99,7 @@ class Journal(object):
     def __init__(self,
                  consensus_module,
                  block_store,
+                 state_view_factory,
                  block_sender,
                  transaction_executor,
                  squash_handler,
@@ -111,6 +111,7 @@ class Journal(object):
         self._block_cache = block_cache
         if self._block_cache is None:
             self._block_cache = BlockCache(self._block_store)
+        self._state_view_factory = state_view_factory
 
         self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
@@ -128,6 +129,8 @@ class Journal(object):
         self._block_publisher = BlockPublisher(
             consensus_module=self._consensus_module,
             transaction_executor=self._transaction_executor,
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
             block_sender=self._block_sender,
             squash_handler=self._squash_handler,
             chain_head=self._block_store.chain_head
@@ -138,6 +141,7 @@ class Journal(object):
             consensus_module=self._consensus_module,
             block_sender=self._block_sender,
             block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
             executor=ThreadPoolExecutor(1),
             transaction_executor=self._transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,

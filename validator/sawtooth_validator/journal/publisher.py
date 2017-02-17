@@ -22,9 +22,11 @@ from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
+from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +39,8 @@ class BlockPublisher(object):
     def __init__(self,
                  consensus_module,
                  transaction_executor,
+                 block_cache,
+                 state_view_factory,
                  block_sender,
                  squash_handler,
                  chain_head):
@@ -44,6 +48,8 @@ class BlockPublisher(object):
         self._candidate_block = None  # the next block in potentia
         self._consensus_module = consensus_module  # the consensus module.
         self._consensus = None
+        self._block_cache = block_cache
+        self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._pending_batches = []  # batches we are waiting for validation
@@ -53,11 +59,23 @@ class BlockPublisher(object):
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
 
+    def _get_previous_block_root_state_hash(self, blkw):
+        if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
+            return INIT_ROOT_KEY
+        else:
+            prev_blkw = self._block_cache[blkw.previous_block_id]
+            return prev_blkw.state_root_hash
+
     def _build_block(self, chain_head):
         """ Build a candidate block and construct the consensus object to
         validate it.
         """
-        self._consensus = self._consensus_module.BlockPublisher()
+        prev_state = self._get_previous_block_root_state_hash(chain_head)
+        state_view = self._state_view_factory. \
+            create_view(prev_state)
+        self._consensus = self._consensus_module.\
+            BlockPublisher(block_cache=self._block_cache,
+                           state_view=state_view)
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
@@ -210,8 +228,9 @@ class BlockPublisher(object):
                                     " dropping %s",
                                     candidate.identifier[:8])
                         return
-
                     block = BlockWrapper(candidate.build_block())
+                    self._block_cache[block.identifier] = block  # add the
+                    # block to the cache, so we can build on top of it.
                     self._block_sender.send(block.block)
 
                     LOGGER.info("Claimed Block: %s", block)

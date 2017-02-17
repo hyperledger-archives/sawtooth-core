@@ -14,8 +14,12 @@
 # ------------------------------------------------------------------------------
 import hashlib
 
-from sawtooth_validator.journal.consensus.consensus import \
-    BlockPublisherInterface, BlockVerifierInterface
+from sawtooth_validator.journal.consensus.consensus\
+    import BlockPublisherInterface
+from sawtooth_validator.journal.consensus.consensus\
+    import BlockVerifierInterface
+from sawtooth_validator.journal.consensus.consensus\
+    import ForkResolverInterface
 
 
 class BlockPublisher(BlockPublisherInterface):
@@ -25,8 +29,11 @@ class BlockPublisher(BlockPublisherInterface):
     2) Check if it is time to claim the current candidate blocks.
     3) Provide the data a signatures required for a block to be validated by
     other consensus algorithms
-
     """
+    def __init__(self, block_cache, state_view):
+        self._block_cache = block_cache
+        self._state_view = state_view
+
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activates, starting proof of work
@@ -69,6 +76,10 @@ class BlockPublisher(BlockPublisherInterface):
 
 
 class BlockVerifier(BlockVerifierInterface):
+    def __init__(self, block_cache, state_view):
+        self._block_cache = block_cache
+        self._state_view = state_view
+
     def verify_block(self, block_state):
         hasher = hashlib.sha256()
         hasher.update(b"test_mode")
@@ -76,3 +87,21 @@ class BlockVerifier(BlockVerifierInterface):
 
     def compute_block_weight(self, block_state):
         return block_state.block_num
+
+class ForkResolver(ForkResolverInterface):
+    # Provides the fork resolution interface for the BlockValidator to use
+    # when deciding between 2 forks.
+    def __init__(self, block_cache):
+        self._block_cache = block_cache
+
+    def compare_forks(self, cur_fork_head, new_fork_head):
+        """
+
+        Args:
+            cur_fork_head: The current head of the block chain.
+            new_fork_head: The head of the fork that is being evaluated.
+        Returns:
+            bool: True if the new chain should replace the current chain.
+            False if the new chain should be discarded.
+        """
+        return new_fork_head.block_num > cur_fork_head.block_num
