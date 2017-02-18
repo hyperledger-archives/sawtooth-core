@@ -16,6 +16,8 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.state.merkle import MerkleDatabase
 
 
 class MockBlockStore(BlockStoreAdapter):
@@ -29,7 +31,7 @@ class MockBlockStore(BlockStoreAdapter):
         for i in range(size):
             self.add_block(str(i))
 
-    def add_block(self, block_id):
+    def add_block(self, block_id, root='merkle_root'):
         head = self.chain_head
         if head:
             previous_id = head.header_signature
@@ -44,7 +46,7 @@ class MockBlockStore(BlockStoreAdapter):
             signer_pubkey='pubkey',
             batch_ids=[],
             consensus=b'consensus',
-            state_root_hash='merkle_root')
+            state_root_hash=root)
 
         block = Block(
             header=header.SerializeToString(),
@@ -53,3 +55,35 @@ class MockBlockStore(BlockStoreAdapter):
 
         self[block_id] = BlockWrapper(block)
         self.set_chain_head(block_id)
+
+
+def make_db_and_store(size=3, start='a'):
+    """
+    Creates and returns three related objects for testing:
+        * database - dict database with evolving state
+        * store - blocks with with root hashes corresponding to that state
+        * roots - list of root hashes used in order
+    With defaults the state at the three roots looks like this:
+        * 0 - {'a': b'1'}
+        * 1 - {'a': b'2', 'b': b'4'}
+        * 2 - {'a': b'3', 'b': b'5', 'c': b'7'}
+    """
+    database = DictDatabase()
+    store = MockBlockStore(size=0);
+    roots = []
+
+    merkle = MerkleDatabase(database)
+    start_ord = ord(start)
+    data = {}
+
+    for i in range(size):
+        for k, v in data.items():
+            data[k] = str(int(v) + 1).encode()
+        data[chr(start_ord + i)] = str(i * size + 1).encode()
+
+        root = merkle.update(data, virtual=False)
+        roots.append(root)
+        store.add_block(str(i), root)
+
+    return database, store, roots
+
