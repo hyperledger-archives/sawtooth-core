@@ -47,6 +47,7 @@ for image in \
   sawtooth-tp_intkey_java \
   sawtooth-tp_intkey_python \
   sawtooth-tp_xo_python \
+  sawtooth-tp_validator_registry \
   sawtooth-validator
 do
     echo "[ Building $image... ]"
