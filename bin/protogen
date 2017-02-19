@@ -73,3 +73,9 @@ run_protoc $config_dir $config_pkg
 protos_dir=$config_dir/protos
 run_protoc $config_dir $config_pkg
 run_protoc $cli_dir $cli_pkg
+
+# Poet protos, for Validator Registry
+val_reg_dir=$top_dir/poet/
+protos_dir=$val_reg_dir/sawtooth_poet/protos
+val_reg_pkg=sawtooth_poet/protobuf
+run_protoc $val_reg_dir $val_reg_pkg

@@ -26,6 +26,9 @@
 
 /manage/**/__pycache__/
 
+/poet/sawtooth_poet/protobuf
+/poet/**/__pycache__/
+
 /rest_api/build/
 /rest_api/sawtooth_rest_api/protobuf/
 /rest_api/**/__pycache__/
