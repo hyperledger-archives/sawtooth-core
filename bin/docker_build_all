@@ -39,6 +39,21 @@ do
     esac
 done
 
+docker_build() {
+  image=$1 
+  if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
+    tag=$image
+  else
+    tag=$image:$ISOLATION_ID
+  fi
+  echo "[ Building $image... ]"
+  docker build -f $image -t $tag . \
+    --build-arg https_proxy=$https_proxy \
+    --build-arg http_proxy=$http_proxy \
+    --build-arg HTTPS_PROXY=$HTTPS_PROXY \
+    --build-arg HTTP_PROXY=$HTTP_PROXY
+}
+
 for image in \
   sawtooth-base \
   sawtooth-rest_api \
@@ -49,10 +64,5 @@ for image in \
   sawtooth-tp_xo_python \
   sawtooth-validator
 do
-    echo "[ Building $image... ]"
-    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
-      docker build -f $image -t $image .
-    else
-      docker build -f $image -t $image:$ISOLATION_ID .
-   fi
+  docker_build $image
 done
