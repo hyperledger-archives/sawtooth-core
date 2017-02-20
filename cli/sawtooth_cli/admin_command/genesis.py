@@ -24,7 +24,7 @@ from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 def add_genesis_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the genesis command.
     """
-    parser = subparsers.add_parser('genesis')
+    parser = subparsers.add_parser('genesis', parents=[parent_parser])
 
     parser.add_argument(
         '-o', '--output',

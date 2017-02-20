@@ -42,11 +42,14 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         self._temp_dir = tempfile.mkdtemp()
         self._temp_data_dir = tempfile.mkdtemp()
 
-        self._parser = argparse.ArgumentParser()
+        parent_parser = argparse.ArgumentParser(prog='test_genesis',
+                                                add_help=False)
+
+        self._parser = argparse.ArgumentParser(add_help=False)
         subparsers = self._parser.add_subparsers(title='subcommands',
                                                  dest='command')
 
-        genesis.add_genesis_parser(subparsers, self._parser)
+        genesis.add_genesis_parser(subparsers, parent_parser)
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
