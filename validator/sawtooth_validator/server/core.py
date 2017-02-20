@@ -20,6 +20,8 @@ import logging
 import os
 import time
 
+from sawtooth_signing import pbct as signing
+
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
@@ -49,9 +51,13 @@ from sawtooth_validator.state.state_view import StateViewFactory
 LOGGER = logging.getLogger(__name__)
 
 
+DEFAULT_KEY_NAME = 'validator'
+"""Default key name for a validator's block signing key."""
+
+
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, peer_list,
-                 data_dir):
+                 data_dir, key_dir):
         """Constructs a validator instance.
 
         Args:
@@ -59,6 +65,7 @@ class Validator(object):
             component_endpoint (str): the component endpoint
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
+            key_dir (str): path to the key directory
         """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
@@ -112,6 +119,10 @@ class Validator(object):
 
         identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
+
+        identity_signing_key = Validator.load_identity_signing_key(
+            key_dir,
+            DEFAULT_KEY_NAME)
 
         network_thread_pool = ThreadPoolExecutor(max_workers=10)
 
@@ -249,3 +260,31 @@ class Validator(object):
         self._service.stop()
         self._network.stop()
         self._journal.stop()
+
+    @staticmethod
+    def load_identity_signing_key(key_dir, key_name):
+        """Loads a private key from the key director, based on a validator's
+        identity.
+
+        Args:
+            key_dir (str): The path to the key directory.
+            key_name (str): The name of the key to load.
+
+        Returns:
+            str: the private signing key, in hex.
+        """
+        key_path = os.path.join(key_dir, '{}.wif'.format(key_name))
+
+        if os.path.exists(key_path):
+            LOGGER.debug('Found signing key %s', key_path)
+            with open(key_path, 'r') as key_file:
+                wif_key = key_file.read().strip()
+                return signing.encode_privkey(
+                    signing.decode_privkey(wif_key), 'hex')
+        else:
+            LOGGER.info('No signing key found. Generating %s', key_path)
+            priv_key = signing.generate_privkey()
+            with open(key_path, 'w') as key_file:
+                key_file.write(signing.encode_privkey(priv_key))
+
+            return signing.encode_privkey(priv_key, 'hex')
