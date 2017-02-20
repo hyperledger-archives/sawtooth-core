@@ -131,7 +131,8 @@ class DockerNodeController(NodeController):
         }
 
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
-        state = yaml.load(open(state_file_path))
+        with open(state_file_path) as fd:
+            state = yaml.load(fd)
 
         # add the processors
         node_num = node_name[len('validator-'):]
@@ -179,7 +180,7 @@ class DockerNodeController(NodeController):
             else:
                 raise e
 
-        for line in output.decode('utf8').split('\n'):
+        for line in output.decode().split('\n'):
             if len(line) < 1:
                 continue
             LOGGER.debug("command output: %s", str(line))
@@ -205,7 +206,7 @@ class DockerNodeController(NodeController):
 
     def _get_built_images(self):
         docker_img_cmd = ['docker', 'images', '--format', '{{.Repository}}']
-        return subprocess.check_output(docker_img_cmd).decode('utf8')\
+        return subprocess.check_output(docker_img_cmd).decode()\
             .split('\n')
 
     def _built_in_processor_types(self):
@@ -216,7 +217,8 @@ class DockerNodeController(NodeController):
 
     def stop(self, node_name):
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
-        state = yaml.load(open(state_file_path))
+        with open(state_file_path) as fd:
+            state = yaml.load(fd)
 
         node_num = node_name[len('validator-'):]
 
@@ -234,7 +236,7 @@ class DockerNodeController(NodeController):
             except subprocess.CalledProcessError as e:
                 raise ManagementError(str(e))
 
-            for line in output.decode('utf8').split('\n'):
+            for line in output.decode().split('\n'):
                 if len(line) < 1:
                     continue
                 LOGGER.debug("command output: %s", str(line))
@@ -247,7 +249,7 @@ class DockerNodeController(NodeController):
             except subprocess.CalledProcessError as e:
                 raise ManagementError(str(e))
 
-            for line in output.decode('utf8').split('\n'):
+            for line in output.decode().split('\n'):
                 if len(line) < 1:
                     continue
                 LOGGER.debug("command output: %s", str(line))
@@ -292,7 +294,7 @@ class DockerNodeController(NodeController):
                                                   args[0]))
 
         entries = []
-        for line in output.decode('utf8').split('\n'):
+        for line in output.decode().split('\n'):
             if len(line) < 1:
                 continue
             parts = line.split(',')
