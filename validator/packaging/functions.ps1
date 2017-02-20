@@ -15,3 +15,14 @@ function Git-Version() {
         }
     }
 }
+
+function Copy-Deps($pkg_dir) {
+    echo $pkg_dir
+    if (Test-Path $pkg_dir\deps\) {
+        rmdir -recurse $pkg_dir\deps\
+    }
+    mkdir $pkg_dir\deps
+    foreach ($dir in (ls c:\jenkins\deps) ) {
+        copy c:\jenkins\deps\$dir\* $pkg_dir\deps -recurse -force
+    }
+}
