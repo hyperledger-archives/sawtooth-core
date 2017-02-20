@@ -22,7 +22,7 @@ outFile "sawtooth-validator.exe"
  
 !include LogicLib.nsh
 
-LicenseData "c:\license.txt"
+LicenseData "C:\Program Files (x86)\Intel\LICENSE"
 
 page license
 

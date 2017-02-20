@@ -1,6 +1,6 @@
 # build and install sawtooth-mktplace for packaging
 
-cd $build_dir\sawtooth-core\extensions\mktplace
+cd $top_dir\extensions\mktplace
 python setup.py clean --all
 if ($lastexitcode -ne 0) { exit 1 }
 python setup.py build
