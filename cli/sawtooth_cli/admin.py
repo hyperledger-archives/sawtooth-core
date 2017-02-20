@@ -40,7 +40,7 @@ def do_admin(args):
 
 
 def add_admin_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('admin')
+    parser = subparsers.add_parser('admin', parents=[parent_parser])
     admin_sub = parser.add_subparsers(title='admin_commands', dest='admin_cmd')
 
     add_genesis_parser(admin_sub, parser)
