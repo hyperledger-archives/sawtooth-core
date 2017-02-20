@@ -23,7 +23,9 @@ from sawtooth_validator.state.merkle import MerkleDatabase
 class MockBlockStore(BlockStoreAdapter):
     """
     Creates a block store with a preseeded chain of blocks.
-    With defaults, creates blocks with ids ranging from '0' to '2'.
+    With defaults, creates three blocks with ids ranging from '0' to '2'.
+    Using optional root parameter for add_block, it is possible to save
+    meaningful state_root_hashes to a block.
     """
     def __init__(self, size=3):
         super().__init__({})
@@ -63,7 +65,7 @@ def make_db_and_store(size=3, start='a'):
         * database - dict database with evolving state
         * store - blocks with with root hashes corresponding to that state
         * roots - list of root hashes used in order
-    With defaults the state at the three roots looks like this:
+    With defaults, the values at the three roots look like this:
         * 0 - {'a': b'1'}
         * 1 - {'a': b'2', 'b': b'4'}
         * 2 - {'a': b'3', 'b': b'5', 'c': b'7'}
