@@ -22,8 +22,8 @@ import subprocess
 import time
 import yaml
 
-from sawtooth.cli.exceptions import CliException
-from sawtooth.exceptions import ManagementError
+from sawtooth_cli.exceptions import CliException
+from sawtooth_manage.exceptions import ManagementError
 
 from sawtooth_manage.node import NodeArguments
 from sawtooth_manage.simple import SimpleNodeCommandGenerator
@@ -32,19 +32,12 @@ from sawtooth_manage.vnm import ValidatorNetworkManager
 
 from sawtooth_manage.docker import DockerNodeController
 from sawtooth_manage.subproc import SubprocessNodeController
-from sawtooth_manage.daemon_legacy import DaemonLegacyNodeController
-from sawtooth_manage.docker_legacy import DockerLegacyNodeController
-from sawtooth_manage.subproc_legacy import SubprocessLegacyNodeController
-
-from sawtooth.cli.stats import run_stats
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 MANAGE_TYPES = 'docker', 'subprocess'
-LEGACY_MANAGE = 'subprocess-legacy', 'daemon-legacy', 'docker-legacy'
-ALL_MANAGE_TYPES = MANAGE_TYPES + LEGACY_MANAGE
 
 DEFAULT_MANAGE = 'docker'
 
@@ -61,7 +54,6 @@ def add_cluster_parser(subparsers, parent_parser):
     add_cluster_stop_parser(cluster_subparsers, parent_parser)
     add_cluster_extend_parser(cluster_subparsers, parent_parser)
     add_cluster_logs_parser(cluster_subparsers, parent_parser)
-    add_cluster_stats_parser(cluster_subparsers, parent_parser)
 
 
 def add_cluster_status_parser(subparsers, parent_parser):
@@ -86,7 +78,7 @@ def add_cluster_start_parser(subparsers, parent_parser):
     parser.add_argument(
         '-m', '--manage',
         help='style of validator management',
-        choices=ALL_MANAGE_TYPES,
+        choices=MANAGE_TYPES,
         default=DEFAULT_MANAGE)
 
     parser.add_argument(
@@ -121,15 +113,6 @@ def add_cluster_extend_parser(subparsers, parent_parser):
         default=1)
 
 
-def add_cluster_stats_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('stats', parents=[parent_parser])
-
-    parser.add_argument(
-        '--node_name',
-        help='node to connect to'
-    )
-
-
 def add_cluster_logs_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('logs', parents=[parent_parser])
 
@@ -152,8 +135,6 @@ def do_cluster(args):
         do_cluster_extend(args)
     elif args.cluster_command == 'logs':
         do_cluster_logs(args)
-    elif args.cluster_command == 'stats':
-        do_cluster_stats(args)
     else:
         raise CliException("invalid cluster command: {}".format(
             args.cluster_command))
@@ -205,17 +186,14 @@ def get_node_controller(state, args):
 
     node_controller_types = {
         'docker': DockerNodeController,
-        'subprocess': SubprocessNodeController,
-        'subprocess-legacy': SubprocessLegacyNodeController,
-        'docker-legacy': DockerLegacyNodeController,
-        'daemon-legacy': DaemonLegacyNodeController,
+        'subprocess': SubprocessNodeController
     }
 
     try:
         node_controller_type = node_controller_types[manage_type]
     except:
         # manage_type hasn't been added to node_controller_types
-        if manage_type in ALL_MANAGE_TYPES:
+        if manage_type in MANAGE_TYPES:
             error_msg = '{} manamgement type not implemented'
         else:
             error_msg = 'Invalid management type: {}'
@@ -235,7 +213,7 @@ def get_node_controller(state, args):
             raise CliException("Already wrapped to %s." % state["Wrap"])
 
     if state['Wrap'] is not False:
-        wrappable_types = SubprocessLegacyNodeController,
+        wrappable_types = ()
         if not isinstance(node_controller, wrappable_types):
             msg = '--wrap currently only implemented for {} management types'
             raise CliException(msg.format(wrappable_types))
@@ -272,10 +250,9 @@ def do_cluster_start(args):
 
     state["DesiredState"] = "Running"
 
-    if state["Manage"] not in LEGACY_MANAGE:
-        if args.processors is None:
-            raise CliException("Use -P to specify one or more processors")
-        state['Processors'] = args.processors
+    if args.processors is None:
+        raise CliException("Use -P to specify one or more processors")
+    state['Processors'] = args.processors
 
     node_controller = get_node_controller(state, args)
     node_command_generator = SimpleNodeCommandGenerator()
@@ -290,14 +267,14 @@ def do_cluster_start(args):
 
     # Check for runnings nodes. If found, raise exception with message to use
     # sawtooth cluster extend command to add nodes to running network.
-    for i in xrange(0, args.count):
+    for i in range(0, args.count):
         node_name = "validator-{:0>3}".format(i)
         if node_name in existing_nodes and vnm.is_running(node_name):
             print("Already running: {}".format(node_name))
             raise CliException("Please use 'sawtooth cluster extend'\
              to add more nodes.")
 
-    for i in xrange(0, args.count):
+    for i in range(0, args.count):
         node_name = "validator-{:0>3}".format(i)
 
         if node_name in existing_nodes and vnm.is_running(node_name):
@@ -471,7 +448,7 @@ def do_cluster_extend(args):
 
     index_offset = len(existing_nodes)
 
-    for i in xrange(0, args.count):
+    for i in range(0, args.count):
         j = i + index_offset
         node_name = "validator-{:0>3}".format(j)
 
@@ -525,28 +502,3 @@ def do_cluster_logs(args):
                 raise CliException(str(cpe))
     else:
         print("logs not implemented for {}".format(state['Manage']))
-
-
-def do_cluster_stats(args):
-    state = load_state()
-
-    node_controller = get_node_controller(state, args)
-    node_command_generator = SimpleNodeCommandGenerator()
-
-    vnm = ValidatorNetworkManager(
-        node_controller=node_controller,
-        node_command_generator=node_command_generator)
-
-    nodes = state["Nodes"]
-    for node_name in nodes:
-        try:
-            node_ip = vnm.get_ip(node_name)
-            node_name_stats = node_name
-            break
-        except ManagementError as e:
-            raise CliException(str(e))
-
-    node_url = "http://" + node_ip.strip(' \t\n\r') + ":" + \
-               nodes[node_name_stats]["HttpPort"]
-
-    run_stats(node_url)

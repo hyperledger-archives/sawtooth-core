@@ -25,6 +25,7 @@ pkgs="
     sdk/python
     rest_api
     validator
+    manage
 "
 
 set -e

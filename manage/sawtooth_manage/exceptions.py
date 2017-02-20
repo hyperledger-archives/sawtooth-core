@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-
-# Copyright 2017 Intel Corporation
+# Copyright 2016 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,22 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import os
-import sys
-import sysconfig
+class SawtoothException(Exception):
+    def __init__(self, msg):
+        super(SawtoothException, self).__init__(msg)
 
-build_str = "lib.{}-{}.{}".format(
-    sysconfig.get_platform(),
-    sys.version_info.major, sys.version_info.minor)
+class ManagementError(SawtoothException):
+    def __init__(self, msg):
+        super(ManagementError, self).__init__(msg)
 
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'cli'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'signing'))
 
-from sawtooth_cli.main import main_wrapper
-
-if __name__ == '__main__':
-    main_wrapper()

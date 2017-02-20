@@ -19,8 +19,8 @@ import subprocess
 import time
 import yaml
 
-from sawtooth.manage.node import NodeController
-from sawtooth.manage.utils import get_executable_script
+from sawtooth_manage.node import NodeController
+from sawtooth_manage.utils import get_executable_script
 
 
 class SubprocessNodeController(NodeController):
@@ -35,7 +35,7 @@ class SubprocessNodeController(NodeController):
         self._state_file_path = os.path.join(self._state_dir, 'state.yaml')
 
     def _load_state(self):
-        return yaml.load(file(self._state_file_path))
+        return yaml.load(open(self._state_file_path))
 
     def _save_state(self, state):
         with open(self._state_file_path, 'w') as state_file:
@@ -59,7 +59,7 @@ class SubprocessNodeController(NodeController):
 
         commands = ['validator'] + state['Processors']
         if node_args.genesis:
-            commands = ['sawtooth-0.8'] + commands
+            commands = ['sawtooth'] + commands
 
         for cmd in commands:
             # get_executable_script returns (path, executable)
@@ -70,7 +70,7 @@ class SubprocessNodeController(NodeController):
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
                 flags = component + network
-            elif cmd == 'sawtooth-0.8':
+            elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
             else:
                 flags = (url,)
