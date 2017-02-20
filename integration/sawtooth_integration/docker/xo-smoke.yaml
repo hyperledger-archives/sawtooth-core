@@ -47,7 +47,7 @@ services:
       - 40000
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin genesis && \
-        ./bin/validator -v\""
+        ./bin/validator -vv\""
     stop_signal: SIGKILL
 
   rest_api:
