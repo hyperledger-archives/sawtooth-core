@@ -70,7 +70,7 @@ setup(name='sawtooth-rest-api',
       version=version('0.8.1'),
       description='Sawtooth Lake REST API',
       author='Intel Corporation',
-      url='http://www.intel.com',
+      url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[
           'sawtooth-sdk',

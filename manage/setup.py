@@ -68,8 +68,8 @@ def version(default):
 
 setup(name='sawtooth-manage',
       version=version('0.8.1'),
-      description='Sawtooth Lake manage library',
+      description='Sawtooth Lake Management Library',
       author='Intel Corporation',
-      url='http://www.intel.com',
+      url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       entry_points={})
