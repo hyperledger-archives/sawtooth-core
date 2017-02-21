@@ -23,6 +23,8 @@ from journal.messages import transaction_message
 from gossip.common import NullIdentifier
 from gossip import message, node
 
+from sawtooth_signing import pbct_nativerecover as signing
+
 logger = logging.getLogger(__name__)
 
 
@@ -345,9 +347,12 @@ class EndpointRegistryTransaction(transaction.Transaction):
             endpoint_registry.Update: A transaction containing an update for
                 registering the node's details.
         """
-        regtxn = EndpointRegistryTransaction()
+        assert nde.SigningKey
+        pub_key = signing.encode_pubkey(
+            signing.generate_pubkey(nde.SigningKey), "hex")
+        minfo = {"PublicKey": pub_key}
+        regtxn = EndpointRegistryTransaction(minfo)
         regtxn.Update = Update.register_node(regtxn, nde, httpport)
-
         return regtxn
 
     @staticmethod
