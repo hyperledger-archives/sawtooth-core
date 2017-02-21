@@ -98,3 +98,31 @@ node ('master') {
         }
     }
 }
+
+node ('windows') {
+    ws("workspace/${env.BUILD_TAG}_0-7") {
+        stage("Clone repo") {
+            checkout scm
+        }
+
+        stage("Verify scripts") {
+            readTrusted 'bin/run_tests_windows.ps1'
+            readTrusted 'core/setup.py'
+            readTrusted 'extensions/arcade/setup.py'
+            readTrusted 'extensions/bond/setup.py'
+            readTrusted 'extensions/mktplace/setup.py'
+            readTrusted 'signing/setup.py'
+            readTrusted 'validator/setup.py'
+            readTrusted 'validator/packaging/create_package.ps1'
+            readTrusted 'validator/packaging/functions.ps1'
+        }
+
+        stage("Build installer") {
+            bat 'powershell validator\\packaging\\create_package.ps1'
+        }
+
+        stage("Archive Build artifacts") {
+            archiveArtifacts artifacts: 'build\\exe\\*.exe'
+        }
+    }
+}
