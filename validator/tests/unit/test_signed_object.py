@@ -58,6 +58,24 @@ class TestSignedObject(unittest.TestCase):
         # test invalid OriginatorID
         self.assertFalse(temp.verify_signature("invalid"))
 
+    def test_valid_signature(self):
+        signing_key = SigObj.generate_signing_key()
+        pub_key = signing.generate_pubkey(signing_key)
+        temp = SignedObject({"PublicKey": pub_key})
+        # test valid signature
+        temp.sign_object(signing_key)
+        self.assertTrue(temp.is_valid("valid"))
+
+    def test_invalid_signature(self):
+        signing_key = SigObj.generate_signing_key()
+        pub_key = signing.generate_pubkey(signing_key)
+        temp = SignedObject({"PublicKey": pub_key})
+
+        invalid_signing_key = SigObj.generate_signing_key()
+        # test invalid signature
+        temp.sign_object(invalid_signing_key)
+        self.assertFalse(temp.is_valid("invalid"))
+
     def test_is_valid_assertion(self):
         # Test that an AssertionError is raised when dealing with a
         # default SignedObject() because it does not have an signature
