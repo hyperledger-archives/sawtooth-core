@@ -17,9 +17,7 @@ import logging
 
 from sawtooth_validator.execution import processor_iterator
 
-from sawtooth_validator.protobuf.processor_pb2 import TpRegisterResponse
-from sawtooth_validator.protobuf.processor_pb2 \
-    import TpRegisterRequest
+from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -33,12 +31,13 @@ class ProcessorRegisterHandler(Handler):
         self._collection = processor_collection
 
     def handle(self, identity, message_content):
-        request = TpRegisterRequest()
+        request = processor_pb2.TpRegisterRequest()
         request.ParseFromString(message_content)
 
         LOGGER.info(
-            'registered transaction processor: family=%s, version=%s, '
-            'encoding=%s, namepsaces=%s',
+            'registered transaction processor: identity=%s, family=%s, '
+            'version=%s, encoding=%s, namespaces=%s',
+            identity,
             request.family,
             request.version,
             request.encoding,
@@ -55,10 +54,32 @@ class ProcessorRegisterHandler(Handler):
 
         self._collection[processor_type] = processor
 
-        ack = TpRegisterResponse()
+        ack = processor_pb2.TpRegisterResponse()
         ack.status = ack.OK
 
         return HandlerResult(
             status=HandlerStatus.RETURN,
             message_out=ack,
             message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
+
+
+class ProcessorUnRegisterHandler(Handler):
+    def __init__(self, processor_collection):
+        self._collection = processor_collection
+
+    def handle(self, identity, message_content):
+        request = processor_pb2.TpUnregisterRequest()
+        request.ParseFromString(message_content)
+
+        LOGGER.info("try to unregister all transaction processor "
+                    "capabilities for identity %s", identity)
+
+        self._collection.remove(processor_identity=identity)
+
+        ack = processor_pb2.TpUnregisterResponse()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.TP_UNREGISTER_RESPONSE)

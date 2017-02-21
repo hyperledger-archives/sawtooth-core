@@ -18,7 +18,8 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 
 
-// The registration request from the transaction processor to the validator/executor
+// The registration request from the transaction processor to the
+// validator/executor
 message TpRegisterRequest {
 
     // A settled upon name for the capabilities of the transaction processor.
@@ -40,8 +41,27 @@ message TpRegisterRequest {
     repeated string namespaces = 4;
 }
 
-// A response sent from the validator to the transaction processor acknowledging the registration
+// A response sent from the validator to the transaction processor
+// acknowledging the registration
 message TpRegisterResponse {
+    enum Status {
+        OK = 0;
+        ERROR = 1;
+    }
+
+    Status status = 1;
+}
+
+// The unregistration request from the transaction processor to the
+// validator/executor. The correct handlers are determined from the
+// zeromq identity of the tp, on the validator side.
+message TpUnregisterRequest {
+
+}
+
+// A response sent from the validator to the transaction processor
+// acknowledging the unregistration
+message TpUnregisterResponse {
     enum Status {
         OK = 0;
         ERROR = 1;

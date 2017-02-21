@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
+from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterResponse
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessRequest
 
@@ -23,8 +24,10 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
+
 _TYPE_TO_PROTO = {
     Message.TP_REGISTER_REQUEST: TpRegisterRequest,
+    Message.TP_REGISTER_RESPONSE: TpRegisterResponse,
     Message.TP_PROCESS_RESPONSE: TpProcessResponse,
     Message.TP_PROCESS_REQUEST: TpProcessRequest,
 

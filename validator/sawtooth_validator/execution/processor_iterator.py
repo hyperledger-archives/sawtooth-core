@@ -16,13 +16,26 @@
 from abc import ABCMeta
 from abc import abstractmethod
 import itertools
+import logging
 from threading import RLock
 from threading import Condition
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class ProcessorIteratorCollection(object):
+    """Contains all of the registered (added via __setitem__)
+    transaction processors in a _processors (dict) where the keys
+    are ProcessorTypes and the values are ProcessorIterators. To
+    aid in removing all of the Processors of a particular zeromq identity
+    (1 transaction processor can have multiple Handlers which will be stored
+    as Processors)
+
+    """
 
     def __init__(self, processor_iterator_class):
+        self._identities = {}
         self._processors = {}
         self._proc_iter_class = processor_iterator_class
         self._condition = Condition()
@@ -31,14 +44,23 @@ class ProcessorIteratorCollection(object):
         """Get a particular ProcessorIterator
 
         :param item (ProcessorType):
-        :return: (Processor)
+        :return: (ProcessorIterator)
         """
         with self._condition:
-            return self._processors[item].next_processor()
+            return self._processors[item]
 
     def __contains__(self, item):
         with self._condition:
             return item in self._processors
+
+    def get_next_of_type(self, processor_type):
+        """Get the next processor of a particular type
+
+        :param processor_type ProcessorType:
+        :return: Processor
+        """
+        with self._condition:
+            return self[processor_type].next_processor()
 
     def __setitem__(self, key, value):
         """Set a ProcessorIterator to a ProcessorType,
@@ -54,7 +76,36 @@ class ProcessorIteratorCollection(object):
                 self._processors[key] = proc_iterator
             else:
                 self._processors[key].add_processor(value)
+            if value.identity not in self._identities:
+                self._identities[value.identity] = [key]
+            else:
+                self._identities[value.identity].append(key)
             self._condition.notify_all()
+
+    def remove(self, processor_identity):
+        """Removes all of the Processors for
+        a particular transaction processor zeromq identity.
+
+        :param processor_identity (str): zeromq identity
+        """
+        with self._condition:
+            processor_types = self._identities.get(processor_identity)
+            if processor_types is None:
+                LOGGER.warning("transaction processor with identity %s tried "
+                               "to unregister but was not registered",
+                               processor_identity)
+                return
+            for processor_type in processor_types:
+                if processor_type not in self._processors:
+                    LOGGER.warning("processor type %s not a known processor "
+                                   "type but it associated with identity %s",
+                                   processor_type,
+                                   processor_identity)
+                    continue
+                self._processors[processor_type].remove_processor(
+                    processor_identity=processor_identity)
+                if len(self._processors[processor_type]) == 0:
+                    del self._processors[processor_type]
 
     def __repr__(self):
         return ",".join([repr(k) for k in self._processors.keys()])
@@ -72,6 +123,9 @@ class Processor(object):
     def __repr__(self):
         return "{}: {}".format(self.identity,
                                self.namespaces)
+
+    def __eq__(self, other):
+        return self.identity == other.identity
 
 
 class ProcessorType(object):
@@ -117,6 +171,24 @@ class ProcessorIterator(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    @abstractmethod
+    def remove_processor(self, processor_identity):
+        """Remove the processor (tied to a specific identity)
+        from the ProcessorIterator
+
+        :param processor_identity (str): zeromq identity of the transaction
+                                         processor
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __len__(self):
+        """
+        The number of transaction processors for a given type
+        :return (int): the number of processors for a given type
+        """
+        raise NotImplementedError()
+
     def next_processor(self):
         return next(self)
 
@@ -131,7 +203,25 @@ class RoundRobinProcessorIterator(ProcessorIterator):
         with self._lock:
             return next(self._inf_iterator)
 
+    def __repr__(self):
+        with self._lock:
+            return repr(self._processors)
+
+    def _processor_identities(self):
+        with self._lock:
+            return [p.identity for p in self._processors]
+
     def add_processor(self, processor):
         with self._lock:
             self._processors.append(processor)
             self._inf_iterator = itertools.cycle(self._processors)
+
+    def remove_processor(self, processor_identity):
+        with self._lock:
+            idx = self._processor_identities().index(processor_identity)
+            self._processors.pop(idx)
+            self._inf_iterator = itertools.cycle(self._processors)
+
+    def __len__(self):
+        with self._lock:
+            return len(self._processors)
