@@ -48,7 +48,7 @@ def auto_version(default, strict):
             parts[0] = default
 
     if len(parts) == 2:
-        return "-git".join([parts[0], parts[1].replace("-", ".")])
+        return ".git".join([parts[0], parts[1].replace("-", ".")])
     else:
         return parts[0]
 
@@ -62,7 +62,7 @@ def version(default):
         else:
             version = os.environ['VERSION']
     else:
-        version = default + "-dev1"
+        version = default + ".dev1"
     return version
 
 
