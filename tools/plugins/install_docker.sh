@@ -25,4 +25,4 @@ package_group_install docker
 
 usermod -aG docker $VAGRANT_USER
 
-pip install docker-compose
+pip3 install docker-compose
