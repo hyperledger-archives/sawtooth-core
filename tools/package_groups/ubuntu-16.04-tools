@@ -1,10 +1,7 @@
 g++
 git
-python-all-dev
-python-dev
-python-pip
-python-setuptools
-python-stdeb
+pep8
+python-all
 python3-all-dev
 python3-pip
 python3-nose2
