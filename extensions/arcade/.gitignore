@@ -1,7 +1,0 @@
-*.tar.gz
-/build
-/dist
-/htmlcov
-/.coverage
-/nose2-junit.xml
-/sawtooth_arcade.egg-info
