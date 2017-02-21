@@ -15,8 +15,18 @@
 
     ## pick the ledger type
     "LedgerType" : "poet1",
+    "GenesisLedger" : false,
+    "InitialConnectivity": 0,
 
-    ## configuration of the ledger wait time certificate 
+    ## PoET1 configuration
+    "BlockClaimThreshold" : 25,
+    "BlockClaimTrigger" : 25,
+    ## 3.075 ==> 99.9% confidence interval
+    ##"MaximumWinDeviation" : 3.075,
+    ##"MinimumWinObservations" : 2,
+    ##"BlockClaimDelay" : 5,
+
+    ## configuration of the ledger wait time certificate
     ## suggested settings for single node dev environment
     "TargetWaitTime" : 5.0,
     "InitialWaitTime" : 5.0,
@@ -47,12 +57,12 @@
     ## configuration of the transaction families to include
     ## in the validator
     "TransactionFamilies" : [
-        "ledger.transaction.integer_key"
+        "ledger.transaction.integer_key",
+        "sawtooth_validator.consensus.poet1.validator_registry"
     ],
 
-    ## configuration of the backing store
-    ## choices include: shelf, lmdb
-    "StoreType" : "shelf",
+    ## do not restart
+    "Restore" : false,
 
     ## This value should be set to the identifier which is
     ## permitted to send shutdown messages on the network.
@@ -60,8 +70,6 @@
     ## "AdministrationNode" : "19ns29kWDTX8vNeHNzJbJy6S9HZiqHZyEE",
 
     ## key file
-    "KeyFile" : "{key_dir}/{node}.wif",
-
-    ## disable checking for elevated privileges
-    "CheckElevated" : false
+    "KeyFile" : "{key_dir}/{node}.wif"
 }
+
