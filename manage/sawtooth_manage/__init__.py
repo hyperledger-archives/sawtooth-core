@@ -15,7 +15,6 @@
 
 
 __all__ = [
-    'daemon_legacy',
     'node',
     'simple',
     'utils',
