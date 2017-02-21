@@ -1,7 +1,2 @@
-recursive-include journal *.py
-recursive-include ledger *.py
-recursive-include gossip  *.py
-include txnserver/*.py
-include etc/txnvalidator.js.example
 include etc/systemd/sawtooth-validator.service
 include etc/default/sawtooth-validator
