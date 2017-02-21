@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from concurrent.futures import Executor
 import hashlib
 import pprint
 import random
@@ -21,14 +20,13 @@ import string
 
 from sawtooth_signing import pbct as signing
 
-from sawtooth_validator.journal.journal import \
-    BlockPublisher
-from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
-    import \
-    BlockPublisher as TestModePublisher
-from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
-    import \
-    BlockVerifier as TestModeVerifier
+from sawtooth_validator.journal.block_builder import BlockBuilder
+from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.journal import BlockPublisher
 
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -37,15 +35,10 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_validator.journal.block_builder import BlockBuilder
-from sawtooth_validator.journal.block_cache import BlockCache
-from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.block_wrapper import BlockStatus
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
-
 from test_journal.mock import MockBlockSender
+from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
+from test_journal import mock_consensus
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -82,7 +75,8 @@ class BlockTreeManager(object):
         self.block_sender = MockBlockSender()
         self.block_store = BlockStoreAdapter({})
         self.block_cache = BlockCache(self.block_store)
-
+        self.state_db = {}
+        self.state_view_factory = MockStateViewFactory(self.state_db)
         self.signing_key = signing.generate_privkey()
         self.public_key = signing.encode_pubkey(
             signing.generate_pubkey(self.signing_key), "hex")
@@ -91,8 +85,10 @@ class BlockTreeManager(object):
         self.set_chain_head(self.genesis_block)
 
         self.block_publisher = BlockPublisher(
-            consensus=TestModePublisher(),
+            consensus_module=mock_consensus,
             transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_cache,
+            state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             squash_handler=None,
             chain_head=self.genesis_block)
@@ -166,7 +162,10 @@ class BlockTreeManager(object):
 
         if add_to_store:
             if block.weight is None:
-                tmv = TestModeVerifier()
+                state_view = self.state_view_factory.create_view(None)
+                tmv = mock_consensus.\
+                    BlockVerifier(block_cache=self.block_cache,
+                                  state_view=state_view)
                 block.weight = tmv.compute_block_weight(block)
             self.block_store[block.identifier] = block
 

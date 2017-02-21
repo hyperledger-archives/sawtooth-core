@@ -12,31 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+from abc import ABCMeta
 from abc import abstractmethod
 
 
-class BlockPublisherInterface(object):
-    """Consensus objects provide the following services to the Journal:
-    1) Build candidate blocks ( this temporary until the block types are
-    combined into a single block type)
-    2) Check if it is time to claim the current candidate blocks.
-    3) Provide the data a signatures required for a block to be validated by
-    other consensus algorithms
-
+class BlockPublisherInterface(metaclass=ABCMeta):
+    """The BlockPublisher provides consensus services to the BlockPublisher.
+    1) Block initialization or error if it is not time to create a block.
+    2) Check if it is time to claim the candidate blocks.
+    3) Sign the block prior to publishing. Provide an opaque block of data
+    that will allow the BlockVerifier implementation of this consensus
+    algorithm to verify that this is a valid block.
     """
-    # TDB - read only access the block store
-    # TBD - Early or late transaction binding -- voting needs to be early????
+
+    @abstractmethod
+    def __init__(self, block_cache, state_view):
+        """Initialize the object, is passed (read-only) state access objects.
+            Args:
+                block_cache: Dict interface to the block cache. Any predecessor
+                block to blocks handed to this object will be present in this
+                dict.
+                state_view: A read only view of state for the last committed
+                block in the chain. For the block publisher this is the block
+                we are building on top of.
+            Returns:
+                none.
+        """
+        pass
 
     @abstractmethod
     def initialize_block(self, block):
         """Do initialization necessary for the consensus to claim a block,
-        this may include initiating voting activates, starting proof of work
+        this may include initiating voting activities, starting proof of work
         hash generation, or create a PoET wait timer.
 
         Args:
             block (Block): the block to initialize.
         Returns:
-            none
+            consensus: the serialized consensus data for the block header, this
+            can be temporary state data or None.
         """
         pass
 
@@ -45,8 +59,7 @@ class BlockPublisherInterface(object):
         """Check if a candidate block is ready to be claimed.
 
         Args:
-            block: the block to be checked if it should be claimed
-            now: the current time
+            block (Block): the block to be checked if it should be claimed
         Returns:
             Boolean: True if the candidate block should be claimed.
         """
@@ -59,36 +72,84 @@ class BlockPublisherInterface(object):
         signed and broadcast to the network.
 
         Args:
-            block: The candidate block that needs to be finalized
+            block (Block): The candidate block that needs to be finalized
              by the consensus
         Returns:
-            None
+            consensus: The consensus data to store on the block.
         """
         pass
 
 
-class BlockVerifierInterface(object):
-    # Block Validator Activites - must be stateless and indpendent of the
-    # of the publishing activites
+class BlockVerifierInterface(metaclass=ABCMeta):
+    # BlockVerifier provides services for the Journal(ChainController) to
+    # determine if a block is valid (for the consensus rules) to be
+    # considered as part of the fork being  evaluate. BlockVerifier must be
+    # independent of block publishing activities.
+    @abstractmethod
+    def __init__(self, block_cache, state_view):
+        """Initialize the object, is passed (read-only) state access objects.
+            Args:
+                block_cache: Dict interface to the block cache. Any predecessor
+                block to blocks handed to this object will be present in this
+                dict.
+                state_view: A read only view of state for the last committed
+                block in the chain. For the BlockVerifier this is the previous
+                block in the chain.
+            Returns:
+                none.
+        """
+        pass
 
     @abstractmethod
     def verify_block(self, block):
-        """Check that the block received meets the consensus rules for validity
+        """Check that the block received conforms to the consensus rules.
 
         Args:
-            block: The block to validate
+            block (Block): The block to validate.
         Returns:
             None
         """
         pass
 
     def compute_block_weight(self, block):
+        """
+        Args:
+            block (Block): The block to compute weight of.
+        Returns:
+            An opaque weight object.
+        """
+        pass
 
-        """Check that the block received meets the consensus rules for validity
+
+class ForkResolverInterface(metaclass=ABCMeta):
+    # Provides the fork resolution interface for the BlockValidator to use
+    # when deciding between two forks.
+    @abstractmethod
+    def __init__(self, block_cache):
+        """Initialize the object, is passed (read-only) state access objects.
+        StateView is not passed to this object as it is ambiguous as to which
+        state it is and all state dependent calculations should have been
+        done during compute_block_weight and stored in the weight object
+        accessible from the block.
+            Args:
+                block_cache: Dict interface to the block cache. Any predecessor
+                block to blocks handed to this object will be present in this
+                dict.
+            Returns:
+                none.
+        """
+        pass
+    @abstractmethod
+    def compare_forks(self, cur_fork_head, new_fork_head):
+        """Given the head of two forks return which should be the fork that
+        the validator chooses.  When this is called both forks consist of
+         only valid blocks.
 
         Args:
-            block: The block to validate
+            cur_fork_head (Block): The current head of the block chain.
+            new_fork_head (Block): The head of the fork that is being evaluated.
         Returns:
-            None
+            bool: True if the new chain should replace the current chain.
+            False if the new chain should be discarded.
         """
         pass

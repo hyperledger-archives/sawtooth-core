@@ -20,6 +20,7 @@ from sawtooth_signing import pbct as signing
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
+from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,17 +40,19 @@ class BlockValidator(object):
     the information necessary to do the switch if necessary.
     """
 
-    def __init__(self, consensus,
+    def __init__(self, consensus_module,
                  block_cache,
                  new_block,
                  chain_head,
+                 state_view_factory,
                  done_cb,
                  executor,
                  squash_handler):
-        self._consensus = consensus
+        self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._new_block = new_block
         self._chain_head = chain_head
+        self._state_view_factory = state_view_factory
         self._done_cb = done_cb
         self._executor = executor
         self._squash_handler = squash_handler
@@ -62,6 +65,13 @@ class BlockValidator(object):
             'committed_batches': [],
             'uncommitted_batches': [],
         }
+
+    def _get_previous_block_root_state_hash(self, blkw):
+        if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
+            return INIT_ROOT_KEY
+        else:
+            prev_blkw = self._block_cache[blkw.previous_block_id]
+            return prev_blkw.state_root_hash
 
     def _is_block_complete(self, blkw):
         """
@@ -89,9 +99,9 @@ class BlockValidator(object):
 
     def _verify_block_batches(self, blkw):
         if len(blkw.block.batches) > 0:
-            prev_blkw = self._block_cache[blkw.previous_block_id]
+            prev_state = self._get_previous_block_root_state_hash(blkw)
             scheduler = self._executor.create_scheduler(
-                self._squash_handler, prev_blkw.state_root_hash)
+                self._squash_handler, prev_state)
             self._executor.execute(scheduler)
 
             for i in range(len(blkw.block.batches) - 1):
@@ -123,6 +133,12 @@ class BlockValidator(object):
             else:
                 valid = True
 
+                prev_state = self._get_previous_block_root_state_hash(blkw)
+                state_view = self._state_view_factory.\
+                    create_view(prev_state)
+                consensus = self._consensus_module.\
+                    BlockVerifier(self._block_cache, state_view=state_view)
+
                 if valid:
                     valid = self._is_block_complete(blkw)
 
@@ -133,17 +149,16 @@ class BlockValidator(object):
                     valid = self._verify_block_batches(blkw)
 
                 if valid:
-                    valid = self._consensus.verify_block(blkw)
+                    valid = consensus.verify_block(blkw)
 
                 # Update the block store
-                # FXM change weight to be an opaque object
-                blkw.weight = self._consensus.compute_block_weight(blkw)
+                blkw.weight = consensus.compute_block_weight(blkw)
                 blkw.status = BlockStatus.Valid if \
                     valid else BlockStatus.Invalid
                 return valid
         # pylint: disable=broad-except
         except Exception as exc:
-            LOGGER.error(exc)
+            LOGGER.exception(exc)
             return False
 
     def _find_common_height(self, new_chain, cur_chain):
@@ -221,7 +236,10 @@ class BlockValidator(object):
         """
         Compare the two chains and determine which should be the head.
         """
-        return self._new_block.weight > self._chain_head.weight
+        fork_resolver = self._consensus_module.\
+            ForkResolver(block_cache=self._block_cache)
+
+        return fork_resolver.compare_forks(self._chain_head, self._new_block)
 
     def _compute_batch_change(self, new_chain, cur_chain):
         """
@@ -302,17 +320,38 @@ class ChainController(object):
     the current chain. If they are valid extend the chain.
     """
     def __init__(self,
-                 consensus,
+                 consensus_module,
                  block_cache,
                  block_sender,
+                 state_view_factory,
                  executor,
                  transaction_executor,
                  on_chain_updated,
                  squash_handler):
+        """Initialize the ChainController
+        Args:
+            consensus_module: the python module containing the consensus
+            algorithm to use.
+             block_cache: The cache of all recent blocks and the processing
+             state associated with them.
+             block_sender: an interface object used to send blocks to the
+             network.
+             state_view_factory: The factory object to create
+             executor: The thread pool to process block validations.
+             transaction_executor: The TransactionExecutor used to produce
+             schedulers for batch validation.
+             on_chain_updated: The callback to call to notify the rest of the
+             system the head block in the chain has been changed.
+             squash_handler: a parameter passed when creating transaction
+             schedulers.
+        Returns:
+            None
+        """
         self._lock = RLock()
-        self._consensus = consensus
+        self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
+        self._state_view_factory = state_view_factory
         self._block_sender = block_sender
         self._executor = executor
         self._transaction_executor = transaction_executor
@@ -343,10 +382,11 @@ class ChainController(object):
 
     def _verify_block(self, blkw):
         validator = BlockValidator(
-            consensus=self._consensus,
+            consensus_module=self._consensus_module,
             new_block=blkw,
             chain_head=self._chain_head,
             block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
             done_cb=self.on_block_validated,
             executor=self._transaction_executor,
             squash_handler=self._sqaush_handler)
@@ -354,10 +394,14 @@ class ChainController(object):
         self._executor.submit(validator.run)
 
     def on_block_validated(self, commit_new_block, result):
-        """
-        Message back from the block validator,
-        :param block:
-        :return:
+        """Message back from the block validator, that the validation is
+        complete
+        Args:
+        commit_new_block (Boolean): wether the new block should become the
+        chain head or not.
+        result (Dict): Map of the results of the fork resolution.
+        Returns:
+            None
         """
         try:
             with self._lock:

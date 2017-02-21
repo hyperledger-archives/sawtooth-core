@@ -14,36 +14,38 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import sys
 import unittest
+
+from sawtooth_validator.database.dict_database import DictDatabase
 
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
+
 from sawtooth_validator.journal.chain import BlockValidator
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.publisher import BlockPublisher
-from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
-    import \
-    BlockPublisher as TestModePublisher
-from sawtooth_validator.journal.consensus.test_mode.test_mode_consensus \
-    import \
-    BlockVerifier as TestModeVerifier
-from sawtooth_validator.journal.consensus.test_mode \
-    import test_mode_consensus
 from sawtooth_validator.journal.timed_cache import TimedCache
+
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+
+from sawtooth_validator.state.state_view import StateViewFactory
+
 from test_journal.block_tree_manager import BlockTreeManager
+
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockNetwork
+from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import SynchronousExecutor
 from test_journal.utils import wait_until
 
+from test_journal import mock_consensus
 
 LOGGER = logging.getLogger(__name__)
+
+
 
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
@@ -72,18 +74,20 @@ class TestBlockCache(unittest.TestCase):
         self.assertTrue("test" in bc)
         self.assertTrue(bc["test"] == "value")
 
-
 class TestBlockPublisher(unittest.TestCase):
     def setUp(self):
         self.blocks = BlockTreeManager()
         self.block_sender = MockBlockSender()
+        self.state_view_factory = MockStateViewFactory({})
 
     def test_publish(self):
 
         LOGGER.info(self.blocks)
         publisher = BlockPublisher(
-            consensus=TestModePublisher(),
+            consensus_module=mock_consensus,
             transaction_executor=MockTransactionExecutor(),
+            block_cache=self.blocks.block_cache,
+            state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             squash_handler=None,
             chain_head=self.blocks.chain_head)
@@ -112,12 +116,15 @@ class TestBlockPublisher(unittest.TestCase):
 class TestBlockValidator(unittest.TestCase):
     def setUp(self):
         self.btm = BlockTreeManager()
+        self.state_view_factory = MockStateViewFactory()
+
 
     def create_block_validator(self, new_block, on_block_validated):
         return BlockValidator(
-            consensus=TestModeVerifier(),
+            consensus_module=mock_consensus,
             new_block=new_block,
             chain_head=self.btm.chain_head,
+            state_view_factory=self.state_view_factory,
             block_cache=self.btm.block_cache,
             done_cb=on_block_validated,
             executor=MockTransactionExecutor(),
@@ -321,14 +328,16 @@ class TestChainController(unittest.TestCase):
         self.executor = SynchronousExecutor()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
+        self.state_view_factory = MockStateViewFactory()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
             pass
 
         self.chain_ctrl = ChainController(
-            consensus=TestModeVerifier(),
+            consensus_module=mock_consensus,
             block_cache=self.blocks.block_cache,
+            state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             executor=self.executor,
             transaction_executor=MockTransactionExecutor(),
@@ -424,9 +433,10 @@ class TestJournal(unittest.TestCase):
         journal = None
         try:
             journal = Journal(
-                consensus=test_mode_consensus,
+                consensus_module=mock_consensus,
                 block_store=btm.block_store.store,
                 block_cache=btm.block_cache,
+                state_view_factory=StateViewFactory(DictDatabase()),
                 block_sender=self.block_sender,
                 transaction_executor=self.txn_executor,
                 squash_handler=None

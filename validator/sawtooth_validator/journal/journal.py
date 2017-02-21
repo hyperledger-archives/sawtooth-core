@@ -24,7 +24,6 @@ from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -98,19 +97,21 @@ class Journal(object):
             self._exit = True
 
     def __init__(self,
-                 consensus,
+                 consensus_module,
                  block_store,
+                 state_view_factory,
                  block_sender,
                  transaction_executor,
                  squash_handler,
                  block_cache=None  # not require, allows tests to inject a
                  # prepopulated block cache.
                  ):
-        self._consensus = consensus
+        self._consensus_module = consensus_module
         self._block_store = BlockStoreAdapter(block_store)
         self._block_cache = block_cache
         if self._block_cache is None:
             self._block_cache = BlockCache(self._block_store)
+        self._state_view_factory = state_view_factory
 
         self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
@@ -126,8 +127,10 @@ class Journal(object):
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
-            consensus=self._consensus.BlockPublisher(),
+            consensus_module=self._consensus_module,
             transaction_executor=self._transaction_executor,
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
             block_sender=self._block_sender,
             squash_handler=self._squash_handler,
             chain_head=self._block_store.chain_head
@@ -135,9 +138,10 @@ class Journal(object):
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
         self._chain_controller = ChainController(
-            consensus=self._consensus.BlockVerifier(),
+            consensus_module=self._consensus_module,
             block_sender=self._block_sender,
             block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
             executor=ThreadPoolExecutor(1),
             transaction_executor=self._transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,
@@ -175,7 +179,7 @@ class Journal(object):
     def on_block_received(self, block):
         """
         New block has been received, queue it with the chain controller
-        for processeing.
+        for processing.
         """
         self._block_queue.put(block)
 

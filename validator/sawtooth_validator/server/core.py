@@ -44,6 +44,7 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PingHandler
+from sawtooth_validator.state.state_view import StateViewFactory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,8 +65,8 @@ class Validator(object):
                                        network_endpoint[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
-        lmdb = LMDBNoLockDatabase(db_filename, 'n')
-        context_manager = ContextManager(lmdb)
+        merkle_db = LMDBNoLockDatabase(db_filename, 'n')
+        context_manager = ContextManager(merkle_db)
 
         block_db_filename = os.path.join(data_dir, 'block.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
@@ -173,8 +174,9 @@ class Validator(object):
 
         # Create and configure journal
         self._journal = Journal(
-            consensus=dev_mode_consensus,
+            consensus_module=dev_mode_consensus,
             block_store=block_store,
+            state_view_factory=StateViewFactory(merkle_db),
             block_sender=block_sender,
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler())
@@ -203,14 +205,14 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
             client_handlers.StateListRequest(
-                lmdb,
+                merkle_db,
                 self._journal.get_block_store()),
             thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
             client_handlers.StateGetRequest(
-                lmdb,
+                merkle_db,
                 self._journal.get_block_store()),
             thread_pool)
 
