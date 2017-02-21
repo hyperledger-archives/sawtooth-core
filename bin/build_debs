@@ -42,25 +42,13 @@ rm -rf $build_dir
 mkdir -p $build_dir
 
 # Needed when VERSION=AUTO_STRICT
-rsync -aH $top_dir/.git/ $build_dir/.git/
+rsync -aH \
+    $top_dir/ \
+    $build_dir/
 
 for pkg in $pkgs
 do
     echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
-
-    mkdir -p $build_dir/$pkg
-    rsync -aH \
-        --exclude=debian \
-        --exclude=tests/unit \
-        --exclude=tests/integration \
-        --exclude=sawtooth_validator/consensus \
-        --exclude=gossip \
-        --exclude=journal \
-        --exclude=ledger \
-        --exclude=txnintegration \
-        --exclude=txnserver \
-        $top_dir/$pkg/ \
-        $build_dir/$pkg/ \
 
     cd $build_dir/$pkg
     if [ $pkg = "validator" ]; then
