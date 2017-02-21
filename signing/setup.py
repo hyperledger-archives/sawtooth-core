@@ -68,9 +68,9 @@ def version(default):
 setup(
     name='sawtooth-signing',
     version=version('0.8.1'),
-    description='Validator service for Sawtooth Lake distributed ledger from ',
-    author='Mic Bowman, Intel Labs',
-    url='http://www.intel.com',
+    description='Sawtooth Lake Signing Library',
+    author='Intel Corporation',
+    url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
     install_requires=[
         'bitcoin',

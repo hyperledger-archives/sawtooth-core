@@ -122,9 +122,9 @@ if os.path.exists("/lib/systemd/system"):
 setup(
     name='sawtooth-validator',
     version=version('0.8.1'),
-    description='Validator service for Sawtooth Lake distributed ledger from ',
-    author='Mic Bowman, Intel Labs',
-    url='http://www.intel.com',
+    description='Sawtooth Lake Validator',
+    author='Intel Corporation',
+    url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
     install_requires=[
         'sawtooth-signing',
