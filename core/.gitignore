@@ -1,8 +1,0 @@
-*.so
-*.egg-info
-dist
-build
-.coverage
-htmlcov
-nose2-junit.xml
-deps/
