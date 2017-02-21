@@ -58,17 +58,18 @@ def transaction_message_handler(msg, journal):
     logger.debug('handle transaction message with identifier %s',
                  msg.Transaction.Identifier)
 
-    with journal._txn_lock:
-        if journal.transaction_store.get(msg.Transaction.Identifier):
-            return
+    if journal.get_transaction_from_transaction_store(
+            msg.Transaction.Identifier):
+        return
 
-        if journal.pending_transactions.get(msg.Transaction.Identifier):
-            return
+    if journal.get_transaction_from_pending_transactions(
+            msg.Transaction.Identifier):
+        return
 
-        journal.add_pending_transaction(msg.Transaction)
-        journal.gossip.forward_message(msg,
-                                       exceptions=[msg.SenderID],
-                                       initialize=False)
+    journal.add_pending_transaction(msg.Transaction)
+    journal.gossip.forward_message(msg,
+                                   exceptions=[msg.SenderID],
+                                   initialize=False)
 
 
 class TransactionRequestMessage(message.Message):
@@ -96,13 +97,12 @@ def _txn_request_handler(msg, journal):
     # a transaction might be in the committed transaction list only as a
     # placeholder, so we have to make sure that it is there and that it is not
     # None
-    with journal._txn_lock:
-        txn = journal.transaction_store.get(msg.TransactionID)
-        if txn:
-            reply = txn.build_message()
-            journal.gossip.forward_message(reply)
-            return
+    txn = journal.get_transaction_from_transaction_store(msg.TransactionID)
+    if txn:
+        reply = txn.build_message()
+        journal.gossip.forward_message(reply)
+        return
 
-        journal.request_missing_txn(msg.TransactionID,
-                                    exceptions=[msg.SenderID],
-                                    request=msg)
+    journal.request_missing_txn(msg.TransactionID,
+                                exceptions=[msg.SenderID],
+                                request=msg)
