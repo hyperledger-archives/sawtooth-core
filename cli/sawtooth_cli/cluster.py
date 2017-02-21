@@ -408,22 +408,17 @@ def do_cluster_status(args):
         nodes = state['Nodes']
 
     # Check expected status of nodes vs what is returned from vnm
-    print("NodeName Expected Current")
+    print("NodeName".ljust(15), "Status".ljust(10))
     for node_name in nodes:
         if node_name not in node_names and \
                 (nodes[node_name]["Status"] == "Running" or
                     nodes[node_name]["Status"] == "No Response"):
-            print("{} {} {}".format(
-                node_name, nodes[node_name]["Status"], "Not Running"))
+            print(node_name.ljust(15), "Not Running".ljust(10))
         else:
             status = vnm.status(node_name)
-            if status == "UNKNOWN" and \
-                    nodes[node_name]["Status"] == "Stopped":
-                print("{} {} {}".format(node_name, nodes[node_name]["Status"],
-                                        status))
-            else:
-                print("{} {} {}".format(node_name, nodes[node_name]["Status"],
-                                        status))
+            if status == "UNKNOWN":
+                status = "Not Running"
+            print(node_name.ljust(15), status.ljust(10))
 
 
 def do_cluster_extend(args):
