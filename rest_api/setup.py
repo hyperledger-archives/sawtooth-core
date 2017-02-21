@@ -82,16 +82,3 @@ setup(name='sawtooth-rest-api',
               'stl-rest-api = sawtooth_rest_api.rest_api:main'
           ]
       })
-
-if "clean" in sys.argv and "--all" in sys.argv:
-    directory = os.path.dirname(os.path.realpath(__file__))
-    for root, fn_dir, files in os.walk(directory):
-        for fn in files:
-            if fn.endswith(".pyc"):
-                os.remove(os.path.join(root, fn))
-    for filename in ['.coverage']:
-        if os.path.exists(os.path.join(directory, filename)):
-            os.remove(os.path.join(directory, filename))
-    shutil.rmtree(os.path.join(directory, "build"), ignore_errors=True)
-    shutil.rmtree(os.path.join(directory, "htmlcov"), ignore_errors=True)
-    shutil.rmtree(os.path.join(directory, "deb_dist"), ignore_errors=True)
