@@ -117,7 +117,7 @@ class EnclaveWaitCertificate(object):
             my_id = \
                 base64.b32encode(
                     hashlib.sha256(
-                        self.signature.encode()).hexdigest().encode())
+                        self.signature.encode()).hexdigest().encode()).decode()
 
         return my_id[:16]
 
