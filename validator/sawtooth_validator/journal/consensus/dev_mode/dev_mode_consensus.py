@@ -33,6 +33,8 @@ class BlockPublisher(BlockPublisherInterface):
 
     """
     def __init__(self, block_cache, state_view):
+        super().__init__(block_cache, state_view)
+
         self._block_cache = block_cache
         self._state_view = state_view
         self._num_batches = 1
@@ -87,6 +89,8 @@ class TimedBlockPublisher(BlockPublisherInterface):
     a block"""
 
     def __init__(self, wait_time=20):
+        super().__init__(block_cache=None, state_view=None)
+
         self._wait_time = wait_time
         self._last_block_time = time.time()
 
@@ -105,6 +109,8 @@ class TimedBlockPublisher(BlockPublisherInterface):
 
 class BlockVerifier(BlockVerifierInterface):
     def __init__(self, block_cache, state_view):
+        super().__init__(block_cache, state_view)
+
         self._block_cache = block_cache
         self._state_view = state_view
 
@@ -120,6 +126,8 @@ class ForkResolver(ForkResolverInterface):
     # Provides the fork resolution interface for the BlockValidator to use
     # when deciding between 2 forks.
     def __init__(self, block_cache):
+        super().__init__(block_cache)
+
         self._block_cache = block_cache
 
     def compare_forks(self, cur_fork_head, new_fork_head):
