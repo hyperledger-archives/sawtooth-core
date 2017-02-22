@@ -108,8 +108,8 @@ class WaitTimer(object):
 
         local_mean = cls.compute_local_mean(certificates)
         previous_certificate_id = \
-            certificates[-1].identifier if certificates else\
-                NULL_BLOCK_IDENTIFIER
+            certificates[-1].identifier if certificates else \
+            NULL_BLOCK_IDENTIFIER
 
         # Create an enclave timer object and then use it to create a
         # WaitTimer object

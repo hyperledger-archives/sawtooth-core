@@ -139,6 +139,7 @@ class ForkResolverInterface(metaclass=ABCMeta):
                 none.
         """
         pass
+
     @abstractmethod
     def compare_forks(self, cur_fork_head, new_fork_head):
         """Given the head of two forks return which should be the fork that
@@ -147,7 +148,8 @@ class ForkResolverInterface(metaclass=ABCMeta):
 
         Args:
             cur_fork_head (Block): The current head of the block chain.
-            new_fork_head (Block): The head of the fork that is being evaluated.
+            new_fork_head (Block): The head of the fork that is being
+                evaluated.
         Returns:
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
