@@ -424,14 +424,9 @@ class ChainController(object):
                 elif commit_new_block:
                     self._chain_head = new_block
 
-                    # update the logic in the block store.
-                    for b in result["new_chain"]:
-                        self._block_store[b.identifier] = b
-
-                    self._block_store.set_chain_head(new_block.identifier)
-
-                    for b in result["cur_chain"]:
-                        del self._block_store[b.identifier]
+                    # update the the block store to have the new chain
+                    self._block_store.update_chain(result["new_chain"],
+                                                   result["cur_chain"])
 
                     LOGGER.info("Chain head updated to: %s", self._chain_head)
 

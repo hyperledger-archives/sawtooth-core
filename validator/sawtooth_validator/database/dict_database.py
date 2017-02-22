@@ -21,9 +21,12 @@ class DictDatabase(database.Database):
     tests. Provides all of the interface methods that
     the MerkleTree requires.
     """
-    def __init__(self):
+    def __init__(self, data=None):
         super(DictDatabase, self).__init__()
-        self._data = dict()
+        if data is None:
+            self._data = dict()
+        else:
+            self._data = data
 
     def get(self, key):
         return self._data.get(key)
@@ -34,21 +37,25 @@ class DictDatabase(database.Database):
     def set(self, key, value):
         self._data[key] = value
 
-    def set_batch(self, kvpairs):
-        for k, v in kvpairs:
+    def set_batch(self, add_pairs, del_keys=None):
+        if del_keys is not None:
+            for k in del_keys:
+                del self._data[k]
+
+        for k, v in add_pairs:
             self._data[k] = v
 
     def close(self):
         pass
 
     def delete(self, key):
-        pass
+        del self._data[key]
 
     def __len__(self):
-        pass
+        return len(self._data)
 
     def keys(self):
-        pass
+        return self._data.keys()
 
     def sync(self):
         pass

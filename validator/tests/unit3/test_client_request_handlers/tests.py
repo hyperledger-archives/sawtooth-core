@@ -55,7 +55,7 @@ class _ClientHandlerTestCase(unittest.TestCase):
         """Breaks the chain head causing certain "latest" requests to fail.
         Simulates what block store would look like if genesis had not been run.
         """
-        self._store.store.pop('chain_head_id')
+        del self._store.store['chain_head_id']
 
     def assertAllInstances(self, items, cls):
         """Checks that all items in a collection are instances of a class

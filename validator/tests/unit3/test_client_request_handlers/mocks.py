@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 
 
-class MockBlockStore(BlockStoreAdapter):
+class MockBlockStore(BlockStore):
     """
     Creates a block store with a preseeded chain of blocks.
     With defaults, creates three blocks with ids ranging from '0' to '2'.
@@ -28,7 +29,7 @@ class MockBlockStore(BlockStoreAdapter):
     meaningful state_root_hashes to a block.
     """
     def __init__(self, size=3):
-        super().__init__({})
+        super().__init__(DictDatabase())
 
         for i in range(size):
             self.add_block(str(i))
@@ -55,8 +56,7 @@ class MockBlockStore(BlockStoreAdapter):
             header_signature=block_id,
             batches=[])
 
-        self[block_id] = BlockWrapper(block)
-        self.set_chain_head(block_id)
+        self.update_chain([BlockWrapper(block)], [])
 
 
 def make_db_and_store(size=3, start='a'):

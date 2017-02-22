@@ -17,6 +17,7 @@ import logging
 
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchList
@@ -35,6 +36,7 @@ class Completer(object):
     def __init__(self, block_store):
         self.batch_cache = TimedCache()
         self.block_cache = BlockCache(block_store)
+        self.block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._on_block_received = None
         self._on_batch_received = None
 

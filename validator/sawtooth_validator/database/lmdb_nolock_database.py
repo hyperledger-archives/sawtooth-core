@@ -94,9 +94,12 @@ class LMDBNoLockDatabase(database.Database):
             txn.put(key.encode(), packed, overwrite=True)
         self.sync()
 
-    def set_batch(self, kvpairs):
+    def set_batch(self, add_pairs, del_keys=None):
         with self._lmdb.begin(write=True, buffers=True) as txn:
-            for k, v in kvpairs:
+            if del_keys is not None:
+                for k in del_keys:
+                    txn.delete(k)
+            for k, v in add_pairs:
                 packed = cbor.dumps(v)
                 txn.put(k.encode(), packed, overwrite=True)
         self.sync()
