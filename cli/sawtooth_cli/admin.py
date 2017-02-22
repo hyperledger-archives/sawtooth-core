@@ -12,35 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import os
-import sys
 
 from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.admin_command.genesis import add_genesis_parser
 from sawtooth_cli.admin_command.genesis import do_genesis
+from sawtooth_cli.admin_command.keygen import add_keygen_parser
+from sawtooth_cli.admin_command.keygen import do_keygen
+from sawtooth_cli.admin_command.utils import ensure_directory
 
 
 def do_admin(args):
-    if 'SAWTOOTH_HOME' in os.environ:
-        data_dir = os.path.join(os.environ['SAWTOOTH_HOME'], 'data')
-    else:
-        data_dir = '/var/lib/sawtooth'
-
-    try:
-        os.makedirs(data_dir, exist_ok=True)
-    except OSError as e:
-        print('Unable to create {}: {}'.format(data_dir, e), file=sys.stderr)
-        return
+    data_dir = ensure_directory('data', '/var/lib/sawtooth')
 
     if args.admin_cmd == 'genesis':
         do_genesis(args, data_dir)
+    elif args.admin_cmd == 'keygen':
+        do_keygen(args)
     else:
-        raise CliException("invalid command: {}".format(args.command))
+        raise CliException("invalid command: {}".format(args.admin_cmd))
 
 
 def add_admin_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('admin')
+    parser = subparsers.add_parser('admin', parents=[parent_parser])
     admin_sub = parser.add_subparsers(title='admin_commands', dest='admin_cmd')
 
-    add_genesis_parser(admin_sub, parser)
+    add_genesis_parser(admin_sub, parent_parser)
+    add_keygen_parser(admin_sub, parent_parser)

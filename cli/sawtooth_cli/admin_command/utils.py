@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,38 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
-import argparse
 import os
-
-from sawtooth_validator.server.core import Validator
-from sawtooth_validator.server.log import init_console_logging
-from sawtooth_validator.exceptions import GenesisError
-from sawtooth_validator.exceptions import LocalConfigurationError
-
-
-def parse_args(args):
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('--network-endpoint',
-                        help='Network endpoint URL',
-                        default='tcp://*:8800',
-                        type=str)
-    parser.add_argument('--component-endpoint',
-                        help='Validator component service endpoint',
-                        default='tcp://0.0.0.0:40000',
-                        type=str)
-    parser.add_argument('--peers',
-                        help='A list of peers to attempt to connect to '
-                             'in the format tcp://hostname:port',
-                        nargs='+')
-    parser.add_argument('-v', '--verbose',
-                        action='count',
-                        default=0,
-                        help='Increase output sent to stderr')
-
-    return parser.parse_args(args)
+import sys
 
 
 def ensure_directory(sawtooth_home_path, posix_fallback_path):
@@ -84,30 +54,3 @@ def ensure_directory(sawtooth_home_path, posix_fallback_path):
             sys.exit(1)
 
     return sawtooth_dir
-
-
-def main(args=sys.argv[1:]):
-    opts = parse_args(args)
-    verbose_level = opts.verbose
-
-    init_console_logging(verbose_level=verbose_level)
-
-    data_dir = ensure_directory('data', '/var/lib/sawtooth')
-    key_dir = ensure_directory('etc/keys', '/etc/sawtooth/keys')
-
-    validator = Validator(opts.network_endpoint,
-                          opts.component_endpoint,
-                          opts.peers,
-                          data_dir,
-                          key_dir)
-
-    try:
-        validator.start()
-    except KeyboardInterrupt:
-        print("Interrupted!", file=sys.stderr)
-    except LocalConfigurationError as local_config_err:
-        print(local_config_err, file=sys.stderr)
-    except GenesisError as genesis_err:
-        print(genesis_err, file=sys.stderr)
-    finally:
-        validator.stop()

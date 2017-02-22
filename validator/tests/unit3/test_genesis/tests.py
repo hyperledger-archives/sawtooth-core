@@ -20,6 +20,8 @@ import unittest
 from unittest.mock import Mock
 from unittest.mock import patch
 
+from sawtooth_signing import pbct as signing
+
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.genesis import InvalidGenesisStateError
@@ -29,9 +31,12 @@ class TestGenesisController(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
         self._temp_dir = None
+        self._identity_key = None
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
+        self._identity_key = signing.encode_privkey(
+            signing.generate_privkey(), 'hex')
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
@@ -44,6 +49,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             {},  # Empty block store
+            self._identity_key,
             data_dir=self._temp_dir
         )
 
@@ -59,6 +65,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            self._identity_key,
             data_dir=self._temp_dir
         )
 
@@ -74,6 +81,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            self._identity_key,
             data_dir=self._temp_dir
         )
 
@@ -94,6 +102,7 @@ class TestGenesisController(unittest.TestCase):
             Mock(name='txn_executor'),
             Mock('completer'),
             block_store,
+            self._identity_key,
             data_dir=self._temp_dir
         )
 
@@ -118,6 +127,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            self._identity_key,
             data_dir=self._temp_dir
         )
 
@@ -142,6 +152,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            self._identity_key,
             data_dir=self._temp_dir
         )
 
@@ -176,6 +187,7 @@ class TestGenesisController(unittest.TestCase):
             txn_executor,
             completer,
             block_store,
+            self._identity_key,
             data_dir=self._temp_dir
         )
 

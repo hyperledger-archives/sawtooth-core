@@ -37,25 +37,39 @@ class GenesisController(object):
                  transaction_executor,
                  completer,
                  block_store,
+                 identity_key,
                  data_dir):
-        """
-        Creates a GenesisController
-        Params:
-            context_manager - a ContextManager instance
-            transaction_executor - a TransactionExecutor instance
-            completer - a Completer instance
-            block_store - the block store, with dict-like access
-            data_dir - the directory for data files
+        """Creates a GenesisController.
+
+        Args:
+            context_manager (:obj:`ContextManager`): A `ContextManager`
+                instance.
+            transaction_executor (:obj:`TransactionExecutor`): A
+                TransactionExecutor instance.
+            completer (:obj:`Completer`): A Completer instance.
+            block_store (:obj:): The block store, with dict-like access.
+            identity_key (str): A private key used for signing blocks, in hex.
+            data_dir (str): The directory for data files.
         """
         self._context_manager = context_manager
         self._transaction_executor = transaction_executor
         self._completer = completer
         self._block_store = block_store
+        self._identity_priv_key = identity_key
         self._data_dir = data_dir
 
     def requires_genesis(self):
         """
         Determines if the system should be put in genesis mode
+
+        Returns:
+            bool: return whether or not a genesis block is required to be
+                generated.
+
+        Raises:
+            InvalidGenesisStateError: raises this error if there is invalid
+                combination of the following: genesis.batch, existing chain
+                head, and block chain id.
         """
 
         genesis_file = os.path.join(self._data_dir, 'genesis.batch')
@@ -70,7 +84,7 @@ class GenesisController(object):
 
         block_chain_id = self._get_block_chain_id()
         is_genesis_node = block_chain_id is None
-        LOGGER.debug('network_name: %s', block_chain_id)
+        LOGGER.debug('block_chain_id: %s', block_chain_id)
 
         if has_genesis_batches and has_chain_head:
             raise InvalidGenesisStateError(
@@ -89,8 +103,13 @@ class GenesisController(object):
         """
         Starts the genesis block creation process.  Will call the given
         `on_done` callback on successful completion.
-        Params:
-            on_done - a function called on completion
+
+        Args:
+            on_done (function): a function called on completion
+
+        Raises:
+            InvalidGenesisStateError: raises this error if a genesis block is
+                unable to be produced, or the resulting block-chain-id saved.
         """
         genesis_file = os.path.join(self._data_dir, 'genesis.batch')
         try:
@@ -138,7 +157,7 @@ class GenesisController(object):
         block_builder.add_batches(genesis_batches)
         block_builder.set_state_hash(state_hash)
 
-        GenesisController._sign_block(block_builder)
+        self._sign_block(block_builder)
 
         block = block_builder.build_block()
         blkw = BlockWrapper(block=block, status=BlockStatus.Valid)
@@ -193,21 +212,19 @@ class GenesisController(object):
 
         return BlockBuilder(genesis_header)
 
-    @staticmethod
-    def _sign_block(block):
+    def _sign_block(self, block):
         """ The block should be complete and the final
         signature from the publishing validator (this validator) needs to
         be added.
         """
-        temp_key = signing.generate_privkey()
         public_key = signing.encode_pubkey(
-            signing.generate_pubkey(temp_key), "hex")
+            signing.generate_pubkey(self._identity_priv_key), "hex")
 
         block.block_header.signer_pubkey = public_key
         block_header = block.block_header
         header_bytes = block_header.SerializeToString()
         signature = signing.sign(
             header_bytes,
-            temp_key)
+            self._identity_priv_key)
         block.set_signature(signature)
         return block
