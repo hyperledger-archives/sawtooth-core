@@ -815,14 +815,6 @@ class PoetConsensus(object):
             journal.maximum_blocks_to_keep,
             WaitTimer.certificate_sample_length)
 
-        # initialize stats specifically for the block chain journal
-        journal.JournalStats.add_metric(stats.Value('LocalMeanTime', 0))
-        journal.JournalStats.add_metric(stats.Value('AggregateLocalMean', 0))
-        journal.JournalStats.add_metric(stats.Value('PopulationEstimate', 0))
-        journal.JournalStats.add_metric(stats.Value('ExpectedExpirationTime',
-                                                    0))
-        journal.JournalStats.add_metric(stats.Value('Duration', 0))
-
         # initialize the block handlers
         poet_transaction_block.register_message_handlers(journal)
 
