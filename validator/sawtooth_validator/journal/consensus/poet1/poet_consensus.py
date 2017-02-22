@@ -23,8 +23,13 @@ import math
 from sawtooth_signing import pbct as signing
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.poet1 import poet_transaction_block
+
+# Disabled pylint as this package no longer exists and will be replaced as PoET
+# is integrated into the validator.
+# pylint: disable=no-name-in-module
 from sawtooth_validator.journal.consensus.poet1\
     import validator_registry as val_reg
+
 from sawtooth_validator.journal.consensus.poet1.signup_info import SignupInfo
 from sawtooth_validator.journal.consensus.poet1.wait_timer import WaitTimer
 from sawtooth_validator.journal.consensus.poet1.wait_certificate\

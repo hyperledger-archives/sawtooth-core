@@ -17,16 +17,20 @@ import logging
 import hashlib
 from threading import RLock
 
+# Disabled pylint as these packages no longer exists and will be replaced as
+# PoET is integrated into the validator.
+# pylint: disable=import-error
+# pylint: disable=no-name-in-module
 from journal import transaction_block
 from journal.messages import transaction_block_message
+from sawtooth_validator.consensus.poet1.validator_registry \
+    import ValidatorRegistryTransaction
+
 from sawtooth_validator.journal.consensus.poet1.wait_certificate\
     import WaitCertificate
 from sawtooth_validator.journal.consensus.poet1.wait_certificate\
     import WaitTimer
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-
-from sawtooth_validator.consensus.poet1.validator_registry \
-    import ValidatorRegistryTransaction
 
 LOGGER = logging.getLogger(__name__)
 
