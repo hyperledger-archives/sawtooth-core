@@ -13,18 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM sawtooth-base
+version: "2.1"
 
-RUN apt-get update && apt-get install -y -q \
-    inetutils-ping \
-    python3-nose2
+services:
 
-RUN pip3 install \
-    PyYAML \
-    aiohttp
-
-VOLUME /project/sawtooth-core
-
-WORKDIR /project/sawtooth-core
-
-ENV PATH="/project/sawtooth-core/bin:$PATH"
+  unit-tests:
+    image: sawtooth-test:$ISOLATION_ID
+    volumes:
+      - ../../:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/rest_api/tests/unit
+    entrypoint: nose2-3 -v
+    environment:
+        PYTHONPATH: "/project/sawtooth-core/rest_api:\
+            /project/sawtooth-core/sdk/python"

@@ -113,6 +113,7 @@ test_core() {
 
 test_rest_api() {
     echo "[---Running REST API tests---]"
+    run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests -p $ISOLATION_ID
 }
 
 test_sdk() {
