@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
-from requests import ConnectionError
+from requests import ConnectionError as RequestsConnectionError
 from requests import Timeout
 
 from sawtooth_validator.exceptions import NotAvailableException
@@ -197,7 +197,7 @@ class WaitCertificate(object):
             raise \
                 ValueError(
                     'Previous certificate ID does not match: {0} != '
-                    '{1}'.foramt(
+                    '{1}'.format(
                         enclave_certificate.previous_certificate_id,
                         certificates[-1].identifier))
 
@@ -207,7 +207,7 @@ class WaitCertificate(object):
                 poet_public_key=poet_public_key)
         except Timeout:
             raise NotAvailableException
-        except ConnectionError:
+        except RequestsConnectionError:
             raise NotAvailableException
 
     def dump(self):

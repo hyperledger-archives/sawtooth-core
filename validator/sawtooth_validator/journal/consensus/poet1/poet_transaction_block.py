@@ -19,11 +19,12 @@ from threading import RLock
 
 from journal import transaction_block
 from journal.messages import transaction_block_message
-from sawtooth_validator.consensus.poet1.wait_certificate import WaitCertificate
-from sawtooth_validator.consensus.poet1.wait_certificate import WaitTimer
-from sawtooth_validator.consensus.poet1.validator_registry \
-    import ValidatorRegistryTransaction
-from gossip.common import NullIdentifier
+from sawtooth_validator.journal.consensus.poet1.wait_certificate\
+    import WaitCertificate
+from sawtooth_validator.journal.consensus.poet1.wait_certificate\
+    import WaitTimer
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             assert self.wait_certificate
             self.aggregate_local_mean = self.wait_certificate.local_mean
 
-            if self.PreviousBlockID != NullIdentifier:
+            if self.PreviousBlockID != NULL_BLOCK_IDENTIFIER:
                 assert self.PreviousBlockID in journal.block_store
                 self.aggregate_local_mean += \
                     journal.block_store[self.PreviousBlockID].\
@@ -191,16 +192,17 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             poet_public_key = None
 
             # First we need to get the store for validator signup information
-            store = \
-                journal.get_transaction_store(
-                    family=ValidatorRegistryTransaction,
-                    block_id=self.PreviousBlockID)
-            if store is None:
-                LOGGER.error(
-                    'Unable to retrieve %s store for block_id=%s',
-                    ValidatorRegistryTransaction.TransactionTypeName,
-                    self.PreviousBlockID)
-                return False
+            # store = \
+            #     journal.get_transaction_store(
+            #         family=ValidatorRegistryTransaction,
+            #         block_id=self.PreviousBlockID)
+            # if store is None:
+            #     LOGGER.error(
+            #        'Unable to retrieve %s store for block_id=%s',
+            #        ValidatorRegistryTransaction.TransactionTypeName,
+            #         self.PreviousBlockID)
+            #     return False
+            store = {}
 
             try:
                 registration = store.get(self.OriginatorID)
@@ -220,7 +222,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                     return False
 
             if poet_public_key is None:
-                LOGGER.warn('PoET public key is invalid')
+                LOGGER.warning('PoET public key is invalid')
                 return False
 
             LOGGER.debug(
