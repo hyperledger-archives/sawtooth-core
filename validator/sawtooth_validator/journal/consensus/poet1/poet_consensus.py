@@ -20,9 +20,8 @@ import hashlib
 import random
 import math
 
-from gossip import common
-from gossip import stats
 from sawtooth_signing import pbct as signing
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.poet1 import poet_transaction_block
 from sawtooth_validator.journal.consensus.poet1\
     import validator_registry as val_reg
@@ -566,7 +565,7 @@ class PoetConsensus(object):
         # Starting with the block previous to the one provided, walk the
         # blocks backwards until we get to the root
         block_id = block.PreviousBlockID
-        while block_id != common.NullIdentifier:
+        while block_id != NULL_BLOCK_IDENTIFIER:
             other_block = journal.block_store[block_id]
 
             # If we haven't cached the information for this block, then
@@ -925,7 +924,7 @@ class PoetConsensus(object):
         certs = collections.deque()
         count = WaitTimer.certificate_sample_length
 
-        while block.PreviousBlockID != common.NullIdentifier \
+        while block.PreviousBlockID != NULL_BLOCK_IDENTIFIER \
                 and len(certs) < count:
             block = block_store[block.PreviousBlockID]
             certs.appendleft(block.wait_certificate)
