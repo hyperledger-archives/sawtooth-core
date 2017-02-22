@@ -15,7 +15,6 @@
 import asyncio
 import json
 import base64
-from urllib.parse import unquote
 from aiohttp import web
 from aiohttp.helpers import parse_mimetype
 # pylint: disable=no-name-in-module,import-error
@@ -118,12 +117,7 @@ class RouteHandler(object):
         Fetch a list of blocks from the validator
         """
         error_traps = [error_handlers.MissingBlock()]
-
-        # aiohttp parses both "+" and "%2B" as " ", so we grab the last segment
-        # of the URL and parse it manually, rather than use `match_info`
-        block_id = unquote(request.url.raw_name)
-
-        print('BLOCK ID', block_id)
+        block_id = request.match_info.get('block_id', '')
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_GET_REQUEST,
