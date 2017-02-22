@@ -72,6 +72,7 @@ main() {
             test_sdk
             test_signing
             test_validator
+            test_poet
             ;;
         cli)
             test_cli
@@ -91,6 +92,10 @@ main() {
         validator)
             test_validator
             ;;
+        poet)
+            test_poet
+            ;;
+
         *)
             echo "Module '$MODULE' not found."
             ;;
@@ -136,5 +141,10 @@ test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator -p $ISOLATION_ID
 }
 
+test_poet(){
+    echo "[---Running poet---]"
+    run_docker_test ./poet/sawtooth_poet/tests/validator_registry_test/tp_validator_registry.yaml \
+    -s validator -p $ISOLATION_ID
+}
 
 main

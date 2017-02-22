@@ -265,8 +265,8 @@ def compare_set_request(req1, req2):
     if len(req1.entries) != len(req2.entries):
         return False
 
-    entries1 = [(e.address, e.data) for e in req1.entries]
-    entries2 = [(e.address, e.data) for e in req2.entries]
+    entries1 = sorted([(e.address, e.data) for e in req1.entries])
+    entries2 = sorted([(e.address, e.data) for e in req2.entries])
     if entries1 != entries2:
         return False
 
