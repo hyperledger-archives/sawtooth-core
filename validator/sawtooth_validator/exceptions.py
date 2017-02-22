@@ -44,3 +44,9 @@ class NotAvailableException(Exception):
     tried again later.
     """
     pass
+
+
+class UnknownConsensusModuleError(Exception):
+    """Error thrown when there is an invalid consensus module configuration.
+    """
+    pass

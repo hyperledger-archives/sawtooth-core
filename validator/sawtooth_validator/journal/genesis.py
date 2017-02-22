@@ -21,11 +21,16 @@ from sawtooth_signing import pbct as signing
 from sawtooth_validator.protobuf import genesis_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.journal.block_builder import BlockBuilder
+from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.consensus_factory import \
+    ConsensusFactory
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.exceptions import InvalidGenesisStateError
+from sawtooth_validator.exceptions import UnknownConsensusModuleError
+from sawtooth_validator.state.config_view import ConfigView
 
 
 LOGGER = logging.getLogger(__name__)
@@ -37,6 +42,7 @@ class GenesisController(object):
                  transaction_executor,
                  completer,
                  block_store,
+                 state_view_factory,
                  identity_key,
                  data_dir):
         """Creates a GenesisController.
@@ -48,6 +54,8 @@ class GenesisController(object):
                 TransactionExecutor instance.
             completer (:obj:`Completer`): A Completer instance.
             block_store (:obj:): The block store, with dict-like access.
+            state_view_factory (:obj:`StateViewFactory`): The state view
+                factory for creating state views during processing.
             identity_key (str): A private key used for signing blocks, in hex.
             data_dir (str): The directory for data files.
         """
@@ -55,6 +63,7 @@ class GenesisController(object):
         self._transaction_executor = transaction_executor
         self._completer = completer
         self._block_store = block_store
+        self._state_view_factory = state_view_factory
         self._identity_priv_key = identity_key
         self._data_dir = data_dir
 
@@ -124,7 +133,6 @@ class GenesisController(object):
 
         initial_state_root = self._context_manager.get_first_root()
 
-        block_builder = GenesisController._generate_genesis_block()
         genesis_batches = [batch for batch in genesis_data.batches]
         if len(genesis_batches) > 0:
             scheduler = SerialScheduler(
@@ -154,13 +162,20 @@ class GenesisController(object):
         LOGGER.debug('Produced state hash %s for genesis block.',
                      state_hash)
 
+        block_builder = GenesisController._generate_genesis_block()
         block_builder.add_batches(genesis_batches)
         block_builder.set_state_hash(state_hash)
+
+        block_publisher = self._get_block_publisher(state_hash)
+        block_publisher.initialize_block(block_builder)
 
         self._sign_block(block_builder)
 
         block = block_builder.build_block()
+        block_publisher.finalize_block(block)
+
         blkw = BlockWrapper(block=block, status=BlockStatus.Valid)
+
         LOGGER.info('Genesis block created: %s', blkw)
 
         self._completer.add_block(block)
@@ -178,6 +193,34 @@ class GenesisController(object):
 
         if on_done is not None:
             on_done()
+
+    def _get_block_publisher(self, state_hash):
+        """Returns the block publisher based on the consensus module set by the
+        "sawtooth_config" transaction family.
+
+        Args:
+            state_hash (str): The current state root hash for reading settings.
+
+        Raises:
+            InvalidGenesisStateError: if any errors occur getting the
+                BlockPublisher.
+        """
+        # verify the block with the configured consensus module
+        state_view = self._state_view_factory.create_view(state_hash)
+        config_view = ConfigView(state_view)
+
+        consensus_module_name = config_view.get_setting(
+            'sawtooth.consensus.algorithm', default_value='devmode')
+        try:
+            consensus_module = ConsensusFactory.get_consensus_module(
+                consensus_module_name)
+            return consensus_module.BlockPublisher(
+                BlockCache(self._block_store),
+                state_view=state_view)
+        except UnknownConsensusModuleError:
+            raise InvalidGenesisStateError(
+                'Unable to load consensus module "{}"'.format(
+                    consensus_module_name))
 
     def _get_block_chain_id(self):
         block_chain_id_file = os.path.join(self._data_dir, 'block-chain-id')
