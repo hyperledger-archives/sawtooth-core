@@ -18,18 +18,13 @@
 find_packages() {
     topdir=$1
     since=$2
-    exclude_dir=$3
 
     (
     if [ "$since" != "" ]; then
         git ls-files -mo "$topdir/*.py" -x build
         git diff --name-only $since "$topdir/*.py"
     else
-        if [ "$exclude_dir" != "" ]; then
-            find $topdir -name \*.py -not -path "*/$exclude_dir/*"
-        else
-            find $topdir -name \*.py
-        fi
+        find $topdir -name \*.py
     fi
     ) \
         | sort \
@@ -48,26 +43,22 @@ find_packages() {
 
 lint() {
     topdir=$(pwd)
-    pylint_bin=$1
-    subdir=$2
-    since=$3
-    pylintrc=$4
-    run_pep8=$5
-    exclude_dir=$6
+    subdir=$1
+    since=$2
 
+    pylintrc=.pylintrc-strict
+    pylint_bin="python3 -m pylint"
 
     error=0
 
-    packages=$(find_packages "$subdir" "$since" "$exclude_dir")
+    packages=$(find_packages "$subdir" "$since")
 
     if [ "$packages" != "" ]; then
-        if [ "$run_pep8" = "1" ]; then
-            [ $VERBOSE = 1 ] && (
-                echo "------------------------------------------------------------------------------"
-                echo "-- Running pep8 in $subdir..."
-            )
-            pep8 --config=$topdir/.pep8 $packages || error=1
-        fi
+	[ $VERBOSE = 1 ] && (
+	    echo "------------------------------------------------------------------------------"
+	    echo "-- Running pep8 in $subdir..."
+	)
+	pep8 --config=$topdir/.pep8 $packages || error=1
 
         [ $VERBOSE = 1 ] && (
             echo "------------------------------------------------------------------------------"
@@ -154,37 +145,37 @@ retval=0
 
 PYTHONPATH=$top_dir/signing
 export PYTHONPATH
-lint "python3 -m pylint" signing "$SINCE" .pylintrc-strict 1 || retval=1
+lint signing "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 export PYTHONPATH
-lint "python3 -m pylint" sdk/python "$SINCE" .pylintrc-strict 1 || retval=1
-lint "python3 -m pylint" sdk/examples/intkey_python "$SINCE" .pylintrc-strict 1 || retval=1
-lint "python3 -m pylint" sdk/examples/sawtooth_xo "$SINCE" .pylintrc-strict 1 || retval=1
-lint "python3 -m pylint" rest_api/sawtooth_rest_api "$SINCE" .pylintrc-strict 1 || retval=1
+lint sdk/python "$SINCE" || retval=1
+lint sdk/examples/intkey_python "$SINCE" || retval=1
+lint sdk/examples/sawtooth_xo "$SINCE" || retval=1
+lint rest_api/sawtooth_rest_api "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/core_transactions/config
 PYTHONPATH=$top_dir/sdk/python
 export PYTHONPATH
-lint "python3 -m pylint" core_transactions/config "$SINCE" .pylintrc-strict 1 || retval=1
+lint core_transactions/config "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
-lint "python3 -m pylint" validator/sawtooth_validator "$SINCE" .pylintrc-strict 1 consensus || retval=1
+lint validator/sawtooth_validator "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/poet/
 PYTHONPATH=$PYTHONPATH:$top_dir/poet/sawtooth_poet
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
 export PYTHONPATH
-lint "python3 -m pylint" poet "$SINCE" .pylintrc-strict 1 || retval=1
+lint poet "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/cli
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/manage
 export PYTHONPATH
-lint "python3 -m pylint" cli  "$SINCE" .pylintrc-strict 1 || retval=1
+lint cli "$SINCE" || retval=1
 
 exit $retval
