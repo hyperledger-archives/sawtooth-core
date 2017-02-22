@@ -17,12 +17,9 @@ The Common module defines utility methods used across gossip.
 """
 
 import json
-import logging
 from collections import OrderedDict
 
 import cbor
-
-logger = logging.getLogger(__name__)
 
 
 def pretty_print_dict(dictionary):
