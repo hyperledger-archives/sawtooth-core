@@ -35,8 +35,9 @@ from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
 class RouteHandler(object):
-    def __init__(self, stream_url):
+    def __init__(self, stream_url, timeout=300):
         self._stream = Stream(stream_url)
+        self._timeout = timeout
 
     @asyncio.coroutine
     def batches_post(self, request):
@@ -141,15 +142,13 @@ class RouteHandler(object):
         Sends a protobuf message to the validator
         Handles a possible timeout if validator is unresponsive
         """
-        timeout = 300
-
         if isinstance(content, BaseMessage):
             content = content.SerializeToString()
 
         future = self._stream.send(message_type=message_type, content=content)
 
         try:
-            response = future.result(timeout=timeout)
+            response = future.result(timeout=self._timeout)
         except FutureTimeoutError:
             raise errors.ValidatorUnavailable()
 

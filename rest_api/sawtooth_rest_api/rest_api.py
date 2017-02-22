@@ -28,7 +28,10 @@ def parse_args(args):
                         default="0.0.0.0")
     parser.add_argument('--stream-url',
                         help='The url to connect to a running Validator',
-                        default="tcp://localhost:40000")
+                        default='tcp://localhost:40000')
+    parser.add_argument('--timeout',
+                        help='Seconds to wait for a validator response',
+                        default=300)
 
     return parser.parse_args(args)
 
@@ -43,8 +46,8 @@ async def logging_middleware(app, handler):
     return logging_handler
 
 
-def start_rest_api(host, port, stream_url):
-    handler = RouteHandler(stream_url)
+def start_rest_api(host, port, stream_url, timeout):
+    handler = RouteHandler(stream_url, timeout)
 
     app = web.Application(middlewares=[logging_middleware])
     # Add routes to the web app
@@ -62,7 +65,11 @@ def start_rest_api(host, port, stream_url):
 def main():
     try:
         opts = parse_args(sys.argv[1:])
-        start_rest_api(opts.host, int(opts.port), opts.stream_url)
+        start_rest_api(
+            opts.host,
+            int(opts.port),
+            opts.stream_url,
+            int(opts.timeout))
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
