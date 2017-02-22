@@ -23,7 +23,7 @@ services:
       - ../../..:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_intkey_python validator:40000
+    entrypoint: ./bin/tp_intkey_python tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:

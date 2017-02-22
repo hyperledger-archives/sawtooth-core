@@ -143,7 +143,7 @@ class DockerNodeController(NodeController):
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
                 'container_name': '-'.join([self._prefix, proc, node_num]),
-                'entrypoint': 'bin/{} {}:40000'.format(proc, node_name)
+                'entrypoint': 'bin/{} tcp://{}:40000'.format(proc, node_name)
             }
 
         # add the host:container port mapping for validator
