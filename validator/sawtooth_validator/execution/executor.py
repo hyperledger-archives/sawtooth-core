@@ -121,3 +121,68 @@ class TransactionExecutor(object):
             self.processors,
             require_txn_processors=require_txn_processors)
         t.start()
+
+
+
+class _Waiter(object):
+    """The _Waiter class waits for a transaction processor
+    of a particular processor type to register and then processes
+    all of the transactions that have queued up while waiting for the
+    transaction processor.
+    """
+
+    def __init__(self,
+                 send_and_process_func,
+                 processor_type,
+                 processors,
+                 in_queue,
+                 waiters_by_type):
+        super().__init__()
+        self._processors = processors
+        self._processor_type = processor_type
+        self._in_queue = in_queue
+        self._send_and_process = send_and_process_func
+        self._waiters_by_type = waiters_by_type
+
+    def add_to_in_queue(self, content):
+        self._in_queue.put_nowait(content)
+
+    def run_in_threadpool(self):
+        LOGGER.info('Waiting for transaction processor (%s, %s, %s)',
+                    self._processor_type.name,
+                    self._processor_type.version,
+                    self._processor_type.encoding)
+        self._processors.wait_to_process(self._processor_type)
+        while not self._in_queue.empty():
+            content = self._in_queue.get_nowait()
+            identity = self._processors.get_next_of_type(
+                self._processor_type).identity
+            self._send_and_process(content, identity)
+
+        del self._waiters_by_type[self._processor_type]
+
+
+class _WaitersByType(object):
+    """Simple threadsafe datastructure to be a Map of ProcessorType: _Waiter
+    pairs. It needs to be threadsafe so it can be accessed from each of the
+    _Waiter threads after processing all of the queued transactions.
+    """
+    def __init__(self):
+        self._waiters = {}
+        self._lock = threading.RLock()
+
+    def __contains__(self, item):
+        with self._lock:
+            return item in self._waiters
+
+    def __getitem__(self, item):
+        with self._lock:
+            return self._waiters[item]
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            self._waiters[key] = value
+
+    def __delitem__(self, key):
+        with self._lock:
+            del self._waiters[key]
