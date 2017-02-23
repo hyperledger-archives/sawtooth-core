@@ -41,7 +41,7 @@ lint() {
     subdir=$1
     since=$2
 
-    pylintrc=.pylintrc-strict
+    pylintrc=.pylintrc
     pylint_bin="python3 -m pylint"
 
     error=0
