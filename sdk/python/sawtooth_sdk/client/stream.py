@@ -135,18 +135,20 @@ class _SendReceiveThread(Thread):
     def _monitor_disconnects(self):
         """Monitors the client socket for disconnects
         """
-        yield from self._monitor_sock.recv()
-        LOGGER.debug("monitor socket received disconnect event")
+        yield from self._monitor_sock.recv_multipart()
+        self._sock.disable_monitor()
+        self._monitor_sock.close(linger=0)
+        self._monitor_sock = None
+        self._sock.disconnect(self._url)
         self._ready_event.clear()
+        LOGGER.debug("monitor socket received disconnect event")
         for future in self._futures.future_values():
             future.set_result(FutureError())
         for task in asyncio.Task.all_tasks(self._event_loop):
             task.cancel()
+        self._event_loop.stop()
         self._send_queue = None
         self._recv_queue = None
-        self._sock.close()
-        self._sock = None
-        self._event_loop.call_soon(self._event_loop.stop)
 
     def put_message(self, message):
         """
@@ -189,7 +191,8 @@ class _SendReceiveThread(Thread):
         :param future: concurrent.futures.Future not used
         """
         self._event_loop.call_soon_threadsafe(self._event_loop.stop)
-        self._sock.close()
+        self._sock.close(linger=0)
+        self._monitor_sock.close(linger=0)
         self._context.destroy()
 
     def run(self):
@@ -200,10 +203,10 @@ class _SendReceiveThread(Thread):
                 asyncio.set_event_loop(self._event_loop)
             if self._context is None:
                 self._context = zmq.asyncio.Context()
-            self._sock = self._context.socket(zmq.DEALER)
+            if self._sock is None:
+                self._sock = self._context.socket(zmq.DEALER)
             self._sock.identity = _generate_id()[0:16].encode('ascii')
-            self._sock.set(zmq.LINGER, 0)
-            self._sock.connect('tcp://' + self._url)
+            self._sock.connect(self._url)
             self._monitor_sock = self._sock.get_monitor_socket(
                 zmq.EVENT_DISCONNECTED)
             self._send_queue = asyncio.Queue(loop=self._event_loop)

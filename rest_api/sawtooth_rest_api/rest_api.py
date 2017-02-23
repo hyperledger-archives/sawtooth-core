@@ -28,7 +28,7 @@ def parse_args(args):
                         default="0.0.0.0")
     parser.add_argument('--stream-url',
                         help='The url to connect to a running Validator',
-                        default="localhost:40000")
+                        default="tcp://localhost:40000")
 
     return parser.parse_args(args)
 

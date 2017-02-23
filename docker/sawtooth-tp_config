@@ -21,4 +21,4 @@ ARG PROJECT_DIR="/project/sawtooth-core"
 
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ./bin/tp_config validator:40000
+ENTRYPOINT ./bin/tp_config tcp://validator:40000

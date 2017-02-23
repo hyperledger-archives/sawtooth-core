@@ -25,7 +25,7 @@ services:
       - 40000
     depends_on:
       - validator
-    entrypoint: ./bin/tp_config -vv validator:40000
+    entrypoint: ./bin/tp_config -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   tp_xo:
@@ -36,7 +36,7 @@ services:
       - 40000
     depends_on:
       - validator
-    entrypoint: ./bin/tp_xo_python -vv validator:40000
+    entrypoint: ./bin/tp_xo_python -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -59,7 +59,7 @@ services:
       - 8080
     depends_on:
      - validator
-    entrypoint: ./bin/rest_api --stream-url validator:40000
+    entrypoint: ./bin/rest_api --stream-url tcp://validator:40000
     stop_signal: SIGKILL
 
   integration_test:

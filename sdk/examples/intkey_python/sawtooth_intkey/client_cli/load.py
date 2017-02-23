@@ -80,4 +80,4 @@ def add_load_parser(subparsers, parent_parser):
         '-U', '--url',
         type=str,
         help='connection URL for validator',
-        default='localhost:40000')
+        default='tcp://localhost:40000')
