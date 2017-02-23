@@ -143,8 +143,7 @@ class GenesisController(object):
             for batch in genesis_data.batches:
                 scheduler.add_batch(batch)
 
-            self._transaction_executor.execute(scheduler,
-                                               require_txn_processors=True)
+            self._transaction_executor.execute(scheduler)
 
             scheduler.finalize()
             scheduler.complete(block=True)

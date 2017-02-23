@@ -44,6 +44,7 @@ from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
+from sawtooth_validator.state.config_view import ConfigViewFactory
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -53,6 +54,7 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PingHandler
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -98,7 +100,10 @@ class Validator(object):
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
                                      secured=False)
-        executor = TransactionExecutor(self._service, context_manager)
+        executor = TransactionExecutor(service=self._service,
+                                       context_manager=context_manager,
+                                       config_view_factory=ConfigViewFactory(
+                                           StateViewFactory(merkle_db)))
 
         identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
