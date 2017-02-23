@@ -23,6 +23,7 @@ from aiohttp.helpers import parse_mimetype
 from google.protobuf.json_format import MessageToJson, MessageToDict
 from google.protobuf.message import Message as BaseMessage
 
+from sawtooth_sdk.client.exceptions import ValidatorConnectionError
 from sawtooth_sdk.client.future import FutureTimeoutError
 from sawtooth_sdk.client.stream import Stream
 from sawtooth_sdk.protobuf.validator_pb2 import Message
@@ -159,7 +160,12 @@ class RouteHandler(object):
         except FutureTimeoutError:
             raise errors.ValidatorUnavailable()
 
-        return response.content
+        try:
+            return response.content
+            # the error is caused by resolving a FutureError
+            # on validator disconnect.
+        except ValidatorConnectionError:
+            raise errors.ValidatorUnavailable()
 
     @staticmethod
     def _try_response_parse(proto, response, traps=None):
