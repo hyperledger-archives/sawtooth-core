@@ -33,34 +33,66 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Completer(object):
-    def __init__(self, block_store):
+    """
+    The Completer is responsible for making sure blocks are formally
+    complete before they are delivered to the chain controller. A formally
+    complete block is a block that predecessor is in the block cache and all
+    the batches are present in the batch list and in the order specified by the
+    block header. If the predecessor or a batch is missing, a request message
+    is sent sent out over the gossip network.
+    """
+    def __init__(self, block_store, gossip):
+        """
+        :param block_store (dictionary) The block store shared with the journal
+        :param gossip (gossip.Gossip) Broadcasts block and batch request to
+                peers
+        """
+        self.gossip = gossip
         self.batch_cache = TimedCache()
         self.block_cache = BlockCache(block_store)
+        # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._on_block_received = None
         self._on_batch_received = None
 
-    def _check_block(self, block):
-        # currently only accepting finalized blocks
-        # in the future if the blocks will be built
-
+    def _complete_block(self, block):
+        """ Check the block to see if it is complete and if it can be passed to
+            the journal. If the block's predecessor is not in the block_cache
+            the predecessor is requested and the current block is dropped.
+            False is returned. If the block.batches and block.header.batch_ids
+            are not the same length, False is returned. The block's batch list
+            needs to be in the same order as the block.header.batch_ids list.
+            If any batches are missing from the block and we do not have the
+            batches in the batch_cache, they are requested. The block is then
+            dropped and False is returned. If the block has all of its expected
+            batches it is added to the block_cache and True is returned.
+        """
+        valid = True
         if block.previous_block_id not in self.block_cache:
             LOGGER.debug("Block discarded(Missing predecessor): %s",
                          block.header_signature[:8])
+            LOGGER.debug("Request missing predecessor: %s",
+                         block.previous_block_id)
+            self.gossip.broadcast_block_request(block.previous_block_id)
             return False
+
         if len(block.batches) != len(block.header.batch_ids):
             LOGGER.debug("Block discarded(Missing batches): %s",
                          block.header_signature[:8])
-            return False
+            valid = False
 
-        for i in range(len(block.batches)):
+        for i in range(len(block.header.batch_ids)):
             if block.batches[i].header_signature != block.header.batch_ids[i]:
                 LOGGER.debug("Block discarded(Missing batch): %s",
                              block.header_signature[:8])
-                return False
+                if block.header.batch_ids[i] not in self.batch_cache:
+                    LOGGER.debug("Request missing batch: %s",
+                                 block.header.batch_ids[i])
+                    self.gossip.broadcast_batch_by_batch_id_request(
+                        block.header.batch_ids[i])
+                valid = False
 
-        self.block_cache[block.header_signature] = block
-        return True
+        return valid
 
     def set_on_block_received(self, on_block_received_func):
         self._on_block_received = on_block_received_func
@@ -70,12 +102,27 @@ class Completer(object):
 
     def add_block(self, block):
         blkw = BlockWrapper(block)
-        if self._check_block(blkw):
+        if self._complete_block(blkw):
+            self.block_cache[block.header_signature] = blkw
             self._on_block_received(blkw)
 
     def add_batch(self, batch):
         self.batch_cache[batch.header_signature] = batch
         self._on_batch_received(batch)
+
+    def get_block(self, block_id):
+        if block_id in self.block_cache:
+            return self.block_cache[block_id]
+        return None
+
+    def get_batch(self, batch_id=None, ):
+        if batch_id in self.batch_cache:
+            return self.batch_cache[batch_id]
+        return None
+
+    def get_batch_by_transaction(self, transaction_id):
+        # need a transaction to batch store
+        return None
 
 
 class CompleterBatchListBroadcastHandler(Handler):
