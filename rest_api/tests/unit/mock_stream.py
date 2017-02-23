@@ -41,6 +41,8 @@ class MockStream(object):
     """
     def __init__(self):
         self._handlers = {}
+        self._add_handler(Message.CLIENT_STATE_LIST_REQUEST, _StateListHandler)
+        self._add_handler(Message.CLIENT_STATE_GET_REQUEST, _StateGetHandler)
         self._add_handler(Message.CLIENT_BLOCK_LIST_REQUEST, _BlockListHandler)
         self._add_handler(Message.CLIENT_BLOCK_GET_REQUEST, _BlockGetHandler)
 
@@ -212,6 +214,56 @@ class _MockHandler(object):
         request = self._request_proto()
         request.ParseFromString(content)
         return request
+
+
+class _StateListHandler(_MockHandler):
+    def __init__(self):
+        super().__init__(
+            client.ClientStateListRequest,
+            client.ClientStateListResponse,
+            Message.CLIENT_STATE_LIST_RESPONSE)
+
+    def handle(self, content):
+        request = self._parse_request(content)
+        state = _MockState()
+
+        head_id, leaves = state.get_leaves(request.address, request.head_id)
+        if leaves == None:
+            return self._response_proto(status=self._response_proto.NO_ROOT)
+        if leaves == []:
+            return self._response_proto(
+                status=self._response_proto.NO_RESOURCE,
+                head_id=head_id)
+
+        return self._response_proto(
+            status=self._response_proto.OK,
+            head_id=head_id,
+            leaves=leaves)
+
+
+class _StateGetHandler(_MockHandler):
+    def __init__(self):
+        super().__init__(
+            client.ClientStateGetRequest,
+            client.ClientStateGetResponse,
+            Message.CLIENT_STATE_GET_RESPONSE)
+
+    def handle(self, content):
+        request = self._parse_request(content)
+        state = _MockState()
+
+        head_id, value = state.get_leaf(request.address, request.head_id)
+        if value == None:
+            return self._response_proto(status=self._response_proto.NO_ROOT)
+        if value == '':
+            return self._response_proto(
+                status=self._response_proto.NO_RESOURCE,
+                head_id=head_id)
+
+        return self._response_proto(
+            status=self._response_proto.OK,
+            head_id=head_id,
+            value=value)
 
 
 class _BlockListHandler(_MockHandler):

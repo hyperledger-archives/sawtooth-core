@@ -78,6 +78,14 @@ class ApiTest(AioHTTPTestCase):
         self.assert_all_instances(data, dict)
         self.assertEqual(expected_length, len(data))
 
+    def assert_leaves_contain(self, leaves, address, value):
+        """Asserts that there is one leaf that matches an address,
+        and that its data when b64decoded matches an expected value.
+        """
+        matches = [l for l in leaves if l['address'] == address]
+        self.assertEqual(1, len(matches))
+        self.assertEqual(value, b64decode(matches[0]['data']))
+
     def assert_block_well_formed(self, block, expected_id):
         """Tests a block dict is fully expanded and matches the expected id.
         Assumes the block contains one batch and txn which share the id.
@@ -109,6 +117,238 @@ class ApiTest(AioHTTPTestCase):
         self.assertEqual(b'payload', b64decode(txns[0]['payload']))
         self.assertIsInstance(txns[0]['header'], dict)
         self.assertEqual(expected_id, txns[0]['header']['nonce'])
+
+    @unittest_run_loop
+    async def test_state_list(self):
+        """Verifies a GET /state without parameters works properly.
+
+        Fetches latest state from mock state data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2'
+            - a link property that ends in '/state?head=2'
+            - a data property that is a list of 3 leaf dicts
+            - and those leaves include the address/data pairs:
+                * 'a': b'3'
+                * 'b': b'5'
+                * 'c': b'7'
+        """
+        response = await self.get_json_assert_200('/state')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state?head=2')
+        self.assert_has_valid_data_list(response, 3)
+
+        self.assert_leaves_contain(response['data'], 'a', b'3')
+        self.assert_leaves_contain(response['data'], 'b', b'5')
+        self.assert_leaves_contain(response['data'], 'c', b'7')
+
+    @unittest_run_loop
+    async def test_state_list_with_head(self):
+        """Verifies a GET /state works properly with head specified.
+
+        Fetches all state from '1' in mock state data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '1'
+            - a link property that ends in '/state?head=1'
+            - a data property that is a list of 2 leaf dicts
+            - and those leaves include the address/data pairs:
+                * 'a': b'2'
+                * 'b': b'4'
+        """
+        response = await self.get_json_assert_200('/state?head=1')
+
+        self.assert_has_valid_head(response, '1')
+        self.assert_has_valid_link(response, '/state?head=1')
+        self.assert_has_valid_data_list(response, 2)
+
+        self.assert_leaves_contain(response['data'], 'a', b'2')
+        self.assert_leaves_contain(response['data'], 'b', b'4')
+
+    @unittest_run_loop
+    async def test_state_list_with_bad_head(self):
+        """Verifies a GET /state breaks properly with a bad head specified.
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/state?head=bad')
+
+    @unittest_run_loop
+    async def test_state_list_with_address(self):
+        """Verifies a GET /state works properly filtered by address.
+
+        Fetches latest state beginning with 'c' in data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2'
+            - a link property that ends in '/state?head=2&address=c'
+            - a data property that is a list of 1 leaf dict
+            - and that leaf include the address/data pairs: 'c': b'7'
+        """
+        response = await self.get_json_assert_200('/state?address=c')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state?head=2&address=c')
+        self.assert_has_valid_data_list(response, 1)
+
+        self.assert_leaves_contain(response['data'], 'c', b'7')
+
+    @unittest_run_loop
+    async def test_state_list_with_bad_address(self):
+        """Verifies a GET /state breaks properly filtered by a bad address.
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2'
+            - a link property that ends in '/state?head=2&address=bad'
+            - a data property that is an empty list
+        """
+        response = await self.get_json_assert_200('/state?address=bad')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state?head=2&address=bad')
+        self.assert_has_valid_data_list(response, 0)
+
+    @unittest_run_loop
+    async def test_state_list_with_head_and_address(self):
+        """Verifies GET /state works with a head and filtered by address.
+
+        Fetches state from '1', beginning with 'a', in data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '1'
+            - a link property that ends in '/state?head=1&address=a'
+            - a data property that is a list of 1 leaf dict
+            - and that leaf include the address/data pairs: 'c': b'7'
+        """
+        response = await self.get_json_assert_200('/state?address=a&head=1')
+
+        self.assert_has_valid_head(response, '1')
+        self.assert_has_valid_link(response, '/state?head=1&address=a')
+        self.assert_has_valid_data_list(response, 1)
+
+        self.assert_leaves_contain(response['data'], 'a', b'2')
+
+    @unittest_run_loop
+    async def test_state_list_with_head_too_early(self):
+        """Verifies GET /state breaks with head earlier than address filter
+
+        Tries to fetch state beginning with 'b', from '0', in data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '0'
+            - a link property that ends in '/state?head=0&address=b'
+            - a data property that is an empty list
+        """
+        response = await self.get_json_assert_200('/state?address=b&head=0')
+
+        self.assert_has_valid_head(response, '0')
+        self.assert_has_valid_link(response, '/state?head=0&address=b')
+        self.assert_has_valid_data_list(response, 0)
+
+    @unittest_run_loop
+    async def test_state_get(self):
+        """Verifies a GET /state/{address} without parameters works properly.
+
+        Fetches latest state with address 'a' in mock state data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2'
+            - a link property that ends in '/state/b?head=2'
+            - a data property that b64decodes to b'5'
+        """
+        response = await self.get_json_assert_200('/state/a')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state/a?head=2')
+        self.assertIn('data', response)
+
+        data = response['data']
+        self.assertIsInstance(data, str)
+        self.assertEqual(b'3', b64decode(data))
+
+    @unittest_run_loop
+    async def test_state_bad_get(self):
+        """Verifies a GET /state/{address} breaks with a bad address.
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/state/bad')
+
+    @unittest_run_loop
+    async def test_state_get_with_head(self):
+        """Verifies a GET /state/{address} works properly with head parameter.
+
+        Fetches state with address 'a', from '1', in data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2'
+            - a link property that ends in '/state/b?head=2'
+            - a data property that b64decodes to b'5'
+        """
+        response = await self.get_json_assert_200('/state/b?head=1')
+
+        self.assert_has_valid_head(response, '1')
+        self.assert_has_valid_link(response, '/state/b?head=1')
+        self.assertIn('data', response)
+
+        data = response['data']
+        self.assertIsInstance(data, str)
+        self.assertEqual(b'4', b64decode(data))
+
+    @unittest_run_loop
+    async def test_state_get_with_bad_head(self):
+        """Verifies a GET /state/{address} breaks properly with a bad head.
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/state/c?head=bad')
+
+    @unittest_run_loop
+    async def test_state_get_with_early_head(self):
+        """Verifies GET /state/{address} breaks with head earlier than address.
+
+        Tries to get address 'c', from '0', in data:
+            '0': {'a': b'1'},
+            '1': {'a': b'2', 'b': b'4'},
+            '2': {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/state/c?head=0')
 
     @unittest_run_loop
     async def test_block_list(self):
