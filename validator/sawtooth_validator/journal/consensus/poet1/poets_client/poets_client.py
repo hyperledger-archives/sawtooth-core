@@ -14,18 +14,13 @@
 # ------------------------------------------------------------------------------
 
 from collections import OrderedDict
+from urllib.parse import urljoin
 import logging
-from urlparse import urljoin
-
 import requests
 
 
 LOGGER = logging.getLogger(__name__)
 
-
-"""
-Reference Client for PoET as a Service(PoETS) Server.
-"""
 
 def ascii_encode_dict(item):
     """
@@ -38,7 +33,7 @@ def ascii_encode_dict(item):
             for key in sorted(item.keys()))
     elif isinstance(item, list):
         return [ascii_encode_dict(element) for element in item]
-    elif isinstance(item, unicode):
+    elif isinstance(item, str):
         return item.encode('ascii')
     else:
         return item
@@ -46,7 +41,7 @@ def ascii_encode_dict(item):
 
 class PoetsClient(object):
     """
-    Reference Poets Client
+    Reference Client for PoET as a Service(PoETS) Server.
 
     _poet_server_url: ServerUrl
     _proxies: HttpsProxy
