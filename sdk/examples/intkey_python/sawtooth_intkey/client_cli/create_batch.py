@@ -59,7 +59,26 @@ class IntKeyPayload(object):
         return self._sha512
 
 
-def create_intkey_transaction(verb, name, value, private_key, public_key):
+def create_intkey_transaction(verb, name, value, deps,
+                              private_key, public_key):
+    """Creates a signed intkey transaction.
+
+    Args:
+        verb (str): the action the transaction takes, either 'set', 'inc',
+            or 'dec'
+        name (str): the variable name which is altered by verb and value
+        value (int): the amount to set, increment, or decrement
+        deps ([str]): a list of transaction header_signatures which are
+            required dependencies which must be processed prior to
+            processing this transaction
+        private_key (str): the private key used to sign the transaction
+        public_key (str): the public key associated with the private key -
+            the public key is included in the transaction as signer_pubkey
+
+    Returns:
+        transaction (transaction_pb2.Transaction): the signed intkey
+            transaction
+    """
     payload = IntKeyPayload(
         verb=verb, name=name, value=value)
 
@@ -75,7 +94,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
         family_version='1.0',
         inputs=[addr],
         outputs=[addr],
-        dependencies=[],
+        dependencies=deps,
         payload_encoding="application/cbor",
         payload_sha512=payload.sha512(),
         batcher_pubkey=public_key,
@@ -123,9 +142,9 @@ def generate_word():
 def generate_word_list(count):
     if os.path.isfile('/usr/share/dict/words'):
         with open('/usr/share/dict/words', 'r') as fd:
-            return [x.strip() for x in fd.readlines()[0:count]]
+            return {x.strip(): None for x in fd.readlines()[0:count]}
     else:
-        return [generate_word() for _ in range(0, count)]
+        return {generate_word(): None for _ in range(0, count)}
 
 
 def do_populate(args, batches, words):
@@ -136,14 +155,19 @@ def do_populate(args, batches, words):
     total_txn_count = 0
     txns = []
     for i in range(0, len(words)):
+        name = list(words)[i]
         txn = create_intkey_transaction(
             verb='set',
-            name=words[i],
+            name=name,
             value=random.randint(9000, 100000),
+            deps=[],
             private_key=private_key,
             public_key=public_key)
         total_txn_count += 1
         txns.append(txn)
+        # Establish the signature of the txn associated with the word
+        # so we can create good dependencies later
+        words[name] = txn.header_signature
 
     batch = create_batch(
         transactions=txns,
@@ -163,10 +187,12 @@ def do_generate(args, batches, words):
     for i in range(0, args.count):
         txns = []
         for _ in range(0, random.randint(1, args.batch_max_size)):
+            name = random.choice(list(words))
             txn = create_intkey_transaction(
                 verb=random.choice(['inc', 'dec']),
-                name=random.choice(words),
+                name=name,
                 value=1,
+                deps=[words[name]],
                 private_key=private_key,
                 public_key=public_key)
             total_txn_count += 1
