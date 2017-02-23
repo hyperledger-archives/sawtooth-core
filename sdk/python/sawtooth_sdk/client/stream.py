@@ -71,6 +71,7 @@ class _SendReceiveThread(Thread):
         self._event_loop = None
         self._sock = None
         self._monitor_sock = None
+        self._monitor_fd = None
         self._recv_queue = None
         self._send_queue = None
         self._context = None
@@ -137,6 +138,7 @@ class _SendReceiveThread(Thread):
         """
         yield from self._monitor_sock.recv_multipart()
         self._sock.disable_monitor()
+        self._monitor_sock.disconnect(self._monitor_fd)
         self._monitor_sock.close(linger=0)
         self._monitor_sock = None
         self._sock.disconnect(self._url)
@@ -207,8 +209,11 @@ class _SendReceiveThread(Thread):
                 self._sock = self._context.socket(zmq.DEALER)
             self._sock.identity = _generate_id()[0:16].encode('ascii')
             self._sock.connect(self._url)
+            self._monitor_fd = "inproc://monitor.s-{}".format(
+                _generate_id()[0:5])
             self._monitor_sock = self._sock.get_monitor_socket(
-                zmq.EVENT_DISCONNECTED)
+                zmq.EVENT_DISCONNECTED,
+                addr=self._monitor_fd)
             self._send_queue = asyncio.Queue(loop=self._event_loop)
             self._recv_queue = asyncio.Queue(loop=self._event_loop)
             if first_time is False:
