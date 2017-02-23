@@ -32,10 +32,11 @@ class BlockStore(MutableMapping):
         self._block_store = block_db
 
     def __setitem__(self, key, value):
-        self._block_store[key] = {
-            "block": value.block.SerializeToString(),
-            "weight": value.weight
-        }
+        if key != value.identifier:
+            raise KeyError("Invalid key to store block under: {} expected {}".
+                           format(key, value.identifier))
+        add_ops = self._build_add_block_ops(value)
+        self._block_store.set_batch(add_ops)
 
     def __getitem__(self, key):
         stored_block = self._block_store[key]
@@ -81,15 +82,11 @@ class BlockStore(MutableMapping):
         """
         add_pairs = []
         del_keys = []
-        for v in new_chain:
-            ov = {
-                "block": v.block.SerializeToString(),
-                "weight": v.weight
-            }
-            add_pairs.append((v.identifier, ov))
+        for blkw in new_chain:
+            add_pairs = add_pairs + self._build_add_block_ops(blkw)
         if old_chain is not None:
-            for v in old_chain:
-                del_keys.append(v)
+            for blkw in old_chain:
+                del_keys = del_keys + self._build_remove_block_ops(blkw)
         add_pairs.append(("chain_head_id", new_chain[0].identifier))
 
         self._block_store.set_batch(add_pairs, del_keys)
@@ -111,3 +108,56 @@ class BlockStore(MutableMapping):
         Access to the underlying store dict.
         """
         return self._block_store
+
+    @staticmethod
+    def wrap_block(blkw):
+        return {
+            "block": blkw.block.SerializeToString(),
+            "weight": blkw.weight
+        }
+
+    @staticmethod
+    def _build_add_block_ops(blkw):
+        """Build the batch operations to add a block to the BlockStore.
+
+        :param blkw (BlockWrapper): block to add
+        :return:
+        list of key value tuples to add to the BlockStore
+        """
+        out = []
+        blk_id = blkw.identifier
+        out.append((blk_id, BlockStore.wrap_block(blkw)))
+        for batch in blkw.batches:
+            out.append((batch.header_signature, blk_id))
+            for txn in batch.transactions:
+                out.append((txn.header_signature, blk_id))
+        return out
+
+    @staticmethod
+    def _build_remove_block_ops(blkw):
+        """Build the batch operations to remove a block to the BlockStore.
+
+        :param blkw (BlockWrapper): block to remove
+        :return:
+        list of values to remove from the BlockStore
+        """
+        out = []
+        blk_id = blkw.identifier
+        out.append(blk_id)
+        for batch in blkw.batches:
+            out.append(batch.header_signature)
+            for txn in batch.transactions:
+                out.append(txn.header_signature)
+        return out
+
+    def get_block_by_transaction_id(self, txn_id):
+        return self.__getitem__(self._block_store[txn_id])
+
+    def has_transaction(self, txn_id):
+        return txn_id in self._block_store
+
+    def get_block_by_batch_id(self, batch_id):
+        return batch_id in self._block_store
+
+    def has_batch(self, batch_id):
+        return batch_id in self._block_store
