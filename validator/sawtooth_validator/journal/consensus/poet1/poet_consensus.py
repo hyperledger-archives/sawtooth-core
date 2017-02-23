@@ -912,7 +912,7 @@ class PoetConsensus(object):
 
     def create_block_message(self, block):
         msg = poet_transaction_block.PoetTransactionBlockMessage()
-        msg.TransactionBlock = block
+        msg.transaction_block = block
         return msg
 
     def build_certificate_list(self, block_store, block):

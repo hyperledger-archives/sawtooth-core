@@ -63,7 +63,7 @@ class PoetTransactionBlockMessage(
         super(PoetTransactionBlockMessage, self).__init__(minfo)
 
         tinfo = minfo.get('TransactionBlock', {})
-        self.TransactionBlock = PoetTransactionBlock(tinfo)
+        self.transaction_block = PoetTransactionBlock(tinfo)
 
 
 class PoetTransactionBlock(transaction_block.TransactionBlock):
