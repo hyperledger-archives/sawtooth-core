@@ -13,8 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from concurrent.futures import ThreadPoolExecutor
+import json
 import logging
 import threading
+import queue
+
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
@@ -28,14 +32,46 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TransactionExecutorThread(threading.Thread):
-    def __init__(self, service, context_manager, scheduler, processors,
-                 require_txn_processors=False):
+    """A thread of execution controlled by the TransactionExecutor.
+    Provides the functionality that the journal can process on several
+    schedulers at once.
+    """
+    def __init__(self,
+                 service,
+                 context_manager,
+                 scheduler,
+                 processors,
+                 waiters_by_type,
+                 waiting_threadpool,
+                 config_view_factory):
+        """
+
+        Args:
+            service (Interconnect): The zmq internal interface
+            context_manager (ContextManager): The cached state for tps
+            scheduler (scheduler.Scheduler): Provides the order of txns to
+                execute.
+            processors (ProcessorIteratorCollection): Provides the next
+                transaction processor to send to.
+            waiters_by_type (_WaitersByType): Queues up transactions based on
+                processor type.
+            waiting_threadpool (ThreadPoolExecutor): A thread pool to run
+                indefinite waiting functions in.
+            config_view_factory (ConfigViewFactory): Read the configuration
+                state
+        Attributes:
+            _tp_config_key (str): the key used to reference the part of state
+                where the list of required transaction processors are.
+        """
         super(TransactionExecutorThread, self).__init__()
         self._service = service
         self._context_manager = context_manager
         self._scheduler = scheduler
         self._processors = processors
-        self._require_txn_processors = require_txn_processors
+        self._config_view_factory = config_view_factory
+        self._tp_config_key = "sawtooth.validator.transaction_families"
+        self._waiters_by_type = waiters_by_type
+        self._waiting_threadpool = waiting_threadpool
 
     def _future_done_callback(self, request, result):
         """
@@ -62,6 +98,55 @@ class TransactionExecutorThread(threading.Thread):
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(txn.header)
 
+            processor_type = processor_iterator.ProcessorType(
+                header.family_name,
+                header.family_version,
+                header.payload_encoding)
+
+            config = self._config_view_factory.create_config_view(
+                txn_info.state_hash)
+            transaction_families = config.get_setting(
+                key=self._tp_config_key,
+                default_value="[]")
+
+            # After reading the transaction families required in configuration
+            # try to json.loads them into a python object
+            # If there is a misconfiguration, proceed as if there is no
+            # configuration.
+            try:
+                transaction_families = json.loads(transaction_families)
+                required_transaction_processors = [
+                    processor_iterator.ProcessorType(
+                        d.get('family'),
+                        d.get('version'),
+                        d.get('encoding')) for d in transaction_families]
+            except ValueError:
+                LOGGER.warning("sawtooth.validator.transaction_families "
+                               "misconfigured. Expecting a json array, found"
+                               " %s", transaction_families)
+                required_transaction_processors = []
+
+            # First check if the transaction should be failed
+            # based on configuration
+            if processor_type not in required_transaction_processors \
+                    and len(required_transaction_processors) > 0:
+                # The txn processor type is not in the required
+                # transaction processors so
+                # failing transaction right away
+                LOGGER.debug("failing transaction %s of type (name=%s,"
+                             "version=%s,encoding=%s) since it isn't"
+                             " required in the configuration",
+                             txn.header_signature,
+                             processor_type.name,
+                             processor_type.version,
+                             processor_type.encoding)
+
+                self._scheduler.set_transaction_execution_result(
+                    txn_signature=txn.header_signature,
+                    is_valid=False,
+                    context_id=None)
+                continue
+
             context_id = self._context_manager.create_context(
                 txn_info.state_hash,
                 inputs=list(header.inputs),
@@ -72,56 +157,86 @@ class TransactionExecutorThread(threading.Thread):
                 signature=txn.header_signature,
                 context_id=context_id).SerializeToString()
 
-            processor_type = processor_iterator.ProcessorType(
-                header.family_name,
-                header.family_version,
-                header.payload_encoding)
+            # Since we have already checked if the transaction should be failed
+            # all other cases should either be executed or waited for.
+            self._execute_or_wait_for_processor_type(
+                processor_type=processor_type,
+                content=content)
 
-            # Currently we only check for the sawtooth_config txn family,
-            # as it is the only family we know to require.
-            if self._require_txn_processors and \
-                    header.family_name == 'sawtooth_config' and \
-                    processor_type not in self._processors:
-                # wait until required processor is registered:
-                LOGGER.info('Waiting for transaction processor (%s, %s, %s)',
-                            header.family_name,
-                            header.family_version,
-                            header.payload_encoding)
-
-                self._processors.wait_to_process(processor_type)
-
-            if processor_type not in self._processors:
-                raise Exception("internal error, no processor available")
-            processor = self._processors.get_next_of_type(processor_type)
+    def _execute_or_wait_for_processor_type(self, processor_type, content):
+        processor = self._processors.get_next_of_type(
+            processor_type=processor_type)
+        if processor is None:
+            LOGGER.debug("no transaction processors registered for "
+                         "processor type %s", processor_type)
+            if processor_type not in self._waiters_by_type:
+                in_queue = queue.Queue()
+                in_queue.put_nowait(content)
+                waiter = _Waiter(self._send_and_process_result,
+                                 processor_type=processor_type,
+                                 processors=self._processors,
+                                 in_queue=in_queue,
+                                 waiters_by_type=self._waiters_by_type)
+                self._waiters_by_type[processor_type] = waiter
+                self._waiting_threadpool.submit(waiter.run_in_threadpool)
+            else:
+                self._waiters_by_type[processor_type].add_to_in_queue(
+                    content)
+        else:
             identity = processor.identity
+            self._send_and_process_result(content, identity)
 
-            future = self._service.send(
-                validator_pb2.Message.TP_PROCESS_REQUEST,
-                content,
-                identity=identity,
-                has_callback=True)
-            future.add_callback(self._future_done_callback)
+    def _send_and_process_result(self, content, identity):
+        future = self._service.send(
+            validator_pb2.Message.TP_PROCESS_REQUEST,
+            content,
+            identity=identity,
+            has_callback=True)
+        future.add_callback(self._future_done_callback)
 
 
 class TransactionExecutor(object):
-    def __init__(self, service, context_manager):
+    def __init__(self, service, context_manager, config_view_factory):
+        """
+
+        Args:
+            service (Interconnect): The zmq internal interface
+            context_manager (ContextManager): Cache of state for tps
+            config_view_factory (ConfigViewFactory): Read-only view of config
+                state.
+        Attributes:
+            processors (ProcessorIteratorCollection): All of the registered
+                transaction processors and a way to find the next one to send
+                to.
+            _waiting_threadpool (ThreadPoolExecutor): A threadpool to run
+                waiting to process transactions functions in.
+            _waiters_by_type (_WaitersByType): Threadsafe map of ProcessorType
+                to _Waiter that is waiting on a processor of that type.
+        """
         self._service = service
         self._context_manager = context_manager
         self.processors = processor_iterator.ProcessorIteratorCollection(
             processor_iterator.RoundRobinProcessorIterator)
+        self._config_view_factory = config_view_factory
+        self._waiting_threadpool = ThreadPoolExecutor(max_workers=3)
+        self._waiters_by_type = _WaitersByType()
 
     def create_scheduler(self, squash_handler, first_state_root):
         return SerialScheduler(squash_handler, first_state_root)
 
-    def execute(self, scheduler, require_txn_processors=False):
+    def execute(self, scheduler):
         t = TransactionExecutorThread(
-            self._service,
-            self._context_manager,
-            scheduler,
-            self.processors,
-            require_txn_processors=require_txn_processors)
+            service=self._service,
+            context_manager=self._context_manager,
+            scheduler=scheduler,
+            processors=self.processors,
+            waiters_by_type=self._waiters_by_type,
+            waiting_threadpool=self._waiting_threadpool,
+            config_view_factory=self._config_view_factory)
         t.start()
 
+    def stop(self):
+        self._waiting_threadpool.shutdown(wait=False)
 
 
 class _Waiter(object):
