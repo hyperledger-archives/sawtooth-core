@@ -1,4 +1,4 @@
-// Copyright 2016 Intel Corporation
+// Copyright 2016, 2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,4 +45,31 @@ message NetworkAcknowledgement {
     }
 
     Status status = 1;
+}
+
+message GossipBlockRequest {
+    // The id of the block that is being requested
+    string block_id = 1;
+
+    // The identity of the validator that is requesting the block
+    bytes node_id = 2;
+
+}
+
+message GossipBatchByBatchIdRequest {
+    // The id of the batch that is being requested
+    string id = 1;
+
+    // The identity of the validator that is requesting the batch
+    bytes node_id = 2;
+
+}
+
+message GossipBatchByTransactionIdRequest {
+    // The id's of the transaction that are in the batches requested
+    repeated string ids = 1;
+
+    // The identity of the validator that is requesting the batches
+    bytes node_id = 2;
+
 }
