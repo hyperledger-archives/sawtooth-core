@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
-from requests import ConnectionError as RequestsConnectionError
+import requests
 from requests import Timeout
 
 from sawtooth_validator.exceptions import NotAvailableException
@@ -207,7 +207,7 @@ class WaitCertificate(object):
                 poet_public_key=poet_public_key)
         except Timeout:
             raise NotAvailableException
-        except RequestsConnectionError:
+        except requests.ConnectionError:
             raise NotAvailableException
 
     def dump(self):
