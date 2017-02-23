@@ -17,6 +17,7 @@ import argparse
 import logging
 import time
 
+from sawtooth_sdk.client.exceptions import ValidatorConnectionError
 from sawtooth_sdk.client.stream import Stream
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
@@ -54,7 +55,10 @@ def do_load(args):
 
     for future in futures:
         result = future.result()
-        assert result.message_type == Message.CLIENT_BATCH_SUBMIT_RESPONSE
+        try:
+            assert result.message_type == Message.CLIENT_BATCH_SUBMIT_RESPONSE
+        except ValidatorConnectionError as vce:
+            LOGGER.warning("the future resolved to %s", vce)
 
     stop = time.time()
     print("batches: {} batch/sec: {}".format(
