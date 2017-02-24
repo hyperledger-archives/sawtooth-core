@@ -49,7 +49,7 @@ class TestWaitCertificate(unittest.TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 wait_timer=None,
-                block_digest="Reader's Digest")
+                block_hash="Reader's Digest")
 
     def test_create_wait_certificate_before_create_wait_timer(self):
         # Need to create signup information
@@ -61,7 +61,7 @@ class TestWaitCertificate(unittest.TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 wait_timer=None,
-                block_digest="Reader's Digest")
+                block_hash="Reader's Digest")
 
     def test_create_wait_certificate_before_wait_timer_expires(self):
         # Need to create signup information
@@ -79,7 +79,7 @@ class TestWaitCertificate(unittest.TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 wait_timer=wt,
-                block_digest="Reader's Digest")
+                block_hash="Reader's Digest")
 
         wt = \
             WaitTimer.create_wait_timer(
@@ -89,7 +89,7 @@ class TestWaitCertificate(unittest.TestCase):
             wc = \
                 WaitCertificate.create_wait_certificate(
                     wait_timer=wt,
-                    block_digest="Reader's Digest")
+                    block_hash="Reader's Digest")
 
     def test_create_wait_certificate_after_wait_timer_timed_out(self):
         # Need to create signup information
@@ -107,7 +107,7 @@ class TestWaitCertificate(unittest.TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 wait_timer=wt,
-                block_digest="Reader's Digest")
+                block_hash="Reader's Digest")
 
         wt = \
             WaitTimer.create_wait_timer(
@@ -121,7 +121,7 @@ class TestWaitCertificate(unittest.TestCase):
             wc = \
                 WaitCertificate.create_wait_certificate(
                     wait_timer=wt,
-                    block_digest="Reader's Digest")
+                    block_hash="Reader's Digest")
 
     def test_create_wait_certificate(self):
         # Need to create signup information and wait timer first
@@ -143,7 +143,7 @@ class TestWaitCertificate(unittest.TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 wait_timer=wt,
-                block_digest="Reader's Digest")
+                block_hash="Reader's Digest")
 
         self.assertIsNotNone(wc)
 
@@ -154,7 +154,7 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertAlmostEqual(wc.request_time, wt.request_time)
         self.assertAlmostEqual(wc.duration, wt.duration)
         self.assertEqual(wc.validator_address, wt.validator_address)
-        self.assertEqual(wc.block_digest, "Reader's Digest")
+        self.assertEqual(wc.block_hash, "Reader's Digest")
         self.assertIsNotNone(wc.signature)
         self.assertIsNotNone(wc.identifier)
 
@@ -174,7 +174,7 @@ class TestWaitCertificate(unittest.TestCase):
         another_wc = \
             WaitCertificate.create_wait_certificate(
                 wait_timer=wt,
-                block_digest="Pepto Bismol")
+                block_hash="Pepto Bismol")
 
         self.assertTrue(
             another_wc.is_valid([wc], signup_info.poet_public_key))
@@ -198,7 +198,7 @@ class TestWaitCertificate(unittest.TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 wait_timer=wt,
-                block_digest="Reader's Digest")
+                block_hash="Reader's Digest")
 
         dumped = wc.dump()
 
@@ -219,7 +219,7 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertAlmostEqual(wc.request_time, wc_copy.request_time)
         self.assertAlmostEqual(wc.duration, wc_copy.duration)
         self.assertEqual(wc.validator_address, wc_copy.validator_address)
-        self.assertEqual(wc.block_digest, wc_copy.block_digest)
+        self.assertEqual(wc.block_hash, wc_copy.block_hash)
         self.assertEqual(wc.signature, wc_copy.signature)
         self.assertEqual(wc.identifier, wc_copy.identifier)
 

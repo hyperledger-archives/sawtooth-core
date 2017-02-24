@@ -253,12 +253,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
                 hasher.update(tid)
-            block_digest = hasher.hexdigest()
+            block_hash = hasher.hexdigest()
 
             self.wait_certificate = \
                 WaitCertificate.create_wait_certificate(
                     wait_timer=self.wait_timer,
-                    block_digest=block_digest)
+                    block_hash=block_hash)
             if self.wait_certificate:
                 self.wait_timer = None
 
