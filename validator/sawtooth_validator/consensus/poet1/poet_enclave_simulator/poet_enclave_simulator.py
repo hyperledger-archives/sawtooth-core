@@ -343,7 +343,7 @@ class _PoetEnclaveSimulator(object):
                         previous_certificate_id,
                         cls._seal_private_key))
 
-            tagd = float(struct.unpack('L', tag[-8:])[0]) / (2**64 - 1)
+            tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
 
             # Now compute the duration
             duration = cls.__MINIMUM_DURATTION - local_mean * math.log(tagd)
