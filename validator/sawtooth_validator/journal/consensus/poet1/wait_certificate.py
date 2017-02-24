@@ -113,8 +113,8 @@ class WaitCertificate(object):
         """
         enclave_certificate = \
             cls.poet_enclave.deserialize_wait_certificate(
-                serialized_certificate=serialized,
-                signature=signature)
+                serialized,
+                signature)
 
         if not enclave_certificate:
             raise \
@@ -209,8 +209,8 @@ class WaitCertificate(object):
 
         try:
             self.poet_enclave.verify_wait_certificate(
-                certificate=enclave_certificate,
-                poet_public_key=poet_public_key)
+                enclave_certificate,
+                poet_public_key)
         except Timeout:
             raise NotAvailableException
         except requests.ConnectionError:

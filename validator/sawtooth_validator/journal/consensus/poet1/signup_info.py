@@ -80,8 +80,7 @@ class SignupInfo(object):
                 info object.
         """
         enclave_signup_info = \
-            cls.poet_enclave.deserialize_signup_info(
-                serialized_signup_info=serialized)
+            cls.poet_enclave.deserialize_signup_info(serialized)
 
         return cls(enclave_signup_info)
 
@@ -115,8 +114,8 @@ class SignupInfo(object):
         """
         return \
             cls.poet_enclave.unseal_signup_data(
-                validator_address=validator_address,
-                sealed_signup_data=sealed_signup_data)
+                validator_address,
+                sealed_signup_data)
 
     def __init__(self, enclave_signup_info):
         self.poet_public_key = enclave_signup_info.poet_public_key
@@ -155,9 +154,9 @@ class SignupInfo(object):
             SignupInfo object
         """
         self.poet_enclave.verify_signup_info(
-            signup_info=self.enclave_signup_info,
-            originator_public_key_hash=originator_public_key_hash,
-            most_recent_wait_certificate_id=most_recent_wait_certificate_id)
+            self.enclave_signup_info,
+            originator_public_key_hash,
+            most_recent_wait_certificate_id)
 
     def serialize(self):
         # Simply return the serialized version of the enclave signup info
