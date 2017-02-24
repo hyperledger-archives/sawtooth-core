@@ -40,7 +40,7 @@ class EnclaveWaitCertificate(object):
             history of certs
         validator_address (str): The address of the validator that created the
             wait certificate.
-        block_digest (str): The digest of the block for which this wait
+        block_hash (str): The hash of the block for which this wait
             certificate was generated
         signature (str): Signature of the certificate using PoET private key
             generated during creation of signup info
@@ -50,7 +50,7 @@ class EnclaveWaitCertificate(object):
     def wait_certificate_with_wait_timer(cls,
                                          wait_timer,
                                          nonce,
-                                         block_digest):
+                                         block_hash):
         """
         Creates a wait certificate object using an already-created wait
         timer.
@@ -59,7 +59,7 @@ class EnclaveWaitCertificate(object):
             wait_timer (EnclaveWaitTimer): The wait timer we are creating
                 wait certificate for
             nonce (str): A random nonce created for this certificate
-            block_digest (str): The digest for the block that this wait
+            block_hash (str): The hash for the block that this wait
                 certificate is being created for
 
         Returns:
@@ -73,7 +73,7 @@ class EnclaveWaitCertificate(object):
                 request_time=wait_timer.request_time,
                 validator_address=wait_timer.validator_address,
                 nonce=nonce,
-                block_digest=block_digest)
+                block_hash=block_hash)
 
     @classmethod
     def wait_certificate_from_serialized(cls,
@@ -103,8 +103,8 @@ class EnclaveWaitCertificate(object):
                 validator_address=str(
                     deserialized_certificate.get('validator_address')),
                 nonce=str(deserialized_certificate.get('nonce')),
-                block_digest=str(deserialized_certificate.get(
-                    'block_digest')),
+                block_hash=str(deserialized_certificate.get(
+                    'block_hash')),
                 signature=signature,
                 serialized_certificate=serialized_certificate)
 
@@ -128,7 +128,7 @@ class EnclaveWaitCertificate(object):
                  request_time,
                  validator_address,
                  nonce,
-                 block_digest,
+                 block_hash,
                  signature=None,
                  serialized_certificate=None):
         self.duration = float(duration)
@@ -137,7 +137,7 @@ class EnclaveWaitCertificate(object):
         self.request_time = float(request_time)
         self.validator_address = str(validator_address)
         self.nonce = str(nonce)
-        self.block_digest = str(block_digest)
+        self.block_hash = str(block_hash)
         self.signature = signature
         self._serialized = serialized_certificate
 
@@ -165,7 +165,7 @@ class EnclaveWaitCertificate(object):
                 'request_time': self.request_time,
                 'validator_address': self.validator_address,
                 'nonce': self.nonce,
-                'block_digest': self.block_digest
+                'block_hash': self.block_hash
             }
 
             self._serialized = dict2json(certificate_dict)
