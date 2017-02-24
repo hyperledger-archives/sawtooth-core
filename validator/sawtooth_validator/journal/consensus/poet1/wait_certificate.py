@@ -75,10 +75,16 @@ class WaitCertificate(object):
                 wait certificate.
         """
 
-        enclave_certificate = \
-            cls.poet_enclave.create_wait_certificate(
-                wait_timer=wait_timer,
-                block_hash=block_hash)
+        enclave_certificate = None
+        try:
+            enclave_certificate = \
+                cls.poet_enclave.create_wait_certificate(
+                    wait_timer.enclave_wait_timer,
+                    block_hash)
+        except AttributeError as ex:
+            LOGGER.error(
+                'Exception caught trying to create wait certificate: %s',
+                ex)
 
         if not enclave_certificate:
             raise \
