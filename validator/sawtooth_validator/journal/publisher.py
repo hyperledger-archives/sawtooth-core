@@ -45,6 +45,23 @@ class BlockPublisher(object):
                  squash_handler,
                  chain_head,
                  identity_signing_key):
+        """
+        Creates a Journal instance.
+
+        Args:
+            consensus_module (module): The consensus module for block
+                processing.
+            transaction_executor (:obj:`TransactionExecutor`): A
+                TransactionExecutor instance.
+            block_cache (:obj:`BlockCache`): A BlockCache instance.
+            state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
+                read-only state views.
+            block_sender (:obj:`BlockSender`): The BlockSender instance.
+            squash_handler (function): Squash handler function for merging
+                contexts.
+            chain_head (:obj:`BlockWrapper`): The inital chain head.
+            identity_signing_key (str): Private key for signing blocks
+        """
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
         self._consensus_module = consensus_module  # the consensus module.

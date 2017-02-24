@@ -104,9 +104,25 @@ class Journal(object):
                  transaction_executor,
                  squash_handler,
                  identity_signing_key,
-                 block_cache=None  # not require, allows tests to inject a
-                 # prepopulated block cache.
-                 ):
+                 block_cache=None):
+        """
+        Creates a Journal instance.
+
+        Args:
+            consensus_module (module): The consensus module for block
+                processing.
+            block_store (:obj:): The block store.
+            state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
+                read-only state views.
+            block_sender (:obj:`BlockSender`): The BlockSender instance.
+            transaction_executor (:obj:`TransactionExecutor`): A
+                TransactionExecutor instance.
+            squash_handler (function): Squash handler function for merging
+                contexts.
+            identity_signing_key (str): Private key for signing blocks
+            block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
+                place of an internally created instance. Defaults to None.
+        """
         self._consensus_module = consensus_module
         self._block_store = BlockStoreAdapter(block_store)
         self._block_cache = block_cache
