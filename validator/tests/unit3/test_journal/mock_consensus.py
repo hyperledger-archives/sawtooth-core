@@ -34,7 +34,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             Boolean: True if the block should become a candidate
         """
-        return True;
+        return True
 
     def check_publish_block(self, block_header):
         """Initialize the candidate block_header.
@@ -85,4 +85,12 @@ class ForkResolver(ForkResolverInterface):
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
         """
-        return new_fork_head.block_num > cur_fork_head.block_num
+
+        new_num, new_weight = new_fork_head.block_num, new_fork_head.weight
+        cur_num, cur_weight = cur_fork_head.block_num, cur_fork_head.weight
+
+        # chains are ordered by length first, then weight
+        if new_num == cur_num:
+            return new_weight > cur_weight
+        else:
+            return new_num > cur_num
