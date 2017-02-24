@@ -120,7 +120,7 @@ and run the following commands:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key --config /home/ubuntu/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F ledger.transaction.integer_key
 
 This will start txnvalidator and logging output will be printed to the
 terminal window.
@@ -132,33 +132,11 @@ terminal window.
     validator as part of the tutorial. The script clears existing data
     files and keys, which would otherwise be loaded when starting the
     validator. The script also runs a utility that creates a genesis
-    block, and creates a special configuration file needed by an initial
-    node serving a genesis block (see note below for details). This
-    utility is part of the sawtooth CLI. To view the available
+    block. This utility is part of the sawtooth CLI. To view the available
     subcommands, run the command **sawtooth -h**. The genesis creation
     utility used in this tutorial is: **sawtooth admin poet0-genesis**
     (see script *genesis.sh* for the command line options used in the
     tutorial).
-
-
-.. note::
-  **Note on configuration needed for initial node serving genesis block**
-
-    The special configuration file created using the utility *genesis.sh*
-    described in the note above contains the following setting, which is
-    required for the intitial node that serves the genesis block:
-
-    **{"InitialConnectivity": 0}**
-
-    The initial node that serves the genesis block must refrain from
-    establishing initial connectivity until it assumes the role of a
-    validator that can provide ledger transfers to other nodes. The
-    initial validator already has the ledger, including the prefabricated
-    genesis block. However, if the initial connectivity is not set to
-    zero, it might attempt to  obtain the ledger from other nodes, rather
-    than providing the critical genesis block to the rest of the network.
-
-
 
 
 To stop the validator, press CTRL-c.
@@ -204,7 +182,7 @@ the following command:
 
    $ /project/sawtooth-core/docs/source/tutorial/genesis.sh
    $ cd /project/sawtooth-core
-   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place --config /home/ubuntu/sawtooth/v0.json
+   $ ./bin/txnvalidator -v -F mktplace.transactions.market_place
 
 Keep txnvalidator running while we interact with it using mktclient below.
 Open a new terminal in your **host** OS and type:
