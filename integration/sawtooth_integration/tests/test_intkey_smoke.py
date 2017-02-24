@@ -72,9 +72,10 @@ class TestIntkeySmoke(unittest.TestCase):
             populate,
             valid_txns,
             # invalid_txns,
-            valid_txns,
+            # valid_txns, -- These batches need to be rebuilt, batchs are only
+            # processed once. Resubmitting the same batche results in a nop.
             # populate,
-            valid_txns
+            # valid_txns
         )
 
         how_many_updates = 0

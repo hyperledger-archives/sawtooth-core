@@ -27,6 +27,7 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -82,8 +83,8 @@ class BlockValidator(object):
         """
         Check that the block is formally complete.
         - all batches are present and in the correct order
-        :param blkw:
-        :return:
+        :param blkw: the block to verify
+        :return: Boolean - True on success.
         """
 
         batch_ids = blkw.header.batch_ids
@@ -99,6 +100,10 @@ class BlockValidator(object):
         return True
 
     def _verify_block_signature(self, blkw):
+        """ Verify a block is properly signed.
+        :param blkw: the block to verify
+        :return: Boolean - True on success.
+        """
         return signing.verify(blkw.block.header, blkw.block.header_signature,
                               blkw.header.signer_pubkey)
 
@@ -107,7 +112,9 @@ class BlockValidator(object):
         satisfied, ie already committed by this block or prior block in the
         chain.
 
-        :param batch: the batch
+        :param batch: the batch to verify
+        :param committed_txn(TransactionCache): Current set of commited
+        transaction, updated during processing.
         :return:
         Boolean: True if all dependencies are present.
         """
@@ -268,7 +275,7 @@ class BlockValidator(object):
             cur_blkw = \
                 self._block_cache[cur_blkw.previous_block_id]
 
-    def _compare_forks(self, fork_root, new_chain, cur_chain):
+    def _compare_forks(self, new_chain, cur_chain):
         """
         Compare the two chains and determine which should be the head.
         """
@@ -281,7 +288,17 @@ class BlockValidator(object):
         """
         Compute the batch change sets.
         """
-        return ([], [])
+        committed_txn = []
+        for blkw in new_chain:
+            for batch in blkw.batches:
+                committed_txn = committed_txn + list(batch.transactions)
+
+        uncommitted_txn = []
+        for blkw in cur_chain:
+            for batch in blkw.batches:
+                uncommitted_txn = uncommitted_txn + list(batch.transactions)
+
+        return (committed_txn, uncommitted_txn)
 
     def run(self):
         """
@@ -304,9 +321,8 @@ class BlockValidator(object):
                                                             cur_chain)
 
             # 2) Walk back until we find the common ancestor
-            fork_root = self._find_common_ancestor(new_blkw, cur_blkw,
-                                                   new_chain, cur_chain)
-            # We now have the root of the fork.
+            self._find_common_ancestor(new_blkw, cur_blkw,
+                                       new_chain, cur_chain)
 
             # 3) Determine the validity of the new fork
             # build the transaction cache to simulate the state of the
@@ -332,8 +348,7 @@ class BlockValidator(object):
                 return
 
             # 4) Evaluate the 2 chains to see which is the one true chain.
-            commit_new_chain = self._compare_forks(fork_root, new_chain,
-                                                   cur_chain)
+            commit_new_chain = self._compare_forks(new_chain, cur_chain)
 
             # 5) Consensus to compute batch sets (only if we are switching).
             if commit_new_chain:

@@ -63,8 +63,9 @@ class BlockStore(MutableMapping):
 
     def __str__(self):
         out = []
-        for v in self._block_store.values():
-            out.append(str(v))
+        for key in self._block_store.keys():
+            value = self._block_store[key]
+            out.append(str(value))
         return ','.join(out)
 
     def update_chain(self, new_chain, old_chain=None):
@@ -120,7 +121,7 @@ class BlockStore(MutableMapping):
     def _build_add_block_ops(blkw):
         """Build the batch operations to add a block to the BlockStore.
 
-        :param blkw (BlockWrapper): block to add
+        :param blkw (BlockWrapper): Block to add BlockStore.
         :return:
         list of key value tuples to add to the BlockStore
         """
@@ -135,9 +136,9 @@ class BlockStore(MutableMapping):
 
     @staticmethod
     def _build_remove_block_ops(blkw):
-        """Build the batch operations to remove a block to the BlockStore.
+        """Build the batch operations to remove a block from the BlockStore.
 
-        :param blkw (BlockWrapper): block to remove
+        :param blkw (BlockWrapper): Block to remove.
         :return:
         list of values to remove from the BlockStore
         """
