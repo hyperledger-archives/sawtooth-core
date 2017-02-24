@@ -103,6 +103,7 @@ class Journal(object):
                  block_sender,
                  transaction_executor,
                  squash_handler,
+                 identity_signing_key,
                  block_cache=None  # not require, allows tests to inject a
                  # prepopulated block cache.
                  ):
@@ -115,6 +116,7 @@ class Journal(object):
 
         self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
+        self._identity_signing_key = identity_signing_key
         self._block_sender = block_sender
 
         self._block_publisher = None
@@ -133,7 +135,8 @@ class Journal(object):
             state_view_factory=self._state_view_factory,
             block_sender=self._block_sender,
             squash_handler=self._squash_handler,
-            chain_head=self._block_store.chain_head
+            chain_head=self._block_store.chain_head,
+            identity_signing_key=self._identity_signing_key
         )
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)

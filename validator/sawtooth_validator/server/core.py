@@ -190,7 +190,8 @@ class Validator(object):
             state_view_factory=StateViewFactory(merkle_db),
             block_sender=block_sender,
             transaction_executor=executor,
-            squash_handler=context_manager.get_squash_handler())
+            squash_handler=context_manager.get_squash_handler(),
+            identity_signing_key=identity_signing_key)
 
         self._genesis_controller = GenesisController(
             context_manager=context_manager,

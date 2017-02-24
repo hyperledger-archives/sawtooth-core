@@ -16,6 +16,8 @@
 import logging
 import unittest
 
+from sawtooth_signing import pbct as signing
+
 from sawtooth_validator.database.dict_database import DictDatabase
 
 from sawtooth_validator.journal.block_cache import BlockCache
@@ -90,7 +92,8 @@ class TestBlockPublisher(unittest.TestCase):
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             squash_handler=None,
-            chain_head=self.blocks.chain_head)
+            chain_head=self.blocks.chain_head,
+            identity_signing_key=self.blocks.identity_signing_key)
 
         # initial load of existing state
         publisher.on_chain_updated(self.blocks.chain_head, [], [])
@@ -439,7 +442,8 @@ class TestJournal(unittest.TestCase):
                 state_view_factory=StateViewFactory(DictDatabase()),
                 block_sender=self.block_sender,
                 transaction_executor=self.txn_executor,
-                squash_handler=None
+                squash_handler=None,
+                identity_signing_key=btm.identity_signing_key
             )
 
             self.gossip.on_batch_received = journal.on_batch_received

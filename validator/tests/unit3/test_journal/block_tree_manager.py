@@ -80,6 +80,8 @@ class BlockTreeManager(object):
         self.signing_key = signing.generate_privkey()
         self.public_key = signing.encode_pubkey(
             signing.generate_pubkey(self.signing_key), "hex")
+
+        self.identity_signing_key = signing.generate_privkey()
         self.genesis_block = self._generate_genesis_block()
         self.block_store[self.genesis_block.identifier] = self.genesis_block
         self.set_chain_head(self.genesis_block)
@@ -91,7 +93,8 @@ class BlockTreeManager(object):
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             squash_handler=None,
-            chain_head=self.genesis_block)
+            chain_head=self.genesis_block,
+            identity_signing_key=self.identity_signing_key)
 
     def _get_block_id(self, block):
         if (block is None):
@@ -143,7 +146,7 @@ class BlockTreeManager(object):
         self.block_publisher.on_chain_updated(previous)
 
         while self.block_sender.new_block is None:
-            self.block_publisher.on_batch_received(Batch())
+            self.block_publisher.on_batch_received(self._generate_batch(''))
             self.block_publisher.on_check_publish_block(True)
 
         block = self.block_sender.new_block
@@ -212,7 +215,7 @@ class BlockTreeManager(object):
         block = BlockBuilder(genesis_header)
         block.add_batches([self._generate_batch("Genesis")])
         header_bytes = block.block_header.SerializeToString()
-        signature = signing.sign(header_bytes, self.signing_key)
+        signature = signing.sign(header_bytes, self.identity_signing_key)
         block.set_signature(signature)
         return BlockWrapper(block.build_block())
 
