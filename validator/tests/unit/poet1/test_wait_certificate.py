@@ -78,7 +78,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[])
         wc = \
             WaitCertificate.create_wait_certificate(
-                wait_timer=None,
+                wait_timer=wt,
                 block_digest="Reader's Digest")
 
         wt = \
@@ -88,7 +88,7 @@ class TestWaitCertificate(unittest.TestCase):
         with self.assertRaises(ValueError):
             wc = \
                 WaitCertificate.create_wait_certificate(
-                    wait_timer=None,
+                    wait_timer=wt,
                     block_digest="Reader's Digest")
 
     def test_create_wait_certificate_after_wait_timer_timed_out(self):
@@ -106,7 +106,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[])
         wc = \
             WaitCertificate.create_wait_certificate(
-                wait_timer=None,
+                wait_timer=wt,
                 block_digest="Reader's Digest")
 
         wt = \
@@ -120,7 +120,7 @@ class TestWaitCertificate(unittest.TestCase):
         with self.assertRaises(ValueError):
             wc = \
                 WaitCertificate.create_wait_certificate(
-                    wait_timer=None,
+                    wait_timer=wt,
                     block_digest="Reader's Digest")
 
     def test_create_wait_certificate(self):
@@ -142,7 +142,7 @@ class TestWaitCertificate(unittest.TestCase):
         # to the wait timer we just created
         wc = \
             WaitCertificate.create_wait_certificate(
-                wait_timer=None,
+                wait_timer=wt,
                 block_digest="Reader's Digest")
 
         self.assertIsNotNone(wc)
@@ -173,7 +173,7 @@ class TestWaitCertificate(unittest.TestCase):
         # to the wait timer we just created
         another_wc = \
             WaitCertificate.create_wait_certificate(
-                wait_timer=None,
+                wait_timer=wt,
                 block_digest="Pepto Bismol")
 
         self.assertTrue(
@@ -197,7 +197,7 @@ class TestWaitCertificate(unittest.TestCase):
         # Now we can create a wait certificate and serialize
         wc = \
             WaitCertificate.create_wait_certificate(
-                wait_timer=None,
+                wait_timer=wt,
                 block_digest="Reader's Digest")
 
         dumped = wc.dump()
