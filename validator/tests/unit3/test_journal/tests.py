@@ -48,7 +48,6 @@ from test_journal import mock_consensus
 LOGGER = logging.getLogger(__name__)
 
 
-
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
         """ Test that misses will load from the block store.
@@ -75,6 +74,7 @@ class TestBlockCache(unittest.TestCase):
 
         self.assertTrue("test" in bc)
         self.assertTrue(bc["test"] == "value")
+
 
 class TestBlockPublisher(unittest.TestCase):
     def setUp(self):
@@ -120,7 +120,6 @@ class TestBlockValidator(unittest.TestCase):
     def setUp(self):
         self.btm = BlockTreeManager()
         self.state_view_factory = MockStateViewFactory()
-
 
     def create_block_validator(self, new_block, on_block_validated):
         return BlockValidator(
@@ -484,7 +483,6 @@ class TestTimedCache(unittest.TestCase):
         del bc["test"]
         self.assertFalse("test" in bc)
 
-
     def test_evict_expired(self):
         """ Test that values will be evicted from the
         cache as they time out.
@@ -521,4 +519,3 @@ class TestTimedCache(unittest.TestCase):
         self.assertEqual(len(bc), 2)
         self.assertTrue("test" in bc)
         self.assertTrue("test2" in bc)
-
