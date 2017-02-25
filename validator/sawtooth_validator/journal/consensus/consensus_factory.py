@@ -15,6 +15,7 @@
 import importlib
 
 from sawtooth_validator.exceptions import UnknownConsensusModuleError
+from sawtooth_validator.state.config_view import ConfigView
 
 
 class ConsensusFactory(object):
@@ -35,13 +36,38 @@ class ConsensusFactory(object):
             UnknownConsensusModuleError: Raised if the given module_name does
                 not correspond to a consensus implementation.
         """
+        module_package = module_name
         if module_name == 'devmode':
-            return importlib.import_module(
-                'sawtooth_validator.journal.consensus.dev_mode.'
-                'dev_mode_consensus')
-        elif module_name == 'poet1':
-            return importlib.import_module(
-                'sawtooth_validator.journal.consensus.poet1.poet_consensus')
-        else:
+            module_package = \
+                'sawtooth_validator.journal.consensus.dev_mode.'\
+                'dev_mode_consensus'
+        elif module_name == 'poet':
+            module_package = \
+                'sawtooth_validator.journal.consensus.poet1.poet_consensus'
+
+        try:
+            return importlib.import_module(module_package)
+        except ImportError:
             raise UnknownConsensusModuleError(
                 'Consensus module "{}" does not exist.'.format(module_name))
+
+    @staticmethod
+    def get_configured_consensus_module(state_view):
+        """Returns the consensus_module based on the consensus module set by the
+        "sawtooth_config" transaction family.
+
+        Args:
+            state_view_factory (:obj:`StateViewFactory`): The state view
+                factory for reading the configuration
+            state_hash (str): The current state root hash for reading settings.
+
+        Raises:
+            UnknownConsensusModuleError: Thrown when an invalid consensus
+                module has been configured.
+        """
+        config_view = ConfigView(state_view)
+
+        consensus_module_name = config_view.get_setting(
+            'sawtooth.consensus.algorithm', default_value='devmode')
+        return ConsensusFactory.get_consensus_module(
+            consensus_module_name)

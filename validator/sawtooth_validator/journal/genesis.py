@@ -30,7 +30,6 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.exceptions import InvalidGenesisStateError
 from sawtooth_validator.exceptions import UnknownConsensusModuleError
-from sawtooth_validator.state.config_view import ConfigView
 
 
 LOGGER = logging.getLogger(__name__)
@@ -205,22 +204,15 @@ class GenesisController(object):
             InvalidGenesisStateError: if any errors occur getting the
                 BlockPublisher.
         """
-        # verify the block with the configured consensus module
         state_view = self._state_view_factory.create_view(state_hash)
-        config_view = ConfigView(state_view)
-
-        consensus_module_name = config_view.get_setting(
-            'sawtooth.consensus.algorithm', default_value='devmode')
         try:
-            consensus_module = ConsensusFactory.get_consensus_module(
-                consensus_module_name)
-            return consensus_module.BlockPublisher(
+            consensus = ConsensusFactory.get_configured_consensus_module(
+                state_view)
+            return consensus.BlockPublisher(
                 BlockCache(self._block_store),
                 state_view=state_view)
-        except UnknownConsensusModuleError:
-            raise InvalidGenesisStateError(
-                'Unable to load consensus module "{}"'.format(
-                    consensus_module_name))
+        except UnknownConsensusModuleError as e:
+            raise InvalidGenesisStateError(e)
 
     def _get_block_chain_id(self):
         block_chain_id_file = os.path.join(self._data_dir, 'block-chain-id')
