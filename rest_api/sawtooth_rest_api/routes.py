@@ -15,7 +15,6 @@
 import asyncio
 import json
 import base64
-from urllib.parse import unquote
 from aiohttp import web
 from aiohttp.helpers import parse_mimetype
 # pylint: disable=no-name-in-module,import-error
@@ -37,8 +36,9 @@ from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
 class RouteHandler(object):
-    def __init__(self, stream_url):
+    def __init__(self, stream_url, timeout=300):
         self._stream = Stream(stream_url)
+        self._timeout = timeout
 
     @asyncio.coroutine
     def batches_post(self, request):
@@ -119,12 +119,7 @@ class RouteHandler(object):
         Fetch a list of blocks from the validator
         """
         error_traps = [error_handlers.MissingBlock()]
-
-        # aiohttp parses both "+" and "%2B" as " ", so we grab the last segment
-        # of the URL and parse it manually, rather than use `match_info`
-        block_id = unquote(request.url.raw_name)
-
-        print('BLOCK ID', block_id)
+        block_id = request.match_info.get('block_id', '')
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_GET_REQUEST,
@@ -148,15 +143,13 @@ class RouteHandler(object):
         Sends a protobuf message to the validator
         Handles a possible timeout if validator is unresponsive
         """
-        timeout = 300
-
         if isinstance(content, BaseMessage):
             content = content.SerializeToString()
 
         future = self._stream.send(message_type=message_type, content=content)
 
         try:
-            response = future.result(timeout=timeout)
+            response = future.result(timeout=self._timeout)
         except FutureTimeoutError:
             raise errors.ValidatorUnavailable()
 
