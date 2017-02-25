@@ -24,6 +24,7 @@ from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
 from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.genesis import InvalidGenesisStateError
 from sawtooth_validator.state.merkle import MerkleDatabase
@@ -58,7 +59,8 @@ class TestGenesisController(unittest.TestCase):
             self.make_block_store(),  # Empty block store
             StateViewFactory(DictDatabase()),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         self.assertEqual(True, genesis_ctrl.requires_genesis())
@@ -75,7 +77,8 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
@@ -92,7 +95,8 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
@@ -114,7 +118,8 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
@@ -144,7 +149,8 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         with self.assertRaises(InvalidGenesisStateError):
@@ -170,7 +176,8 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         with self.assertRaises(InvalidGenesisStateError):
@@ -209,7 +216,8 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(state_database),
             self._identity_key,
-            data_dir=self._temp_dir
+            data_dir=self._temp_dir,
+            chain_id_manager=ChainIdManager(self._temp_dir)
         )
 
         on_done_fn = Mock(return_value='')

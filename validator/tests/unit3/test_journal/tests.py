@@ -342,7 +342,8 @@ class TestChainController(unittest.TestCase):
             executor=self.executor,
             transaction_executor=MockTransactionExecutor(),
             on_chain_updated=chain_updated,
-            squash_handler=None)
+            squash_handler=None,
+            chain_id_manager=None)
 
     def test_simple_case(self):
         # TEST Run the simple case
@@ -439,7 +440,8 @@ class TestJournal(unittest.TestCase):
                 block_sender=self.block_sender,
                 transaction_executor=self.txn_executor,
                 squash_handler=None,
-                identity_signing_key=btm.identity_signing_key
+                identity_signing_key=btm.identity_signing_key,
+                chain_id_manager=None
             )
 
             self.gossip.on_batch_received = journal.on_batch_received

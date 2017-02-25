@@ -40,6 +40,7 @@ from sawtooth_validator.journal.responder import \
     BatchByTransactionIdResponderHandler
 from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
+from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
@@ -131,7 +132,7 @@ class Validator(object):
         completer = Completer(block_store, self._gossip)
 
         block_sender = BroadcastBlockSender(completer, self._gossip)
-
+        chain_id_manager = ChainIdManager(data_dir)
         # Create and configure journal
         self._journal = Journal(
             block_store=block_store,
@@ -139,7 +140,9 @@ class Validator(object):
             block_sender=block_sender,
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler(),
-            identity_signing_key=identity_signing_key))
+            identity_signing_key=identity_signing_key,
+            chain_id_manager=chain_id_manager
+        )
 
         self._genesis_controller = GenesisController(
             context_manager=context_manager,
@@ -148,7 +151,8 @@ class Validator(object):
             block_store=block_store,
             state_view_factory=state_view_factory,
             identity_key=identity_signing_key,
-            data_dir=data_dir
+            data_dir=data_dir,
+            chain_id_manager=chain_id_manager
         )
 
         responder = Responder(completer)
