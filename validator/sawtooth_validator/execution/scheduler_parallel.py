@@ -116,23 +116,30 @@ class PredecessorTree:
         # Children readers must be added, since their reads must happen prior
         # to the write.
 
-        predecessors = set()
-
         tokens = self._tokenize_address(address)
 
-        # First, find enclosing_writer, enclosing_readers, and address_node (if
-        # the tree is deep enough).
-        enclosing_writer = None
-        address_node = None
+        predecessors = set()
+
+        # First, walk down from the root to the address, collecting all readers
+        # and updating the enclosing_writer if needed.
 
         node = self._root
-        for i, token in enumerate(tokens):
+        enclosing_writer = node.writer  # possibly None
+
+        # the readers at the root node will always be added
+        predecessors.update(set(node.readers))
+
+        for token in tokens:
+            # If the address isn't on the tree, then there aren't any
+            # predecessors below the node to worry about (because
+            # there isn't anything at all), so return the predecessors
+            # that have already been collected.
             if token not in node.children:
-                break
+                if enclosing_writer is not None:
+                    predecessors.add(enclosing_writer)
+                return predecessors
 
             node = node.children[token]
-            if i == len(tokens) - 1:
-                address_node = node
 
             # add enclosing readers directly to predecessors
             predecessors.update(set(node.readers))
@@ -143,16 +150,17 @@ class PredecessorTree:
         if enclosing_writer is not None:
             predecessors.add(enclosing_writer)
 
-        # Next, descend down the tree starting at address_node and find
+        # Next, descend down the tree starting at the address node and find
         # all children writers and readers.  Uses breadth first search.
+
         to_process = deque()
-        to_process.extendleft(address_node.children.values())
+        to_process.extendleft(node.children.values())
         while len(to_process) > 0:
             node = to_process.pop()
             predecessors.update(node.readers)
             if node.writer is not None:
                 predecessors.add(node.writer)
-            to_process.extendleft(address_node.children.values())
+            to_process.extendleft(node.children.values())
 
         return predecessors
 
@@ -188,23 +196,27 @@ class PredecessorTree:
         # this reader will also not impact the readers already recorded in the
         # tree.
 
-        predecessors = set()
-
         tokens = self._tokenize_address(address)
 
-        # First, find enclosing_writer and address_node (if the tree is deep
-        # enough).
-        enclosing_writer = None
-        address_node = None
+        predecessors = set()
+
+        # First, walk down from the root to the address, updating the
+        # enclosing_writer if needed.
 
         node = self._root
-        for i, token in enumerate(tokens):
+        enclosing_writer = node.writer  # possibly None
+
+        for token in tokens:
+            # If the address isn't on the tree, then there aren't any
+            # predecessors below the node to worry about (because
+            # there isn't anything at all), so return the predecessors
+            # that have already been collected.
             if token not in node.children:
-                break
+                if enclosing_writer is not None:
+                    predecessors.add(enclosing_writer)
+                return predecessors
 
             node = node.children[token]
-            if i == len(tokens) - 1:
-                address_node = node
 
             if node.writer is not None:
                 enclosing_writer = node.writer
@@ -212,14 +224,15 @@ class PredecessorTree:
         if enclosing_writer is not None:
             predecessors.add(enclosing_writer)
 
-        # Next, descend down the tree starting at address_node and find
+        # Next, descend down the tree starting at the address node and find
         # all children writers.  Uses breadth first search.
+
         to_process = deque()
-        to_process.extendleft(address_node.children.values())
+        to_process.extendleft(node.children.values())
         while len(to_process) > 0:
             node = to_process.pop()
             if node.writer is not None:
                 predecessors.add(node.writer)
-            to_process.extendleft(address_node.children.values())
+            to_process.extendleft(node.children.values())
 
         return predecessors
