@@ -23,6 +23,8 @@ from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.consensus_factory import \
+    ConsensusFactory
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
@@ -37,7 +39,6 @@ class BlockPublisher(object):
     Consensus deems it appropriate.
     """
     def __init__(self,
-                 consensus_module,
                  transaction_executor,
                  block_cache,
                  state_view_factory,
@@ -64,7 +65,6 @@ class BlockPublisher(object):
         """
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
-        self._consensus_module = consensus_module  # the consensus module.
         self._consensus = None
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
@@ -94,7 +94,9 @@ class BlockPublisher(object):
         prev_state = self._get_previous_block_root_state_hash(chain_head)
         state_view = self._state_view_factory. \
             create_view(prev_state)
-        self._consensus = self._consensus_module.\
+        consensus_module = ConsensusFactory.get_configured_consensus_module(
+            state_view)
+        self._consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
                            state_view=state_view)
 

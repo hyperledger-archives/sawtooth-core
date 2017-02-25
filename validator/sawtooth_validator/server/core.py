@@ -24,7 +24,6 @@ from sawtooth_signing import pbct as signing
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
-from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
@@ -186,7 +185,6 @@ class Validator(object):
 
         # Create and configure journal
         self._journal = Journal(
-            consensus_module=dev_mode_consensus,
             block_store=block_store,
             state_view_factory=state_view_factory,
             block_sender=block_sender,

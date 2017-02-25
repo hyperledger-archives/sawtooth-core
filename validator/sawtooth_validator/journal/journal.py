@@ -97,7 +97,6 @@ class Journal(object):
             self._exit = True
 
     def __init__(self,
-                 consensus_module,
                  block_store,
                  state_view_factory,
                  block_sender,
@@ -109,8 +108,6 @@ class Journal(object):
         Creates a Journal instance.
 
         Args:
-            consensus_module (module): The consensus module for block
-                processing.
             block_store (:obj:): The block store.
             state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
                 read-only state views.
@@ -123,7 +120,6 @@ class Journal(object):
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
-        self._consensus_module = consensus_module
         self._block_store = BlockStoreAdapter(block_store)
         self._block_cache = block_cache
         if self._block_cache is None:
@@ -145,7 +141,6 @@ class Journal(object):
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
-            consensus_module=self._consensus_module,
             transaction_executor=self._transaction_executor,
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
@@ -157,7 +152,6 @@ class Journal(object):
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
         self._chain_controller = ChainController(
-            consensus_module=self._consensus_module,
             block_sender=self._block_sender,
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
