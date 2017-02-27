@@ -27,33 +27,31 @@ describe('ProtoBuf', () => {
   describe('Message', () => {
     it('should correctly round trip with complete fields', () => {
       let encMessage = Message.encode({
-        messageType: 'test_message',
-        correlationId: 'corr_id',
-        content: Buffer.from('Hello', 'utf8'),
-        sender: 'sender_id'
-      }).finish()
-
-      let decMessage = Message.decode(encMessage)
-
-      assert.equal('test_message', decMessage.messageType)
-      assert.equal('corr_id', decMessage.correlationId)
-      assert.equal('Hello', decMessage.content.toString('utf8'))
-      assert.equal('sender_id', decMessage.sender)
-    })
-
-    it('should correctly round trip with partial fields', () => {
-      let encMessage = Message.encode({
-        messageType: 'test_message',
+        messageType: Message.MessageType.CLIENT_STATE_GET_REQUEST,
         correlationId: 'corr_id',
         content: Buffer.from('Hello', 'utf8')
       }).finish()
 
       let decMessage = Message.decode(encMessage)
 
-      assert.equal('test_message', decMessage.messageType)
+      assert.equal(Message.MessageType.CLIENT_STATE_GET_REQUEST,
+                   decMessage.messageType)
       assert.equal('corr_id', decMessage.correlationId)
       assert.equal('Hello', decMessage.content.toString('utf8'))
-      assert.ok(!decMessage.sender)
+    })
+
+    it('should correctly round trip with partial fields', () => {
+      let encMessage = Message.encode({
+        messageType: Message.MessageType.CLIENT_STATE_GET_RESPONSE,
+        content: Buffer.from('Hello', 'utf8')
+      }).finish()
+
+      let decMessage = Message.decode(encMessage)
+
+      assert.equal(Message.MessageType.CLIENT_STATE_GET_RESPONSE,
+                   decMessage.messageType)
+      assert.equal('Hello', decMessage.content.toString('utf8'))
+      assert.ok(!decMessage.correlationId)
     })
   })
 })
