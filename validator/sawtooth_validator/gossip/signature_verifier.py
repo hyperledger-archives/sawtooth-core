@@ -66,6 +66,10 @@ def validate_batch(batch):
                            batch.header_signature,
                            header.signer_pubkey)
 
+    if not valid:
+        LOGGER.debug("batch failed signature validation: %s",
+                     batch.header_signature)
+
     # validate all transactions in batch
     total = len(batch.transactions)
     index = 0
@@ -76,6 +80,10 @@ def validate_batch(batch):
             txn_header = TransactionHeader()
             txn_header.ParseFromString(txn.header)
             if txn_header.batcher_pubkey != header.signer_pubkey:
+                LOGGER.debug("txn batcher pubkey does not match signer"
+                             "pubkey for batch: %s txn: %s",
+                             batch.header_signature,
+                             txn.header_signature)
                 valid = False
         index += 1
 
@@ -89,6 +97,10 @@ def validate_transaction(txn):
     valid = signing.verify(txn.header,
                            txn.header_signature,
                            header.signer_pubkey)
+
+    if not valid:
+        LOGGER.debug("transaction signature invalid for txn: %s",
+                     txn.header_signature)
     return valid
 
 
