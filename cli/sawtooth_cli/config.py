@@ -25,7 +25,7 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 
 def add_config_parser(subparsers, parent_parser):

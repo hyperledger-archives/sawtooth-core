@@ -20,7 +20,7 @@ import hashlib
 import random
 import math
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.poet1 import poet_transaction_block
 

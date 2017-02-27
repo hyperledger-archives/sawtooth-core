@@ -16,7 +16,7 @@ import base64
 import json
 import hashlib
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_processor_test.message_factory import MessageFactory
 from sawtooth_poet.protobuf.validator_registry_pb2 import \

@@ -20,7 +20,7 @@ import logging
 import os
 import time
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase

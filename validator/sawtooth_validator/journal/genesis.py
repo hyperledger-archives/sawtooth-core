@@ -17,7 +17,7 @@ import logging
 import os
 from pathlib import Path
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_validator.protobuf import genesis_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.journal.block_builder import BlockBuilder

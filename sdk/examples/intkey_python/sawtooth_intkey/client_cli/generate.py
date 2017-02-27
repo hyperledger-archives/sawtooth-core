@@ -24,8 +24,8 @@ import string
 import time
 
 import cbor
-import bitcoin
 
+from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_sdk.protobuf import transaction_pb2
 from sawtooth_sdk.protobuf import batch_pb2
 
@@ -84,9 +84,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
 
     header_bytes = header.SerializeToString()
 
-    signature = bitcoin.ecdsa_sign(
-        header_bytes,
-        private_key)
+    signature = signing.sign(header_bytes, private_key)
 
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
@@ -105,9 +103,7 @@ def create_batch(transactions, private_key, public_key):
 
     header_bytes = header.SerializeToString()
 
-    signature = bitcoin.ecdsa_sign(
-        header_bytes,
-        private_key)
+    signature = signing.sign(header_bytes, private_key)
 
     batch = batch_pb2.Batch(
         header=header_bytes,
@@ -130,9 +126,8 @@ def generate_word_list(count):
 
 
 def do_generate(args):
-    private_key = bitcoin.random_key()
-    public_key = bitcoin.encode_pubkey(
-        bitcoin.privkey_to_pubkey(private_key), "hex")
+    private_key = signing.generate_privkey()
+    public_key = signing.generate_pubkey(private_key)
 
     words = generate_word_list(args.pool_size)
 

@@ -18,7 +18,7 @@ import sys
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.admin_command.utils import ensure_directory
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 
 def add_keygen_parser(subparsers, parent_parser):

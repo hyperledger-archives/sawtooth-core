@@ -17,7 +17,7 @@ import unittest
 import json
 import base64
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 from validator_registry_test.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
 from sawtooth_poet.protobuf.validator_registry_pb2 import \

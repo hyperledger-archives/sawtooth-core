@@ -15,7 +15,7 @@
 
 import logging
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, BatchList

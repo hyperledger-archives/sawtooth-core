@@ -18,7 +18,7 @@ import hashlib
 import base64
 import json
 
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.client.future import FutureTimeoutError

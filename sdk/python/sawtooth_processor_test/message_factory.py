@@ -14,7 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
-import bitcoin
+
+from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
@@ -35,17 +36,15 @@ from sawtooth_sdk.protobuf.state_context_pb2 import Entry
 
 
 def _private():
-    return bitcoin.random_key()
+    return signing.generate_privkey()
 
 
 def _private_to_public(private):
-    return bitcoin.encode_pubkey(
-        bitcoin.privkey_to_pubkey(private), "hex"
-    )
+    return signing.generate_pubkey(private)
 
 
 def _sign(content, private):
-    return bitcoin.ecdsa_sign(content, private)
+    return signing.sign(content, private)
 
 
 class MessageFactory(object):

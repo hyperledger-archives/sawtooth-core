@@ -15,13 +15,14 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
-import pybitcointools
 import os
 import random
 import sys
 import time
 import cProfile
 import argparse
+
+from sawtooth_signing import secp256k1_signer as signing
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 from sawtooth_sdk.protobuf import jvm_sc_pb2
@@ -83,9 +84,7 @@ def create_jvm_sc_transaction(verb, private_key, public_key,
         batcher=public_key)
     header_bytes = header.SerializeToString()
 
-    signature = pybitcointools.ecdsa_sign(
-        header_bytes,
-        private_key)
+    signature = signing.sign(header_bytes, private_key)
 
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
@@ -104,9 +103,7 @@ def create_batch(transactions, private_key, public_key):
 
     header_bytes = header.SerializeToString()
 
-    signature = pybitcointools.ecdsa_sign(
-        header_bytes,
-        private_key)
+    signature = signing.sign(header_bytes, private_key)
 
     batch = batch_pb2.Batch(
         header=header_bytes,
@@ -133,9 +130,8 @@ def generate_word_list(count):
 
 
 def do_generate(args):
-    private_key = pybitcointools.random_key()
-    public_key = pybitcointools.encode_pubkey(
-        pybitcointools.privkey_to_pubkey(private_key), "hex")
+    private_key = signing.generate_privkey()
+    public_key = signing.generate_pubkey(private_key)
 
     words = generate_word_list(args.pool_size)
 
