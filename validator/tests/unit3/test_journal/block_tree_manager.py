@@ -32,6 +32,7 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
+from sawtooth_validator.protobuf.setting_pb2 import Setting
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -47,6 +48,16 @@ def _generate_id(length=16):
     return ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits)
         for _ in range(length))
+
+
+def _setting_address(key):
+    return '000000' + hashlib.sha256(key.encode()).hexdigest()
+
+
+def _setting_entry(key, value):
+    return Setting(
+        entries=[Setting.Entry(key=key, value=value)]
+    ).SerializeToString()
 
 
 class BlockTreeManager(object):
@@ -76,6 +87,12 @@ class BlockTreeManager(object):
         self.block_store = BlockStoreAdapter({})
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
+
+        # add the mock reference to the consensus
+        self.state_db[_setting_address('sawtooth.consensus.algorithm')] = \
+            _setting_entry('sawtooth.consensus.algorithm',
+                           'test_journal.mock_consensus')
+
         self.state_view_factory = MockStateViewFactory(self.state_db)
         self.signing_key = signing.generate_privkey()
         self.public_key = signing.encode_pubkey(
@@ -87,7 +104,6 @@ class BlockTreeManager(object):
         self.set_chain_head(self.genesis_block)
 
         self.block_publisher = BlockPublisher(
-            consensus_module=mock_consensus,
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_cache,
             state_view_factory=self.state_view_factory,

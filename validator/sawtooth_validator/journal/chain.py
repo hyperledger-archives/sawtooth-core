@@ -19,6 +19,8 @@ from sawtooth_signing import pbct as signing
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.consensus_factory import \
+    ConsensusFactory
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
@@ -320,7 +322,6 @@ class ChainController(object):
     the current chain. If they are valid extend the chain.
     """
     def __init__(self,
-                 consensus_module,
                  block_cache,
                  block_sender,
                  state_view_factory,
@@ -330,7 +331,6 @@ class ChainController(object):
                  squash_handler):
         """Initialize the ChainController
         Args:
-            consensus_module: the python module containing the consensus
             algorithm to use.
              block_cache: The cache of all recent blocks and the processing
              state associated with them.
@@ -348,7 +348,6 @@ class ChainController(object):
             None
         """
         self._lock = RLock()
-        self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
         self._state_view_factory = state_view_factory
@@ -381,8 +380,14 @@ class ChainController(object):
         return self._chain_head
 
     def _verify_block(self, blkw):
+
+        state_view = self._state_view_factory.create_view(
+            self.chain_head.header.state_root_hash)
+        consensus_module = ConsensusFactory.get_configured_consensus_module(
+            state_view)
+
         validator = BlockValidator(
-            consensus_module=self._consensus_module,
+            consensus_module=consensus_module,
             new_block=blkw,
             chain_head=self._chain_head,
             block_cache=self._block_cache,

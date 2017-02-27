@@ -24,7 +24,6 @@ from sawtooth_signing import pbct as signing
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
-from sawtooth_validator.journal.consensus.dev_mode import dev_mode_consensus
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
@@ -38,6 +37,7 @@ from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
+from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
@@ -46,7 +46,6 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PingHandler
-from sawtooth_validator.state.state_view import StateViewFactory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -74,6 +73,7 @@ class Validator(object):
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'n')
         context_manager = ContextManager(merkle_db)
+        state_view_factory = StateViewFactory(merkle_db)
 
         block_db_filename = os.path.join(data_dir, 'block.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
@@ -185,9 +185,8 @@ class Validator(object):
 
         # Create and configure journal
         self._journal = Journal(
-            consensus_module=dev_mode_consensus,
             block_store=block_store,
-            state_view_factory=StateViewFactory(merkle_db),
+            state_view_factory=state_view_factory,
             block_sender=block_sender,
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler(),
@@ -198,6 +197,7 @@ class Validator(object):
             transaction_executor=executor,
             completer=completer,
             block_store=block_store,
+            state_view_factory=state_view_factory,
             identity_key=identity_signing_key,
             data_dir=data_dir
         )

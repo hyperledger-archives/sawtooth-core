@@ -22,9 +22,12 @@ from unittest.mock import patch
 
 from sawtooth_signing import pbct as signing
 
+from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.genesis import InvalidGenesisStateError
+from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.state_view import StateViewFactory
 
 
 class TestGenesisController(unittest.TestCase):
@@ -49,6 +52,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             {},  # Empty block store
+            StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
         )
@@ -65,6 +69,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
         )
@@ -81,6 +86,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
         )
@@ -102,6 +108,7 @@ class TestGenesisController(unittest.TestCase):
             Mock(name='txn_executor'),
             Mock('completer'),
             block_store,
+            StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
         )
@@ -127,6 +134,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
         )
@@ -152,6 +160,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
+            StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
         )
@@ -174,9 +183,12 @@ class TestGenesisController(unittest.TestCase):
         genesis_file = self._with_empty_batch_file()
         block_store = {}
 
+        state_database = DictDatabase()
+        merkle_db = MerkleDatabase(state_database)
+
         ctx_mgr = Mock(name='ContextManager')
         ctx_mgr.get_squash_handler.return_value = Mock()
-        ctx_mgr.get_first_root.return_value = '000000000'
+        ctx_mgr.get_first_root.return_value = merkle_db.get_merkle_root()
 
         txn_executor = Mock(name='txn_executor')
         completer = Mock('completer')
@@ -187,6 +199,7 @@ class TestGenesisController(unittest.TestCase):
             txn_executor,
             completer,
             block_store,
+            StateViewFactory(state_database),
             self._identity_key,
             data_dir=self._temp_dir
         )

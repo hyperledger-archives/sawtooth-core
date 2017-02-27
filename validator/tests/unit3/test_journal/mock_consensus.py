@@ -34,7 +34,7 @@ class BlockPublisher(BlockPublisherInterface):
         self._block_cache = block_cache
         self._state_view = state_view
 
-    def initialize_block(self, block_header):
+    def initialize_block(self, block):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activates, starting proof of work
         hash generation, or create a PoET wait timer.
@@ -45,7 +45,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             none
         """
-        block_header.consensus = b"test_mode"
+        block.block_header.consensus = b"test_mode"
 
     def check_publish_block(self, block):
         """Check if a candidate block is ready to be claimed.
@@ -59,7 +59,7 @@ class BlockPublisher(BlockPublisherInterface):
         """
         return True
 
-    def finalize_block(self, block_header):
+    def finalize_block(self, block):
         """Finalize a block to be claimed. Provide any signatures and
         data updates that need to be applied to the block before it is
         signed and broadcast to the network.
@@ -71,8 +71,8 @@ class BlockPublisher(BlockPublisherInterface):
             None
         """
         hasher = hashlib.sha256()
-        hasher.update(block_header.consensus)
-        block_header.consensus = hasher.hexdigest().encode()
+        hasher.update(block.block_header.consensus)
+        block.block_header.consensus = hasher.hexdigest().encode()
 
 
 class BlockVerifier(BlockVerifierInterface):
@@ -87,6 +87,7 @@ class BlockVerifier(BlockVerifierInterface):
 
     def compute_block_weight(self, block_state):
         return block_state.block_num
+
 
 class ForkResolver(ForkResolverInterface):
     # Provides the fork resolution interface for the BlockValidator to use

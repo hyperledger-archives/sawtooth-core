@@ -86,7 +86,6 @@ class TestBlockPublisher(unittest.TestCase):
 
         LOGGER.info(self.blocks)
         publisher = BlockPublisher(
-            consensus_module=mock_consensus,
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.blocks.block_cache,
             state_view_factory=self.state_view_factory,
@@ -337,7 +336,6 @@ class TestChainController(unittest.TestCase):
             pass
 
         self.chain_ctrl = ChainController(
-            consensus_module=mock_consensus,
             block_cache=self.blocks.block_cache,
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
@@ -435,7 +433,6 @@ class TestJournal(unittest.TestCase):
         journal = None
         try:
             journal = Journal(
-                consensus_module=mock_consensus,
                 block_store=btm.block_store.store,
                 block_cache=btm.block_cache,
                 state_view_factory=StateViewFactory(DictDatabase()),

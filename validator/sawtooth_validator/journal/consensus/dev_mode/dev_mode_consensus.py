@@ -40,7 +40,7 @@ class BlockPublisher(BlockPublisherInterface):
         self._num_batches = 1
         self._count = 0
 
-    def initialize_block(self, block_header):
+    def initialize_block(self, block):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activates, starting proof of work
         hash generation, or create a PoET wait timer.
@@ -51,7 +51,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             none
         """
-        block_header.consensus = b"Devmode"
+        block.block_header.consensus = b"Devmode"
 
     def check_publish_block(self, block):
         """Check if a candidate block is ready to be claimed.
@@ -69,7 +69,7 @@ class BlockPublisher(BlockPublisherInterface):
         self._count += 1
         return False
 
-    def finalize_block(self, block_header):
+    def finalize_block(self, block):
         """Finalize a block to be claimed. Provide any signatures and
         data updates that need to be applied to the block before it is
         signed and broadcast to the network.
@@ -94,8 +94,8 @@ class TimedBlockPublisher(BlockPublisherInterface):
         self._wait_time = wait_time
         self._last_block_time = time.time()
 
-    def initialize_block(self, block_header):
-        block_header.consensus = b"TimedDevmode"
+    def initialize_block(self, block):
+        block.block_header.consensus = b"TimedDevmode"
 
     def check_publish_block(self, block):
         if time.time() - self._last_block_time > self._wait_time:
@@ -103,7 +103,7 @@ class TimedBlockPublisher(BlockPublisherInterface):
             return True
         return False
 
-    def finalize_block(self, block_header):
+    def finalize_block(self, block):
         pass
 
 

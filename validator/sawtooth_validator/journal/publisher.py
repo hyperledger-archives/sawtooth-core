@@ -23,6 +23,8 @@ from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.consensus_factory import \
+    ConsensusFactory
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
@@ -37,7 +39,6 @@ class BlockPublisher(object):
     Consensus deems it appropriate.
     """
     def __init__(self,
-                 consensus_module,
                  transaction_executor,
                  block_cache,
                  state_view_factory,
@@ -64,7 +65,6 @@ class BlockPublisher(object):
         """
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
-        self._consensus_module = consensus_module  # the consensus module.
         self._consensus = None
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
@@ -94,14 +94,17 @@ class BlockPublisher(object):
         prev_state = self._get_previous_block_root_state_hash(chain_head)
         state_view = self._state_view_factory. \
             create_view(prev_state)
-        self._consensus = self._consensus_module.\
+        consensus_module = ConsensusFactory.get_configured_consensus_module(
+            state_view)
+        self._consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
                            state_view=state_view)
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
             previous_block_id=chain_head.header_signature)
-        self._consensus.initialize_block(block_header)
+        block_builder = BlockBuilder(block_header)
+        self._consensus.initialize_block(block_builder)
 
         # create a new scheduler
         # TBD move factory in to executor for easier mocking --
@@ -113,7 +116,7 @@ class BlockPublisher(object):
         for batch in self._pending_batches:
             self._scheduler.add_batch(batch)
         self._pending_batches = []
-        return BlockBuilder(block_header)
+        return block_builder
 
     def _sign_block(self, block):
         """ The block should be complete and the final
@@ -211,7 +214,7 @@ class BlockPublisher(object):
         self._validated_batches = []
 
         # might need to take state_hash
-        self._consensus.finalize_block(block.block_header)
+        self._consensus.finalize_block(block)
         if state_hash is not None:
             block.set_state_hash(state_hash)
         self._sign_block(block)
@@ -237,7 +240,7 @@ class BlockPublisher(object):
                                                             _candidate_block):
                     candidate = self._candidate_block
                     self._candidate_block = None
-                    candidate = self._finalize_block(candidate)
+                    self._finalize_block(candidate)
                     # if no batches are in the block, do not send it out
                     if len(candidate.batches) == 0:
                         LOGGER.info("No Valid batches added to block, " +
