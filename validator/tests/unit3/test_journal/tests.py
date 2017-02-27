@@ -16,6 +16,8 @@
 import logging
 import unittest
 
+from sawtooth_signing import pbct as signing
+
 from sawtooth_validator.database.dict_database import DictDatabase
 
 from sawtooth_validator.journal.block_cache import BlockCache
@@ -46,7 +48,6 @@ from test_journal import mock_consensus
 LOGGER = logging.getLogger(__name__)
 
 
-
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
         """ Test that misses will load from the block store.
@@ -74,6 +75,7 @@ class TestBlockCache(unittest.TestCase):
         self.assertTrue("test" in bc)
         self.assertTrue(bc["test"] == "value")
 
+
 class TestBlockPublisher(unittest.TestCase):
     def setUp(self):
         self.blocks = BlockTreeManager()
@@ -90,7 +92,8 @@ class TestBlockPublisher(unittest.TestCase):
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             squash_handler=None,
-            chain_head=self.blocks.chain_head)
+            chain_head=self.blocks.chain_head,
+            identity_signing_key=self.blocks.identity_signing_key)
 
         # initial load of existing state
         publisher.on_chain_updated(self.blocks.chain_head, [], [])
@@ -117,7 +120,6 @@ class TestBlockValidator(unittest.TestCase):
     def setUp(self):
         self.btm = BlockTreeManager()
         self.state_view_factory = MockStateViewFactory()
-
 
     def create_block_validator(self, new_block, on_block_validated):
         return BlockValidator(
@@ -439,7 +441,8 @@ class TestJournal(unittest.TestCase):
                 state_view_factory=StateViewFactory(DictDatabase()),
                 block_sender=self.block_sender,
                 transaction_executor=self.txn_executor,
-                squash_handler=None
+                squash_handler=None,
+                identity_signing_key=btm.identity_signing_key
             )
 
             self.gossip.on_batch_received = journal.on_batch_received
@@ -480,7 +483,6 @@ class TestTimedCache(unittest.TestCase):
         del bc["test"]
         self.assertFalse("test" in bc)
 
-
     def test_evict_expired(self):
         """ Test that values will be evicted from the
         cache as they time out.
@@ -517,4 +519,3 @@ class TestTimedCache(unittest.TestCase):
         self.assertEqual(len(bc), 2)
         self.assertTrue("test" in bc)
         self.assertTrue("test2" in bc)
-

@@ -43,7 +43,25 @@ class BlockPublisher(object):
                  state_view_factory,
                  block_sender,
                  squash_handler,
-                 chain_head):
+                 chain_head,
+                 identity_signing_key):
+        """
+        Creates a Journal instance.
+
+        Args:
+            consensus_module (module): The consensus module for block
+                processing.
+            transaction_executor (:obj:`TransactionExecutor`): A
+                TransactionExecutor instance.
+            block_cache (:obj:`BlockCache`): A BlockCache instance.
+            state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
+                read-only state views.
+            block_sender (:obj:`BlockSender`): The BlockSender instance.
+            squash_handler (function): Squash handler function for merging
+                contexts.
+            chain_head (:obj:`BlockWrapper`): The inital chain head.
+            identity_signing_key (str): Private key for signing blocks
+        """
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
         self._consensus_module = consensus_module  # the consensus module.
@@ -58,6 +76,9 @@ class BlockPublisher(object):
         self._scheduler = None
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
+        self._identity_signing_key = identity_signing_key
+        self._identity_public_key = signing.encode_pubkey(
+            signing.generate_pubkey(self._identity_signing_key), "hex")
 
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -99,17 +120,12 @@ class BlockPublisher(object):
         signature from the publishing validator(this validator) needs to
         be added.
         """
-        # Temp signature creation to use as identifier
-        temp_key = signing.generate_privkey()
-        public_key = signing.encode_pubkey(
-            signing.generate_pubkey(temp_key), "hex")
-
-        block.block_header.signer_pubkey = public_key
+        block.block_header.signer_pubkey = self._identity_public_key
         block_header = block.block_header
         header_bytes = block_header.SerializeToString()
         signature = signing.sign(
             header_bytes,
-            temp_key)
+            self._identity_signing_key)
         block.set_signature(signature)
         return block
 

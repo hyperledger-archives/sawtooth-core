@@ -103,9 +103,26 @@ class Journal(object):
                  block_sender,
                  transaction_executor,
                  squash_handler,
-                 block_cache=None  # not require, allows tests to inject a
-                 # prepopulated block cache.
-                 ):
+                 identity_signing_key,
+                 block_cache=None):
+        """
+        Creates a Journal instance.
+
+        Args:
+            consensus_module (module): The consensus module for block
+                processing.
+            block_store (:obj:): The block store.
+            state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
+                read-only state views.
+            block_sender (:obj:`BlockSender`): The BlockSender instance.
+            transaction_executor (:obj:`TransactionExecutor`): A
+                TransactionExecutor instance.
+            squash_handler (function): Squash handler function for merging
+                contexts.
+            identity_signing_key (str): Private key for signing blocks
+            block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
+                place of an internally created instance. Defaults to None.
+        """
         self._consensus_module = consensus_module
         self._block_store = BlockStoreAdapter(block_store)
         self._block_cache = block_cache
@@ -115,6 +132,7 @@ class Journal(object):
 
         self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
+        self._identity_signing_key = identity_signing_key
         self._block_sender = block_sender
 
         self._block_publisher = None
@@ -133,7 +151,8 @@ class Journal(object):
             state_view_factory=self._state_view_factory,
             block_sender=self._block_sender,
             squash_handler=self._squash_handler,
-            chain_head=self._block_store.chain_head
+            chain_head=self._block_store.chain_head,
+            identity_signing_key=self._identity_signing_key
         )
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
