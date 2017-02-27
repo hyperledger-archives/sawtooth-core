@@ -26,6 +26,7 @@ from test_dispatcher.mock import MockHandler2
 
 class TestDispatcherIdentityMessageMatch(unittest.TestCase):
     def setUp(self):
+        self._connection = "TestConnection"
         self._dispatcher = dispatch.Dispatcher()
         thread_pool = ThreadPoolExecutor()
 
@@ -39,7 +40,8 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
             thread_pool)
 
         self.mock_send_message = MockSendMessage()
-        self._dispatcher.set_send_message(self.mock_send_message.send_message)
+        self._dispatcher.add_send_message(self._connection,
+                                          self.mock_send_message.send_message)
 
         self._message_ids = [str(i) for i in range(10)]
         self._identities = [str(i) for i in range(10)]
@@ -49,8 +51,8 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
 
     def test_correct_identity(self):
         """Tests that if a message is dispatched with a particular identity --
-        having dispatcher.dispatch(identity, message) called -- that identity
-        will be sent back to the zmq interface with the message.
+        having dispatcher.dispatch(connection, message, identity) called --
+        that identity will be sent back to the zmq interface with the message.
 
         Each message gets an id 0-9 along with an identity 0-9. These will
         be returned to send_message together no matter the ordering of the
@@ -58,7 +60,8 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
         """
         self._dispatcher.start()
         for identity, message in zip(self._identities, self._messages):
-            self._dispatcher.dispatch(identity, message)
+            self._dispatcher.dispatch(self._connection, message,
+                                      identity=identity)
         self._dispatcher.block_until_complete()
         self.assertEqual(self.mock_send_message.message_ids,
                          self.mock_send_message.identities)
