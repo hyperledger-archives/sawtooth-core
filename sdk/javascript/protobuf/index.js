@@ -35,8 +35,6 @@ module.exports = {
   // Validator messages
   Message,
 
-  MessageList: root.lookup('MessageList'),
-
   //
   // processor
   TpRegisterRequest:
