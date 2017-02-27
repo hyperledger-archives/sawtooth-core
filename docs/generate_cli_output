@@ -1,0 +1,51 @@
+#!/bin/bash
+
+if [ ! -e source/conf.py ]; then
+    echo "Must be run from the sawtooth-core repo docs directory." 1>&2
+    exit 1
+fi
+
+function save_usage() {
+   safe_string=$(echo "$*" | sed -e 's/[^A-Za-z0-9-]/_/g')
+   filename="source/bond_family_guide/users_guide/cli_output/${safe_string}_usage.out"
+   echo "Generating: $filename"
+   $* -h > $filename
+}
+
+export PATH=$PATH:$(pwd)/../bin
+mkdir -p source/users_guide/cli_output
+
+save_usage btp
+save_usage btp init
+save_usage btp bond
+save_usage btp bond list
+save_usage btp bond show
+save_usage btp holding
+save_usage btp holding create
+save_usage btp holding list
+save_usage btp holding show
+save_usage btp load
+save_usage btp order
+save_usage btp order create
+save_usage btp order list
+save_usage btp order show
+save_usage btp org
+save_usage btp org create
+save_usage btp org list
+save_usage btp org show
+save_usage btp quote
+save_usage btp quote create
+save_usage btp quote list
+save_usage btp quote show
+save_usage btp receipt
+save_usage btp receipt list
+save_usage btp receipt show
+save_usage btp settlement
+save_usage btp settlement create
+save_usage btp settlement list
+save_usage btp settlement show
+save_usage btp user
+save_usage btp user list
+save_usage btp user register
+save_usage btp user show
+save_usage btp user update

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function save_listing() {
+safe_string=$(echo "$*" | sed -e 's/[^A-Za-z0-9-]/_/g')
+   filename="source/bond_family_guide/users_guide/cli_output/${safe_string}_listoutput.out"
+   echo "Generating: $filename"
+   echo "$*" > $filename
+   output_len=$($* | wc -l)
+   if (( $output_len<10 )); then
+       # | head -n $output_len >>
+       $* >> $filename
+   else
+       $* | head -n 10 >> $filename
+       echo "..." >> $filename
+   fi
+}
+
+export PATH=$PATH:$(pwd)/../bin
+
+save_listing btp bond list
+save_listing btp holding list
+save_listing btp order list
+save_listing btp org list
+save_listing btp quote list
+save_listing btp receipt list
+save_listing btp settlement list
+save_listing btp user list
