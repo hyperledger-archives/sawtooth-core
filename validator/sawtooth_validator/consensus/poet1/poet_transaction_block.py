@@ -228,7 +228,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 self.wait_certificate.is_valid(
                     certificates=journal.consensus.build_certificate_list(
                         journal.block_store, self),
-                    poet_public_key=poet_public_key)
+                    poet_public_key=str(poet_public_key))
 
     def create_wait_timer(self, validator_address, certlist):
         """Creates a wait timer for the journal based on a list
