@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import logging
+from threading import Condition
+
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
 from sawtooth_validator.protobuf.network_pb2 import \
@@ -20,10 +23,43 @@ from sawtooth_validator.protobuf.network_pb2 import GossipBlockRequest
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 
+LOGGER = logging.getLogger(__name__)
+
 
 class Gossip(object):
     def __init__(self, network):
+        self._condition = Condition()
         self._network = network
+        self._identities = []
+
+    def register_identity(self, identity):
+        """Registers a connected identity.
+
+        Args:
+            identity (str): A unique identifier which identifies an
+                incoming connection on the network server socket.
+        """
+        with self._condition:
+            self._identities.append(identity)
+        LOGGER.debug("Added identity %s, connected identities are now %s",
+                     identity, self._identities)
+
+    def unregister_identity(self, identity):
+        """Removes an identity from the registry.
+
+        Args:
+            identity (str): A unique identifier which identifies an
+                incoming connection on the network server socket.
+        """
+        with self._condition:
+            if identity in self._identities:
+                self._identities.remove(identity)
+                LOGGER.debug("Removed identity %s, "
+                             "connected identities are now %s",
+                             identity, self._identities)
+            else:
+                LOGGER.debug("Attempt to unregister identity %s failed: "
+                             "identity was not registered")
 
     def broadcast_block(self, block):
         gossip_message = GossipMessage(
@@ -64,6 +100,13 @@ class Gossip(object):
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
     def broadcast(self, gossip_message, message_type):
+        # Gossip broadcasts are sent out in two different ways.
+        # 1) To connected identities on our server socket
+        # 2) To outbound connections we have originated
+        for identity in self._identities:
+            self._network.send(message_type,
+                               gossip_message.SerializeToString(),
+                               identity)
         for connection in self._network.connections:
             connection.send(message_type, gossip_message.SerializeToString())
 
