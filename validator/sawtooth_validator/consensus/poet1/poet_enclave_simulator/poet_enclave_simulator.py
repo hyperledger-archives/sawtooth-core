@@ -66,9 +66,6 @@ class _PoetEnclaveSimulator(object):
         signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
     _report_public_key = signing.generate_pubkey(_report_private_key)
 
-    # Minimum duration for PoET 1 simulator is 30 seconds
-    __MINIMUM_DURATTION = 30.0
-
     # The anti-sybil ID for this particular validator.  This will get set when
     # the enclave is initialized
     _anti_sybil_id = None
@@ -346,7 +343,7 @@ class _PoetEnclaveSimulator(object):
             tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
 
             # Now compute the duration
-            duration = cls.__MINIMUM_DURATTION - local_mean * math.log(tagd)
+            duration = MINIMUM_WAIT_TIME - local_mean * math.log(tagd)
 
             # Create and sign the wait timer
             wait_timer = \
