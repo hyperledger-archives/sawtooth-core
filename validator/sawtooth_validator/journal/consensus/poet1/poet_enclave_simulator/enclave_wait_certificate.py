@@ -110,7 +110,6 @@ class EnclaveWaitCertificate(object):
 
         return certificate
 
-    @property
     def identifier(self):
         my_id = NULL_BLOCK_IDENTIFIER
         if self.signature is not None:

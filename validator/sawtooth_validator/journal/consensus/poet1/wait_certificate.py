@@ -149,7 +149,7 @@ class WaitCertificate(object):
         self.validator_address = enclave_certificate.validator_address
         self.block_hash = enclave_certificate.block_hash
         self.signature = enclave_certificate.signature
-        self.identifier = enclave_certificate.identifier
+        self.identifier = enclave_certificate.identifier()
 
         # we cannot hold the certificate because it cannot be pickled for
         # storage in the transaction block array
