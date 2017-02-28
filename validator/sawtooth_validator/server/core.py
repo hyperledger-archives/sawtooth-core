@@ -82,7 +82,8 @@ class Validator(object):
         context_manager = ContextManager(merkle_db)
         state_view_factory = StateViewFactory(merkle_db)
 
-        block_db_filename = os.path.join(data_dir, 'block-{}.lmdb')
+        block_db_filename = os.path.join(data_dir, 'block-{}.lmdb'.format(
+                                         network_endpoint[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
 
         block_db = LMDBNoLockDatabase(block_db_filename, 'n')
