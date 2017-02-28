@@ -61,8 +61,7 @@ def init_console_logging(verbose_level=2, capture_std_output=False):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    if verbose_level > 0:
-        logger.addHandler(create_console_handler(verbose_level))
+    logger.addHandler(create_console_handler(verbose_level))
 
     if capture_std_output:
         sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
