@@ -7,4 +7,5 @@ python3-nose2
 python3-cbor
 python3-colorlog
 python3-lmdb
+python3-toml
 python3-zmq
