@@ -66,9 +66,6 @@ class _PoetEnclaveSimulator(object):
         signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif')
     _report_public_key = signing.generate_pubkey(_report_private_key)
 
-    # Minimum duration for PoET 1 simulator is 30 seconds
-    __MINIMUM_DURATTION = 30.0
-
     # The anti-sybil ID for this particular validator.  This will get set when
     # the enclave is initialized
     _anti_sybil_id = None
@@ -343,10 +340,10 @@ class _PoetEnclaveSimulator(object):
                         previous_certificate_id,
                         cls._seal_private_key))
 
-            tagd = float(struct.unpack('L', tag[-8:])[0]) / (2**64 - 1)
+            tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
 
             # Now compute the duration
-            duration = cls.__MINIMUM_DURATTION - local_mean * math.log(tagd)
+            duration = MINIMUM_WAIT_TIME - local_mean * math.log(tagd)
 
             # Create and sign the wait timer
             wait_timer = \
@@ -383,7 +380,7 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def create_wait_certificate(cls,
                                 wait_timer,
-                                block_digest):
+                                block_hash):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
@@ -453,7 +450,7 @@ class _PoetEnclaveSimulator(object):
                 EnclaveWaitCertificate.wait_certificate_with_wait_timer(
                     wait_timer=cls._active_wait_timer,
                     nonce=nonce,
-                    block_digest=block_digest)
+                    block_hash=block_hash)
             wait_certificate.signature = \
                 signing.sign(
                     wait_certificate.serialize(),
@@ -533,11 +530,11 @@ def deserialize_wait_timer(serialized_timer, signature):
             signature=signature)
 
 
-def create_wait_certificate(wait_timer, block_digest):
+def create_wait_certificate(wait_timer, block_hash):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
             wait_timer=wait_timer,
-            block_digest=block_digest)
+            block_hash=block_hash)
 
 
 def deserialize_wait_certificate(serialized_certificate, signature):

@@ -150,6 +150,14 @@ class WaitTimer(object):
 
         return local_mean
 
+    @property
+    def enclave_wait_timer(self):
+        """Converts the serialized timer into an enclave timer object.
+        Returns:
+            poet_enclave.WaitTimer: The deserialized enclave timer object.
+        """
+        return self._enclave_wait_timer
+
     def __init__(self, enclave_timer):
         self.previous_certificate_id =\
             str(enclave_timer.previous_certificate_id)
