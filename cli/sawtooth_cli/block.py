@@ -89,7 +89,7 @@ def do_block(args):
     if args.subcommand == 'list':
         blocks = rest_client.list_blocks()
         keys = ('num', 'block_id', 'batches', 'txns', 'signer')
-        headers = (k.upper() for k in keys)
+        headers = (k.upper() if k != 'batches' else 'BATS' for k in keys)
 
         def get_block_data(block):
             batches = block.get('batches', [])
@@ -107,9 +107,10 @@ def do_block(args):
             )
 
         if args.format == 'default':
-            print('{:<3}  {:88.88}  {:<7}  {:<4}  {:20.20}'.format(*headers))
+            # Fit within 150 chars, without truncating block id
+            print('{:<3}  {:128.128}  {:<4}  {:<4}  {:11.11}'.format(*headers))
             for block in blocks:
-                print('{:<3}  {:88.88}  {:<7}  {:<4}  {:17.17}...'.format(
+                print('{:<3}  {:128.128}  {:<4}  {:<4}  {:8.8}...'.format(
                     *get_block_data(block)))
 
         elif args.format == 'csv':
