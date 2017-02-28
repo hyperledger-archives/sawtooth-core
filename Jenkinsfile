@@ -60,6 +60,19 @@ node ('master') {
             }
         }
 
+        stage("Create git archive") {
+            docker.withServer('tcp://0.0.0.0:4243'){
+                docker.image('sawtooth-build:$BUILD_TAG').inside {
+                    sh '''
+                        NAME=`git describe --dirty`
+                        REPONAME=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
+                        git archive HEAD --prefix=$REPONAME-$NAME --format=zip -9 --output=$REPONAME-$NAME.zip
+                        git archive HEAD --prefix=$REPONAME-$NAME --format=tgz -9 --output=$REPONAME-$NAME.tgz
+                    '''
+                }
+            }
+        }
+
         stage("Build the packages"){
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
@@ -87,14 +100,22 @@ node ('master') {
         }
 
         stage("Archive Build artifacts") {
-            archiveArtifacts artifacts: 'core/deb_dist/*.deb, \
-                                        signing/deb_dist/*.deb, \
-                                        *.deb, \
-                                        extensions/arcade/deb_dist/*.deb, \
-                                        extensions/bond/deb_dist/*.deb, \
-                                        extensions/mktplace/deb_dist/*.deb'
-            archiveArtifacts artifacts: 'docs/build/html/**, \
-                                        docs/build/latex/*.pdf'
+
+            archiveArtifacts artifacts: '''
+                *.tgz, *.zip
+            '''
+            archiveArtifacts artifacts: '''
+                core/deb_dist/*.deb,\
+                signing/deb_dist/*.deb,\
+                *.deb,\
+                extensions/arcade/deb_dist/*.deb,\
+                extensions/bond/deb_dist/*.deb,\
+                extensions/mktplace/deb_dist/*.deb
+            '''
+            archiveArtifacts artifacts: '''
+                docs/build/html/**,\
+                docs/build/latex/*.pdf
+            '''
         }
     }
 }
