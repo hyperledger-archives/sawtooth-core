@@ -67,6 +67,19 @@ node ('master') {
             sh './bin/run_tests -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
         }
 
+        stage("Create git archive") {
+            docker.withServer('tcp://0.0.0.0:4243'){
+                docker.image('sawtooth-build:$BUILD_TAG').inside {
+                    sh '''
+                        NAME=`git describe --dirty`
+                        REPONAME=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
+                        git archive HEAD --prefix=$REPONAME-$NAME --format=zip -9 --output=$REPONAME-$NAME.zip
+                        git archive HEAD --prefix=$REPONAME-$NAME --format=tgz -9 --output=$REPONAME-$NAME.tgz
+                    '''
+                }
+            }
+        }
+
         stage("Build the packages"){
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
@@ -95,6 +108,7 @@ node ('master') {
         }
 
         stage("Archive Build artifacts") {
+            archiveArtifacts artifacts: '*.tgz, *.zip'
             archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
