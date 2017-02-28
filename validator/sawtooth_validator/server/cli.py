@@ -50,7 +50,7 @@ def parse_args(args):
 def ensure_directory(sawtooth_home_path, posix_fallback_path):
     """Ensures the one of the given sets of directories exists.
 
-    The dirctory in sawtooth_home_path is ensured to exist, if `SAWTOOTH_HOME`
+    The directory in sawtooth_home_path is ensured to exist, if `SAWTOOTH_HOME`
     exists. If the host operating system is windows, `SAWTOOTH_HOME` is
     defaulted to `C:\\Program Files (x86)\\Intel\\sawtooth-validator`,
     Otherwise, the given posix fallback path is ensured to exist.
