@@ -30,9 +30,13 @@ class BlockBuilder(object):
         self.block_header.batch_ids.extend(batch_id_list)
         self.batches = self.batches + batches
 
+    def add_batch(self, batch):
+        self.block_header.batch_ids.append(batch.header_signature)
+        self.batches.append(batch)
+
     def build_block(self):
         """
-        Assembles the canidate block into it's finalized form for broadcast.
+        Assembles the candidate block into it's finalized form for broadcast.
         """
         header_bytes = self.block_header.SerializeToString()
         block = Block(header=header_bytes,
@@ -56,3 +60,9 @@ class BlockBuilder(object):
 
     def set_signature(self, sig):
         self._header_signature = sig
+
+    def __str__(self):
+        return "({}, S:{}, P:{})". \
+            format(self.block_header.block_num,
+                   self.block_header.state_root_hash[:8],
+                   self.block_header.previous_block_id[:8])

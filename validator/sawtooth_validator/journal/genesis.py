@@ -85,10 +85,9 @@ class GenesisController(object):
         LOGGER.debug('genesis_batch_file: %s',
                      genesis_file if has_genesis_batches else 'None')
 
-        has_chain_head = "chain_head_id" in self._block_store
-        LOGGER.debug(
-            'chain_head: %s',
-            self._block_store['chain_head_id'] if has_chain_head else 'None')
+        chain_head = self._block_store.chain_head
+        has_chain_head = chain_head is not None
+        LOGGER.debug('chain_head: %s %s', chain_head, has_chain_head)
 
         block_chain_id = self._get_block_chain_id()
         is_genesis_node = block_chain_id is None
@@ -178,12 +177,7 @@ class GenesisController(object):
         LOGGER.info('Genesis block created: %s', blkw)
 
         self._completer.add_block(block)
-        self._block_store['chain_head_id'] = blkw.identifier
-
-        self._block_store[blkw.identifier] = {
-            "block": blkw.block,
-            "weight": blkw.weight
-        }
+        self._block_store.update_chain([blkw])
 
         self._save_block_chain_id(block.header_signature)
 

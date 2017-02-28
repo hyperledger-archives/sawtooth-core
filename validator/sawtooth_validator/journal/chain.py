@@ -21,8 +21,12 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
+from sawtooth_validator.journal.transaction_cache import TransactionCache
+
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -79,8 +83,8 @@ class BlockValidator(object):
         """
         Check that the block is formally complete.
         - all batches are present and in the correct order
-        :param blkw:
-        :return:
+        :param blkw: the block to verify
+        :return: Boolean - True on success.
         """
 
         batch_ids = blkw.header.batch_ids
@@ -96,20 +100,57 @@ class BlockValidator(object):
         return True
 
     def _verify_block_signature(self, blkw):
+        """ Verify a block is properly signed.
+        :param blkw: the block to verify
+        :return: Boolean - True on success.
+        """
         return signing.verify(blkw.block.header, blkw.block.header_signature,
                               blkw.header.signer_pubkey)
 
-    def _verify_block_batches(self, blkw):
+    def _verify_batches_dependencies(self, batch, committed_txn):
+        """Verify that all transactions dependencies in this batch have been
+        satisfied, ie already committed by this block or prior block in the
+        chain.
+
+        :param batch: the batch to verify
+        :param committed_txn(TransactionCache): Current set of commited
+        transaction, updated during processing.
+        :return:
+        Boolean: True if all dependencies are present.
+        """
+        for txn in batch.transactions:
+            txn_hdr = TransactionHeader()
+            txn_hdr.ParseFromString(txn.header)
+            for dep in txn_hdr.dependencies:
+                if dep not in committed_txn:
+                    LOGGER.debug("Block rejected due missing" +
+                                 " transaction dependency, transaction {}"
+                                 " depends on {}",
+                                 txn.header_signature, dep)
+                    return False
+            committed_txn.add_txn(txn.header_signature)
+        return True
+
+    def _verify_block_batches(self, blkw, committed_txn):
         if len(blkw.block.batches) > 0:
+
             prev_state = self._get_previous_block_root_state_hash(blkw)
             scheduler = self._executor.create_scheduler(
                 self._squash_handler, prev_state)
             self._executor.execute(scheduler)
 
             for i in range(len(blkw.block.batches) - 1):
-                scheduler.add_batch(blkw.batches[i])
-            scheduler.add_batch(blkw.batches[-1],
+                batch = blkw.batches[i]
+                if not self._verify_batches_dependencies(batch, committed_txn):
+                    return False
+                scheduler.add_batch(batch)
+
+            batch = blkw.batches[-1]
+            if not self._verify_batches_dependencies(batch, committed_txn):
+                return False
+            scheduler.add_batch(batch,
                                 blkw.state_root_hash)
+
             scheduler.finalize()
             scheduler.complete(block=True)
             state_hash = None
@@ -126,7 +167,7 @@ class BlockValidator(object):
                 return False
         return True
 
-    def _validate_block(self, blkw):
+    def _validate_block(self, blkw, committed_txn):
         try:
             if blkw.status == BlockStatus.Valid:
                 return True
@@ -148,7 +189,7 @@ class BlockValidator(object):
                     valid = self._verify_block_signature(blkw)
 
                 if valid:
-                    valid = self._verify_block_batches(blkw)
+                    valid = self._verify_block_batches(blkw, committed_txn)
 
                 if valid:
                     valid = consensus.verify_block(blkw)
@@ -234,7 +275,7 @@ class BlockValidator(object):
             cur_blkw = \
                 self._block_cache[cur_blkw.previous_block_id]
 
-    def _compare_forks(self, fork_root, new_chain, cur_chain):
+    def _compare_forks(self, new_chain, cur_chain):
         """
         Compare the two chains and determine which should be the head.
         """
@@ -247,7 +288,17 @@ class BlockValidator(object):
         """
         Compute the batch change sets.
         """
-        return ([], [])
+        committed_txn = []
+        for blkw in new_chain:
+            for batch in blkw.batches:
+                committed_txn = committed_txn + list(batch.transactions)
+
+        uncommitted_txn = []
+        for blkw in cur_chain:
+            for batch in blkw.batches:
+                uncommitted_txn = uncommitted_txn + list(batch.transactions)
+
+        return (committed_txn, uncommitted_txn)
 
     def run(self):
         """
@@ -270,15 +321,21 @@ class BlockValidator(object):
                                                             cur_chain)
 
             # 2) Walk back until we find the common ancestor
-            fork_root = self._find_common_ancestor(new_blkw, cur_blkw,
-                                                   new_chain, cur_chain)
-            # We now have the root of the fork.
+            self._find_common_ancestor(new_blkw, cur_blkw,
+                                       new_chain, cur_chain)
 
             # 3) Determine the validity of the new fork
+            # build the transaction cache to simulate the state of the
+            # chain at the common root.
+            committed_txn = TransactionCache(self._block_cache.block_store)
+            for block in cur_chain:
+                for batch in block.batches:
+                    committed_txn.uncommit_batch(batch)
+
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self._validate_block(block):
+                    if not self._validate_block(block, committed_txn):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
                 else:
@@ -291,8 +348,7 @@ class BlockValidator(object):
                 return
 
             # 4) Evaluate the 2 chains to see which is the one true chain.
-            commit_new_chain = self._compare_forks(fork_root, new_chain,
-                                                   cur_chain)
+            commit_new_chain = self._compare_forks(new_chain, cur_chain)
 
             # 5) Consensus to compute batch sets (only if we are switching).
             if commit_new_chain:
@@ -424,14 +480,9 @@ class ChainController(object):
                 elif commit_new_block:
                     self._chain_head = new_block
 
-                    # update the logic in the block store.
-                    for b in result["new_chain"]:
-                        self._block_store[b.identifier] = b
-
-                    self._block_store.set_chain_head(new_block.identifier)
-
-                    for b in result["cur_chain"]:
-                        del self._block_store[b.identifier]
+                    # update the the block store to have the new chain
+                    self._block_store.update_chain(result["new_chain"],
+                                                   result["cur_chain"])
 
                     LOGGER.info("Chain head updated to: %s", self._chain_head)
 

@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
+import time
 
 from sawtooth_signing import secp256k1_signer as signing
 
@@ -102,7 +103,8 @@ class MessageFactory(object):
             dependencies=deps,
             payload_encoding=self.encoding,
             payload_sha512=self.sha512(payload),
-            batcher_pubkey=self._public
+            batcher_pubkey=self._public,
+            nonce=str(time.time())
         ).SerializeToString()
 
     def _create_signature(self, header):

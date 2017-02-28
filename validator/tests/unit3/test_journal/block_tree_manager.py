@@ -20,9 +20,11 @@ import string
 
 from sawtooth_signing import secp256k1_signer as signing
 
+from sawtooth_validator.database.dict_database import DictDatabase
+
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
-from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -84,7 +86,7 @@ class BlockTreeManager(object):
 
     def __init__(self):
         self.block_sender = MockBlockSender()
-        self.block_store = BlockStoreAdapter({})
+        self.block_store = BlockStore(DictDatabase())
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
 
@@ -100,7 +102,6 @@ class BlockTreeManager(object):
 
         self.identity_signing_key = signing.generate_privkey()
         self.genesis_block = self._generate_genesis_block()
-        self.block_store[self.genesis_block.identifier] = self.genesis_block
         self.set_chain_head(self.genesis_block)
 
         self.block_publisher = BlockPublisher(
@@ -135,15 +136,12 @@ class BlockTreeManager(object):
         else:  # WTF try something crazy
             return self.block_cache[str(block)]
 
-    def set_chain_head(self, block):
-        self.block_store.set_chain_head(self._get_block_id(block))
-
     @property
     def chain_head(self):
         return self.block_store.chain_head
 
     def set_chain_head(self, block):
-        self.block_store.set_chain_head(block.identifier)
+        self.block_store.update_chain([block], [])
 
     def generate_block(self, previous_block=None,
                        add_to_store=False,

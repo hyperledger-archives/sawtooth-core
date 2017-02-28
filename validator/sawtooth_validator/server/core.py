@@ -28,6 +28,7 @@ from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.execution import tp_state_handlers
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.completer import CompleterGossipHandler
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
@@ -75,13 +76,11 @@ class Validator(object):
         context_manager = ContextManager(merkle_db)
         state_view_factory = StateViewFactory(merkle_db)
 
-        block_db_filename = os.path.join(data_dir, 'block.lmdb')
+        block_db_filename = os.path.join(data_dir, 'block-{}.lmdb')
         LOGGER.debug('block store file is %s', block_db_filename)
 
-        # block_store = LMDBNoLockDatabase(block_db_filename, 'n')
-        block_store = {}
-        # this is not currently being used but will be something like this
-        # in the future, when Journal takes a block_store that isn't a dict
+        block_db = LMDBNoLockDatabase(block_db_filename, 'n')
+        block_store = BlockStore(block_db)
 
         # setup network
         self._dispatcher = Dispatcher()

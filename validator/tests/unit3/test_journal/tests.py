@@ -45,8 +45,8 @@ from test_journal.utils import wait_until
 
 from test_journal import mock_consensus
 
-LOGGER = logging.getLogger(__name__)
 
+LOGGER = logging.getLogger(__name__)
 
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
@@ -433,7 +433,7 @@ class TestJournal(unittest.TestCase):
         journal = None
         try:
             journal = Journal(
-                block_store=btm.block_store.store,
+                block_store=btm.block_store,
                 block_cache=btm.block_cache,
                 state_view_factory=StateViewFactory(DictDatabase()),
                 block_sender=self.block_sender,

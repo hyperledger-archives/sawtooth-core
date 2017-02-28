@@ -22,7 +22,7 @@ import time
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.block_cache import BlockCache
-from sawtooth_validator.journal.block_store_adapter import BlockStoreAdapter
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ class Journal(object):
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
-        self._block_store = BlockStoreAdapter(block_store)
+        self._block_store = block_store
         self._block_cache = block_cache
         if self._block_cache is None:
             self._block_cache = BlockCache(self._block_store)

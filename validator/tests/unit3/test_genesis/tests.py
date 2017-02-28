@@ -23,6 +23,7 @@ from unittest.mock import patch
 from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.genesis import InvalidGenesisStateError
 from sawtooth_validator.state.merkle import MerkleDatabase
@@ -43,6 +44,10 @@ class TestGenesisController(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
 
+    @staticmethod
+    def make_block_store(data=None):
+        return BlockStore(DictDatabase(data))
+
     def test_requires_genesis(self):
         self._with_empty_batch_file()
 
@@ -50,7 +55,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('context_manager'),
             Mock('txn_executor'),
             Mock('completer'),
-            {},  # Empty block store
+            self.make_block_store(),  # Empty block store
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir
@@ -59,9 +64,9 @@ class TestGenesisController(unittest.TestCase):
         self.assertEqual(True, genesis_ctrl.requires_genesis())
 
     def test_does_not_require_genesis_block_exists(self):
-        block_store = {
+        block_store = self.make_block_store({
             'chain_head_id': 'some_other_id'
-        }
+        })
 
         genesis_ctrl = GenesisController(
             Mock('context_manager'),
@@ -78,7 +83,7 @@ class TestGenesisController(unittest.TestCase):
     def test_does_not_require_genesis_join_network(self):
         self._with_network_name('some_network_name')
 
-        block_store = {}
+        block_store = self.make_block_store()
 
         genesis_ctrl = GenesisController(
             Mock('context_manager'),
@@ -100,7 +105,7 @@ class TestGenesisController(unittest.TestCase):
          - no network
         the the GenesisController should not require genesis.
         """
-        block_store = {}
+        block_store = self.make_block_store()
 
         genesis_ctrl = GenesisController(
             Mock(name='context_manager'),
@@ -124,9 +129,13 @@ class TestGenesisController(unittest.TestCase):
         """
         self._with_empty_batch_file()
 
-        block_store = {
-            'chain_head_id': 'some_other_id'
-        }
+        block_store = self.make_block_store({
+            'chain_head_id': 'some_other_id',
+            'some_other_id': {
+                'weight': 0,
+                'block': b''
+            }
+        })
 
         genesis_ctrl = GenesisController(
             Mock('context_manager'),
@@ -152,7 +161,7 @@ class TestGenesisController(unittest.TestCase):
         self._with_empty_batch_file()
         self._with_network_name('some_block_chain_id')
 
-        block_store = {}
+        block_store = self.make_block_store()
 
         genesis_ctrl = GenesisController(
             Mock('context_manager'),
@@ -180,7 +189,7 @@ class TestGenesisController(unittest.TestCase):
          - the block_chain_id file should be created and populated
         """
         genesis_file = self._with_empty_batch_file()
-        block_store = {}
+        block_store = self.make_block_store()
 
         state_database = DictDatabase()
         merkle_db = MerkleDatabase(state_database)
@@ -208,11 +217,10 @@ class TestGenesisController(unittest.TestCase):
 
         self.assertEqual(False, os.path.exists(genesis_file))
 
-        self.assertEqual(True, 'chain_head_id' in block_store)
-        self.assertEqual(True, block_store['chain_head_id'] in block_store)
+        self.assertEqual(True, block_store.chain_head is not None)
         self.assertEqual(1, on_done_fn.call_count)
         self.assertEqual(1, completer.add_block.call_count)
-        self.assertEqual(block_store['chain_head_id'],
+        self.assertEqual(block_store.chain_head.identifier,
                          self._read_block_chain_id())
 
     def _with_empty_batch_file(self):
