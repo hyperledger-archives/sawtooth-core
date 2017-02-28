@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,8 +33,14 @@ from sawtooth_validator.journal.completer import CompleterGossipHandler
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
 from sawtooth_validator.journal.completer import Completer
+from sawtooth_validator.journal.responder import Responder
+from sawtooth_validator.journal.responder import BlockResponderHandler
+from sawtooth_validator.journal.responder import BatchByBatchIdResponderHandler
+from sawtooth_validator.journal.responder import \
+    BatchByTransactionIdResponderHandler
 from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
+from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
@@ -85,36 +91,13 @@ class Validator(object):
         # setup network
         self._dispatcher = Dispatcher()
 
-        completer = Completer(block_store)
-
         thread_pool = ThreadPoolExecutor(max_workers=10)
         process_pool = ProcessPoolExecutor(max_workers=3)
-
-        self._dispatcher.add_handler(
-            validator_pb2.Message.TP_STATE_GET_REQUEST,
-            tp_state_handlers.TpStateGetHandler(context_manager),
-            thread_pool)
-
-        self._dispatcher.add_handler(
-            validator_pb2.Message.TP_STATE_SET_REQUEST,
-            tp_state_handlers.TpStateSetHandler(context_manager),
-            thread_pool)
 
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
                                      secured=False)
         executor = TransactionExecutor(self._service, context_manager)
-
-        self._dispatcher.add_handler(
-            validator_pb2.Message.TP_REGISTER_REQUEST,
-            processor_handlers.ProcessorRegisterHandler(executor.processors),
-            thread_pool)
-
-        self._dispatcher.add_handler(
-            validator_pb2.Message.TP_UNREGISTER_REQUEST,
-            processor_handlers.ProcessorUnRegisterHandler(executor.processors),
-            thread_pool
-        )
 
         identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -146,7 +129,57 @@ class Validator(object):
 
         self._gossip = Gossip(self._network)
 
+        completer = Completer(block_store, self._gossip)
+
         block_sender = BroadcastBlockSender(completer, self._gossip)
+        chain_id_manager = ChainIdManager(data_dir)
+        # Create and configure journal
+        self._journal = Journal(
+            block_store=block_store,
+            state_view_factory=StateViewFactory(merkle_db),
+            block_sender=block_sender,
+            transaction_executor=executor,
+            squash_handler=context_manager.get_squash_handler(),
+            identity_signing_key=identity_signing_key,
+            chain_id_manager=chain_id_manager
+        )
+
+        self._genesis_controller = GenesisController(
+            context_manager=context_manager,
+            transaction_executor=executor,
+            completer=completer,
+            block_store=block_store,
+            state_view_factory=state_view_factory,
+            identity_key=identity_signing_key,
+            data_dir=data_dir,
+            chain_id_manager=chain_id_manager
+        )
+
+        responder = Responder(completer)
+
+        completer.set_on_batch_received(self._journal.on_batch_received)
+        completer.set_on_block_received(self._journal.on_block_received)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_STATE_GET_REQUEST,
+            tp_state_handlers.TpStateGetHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_STATE_SET_REQUEST,
+            tp_state_handlers.TpStateSetHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_REGISTER_REQUEST,
+            processor_handlers.ProcessorRegisterHandler(executor.processors),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_UNREGISTER_REQUEST,
+            processor_handlers.ProcessorUnRegisterHandler(executor.processors),
+            thread_pool
+        )
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_PING,
@@ -167,47 +200,44 @@ class Validator(object):
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipMessageHandler(),
             network_thread_pool)
+
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
             process_pool)
+
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipBroadcastHandler(
                 gossip=self._gossip),
             network_thread_pool)
+
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(
                 completer),
             network_thread_pool)
 
-        # Create and configure journal
-        self._journal = Journal(
-            block_store=block_store,
-            state_view_factory=state_view_factory,
-            block_sender=block_sender,
-            transaction_executor=executor,
-            squash_handler=context_manager.get_squash_handler(),
-            identity_signing_key=identity_signing_key)
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
+            BlockResponderHandler(responder, self._gossip),
+            network_thread_pool)
 
-        self._genesis_controller = GenesisController(
-            context_manager=context_manager,
-            transaction_executor=executor,
-            completer=completer,
-            block_store=block_store,
-            state_view_factory=state_view_factory,
-            identity_key=identity_signing_key,
-            data_dir=data_dir
-        )
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
+            BatchByBatchIdResponderHandler(responder, self._gossip),
+            network_thread_pool)
 
-        completer.set_on_batch_received(self._journal.on_batch_received)
-        completer.set_on_block_received(self._journal.on_block_received)
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
+            BatchByTransactionIdResponderHandler(responder, self._gossip),
+            network_thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             signature_verifier.BatchListSignatureVerifier(),
             process_pool)
+
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             CompleterBatchListBroadcastHandler(

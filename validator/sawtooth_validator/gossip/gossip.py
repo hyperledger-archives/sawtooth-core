@@ -13,6 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
+from sawtooth_validator.protobuf.network_pb2 import \
+    GossipBatchByTransactionIdRequest
+from sawtooth_validator.protobuf.network_pb2 import GossipBlockRequest
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 
@@ -26,17 +30,40 @@ class Gossip(object):
             content_type="BLOCK",
             content=block.SerializeToString())
 
-        self._broadcast(gossip_message)
+        self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
+
+    def broadcast_block_request(self, block_id):
+        # Need to define node identity to be able to route directly back
+        block_request = GossipBlockRequest(block_id=block_id)
+        self.broadcast(block_request,
+                       validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
 
     def broadcast_batch(self, batch):
         gossip_message = GossipMessage(
             content_type="BATCH",
             content=batch.SerializeToString())
 
-        self._broadcast(gossip_message)
+        self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
 
-    def _broadcast(self, gossip_message):
-        message_type = validator_pb2.Message.GOSSIP_MESSAGE
+    def broadcast_batch_by_transaction_id_request(self, batch_id):
+        # Need to define node identity to be able to route directly back
+        batch_request = GossipBatchByTransactionIdRequest(
+            id=batch_id
+        )
+        self.broadcast(
+            batch_request,
+            validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST)
+
+    def broadcast_batch_by_batch_id_request(self, batch_id):
+        # Need to define node identity to be able to route directly back
+        batch_request = GossipBatchByBatchIdRequest(
+            id=batch_id
+        )
+        self.broadcast(
+            batch_request,
+            validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
+
+    def broadcast(self, gossip_message, message_type):
         for connection in self._network.connections:
             connection.send(message_type, gossip_message.SerializeToString())
 

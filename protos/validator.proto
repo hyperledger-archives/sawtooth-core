@@ -1,4 +1,4 @@
-// Copyright 2016 Intel Corporation
+// Copyright 2016, 2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,6 +95,9 @@ message Message {
         GOSSIP_UNREGISTER = 202;
         GOSSIP_ACK = 203;
         GOSSIP_PING = 204;
+        GOSSIP_BLOCK_REQUEST = 205;
+        GOSSIP_BATCH_BY_BATCH_ID_REQUEST = 206;
+        GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST = 207;
 
     }
     // The type of message, used to determine how to 'route' the message

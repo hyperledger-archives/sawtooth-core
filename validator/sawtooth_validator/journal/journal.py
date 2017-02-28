@@ -103,6 +103,7 @@ class Journal(object):
                  transaction_executor,
                  squash_handler,
                  identity_signing_key,
+                 chain_id_manager,
                  block_cache=None):
         """
         Creates a Journal instance.
@@ -117,6 +118,8 @@ class Journal(object):
             squash_handler (function): Squash handler function for merging
                 contexts.
             identity_signing_key (str): Private key for signing blocks
+            chain_id_manager (:obj:`ChainIdManager`) The ChainIdManager
+                instance.
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
@@ -138,6 +141,7 @@ class Journal(object):
         self._chain_controller = None
         self._block_queue = queue.Queue()
         self._chain_thread = None
+        self._chain_id_manager = chain_id_manager
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
@@ -158,7 +162,8 @@ class Journal(object):
             executor=ThreadPoolExecutor(1),
             transaction_executor=self._transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,
-            squash_handler=self._squash_handler
+            squash_handler=self._squash_handler,
+            chain_id_manager=self._chain_id_manager
         )
         self._chain_thread = self._ChainThread(self._chain_controller,
                                                self._block_queue,
