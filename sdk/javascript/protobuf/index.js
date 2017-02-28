@@ -27,10 +27,13 @@ TpRegisterResponse.Status = TpRegisterResponse.nested.Status.values
 const TpProcessResponse = root.lookup('TpProcessResponse')
 TpProcessResponse.Status = TpProcessResponse.nested.Status.values
 
-module.exports = {
-  Message: root.lookup('Message'),
+const Message = root.lookup('Message')
+Message.MessageType = Message.nested.MessageType.values
 
-  MessageList: root.lookup('MessageList'),
+module.exports = {
+  //
+  // Validator messages
+  Message,
 
   //
   // processor

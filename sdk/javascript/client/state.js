@@ -18,8 +18,6 @@
 'use strict'
 
 const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
-Message.MessageType = Message.nested.MessageType.values
-
 
 class State {
   constructor (stream, contextId) {

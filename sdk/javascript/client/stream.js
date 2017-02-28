@@ -24,7 +24,7 @@ const zmq = require('zmq')
 const util = require('util')
 const assert = require('assert')
 
-const {Message, MessageList} = require('../protobuf')
+const {Message} = require('../protobuf')
 const Future = require('./future')
 
 const _encodeMessage = (messageType, correlationId, content) => {
@@ -78,14 +78,12 @@ class Stream {
   onReceive (cb) {
     let self = this
     this._socket.on('message', buffer => {
-      let messageList = MessageList.decode(buffer)
-      messageList.messages.forEach((message) => {
-        if (self._futures[message.correlationId]) {
-          self._futures[message.correlationId].set(message.content)
-        } else {
-          cb(message)
-        }
-      })
+      let message = Message.decode(buffer)
+      if (self._futures[message.correlationId]) {
+        self._futures[message.correlationId].set(message.content)
+      } else {
+        cb(message)
+      }
     })
   }
 }
