@@ -1,13 +1,13 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the 'License');
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an 'AS IS' BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -16,20 +16,20 @@
 import os
 import unittest
 import random
-import string
+import tempfile
+from string import ascii_lowercase
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.database import lmdb_nolock_database
 
-RUN_MERKLE_TESTS = True \
-    if os.environ.get("RUN_MERKLE_TESTS", False) == "1" else False
 
-
-@unittest.skipUnless(RUN_MERKLE_TESTS, "merkle tests require good filesystem")
 class TestSawtoothMerkleTrie(unittest.TestCase):
     def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.file = os.path.join(self.dir, 'merkle.lmdb')
+
         self.lmdb = lmdb_nolock_database.LMDBNoLockDatabase(
-            "/home/vagrant/merkle.lmdb",
+            self.file,
             'n')
 
         self.trie = MerkleDatabase(self.lmdb)
@@ -38,58 +38,142 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.trie.close()
 
     def test_merkle_trie_root_advance(self):
-        value = {"name": "foo", "value": 1}
+        value = {'name': 'foo', 'value': 1}
 
-        orig_root = self.trie.get_merkle_root()
-        new_root = self.trie.set(MerkleDatabase.hash("foo"),
-                                 value)
+        orig_root = self.get_merkle_root()
+        new_root = self.set('foo', value)
 
-        with self.assertRaises(KeyError):
-            self.trie.get(MerkleDatabase.hash("foo"))
+        self.assert_root(orig_root)
+        self.assert_no_key('foo')
 
-        self.trie.set_merkle_root(new_root)
+        self.set_merkle_root(new_root)
 
-        self.assertEqual(self.trie.get(MerkleDatabase.hash("foo")),
-                         value)
+        self.assert_root(new_root)
+        self.assert_value_at_address('foo', value)
 
     def test_merkle_trie_delete(self):
-        value = {"name": "bar", "value": 1}
+        value = {'name': 'bar', 'value': 1}
 
-        new_root = self.trie.set(MerkleDatabase.hash("bar"), value)
+        new_root = self.set('bar', value)
+        self.set_merkle_root(new_root)
 
-        self.trie.set_merkle_root(new_root)
+        self.assert_root(new_root)
+        self.assert_value_at_address('bar', value)
 
-        self.assertEqual(self.trie.get(MerkleDatabase.hash("bar")),
-                         value)
-
-        del_root = self.trie.delete(MerkleDatabase.hash("bar"))
-
-        self.trie.set_merkle_root(del_root)
-
+        # deleting an invalid key should raise an error
         with self.assertRaises(KeyError):
-            self.trie.get(MerkleDatabase.hash("bar"))
+            self.delete('barf')
+
+        del_root = self.delete('bar')
+
+        # del_root hasn't been set yet, so address should still have value
+        self.assert_root(new_root)
+        self.assert_value_at_address('bar', value)
+
+        self.set_merkle_root(del_root)
+
+        self.assert_root(del_root)
+        self.assert_no_key('bar')
 
     def test_merkle_trie_update(self):
-        value = ''.join(random.choice(string.ascii_lowercase)
-                        for _ in range(512))
-        keys = []
-        for i in range(1000):
-            key = ''.join(random.choice(string.ascii_lowercase)
-                          for _ in range(10))
-            keys.append(key)
-            hash = MerkleDatabase.hash(key)
-            new_root = self.trie.set(hash, {key: value})
-            self.trie.set_merkle_root(new_root)
+        init_root = self.get_merkle_root()
 
-        set_items = {}
-        for key in random.sample(keys, 50):
-            hash = MerkleDatabase.hash(key)
-            thing = {key: 5.0}
-            set_items[hash] = thing
+        key_hashes = {
+            key: _hash(key) for key in
+            (_random_string(10) for _ in range(1000))
+        }
 
-        update_root = self.trie.update(set_items)
-        self.trie.set_merkle_root(update_root)
+        for key, hashed in key_hashes.items():
+            new_root = self.set(
+                hashed,
+                {key: _random_string(512)})
+            self.set_merkle_root(new_root)
 
-        for address in set_items:
-            self.assertEqual(self.trie.get(address),
-                             set_items[address])
+        self.assert_not_root(init_root)
+
+        set_items = {
+            hashed: {key: 5.0} for key, hashed in
+            random.sample(key_hashes.items(), 50)
+        }
+
+        virtual_root = self.update(set_items, virtual=True)
+
+        # virtual root shouldn't match actual contents of tree
+        with self.assertRaises(KeyError):
+            self.set_merkle_root(virtual_root)
+
+        actual_root = self.update(set_items, virtual=False)
+
+        # the virtual root should be the same as the actual root
+        self.assertEqual(virtual_root, actual_root)
+
+        # neither should be the root yet
+        self.assert_not_root(
+            virtual_root,
+            actual_root)
+
+        self.set_merkle_root(actual_root)
+        self.assert_root(actual_root)
+
+        for address, value in set_items.items():
+            self.assert_value_at_address(
+                address, value, ishash=True)
+
+    # assertions
+
+    def assert_value_at_address(self, address, value, ishash=False):
+        self.assertEqual(
+            self.get(address, ishash),
+            value,
+            'Wrong value')
+
+    def assert_no_key(self, key):
+        with self.assertRaises(KeyError):
+            self.get(key)
+
+    def assert_root(self, expected):
+        self.assertEqual(
+            expected,
+            self.get_merkle_root(),
+            'Wrong root')
+
+    def assert_not_root(self, *not_roots):
+        root = self.get_merkle_root()
+        for not_root in not_roots:
+            self.assertNotEqual(
+                root,
+                not_root,
+                'Wrong root')
+
+    # trie accessors
+
+    # For convenience, assume keys are not hashed
+    # unless otherwise indicated.
+
+    def set(self, key, val, ishash=False):
+        key_ = key if ishash else _hash(key)
+        return self.trie.set(key_, val)
+
+    def get(self, key, ishash=False):
+        key_ = key if ishash else _hash(key)
+        return self.trie.get(key_)
+
+    def delete(self, key, ishash=False):
+        key_ = key if ishash else _hash(key)
+        return self.trie.delete(key_)
+
+    def set_merkle_root(self, root):
+        self.trie.set_merkle_root(root)
+
+    def get_merkle_root(self):
+        return self.trie.get_merkle_root()
+
+    def update(self, items, virtual=True):
+        return self.trie.update(items, virtual)
+
+
+def _hash(key):
+    return MerkleDatabase.hash(key.encode())
+
+def _random_string(length):
+    return ''.join(random.choice(ascii_lowercase) for _ in range(length))
