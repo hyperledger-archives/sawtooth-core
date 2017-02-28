@@ -18,7 +18,7 @@ import base64
 import urllib.request
 import yaml
 
-import sawtooth_signing.pbct as signing
+import sawtooth_signing.secp256k1_signer as signing
 
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.transaction_pb2 import Transaction

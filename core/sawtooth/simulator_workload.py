@@ -16,7 +16,7 @@
 # pylint: disable=no-self-use
 
 from tempfile import NamedTemporaryFile
-from sawtooth_signing import pbct as signing
+from sawtooth_signing import secp256k1_signer as signing
 
 
 class SawtoothWorkload(object):
