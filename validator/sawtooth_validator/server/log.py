@@ -33,7 +33,7 @@ def create_console_handler(verbose_level):
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
         "%(log_color)s[%(asctime)s.%(msecs)03d "
-        "%(levelname)-8s%(module)s]%(reset)s "
+        "%(levelname)-8s %(module)s]%(reset)s "
         "%(white)s%(message)s",
         datefmt="%H:%M:%S",
         reset=True,
