@@ -13,12 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import unittest
+from collections import Hashable
 
 import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import Block
 from test_client_request_handlers.mocks import MockBlockStore
 from test_client_request_handlers.mocks import make_db_and_store
+from test_client_request_handlers.mocks import make_store_and_cache
 
 
 class _ClientHandlerTestCase(unittest.TestCase):
@@ -57,7 +59,7 @@ class _ClientHandlerTestCase(unittest.TestCase):
         """
         del self._store.store['chain_head_id']
 
-    def assertAllInstances(self, items, cls):
+    def assert_all_instances(self, items, cls):
         """Checks that all items in a collection are instances of a class
         """
         for item in items:
@@ -84,13 +86,136 @@ class TestStateCurrentRequests(_ClientHandlerTestCase):
         self.assertEqual('123', response.merkle_root)
 
 
+class TestBatchStatusRequests(_ClientHandlerTestCase):
+    def setUp(self):
+        store, cache = make_store_and_cache()
+
+        self.initialize(
+            handlers.BatchStatusRequest(store, cache),
+            client_pb2.ClientBatchStatusRequest,
+            client_pb2.ClientBatchStatusResponse)
+
+    def test_batch_status_in_store(self):
+        """Verifies requests for status of a batch in the block store work.
+
+        Queries the default mock block store with three blocks/batches:
+            {header: {batch_ids: ['2'] ...}, header_signature: '2' ...},
+            {header: {batch_ids: ['1'] ...}, header_signature: '1' ...},
+            {header: {batch_ids: ['0'] ...}, header_signature: '0' ...}
+
+        Expects to find:
+            - a response status of OK
+            - a status of COMMITTED at key '0' in batch_statuses
+        """
+        response = self.make_request(batch_ids=['0'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses['0'], self.status.COMMITTED)
+
+    def test_batch_status_bad_request(self):
+        """Verifies bad requests for status of a batch break properly.
+
+        Expects to find:
+            - a response status of INTERNAL_ERROR
+        """
+        response = self.make_bad_request(batch_ids=['0'])
+
+        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
+
+    def test_batch_status_when_empty(self):
+        """Verifies requests for batch statuses with no ids break properly.
+
+        Expects to find:
+            - a response status of NO_RESOURCE
+            - that batch_statuses is empty
+        """
+        response = self.make_request(batch_ids=[])
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.batch_statuses)
+
+    def test_batch_status_in_cache(self):
+        """Verifies requests for status of a batch in the batch cache work.
+
+        Queries the default mock batch cache with two batches:
+            {header_signature: '3' ...},
+            {header_signature: '2' ...}
+
+        Expects to find:
+            - a response status of OK
+            - a status of PENDING at key '3' in batch_statuses
+        """
+        response = self.make_request(batch_ids=['3'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses['3'], self.status.PENDING)
+
+    def test_batch_status_when_missing(self):
+        """Verifies requests for status of a batch that is not found work.
+
+        Expects to find:
+            - a response status of OK
+            - a status of UNKNOWN at key 'z' in batch_statuses
+        """
+        response = self.make_request(batch_ids=['z'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses['z'], self.status.UNKNOWN)
+
+    def test_batch_status_in_store_and_cache(self):
+        """Verifies requests for status of batch in both store and cache work.
+
+        Queries the default mock block store with three blocks/batches:
+            {header: {batch_ids: ['2'] ...}, header_signature: '2' ...},
+            {header: {batch_ids: ['1'] ...}, header_signature: '1' ...},
+            {header: {batch_ids: ['0'] ...}, header_signature: '0' ...}
+
+        ...and the default mock batch cache with two batches:
+            {header_signature: '3' ...},
+            {header_signature: '2' ...}
+
+        Expects to find:
+            - a response status of OK
+            - a status of COMMITTED at key '2' in batch_statuses
+        """
+        response = self.make_request(batch_ids=['2'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses['2'], self.status.COMMITTED)
+
+    def test_batch_status_for_many_batches(self):
+        """Verifies requests for status of many batches work properly.
+
+        Queries the default mock block store with three blocks/batches:
+            {header: {batch_ids: ['2'] ...}, header_signature: '2' ...},
+            {header: {batch_ids: ['1'] ...}, header_signature: '1' ...},
+            {header: {batch_ids: ['0'] ...}, header_signature: '0' ...}
+
+        ...and the default mock batch cache with two batches:
+            {header_signature: '3' ...},
+            {header_signature: '2' ...}
+
+        Expects to find:
+            - a response status of OK
+            - a status of COMMITTED at key '1' in batch_statuses
+            - a status of COMMITTED at key '2' in batch_statuses
+            - a status of PENDING at key '3' in batch_statuses
+            - a status of UNKNOWN at key 'y' in batch_statuses
+        """
+        response = self.make_request(batch_ids=['1', '2', '3', 'y'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses['1'], self.status.COMMITTED)
+        self.assertEqual(response.batch_statuses['2'], self.status.COMMITTED)
+        self.assertEqual(response.batch_statuses['3'], self.status.PENDING)
+        self.assertEqual(response.batch_statuses['y'], self.status.UNKNOWN)
+
 class TestStateListRequests(_ClientHandlerTestCase):
     def _find_value(self, leaves, address):
         """The ordering of leaves is fairly arbitrary, so some tests
         need to filter for the matching address.
         """
-        matches = filter(lambda leaf: leaf.address == address, leaves)
-        return list(matches)[0].data
+        return [l for l in leaves if l.address == address][0].data
 
     def setUp(self):
         db, store, roots = make_db_and_store()
@@ -119,7 +244,7 @@ class TestStateListRequests(_ClientHandlerTestCase):
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('2', response.head_id)
         self.assertEqual(3, len(response.leaves))
-        self.assertAllInstances(response.leaves, client_pb2.Leaf)
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual(b'3', self._find_value(response.leaves, 'a'))
 
     def test_state_list_bad_request(self):
@@ -168,7 +293,7 @@ class TestStateListRequests(_ClientHandlerTestCase):
         self.assertFalse(response.head_id)
         self.assertEqual(1, len(response.leaves))
 
-        self.assertAllInstances(response.leaves, client_pb2.Leaf)
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual('a', response.leaves[0].address)
         self.assertEqual(b'1', response.leaves[0].data)
 
@@ -204,7 +329,7 @@ class TestStateListRequests(_ClientHandlerTestCase):
         self.assertEqual('1', response.head_id)
         self.assertEqual(2, len(response.leaves))
 
-        self.assertAllInstances(response.leaves, client_pb2.Leaf)
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual(b'2', self._find_value(response.leaves, 'a'))
 
     def test_state_list_with_bad_head(self):
@@ -239,7 +364,7 @@ class TestStateListRequests(_ClientHandlerTestCase):
         self.assertEqual('2', response.head_id)
         self.assertEqual(1, len(response.leaves))
 
-        self.assertAllInstances(response.leaves, client_pb2.Leaf)
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual('c', response.leaves[0].address)
         self.assertEqual(b'7', response.leaves[0].data)
 
@@ -276,7 +401,7 @@ class TestStateListRequests(_ClientHandlerTestCase):
         self.assertEqual('1', response.head_id)
         self.assertEqual(1, len(response.leaves))
 
-        self.assertAllInstances(response.leaves, client_pb2.Leaf)
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual('b', response.leaves[0].address)
         self.assertEqual(b'4', response.leaves[0].data)
 
@@ -471,7 +596,7 @@ class TestBlockListRequests(_ClientHandlerTestCase):
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('2', response.head_id)
         self.assertEqual(3, len(response.blocks))
-        self.assertAllInstances(response.blocks, Block)
+        self.assert_all_instances(response.blocks, Block)
         self.assertEqual('2', response.blocks[0].header_signature)
 
     def test_block_list_bad_request(self):
@@ -520,7 +645,7 @@ class TestBlockListRequests(_ClientHandlerTestCase):
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('1', response.head_id)
         self.assertEqual(2, len(response.blocks))
-        self.assertAllInstances(response.blocks, Block)
+        self.assert_all_instances(response.blocks, Block)
         self.assertEqual('1', response.blocks[0].header_signature)
 
     def test_block_list_with_bad_head(self):
