@@ -82,9 +82,25 @@ class TestBlockPublisher(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.state_view_factory = MockStateViewFactory({})
 
-    def test_publish(self):
+    def test_no_chain_head(self):
+        publisher = BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.blocks.block_cache,
+            state_view_factory=self.state_view_factory,
+            block_sender=self.block_sender,
+            squash_handler=None,
+            chain_head=self.blocks.chain_head,
+            identity_signing_key=self.blocks.identity_signing_key)
 
-        LOGGER.info(self.blocks)
+        # Test halting the BlockPublisher by setting the chain head to null
+        publisher.on_chain_updated(None)
+
+        batch = Batch()
+        publisher.on_batch_received(batch)
+        publisher.on_check_publish_block()
+        self.assertIsNone(self.block_sender.new_block)
+
+    def test_publish(self):
         publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.blocks.block_cache,
@@ -104,16 +120,7 @@ class TestBlockPublisher(unittest.TestCase):
         # this will be called on a polling every so often or possibly triggered
         # by events in the consensus it's self ... TBD
         publisher.on_check_publish_block()
-        LOGGER.info(self.blocks)
-
-        # repeat as necessary
-        batch = Batch()
-        publisher.on_batch_received(batch)
-
-        publisher.on_check_publish_block()
-
-        LOGGER.info(self.blocks)
-
+        
 
 class TestBlockValidator(unittest.TestCase):
     def setUp(self):
