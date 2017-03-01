@@ -194,12 +194,12 @@ class Validator(object):
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_REGISTER,
-            PeerRegisterHandler(),
+            PeerRegisterHandler(gossip=self._gossip),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_UNREGISTER,
-            PeerUnregisterHandler(),
+            PeerUnregisterHandler(gossip=self._gossip),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
