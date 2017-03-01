@@ -71,10 +71,10 @@ node ('master') {
             docker.withServer('tcp://0.0.0.0:4243'){
                 docker.image('sawtooth-build:$BUILD_TAG').inside {
                     sh '''
-                        NAME=`git describe --dirty`
-                        REPONAME=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
-                        git archive HEAD --prefix=$REPONAME-$NAME --format=zip -9 --output=$REPONAME-$NAME.zip
-                        git archive HEAD --prefix=$REPONAME-$NAME --format=tgz -9 --output=$REPONAME-$NAME.tgz
+                        REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
+                        VERSION=`git describe --dirty`
+                        git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
+                        git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
                     '''
                 }
             }
