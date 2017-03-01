@@ -37,18 +37,49 @@ class Dispatcher(Thread):
         super().__init__()
         self._msg_type_handlers = {}
         self._in_queue = queue.Queue()
-        self._send_message = None
+        self._send_message = {}
         self._message_information = {}
         self._condition = Condition()
         self.daemon = True
 
-    def set_send_message(self, send_message):
-        self._send_message = send_message
+    def add_send_message(self, connection, send_message):
+        """Adds a send_message function to the Dispatcher's
+        dictionary of functions indexed by connection.
 
-    def dispatch(self, identity, message):
+        Args:
+            connection (str): A locally unique identifier
+                provided by the receiver of messages.
+            send_message (fn): The method that should be called
+                by the dispatcher to respond to messages which
+                arrive via connection.
+        """
+        self._send_message[connection] = send_message
+        LOGGER.debug("Added send_message function "
+                     "for connection %s", connection)
+
+    def remove_send_message(self, connection):
+        """Removes a send_message function previously registered
+        with the Dispatcher.
+
+        Args:
+            connection (str): A locally unique identifier provided
+                by the receiver of messages.
+        """
+        if connection in self._send_message:
+            del self._send_message[connection]
+            LOGGER.debug("Removed send_message function "
+                         "for connection %s", connection)
+        else:
+            LOGGER.debug("Attempted to remove send_message "
+                         "function for connection %s, but no "
+                         "send_message function was registered",
+                         connection)
+
+    def dispatch(self, connection, message, identity=None):
         if message.message_type in self._msg_type_handlers:
             message_id = _gen_message_id()
             self._message_information[message_id] = (
+                connection,
                 identity,
                 message,
                 _ManagerCollection(
@@ -73,8 +104,8 @@ class Dispatcher(Thread):
 
     def _process(self, message_id):
         with self._condition:
-            identity, message, collection = self._message_information[
-                message_id]
+            _, identity, \
+                message, collection = self._message_information[message_id]
         try:
             handler_manager = next(collection)
             future = handler_manager.execute(identity, message.content)
@@ -94,22 +125,22 @@ class Dispatcher(Thread):
 
         elif future.result().status == HandlerStatus.RETURN_AND_PASS:
             with self._condition:
-                ident, original_message, _ = self._message_information[
-                    message_id]
+                connection, ident, \
+                    original_message, _ = self._message_information[message_id]
 
             message = validator_pb2.Message(
                 content=future.result().message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
                 message_type=future.result().message_type)
 
-            self._send_message(msg=message,
-                               identity=ident)
+            self._send_message[connection](msg=message,
+                                           identity=ident)
             self._process(message_id)
 
         elif future.result().status == HandlerStatus.RETURN:
             with self._condition:
-                ident, original_message, _ = self._message_information[
-                    message_id]
+                connection, ident, \
+                    original_message, _ = self._message_information[message_id]
 
                 del self._message_information[message_id]
 
@@ -118,8 +149,8 @@ class Dispatcher(Thread):
                 correlation_id=original_message.correlation_id,
                 message_type=future.result().message_type)
 
-            self._send_message(msg=message,
-                               identity=ident)
+            self._send_message[connection](msg=message,
+                                           identity=ident)
         with self._condition:
             if len(self._message_information) == 0:
                 self._condition.notify()

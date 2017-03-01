@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import sys
 import asyncio
 import hashlib
 import logging
@@ -42,13 +43,16 @@ def get_enum_name(enum_value):
 
 
 class _SendReceive(object):
-    def __init__(self, address, futures, identity=None,
+    def __init__(self, connection, address, futures, identity=None,
                  dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None):
         """
         Constructor for _SendReceive.
 
         Args:
+            connection (str): A locally unique identifier for this
+                thread's connection. Used to identify the connection
+                in the dispatcher for transmitting responses.
             secured (bool): Whether or not to start the socket in
                 secure mode -- using zmq auth.
             server_public_key (bytes): A public key to use in verifying
@@ -57,6 +61,7 @@ class _SendReceive(object):
                 server_public_key used by the server socket to sign
                 messages are part of the zmq auth handshake.
         """
+        self._connection = connection
         self._dispatcher = dispatcher
         self._futures = futures
         self._address = address
@@ -86,8 +91,11 @@ class _SendReceive(object):
             message = validator_pb2.Message()
             message.ParseFromString(msg_bytes)
 
-            LOGGER.debug("receiving %s message",
-                         get_enum_name(message.message_type))
+            LOGGER.debug("%s receiving %s message: %s bytes",
+                         self._connection,
+                         get_enum_name(message.message_type),
+                         sys.getsizeof(msg_bytes))
+
             try:
                 self._futures.set_result(
                     message.correlation_id,
@@ -95,23 +103,30 @@ class _SendReceive(object):
                                         content=message.content))
             except future.FutureCollectionKeyError:
                 if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                    self._dispatcher.dispatch(identity, message)
+                    self._dispatcher.dispatch(self._connection,
+                                              message,
+                                              identity=identity)
                 else:
-                    LOGGER.info(
-                        "received a first message on the zmq dealer.")
+                    # Because this is a zmq.DEALER socket, there is no
+                    # outbound identity
+                    self._dispatcher.dispatch(self._connection,
+                                              message)
             else:
                 my_future = self._futures.get(message.correlation_id)
+
                 LOGGER.debug("message round "
                              "trip: %s %s",
                              get_enum_name(message.message_type),
                              my_future.get_duration())
+
                 self._futures.remove(message.correlation_id)
 
     @asyncio.coroutine
     def _send_message(self, identity, msg):
-        LOGGER.debug("sending %s to %s",
+        LOGGER.debug("%s sending %s to %s",
+                     self._connection,
                      get_enum_name(msg.message_type),
-                     identity)
+                     identity if identity else self._address)
 
         if identity is None:
             message_bundle = [msg.SerializeToString()]
@@ -143,10 +158,9 @@ class _SendReceive(object):
         self._event_loop = zmq.asyncio.ZMQEventLoop()
         asyncio.set_event_loop(self._event_loop)
         self._context = zmq.asyncio.Context()
+        self._socket = self._context.socket(socket_type)
 
         if socket_type == zmq.DEALER:
-            self._socket = self._context.socket(socket_type)
-
             self._socket.identity = "{}-{}".format(
                 self._identity,
                 hashlib.sha512(uuid.uuid4().hex.encode()
@@ -159,10 +173,10 @@ class _SendReceive(object):
 
                 self._socket.curve_serverkey = self._server_public_key
 
+            self._dispatcher.add_send_message(self._connection,
+                                              self.send_message)
             self._socket.connect(self._address)
         elif socket_type == zmq.ROUTER:
-            self._socket = self._context.socket(socket_type)
-
             if self._secured:
                 auth = AsyncioAuthenticator(self._context)
                 auth.start()
@@ -173,7 +187,8 @@ class _SendReceive(object):
                 self._socket.curve_publickey = self._server_public_key
                 self._socket.curve_server = True
 
-            self._dispatcher.set_send_message(self.send_message)
+            self._dispatcher.add_send_message(self._connection,
+                                              self.send_message)
             self._socket.bind(self._address)
 
         self._recv_queue = asyncio.Queue()
@@ -183,6 +198,7 @@ class _SendReceive(object):
         self._event_loop.run_forever()
 
     def stop(self):
+        self._dispatcher.remove_send_message(self._connection)
         self._event_loop.stop()
         self._socket.close()
         self._context.term()
@@ -212,6 +228,7 @@ class Interconnect(object):
         """
         self._futures = future.FutureCollection()
         self._send_receive_thread = _SendReceive(
+            "ServerThread",
             address=endpoint,
             dispatcher=dispatcher,
             futures=self._futures,
@@ -225,6 +242,7 @@ class Interconnect(object):
             self.connections = [
                 Connection(
                     endpoint=addr,
+                    dispatcher=dispatcher,
                     identity=identity,
                     secured=secured,
                     server_public_key=server_public_key,
@@ -267,6 +285,7 @@ class Interconnect(object):
 class Connection(object):
     def __init__(self,
                  endpoint,
+                 dispatcher,
                  identity,
                  secured,
                  server_public_key,
@@ -274,11 +293,14 @@ class Connection(object):
         self._futures = future.FutureCollection()
         self._identity = identity
         self._endpoint = endpoint
+        self._dispatcher = dispatcher
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
         self._send_receive_thread = _SendReceive(
+            "ConnectionThread-{}".format(self._endpoint),
             endpoint,
+            dispatcher=self._dispatcher,
             futures=self._futures,
             identity=identity,
             secured=secured,
