@@ -86,6 +86,10 @@ message Message {
         CLIENT_STATE_GET_REQUEST = 118;
         // The response with the entry
         CLIENT_STATE_GET_RESPONSE = 119;
+        // A request for the status of a batch or batches
+        CLIENT_BATCH_STATUS_REQUEST = 120;
+        // A response with the batch statuses
+        CLIENT_BATCH_STATUS_RESPONSE = 121;
         // Further messages from the stats client through the web api
 
 
