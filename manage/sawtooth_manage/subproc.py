@@ -18,6 +18,7 @@ import signal
 import subprocess
 import time
 import yaml
+import re
 
 from sawtooth_manage.node import NodeController
 from sawtooth_manage.utils import get_executable_script
@@ -49,7 +50,7 @@ class SubprocessNodeController(NodeController):
 
         base_component_port = 40000
         port = str(base_component_port + node_num)
-        url = '0.0.0.0:' + port
+        url = 'tcp://0.0.0.0:' + port
 
         base_gossip_port = 8800
         gossip_port_num = str(base_gossip_port + node_num)
@@ -60,6 +61,10 @@ class SubprocessNodeController(NodeController):
         commands = ['validator'] + state['Processors']
         if node_args.genesis:
             commands = ['sawtooth'] + commands
+            # clean data dir of existing genesis node artifacts
+            data_dir = os.path.join(os.path.expanduser("~"), 'sawtooth', 'data')
+            regex = re.compile('.*')
+            self._rm_wildcard(data_dir, regex)
 
         for cmd in commands:
             # get_executable_script returns (path, executable)
@@ -69,12 +74,19 @@ class SubprocessNodeController(NodeController):
             if cmd == 'validator':
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
+                peer_list = ['tcp://0.0.0.0:' + str(base_gossip_port + i) for i in range(node_num)]
+                peers = ['--peers']
+                peers.extend(peer_list)
+                if peers:
+                    peers = tuple(peers)
                 flags = component + network
+                if len(peers) > 1:
+                    flags += peers
+
             elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
             else:
                 flags = (url,)
-
             handle = subprocess.Popen((executable,) + flags)
 
             pid = handle.pid
@@ -106,3 +118,14 @@ class SubprocessNodeController(NodeController):
 
     def create_genesis_block(self, node_args):
         pass
+
+    def _rm_wildcard(self, path, pattern):
+        for each in os.listdir(path):
+            if pattern.search(each):
+                name = os.path.join(path, each)
+                try:
+                    os.remove(name)
+                except:
+                    traceback.print_exc(file=sys.stderr)
+                    sys.exit(1)
+
