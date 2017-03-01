@@ -23,12 +23,12 @@ from threading import RLock
 # pylint: disable=no-name-in-module
 from journal import transaction_block
 from journal.messages import transaction_block_message
-from sawtooth_validator.consensus.poet1.validator_registry \
+from sawtooth_validator.consensus.poet.validator_registry \
     import ValidatorRegistryTransaction
 
-from sawtooth_validator.journal.consensus.poet1.wait_certificate\
+from sawtooth_validator.journal.consensus.poet.wait_certificate\
     import WaitCertificate
-from sawtooth_validator.journal.consensus.poet1.wait_certificate\
+from sawtooth_validator.journal.consensus.poet.wait_certificate\
     import WaitTimer
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
@@ -55,7 +55,7 @@ class PoetTransactionBlockMessage(
         PoetTransactionBlockMessage.MessageType (str): The class name of
             the message.
     """
-    MessageType = "/Poet1/TransactionBlock"
+    MessageType = "/Poet/TransactionBlock"
 
     def __init__(self, minfo=None):
         if minfo is None:

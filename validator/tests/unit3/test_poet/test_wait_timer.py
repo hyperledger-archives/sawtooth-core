@@ -18,14 +18,14 @@ import time
 import unittest
 
 
-import sawtooth_validator.journal.consensus.poet1.wait_timer as wait_timer
-import sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.\
+import sawtooth_validator.journal.consensus.poet.wait_timer as wait_timer
+import sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.\
     poet_enclave_simulator as poet_enclave
 
-from sawtooth_validator.journal.consensus.poet1.signup_info import SignupInfo
+from sawtooth_validator.journal.consensus.poet.signup_info import SignupInfo
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
-from test_poet1.utils import create_random_public_key_hash
+from test_poet.utils import create_random_public_key_hash
 
 
 class TestWaitTimer(unittest.TestCase):

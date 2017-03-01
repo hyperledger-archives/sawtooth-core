@@ -14,9 +14,9 @@
 # ------------------------------------------------------------------------------
 import logging
 
-from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.common\
     import json2dict
-from sawtooth_validator.journal.consensus.poet1.poet_enclave_simulator.common\
+from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.common\
     import dict2json
 
 LOGGER = logging.getLogger(__name__)

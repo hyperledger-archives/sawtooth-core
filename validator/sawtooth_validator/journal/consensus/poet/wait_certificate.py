@@ -18,7 +18,7 @@ import requests
 from requests import Timeout
 
 from sawtooth_validator.exceptions import NotAvailableException
-from sawtooth_validator.journal.consensus.poet1.wait_timer import WaitTimer
+from sawtooth_validator.journal.consensus.poet.wait_timer import WaitTimer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class WaitCertificate(object):
                 certificate is being created.
 
         Returns:
-            journal.consensus.poet1.wait_certificate.WaitCertificate: A new
+            journal.consensus.poet.wait_certificate.WaitCertificate: A new
                 wait certificate.
         """
 
@@ -107,7 +107,7 @@ class WaitCertificate(object):
             signature (str): The signature.
 
         Returns:
-            journal.consensus.poet1.wait_certificate.WaitCertificate: A wait
+            journal.consensus.poet.wait_certificate.WaitCertificate: A wait
                 certificate representing the contents of the serialized wait
                 certificate.
         """

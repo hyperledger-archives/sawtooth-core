@@ -76,7 +76,7 @@ class SignupInfo(object):
             serialized (str): The serialized signup info
 
         Returns:
-            journal.consensus.poet1.signup_info.SignupInfo: A signup
+            journal.consensus.poet.signup_info.SignupInfo: A signup
                 info object.
         """
         enclave_signup_info = \
