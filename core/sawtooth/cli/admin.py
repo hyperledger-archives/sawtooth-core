@@ -17,8 +17,8 @@ import logging
 from sawtooth.cli.exceptions import CliException
 from sawtooth.cli.admin_sub.dev_mode_genesis import add_dev_mode_genesis_parser
 from sawtooth.cli.admin_sub.dev_mode_genesis import do_dev_mode_genesis
-from sawtooth.cli.admin_sub.poet1_genesis import add_poet1_genesis_parser
-from sawtooth.cli.admin_sub.poet1_genesis import do_poet1_genesis
+from sawtooth.cli.admin_sub.poet1_genesis import add_poet_genesis_parser
+from sawtooth.cli.admin_sub.poet1_genesis import do_poet_genesis
 from sawtooth.cli.admin_sub.permissioned_validator_registry\
     import add_validator_parser
 from sawtooth.cli.admin_sub.permissioned_validator_registry\
@@ -32,8 +32,8 @@ LOGGER = logging.getLogger(__name__)
 def do_admin(args):
     if args.admin_cmd == 'dev-mode-genesis':
         do_dev_mode_genesis(args)
-    elif args.admin_cmd == 'poet1-genesis':
-        do_poet1_genesis(args)
+    elif args.admin_cmd == 'poet-genesis':
+        do_poet_genesis(args)
     elif args.admin_cmd == 'validator-registry':
         do_validator_registry(args)
     elif args.admin_cmd == 'clean':
@@ -46,6 +46,6 @@ def add_admin_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('admin')
     admin_sub = parser.add_subparsers(title='admin_commands', dest='admin_cmd')
     add_dev_mode_genesis_parser(admin_sub, parser)
-    add_poet1_genesis_parser(admin_sub, parser)
+    add_poet_genesis_parser(admin_sub, parser)
     add_validator_parser(admin_sub, parser)
     add_clean_parser(admin_sub, parser)

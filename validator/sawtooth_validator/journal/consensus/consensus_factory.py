@@ -43,7 +43,7 @@ class ConsensusFactory(object):
                 'dev_mode_consensus'
         elif module_name == 'poet':
             module_package = \
-                'sawtooth_validator.journal.consensus.poet1.poet_consensus'
+                'sawtooth_validator.journal.consensus.poet.poet_consensus'
 
         try:
             return importlib.import_module(module_package)

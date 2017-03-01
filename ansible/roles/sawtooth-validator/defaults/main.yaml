@@ -23,6 +23,6 @@ sawtooth_validator_log_level: "DEBUG"
 sawtooth_validator_log_file: "{log_dir}/lottery-{node}.log"
 sawtooth_validator_transaction_families:
     - "ledger.transaction.integer_key"
-sawtooth_validator_ledger_type: "poet1"
+sawtooth_validator_ledger_type: "poet"
 sawtooth_validator_administration_node: "NOT_SET"
 sawtooth_validator_key_file: "{key_dir}/{node}.wif"

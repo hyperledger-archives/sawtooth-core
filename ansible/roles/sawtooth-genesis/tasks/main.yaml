@@ -6,7 +6,7 @@
     creates: /etc/sawtooth-validator/keys/*.wif
 
 - name: Create Genesis block
-  shell: sawtooth admin poet1-genesis
+  shell: sawtooth admin poet-genesis
   args:
     creates: /var/lib/sawtooth-validator/*.shelf
 

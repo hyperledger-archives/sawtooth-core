@@ -22,17 +22,17 @@ import math
 
 from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.consensus.poet1 import poet_transaction_block
+from sawtooth_validator.journal.consensus.poet import poet_transaction_block
 
 # Disabled pylint as this package no longer exists and will be replaced as PoET
 # is integrated into the validator.
 # pylint: disable=no-name-in-module
-from sawtooth_validator.journal.consensus.poet1\
+from sawtooth_validator.journal.consensus.poet\
     import validator_registry as val_reg
 
-from sawtooth_validator.journal.consensus.poet1.signup_info import SignupInfo
-from sawtooth_validator.journal.consensus.poet1.wait_timer import WaitTimer
-from sawtooth_validator.journal.consensus.poet1.wait_certificate\
+from sawtooth_validator.journal.consensus.poet.signup_info import SignupInfo
+from sawtooth_validator.journal.consensus.poet.wait_timer import WaitTimer
+from sawtooth_validator.journal.consensus.poet.wait_certificate\
     import WaitCertificate
 
 LOGGER = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class PoetConsensus(object):
         if 'PoetEnclaveImplementation' in kwargs:
             enclave_module = kwargs['PoetEnclaveImplementation']
         else:
-            enclave_module = 'sawtooth_validator.consensus.poet1.' \
+            enclave_module = 'sawtooth_validator.consensus.poet.' \
                              'poet_enclave_simulator' \
                              '.poet_enclave_simulator'
 
