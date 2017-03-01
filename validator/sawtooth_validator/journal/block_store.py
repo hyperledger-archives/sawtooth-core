@@ -56,10 +56,12 @@ class BlockStore(MutableMapping):
         return x in self._block_store
 
     def __iter__(self):
-        return iter(self._block_store)
+        # Required by abstract base class, but implementing is non-trivial
+        raise NotImplementedError('BlockStore is not iterable')
 
     def __len__(self):
-        return len(self._block_store)
+        # Required by abstract base class, but implementing is non-trivial
+        raise NotImplementedError('BlockStore has no meaningful length')
 
     def __str__(self):
         out = []
@@ -158,7 +160,7 @@ class BlockStore(MutableMapping):
         return txn_id in self._block_store
 
     def get_block_by_batch_id(self, batch_id):
-        return batch_id in self._block_store
+        return self.__getitem__(self._block_store[batch_id])
 
     def has_batch(self, batch_id):
         return batch_id in self._block_store
