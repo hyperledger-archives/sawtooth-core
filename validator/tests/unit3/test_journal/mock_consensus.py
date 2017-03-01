@@ -23,9 +23,10 @@ from sawtooth_validator.journal.consensus.consensus\
 class BlockPublisher(BlockPublisherInterface):
     """ MockConsensus BlockPublisher
     """
-    def __init__(self, block_cache, state_view):
+    def __init__(self, block_cache, state_view, batch_publisher):
         self._block_cache = block_cache
         self._state_view = state_view
+        self.batch_publisher = batch_publisher
 
     def initialize_block(self, block_header):
         """

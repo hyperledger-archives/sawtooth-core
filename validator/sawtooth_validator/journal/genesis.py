@@ -48,7 +48,8 @@ class GenesisController(object):
                  state_view_factory,
                  identity_key,
                  data_dir,
-                 chain_id_manager):
+                 chain_id_manager,
+                 batch_sender):
         """Creates a GenesisController.
 
         Args:
@@ -62,6 +63,9 @@ class GenesisController(object):
                 factory for creating state views during processing.
             identity_key (str): A private key used for signing blocks, in hex.
             data_dir (str): The directory for data files.
+            chain_id_manager (ChainIdManager): utility class to manage the
+            chain id file.
+            batch_sender: interface to broadcast batches to the network.
         """
         self._context_manager = context_manager
         self._transaction_executor = transaction_executor
@@ -71,6 +75,7 @@ class GenesisController(object):
         self._identity_priv_key = identity_key
         self._data_dir = data_dir
         self._chain_id_manager = chain_id_manager
+        self._batch_sender = batch_sender
 
     def requires_genesis(self):
         """
@@ -212,11 +217,25 @@ class GenesisController(object):
         """
         state_view = self._state_view_factory.create_view(state_hash)
         try:
+            class BatchPublisher(object):
+                def send(self, transactions):
+                    # Consensus implementations are expected to have handling
+                    # in place for genesis operation. This should includes
+                    # adding any authorization and registrations required
+                    # for the genesis node to the Genesis Batch list and
+                    # detecting validation of the Genesis Block and handle it
+                    # correctly. Batch publication is not allowed during
+                    # genesis operation since there is no network to validate
+                    # the batch yet.
+                    raise InvalidGenesisConsensusError(
+                        'Consensus cannot send transactions during genesis.')
+
             consensus = ConsensusFactory.get_configured_consensus_module(
                 state_view)
             return consensus.BlockPublisher(
                 BlockCache(self._block_store),
-                state_view=state_view)
+                state_view=state_view,
+                batch_publisher=BatchPublisher())
         except UnknownConsensusModuleError as e:
             raise InvalidGenesisStateError(e)
 

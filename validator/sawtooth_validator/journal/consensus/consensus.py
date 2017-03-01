@@ -26,7 +26,7 @@ class BlockPublisherInterface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def __init__(self, block_cache, state_view):
+    def __init__(self, block_cache, state_view, batch_publisher):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
@@ -35,6 +35,9 @@ class BlockPublisherInterface(metaclass=ABCMeta):
                 state_view: A read only view of state for the last committed
                 block in the chain. For the block publisher this is the block
                 we are building on top of.
+                batch_publisher: An interface implementing send(txn_list)
+                which wrap the transactions in a batch and broadcast that
+                batch to the network.
             Returns:
                 none.
         """

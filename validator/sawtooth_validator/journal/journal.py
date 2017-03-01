@@ -100,6 +100,7 @@ class Journal(object):
                  block_store,
                  state_view_factory,
                  block_sender,
+                 batch_sender,
                  transaction_executor,
                  squash_handler,
                  identity_signing_key,
@@ -113,6 +114,7 @@ class Journal(object):
             state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
                 read-only state views.
             block_sender (:obj:`BlockSender`): The BlockSender instance.
+            batch_sender (:obj:`BatchSender`): The BatchSender instance.
             transaction_executor (:obj:`TransactionExecutor`): A
                 TransactionExecutor instance.
             squash_handler (function): Squash handler function for merging
@@ -133,6 +135,7 @@ class Journal(object):
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
         self._block_sender = block_sender
+        self._batch_sender = batch_sender
 
         self._block_publisher = None
         self._batch_queue = queue.Queue()
@@ -149,6 +152,7 @@ class Journal(object):
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
             block_sender=self._block_sender,
+            batch_sender=self._batch_sender,
             squash_handler=self._squash_handler,
             chain_head=self._block_store.chain_head,
             identity_signing_key=self._identity_signing_key
