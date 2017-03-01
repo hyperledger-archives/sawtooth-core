@@ -15,12 +15,12 @@
 
 import logging
 
-from sawtooth_validator.journal.consensus.poet1.poets_client.poets_client \
+from sawtooth_validator.journal.consensus.poet.poets_client.poets_client \
     import PoetsClient
-from sawtooth_validator.journal.consensus.poet1.poets_client.wait_certificate \
+from sawtooth_validator.journal.consensus.poet.poets_client.wait_certificate \
     import WaitCertificate
 
-from sawtooth_validator.journal.consensus.poet1.poets_client.wait_timer \
+from sawtooth_validator.journal.consensus.poet.poets_client.wait_timer \
     import WaitTimer
 
 LOGGER = logging.getLogger(__name__)
