@@ -39,7 +39,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
             EnclaveWaitCertificate.wait_certificate_with_wait_timer(
                 wait_timer=wait_timer,
                 nonce='Eeny, meeny, miny, moe.',
-                block_digest='Indigestion. Pepto Bismol.')
+                block_hash='Indigestion. Pepto Bismol.')
 
         self.assertAlmostEqual(
             wait_timer.request_time,
@@ -58,7 +58,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
             wait_certificate.validator_address)
         self.assertEqual(wait_certificate.nonce, 'Eeny, meeny, miny, moe.')
         self.assertEqual(
-            wait_certificate.block_digest,
+            wait_certificate.block_hash,
             'Indigestion. Pepto Bismol.')
         self.assertIsNone(wait_certificate.signature)
 
@@ -76,7 +76,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 request_time=wait_certificate.request_time,
                 validator_address='1600 Pennsylvania Avenue NW',
                 nonce='Eeny, meeny, miny, moe.',
-                block_digest=wait_certificate.block_digest)
+                block_hash=wait_certificate.block_hash)
 
         self.assertAlmostEqual(
             wait_certificate.duration,
@@ -95,8 +95,8 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
             other_wait_certificate.validator_address)
         self.assertEqual(wait_certificate.nonce, other_wait_certificate.nonce)
         self.assertEqual(
-            wait_certificate.block_digest,
-            other_wait_certificate.block_digest)
+            wait_certificate.block_hash,
+            other_wait_certificate.block_hash)
         self.assertIsNone(other_wait_certificate.signature)
 
     def test_serialize_wait_certificate(self):
@@ -111,7 +111,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
             EnclaveWaitCertificate.wait_certificate_with_wait_timer(
                 wait_timer=wait_timer,
                 nonce='Eeny, meeny, miny, moe.',
-                block_digest='Indigestion. Pepto Bismol.')
+                block_hash='Indigestion. Pepto Bismol.')
 
         self.assertIsNotNone(wait_certificate.serialize())
 
@@ -127,7 +127,7 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
             EnclaveWaitCertificate.wait_certificate_with_wait_timer(
                 wait_timer=wait_timer,
                 nonce='Eeny, meeny, miny, moe.',
-                block_digest='Indigestion. Pepto Bismol.')
+                block_hash='Indigestion. Pepto Bismol.')
 
         serialized = wait_certificate.serialize()
         signing_key = self._create_random_key()
@@ -158,8 +158,8 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
             wait_certificate.nonce,
             copy_wait_certificate.nonce)
         self.assertEqual(
-            wait_certificate.block_digest,
-            copy_wait_certificate.block_digest)
+            wait_certificate.block_hash,
+            copy_wait_certificate.block_hash)
         self.assertEqual(
             wait_certificate.signature,
             copy_wait_certificate.signature)

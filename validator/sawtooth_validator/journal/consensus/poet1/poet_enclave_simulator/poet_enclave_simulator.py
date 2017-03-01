@@ -383,7 +383,7 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def create_wait_certificate(cls,
                                 wait_timer,
-                                block_digest):
+                                block_hash):
         with cls._lock:
             # If we don't have a PoET private key, then the enclave has not
             # been properly initialized (either by calling create_signup_info
@@ -466,7 +466,7 @@ class _PoetEnclaveSimulator(object):
                 EnclaveWaitCertificate.wait_certificate_with_wait_timer(
                     wait_timer=cls._active_wait_timer,
                     nonce=nonce,
-                    block_digest=block_digest)
+                    block_hash=block_hash)
             wait_certificate.signature = \
                 signing.sign(
                     wait_certificate.serialize(),
@@ -551,11 +551,11 @@ def deserialize_wait_timer(serialized_timer, signature):
             signature=signature)
 
 
-def create_wait_certificate(wait_timer, block_digest):
+def create_wait_certificate(wait_timer, block_hash):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
             wait_timer=wait_timer,
-            block_digest=block_digest)
+            block_hash=block_hash)
 
 
 def deserialize_wait_certificate(serialized_certificate, signature):

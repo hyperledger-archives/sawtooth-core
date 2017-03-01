@@ -50,8 +50,8 @@ class WaitCertificate(object):
         duration (float): The duration of the wait timer.
         validator_address (str): The address of the validator that created
             the wait certificate.
-        block_digest (str): The block digest of the block for which this
-            wait certificate was created.
+        block_hash (str): The hash of the block for which this wait
+            certificate was created.
         signature (str): The signature of the certificate.
         identifier (str): The identifier of this certificate.
     """
@@ -60,25 +60,31 @@ class WaitCertificate(object):
     @classmethod
     def create_wait_certificate(cls,
                                 wait_timer,
-                                block_digest):
+                                block_hash):
         """Creates a wait certificate in the enclave and then constructs
         a WaitCertificate object from it.
 
         Args:
             wait_timer (WaitTimer): The wait timer for which the wait
                 certificate is being requested.
-            block_digest (str): The block digest of the block for which
-                this certificate is being created.
+            block_hash (str): The hash of the block for which this
+                certificate is being created.
 
         Returns:
             journal.consensus.poet1.wait_certificate.WaitCertificate: A new
                 wait certificate.
         """
 
-        enclave_certificate = \
-            cls.poet_enclave.create_wait_certificate(
-                wait_timer=wait_timer,
-                block_digest=block_digest)
+        enclave_certificate = None
+        try:
+            enclave_certificate = \
+                cls.poet_enclave.create_wait_certificate(
+                    wait_timer.enclave_wait_timer,
+                    block_hash)
+        except AttributeError as ex:
+            LOGGER.error(
+                'Exception caught trying to create wait certificate: %s',
+                ex)
 
         if not enclave_certificate:
             raise \
@@ -107,8 +113,8 @@ class WaitCertificate(object):
         """
         enclave_certificate = \
             cls.poet_enclave.deserialize_wait_certificate(
-                serialized_certificate=serialized,
-                signature=signature)
+                serialized,
+                signature)
 
         if not enclave_certificate:
             raise \
@@ -141,9 +147,9 @@ class WaitCertificate(object):
         self.request_time = enclave_certificate.request_time
         self.duration = enclave_certificate.duration
         self.validator_address = enclave_certificate.validator_address
-        self.block_digest = enclave_certificate.block_digest
+        self.block_hash = enclave_certificate.block_hash
         self.signature = enclave_certificate.signature
-        self.identifier = enclave_certificate.identifier
+        self.identifier = enclave_certificate.identifier()
 
         # we cannot hold the certificate because it cannot be pickled for
         # storage in the transaction block array
@@ -203,8 +209,8 @@ class WaitCertificate(object):
 
         try:
             self.poet_enclave.verify_wait_certificate(
-                certificate=enclave_certificate,
-                poet_public_key=poet_public_key)
+                enclave_certificate,
+                poet_public_key)
         except Timeout:
             raise NotAvailableException
         except requests.ConnectionError:

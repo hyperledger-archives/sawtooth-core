@@ -115,10 +115,10 @@ class WaitTimer(object):
         # WaitTimer object
         enclave_timer = \
             cls.poet_enclave.create_wait_timer(
-                validator_address=validator_address,
-                previous_certificate_id=previous_certificate_id,
-                local_mean=local_mean,
-                minimum_wait_time=cls.minimum_wait_time)
+                validator_address,
+                previous_certificate_id,
+                local_mean,
+                cls.minimum_wait_time)
         timer = cls(enclave_timer)
 
         LOGGER.info('wait timer created; %s', timer)
@@ -155,6 +155,15 @@ class WaitTimer(object):
     @property
     def population_estimate(self):
         return self.local_mean / WaitTimer.target_wait_time
+
+    @property
+    def enclave_wait_timer(self):
+        """Converts the serialized timer into an eclave timer object.
+
+        Returns:
+            poet_enclave.WaitTimer: The deserialized enclave timer object.
+        """
+        return self._enclave_wait_timer
 
     def __init__(self, enclave_timer):
         self.previous_certificate_id =\

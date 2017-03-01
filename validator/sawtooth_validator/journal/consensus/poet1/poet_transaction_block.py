@@ -239,7 +239,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
                 self.wait_certificate.check_valid(
                     certificates=journal.consensus.build_certificate_list(
                         journal.block_store, self),
-                    poet_public_key=poet_public_key)
+                    poet_public_key=str(poet_public_key))
             except (ValueError, TypeError) as err:
                 LOGGER.error('Wait certificate is not valid: %s', err)
                 return False
@@ -269,12 +269,12 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
             hasher = hashlib.sha256()
             for tid in self.TransactionIDs:
                 hasher.update(tid.encode())
-            block_digest = hasher.hexdigest()
+            block_hash = hasher.hexdigest()
 
             self.wait_certificate = \
                 WaitCertificate.create_wait_certificate(
                     wait_timer=self.wait_timer,
-                    block_digest=block_digest)
+                    block_hash=block_hash)
             if self.wait_certificate:
                 self.wait_timer = None
 
