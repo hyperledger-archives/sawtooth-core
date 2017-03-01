@@ -53,7 +53,8 @@ class Dispatcher(Thread):
                 by the dispatcher to respond to messages which
                 arrive via connection.
         """
-        self._send_message[connection] = send_message
+        with self._condition:
+            self._send_message[connection] = send_message
         LOGGER.debug("Added send_message function "
                      "for connection %s", connection)
 
@@ -66,7 +67,8 @@ class Dispatcher(Thread):
                 by the receiver of messages.
         """
         if connection in self._send_message:
-            del self._send_message[connection]
+            with self._condition:
+                del self._send_message[connection]
             LOGGER.debug("Removed send_message function "
                          "for connection %s", connection)
         else:
