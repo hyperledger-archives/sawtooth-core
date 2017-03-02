@@ -42,11 +42,10 @@ class BlockStore(MutableMapping):
         stored_block = self._block_store[key]
         if stored_block is not None:
             block = Block()
-            block.ParseFromString(stored_block['block'])
+            block.ParseFromString(stored_block)
             return BlockWrapper(
                 status=BlockStatus.Valid,
-                block=block,
-                weight=stored_block['weight'])
+                block=block)
         raise KeyError("Key {} not found.".format(key))
 
     def __delitem__(self, key):
@@ -113,13 +112,6 @@ class BlockStore(MutableMapping):
         return self._block_store
 
     @staticmethod
-    def wrap_block(blkw):
-        return {
-            "block": blkw.block.SerializeToString(),
-            "weight": blkw.weight
-        }
-
-    @staticmethod
     def _build_add_block_ops(blkw):
         """Build the batch operations to add a block to the BlockStore.
 
@@ -129,7 +121,7 @@ class BlockStore(MutableMapping):
         """
         out = []
         blk_id = blkw.identifier
-        out.append((blk_id, BlockStore.wrap_block(blkw)))
+        out.append((blk_id, blkw.block.SerializeToString()))
         for batch in blkw.batches:
             out.append((batch.header_signature, blk_id))
             for txn in batch.transactions:

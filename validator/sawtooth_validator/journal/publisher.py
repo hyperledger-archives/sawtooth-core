@@ -120,11 +120,10 @@ class BlockPublisher(object):
             block_num=chain_head.block_num + 1,
             previous_block_id=chain_head.header_signature)
         block_builder = BlockBuilder(block_header)
-        self._consensus.initialize_block(block_builder)
+        if not self._consensus.initialize_block(block_builder.block_header):
+            LOGGER.debug("Consensus not ready to build candidate block.")
 
         # create a new scheduler
-        # TBD move factory in to executor for easier mocking --
-        # Yes I want to make fun of it.
         self._scheduler = self._transaction_executor.create_scheduler(
             self._squash_handler, chain_head.state_root_hash)
 
@@ -311,8 +310,8 @@ class BlockPublisher(object):
                     self._candidate_block = self._build_block(chain_head)
         # pylint: disable=broad-except
         except Exception as exc:
+            LOGGER.critical("on_chain_updated exception.")
             LOGGER.exception(exc)
-            LOGGER.critical("BlockPublisher thread exited.")
 
     def _finalize_block(self, block):
         if self._scheduler:
@@ -366,7 +365,11 @@ class BlockPublisher(object):
             LOGGER.debug("Abandoning block %s no batches added", block)
             return False
 
-        self._consensus.finalize_block(block)
+        if not self._consensus.finalize_block(block.block_header):
+            LOGGER.debug("Abandoning block %s, consensus failed to finalize "
+                         "it", block)
+            return False
+
         self._consensus = None
 
         block.set_state_hash(state_hash)
@@ -378,6 +381,7 @@ class BlockPublisher(object):
         """Ask the consensus module if it is time to claim the candidate block
         if it is then, claim it and tell the world about it.
         :return:
+            None
         """
         try:
             with self._lock:
@@ -388,7 +392,8 @@ class BlockPublisher(object):
                 if self._candidate_block and \
                         (force or len(self._pending_batches) != 0) and \
                         self._consensus.check_publish_block(self.
-                                                            _candidate_block):
+                                                            _candidate_block.
+                                                            block_header):
                     candidate = self._candidate_block
                     self._candidate_block = None
 
@@ -407,5 +412,5 @@ class BlockPublisher(object):
                     self.on_chain_updated(block)
         # pylint: disable=broad-except
         except Exception as exc:
+            LOGGER.critical("on_check_publish_block exception.")
             LOGGER.exception(exc)
-            LOGGER.critical("BlockPublisher thread exited.")

@@ -136,10 +136,7 @@ class TestGenesisController(unittest.TestCase):
 
         block_store = self.make_block_store({
             'chain_head_id': 'some_other_id',
-            'some_other_id': {
-                'weight': 0,
-                'block': b''
-            }
+            'some_other_id': b''
         })
 
         genesis_ctrl = GenesisController(

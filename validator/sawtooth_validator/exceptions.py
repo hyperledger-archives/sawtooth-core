@@ -38,6 +38,14 @@ class InvalidGenesisStateError(GenesisError):
     pass
 
 
+class InvalidGenesisConsensusError(GenesisError):
+    """
+    Error thrown when the consensus algorithm refuses or fails to initialize
+    or finalize the genesis block.
+    """
+    pass
+
+
 class NotAvailableException(Exception):
     """
     Indicates a required service is not available and the action should be

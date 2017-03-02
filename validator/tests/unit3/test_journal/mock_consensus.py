@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import hashlib
-
 from sawtooth_validator.journal.consensus.consensus\
     import BlockPublisherInterface
 from sawtooth_validator.journal.consensus.consensus\
@@ -23,75 +21,56 @@ from sawtooth_validator.journal.consensus.consensus\
 
 
 class BlockPublisher(BlockPublisherInterface):
-    """Consensus objects provide the following services to the Journal:
-    1) Build candidate blocks ( this temporary until the block types are
-    combined into a single block type)
-    2) Check if it is time to claim the current candidate blocks.
-    3) Provide the data a signatures required for a block to be validated by
-    other consensus algorithms
+    """ MockConsensus BlockPublisher
     """
     def __init__(self, block_cache, state_view):
         self._block_cache = block_cache
         self._state_view = state_view
 
-    def initialize_block(self, block):
-        """Do initialization necessary for the consensus to claim a block,
-        this may include initiating voting activates, starting proof of work
-        hash generation, or create a PoET wait timer.
-
-        Args:
-            journal (Journal): the current journal object
-            block (TransactionBlock): the block to initialize.
-        Returns:
-            none
+    def initialize_block(self, block_header):
         """
-        block.block_header.consensus = b"test_mode"
-
-    def check_publish_block(self, block):
-        """Check if a candidate block is ready to be claimed.
-
         Args:
-            journal (Journal): the current journal object
-            block: the block to be checked if it should be claimed
-            now: the current time
+            block_header (BlockHeader): the block_header to initialize.
         Returns:
-            Boolean: True if the candidate block should be claimed.
+            Boolean: True if the block should become a candidate
+        """
+        return True;
+
+    def check_publish_block(self, block_header):
+        """Initialize the candidate block_header.
+        Args:
+            block_header (block_header): the block_header to check.
+        Returns:
+            Boolean: True if the candidate block_header should be built.
         """
         return True
 
-    def finalize_block(self, block):
-        """Finalize a block to be claimed. Provide any signatures and
-        data updates that need to be applied to the block before it is
-        signed and broadcast to the network.
+    def finalize_block(self, block_header):
+        """Finalize a block_header to be claimed.
 
         Args:
-            journal (Journal): the current journal object
-            block: The candidate block that
+            block_header: The candidate block_header to be finalized.
         Returns:
-            None
+            Boolean: True if the candidate block should be claimed.
         """
-        hasher = hashlib.sha256()
-        hasher.update(block.block_header.consensus)
-        block.block_header.consensus = hasher.hexdigest().encode()
+        block_header.consensus = b"test_mode"
+        return True
 
 
 class BlockVerifier(BlockVerifierInterface):
+    """MockConsensus BlockVerifier implementation
+    """
     def __init__(self, block_cache, state_view):
         self._block_cache = block_cache
         self._state_view = state_view
 
-    def verify_block(self, block_state):
-        hasher = hashlib.sha256()
-        hasher.update(b"test_mode")
-        return block_state.consensus == hasher.hexdigest().encode()
-
-    def compute_block_weight(self, block_state):
-        return block_state.block_num
+    def verify_block(self, block_wrapper):
+        return block_wrapper.consensus == b"test_mode"
 
 
 class ForkResolver(ForkResolverInterface):
-    # Provides the fork resolution interface for the BlockValidator to use
-    # when deciding between 2 forks.
+    """MockConsensus ForkResolver implementation
+    """
     def __init__(self, block_cache):
         self._block_cache = block_cache
 
@@ -99,8 +78,9 @@ class ForkResolver(ForkResolverInterface):
         """
 
         Args:
-            cur_fork_head: The current head of the block chain.
-            new_fork_head: The head of the fork that is being evaluated.
+            cur_fork_head (BlockWrapper): The current head of the block chain.
+            new_fork_head (BlockWrapper): The head of the fork that is being
+            evaluated.
         Returns:
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
