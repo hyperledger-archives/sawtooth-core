@@ -251,6 +251,13 @@ class Validator(object):
             thread_pool)
 
         self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_STATUS_REQUEST,
+            client_handlers.BatchStatusRequest(
+                self._journal.get_block_store(),
+                completer.batch_cache),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
             client_handlers.StateListRequest(
                 merkle_db,

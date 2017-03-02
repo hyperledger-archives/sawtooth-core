@@ -31,6 +31,39 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 
 
+class BatchStatusRequest(Handler):
+    def __init__(self, block_store, batch_cache):
+        self._block_store = block_store
+        self._batch_cache = batch_cache
+
+    def handle(self, identity, message_content):
+        helper = _ClientHelper(
+            message_content,
+            client_pb2.ClientBatchStatusRequest,
+            client_pb2.ClientBatchStatusResponse,
+            validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE)
+        if helper.has_response():
+            return helper.result
+
+        statuses = {}
+
+        for batch_id in helper.request.batch_ids:
+            # Once format for ids is formalized, they should be validated here
+            if self._block_store.has_batch(batch_id):
+                statuses[batch_id] = helper.status.COMMITTED
+            elif batch_id in self._batch_cache:
+                statuses[batch_id] = helper.status.PENDING
+            else:
+                statuses[batch_id] = helper.status.UNKNOWN
+
+        if not statuses:
+            helper.set_response(helper.status.NO_RESOURCE)
+        else:
+            helper.set_response(helper.status.OK, batch_statuses=statuses)
+
+        return helper.result
+
+
 class StateCurrentRequest(Handler):
     def __init__(self, current_root_func):
         self._current_root_func = current_root_func

@@ -28,6 +28,7 @@ class ApiTest(AioHTTPTestCase):
 
         # Add handlers
         app = web.Application(loop=loop)
+        app.router.add_get('/batch_status', handlers.status_list)
         app.router.add_get('/state', handlers.state_list)
         app.router.add_get('/state/{address}', handlers.state_get)
         app.router.add_get('/blocks', handlers.block_list)
@@ -70,13 +71,21 @@ class ApiTest(AioHTTPTestCase):
         self.assertTrue(link.endswith(expected_ending))
 
     def assert_has_valid_data_list(self, response, expected_length):
-        """Asserts a response has a data list of dicts of an expected length,
+        """Asserts a response has a data list of dicts of an expected length.
         """
         self.assertIn('data', response)
         data = response['data']
         self.assertIsInstance(data, list)
         self.assert_all_instances(data, dict)
         self.assertEqual(expected_length, len(data))
+
+    def assert_has_valid_data_dict(self, response, expected_value):
+        """Asserts a response has a data dict with an expected value.
+        """
+        self.assertIn('data', response)
+        data = response['data']
+        self.assertIsInstance(data, dict)
+        self.assertEqual(expected_value, data)
 
     def assert_leaves_contain(self, leaves, address, value):
         """Asserts that there is one leaf that matches an address,
@@ -117,6 +126,63 @@ class ApiTest(AioHTTPTestCase):
         self.assertEqual(b'payload', b64decode(txns[0]['payload']))
         self.assertIsInstance(txns[0]['header'], dict)
         self.assertEqual(expected_id, txns[0]['header']['nonce'])
+
+    @unittest_run_loop
+    async def test_batch_status_with_one_id(self):
+        """Verifies a GET /batch_status with one id works properly.
+
+        Fetches from the following preseeded id/status pairs:
+            'committed': COMMITTED
+            'pending': PENDING
+             *: UNKNOWN
+
+        Expects to find:
+            - a response status of 200
+            - a link property that ends in '/batch_status?id=pending'
+            - a data property that is a dict with the key/value pair
+                * 'pending': 'PENDING'
+        """
+        response = await self.get_json_assert_200('/batch_status?id=pending')
+
+        self.assert_has_valid_link(response, '/batch_status?id=pending')
+        self.assert_has_valid_data_dict(response, {'pending': 'PENDING'})
+
+    @unittest_run_loop
+    async def test_batch_status_with_many_ids(self):
+        """Verifies a GET /batch_status with many ids works properly.
+
+        Fetches from the following preseeded id/status pairs:
+            'committed': COMMITTED
+            'pending': PENDING
+             *: UNKNOWN
+
+        Expects to find:
+            - a response status of 200
+            - link property ending in '/batch_status?id=committed,unknown,bad'
+            - a data property that is a dict with the key/value pair
+                * 'committed': 'COMMITTED'
+                * 'unknown': 'UNKNOWN'
+                * 'bad': 'UNKNOWN'
+        """
+        response = await self.get_json_assert_200(
+            '/batch_status?id=committed,unknown,bad')
+
+        self.assert_has_valid_link(
+            response,
+            '/batch_status?id=committed,unknown,bad')
+        self.assert_has_valid_data_dict(response, {
+            'committed': 'COMMITTED',
+            'unknown': 'UNKNOWN',
+            'bad': 'UNKNOWN'})
+
+    @unittest_run_loop
+    async def test_batch_status_with_no_id(self):
+        """Verifies a GET /batch_status with no id breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        response = await self.get_and_assert_status('/batch_status', 400)
 
     @unittest_run_loop
     async def test_state_list(self):

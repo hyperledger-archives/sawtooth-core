@@ -58,6 +58,25 @@ class RouteHandler(object):
         return RouteHandler._try_client_response(request.headers, response)
 
     @asyncio.coroutine
+    def status_list(self, request):
+        error_traps = [error_handlers.MissingStatus()]
+
+        try:
+            batch_ids = request.url.query['id'].split(',')
+        except KeyError:
+            return errors.MissingStatusId()
+
+        response = self._query_validator(
+            Message.CLIENT_BATCH_STATUS_REQUEST,
+            client.ClientBatchStatusResponse,
+            client.ClientBatchStatusRequest(batch_ids=batch_ids),
+            error_traps)
+
+        return RouteHandler._wrap_response(
+            data=response.get('batch_statuses'),
+            metadata=RouteHandler._get_metadata(request, response))
+
+    @asyncio.coroutine
     def state_list(self, request):
         """
         Fetch a list of data leaves from the validator's state merkle-tree
