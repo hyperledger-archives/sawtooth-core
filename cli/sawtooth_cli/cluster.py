@@ -292,7 +292,6 @@ def do_cluster_start(args):
         if node_args.genesis is True:
             node_controller.create_genesis_block(node_args)
 
-        print("Starting: {}".format(node_name))
         node_command_generator.start(node_args)
 
         state["Nodes"][node_name] = {
@@ -344,7 +343,6 @@ def do_cluster_stop(args):
         if state_nodes[node_name]['Status'] == 'Stopped':
             raise CliException('{} already stopped'.format(node_name))
 
-        print("Stopping: {}".format(node_name))
         node_command_generator.stop(node_name)
 
         # Update status of Nodes

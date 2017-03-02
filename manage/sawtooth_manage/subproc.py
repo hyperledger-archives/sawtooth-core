@@ -66,6 +66,8 @@ class SubprocessNodeController(NodeController):
             regex = re.compile('.*')
             self._rm_wildcard(data_dir, regex)
 
+        print("Starting: {}".format(node_name))
+
         for cmd in commands:
             # get_executable_script returns (path, executable)
             _, executable = get_executable_script(cmd)
@@ -99,6 +101,7 @@ class SubprocessNodeController(NodeController):
 
     def _send_signal_to_node(self, signal_type, node_name):
         state = self._load_state()
+        print("Stopping: {}".format(node_name))
         for pid in state['Nodes'][node_name]['pid']:
             os.kill(pid, int(signal_type))
 

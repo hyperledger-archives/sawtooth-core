@@ -154,6 +154,9 @@ class DockerNodeController(NodeController):
         yaml.dump(compose_dict,
                   open(os.path.join(compose_dir, 'docker-compose.yaml'),
                        mode='w'))
+
+        print("Starting: {}".format(node_name))
+
         try:
             os.chdir(compose_dir)
             output = subprocess.check_output(args)
