@@ -13,7 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import datetime
+import getpass
 import hashlib
+import os
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
@@ -139,7 +141,8 @@ def _read_signing_keys(key_filename):
     """Reads the given file as a WIF formatted key.
 
     Args:
-        key_filename: The filename where the key is stored.
+        key_filename: The filename where the key is stored. If None,
+            defaults to the default key for the current user.
 
     Returns:
         tuple (str, str): the public and private key pair
@@ -147,8 +150,15 @@ def _read_signing_keys(key_filename):
     Raises:
         CliException: If unable to read the file.
     """
+    filename = key_filename
+    if filename is None:
+        filename = os.path.join(os.path.expanduser('~'),
+                                '.sawtooth',
+                                'keys',
+                                getpass.getuser() + '.wif')
+
     try:
-        with open(key_filename, 'r') as key_file:
+        with open(filename, 'r') as key_file:
             wif_key = key_file.read().strip()
             signing_key = signing.encode_privkey(
                 signing.decode_privkey(wif_key, 'wif'), 'hex')
