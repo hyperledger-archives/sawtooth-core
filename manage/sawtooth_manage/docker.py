@@ -227,8 +227,13 @@ class DockerNodeController(NodeController):
         containers = ['-'.join([self._prefix, proc, node_num])
                       for proc in processes]
 
+        print("Stopping: {}".format(node_name))
+
+        # Seconds docker waits for stop before killing
+        docker_wait = 1
+
         for c_name in containers:
-            args = ['docker', 'stop', c_name]
+            args = ['docker', 'stop', '-t', str(docker_wait), c_name]
             LOGGER.debug('stopping %s: %s', c_name, ' '.join(args))
 
             try:
@@ -276,7 +281,6 @@ class DockerNodeController(NodeController):
         args = [
             'docker',
             'ps',
-            '-a',
             '--no-trunc',
             '--format',
             '{{.Names}},{{.ID}},{{.Status}},'

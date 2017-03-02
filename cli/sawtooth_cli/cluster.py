@@ -367,18 +367,18 @@ def do_cluster_stop(args):
 
     vnm.update()
 
-    # Wait up to 16 seconds for our targeted nodes to gracefully shut down
+    # Wait for targeted nodes to gracefully shut down, then kill
+    timeout = 30
+
     def find_still_up(targeted_nodes):
         return set(vnm.get_node_names()).intersection(set(targeted_nodes))
 
-    timeout = 16
     mark = time.time()
     while len(find_still_up(node_names)) > 0:
         if time.time() - mark > timeout:
             break
         time.sleep(1)
 
-    # Force kill any targeted nodes that are still up
     for node_name in find_still_up(node_names):
         print("Node name still up: killling {}".format(node_name))
         node_controller.kill(node_name)
