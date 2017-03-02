@@ -25,7 +25,8 @@ const util = require('util')
 const assert = require('assert')
 
 const {Message} = require('../protobuf')
-const Future = require('./future')
+const Deferred = require('./deferred')
+const {ValidatorConnectionError} = require('../processor/exceptions')
 
 const _encodeMessage = (messageType, correlationId, content) => {
   assert(util.isNumber(messageType))
@@ -47,40 +48,72 @@ const _generateId = () =>
 class Stream {
   constructor (url) {
     this._url = url
-    this._socket = zmq.socket('dealer')
-    this._socket.setsockopt('identity',
-                            Buffer.from(this.constructor.name + uuid(), 'utf8'))
+
     this._futures = {}
+    this._initial_connection = true
   }
 
-  connect () {
+  connect (onConnectCb) {
+    this._onConnectCb = onConnectCb
+    this._socket = zmq.socket('dealer')
+    this._socket.setsockopt('identity', Buffer.from(uuid(), 'utf8'))
     this._socket.connect(this._url)
+    this._socket.on('disconnect', (fd, endpoint) => this._handleDisconnect())
+    this._socket.monitor(500, zmq.ZMQ_EVENT_DISCONNECTED)
+    this._onConnectCb()
+    this._initial_connection = false
   }
 
   close () {
+    this._socket.setsockopt(zmq.ZMQ_LINGER, 0)
+    this._socket.unmonitor()
     this._socket.close()
+    this._socket = null
+  }
+
+  _handleDisconnect () {
+    console.log(`Disconnected from ${this._url}`)
+    this.close()
+    Object.keys(this._futures).forEach((correlationId) => {
+      this._futures[correlationId].reject(
+        new ValidatorConnectionError('The connection to the validator was lost'))
+    })
+
+    this.connect(this._onConnectCb)
   }
 
   send (type, content) {
-    const correlationId = _generateId()
-    let future = new Future()
-    this._futures[correlationId] = future
+    if (this._socket) {
+      const correlationId = _generateId()
+      let deferred = new Deferred()
+      this._futures[correlationId] = deferred
 
-    this._socket.send(_encodeMessage(type, correlationId, content))
+      this._socket.send(_encodeMessage(type, correlationId, content))
 
-    return future
+      return deferred.promise
+    } else {
+      let err = null
+      if (this._initial_connection) {
+        err = new Error('Must call `connect` before calling `send`')
+      } else {
+        err = new ValidatorConnectionError('The connection to the validator was lost')
+      }
+
+      return Promise.reject(err)
+    }
   }
 
   sendBack (type, correlationId, content) {
-    this._socket.send(_encodeMessage(type, correlationId, content))
+    if (this._socket) {
+      this._socket.send(_encodeMessage(type, correlationId, content))
+    }
   }
 
   onReceive (cb) {
-    let self = this
     this._socket.on('message', buffer => {
       let message = Message.decode(buffer)
-      if (self._futures[message.correlationId]) {
-        self._futures[message.correlationId].set(message.content)
+      if (this._futures[message.correlationId]) {
+        this._futures[message.correlationId].resolve(message.content)
       } else {
         cb(message)
       }

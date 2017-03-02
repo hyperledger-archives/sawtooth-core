@@ -20,6 +20,9 @@
     "standard": "^8.6.0"
   },
   "standard": {
-    "globals": ["describe", "it"]
+    "globals": [
+      "describe",
+      "it"
+    ]
   }
 }

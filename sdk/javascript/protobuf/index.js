@@ -27,6 +27,9 @@ TpRegisterResponse.Status = TpRegisterResponse.nested.Status.values
 const TpProcessResponse = root.lookup('TpProcessResponse')
 TpProcessResponse.Status = TpProcessResponse.nested.Status.values
 
+const TpUnregisterResponse = root.lookup('TpUnregisterResponse')
+TpUnregisterResponse.Status = TpUnregisterResponse.nested.Status.values
+
 const Message = root.lookup('Message')
 Message.MessageType = Message.nested.MessageType.values
 
@@ -41,6 +44,11 @@ module.exports = {
     root.lookup('TpRegisterRequest'),
 
   TpRegisterResponse,
+
+  TpUnregisterRequest:
+    root.lookup('TpUnregisterRequest'),
+
+  TpUnregisterResponse,
 
   TpProcessRequest:
     root.lookup('TpProcessRequest'),

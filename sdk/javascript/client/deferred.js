@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 Intel Corporation
+ * Copyright 2017 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,44 +17,21 @@
 
 'use strict'
 
-//
-// TODO: Timeouts
+function Deferred () {
+  if (Promise.defer) {
+    return Promise.defer()
+  } else {
+    this.resolve = null
+    this.reject = null
 
-const _handleResult = (self, f) => (v) => {
-  self._isDone = true
-  self._value = v
-  return f(v)
-}
-
-class Future {
-  constructor () {
-    let self = this
-    this._promise = new Promise((resolve, reject) => {
-      self._resolver = resolve
+    this.promise = new Promise((resolve, reject) => {
+      this.resolve = resolve
+      this.reject = reject
     })
-  }
 
-  get (f) {
-    if (this._isDone) {
-      return f(this._value)
-    } else {
-      return this._promise.then(_handleResult(this, f))
-    }
-  }
-
-  set (value) {
-    if (!this._isDone) {
-      this._resolver(value)
-    }
-  }
-
-  then (f) {
-    return this._promise.then(_handleResult(this, f))
-  }
-
-  catch (f) {
-    return this._promise.catch(f)
+    Object.freeze(this)
   }
 }
 
-module.exports = Future
+module.exports = Deferred
+
