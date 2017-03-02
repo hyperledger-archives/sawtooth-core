@@ -22,7 +22,8 @@ import math
 
 from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.consensus.poet import poet_transaction_block
+from sawtooth_validator.journal.consensus.poet.poet_consensus \
+    import poet_transaction_block
 
 # Disabled pylint as this package no longer exists and will be replaced as PoET
 # is integrated into the validator.
