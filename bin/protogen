@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env python3
 #
-# Copyright 2016, 2017 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,67 +15,98 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-function run_protoc() {
-    base_dir=$1
-    pkg=$2
-    subdir=$base_dir/$pkg
-    tmp_dir=/tmp/protogen-$$
+import os
+import tempfile
+from glob import glob
+import re
 
-    mkdir -p $subdir
-    if [ ! -e $subdir/__init__.py ]; then
-        touch $subdir/__init__.py
-    fi
 
-    mkdir -p $tmp_dir/$pkg
+try:
+    from grpc.tools.protoc import main as _protoc
+except ImportError:
+    print("Error: protoc not found.")
+    exit(1)
 
-    for file in $(cd $protos_dir && /bin/ls -1 *.proto)
-    do
-        cat $protos_dir/$file \
-            | sed -e "s#import \"\(.*\).proto\";#import \"$pkg/\1.proto\";#" \
-            > $tmp_dir/$pkg/$file
-    done
 
-    python3 -m grpc.tools.protoc \
-        -I$tmp_dir \
-        --python_out=$base_dir \
-        $tmp_dir/$pkg/*.proto
+JOIN = os.path.join
+TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-    rm -rf $tmp_dir
-}
 
-set -e
+def main():
+    # 1. Generate and distribute top-level protos
+    proto_dir = JOIN(TOP_DIR, "protos")
+    config_dir = "core_transactions/config"
 
-top_dir=$(dirname $(dirname $0))
-protos_dir=$top_dir/protos
+    protoc(proto_dir, "sdk/python", "sawtooth_sdk/protobuf")
+    protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
+    protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
+    protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
+    protoc(proto_dir, "core_transactions/config", "sawtooth_config/protobuf")
 
-sdk_dir=$top_dir/sdk/python
-sdk_pkg=sawtooth_sdk/protobuf
+    # 2. Generate config protos
+    proto_dir = JOIN(TOP_DIR, "core_transactions/config/protos")
+    protoc(proto_dir, "core_transactions/config", "sawtooth_config/protobuf")
+    protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
-cli_dir=$top_dir/cli
-cli_pkg=sawtooth_cli/protobuf
+    # 3. Generate PoET protos
+    proto_dir = JOIN(TOP_DIR, "poet/sawtooth_poet/protos")
+    protoc(proto_dir, "poet", "sawtooth_poet/protobuf")
 
-validator_dir=$top_dir/validator
-validator_pkg=sawtooth_validator/protobuf
 
-rest_api_dir=$top_dir/rest_api
-rest_api_pkg=sawtooth_rest_api/protobuf
+def protoc(src_dir, base_dir, pkg):
+    # 1. Create output package directory
+    pkg_dir = JOIN(TOP_DIR, base_dir, pkg)
+    os.makedirs(pkg_dir, exist_ok=True)
 
-config_dir=$top_dir/core_transactions/config
-config_pkg=sawtooth_config/protobuf
+    # 2. 'touch' the __init__.py file if the output directory exists
+    init_py = JOIN(pkg_dir, "__init__.py")
+    if not os.path.exists(init_py):
+        with open(init_py, "w") as fd:
+            pass # Just need it to exist
 
-run_protoc $sdk_dir $sdk_pkg
-run_protoc $cli_dir $cli_pkg
-run_protoc $validator_dir $validator_pkg
-run_protoc $rest_api_dir $rest_api_pkg
-run_protoc $config_dir $config_pkg
+    # 3. Create a temp directory for building
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_pkg_dir = JOIN(tmp_dir, pkg)
+        os.makedirs(tmp_pkg_dir)
 
-# Config txn family protos, included in the cli, as well
-protos_dir=$config_dir/protos
-run_protoc $config_dir $config_pkg
-run_protoc $cli_dir $cli_pkg
+        # 4. Get a list of all .proto files to build
+        cwd = os.getcwd()
+        os.chdir(src_dir)
+        proto_files = glob("*.proto")
+        os.chdir(cwd)
 
-# Poet protos, for Validator Registry
-val_reg_dir=$top_dir/poet/
-protos_dir=$val_reg_dir/sawtooth_poet/protos
-val_reg_pkg=sawtooth_poet/protobuf
-run_protoc $val_reg_dir $val_reg_pkg
+        # 5. Copy protos to temp dir and fix imports
+        for proto in proto_files:
+            src = JOIN(src_dir, proto)
+            dst = JOIN(tmp_pkg_dir, proto)
+            with open(src, encoding='utf-8') as fin:
+                with open(dst, "w", encoding='utf-8') as fout:
+                    src_contents = fin.read()
+                    fixed_contents = fix_import(src_contents, pkg)
+                    fout.write(fixed_contents)
+
+        # 6. Compile protobuf files
+        _protoc([
+            __file__,
+            "-I=%s" % tmp_dir,
+            "--python_out=%s" % base_dir,
+        ] + glob("%s/*.proto" % tmp_pkg_dir))
+
+
+def fix_import(contents, pkg):
+    pattern = r'^import "(.*)\.proto\"'
+    template = r'import "%s/\1.proto"'
+
+    return re.sub(
+        pattern,
+        lambda match: match.expand(template) % pkg,
+        contents,
+        flags=re.MULTILINE
+    )
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit(1)
