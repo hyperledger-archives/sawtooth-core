@@ -61,6 +61,14 @@ class MissingHead(_ErrorTrap):
         super().__init__(trigger, error, message)
 
 
+class InvalidBatch(_ErrorTrap):
+    def __init__(self):
+        super().__init__(
+            trigger=client.ClientBatchSubmitResponse.INVALID_BATCH,
+            error=web.HTTPBadRequest,
+            message='A submitted batch had an invalid signature')
+
+
 class MissingStatus(_ErrorTrap):
     def __init__(self):
         super().__init__(

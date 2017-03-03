@@ -47,6 +47,7 @@ class RouteHandler(object):
         """
         if request.headers['Content-Type'] != 'application/octet-stream':
             return errors.WrongBodyType()
+        error_traps = [error_handlers.InvalidBatch()]
 
         payload = yield from request.read()
 
@@ -54,7 +55,8 @@ class RouteHandler(object):
         self._query_validator(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
             client.ClientBatchSubmitResponse,
-            payload)
+            payload,
+            error_traps)
 
         # Build link to query submitted batch status
         batch_list = BatchList()
