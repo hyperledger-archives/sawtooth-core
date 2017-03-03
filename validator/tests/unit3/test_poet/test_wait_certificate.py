@@ -45,9 +45,9 @@ class TestWaitCertificate(unittest.TestCase):
         # This is a little ham-handed, but we need to ensure that the
         # PoET enclave is set back to initial state at the start of every
         # test.
-        SignupInfo.poet_enclave = reload(poet_enclave)
-        WaitTimer.poet_enclave = SignupInfo.poet_enclave
-        WaitCertificate.poet_enclave = SignupInfo.poet_enclave
+        self.poet_enclave_module = reload(poet_enclave)
+        SignupInfo.poet_enclave = self.poet_enclave_module
+        WaitCertificate.poet_enclave = self.poet_enclave_module
 
         args = {"NodeName": "DasValidator"}
         SignupInfo.poet_enclave.initialize(**args)
@@ -85,6 +85,7 @@ class TestWaitCertificate(unittest.TestCase):
         # create another wait certificate that has to play by the rules.
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
         wc = \
@@ -94,6 +95,7 @@ class TestWaitCertificate(unittest.TestCase):
 
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[wc])
         with self.assertRaises(ValueError):
@@ -112,6 +114,7 @@ class TestWaitCertificate(unittest.TestCase):
         # create another wait certificate that has to play by the rules.
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
         wc = \
@@ -121,11 +124,12 @@ class TestWaitCertificate(unittest.TestCase):
 
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[wc])
         while not wt.has_expired(time.time()):
             time.sleep(1)
-        time.sleep(WaitTimer.poet_enclave.TIMER_TIMEOUT_PERIOD + 1)
+        time.sleep(self.poet_enclave_module.TIMER_TIMEOUT_PERIOD + 1)
 
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
@@ -143,10 +147,12 @@ class TestWaitCertificate(unittest.TestCase):
         # first one, which should fail as it is not the current wait timer
         invalid_wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
         valid_wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
 
@@ -172,6 +178,7 @@ class TestWaitCertificate(unittest.TestCase):
         # create another wait certificate that has to play by the rules.
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
         wc = \
@@ -189,6 +196,7 @@ class TestWaitCertificate(unittest.TestCase):
                 block_hash="Reader's Digest")
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[wc])
         with self.assertRaises(ValueError):
@@ -215,6 +223,7 @@ class TestWaitCertificate(unittest.TestCase):
 
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
         while not wt.has_expired(time.time()):
@@ -246,6 +255,7 @@ class TestWaitCertificate(unittest.TestCase):
         # Create another wait certificate and verify it is valid also
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[wc])
         while not wt.has_expired(time.time()):
@@ -270,6 +280,7 @@ class TestWaitCertificate(unittest.TestCase):
 
         wt = \
             WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 certificates=[])
         while not wt.has_expired(time.time()):

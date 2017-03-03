@@ -258,6 +258,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
         with self._lock:
             self.wait_timer = \
                 WaitTimer.create_wait_timer(
+                    poet_enclave_module=None,
                     validator_address=validator_address,
                     certificates=certlist)
 
