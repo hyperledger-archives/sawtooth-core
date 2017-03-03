@@ -16,6 +16,7 @@
 from base64 import b64decode
 from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from sawtooth_rest_api.protobuf import batch_pb2
 from sawtooth_rest_api.routes import RouteHandler
 from tests.unit.mock_stream import MockStream
 
@@ -28,12 +29,67 @@ class ApiTest(AioHTTPTestCase):
 
         # Add handlers
         app = web.Application(loop=loop)
+        app.router.add_post('/batches', handlers.batches_post)
         app.router.add_get('/batch_status', handlers.status_list)
         app.router.add_get('/state', handlers.state_list)
         app.router.add_get('/state/{address}', handlers.state_get)
         app.router.add_get('/blocks', handlers.block_list)
         app.router.add_get('/blocks/{block_id}', handlers.block_get)
         return app
+
+    @unittest_run_loop
+    async def test_post_batch(self):
+        """Verifies a POST /batches with one id works properly.
+
+        Expects to find:
+            - a response status of 202
+            - a link property that ends in '/batches?id=a'
+        """
+        request = await self.post_batch_ids('a')
+        self.assertEqual(202, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_link(response, '/batch_status?id=a')
+
+    @unittest_run_loop
+    async def test_post_json_batch(self):
+        """Verifies a POST /batches with a JSON request body breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        request = await self.client.post(
+            '/batches',
+            data='{"bad": "data"}',
+            headers={'content-type': 'application/json'})
+        self.assertEqual(400, request.status)
+
+    @unittest_run_loop
+    async def test_post_invalid_batch(self):
+        """Verifies a POST /batches with an invalid batch breaks properly.
+
+        *Note: the mock submit handler marks ids of 'bad' as invalid
+
+        Expects to find:
+            - a response status of 400
+        """
+        request = await self.post_batch_ids('bad')
+        self.assertEqual(400, request.status)
+
+    @unittest_run_loop
+    async def test_post_many_batches(self):
+        """Verifies a POST /batches with many ids works properly.
+
+        Expects to find:
+            - a response status of 202
+            - a link property that ends in '/batches?id=a,b,c'
+        """
+        request = await self.post_batch_ids('a', 'b', 'c')
+        self.assertEqual(202, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_link(response, '/batch_status?id=a,b,c')
+
 
     @unittest_run_loop
     async def test_batch_status_with_one_id(self):
@@ -457,8 +513,19 @@ class ApiTest(AioHTTPTestCase):
         """
         await self.assert_404('/blocks/bad')
 
+    async def post_batch_ids(self, *batch_ids):
+        batches = [batch_pb2.Batch(
+            header_signature=batch_id,
+            header=b'header') for batch_id in batch_ids]
+        batch_list = batch_pb2.BatchList(batches=batches)
+
+        return await self.client.post(
+            '/batches',
+            data=batch_list.SerializeToString(),
+            headers={'content-type': 'application/octet-stream'})
+
     async def get_and_assert_status(self, endpoint, status):
-        request = await self.client.request('GET', endpoint)
+        request = await self.client.get(endpoint)
         self.assertEqual(status, request.status)
         return request
 

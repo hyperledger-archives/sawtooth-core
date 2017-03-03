@@ -41,6 +41,7 @@ class MockStream(object):
     """
     def __init__(self):
         self._handlers = {}
+        self._add_handler(Message.CLIENT_BATCH_SUBMIT_REQUEST, _SubmitHandler)
         self._add_handler(Message.CLIENT_BATCH_STATUS_REQUEST, _StatusHandler)
         self._add_handler(Message.CLIENT_STATE_LIST_REQUEST, _StateListHandler)
         self._add_handler(Message.CLIENT_STATE_GET_REQUEST, _StateGetHandler)
@@ -215,6 +216,25 @@ class _MockHandler(object):
         request = self._request_proto()
         request.ParseFromString(content)
         return request
+
+
+class _SubmitHandler(_MockHandler):
+    def __init__(self):
+        super().__init__(
+            client.ClientBatchSubmitRequest,
+            client.ClientBatchSubmitResponse,
+            Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
+    def handle(self, content):
+        request = self._parse_request(content)
+
+        # A batch id of 'bad' will trigger an invalid batch response
+        for batch in request.batches:
+            if batch.header_signature == 'bad':
+                return self._response_proto(
+                    status=self._response_proto.INVALID_BATCH)
+
+        return self._response_proto(status=self._response_proto.OK)
 
 
 class _StatusHandler(_MockHandler):
