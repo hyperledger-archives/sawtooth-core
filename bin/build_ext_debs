@@ -1,0 +1,132 @@
+#!/bin/bash
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# This script was developed for usage inside a docker container and makes
+# assumptions about packages that are already installed on the host. The
+# most up-to-date list can be found in the Dockerfile:
+#
+#    sawtooth-core/docker/sawtooth-build-debs
+
+set -e
+
+build_dir=./projects
+pkg_dir=./packages
+
+while getopts :p:b:h opt
+do
+    case $opt in
+        h)
+            echo "Usage:"
+            echo "  $0 [-b build_dir] [-p package_dir]"
+            echo
+            echo "Options:"
+            echo "  -h             print usage and exit"
+            echo "  -b build_dir   directory to build in"
+            echo "  -p package_dir directory to place debs in"
+            exit 0
+            ;;
+        b)
+            build_dir=$OPTARG
+            ;;
+        p)
+            pkg_dir=$OPTARG
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 2
+            ;;
+    esac
+done
+
+mkdir -p ${build_dir} && mkdir -p ${pkg_dir}
+
+# WARNING: Order is important
+pip_pkgs='
+chardet
+multidict
+async_timeout
+yarl
+aiohttp
+grpcio
+protobuf
+six
+grpcio-tools
+bitcoin
+setuptools_scm
+pytest-runner==2.6.2
+secp256k1
+'
+
+# secp256k1 needs a couple of libraries not readily available
+libsecp256k1_debs='
+libsecp256k1-0_0.1~20161228-1_amd64.deb
+libsecp256k1-dev_0.1~20161228-1_amd64.deb
+'
+
+# Download and install additional secp256k dependencies
+for deb in $libsecp256k1_debs; do
+    wget http://ftp.br.debian.org/debian/pool/main/libs/libsecp256k1/$deb
+    sudo dpkg -i $deb
+    mv $deb $pkg_dir
+done
+
+# Install packages so pip doesn't blow up while trying to download
+sudo pip3 install $pip_pkgs
+
+cd $build_dir
+
+# Download and extract pip packages
+pip3 download --no-binary :all: \
+    --disable-pip-version-check \
+    --no-deps $pip_pkgs
+
+# Unpack tarballs
+for file in *.tar.gz; do
+    tar xfz $file;
+done
+rm -f *.tar.gz
+
+for pkg in $pip_pkgs; do
+    # Remove version fixing and fix async-timeout inconsistency
+    pkg=$(echo "$pkg" | sed -e 's/==.*//' -e 's/async_/async-/')
+
+    cd $build_dir/$pkg*
+
+    # Arcane wizadry to get protobuf to build right
+    if [ $pkg = 'protobuf' ]; then
+        # Grab protoc and .proto files expected by protobuf
+        wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
+
+        # Unpack and relocate
+        mkdir src
+        unzip protoc-3.2.0-linux-x86_64.zip -d src
+        mv src/include/* src/ && mv src/bin/* src/
+
+        # Patch bad relative paths
+        sed 's/\.\.\/src/\.\.\/\.\.\/src/' < setup.py > patch.py && mv patch.py setup.py
+    fi
+
+    # Build the package
+    sudo python3 setup.py --command-packages=stdeb.command bdist_deb
+
+    # Install the package
+    sudo dpkg -i deb_dist/*.deb
+
+    # Save the package
+    cp deb_dist/*.deb $pkg_dir
+
+    cd $build_dir
+done
