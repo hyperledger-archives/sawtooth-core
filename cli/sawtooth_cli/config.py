@@ -118,9 +118,9 @@ def _do_config_set(args):
     try:
         with open(args.output, 'wb') as batch_file:
             batch_file.write(batch_list)
-    except IOError as ioe:
+    except IOError as e:
         raise CliException(
-            'Unable to write to {}: {}'.format(args.output, ioe))
+            'Unable to write to batch file: {}'.format(str(e)))
 
 
 def _do_config_propose(args):
@@ -166,8 +166,8 @@ def _read_signing_keys(key_filename):
                 signing.generate_pubkey(signing_key), 'hex')
 
             return pubkey, signing_key
-    except IOError as ioe:
-        raise CliException('Unable to read {}: {}'.format(key_filename, ioe))
+    except IOError as e:
+        raise CliException('Unable to read key file: {}'.format(str(e)))
 
 
 def _create_batch(pubkey, signing_key, transactions):
