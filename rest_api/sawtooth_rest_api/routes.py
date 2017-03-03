@@ -16,10 +16,9 @@ import asyncio
 import json
 import base64
 from aiohttp import web
-from aiohttp.helpers import parse_mimetype
 # pylint: disable=no-name-in-module,import-error
 # needed for the google.protobuf imports to pass pylint
-from google.protobuf.json_format import MessageToJson, MessageToDict
+from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.client.exceptions import ValidatorConnectionError
@@ -31,6 +30,7 @@ import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.protobuf import client_pb2 as client
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
+from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
@@ -49,13 +49,25 @@ class RouteHandler(object):
             return errors.WrongBodyType()
 
         payload = yield from request.read()
-        validator_response = self._try_validator_request(
+
+        # No need to save response, as only contains an already-checked status
+        self._query_validator(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            client.ClientBatchSubmitResponse,
             payload)
 
-        response = client.ClientBatchSubmitResponse()
-        response.ParseFromString(validator_response)
-        return RouteHandler._try_client_response(request.headers, response)
+        # Build link to query submitted batch status
+        batch_list = BatchList()
+        batch_list.ParseFromString(payload)
+        batch_ids = [b.header_signature for b in batch_list.batches]
+        status_link = '{}://{}/batch_status?id={}'.format(
+            request.scheme,
+            request.host,
+            ','.join(batch_ids))
+
+        return RouteHandler._wrap_response(
+            metadata={'link': status_link},
+            status=202)
 
     @asyncio.coroutine
     def status_list(self, request):
@@ -209,7 +221,7 @@ class RouteHandler(object):
         return MessageToDict(parsed, preserving_proto_field_name=True)
 
     @staticmethod
-    def _wrap_response(data=None, metadata=None):
+    def _wrap_response(data=None, metadata=None, status=200):
         """
         Creates a JSON response envelope and sends it back to the client
         """
@@ -219,6 +231,7 @@ class RouteHandler(object):
             envelope['data'] = data
 
         return web.Response(
+            status=status,
             content_type='application/json',
             text=json.dumps(
                 envelope,
@@ -278,32 +291,3 @@ class RouteHandler(object):
         header.ParseFromString(header_bytes)
         obj['header'] = MessageToDict(header, preserving_proto_field_name=True)
         return obj
-
-    @staticmethod
-    def _try_client_response(headers, parsed):
-        """
-        Used by pre-spec /batches route,
-        Should be removed when updated to spec
-        """
-        media_msg = 'The requested media type is unsupported'
-        mime_type = None
-        sub_type = None
-
-        try:
-            accept_types = headers['Accept']
-            mime_type, sub_type, _, _ = parse_mimetype(accept_types)
-        except KeyError:
-            pass
-
-        if mime_type == 'application' and sub_type == 'octet-stream':
-            return web.Response(
-                content_type='application/octet-stream',
-                body=parsed.SerializeToString())
-
-        if ((mime_type in ['application', '*'] or mime_type is None)
-                and (sub_type in ['json', '*'] or sub_type is None)):
-            return web.Response(
-                content_type='application/json',
-                text=MessageToJson(parsed))
-
-        raise web.HTTPUnsupportedMediaType(reason=media_msg)
