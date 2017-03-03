@@ -81,10 +81,10 @@ class Gossip(object):
 
         self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
 
-    def broadcast_batch_by_transaction_id_request(self, batch_id):
+    def broadcast_batch_by_transaction_id_request(self, transaction_ids):
         # Need to define node identity to be able to route directly back
         batch_request = GossipBatchByTransactionIdRequest(
-            id=batch_id
+            ids=transaction_ids
         )
         self.broadcast(
             batch_request,

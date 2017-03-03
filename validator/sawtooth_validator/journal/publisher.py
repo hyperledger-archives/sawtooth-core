@@ -351,7 +351,7 @@ class BlockPublisher(object):
                     LOGGER.debug("Abandoning block %s:" +
                                  "root state hash has invalid txn applied",
                                  block)
-                    del pending_batches[batch]
+                    pending_batches.remove(batch)
                     self._pending_batches = pending_batches
                     return False
                 else:

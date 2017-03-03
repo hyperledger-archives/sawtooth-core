@@ -38,7 +38,7 @@ class Responder(object):
         return batch
 
     def check_for_batch_by_transaction(self, transaction_id):
-        batch = self.completer.get_batch(transaction_id)
+        batch = self.completer.get_batch_by_transaction(transaction_id)
         return batch
 
 
