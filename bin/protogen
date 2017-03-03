@@ -35,7 +35,6 @@ TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 def main():
     # 1. Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
-    config_dir = "core_transactions/config"
 
     protoc(proto_dir, "sdk/python", "sawtooth_sdk/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
@@ -89,7 +88,7 @@ def protoc(src_dir, base_dir, pkg):
         _protoc([
             __file__,
             "-I=%s" % tmp_dir,
-            "--python_out=%s" % base_dir,
+            "--python_out=%s" % JOIN(TOP_DIR, base_dir),
         ] + glob("%s/*.proto" % tmp_pkg_dir))
 
 
