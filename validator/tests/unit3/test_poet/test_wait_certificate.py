@@ -47,7 +47,6 @@ class TestWaitCertificate(unittest.TestCase):
         # test.
         self.poet_enclave_module = reload(poet_enclave)
         SignupInfo.poet_enclave = self.poet_enclave_module
-        WaitCertificate.poet_enclave = self.poet_enclave_module
 
         args = {"NodeName": "DasValidator"}
         SignupInfo.poet_enclave.initialize(**args)
@@ -57,6 +56,7 @@ class TestWaitCertificate(unittest.TestCase):
         # information is provided causes an error
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
@@ -71,6 +71,7 @@ class TestWaitCertificate(unittest.TestCase):
         # a wait timer causes an error
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
@@ -90,6 +91,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[])
         wc = \
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -100,6 +102,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[wc])
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -119,6 +122,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[])
         wc = \
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -133,6 +137,7 @@ class TestWaitCertificate(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -160,10 +165,12 @@ class TestWaitCertificate(unittest.TestCase):
         # timer, but we can with the new one
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=invalid_wt,
                 block_hash="Reader's Digest")
 
         WaitCertificate.create_wait_certificate(
+            poet_enclave_module=self.poet_enclave_module,
             wait_timer=valid_wt,
             block_hash="Reader's Digest")
 
@@ -183,6 +190,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[])
         wc = \
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -192,6 +200,7 @@ class TestWaitCertificate(unittest.TestCase):
         # certificate either before or after creating a new wait timer
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=consumed_wt,
                 block_hash="Reader's Digest")
         wt = \
@@ -201,6 +210,7 @@ class TestWaitCertificate(unittest.TestCase):
                 certificates=[wc])
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=consumed_wt,
                 block_hash="Reader's Digest")
 
@@ -210,6 +220,7 @@ class TestWaitCertificate(unittest.TestCase):
             time.sleep(1)
 
         WaitCertificate.create_wait_certificate(
+            poet_enclave_module=self.poet_enclave_module,
             wait_timer=wt,
             block_hash="Reader's Digest")
 
@@ -233,6 +244,7 @@ class TestWaitCertificate(unittest.TestCase):
         # to the wait timer we just created
         wc = \
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -250,7 +262,10 @@ class TestWaitCertificate(unittest.TestCase):
         self.assertIsNotNone(wc.identifier)
 
         # A newly-created wait certificate should be valid
-        wc.check_valid([], signup_info.poet_public_key)
+        wc.check_valid(
+            poet_enclave_module=self.poet_enclave_module,
+            certificates=[],
+            poet_public_key=signup_info.poet_public_key)
 
         # Create another wait certificate and verify it is valid also
         wt = \
@@ -265,10 +280,14 @@ class TestWaitCertificate(unittest.TestCase):
         # to the wait timer we just created
         another_wc = \
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Pepto Bismol")
 
-        another_wc.check_valid([wc], signup_info.poet_public_key)
+        another_wc.check_valid(
+            poet_enclave_module=self.poet_enclave_module,
+            certificates=[wc],
+            poet_public_key=signup_info.poet_public_key)
 
     def test_wait_certificate_serialization(self):
         # Need to create signup information and wait timer first
@@ -289,6 +308,7 @@ class TestWaitCertificate(unittest.TestCase):
         # Now we can create a wait certificate and serialize
         wc = \
             WaitCertificate.create_wait_certificate(
+                poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -301,8 +321,9 @@ class TestWaitCertificate(unittest.TestCase):
         # and that deserialized one is valid
         wc_copy = \
             WaitCertificate.wait_certificate_from_serialized(
-                dumped.get('SerializedCertificate'),
-                dumped.get('Signature'))
+                poet_enclave_module=self.poet_enclave_module,
+                serialized=dumped.get('SerializedCertificate'),
+                signature=dumped.get('Signature'))
 
         self.assertEqual(
             wc.previous_certificate_id,
@@ -326,4 +347,7 @@ class TestWaitCertificate(unittest.TestCase):
             dumped.get('Signature'),
             dumped_copy.get('Signature'))
 
-        wc_copy.check_valid([], signup_info.poet_public_key)
+        wc_copy.check_valid(
+            poet_enclave_module=self.poet_enclave_module,
+            certificates=[],
+            poet_public_key=signup_info.poet_public_key)

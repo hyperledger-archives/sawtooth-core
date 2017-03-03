@@ -103,6 +103,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             self.wait_certificate = \
                 WaitCertificate.wait_certificate_from_serialized(
+                    poet_enclave_module=None,
                     serialized=serialized_certificate,
                     signature=signature)
 
@@ -237,6 +238,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             try:
                 self.wait_certificate.check_valid(
+                    poet_enclave_module=None,
                     certificates=journal.consensus.build_certificate_list(
                         journal.block_store, self),
                     poet_public_key=str(poet_public_key))
@@ -274,6 +276,7 @@ class PoetTransactionBlock(transaction_block.TransactionBlock):
 
             self.wait_certificate = \
                 WaitCertificate.create_wait_certificate(
+                    poet_enclave_module=None,
                     wait_timer=self.wait_timer,
                     block_hash=block_hash)
             if self.wait_certificate:
