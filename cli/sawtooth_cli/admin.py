@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.admin_command.genesis import add_genesis_parser
 from sawtooth_cli.admin_command.genesis import do_genesis
@@ -30,12 +29,12 @@ def do_admin(args):
     elif args.admin_cmd == 'keygen':
         do_keygen(args)
     else:
-        raise CliException("invalid command: {}".format(args.admin_cmd))
+        raise AssertionError("invalid command: {}".format(args.admin_cmd))
 
 
 def add_admin_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('admin', parents=[parent_parser])
     admin_sub = parser.add_subparsers(title='admin_commands', dest='admin_cmd')
-
+    admin_sub.required = True
     add_genesis_parser(admin_sub, parent_parser)
     add_keygen_parser(admin_sub, parent_parser)

@@ -36,7 +36,7 @@ def add_config_parser(subparsers, parent_parser):
 
     config_parsers = parser.add_subparsers(title="subcommands",
                                            dest="subcommand")
-
+    config_parsers.required = True
     set_parser = config_parsers.add_parser(
         'set',
         help='creates batches of sawtooth-config transactions')

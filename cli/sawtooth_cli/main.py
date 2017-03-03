@@ -90,7 +90,7 @@ def create_parser(prog_name):
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
-
+    subparsers.required = True
     add_keygen_parser(subparsers, parent_parser)
     add_admin_parser(subparsers, parent_parser)
     add_config_parser(subparsers, parent_parser)

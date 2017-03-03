@@ -48,7 +48,7 @@ def add_cluster_parser(subparsers, parent_parser):
     cluster_subparsers = parser.add_subparsers(
         title='subcommands',
         dest='cluster_command')
-
+    cluster_subparsers.required = True
     add_cluster_start_parser(cluster_subparsers, parent_parser)
     add_cluster_status_parser(cluster_subparsers, parent_parser)
     add_cluster_stop_parser(cluster_subparsers, parent_parser)
@@ -125,6 +125,7 @@ def add_cluster_logs_parser(subparsers, parent_parser):
 
 
 def do_cluster(args):
+
     if args.cluster_command == 'start':
         do_cluster_start(args)
     elif args.cluster_command == 'status':
@@ -136,7 +137,7 @@ def do_cluster(args):
     elif args.cluster_command == 'logs':
         do_cluster_logs(args)
     else:
-        raise CliException("invalid cluster command: {}".format(
+        raise AssertionError("invalid cluster command: {}".format(
             args.cluster_command))
 
 

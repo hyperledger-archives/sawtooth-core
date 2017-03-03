@@ -29,7 +29,7 @@ def add_state_parser(subparsers, parent_parser):
 
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
-
+    grand_parsers.required = True
     epilog = '''
     details:
         Lists leaves on the merkle tree, storing state. List can be
@@ -79,6 +79,7 @@ def add_state_parser(subparsers, parent_parser):
 
 
 def do_state(args):
+
     rest_client = RestClient(args.url)
 
     def print_json(data):
@@ -143,7 +144,7 @@ def do_state(args):
                 print_yaml(state_data)
 
         else:
-            raise CliException('Unknown format: {}'.format(args.format))
+            raise AssertionError('Unknown format: {}'.format(args.format))
 
     if args.subcommand == 'show':
         leaf = rest_client.get_leaf(args.address, args.head)
