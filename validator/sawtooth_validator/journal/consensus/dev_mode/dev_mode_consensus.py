@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import time
 
 from sawtooth_validator.journal.consensus.consensus\
     import BlockPublisherInterface
@@ -24,13 +23,7 @@ from sawtooth_validator.journal.consensus.consensus\
 
 
 class BlockPublisher(BlockPublisherInterface):
-    """Consensus objects provide the following services to the Journal:
-    1) Build candidate blocks ( this temporary until the block types are
-    combined into a single block type)
-    2) Check if it is time to claim the current candidate blocks.
-    3) Provide the data a signatures required for a block to be validated by
-    other consensus algorithms
-
+    """ DevMode BlockPublisher implementation.
     """
     def __init__(self, block_cache, state_view):
         super().__init__(block_cache, state_view)
@@ -40,28 +33,22 @@ class BlockPublisher(BlockPublisherInterface):
         self._num_batches = 1
         self._count = 0
 
-    def initialize_block(self, block):
-        """Do initialization necessary for the consensus to claim a block,
-        this may include initiating voting activates, starting proof of work
-        hash generation, or create a PoET wait timer.
-
+    def initialize_block(self, block_header):
+        """Initialize the candidate block_header.
         Args:
-            journal (Journal): the current journal object
-            block (TransactionBlock): the block to initialize.
+            block_header (block_header): the block_header to initialize.
         Returns:
-            none
+            Boolean: True if the candidate block_header should be built.
         """
-        block.block_header.consensus = b"Devmode"
+        return True
 
-    def check_publish_block(self, block):
-        """Check if a candidate block is ready to be claimed.
-
+    def check_publish_block(self, block_header):
+        """Check if a candidate block_header is ready to be claimed.
         Args:
-            journal (Journal): the current journal object
-            block: the block to be checked if it should be claimed
-            now: the current time
+            block_header: the block_header to be checked if it
+            should be claimed.
         Returns:
-            Boolean: True if the candidate block should be claimed.
+            Boolean: True if the candidate block_header should be claimed.
         """
         if self._count >= self._num_batches:
             self._count = 0
@@ -69,45 +56,21 @@ class BlockPublisher(BlockPublisherInterface):
         self._count += 1
         return False
 
-    def finalize_block(self, block):
-        """Finalize a block to be claimed. Provide any signatures and
-        data updates that need to be applied to the block before it is
-        signed and broadcast to the network.
+    def finalize_block(self, block_header):
+        """Finalize a block_header to be claimed.
 
         Args:
-            journal (Journal): the current journal object
-            block: The candidate block that
+            block_header: The candidate block_header to be finalized.
         Returns:
-            None
+            Boolean: True if the candidate block should be finalized.
         """
-        pass
-
-
-class TimedBlockPublisher(BlockPublisherInterface):
-    """Provides a timed block claim mechanism based on
-    the number of seconds since that validator last claimed
-    a block"""
-
-    def __init__(self, wait_time=20):
-        super().__init__(block_cache=None, state_view=None)
-
-        self._wait_time = wait_time
-        self._last_block_time = time.time()
-
-    def initialize_block(self, block):
-        block.block_header.consensus = b"TimedDevmode"
-
-    def check_publish_block(self, block):
-        if time.time() - self._last_block_time > self._wait_time:
-            self._last_block_time = time.time()
-            return True
-        return False
-
-    def finalize_block(self, block):
-        pass
+        block_header.consensus = b"Devmode"
+        return True
 
 
 class BlockVerifier(BlockVerifierInterface):
+    """DevMode BlockVerifier implementation
+    """
     def __init__(self, block_cache, state_view):
         super().__init__(block_cache, state_view)
 
@@ -117,14 +80,10 @@ class BlockVerifier(BlockVerifierInterface):
     def verify_block(self, block_state):
         return True
 
-    def compute_block_weight(self, block_state):
-        # longest chain wins
-        return block_state.block_num
-
 
 class ForkResolver(ForkResolverInterface):
-    # Provides the fork resolution interface for the BlockValidator to use
-    # when deciding between 2 forks.
+    """ DevMode ForkResolver implementation
+    """
     def __init__(self, block_cache):
         super().__init__(block_cache)
 
@@ -132,10 +91,10 @@ class ForkResolver(ForkResolverInterface):
 
     def compare_forks(self, cur_fork_head, new_fork_head):
         """
-
         Args:
-            cur_fork_head: The current head of the block chain.
-            new_fork_head: The head of the fork that is being evaluated.
+            cur_fork_head (BlockWrapper): The current head of the block chain.
+            new_fork_head (BlockWrapper): The head of the fork that is being
+            evaluated.
         Returns:
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.

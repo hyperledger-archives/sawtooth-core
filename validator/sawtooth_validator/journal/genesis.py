@@ -18,8 +18,13 @@ import os
 from pathlib import Path
 
 from sawtooth_signing import secp256k1_signer as signing
-from sawtooth_validator.protobuf import genesis_pb2
-from sawtooth_validator.protobuf import block_pb2
+
+from sawtooth_validator.exceptions import InvalidGenesisStateError
+from sawtooth_validator.exceptions import InvalidGenesisConsensusError
+from sawtooth_validator.exceptions import UnknownConsensusModuleError
+
+from sawtooth_validator.execution.scheduler_serial import SerialScheduler
+
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -27,9 +32,8 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
-from sawtooth_validator.execution.scheduler_serial import SerialScheduler
-from sawtooth_validator.exceptions import InvalidGenesisStateError
-from sawtooth_validator.exceptions import UnknownConsensusModuleError
+from sawtooth_validator.protobuf import genesis_pb2
+from sawtooth_validator.protobuf import block_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -166,12 +170,19 @@ class GenesisController(object):
         block_builder.set_state_hash(state_hash)
 
         block_publisher = self._get_block_publisher(state_hash)
-        block_publisher.initialize_block(block_builder)
+        if not block_publisher.initialize_block(block_builder.block_header):
+            LOGGER.error('Consensus refused to initialize consensus block.')
+            raise InvalidGenesisConsensusError(
+                'Consensus refused to initialize genesis block.')
+
+        if not block_publisher.finalize_block(block_builder.block_header):
+            LOGGER.error('Consensus refused to finalize genesis block.')
+            raise InvalidGenesisConsensusError(
+                'Consensus refused to finalize genesis block.')
 
         self._sign_block(block_builder)
 
         block = block_builder.build_block()
-        block_publisher.finalize_block(block)
 
         blkw = BlockWrapper(block=block, status=BlockStatus.Valid)
 

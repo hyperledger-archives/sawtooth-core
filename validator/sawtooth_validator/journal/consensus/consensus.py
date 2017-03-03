@@ -41,41 +41,48 @@ class BlockPublisherInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def initialize_block(self, block):
+    def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
         this may include initiating voting activities, starting proof of work
-        hash generation, or create a PoET wait timer.
+        hash generation, or create a PoET wait timer. The block
+        is represented by a block_header since the full block will not be
+        built until the block is finalized.
 
         Args:
-            block (Block): the block to initialize.
+            block_header (BlockHeader): the BlockHeader to initialize.
         Returns:
-            consensus: the serialized consensus data for the block header, this
-            can be temporary state data or None.
+            Boolean: True if the candidate block should be built. False if
+            no candidate should be built.
         """
         pass
 
     @abstractmethod
-    def check_publish_block(self, block):
-        """Check if a candidate block is ready to be claimed.
+    def check_publish_block(self, block_header):
+        """Check if a candidate block is ready to be claimed. The block
+        is represented by a block_header since the full block will not be
+        built until the block is finalized.
 
         Args:
-            block (Block): the block to be checked if it should be claimed
+            block_header (BlockHeader): the block_header to be checked if it
+            should be claimed
         Returns:
-            Boolean: True if the candidate block should be claimed.
+            Boolean: True if the candidate block should be claimed. False if
+            the block is not ready to be claimed.
         """
         pass
 
     @abstractmethod
-    def finalize_block(self, block):
-        """Finalize a block to be claimed. Provide any signatures and
-        data updates that need to be applied to the block before it is
-        signed and broadcast to the network.
+    def finalize_block(self, block_header):
+        """Finalize a block to be claimed. Update the
+        Block.block_header.consensus field with any data this consensus's
+        BlockVerifier needs to establish the validity of the block.
 
         Args:
-            block (Block): The candidate block that needs to be finalized
-             by the consensus
+            block_header (BlockHeader): The candidate block that needs to be
+            finalized.
         Returns:
-            consensus: The consensus data to store on the block.
+            Boolean: True if the candidate block good and should be generated.
+            False if the block should be abandoned.
         """
         pass
 
@@ -107,16 +114,7 @@ class BlockVerifierInterface(metaclass=ABCMeta):
         Args:
             block (Block): The block to validate.
         Returns:
-            None
-        """
-        pass
-
-    def compute_block_weight(self, block):
-        """
-        Args:
-            block (Block): The block to compute weight of.
-        Returns:
-            An opaque weight object.
+            Boolean: True if the Block is valid, False if the block is invalid.
         """
         pass
 
@@ -147,9 +145,10 @@ class ForkResolverInterface(metaclass=ABCMeta):
          only valid blocks.
 
         Args:
-            cur_fork_head (Block): The current head of the block chain.
-            new_fork_head (Block): The head of the fork that is being
-                evaluated.
+            cur_fork_head (BlockWrapper): The current head of the block
+            chain.
+            new_fork_head (BlockWrapper): The head of the fork that is being
+            evaluated.
         Returns:
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.

@@ -194,8 +194,6 @@ class BlockValidator(object):
                 if valid:
                     valid = consensus.verify_block(blkw)
 
-                # Update the block store
-                blkw.weight = consensus.compute_block_weight(blkw)
                 blkw.status = BlockStatus.Valid if \
                     valid else BlockStatus.Invalid
                 return valid
@@ -346,7 +344,7 @@ class BlockValidator(object):
                 return
 
             # 4) Evaluate the 2 chains to see if the new chain should be
-            # commited
+            # committed
             commit_new_chain = self._test_commit_new_chain()
 
             # 5) Consensus to compute batch sets (only if we are switching).

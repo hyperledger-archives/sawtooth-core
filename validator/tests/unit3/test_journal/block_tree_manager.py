@@ -178,12 +178,6 @@ class BlockTreeManager(object):
             self.block_cache[block.identifier] = block
 
         if add_to_store:
-            if block.weight is None:
-                state_view = self.state_view_factory.create_view(None)
-                tmv = mock_consensus.\
-                    BlockVerifier(block_cache=self.block_cache,
-                                  state_view=state_view)
-                block.weight = tmv.compute_block_weight(block)
             self.block_store[block.identifier] = block
 
         return block
