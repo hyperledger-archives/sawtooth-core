@@ -49,18 +49,20 @@ class Stream {
   constructor (url) {
     this._url = url
 
-    this._futures = {}
     this._initial_connection = true
   }
 
   connect (onConnectCb) {
     this._onConnectCb = onConnectCb
+
+    this._futures = {}
     this._socket = zmq.socket('dealer')
     this._socket.setsockopt('identity', Buffer.from(uuid(), 'utf8'))
     this._socket.connect(this._url)
     this._socket.on('disconnect', (fd, endpoint) => this._handleDisconnect())
     this._socket.monitor(500, zmq.ZMQ_EVENT_DISCONNECTED)
     this._onConnectCb()
+
     this._initial_connection = false
   }
 
@@ -91,6 +93,14 @@ class Stream {
       this._socket.send(_encodeMessage(type, correlationId, content))
 
       return deferred.promise
+        .then(result => {
+          delete this._futures[correlationId]
+          return result
+        })
+        .catch(err => {
+          delete this._futures[correlationId]
+          throw err
+        })
     } else {
       let err = null
       if (this._initial_connection) {
