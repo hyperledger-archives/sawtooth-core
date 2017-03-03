@@ -342,6 +342,7 @@ class PoetConsensus(object):
         if sealed_signup_data is not None:
             self.poet_public_key = \
                 SignupInfo.unseal_signup_data(
+                    poet_enclave_module=None,
                     validator_address=journal.local_node.signing_address(),
                     sealed_signup_data=sealed_signup_data)
 
@@ -768,6 +769,7 @@ class PoetConsensus(object):
 
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=None,
                 validator_address=journal.local_node.signing_address(),
                 originator_public_key_hash=public_key_hash,
                 most_recent_wait_certificate_id=wait_certificate_id)

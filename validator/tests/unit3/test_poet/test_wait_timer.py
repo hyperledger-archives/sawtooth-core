@@ -41,12 +41,18 @@ class TestWaitTimer(unittest.TestCase):
         # PoET enclave is set back to initial state at the start of every
         # test.
         self.poet_enclave_module = reload(poet_enclave)
-        SignupInfo.poet_enclave = self.poet_enclave_module
 
         args = {"NodeName": "DasValidator"}
         self.poet_enclave_module.initialize(**args)
 
     def test_create_wait_timer_with_invalid_certificate_list(self):
+        # Need to create signup information first
+        SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
+            validator_address='1060 W Addison Street',
+            originator_public_key_hash=self._originator_public_key_hash,
+            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+
         # Make sure that invalid certificate lists cause error
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(
@@ -97,6 +103,7 @@ class TestWaitTimer(unittest.TestCase):
         # Need to create signup information first
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -136,8 +143,7 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
         # Ensure that the enclave is set back to initial state
-        SignupInfo.poet_enclave = reload(poet_enclave)
-        wait_timer.WaitTimer.poet_enclave = SignupInfo.poet_enclave
+        self.poet_enclave_module = reload(poet_enclave)
 
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
@@ -155,6 +161,7 @@ class TestWaitTimer(unittest.TestCase):
 
         # Initialize the enclave with sealed signup data
         SignupInfo.unseal_signup_data(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             sealed_signup_data=signup_info.sealed_signup_data)
 
@@ -221,6 +228,7 @@ class TestWaitTimer(unittest.TestCase):
     def test_has_expired(self):
         # Need to create signup information first
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)

@@ -29,7 +29,6 @@ class TestSignupInfo(unittest.TestCase):
     def setUpClass(cls):
         args = {"NodeName": "DasValidator"}
         poet_enclave.initialize(**args)
-        SignupInfo.poet_enclave = poet_enclave
 
         cls._originator_public_key_hash = create_random_public_key_hash()
         cls._another_public_key_hash = create_random_public_key_hash()
@@ -45,6 +44,7 @@ class TestSignupInfo(unittest.TestCase):
     def test_basic_create_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -57,11 +57,15 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_serialized_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
         serialized = signup_info.serialize()
-        copy_signup_info = SignupInfo.signup_info_from_serialized(serialized)
+        copy_signup_info = \
+            SignupInfo.signup_info_from_serialized(
+                poet_enclave_module=poet_enclave,
+                serialized=serialized)
 
         self.assertEqual(
             signup_info.poet_public_key,
@@ -75,11 +79,13 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_unsealing_data(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
         poet_public_key = \
             SignupInfo.unseal_signup_data(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 sealed_signup_data=signup_info.sealed_signup_data)
 
@@ -91,12 +97,14 @@ class TestSignupInfo(unittest.TestCase):
     def test_verify_signup_info(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         try:
             signup_info.check_valid(
+                poet_enclave_module=poet_enclave,
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
         except ValueError as e:
@@ -105,18 +113,21 @@ class TestSignupInfo(unittest.TestCase):
     def test_non_matching_originator_public_key(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         with self.assertRaises(ValueError):
             signup_info.check_valid(
+                poet_enclave_module=poet_enclave,
                 originator_public_key_hash=self._another_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
     def test_non_matching_most_recent_wait_certificate_id(self):
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=poet_enclave,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -129,5 +140,6 @@ class TestSignupInfo(unittest.TestCase):
         #
         # with self.assertRaises(ValueError):
         signup_info.check_valid(
+            poet_enclave_module=poet_enclave,
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id='SomeFunkyCertificateID')

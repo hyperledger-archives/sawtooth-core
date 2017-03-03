@@ -46,10 +46,9 @@ class TestWaitCertificate(unittest.TestCase):
         # PoET enclave is set back to initial state at the start of every
         # test.
         self.poet_enclave_module = reload(poet_enclave)
-        SignupInfo.poet_enclave = self.poet_enclave_module
 
         args = {"NodeName": "DasValidator"}
-        SignupInfo.poet_enclave.initialize(**args)
+        self.poet_enclave_module.initialize(**args)
 
     def test_create_wait_certificate_before_create_signup_info(self):
         # Make sure that trying to create a wait certificate before signup
@@ -63,6 +62,7 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_before_create_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -78,6 +78,7 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_before_wait_timer_expires(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -109,6 +110,7 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_after_wait_timer_timed_out(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -144,6 +146,7 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_with_wrong_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -177,6 +180,7 @@ class TestWaitCertificate(unittest.TestCase):
     def test_create_wait_certificate_with_reused_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -228,6 +232,7 @@ class TestWaitCertificate(unittest.TestCase):
         # Need to create signup information and wait timer first
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -293,6 +298,7 @@ class TestWaitCertificate(unittest.TestCase):
         # Need to create signup information and wait timer first
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
