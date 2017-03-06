@@ -74,7 +74,6 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
-    @unittest.skip("Disabled until poet integration")
     def test_create_wait_certificate_before_wait_timer_expires(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
@@ -102,7 +101,6 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
-    @unittest.skip("Disabled until poet integration")
     def test_create_wait_certificate_after_wait_timer_timed_out(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
@@ -134,7 +132,6 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
-    @unittest.skip("Disabled until poet integration")
     def test_create_wait_certificate_with_wrong_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
@@ -164,7 +161,6 @@ class TestWaitCertificate(unittest.TestCase):
             wait_timer=valid_wt,
             block_hash="Reader's Digest")
 
-    @unittest.skip("Disabled until poet integration")
     def test_create_wait_certificate_with_reused_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
@@ -209,7 +205,6 @@ class TestWaitCertificate(unittest.TestCase):
             wait_timer=wt,
             block_hash="Reader's Digest")
 
-    @unittest.skip("Disabled until poet integration")
     def test_create_wait_certificate(self):
         # Need to create signup information and wait timer first
         signup_info = \
@@ -265,7 +260,6 @@ class TestWaitCertificate(unittest.TestCase):
 
         another_wc.check_valid([wc], signup_info.poet_public_key)
 
-    @unittest.skip("Disabled until poet integration")
     def test_wait_certificate_serialization(self):
         # Need to create signup information and wait timer first
         signup_info = \
