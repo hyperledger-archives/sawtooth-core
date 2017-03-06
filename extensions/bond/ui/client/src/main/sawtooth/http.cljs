@@ -38,8 +38,8 @@
               (str (encode-uri-query (name k)) "=" (encode-uri-query v)))))
 
 (def ^:private content-types
-  {:json "application/json; charset=UTF8"
-   :form "application/x-www-form-urlencoded; charset=UTF8"})
+  {:json "application/json; charset=UTF-8"
+   :form "application/x-www-form-urlencoded; charset=UTF-8"})
 
 (def ^:private data-formatters
   {:json #(->> % (clj->js) (.stringify js/JSON))
