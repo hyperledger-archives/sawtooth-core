@@ -18,7 +18,7 @@
 from collections.abc import MutableMapping
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 
 
@@ -156,3 +156,48 @@ class BlockStore(MutableMapping):
 
     def has_batch(self, batch_id):
         return batch_id in self._block_store
+
+    def get_batch_by_transaction(self, transaction_id):
+        """
+        Check to see if the requested transaction_id is in the current chain.
+        If so, find the batch that has the transaction referenced by the
+        transaction_id and return the batch. This is done by finding the block
+        and searching for the batch.
+
+        :param transaction_id (string): The id of the transaction that is being
+            requested.
+        :return:
+        The batch that has the transaction.
+        """
+        if self.has_transaction(transaction_id):
+            block = self.get_block_by_transaction_id(
+                transaction_id)
+            # Find batch in block
+            for batch in block.batches:
+                batch_header = BatchHeader()
+                batch_header.ParseFromString(batch.header)
+                if transaction_id in batch_header.transactions_ids:
+                    return batch
+        else:
+            raise ValueError("Transaction_id %s not found in BlockStore.",
+                             transaction_id)
+
+    def get_batch(self, batch_id):
+        """
+        Check to see if the requested batch_id is in the current chain. If so,
+        find the batch with the batch_id and return it. This is done by
+        finding the block and searching for the batch.
+
+        :param batch_id (string): The id of the batch requested.
+        :return:
+        The batch with the batch_id.
+        """
+        if self.has_batch(batch_id):
+            block = self.block_store.get_block_by_batch_id(
+                batch_id)
+
+            for batch in block.batches:
+                if batch.header_signature == batch_id:
+                    return batch
+
+        raise ValueError("Batch_id %s not found in BlockStore.", batch_id)
