@@ -87,7 +87,17 @@
                "documented here"]
               "."]
           [:p "To begin you will need to create an identity by generating a new
-              Wallet Import Format (WIF) key or importing an existing one."]]
+              Wallet Import Format (WIF) key or importing an existing one."]
+           (when (or (= :edge (utils/browser)) (= :ie (utils/browser) (not (utils/browser))))
+            [:div.row
+             [:div.alert.alert-danger.col-md-10.col-md-offset-1
+              {:role "alert"}
+              [:span.glyphicon.glyphicon-exclamation-sign {:aria-hidden true}]
+              (cond
+                (= :edge (utils/browser)) " Microsoft Edge is not supported for this demo."
+                (= :ie (utils/browser)) " Internet Explorer is not supported for this demo."
+                :default " Your browser configuration could not be detected.")
+              " We recommend using Google Chrome for the best experience."]])]
          [:div.panel.panel-warning
           [:div.panel-heading "Generate or import your WIF key:"]
           [:div.panel-footer

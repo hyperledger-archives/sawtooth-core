@@ -62,7 +62,9 @@
         agent-contains #(re-find (re-pattern %) user-agent)]
         (cond (agent-contains "Firefox") :firefox
               (agent-contains "OPR") :opera
+              (or (agent-contains "MSIE") (agent-contains "Trident")) :ie
+              ; Order important: Edge lists Chrome/Safari, Chrome lists Safari
+              (agent-contains "Edge") :edge
               (agent-contains "Chrome") :chrome
               (agent-contains "Safari") :safari
-              (or (agent-contains "MSIE") (.-documentMode js/document)) :ie
               :default nil)))))
