@@ -22,9 +22,13 @@ from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.batch_publisher import \
+    BatchPublisher
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
+
 from sawtooth_validator.journal.transaction_cache import TransactionCache
+
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -45,6 +49,7 @@ class BlockPublisher(object):
                  block_cache,
                  state_view_factory,
                  block_sender,
+                 batch_sender,
                  squash_handler,
                  chain_head,
                  identity_signing_key):
@@ -52,17 +57,16 @@ class BlockPublisher(object):
         Initialize the BlockPublisher object
 
         Args:
-            consensus_module (module): The consensus module for block
-                processing.
             transaction_executor (:obj:`TransactionExecutor`): A
                 TransactionExecutor instance.
             block_cache (:obj:`BlockCache`): A BlockCache instance.
             state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
                 read-only state views.
             block_sender (:obj:`BlockSender`): The BlockSender instance.
+            batch_sender (:obj:`BatchSender`): The BatchSender instance.
             squash_handler (function): Squash handler function for merging
                 contexts.
-            chain_head (:obj:`BlockWrapper`): The inital chain head.
+            chain_head (:obj:`BlockWrapper`): The initial chain head.
             identity_signing_key (str): Private key for signing blocks
         """
         self._lock = RLock()
@@ -72,6 +76,8 @@ class BlockPublisher(object):
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
+        self._batch_publisher = BatchPublisher(identity_signing_key,
+                                               batch_sender)
         self._pending_batches = []  # batches we are waiting for validation,
         # arranged in the order of batches received.
         self._committed_txn_cache = TransactionCache(self._block_cache.
@@ -90,7 +96,7 @@ class BlockPublisher(object):
 
     def _get_previous_block_root_state_hash(self, blkw):
         """ Get the state root hash for the previous block. This
-        function handles the origing block correctly.
+        function handles the origin block correctly.
         :param blkw: the reference block block.
         :return: The state root hash of the previous block.
         """
@@ -112,9 +118,11 @@ class BlockPublisher(object):
             create_view(prev_state)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
             state_view)
+
         self._consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
-                           state_view=state_view)
+                           state_view=state_view,
+                           batch_publisher=self._batch_publisher)
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,

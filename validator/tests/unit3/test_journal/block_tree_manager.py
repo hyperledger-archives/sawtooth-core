@@ -38,6 +38,7 @@ from sawtooth_validator.protobuf.setting_pb2 import Setting
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
+from test_journal.mock import MockBatchSender
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
@@ -71,6 +72,7 @@ class BlockTreeManager(object):
 
     def __init__(self):
         self.block_sender = MockBlockSender()
+        self.batch_sender = MockBatchSender()
         self.block_store = BlockStore(DictDatabase())
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
@@ -94,6 +96,7 @@ class BlockTreeManager(object):
             block_cache=self.block_cache,
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
+            batch_sender=self.block_sender,
             squash_handler=None,
             chain_head=self.genesis_block,
             identity_signing_key=self.identity_signing_key)

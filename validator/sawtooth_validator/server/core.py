@@ -28,6 +28,8 @@ from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.execution import tp_state_handlers
+from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
+from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.completer import CompleterGossipHandler
 from sawtooth_validator.journal.completer import \
@@ -39,7 +41,6 @@ from sawtooth_validator.journal.responder import BatchByBatchIdResponderHandler
 from sawtooth_validator.journal.responder import \
     BatchByTransactionIdResponderHandler
 from sawtooth_validator.networking.dispatch import Dispatcher
-from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
@@ -138,12 +139,14 @@ class Validator(object):
         completer = Completer(block_store, self._gossip)
 
         block_sender = BroadcastBlockSender(completer, self._gossip)
+        batch_sender = BroadcastBatchSender(completer, self._gossip)
         chain_id_manager = ChainIdManager(data_dir)
         # Create and configure journal
         self._journal = Journal(
             block_store=block_store,
             state_view_factory=StateViewFactory(merkle_db),
             block_sender=block_sender,
+            batch_sender=batch_sender,
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler(),
             identity_signing_key=identity_signing_key,
@@ -158,7 +161,8 @@ class Validator(object):
             state_view_factory=state_view_factory,
             identity_key=identity_signing_key,
             data_dir=data_dir,
-            chain_id_manager=chain_id_manager
+            chain_id_manager=chain_id_manager,
+            batch_sender=batch_sender
         )
 
         responder = Responder(completer)

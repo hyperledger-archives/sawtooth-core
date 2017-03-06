@@ -38,6 +38,7 @@ from sawtooth_validator.state.state_view import StateViewFactory
 from test_journal.block_tree_manager import BlockTreeManager
 
 from test_journal.mock import MockBlockSender
+from test_journal.mock import MockBatchSender
 from test_journal.mock import MockNetwork
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
@@ -69,6 +70,7 @@ class TestBlockPublisher(unittest.TestCase):
     def setUp(self):
         self.blocks = BlockTreeManager()
         self.block_sender = MockBlockSender()
+        self.batch_sender = MockBatchSender()
         self.state_view_factory = MockStateViewFactory({})
 
     def test_no_chain_head(self):
@@ -77,6 +79,7 @@ class TestBlockPublisher(unittest.TestCase):
             block_cache=self.blocks.block_cache,
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.blocks.chain_head,
             identity_signing_key=self.blocks.identity_signing_key)
@@ -95,6 +98,7 @@ class TestBlockPublisher(unittest.TestCase):
             block_cache=self.blocks.block_cache,
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.blocks.chain_head,
             identity_signing_key=self.blocks.identity_signing_key)
@@ -691,6 +695,7 @@ class TestJournal(unittest.TestCase):
         self.gossip = MockNetwork()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
+        self.batch_sender = MockBatchSender()
 
     def test_publish_block(self):
         """
@@ -709,6 +714,7 @@ class TestJournal(unittest.TestCase):
                 block_cache=btm.block_cache,
                 state_view_factory=StateViewFactory(DictDatabase()),
                 block_sender=self.block_sender,
+                batch_sender=self.batch_sender,
                 transaction_executor=self.txn_executor,
                 squash_handler=None,
                 identity_signing_key=btm.identity_signing_key,

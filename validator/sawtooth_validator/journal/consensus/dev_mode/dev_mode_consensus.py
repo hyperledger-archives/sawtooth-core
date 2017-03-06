@@ -25,11 +25,12 @@ from sawtooth_validator.journal.consensus.consensus\
 class BlockPublisher(BlockPublisherInterface):
     """ DevMode BlockPublisher implementation.
     """
-    def __init__(self, block_cache, state_view):
-        super().__init__(block_cache, state_view)
+    def __init__(self, block_cache, state_view, batch_publisher):
+        super().__init__(block_cache, state_view, batch_publisher)
 
         self._block_cache = block_cache
         self._state_view = state_view
+        self.batch_publisher = batch_publisher
         self._num_batches = 1
         self._count = 0
 
