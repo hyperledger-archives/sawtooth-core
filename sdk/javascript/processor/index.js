@@ -19,14 +19,19 @@
 
 const {
   TpRegisterRequest,
+  TpRegisterResponse,
+  TpUnregisterRequest,
   TpProcessRequest,
   TpProcessResponse,
   TransactionHeader,
   Message
 } = require('../protobuf')
-Message.MessageType = Message.nested.MessageType.values
 
-const {InternalError, InvalidTransaction} = require('./exceptions')
+const {
+  InternalError,
+  InvalidTransaction,
+  ValidatorConnectionError
+} = require('./exceptions')
 
 const {Stream} = require('../client/stream')
 
@@ -43,72 +48,87 @@ class TransactionProcessor {
   }
 
   start () {
-    this._stream.connect()
+    this._stream.connect(() => {
+      this._stream.onReceive(message => {
+        console.log('Received ', message.messageType)
 
-    this._stream.onReceive(message => {
-      console.log('Received', message.messageType)
+        const request = TpProcessRequest.decode(message.content)
 
-      const request = TpProcessRequest.decode(message.content)
+        const state = new State(this._stream, request.contextId)
 
-      const state = new State(this._stream, request.contextId)
+        if (this._handlers.length > 0) {
+          let txnHeader = TransactionHeader.decode(request.header)
 
-      if (this._handlers.length > 0) {
-        let txnHeader = TransactionHeader.decode(request.header)
+          let handler = this._handlers.find((candidate) =>
+             candidate.transactionFamilyName === txnHeader.familyName &&
+               candidate.version === txnHeader.familyVersion &&
+               candidate.encoding === txnHeader.payloadEncoding)
 
-        let handler = this._handlers.find((candidate) =>
-           candidate.transactionFamilyName === txnHeader.familyName &&
-             candidate.version === txnHeader.familyVersion &&
-             candidate.encoding === txnHeader.payloadEncoding)
-
-        if (handler) {
-          handler.apply(request, state)
-            .then(() => TpProcessResponse.encode({
-              status: TpProcessResponse.Status.OK
-            }).finish())
-            .catch((e) => {
-              if (e instanceof InvalidTransaction) {
-                console.log(e)
-                return TpProcessResponse.encode({
-                  status: TpProcessResponse.Status.INVALID_TRANSACTION
-                }).finish()
-              } else if (e instanceof InternalError) {
-                console.log(e)
-                return TpProcessResponse.encode({
-                  status: TpProcessResponse.Status.INTERNAL_ERROR
-                }).finish()
-              } else {
-                console.log('Unhandled exception, returning INTERNAL_ERROR')
-                console.log(e)
-                return TpProcessResponse.encode({
-                  status: TpProcessResponse.Status.INTERNAL_ERROR
-                }).finish()
-              }
-            })
-            .then((response) =>
-                  this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE, message.correlationId, response))
+          if (handler) {
+            handler.apply(request, state)
+              .then(() => TpProcessResponse.encode({
+                status: TpProcessResponse.Status.OK
+              }).finish())
+              .catch((e) => {
+                if (e instanceof InvalidTransaction) {
+                  console.log(e)
+                  return TpProcessResponse.encode({
+                    status: TpProcessResponse.Status.INVALID_TRANSACTION
+                  }).finish()
+                } else if (e instanceof InternalError) {
+                  console.log('Internal Error Occurred', e)
+                  return TpProcessResponse.encode({
+                    status: TpProcessResponse.Status.INTERNAL_ERROR
+                  }).finish()
+                } else if (e instanceof ValidatorConnectionError) {
+                  console.log('Validator disconnected.  Ignoring.')
+                } else {
+                  console.log('Unhandled exception, returning INTERNAL_ERROR', e)
+                  return TpProcessResponse.encode({
+                    status: TpProcessResponse.Status.INTERNAL_ERROR
+                  }).finish()
+                }
+              })
+              .then((response) =>
+                    this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
+                                          message.correlationId,
+                                          response))
+          }
         }
-      }
+      })
+
+      this._handlers.forEach(handler => {
+        this._stream.send(
+          Message.MessageType.TP_REGISTER_REQUEST,
+          TpRegisterRequest.encode({
+            family: handler.transactionFamilyName,
+            version: handler.version,
+            encoding: handler.encoding,
+            namespaces: handler.namespaces
+          }).finish()
+        )
+        .then(content => TpRegisterResponse.decode(content))
+        .then(ack => {
+          let {transactionFamilyName: familyName, version, encoding} = handler
+          let status = ack.status === 0 ? 'succeeded' : 'failed'
+          console.log(`Registration of [${familyName} ${version} ${encoding}] ${status}`)
+        })
+        .catch(e => {
+          let {transactionFamilyName: familyName, version, encoding} = handler
+          console.log(`Registration of [${familyName} ${version} ${encoding}] Failed!`, e)
+        })
+      })
     })
 
-    this._handlers.forEach(handler => {
-      this._stream.send(
-        Message.MessageType.TP_REGISTER_REQUEST,
-        TpRegisterRequest.encode({
-          family: handler.transactionFamilyName,
-          version: handler.version,
-          encoding: handler.encoding,
-          namespaces: handler.namespaces
-        }).finish()
-      )
-      /*
-      .then(content => Acknowledgement.decode(content))
-      .then(ack => {
-        let {transactionFamilyName: familyName, version, encoding} = handler
-        let status = ack.status === 0 ? 'Succeded' : 'Failed'
-        console.log(`Registration of [${familyName} ${version} ${encoding}] ${status}`)
-      })
-     */
-    })
+    process.on('SIGINT', () => this._handleShutdown())
+    process.on('SIGTERM', () => this._handleShutdown())
+  }
+
+  _handleShutdown () {
+    console.log('Unregistering transaction processor')
+    this._stream.send(Message.MessageType.TP_UNREGISTER_REQUEST,
+                      TpUnregisterRequest.encode().finish())
+    process.exit()
   }
 }
 

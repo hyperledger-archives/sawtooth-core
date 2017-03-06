@@ -31,4 +31,15 @@ class InternalError extends Error {
   }
 }
 
-module.exports = {InvalidTransaction, InternalError}
+class ValidatorConnectionError extends Error {
+  constructor (message = '') {
+    super(message)
+    this.name = this.constructor.name
+  }
+}
+
+module.exports = {
+  InvalidTransaction,
+  InternalError,
+  ValidatorConnectionError
+}

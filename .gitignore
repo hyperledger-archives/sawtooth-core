@@ -36,8 +36,11 @@
 /sdk/python/build/
 /sdk/python/sawtooth_sdk/protobuf/
 /sdk/python/**/__pycache__/
+/sdk/javascript/node_modules
+/sdk/javascript/protobuf/protobuf_bundle.json
 /sdk/examples/sawtooth_xo/**/__pycache__/
 /sdk/examples/intkey_python/**/__pycache__/
+/sdk/examples/intkey_javascript/node_modules/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/
