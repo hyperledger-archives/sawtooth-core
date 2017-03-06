@@ -28,15 +28,21 @@ message Leaf {
     bytes data = 2;
 }
 
-// Corresponds to messagetype CLIENT_BATCH_SUBMIT_REQUEST
+// Submits a list of Batches to be added to the blockchain.
 message ClientBatchSubmitRequest {
     repeated Batch batches = 1;
 }
 
+// This is a response to a submission of one or more Batches.
+// Statuses:
+//   * OK - everything with the request worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * INVALID_BATCH - the batch failed validation, likely due to a bad signature
 message ClientBatchSubmitResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
+        INVALID_BATCH = 2;
     }
     Status status = 1;
 }

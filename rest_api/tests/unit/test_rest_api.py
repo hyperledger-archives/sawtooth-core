@@ -16,6 +16,7 @@
 from base64 import b64decode
 from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from sawtooth_rest_api.protobuf import batch_pb2
 from sawtooth_rest_api.routes import RouteHandler
 from tests.unit.mock_stream import MockStream
 
@@ -28,6 +29,7 @@ class ApiTest(AioHTTPTestCase):
 
         # Add handlers
         app = web.Application(loop=loop)
+        app.router.add_post('/batches', handlers.batches_post)
         app.router.add_get('/batch_status', handlers.status_list)
         app.router.add_get('/state', handlers.state_list)
         app.router.add_get('/state/{address}', handlers.state_get)
@@ -35,97 +37,59 @@ class ApiTest(AioHTTPTestCase):
         app.router.add_get('/blocks/{block_id}', handlers.block_get)
         return app
 
-    async def get_and_assert_status(self, endpoint, status):
-        request = await self.client.request('GET', endpoint)
-        self.assertEqual(status, request.status)
-        return request
+    @unittest_run_loop
+    async def test_post_batch(self):
+        """Verifies a POST /batches with one id works properly.
 
-    async def get_json_assert_200(self, endpoint):
-        request = await self.get_and_assert_status(endpoint, 200)
-        return await request.json()
-
-    async def assert_404(self, endpoint):
-        await self.get_and_assert_status(endpoint, 404)
-
-    def assert_all_instances(self, items, cls):
-        """Asserts that all items in a collection are instances of a class
+        Expects to find:
+            - a response status of 202
+            - a link property that ends in '/batches?id=a'
         """
-        for item in items:
-            self.assertIsInstance(item, cls)
+        request = await self.post_batch_ids('a')
+        self.assertEqual(202, request.status)
 
-    def assert_has_valid_head(self, response, expected):
-        """Asserts a response has a head string with an expected value
+        response = await request.json()
+        self.assert_has_valid_link(response, '/batch_status?id=a')
+
+    @unittest_run_loop
+    async def test_post_json_batch(self):
+        """Verifies a POST /batches with a JSON request body breaks properly.
+
+        Expects to find:
+            - a response status of 400
         """
-        self.assertIn('head', response)
-        head = response['head']
-        self.assertIsInstance(head, str)
-        self.assertEqual(head, expected)
+        request = await self.client.post(
+            '/batches',
+            data='{"bad": "data"}',
+            headers={'content-type': 'application/json'})
+        self.assertEqual(400, request.status)
 
-    def assert_has_valid_link(self, response, expected_ending):
-        """Asserts a response has a link url string with an expected ending
+    @unittest_run_loop
+    async def test_post_invalid_batch(self):
+        """Verifies a POST /batches with an invalid batch breaks properly.
+
+        *Note: the mock submit handler marks ids of 'bad' as invalid
+
+        Expects to find:
+            - a response status of 400
         """
-        self.assertIn('link', response)
-        link = response['link']
-        self.assertIsInstance(link, str)
-        self.assertTrue(link.startswith('http'))
-        self.assertTrue(link.endswith(expected_ending))
+        request = await self.post_batch_ids('bad')
+        self.assertEqual(400, request.status)
 
-    def assert_has_valid_data_list(self, response, expected_length):
-        """Asserts a response has a data list of dicts of an expected length.
+    @unittest_run_loop
+    async def test_post_many_batches(self):
+        """Verifies a POST /batches with many ids works properly.
+
+        Expects to find:
+            - a response status of 202
+            - a link property that ends in '/batches?id=a,b,c'
         """
-        self.assertIn('data', response)
-        data = response['data']
-        self.assertIsInstance(data, list)
-        self.assert_all_instances(data, dict)
-        self.assertEqual(expected_length, len(data))
+        request = await self.post_batch_ids('a', 'b', 'c')
+        self.assertEqual(202, request.status)
 
-    def assert_has_valid_data_dict(self, response, expected_value):
-        """Asserts a response has a data dict with an expected value.
-        """
-        self.assertIn('data', response)
-        data = response['data']
-        self.assertIsInstance(data, dict)
-        self.assertEqual(expected_value, data)
+        response = await request.json()
+        self.assert_has_valid_link(response, '/batch_status?id=a,b,c')
 
-    def assert_leaves_contain(self, leaves, address, value):
-        """Asserts that there is one leaf that matches an address,
-        and that its data when b64decoded matches an expected value.
-        """
-        matches = [l for l in leaves if l['address'] == address]
-        self.assertEqual(1, len(matches))
-        self.assertEqual(value, b64decode(matches[0]['data']))
-
-    def assert_block_well_formed(self, block, expected_id):
-        """Tests a block dict is fully expanded and matches the expected id.
-        Assumes the block contains one batch and txn which share the id.
-        """
-
-        # Check block and its header
-        self.assertIsInstance(block, dict)
-        self.assertEqual(expected_id, block['header_signature'])
-        self.assertIsInstance(block['header'], dict)
-        self.assertEqual(b'consensus', b64decode(block['header']['consensus']))
-
-        # Check batch and its header
-        batches = block['batches']
-        self.assertIsInstance(batches, list)
-        self.assertEqual(1, len(batches))
-        self.assert_all_instances(batches, dict)
-
-        self.assertEqual(expected_id, batches[0]['header_signature'])
-        self.assertIsInstance(batches[0]['header'], dict)
-        self.assertEqual('pubkey', batches[0]['header']['signer_pubkey'])
-
-        # Check transaction and its header
-        txns = batches[0]['transactions']
-        self.assertIsInstance(txns, list)
-        self.assertEqual(1, len(txns))
-        self.assert_all_instances(txns, dict)
-
-        self.assertEqual(expected_id, txns[0]['header_signature'])
-        self.assertEqual(b'payload', b64decode(txns[0]['payload']))
-        self.assertIsInstance(txns[0]['header'], dict)
-        self.assertEqual(expected_id, txns[0]['header']['nonce'])
 
     @unittest_run_loop
     async def test_batch_status_with_one_id(self):
@@ -548,3 +512,106 @@ class ApiTest(AioHTTPTestCase):
             - a response status of 404
         """
         await self.assert_404('/blocks/bad')
+
+    async def post_batch_ids(self, *batch_ids):
+        batches = [batch_pb2.Batch(
+            header_signature=batch_id,
+            header=b'header') for batch_id in batch_ids]
+        batch_list = batch_pb2.BatchList(batches=batches)
+
+        return await self.client.post(
+            '/batches',
+            data=batch_list.SerializeToString(),
+            headers={'content-type': 'application/octet-stream'})
+
+    async def get_and_assert_status(self, endpoint, status):
+        request = await self.client.get(endpoint)
+        self.assertEqual(status, request.status)
+        return request
+
+    async def get_json_assert_200(self, endpoint):
+        request = await self.get_and_assert_status(endpoint, 200)
+        return await request.json()
+
+    async def assert_404(self, endpoint):
+        await self.get_and_assert_status(endpoint, 404)
+
+    def assert_all_instances(self, items, cls):
+        """Asserts that all items in a collection are instances of a class
+        """
+        for item in items:
+            self.assertIsInstance(item, cls)
+
+    def assert_has_valid_head(self, response, expected):
+        """Asserts a response has a head string with an expected value
+        """
+        self.assertIn('head', response)
+        head = response['head']
+        self.assertIsInstance(head, str)
+        self.assertEqual(head, expected)
+
+    def assert_has_valid_link(self, response, expected_ending):
+        """Asserts a response has a link url string with an expected ending
+        """
+        self.assertIn('link', response)
+        link = response['link']
+        self.assertIsInstance(link, str)
+        self.assertTrue(link.startswith('http'))
+        self.assertTrue(link.endswith(expected_ending))
+
+    def assert_has_valid_data_list(self, response, expected_length):
+        """Asserts a response has a data list of dicts of an expected length.
+        """
+        self.assertIn('data', response)
+        data = response['data']
+        self.assertIsInstance(data, list)
+        self.assert_all_instances(data, dict)
+        self.assertEqual(expected_length, len(data))
+
+    def assert_has_valid_data_dict(self, response, expected_value):
+        """Asserts a response has a data dict with an expected value.
+        """
+        self.assertIn('data', response)
+        data = response['data']
+        self.assertIsInstance(data, dict)
+        self.assertEqual(expected_value, data)
+
+    def assert_leaves_contain(self, leaves, address, value):
+        """Asserts that there is one leaf that matches an address,
+        and that its data when b64decoded matches an expected value.
+        """
+        matches = [l for l in leaves if l['address'] == address]
+        self.assertEqual(1, len(matches))
+        self.assertEqual(value, b64decode(matches[0]['data']))
+
+    def assert_block_well_formed(self, block, expected_id):
+        """Tests a block dict is fully expanded and matches the expected id.
+        Assumes the block contains one batch and txn which share the id.
+        """
+
+        # Check block and its header
+        self.assertIsInstance(block, dict)
+        self.assertEqual(expected_id, block['header_signature'])
+        self.assertIsInstance(block['header'], dict)
+        self.assertEqual(b'consensus', b64decode(block['header']['consensus']))
+
+        # Check batch and its header
+        batches = block['batches']
+        self.assertIsInstance(batches, list)
+        self.assertEqual(1, len(batches))
+        self.assert_all_instances(batches, dict)
+
+        self.assertEqual(expected_id, batches[0]['header_signature'])
+        self.assertIsInstance(batches[0]['header'], dict)
+        self.assertEqual('pubkey', batches[0]['header']['signer_pubkey'])
+
+        # Check transaction and its header
+        txns = batches[0]['transactions']
+        self.assertIsInstance(txns, list)
+        self.assertEqual(1, len(txns))
+        self.assert_all_instances(txns, dict)
+
+        self.assertEqual(expected_id, txns[0]['header_signature'])
+        self.assertEqual(b'payload', b64decode(txns[0]['payload']))
+        self.assertIsInstance(txns[0]['header'], dict)
+        self.assertEqual(expected_id, txns[0]['header']['nonce'])

@@ -43,8 +43,6 @@ paths:
                 $ref: "#/definitions/Link"
         400:
           $ref: "#/responses/400BadRequest"
-        422:
-          $ref: "#/responses/422UnprocessableEntity"
         500:
           $ref: "#/responses/500ServerError"
         503:

@@ -14,6 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import logging
+# pylint: disable=import-error,no-name-in-module
+# needed for google.protobuf import
+from google.protobuf.message import DecodeError
 
 from sawtooth_signing import secp256k1_signer as signing
 
@@ -25,6 +28,8 @@ from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
+from sawtooth_validator.protobuf.validator_pb2 import Message
+from sawtooth_validator.protobuf.client_pb2 import ClientBatchSubmitResponse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -138,10 +143,20 @@ class GossipMessageSignatureVerifier(Handler):
 class BatchListSignatureVerifier(Handler):
 
     def handle(self, identity, message_content):
-        batch_list = BatchList()
-        batch_list.ParseFromString(message_content)
-        status = validate_batch_list(batch_list)
-        if status is True:
-            return HandlerResult(status=HandlerStatus.PASS)
+        try:
+            batch_list = BatchList()
+            batch_list.ParseFromString(message_content)
+            status = validate_batch_list(batch_list)
+        except DecodeError:
+            return self._response(ClientBatchSubmitResponse.INTERNAL_ERROR)
 
-        return HandlerResult(status=HandlerStatus.RETURN)
+        if status is not True:
+            return self._response(ClientBatchSubmitResponse.INVALID_BATCH)
+
+        return HandlerResult(status=HandlerStatus.PASS)
+
+    def _response(self, out_status):
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=ClientBatchSubmitResponse(status=out_status),
+            message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
