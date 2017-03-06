@@ -71,7 +71,6 @@ services:
     expose:
       - 8080
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
-    entrypoint: python3 -m http.server
     depends_on:
       - validator
       - rest_api
