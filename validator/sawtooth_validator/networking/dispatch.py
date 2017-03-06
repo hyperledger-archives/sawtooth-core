@@ -106,11 +106,12 @@ class Dispatcher(Thread):
 
     def _process(self, message_id):
         with self._condition:
-            _, identity, \
+            connection, identity, \
                 message, collection = self._message_information[message_id]
         try:
             handler_manager = next(collection)
-            future = handler_manager.execute(identity, message.content)
+            future = handler_manager.execute(
+                identity, connection, message.content)
             future.add_done_callback(partial(self._determine_next, message_id))
         except IndexError:
             # IndexError is raised if done with handlers
@@ -185,8 +186,9 @@ class _HandlerManager(object):
         self._executor = executor
         self._handler = handler
 
-    def execute(self, identity, message):
-        return self._executor.submit(self._handler.handle, identity, message)
+    def execute(self, identity, connection, message):
+        return self._executor.submit(
+            self._handler.handle, identity, connection, message)
 
 
 class _ManagerCollection(object):
@@ -225,12 +227,11 @@ class HandlerStatus(enum.Enum):
 class Handler(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         """
 
-        :param identity: zmq identity set on the zmq socket
-                         could be a pubkey and used in a
-                         authentication handler.
+        :param identity: zmq identity set on the peer's dealer zmq socket
+        :param connection: Unique identifier for peer's zmq router socket
         :param message_content: The bytes to be deserialized
                                 into a protobuf python class
         :return HandlerResult: The status of the handling

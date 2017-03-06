@@ -33,7 +33,7 @@ class PeerRegisterHandler(Handler):
     def __init__(self, gossip):
         self._gossip = gossip
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         request = PeerRegisterRequest()
         request.ParseFromString(message_content)
         LOGGER.debug("got peer register message "
@@ -52,7 +52,7 @@ class PeerUnregisterHandler(Handler):
     def __init__(self, gossip):
         self._gossip = gossip
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         request = PeerUnregisterRequest()
         request.ParseFromString(message_content)
         LOGGER.debug("got peer unregister message "
@@ -68,7 +68,7 @@ class PeerUnregisterHandler(Handler):
 
 
 class GossipMessageHandler(Handler):
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
@@ -107,7 +107,7 @@ class GossipBroadcastHandler(Handler):
 
 class PingHandler(Handler):
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         request = PingRequest()
         request.ParseFromString(message_content)
 

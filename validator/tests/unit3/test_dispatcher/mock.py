@@ -25,7 +25,7 @@ class MockHandler1(dispatch.Handler):
     def __init__(self):
         self._time_to_sleep = 2.0
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         if self._time_to_sleep > 0:
             time.sleep(self._time_to_sleep)
             self._time_to_sleep -= 0.1
@@ -35,7 +35,7 @@ class MockHandler1(dispatch.Handler):
 
 class MockHandler2(dispatch.Handler):
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         request = validator_pb2.Message()
         request.ParseFromString(message_content)
         return dispatch.HandlerResult(
