@@ -86,17 +86,18 @@ class GossipBroadcastHandler(Handler):
     def __init__(self, gossip):
         self._gossip = gossip
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
+        exclude = [(connection, identity)]
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
         if gossip_message.content_type == "BATCH":
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
-            self._gossip.broadcast_batch(batch)
+            self._gossip.broadcast_batch(batch, exclude)
         elif gossip_message.content_type == "BLOCK":
             block = Block()
             block.ParseFromString(gossip_message.content)
-            self._gossip.broadcast_block(block)
+            self._gossip.broadcast_block(block, exclude)
         else:
             LOGGER.info("received %s, not BATCH or BLOCK",
                         gossip_message.content_type)

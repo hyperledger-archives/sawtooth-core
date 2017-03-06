@@ -75,6 +75,14 @@ class _SendReceive(object):
         self._socket = None
         self._condition = Condition()
 
+    @property
+    def connection(self):
+        return self._connection
+
+    @property
+    def identity(self):
+        return self._identity
+
     @asyncio.coroutine
     def _receive_message(self):
         """
@@ -308,6 +316,10 @@ class Connection(object):
             server_private_key=server_private_key)
 
         self._thread = None
+
+    @property
+    def local_id(self):
+        return self._send_receive_thread.connection
 
     def send(self, message_type, data):
         """
