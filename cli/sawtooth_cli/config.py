@@ -12,16 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+from base64 import b64decode
+import csv
 import datetime
 import getpass
 import hashlib
+import json
 import os
+import sys
+import yaml
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 
 from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
 from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
+from sawtooth_cli.protobuf.setting_pb2 import Setting
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
@@ -31,17 +37,15 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchList
 from sawtooth_signing import secp256k1_signer as signing
 
 
+CONFIG_NAMESPACE = '000000'
+DEFAULT_COL_WIDTH = 15
+
+
 def add_config_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the config command and
     its subcommands.
     """
     parser = subparsers.add_parser('config')
-
-    parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of the validator's REST API",
-        default='http://localhost:8080')
 
     config_parsers = parser.add_subparsers(title="subcommands",
                                            dest="subcommand")
@@ -71,6 +75,12 @@ def add_config_parser(subparsers, parent_parser):
         help='creates and submits a Propose configuration transaction')
 
     propose_parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    propose_parser.add_argument(
         '-k', '--key',
         type=str,
         help='the signing key for the resulting batch')
@@ -85,6 +95,28 @@ def add_config_parser(subparsers, parent_parser):
         type=str,
         help='the proposed value of the setting key')
 
+    list_parser = config_parsers.add_parser(
+        'list',
+        help='list the current keys and values of sawtooth-config settings')
+
+    list_parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    list_parser.add_argument(
+        '--filter',
+        type=str,
+        default='',
+        help='filters keys that begin with this value')
+
+    list_parser.add_argument(
+        '--format',
+        default='default',
+        choices=['default', 'csv', 'json', 'yaml'],
+        help='the format of the output')
+
 
 def do_config(args):
     """Executes the config commands subcommands.
@@ -93,6 +125,8 @@ def do_config(args):
         _do_config_set(args)
     elif args.subcommand == 'propose':
         _do_config_propose(args)
+    elif args.subcommand == 'list':
+        _do_config_list(args)
     else:
         raise AssertionError(
             '"{}" is not a valid subcommand of "config"'.format(
@@ -135,6 +169,61 @@ def _do_config_propose(args):
 
     rest_client = RestClient(args.url)
     rest_client.send_batches(batch_list)
+
+
+def _do_config_list(args):
+    """Lists the current on-chain configuration values.
+    """
+    rest_client = RestClient(args.url)
+    state = rest_client.list_state(subtree=CONFIG_NAMESPACE)
+
+    prefix = args.filter
+
+    head = state['head']
+    state_values = state['data']
+    printable_settings = []
+    proposals_address = _key_to_address('sawtooth.config.vote.proposals')
+    for state_value in state_values:
+        if state_value['address'] == proposals_address:
+            # This is completely internal setting and we won't list it here
+            continue
+
+        decoded = b64decode(state_value['data'])
+        setting = Setting()
+        setting.ParseFromString(decoded)
+
+        for entry in setting.entries:
+            if entry.key.startswith(prefix):
+                printable_settings.append(entry)
+
+    printable_settings.sort(key=lambda s: s.key)
+
+    if args.format == 'default':
+        for setting in printable_settings:
+            value = (setting.value[:DEFAULT_COL_WIDTH] + '...'
+                     if len(setting.value) > DEFAULT_COL_WIDTH
+                     else setting.value)
+            print('{}: {}'.format(setting.key, value))
+    elif args.format == 'csv':
+        try:
+            writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
+            writer.writerow(['KEY', 'VALUE'])
+            for setting in printable_settings:
+                writer.writerow([setting.key, setting.value])
+        except csv.Error:
+            raise CliException('Error writing CSV')
+    elif args.format == 'json' or args.format == 'yaml':
+        settings_snapshot = {
+            'head': head,
+            'settings': {setting.key: setting.value
+                         for setting in printable_settings}
+        }
+        if args.format == 'json':
+            print(json.dumps(settings_snapshot, indent=2, sort_keys=True))
+        else:
+            print(yaml.dump(settings_snapshot, default_flow_style=False)[0:-1])
+    else:
+        raise AssertionError('Unknown format {}'.format(args.format))
 
 
 def _read_signing_keys(key_filename):
@@ -253,4 +342,4 @@ def _config_outputs(key):
 def _key_to_address(key):
     """Creates the state address for a given setting key.
     """
-    return '000000' + hashlib.sha256(key.encode()).hexdigest()
+    return CONFIG_NAMESPACE + hashlib.sha256(key.encode()).hexdigest()
