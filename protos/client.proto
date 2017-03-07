@@ -48,8 +48,13 @@ message ClientBatchSubmitResponse {
 }
 
 // A request for the status of one or more batches, specified by id.
+// If `wait_for_commit` is set to true, the validator will wait to respond
+// until all batches are committed, or until the specified `timeout
+// in seconds has elapsed. Defaults to 300.
 message ClientBatchStatusRequest {
     repeated string batch_ids = 1;
+    bool wait_for_commit = 2;
+    int32 timeout = 3;
 }
 
 // This is a response to a request for the status of specific batches. The

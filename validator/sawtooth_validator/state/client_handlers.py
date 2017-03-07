@@ -45,6 +45,11 @@ class BatchStatusRequest(Handler):
         if helper.has_response():
             return helper.result
 
+        if helper.request.wait_for_commit:
+            self._block_store.wait_for_batch_commits(
+                batch_ids=helper.request.batch_ids,
+                timeout=helper.request.timeout)
+
         statuses = {}
 
         for batch_id in helper.request.batch_ids:
