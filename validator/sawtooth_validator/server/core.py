@@ -54,7 +54,7 @@ from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
-from sawtooth_validator.gossip.gossip_handlers import PingHandler
+from sawtooth_validator.networking.handlers import PingHandler
 
 
 LOGGER = logging.getLogger(__name__)
@@ -100,7 +100,8 @@ class Validator(object):
 
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
-                                     secured=False)
+                                     secured=False,
+                                     heartbeat=False)
         executor = TransactionExecutor(service=self._service,
                                        context_manager=context_manager,
                                        config_view_factory=ConfigViewFactory(
@@ -132,7 +133,8 @@ class Validator(object):
             peer_connections=peer_list,
             secured=True,
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
-            server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*')
+            server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
+            heartbeat=True)
 
         self._gossip = Gossip(self._network)
 
@@ -191,11 +193,13 @@ class Validator(object):
             thread_pool
         )
 
+        # Set up base network handlers
         self._network_dispatcher.add_handler(
-            validator_pb2.Message.GOSSIP_PING,
+            validator_pb2.Message.NETWORK_PING,
             PingHandler(),
             network_thread_pool)
 
+        # Set up gossip handlers
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_REGISTER,
             PeerRegisterHandler(gossip=self._gossip),
