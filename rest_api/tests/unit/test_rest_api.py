@@ -112,6 +112,26 @@ class ApiTest(AioHTTPTestCase):
         self.assert_has_valid_data_dict(response, {'pending': 'PENDING'})
 
     @unittest_run_loop
+    async def test_batch_status_with_wait(self):
+        """Verifies a GET /batch_status with a wait set works properly.
+
+        Fetches from preseeded id/status pairs that look like this with a wait:
+            'committed': COMMITTED
+            'pending': COMMITTED
+             *: UNKNOWN
+
+        Expects to find:
+            - a response status of 200
+            - a link property that ends in '/batch_status?id=pending&wait'
+            - a data property that is a dict with the key/value pair
+                * 'pending': 'COMMITTED'
+        """
+        response = await self.get_json_assert_200('/batch_status?id=pending&wait')
+
+        self.assert_has_valid_link(response, '/batch_status?id=pending&wait')
+        self.assert_has_valid_data_dict(response, {'pending': 'COMMITTED'})
+
+    @unittest_run_loop
     async def test_batch_status_with_many_ids(self):
         """Verifies a GET /batch_status with many ids works properly.
 

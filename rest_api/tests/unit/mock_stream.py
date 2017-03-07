@@ -251,6 +251,10 @@ class _StatusHandler(_MockHandler):
 
         request = self._parse_request(content)
 
+        # simulate having waited for a pending batch to be committed
+        if request.wait_for_commit == True and request.timeout > 0:
+            mock['pending'] = self._response_proto.COMMITTED
+
         statuses = {
             b_id: mock[b_id] if b_id in mock else self._response_proto.UNKNOWN
             for b_id in request.batch_ids}
