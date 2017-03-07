@@ -20,7 +20,6 @@ import logging
 import os
 import time
 
-from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
@@ -55,6 +54,7 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.networking.handlers import PingHandler
+from sawtooth_validator.server.keys import load_identity_signing_key
 
 
 LOGGER = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class Validator(object):
         identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
 
-        identity_signing_key = Validator.load_identity_signing_key(
+        identity_signing_key = load_identity_signing_key(
             key_dir,
             DEFAULT_KEY_NAME)
 
@@ -312,31 +312,3 @@ class Validator(object):
         self._service.stop()
         self._network.stop()
         self._journal.stop()
-
-    @staticmethod
-    def load_identity_signing_key(key_dir, key_name):
-        """Loads a private key from the key director, based on a validator's
-        identity.
-
-        Args:
-            key_dir (str): The path to the key directory.
-            key_name (str): The name of the key to load.
-
-        Returns:
-            str: the private signing key, in hex.
-        """
-        key_path = os.path.join(key_dir, '{}.wif'.format(key_name))
-
-        if os.path.exists(key_path):
-            LOGGER.debug('Found signing key %s', key_path)
-            with open(key_path, 'r') as key_file:
-                wif_key = key_file.read().strip()
-                return signing.encode_privkey(
-                    signing.decode_privkey(wif_key), 'hex')
-        else:
-            LOGGER.info('No signing key found. Generating %s', key_path)
-            priv_key = signing.generate_privkey()
-            with open(key_path, 'w') as key_file:
-                key_file.write(signing.encode_privkey(priv_key))
-
-            return signing.encode_privkey(priv_key, 'hex')
