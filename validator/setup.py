@@ -83,33 +83,19 @@ else:
     library_dirs = []
 
 if os.name == 'nt':
-    conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\conf"
-    log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\logs"
-    data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\data"
-    run_dir = "C:\\Program Files (x86)\\Intel\\sawtooth-validator\\run"
-    static_content_dir = "Lib\\site-packages\\txnserver\\static_content"
+    conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
+    log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\logs"
+    data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\data"
 else:
-    conf_dir = "/etc/sawtooth-validator"
-    log_dir = "/var/log/sawtooth-validator"
-    data_dir = "/var/lib/sawtooth-validator"
-    run_dir = "/var/run/sawtooth-validator"
-    static_content_dir = "lib/python2.7/dist-packages/txnserver/static_content"
-
-
-# collect the static files to put in the installation dir
-static_content_files = []
-for root, dirs, files in os.walk("txnserver/static_content"):
-    for file in files:
-        static_content_files.append(os.path.join(root, file))
-
+    conf_dir = "/etc/sawtooth"
+    log_dir = "/var/log/sawtooth"
+    data_dir = "/var/lib/sawtooth"
 
 data_files = [
     (conf_dir, ["etc/txnvalidator-logging.yaml.example"]),
     (os.path.join(conf_dir, "keys"), []),
     (log_dir, []),
-    (data_dir, []),
-    (run_dir, []),
-    (static_content_dir, static_content_files),
+    (data_dir, [])
 ]
 
 if os.path.exists("/etc/default"):
