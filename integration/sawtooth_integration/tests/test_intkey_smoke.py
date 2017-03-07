@@ -62,17 +62,12 @@ class TestIntkeySmoke(unittest.TestCase):
 
         self.verify_empty_state()
 
-        # 2/7/17: The validator seems to stop responding when sent
-        # invalid txns (a bug). The invalid txns are commented out
-        # so the test will pass for the moment, but they should be
-        # be uncommented when that issue is addressed.
-
         batches = (
             populate,
             valid_txns,
-            # invalid_txns,
+            invalid_txns,
             valid_txns,
-            # populate,
+            populate,
             valid_txns
         )
 
@@ -96,11 +91,18 @@ class TestIntkeySmoke(unittest.TestCase):
         LOGGER.debug('Verifying state after {} updates'.format(num))
         expected_state = self.verifier.state_after_n_updates(num)
         actual_state = _get_data()
-        self.assertEqual(expected_state, actual_state)
+        LOGGER.info('Current state: {}'.format(actual_state))
+        self.assertEqual(
+            expected_state,
+            actual_state,
+            'Updated state error')
 
     def verify_empty_state(self):
         LOGGER.debug('Verifying empty state')
-        self.assertEqual([], _get_state())
+        self.assertEqual(
+            [],
+            _get_state(),
+            'Empty state error')
 
     # utilities
 
@@ -137,8 +139,8 @@ def _query_rest_api(suffix='', data=None, headers={}):
 
 class IntkeyTestVerifier:
     def __init__(self,
-                 valid=('cow', 'pig', 'sheep', 'goat', 'horse'),
-                 invalid=('lark', 'thrush', 'jay', 'wren', 'finch'),
+                 valid=('lark', 'thrush', 'jay', 'wren', 'finch'),
+                 invalid=('cow', 'pig', 'sheep', 'goat', 'horse'),
                  verbs=('inc', 'inc', 'dec', 'inc', 'dec'),
                  incdec=(1, 2, 3, 5, 8),
                  initial=(415, 325, 538, 437, 651)):
