@@ -446,10 +446,6 @@ responses:
     description: Address, prefix, or root did not match any resource
     schema:
       $ref: "#/definitions/ErrorList"
-  422UnprocessableEntity:
-    description: Submitted Batch was improperly signed
-    schema:
-      $ref: "#/definitions/ErrorList"
   500ServerError:
     description: Something went wrong with the server
     schema:
