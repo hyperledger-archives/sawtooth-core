@@ -92,7 +92,10 @@ else:
     data_dir = "/var/lib/sawtooth"
 
 data_files = [
-    (conf_dir, ["etc/txnvalidator-logging.yaml.example"]),
+    (conf_dir, [
+        "etc/path.toml.example",
+        "etc/txnvalidator-logging.yaml.example"
+    ]),
     (os.path.join(conf_dir, "keys"), []),
     (log_dir, []),
     (data_dir, [])
