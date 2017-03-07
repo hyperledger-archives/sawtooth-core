@@ -24,10 +24,9 @@ import json
 from base64 import b64decode
 
 import cbor
-# ------------------------------
 
 from sawtooth_integration.intkey.intkey_message_factory \
-    import IntkeyMessageFactory # used by verifier
+    import IntkeyMessageFactory
 
 
 LOGGER = logging.getLogger(__name__)
@@ -72,10 +71,9 @@ class TestIntkeySmoke(unittest.TestCase):
             populate,
             valid_txns,
             # invalid_txns,
-            # valid_txns, -- These batches need to be rebuilt, batchs are only
-            # processed once. Resubmitting the same batche results in a nop.
+            valid_txns,
             # populate,
-            # valid_txns
+            valid_txns
         )
 
         how_many_updates = 0
@@ -88,6 +86,7 @@ class TestIntkeySmoke(unittest.TestCase):
     # assertions
 
     def post_and_verify(self, batch, how_many_updates):
+        batch = IntkeyMessageFactory().create_batch(batch)
         LOGGER.info('Posting batch')
         _post_batch(batch)
         time.sleep(1)
@@ -151,14 +150,9 @@ class IntkeyTestVerifier:
         self.sets = ['set' for _ in range(len(self.initial))]
 
     def make_txn_batches(self):
-        def make_batch(verbs, words, values):
-            txns = zip(verbs, words, values)
-            batch = IntkeyMessageFactory().create_batch(txns)
-            return batch
-
-        populate = make_batch(self.sets, self.valid, self.initial)
-        valid_txns = make_batch(self.verbs, self.valid, self.incdec)
-        invalid_txns = make_batch(self.verbs, self.invalid, self.incdec)
+        populate = tuple(zip(self.sets, self.valid, self.initial))
+        valid_txns = tuple(zip(self.verbs, self.valid, self.incdec))
+        invalid_txns = tuple(zip(self.verbs, self.invalid, self.incdec))
 
         return populate, valid_txns, invalid_txns
 
