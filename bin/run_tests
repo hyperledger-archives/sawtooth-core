@@ -146,6 +146,7 @@ test_poet(){
     echo "[---Running poet---]"
     run_docker_test ./poet/sawtooth_poet/tests/validator_registry_test/tp_validator_registry.yaml \
     -s validator -p $ISOLATION_ID
+    run_docker_test ./poet/tests/unit_poet.yaml -s poet -p $ISOLATION_ID
 }
 
 main
