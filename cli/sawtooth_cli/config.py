@@ -51,51 +51,53 @@ def add_config_parser(subparsers, parent_parser):
                                            dest="subcommand")
     config_parsers.required = True
 
-    set_parser = config_parsers.add_parser(
-        'set',
+    # The following parser is for the `proposal` subcommand group. These
+    # commands allow the user to create proposals which may be applied
+    # immediately or placed in ballot mode, depending on the current on-chain
+    # settings.
+
+    proposal_parser = config_parsers.add_parser('proposal')
+    proposal_parsers = proposal_parser.add_subparsers(
+        title='proposals',
+        dest='proposal_cmd')
+    proposal_parsers.required = True
+
+    create_parser = proposal_parsers.add_parser(
+        'create',
         help='creates batches of sawtooth-config transactions')
 
-    set_parser.add_argument(
+    create_parser.add_argument(
         '-k', '--key',
         type=str,
         help='the signing key for the resulting batches')
-    set_parser.add_argument(
+
+    create_target_group = create_parser.add_mutually_exclusive_group()
+    create_target_group.add_argument(
         '-o', '--output',
         type=str,
-        default='config.batch',
         help='the name of the file to ouput the resulting batches')
-    set_parser.add_argument(
+
+    create_target_group.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+    create_parser.add_argument(
         'setting',
         type=str,
         nargs='+',
         help='configuration setting, as a key/value pair: <key>=<value>')
 
-    propose_parser = config_parsers.add_parser(
-        'propose',
-        help='creates and submits a Propose configuration transaction')
+    # The following parser is for the settings subsection of commands.  These
+    # commands display information about the currently applied on-chain
+    # settings.
 
-    propose_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of a validator's REST API",
-        default='http://localhost:8080')
+    settings_parser = config_parsers.add_parser('settings')
+    settings_parsers = settings_parser.add_subparsers(
+        title='settings',
+        dest='settings_cmd')
 
-    propose_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='the signing key for the resulting batch')
-
-    propose_parser.add_argument(
-        'setting',
-        type=str,
-        help='the configuration setting key')
-
-    propose_parser.add_argument(
-        'value',
-        type=str,
-        help='the proposed value of the setting key')
-
-    list_parser = config_parsers.add_parser(
+    list_parser = settings_parsers.add_parser(
         'list',
         help='list the current keys and values of sawtooth-config settings')
 
@@ -121,11 +123,9 @@ def add_config_parser(subparsers, parent_parser):
 def do_config(args):
     """Executes the config commands subcommands.
     """
-    if args.subcommand == 'set':
-        _do_config_set(args)
-    elif args.subcommand == 'propose':
-        _do_config_propose(args)
-    elif args.subcommand == 'list':
+    if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
+        _do_config_create(args)
+    elif args.subcommand == 'settings' and args.settings_cmd == 'list':
         _do_config_list(args)
     else:
         raise AssertionError(
@@ -133,10 +133,11 @@ def do_config(args):
                 args.subcommand))
 
 
-def _do_config_set(args):
-    """Executes the 'set' subcommand.  Given a key file, and a series of
-    key/value pairs, it generates batches of sawtooth_config transactions in a
-    BatchList instance, and stores it in a file.
+def _do_config_create(args):
+    """Executes the 'proposal create' subcommand.  Given a key file, and a
+    series of key/value pairs, it generates batches of sawtooth_config
+    transactions in a BatchList instance.  The BatchList is either stored to a
+    file or submitted to a validator, depending on the supplied CLI arguments.
     """
     settings = [s.split('=', 1) for s in args.setting]
 
@@ -147,28 +148,20 @@ def _do_config_set(args):
 
     batch = _create_batch(pubkey, signing_key, txns)
 
-    batch_list = BatchList(batches=[batch]).SerializeToString()
-
-    try:
-        with open(args.output, 'wb') as batch_file:
-            batch_file.write(batch_list)
-    except IOError as e:
-        raise CliException(
-            'Unable to write to batch file: {}'.format(str(e)))
-
-
-def _do_config_propose(args):
-    """Executes the 'propose' subcommand. Given a key file, a URL and a setting
-    key and value, it generates a ConfigPayload.PROPOSE sawtooth_config
-    transaction and submits it via the validator REST API.
-    """
-    pubkey, signing_key = _read_signing_keys(args.key)
-    txn = _create_propose_txn(pubkey, signing_key, (args.setting, args.value))
-    batch = _create_batch(pubkey, signing_key, [txn])
     batch_list = BatchList(batches=[batch])
 
-    rest_client = RestClient(args.url)
-    rest_client.send_batches(batch_list)
+    if args.output is not None:
+        try:
+            with open(args.output, 'wb') as batch_file:
+                batch_file.write(batch_list.SerializeToString())
+        except IOError as e:
+            raise CliException(
+                'Unable to write to batch file: {}'.format(str(e)))
+    elif args.url is not None:
+        rest_client = RestClient(args.url)
+        rest_client.send_batches(batch_list)
+    else:
+        raise AssertionError('No target for create set.')
 
 
 def _do_config_list(args):

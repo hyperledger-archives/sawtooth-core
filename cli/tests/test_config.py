@@ -52,7 +52,8 @@ class TestConfigBatchlist(unittest.TestCase):
         shutil.rmtree(self._temp_dir)
 
     def _parse_set_command(self, *settings):
-        cmd_args = ['config', 'set', '-k', self._wif_file,
+        cmd_args = ['config', 'proposal', 'create',
+                    '-k', self._wif_file,
                     '-o', os.path.join(self._temp_dir, 'myconfig.batch')]
         cmd_args += settings
 
