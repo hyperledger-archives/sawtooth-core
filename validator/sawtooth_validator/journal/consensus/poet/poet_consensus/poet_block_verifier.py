@@ -17,6 +17,8 @@ import logging
 
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
+from sawtooth_validator.journal.consensus.poet.poet_consensus \
+    import poet_enclave_factory as factory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +45,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
 
         self._block_cache = block_cache
         self._state_view = state_view
+        self._poet_enclave_module = \
+            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
 
     def verify_block(self, block):
         """Check that the block received conforms to the consensus rules.
@@ -54,4 +58,3 @@ class PoetBlockVerifier(BlockVerifierInterface):
         """
         LOGGER.debug("PoetBlockPublisher.verify_block()")
         return True
-

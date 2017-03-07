@@ -17,6 +17,8 @@ import logging
 
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
+from sawtooth_validator.journal.consensus.poet.poet_consensus \
+    import poet_enclave_factory as factory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +51,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
         self._block_cache = block_cache
         self._state_view = state_view
         self._batch_publisher = batch_publisher
+        self._poet_enclave_module = \
+            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
 
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
