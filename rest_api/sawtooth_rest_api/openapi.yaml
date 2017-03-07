@@ -112,20 +112,31 @@ paths:
   /batch_status:
     get:
       summary: Fetches the committed statuses for a set of batches
-      description: >
+      description: |
         Fetches an object with a status for each batch requested. The keys of
         the data object will be the ids of the batch(es), while the values will
         be a string status with the values `'COMMITTED'`, `'INVALID'`,
         `'PENDING'`, or `'UNKNOWN'`.
+
         The batch(es) you want to check can be specified using the `id` filter
-        parameter. Note that as this route does not return a full resource, and
-        the response body will _not_ include the `head` or `paging` properties.
+        parameter. If a `wait` time is specified in the url, the API will wait
+        to respond until all batches are committed, or the time in seconds has
+        elapsed. If the value of `wait` is not set (i.e. `?wait&id=...`), or
+        it is set to any non-integer value other than `false`, the wait time
+        will be just shy of the api's specified timeout (usually 300).
+
+        Note that as this route does not return a full resource, and the
+        response body will _not_ include the `head` or `paging` properties.
       parameters:
         - name: id
           in: query
           description: A comma seperated list of batch ids
           type: string
           required: true
+        - name: wait
+          in: query
+          description: A time in seconds to wait for commit
+          type: integer
       responses:
         200:
           description: Successfully retrieved statuses

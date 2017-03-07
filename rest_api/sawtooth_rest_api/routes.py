@@ -73,17 +73,31 @@ class RouteHandler(object):
 
     @asyncio.coroutine
     def status_list(self, request):
+        """
+        Fetches the status of a set of batches submitted to the validator
+        Will wait for batches to commit if the `wait` parameter is set
+        """
         error_traps = [error_handlers.MissingStatus()]
 
         try:
             batch_ids = request.url.query['id'].split(',')
         except KeyError:
             return errors.MissingStatusId()
+        validator_query = client.ClientBatchStatusRequest(batch_ids=batch_ids)
+
+        wait = request.url.query.get('wait', 'false')
+        if wait.lower() != 'false':
+            validator_query.wait_for_commit = True
+            try:
+                validator_query.timeout = int(wait)
+            except ValueError:
+                # By default, waits for 95% of REST API's configured timeout
+                validator_query.timeout = int(self._timeout * 0.95)
 
         response = self._query_validator(
             Message.CLIENT_BATCH_STATUS_REQUEST,
             client.ClientBatchStatusResponse,
-            client.ClientBatchStatusRequest(batch_ids=batch_ids),
+            validator_query,
             error_traps)
 
         return RouteHandler._wrap_response(
