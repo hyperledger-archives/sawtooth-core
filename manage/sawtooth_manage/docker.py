@@ -103,10 +103,12 @@ class DockerNodeController(NodeController):
         peers = self._find_peers()
 
         if node_config.genesis:
-            entrypoint = 'bash -c "./bin/sawtooth admin genesis && \
+            entrypoint = 'bash -c "./bin/sawtooth admin keygen && \
+            ./bin/sawtooth admin genesis && \
             ./bin/validator {} -v"'
         else:
-            entrypoint = './bin/validator {} -v'
+            entrypoint = 'bash -c "./bin/sawtooth admin keygen && \
+            ./bin/validator {} -v"'
         if len(peers) > 0:
             entrypoint = entrypoint.format('--peers ' + " ".join(peers))
         else:

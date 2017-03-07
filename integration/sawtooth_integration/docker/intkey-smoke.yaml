@@ -47,6 +47,7 @@ services:
       - 40000
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
+        ./bin/sawtooth admin keygen && \
         ./bin/sawtooth admin genesis && \
         ./bin/validator -vv\""
     stop_signal: SIGKILL

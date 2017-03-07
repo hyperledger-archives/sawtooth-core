@@ -46,6 +46,7 @@ services:
     expose:
       - 40000
     entrypoint: "bash -c \"\
+        ./bin/sawtooth admin keygen && \
         ./bin/sawtooth admin genesis && \
         ./bin/validator -vv\""
     stop_signal: SIGKILL
