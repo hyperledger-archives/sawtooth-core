@@ -58,9 +58,9 @@ class _PoetEnclaveSimulator(object):
     __REPORT_PRIVATE_KEY_WIF = \
         '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
 
-    _report_private_key = \
-        signing.encode_privkey(
-            signing.decode_privkey(__REPORT_PRIVATE_KEY_WIF, 'wif'), 'hex')
+    # Since signing works with WIF-encoded private keys, we don't have to
+    # decode the encoded key string.
+    _report_private_key = __REPORT_PRIVATE_KEY_WIF
     _report_public_key = signing.generate_pubkey(_report_private_key)
 
     # The anti-sybil ID for this particular validator.  This will get set when
@@ -92,14 +92,16 @@ class _PoetEnclaveSimulator(object):
                 signing.generate_pubkey(cls._poet_private_key)
             cls._active_wait_timer = None
 
-            # We are going to fake out the sealing the signup data.
+            # We are going to fake out sealing the signup data.  Note that
+            # the signing module uses strings for both private (WIF encoded)
+            # and public (hex encoded) key canonical formats.  Therefore, we
+            # don't have to encode before putting in the signup data.  This
+            # also means that on the flip side (unsealing signup data and
+            # verifying signatures using public keys), we don't have to decode
+            # before using.
             signup_data = {
-                'poet_public_key':
-                    signing.encode_pubkey(cls._poet_public_key, 'hex'),
-                'poet_private_key':
-                    signing.encode_privkey(
-                        cls._poet_private_key,
-                        'hex')
+                'poet_public_key': cls._poet_public_key,
+                'poet_private_key': cls._poet_private_key
             }
             sealed_signup_data = \
                 base64.b64encode(bytes(dict2json(signup_data).encode()))
@@ -107,9 +109,7 @@ class _PoetEnclaveSimulator(object):
             # Create a fake report
             report_data = '{0}{1}'.format(
                 originator_public_key_hash.upper(),
-                signing.encode_pubkey(
-                    cls._poet_public_key,
-                    'hex').upper()
+                cls._poet_public_key.upper()
             )
             quote = {
                 'report_body': hashlib.sha256(
@@ -173,21 +173,18 @@ class _PoetEnclaveSimulator(object):
         """
 
         # Reverse the process we used in creating "sealed" signup info.
-        # Specifically, we will do a base 32 decode, which gives us json
+        # Specifically, we will do a base 64 decode, which gives us JSON
         # we can convert back to a dictionary we can use to get the
         # data we need
         signup_data = \
             json2dict(base64.b64decode(sealed_signup_data).decode())
 
+        # Since the signing module uses strings for both private (WIF encoded)
+        # and public (hex encoded) key canonical formats, we don't have to
+        # decode.
         with cls._lock:
-            cls._poet_public_key = \
-                signing.decode_pubkey(
-                    signup_data.get('poet_public_key'),
-                    'hex')
-            cls._poet_private_key = \
-                signing.decode_privkey(
-                    signup_data.get('poet_private_key'),
-                    'hex')
+            cls._poet_public_key = str(signup_data.get('poet_public_key'))
+            cls._poet_private_key = str(signup_data.get('poet_private_key'))
             cls._active_wait_timer = None
 
             return signup_data.get('poet_public_key')
@@ -487,16 +484,15 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def verify_wait_certificate(cls, certificate, poet_public_key):
-        # Reconstitute the PoET public key and check the signature over the
-        # serialized wait certificate.
-        decoded_poet_public_key = \
-            signing.decode_pubkey(poet_public_key, 'hex')
-
+        # Since the signing module uses a hex-encoded string as the canonical
+        # format for public keys and we should be handed a public key that was
+        # part of signup information created by us, don't bother decoding
+        # the public key.
         if not \
             signing.verify(
                 certificate.serialize(),
                 certificate.signature,
-                decoded_poet_public_key):
+                poet_public_key):
             raise ValueError('Wait certificate signature does not match')
 
 

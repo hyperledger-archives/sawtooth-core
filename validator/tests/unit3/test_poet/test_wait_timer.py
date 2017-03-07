@@ -86,7 +86,6 @@ class TestWaitTimer(unittest.TestCase):
                 validator_address='1060 W Addison Street',
                 certificates=tuple())
 
-    @unittest.skip("Disabled until poet integration")
     def test_create_wait_timer(self):
         # Need to create signup information first
         signup_info = \

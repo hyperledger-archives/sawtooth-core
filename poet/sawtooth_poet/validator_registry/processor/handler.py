@@ -121,11 +121,9 @@ class ValidatorRegistryTransactionHandler(object):
         '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
 
     def __init__(self):
-        self._report_private_key = \
-            signing.encode_privkey(
-                signing.decode_privkey(self.__REPORT_PRIVATE_KEY_WIF, 'wif'),
-                'hex')
-
+        # Since signing works with WIF-encoded private keys, we don't have to
+        # decode the encoded key string.
+        self._report_private_key = self.__REPORT_PRIVATE_KEY_WIF
         self._report_public_key = signing.generate_pubkey(
             self._report_private_key)
 
