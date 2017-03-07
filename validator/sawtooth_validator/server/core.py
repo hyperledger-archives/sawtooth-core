@@ -20,7 +20,6 @@ import logging
 import os
 import time
 
-
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.genesis import GenesisController
@@ -54,19 +53,14 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.networking.handlers import PingHandler
-from sawtooth_validator.server.keys import load_identity_signing_key
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-DEFAULT_KEY_NAME = 'validator'
-"""Default key name for a validator's block signing key."""
-
-
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, peer_list,
-                 data_dir, key_dir):
+                 data_dir, identity_signing_key):
         """Constructs a validator instance.
 
         Args:
@@ -109,10 +103,6 @@ class Validator(object):
 
         identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
-
-        identity_signing_key = load_identity_signing_key(
-            key_dir,
-            DEFAULT_KEY_NAME)
 
         network_thread_pool = ThreadPoolExecutor(max_workers=10)
 

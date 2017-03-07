@@ -18,7 +18,9 @@ import sys
 import argparse
 import os
 
+from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.server.core import Validator
+from sawtooth_validator.server.keys import load_identity_signing_key
 from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
@@ -31,6 +33,9 @@ def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
 
+    parser.add_argument('--config-dir',
+                        help='Configuration directory',
+                        type=str)
     parser.add_argument('--network-endpoint',
                         help='Network endpoint URL',
                         default='tcp://*:8800',
@@ -51,43 +56,41 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def ensure_directory(sawtooth_home_path, posix_fallback_path):
-    """Ensures the one of the given sets of directories exists.
-
-    The directory in sawtooth_home_path is ensured to exist, if `SAWTOOTH_HOME`
-    exists. If the host operating system is windows, `SAWTOOTH_HOME` is
-    defaulted to `C:\\Program Files (x86)\\Intel\\sawtooth-validator`,
-    Otherwise, the given posix fallback path is ensured to exist.
+def check_directory(path, human_readable_name):
+    """Verify that the directory exists and is readable and writable.
 
     Args:
-        sawtooth_home_dirs (str): Subdirectory of `SAWTOOTH_HOME`.
-        posix_fallback_dir (str): Fallback directory path if `SAWTOOTH_HOME` is
-            unset on posix host system.
+        path (str): a directory which should exist and be writable
+        human_readable_name (str): a human readable string for the directory
+            which is used in logging statements
 
     Returns:
-        str: The path determined to exist.
+        bool: True if an error exists, False otherwise.
     """
-    if 'SAWTOOTH_HOME' in os.environ:
-        sawtooth_home_dirs = sawtooth_home_path.split('/')
-        sawtooth_dir = os.path.join(os.environ['SAWTOOTH_HOME'],
-                                    *sawtooth_home_dirs)
-    elif os.name == 'nt':
-        default_win_home = \
-            'C:\\Program Files (x86)\\Intel\\sawtooth-validator\\'
-        sawtooth_home_dirs = sawtooth_home_path.split('/')
-        sawtooth_dir = os.path.join(default_win_home, *sawtooth_home_dirs)
-    else:
-        sawtooth_dir = posix_fallback_path
+    if not os.path.exists(path):
+        LOGGER.error("%s directory does not exist: %s",
+                     human_readable_name,
+                     path)
+        return True
 
-    if not os.path.exists(sawtooth_dir):
-        try:
-            os.makedirs(sawtooth_dir, exist_ok=True)
-        except OSError as e:
-            print('Unable to create {}: {}'.format(sawtooth_dir, e),
-                  file=sys.stderr)
-            sys.exit(1)
+    if not os.path.isdir(path):
+        LOGGER.error("%s directory is not a directory: %s",
+                     human_readable_name,
+                     path)
+        return True
 
-    return sawtooth_dir
+    errors = False
+    if not os.access(path, os.R_OK):
+        LOGGER.error("%s directory is not readable: %s",
+                     human_readable_name,
+                     path)
+        errors = True
+    if not os.access(path, os.W_OK):
+        LOGGER.error("%s directory is not writable: %s",
+                     human_readable_name,
+                     path)
+        errors = True
+    return errors
 
 
 def main(args=sys.argv[1:]):
@@ -96,14 +99,44 @@ def main(args=sys.argv[1:]):
 
     init_console_logging(verbose_level=verbose_level)
 
-    data_dir = ensure_directory('data', '/var/lib/sawtooth')
-    key_dir = ensure_directory('etc/keys', '/etc/sawtooth/keys')
+    try:
+        path_config = load_path_config(config_dir=opts.config_dir)
+    except LocalConfigurationError as local_config_err:
+        LOGGER.error(str(local_config_err))
+        sys.exit(1)
+
+    for line in path_config.to_toml_string():
+        LOGGER.info("config [path]: %s", line)
+
+    # Process initial initialization errors, delaying the sys.exit(1) until
+    # all errors have been reported to the user (via LOGGER.error()).  This
+    # is intended to provide enough information to the user so they can correct
+    # multiple errors before restarting the validator.
+    init_errors = False
+
+    if check_directory(path=path_config.data_dir, human_readable_name='Data'):
+        init_errors = True
+    if check_directory(path=path_config.log_dir, human_readable_name='Log'):
+        init_errors = True
+
+    try:
+        identity_signing_key = load_identity_signing_key(
+            key_dir=path_config.key_dir,
+            key_name='validator')
+    except LocalConfigurationError as e:
+        LOGGER.error(str(e))
+        init_errors = True
+
+    if init_errors:
+        LOGGER.error("Initialization errors occurred (see previous log "
+                     "ERROR messages), shutting down.")
+        sys.exit(1)
 
     validator = Validator(opts.network_endpoint,
                           opts.component_endpoint,
                           opts.peers,
-                          data_dir,
-                          key_dir)
+                          path_config.data_dir,
+                          identity_signing_key)
 
     # pylint: disable=broad-except
     try:
