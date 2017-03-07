@@ -111,7 +111,7 @@ def validate_transaction(txn):
 
 class GossipMessageSignatureVerifier(Handler):
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
 
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
@@ -142,7 +142,7 @@ class GossipMessageSignatureVerifier(Handler):
 
 class BatchListSignatureVerifier(Handler):
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         try:
             batch_list = BatchList()
             batch_list.ParseFromString(message_content)

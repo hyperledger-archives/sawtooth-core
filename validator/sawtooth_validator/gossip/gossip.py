@@ -61,12 +61,13 @@ class Gossip(object):
                 LOGGER.debug("Attempt to unregister identity %s failed: "
                              "identity was not registered")
 
-    def broadcast_block(self, block):
+    def broadcast_block(self, block, exclude=None):
         gossip_message = GossipMessage(
             content_type="BLOCK",
             content=block.SerializeToString())
 
-        self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
+        self.broadcast(
+            gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
     def broadcast_block_request(self, block_id):
         # Need to define node identity to be able to route directly back
@@ -74,12 +75,13 @@ class Gossip(object):
         self.broadcast(block_request,
                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
 
-    def broadcast_batch(self, batch):
+    def broadcast_batch(self, batch, exclude=None):
         gossip_message = GossipMessage(
             content_type="BATCH",
             content=batch.SerializeToString())
 
-        self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
+        self.broadcast(
+            gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
     def broadcast_batch_by_transaction_id_request(self, transaction_ids):
         # Need to define node identity to be able to route directly back
@@ -99,16 +101,35 @@ class Gossip(object):
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def broadcast(self, gossip_message, message_type):
-        # Gossip broadcasts are sent out in two different ways.
-        # 1) To connected identities on our server socket
-        # 2) To outbound connections we have originated
+    def broadcast(self, gossip_message, message_type, exclude=None):
+        """Broadcast gossip messages.
+
+        Broadcast to both connected identities on our server socket and to
+        outboud connections we have originated. If a peer's identifiers are in
+        exclude, do not broadcast the message to them.
+
+        Args:
+            gossip_message: The message to be broadcast.
+            message_type: Type of the message.
+            exclude: A list of tuples that contains a peer's information
+                (connection, identifier)
+        """
+        if exclude is None:
+            exclude = []
+
+        excluded_inbound_peers = [peer[1] for peer in exclude]
+        excluded_outbound_peers = [peer[0] for peer in exclude]
+
         for identity in self._identities:
-            self._network.send(message_type,
-                               gossip_message.SerializeToString(),
-                               identity)
+            if identity not in excluded_inbound_peers:
+                self._network.send(message_type,
+                                   gossip_message.SerializeToString(),
+                                   identity)
+
         for connection in self._network.connections:
-            connection.send(message_type, gossip_message.SerializeToString())
+            if connection.local_id not in excluded_outbound_peers:
+                connection.send(
+                    message_type, gossip_message.SerializeToString())
 
     def broadcast_peer_request(self, message_type, message):
         for connection in self._network.connections:

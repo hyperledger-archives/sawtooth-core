@@ -30,6 +30,7 @@ class _ClientHandlerTestCase(unittest.TestCase):
     def initialize(self, handler, request_proto, response_proto,
                     store=None, roots=None):
         self._identity = '1234567'
+        self._connection = "Connection"
         self._handler = handler
         self._request_proto = request_proto
         self._store = store
@@ -44,7 +45,8 @@ class _ClientHandlerTestCase(unittest.TestCase):
         return request.SerializeToString()
 
     def _handle(self, request):
-        result = self._handler.handle(self._identity, request)
+        result = self._handler.handle(
+            self._identity, self._connection, request)
         return result.message_out
 
     def make_bad_request(self, **kwargs):

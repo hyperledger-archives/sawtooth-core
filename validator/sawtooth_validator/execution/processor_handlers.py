@@ -30,7 +30,7 @@ class ProcessorRegisterHandler(Handler):
     def __init__(self, processor_collection):
         self._collection = processor_collection
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         request = processor_pb2.TpRegisterRequest()
         request.ParseFromString(message_content)
 
@@ -67,7 +67,7 @@ class ProcessorUnRegisterHandler(Handler):
     def __init__(self, processor_collection):
         self._collection = processor_collection
 
-    def handle(self, identity, message_content):
+    def handle(self, identity, connection, message_content):
         request = processor_pb2.TpUnregisterRequest()
         request.ParseFromString(message_content)
 
