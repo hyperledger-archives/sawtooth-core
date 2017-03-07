@@ -62,6 +62,7 @@ RUN apt-get update && apt-get install -y -q \
     python3-nose2-cov \
     python3-stdeb \
     python3-yaml \
+    python3-toml \
     python3-zmq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
