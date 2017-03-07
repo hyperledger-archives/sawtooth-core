@@ -13,9 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import subprocess
 import asyncio
+import binascii
 import logging
+import subprocess
 
 import zmq
 import zmq.asyncio
@@ -177,6 +178,9 @@ class MockValidator(object):
         ident, result = self._loop.run_until_complete(
             self._receive()
         )
+
+        LOGGER.info(result)
+        LOGGER.info("%s:%s", len(result), binascii.hexlify(result))
 
         # Deconstruct the message
         message = Message()

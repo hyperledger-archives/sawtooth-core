@@ -67,3 +67,5 @@
 /validator/sawtooth_validator.egg-info/
 /validator/sawtooth_validator/protobuf/
 /validator/**/__pycache__/
+
+/sdk/cxx/build/
