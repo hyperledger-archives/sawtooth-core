@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 import sys
 import argparse
 import os
@@ -21,6 +22,9 @@ from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def parse_args(args):
@@ -101,13 +105,18 @@ def main(args=sys.argv[1:]):
                           data_dir,
                           key_dir)
 
+    # pylint: disable=broad-except
     try:
         validator.start()
     except KeyboardInterrupt:
         print("Interrupted!", file=sys.stderr)
+        sys.exit(1)
     except LocalConfigurationError as local_config_err:
-        print(local_config_err, file=sys.stderr)
+        LOGGER.error(str(local_config_err))
+        sys.exit(1)
     except GenesisError as genesis_err:
-        print(genesis_err, file=sys.stderr)
-    finally:
-        validator.stop()
+        LOGGER.error(str(genesis_err))
+        sys.exit(1)
+    except Exception as e:
+        LOGGER.exception(e)
+        sys.exit(1)
