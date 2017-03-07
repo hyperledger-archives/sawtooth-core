@@ -133,6 +133,7 @@ setup(
         'PyYAML',
         'protobuf',
         'requests',
+        'toml',
         'pyzmq'
         ],
     data_files=data_files,
