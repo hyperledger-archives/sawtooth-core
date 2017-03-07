@@ -13,9 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import datetime
+import getpass
 import hashlib
+import os
 
 from sawtooth_cli.exceptions import CliException
+from sawtooth_cli.rest_client import RestClient
 
 from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
 from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
@@ -34,9 +37,16 @@ def add_config_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser('config')
 
+    parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of the validator's REST API",
+        default='http://localhost:8080')
+
     config_parsers = parser.add_subparsers(title="subcommands",
                                            dest="subcommand")
     config_parsers.required = True
+
     set_parser = config_parsers.add_parser(
         'set',
         help='creates batches of sawtooth-config transactions')
@@ -56,12 +66,33 @@ def add_config_parser(subparsers, parent_parser):
         nargs='+',
         help='configuration setting, as a key/value pair: <key>=<value>')
 
+    propose_parser = config_parsers.add_parser(
+        'propose',
+        help='creates and submits a Propose configuration transaction')
+
+    propose_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the signing key for the resulting batch')
+
+    propose_parser.add_argument(
+        'setting',
+        type=str,
+        help='the configuration setting key')
+
+    propose_parser.add_argument(
+        'value',
+        type=str,
+        help='the proposed value of the setting key')
+
 
 def do_config(args):
     """Executes the config commands subcommands.
     """
     if args.subcommand == 'set':
         _do_config_set(args)
+    elif args.subcommand == 'propose':
+        _do_config_propose(args)
     else:
         raise AssertionError(
             '"{}" is not a valid subcommand of "config"'.format(
@@ -75,41 +106,99 @@ def _do_config_set(args):
     """
     settings = [s.split('=', 1) for s in args.setting]
 
-    with open(args.key, 'r') as key_file:
-        wif_key = key_file.read().strip()
-        signing_key = signing.encode_privkey(
-            signing.decode_privkey(wif_key, 'wif'), 'hex')
-        pubkey = signing.encode_pubkey(
-            signing.generate_pubkey(signing_key), 'hex')
+    pubkey, signing_key = _read_signing_keys(args.key)
 
-    txns = [_create_config_txn(pubkey, signing_key, setting)
+    txns = [_create_propose_txn(pubkey, signing_key, setting)
             for setting in settings]
-    txn_ids = [txn.header_signature for txn in txns]
 
-    batch_header = BatchHeader(signer_pubkey=pubkey,
-                               transaction_ids=txn_ids).SerializeToString()
-
-    batch = Batch(
-        header=batch_header,
-        header_signature=signing.sign(batch_header, signing_key),
-        transactions=txns
-    )
+    batch = _create_batch(pubkey, signing_key, txns)
 
     batch_list = BatchList(batches=[batch]).SerializeToString()
 
     try:
         with open(args.output, 'wb') as batch_file:
             batch_file.write(batch_list)
-    except:
-        raise CliException('Unable to write to {}'.format(args.output))
+    except IOError as e:
+        raise CliException(
+            'Unable to write to batch file: {}'.format(str(e)))
 
 
-def _create_config_txn(pubkey, signing_key, setting_key_value):
+def _do_config_propose(args):
+    """Executes the 'propose' subcommand. Given a key file, a URL and a setting
+    key and value, it generates a ConfigPayload.PROPOSE sawtooth_config
+    transaction and submits it via the validator REST API.
+    """
+    pubkey, signing_key = _read_signing_keys(args.key)
+    txn = _create_propose_txn(pubkey, signing_key, (args.setting, args.value))
+    batch = _create_batch(pubkey, signing_key, [txn])
+    batch_list = BatchList(batches=[batch])
+
+    rest_client = RestClient(args.url)
+    rest_client.send_batches(batch_list)
+
+
+def _read_signing_keys(key_filename):
+    """Reads the given file as a WIF formatted key.
+
+    Args:
+        key_filename: The filename where the key is stored. If None,
+            defaults to the default key for the current user.
+
+    Returns:
+        tuple (str, str): the public and private key pair
+
+    Raises:
+        CliException: If unable to read the file.
+    """
+    filename = key_filename
+    if filename is None:
+        filename = os.path.join(os.path.expanduser('~'),
+                                '.sawtooth',
+                                'keys',
+                                getpass.getuser() + '.wif')
+
+    try:
+        with open(filename, 'r') as key_file:
+            wif_key = key_file.read().strip()
+            signing_key = signing.encode_privkey(
+                signing.decode_privkey(wif_key, 'wif'), 'hex')
+            pubkey = signing.encode_pubkey(
+                signing.generate_pubkey(signing_key), 'hex')
+
+            return pubkey, signing_key
+    except IOError as e:
+        raise CliException('Unable to read key file: {}'.format(str(e)))
+
+
+def _create_batch(pubkey, signing_key, transactions):
+    """Creates a batch from a list of transactions and a public key, and signs
+    the resulting batch with the given signing key.
+
+    Args:
+        pubkey (str): The public key associated with the signing key.
+        signing_key (str): The private key for signing the batch.
+        transactions (list of `Transaction`): The transactions to add to the
+            batch.
+
+    Returns:
+        `Batch`: The constructed and signed batch.
+    """
+    txn_ids = [txn.header_signature for txn in transactions]
+    batch_header = BatchHeader(signer_pubkey=pubkey,
+                               transaction_ids=txn_ids).SerializeToString()
+
+    return Batch(
+        header=batch_header,
+        header_signature=signing.sign(batch_header, signing_key),
+        transactions=transactions
+    )
+
+
+def _create_propose_txn(pubkey, signing_key, setting_key_value):
     """Creates an individual sawtooth_config transaction for the given key and
     value.
     """
-    setting_key = setting_key_value[0]
-    setting_value = setting_key_value[1]
+    setting_key, setting_value = setting_key_value
     nonce = str(datetime.datetime.utcnow().timestamp())
     proposal = ConfigProposal(
         setting=setting_key,

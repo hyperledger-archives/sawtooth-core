@@ -40,19 +40,57 @@ class RestClient(object):
         queries = RestClient._remove_nones(head=head)
         return self._get('/state/' + address, queries)
 
+    def send_batches(self, batch_list):
+        """Sends a list of batches to the validator.
+
+        Args:
+            batch_list (:obj:`BatchList`): the list of batches
+
+        Returns:
+            dict: the json result data, as a dict
+        """
+        data_bytes = batch_list.SerializeToString()
+        batch_request = urllib.Request(
+            self._base_url + '/batches',
+            data=data_bytes,
+            headers={
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': "%d" % len(data_bytes)
+            },
+            method='POST')
+
+        result = self._submit_request(batch_request)
+        return json.loads(result.read().decode())
+
     def _get(self, path, queries=None):
         query_string = '?' + urlencode(queries) if queries else ''
 
+        response = self._submit_request(self._base_url + path + query_string)
+        result = response.read().decode()
+        return json.loads(result)
+
+    def _submit_request(self, url_or_request):
+        """Submits the given request, and handles the errors appropriately.
+
+        Args:
+            url_or_request (str or `urlib.request.Request`): the request to
+                send.
+
+        Returns:
+            `http.client.HTTPResponse`: The response from the request.
+
+        Raises:
+            `CliException`: If any issues occur when making the request or the
+                URL is unavailable.
+        """
         try:
-            response = urllib.urlopen(self._base_url + path + query_string)
+            return urllib.urlopen(url_or_request)
         except HTTPError as e:
             raise CliException('({}) {}'.format(e.code, e.msg))
         except URLError as e:
             raise CliException(
-                ('Unable to connect to "{}" '
+                ('Unable to connect to "{}": '
                  'make sure URL is correct').format(self._base_url))
-        result = response.read().decode('utf-8')
-        return json.loads(result)
 
     @staticmethod
     def _remove_nones(**kwargs):
