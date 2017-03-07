@@ -222,6 +222,8 @@ test_signing() {
 
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
+    run_docker_test shutdown-smoke.yaml -s integration_test
 }
+
 
 main
