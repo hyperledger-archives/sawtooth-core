@@ -16,6 +16,9 @@
 FROM sawtooth-base
 
 RUN mkdir -p /project/sawtooth-core
+RUN mkdir -p /var/log/sawtooth
+RUN mkdir -p /var/lib/sawtooth
+RUN mkdir -p /etc/sawtooth
 
 ARG PROJECT_DIR="/project/sawtooth-core"
 
