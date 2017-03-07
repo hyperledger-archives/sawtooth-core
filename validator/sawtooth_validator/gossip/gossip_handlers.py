@@ -23,7 +23,6 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
-from sawtooth_validator.protobuf.network_pb2 import PingRequest
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
 LOGGER = logging.getLogger(__name__)
@@ -45,7 +44,7 @@ class PeerRegisterHandler(Handler):
         return HandlerResult(
             HandlerStatus.RETURN,
             message_out=ack,
-            message_type=validator_pb2.Message.GOSSIP_ACK)
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class PeerUnregisterHandler(Handler):
@@ -64,7 +63,7 @@ class PeerUnregisterHandler(Handler):
         return HandlerResult(
             HandlerStatus.RETURN,
             message_out=ack,
-            message_type=validator_pb2.Message.GOSSIP_ACK)
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class GossipMessageHandler(Handler):
@@ -78,7 +77,7 @@ class GossipMessageHandler(Handler):
         return HandlerResult(
             HandlerStatus.RETURN_AND_PASS,
             message_out=ack,
-            message_type=validator_pb2.Message.GOSSIP_ACK)
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class GossipBroadcastHandler(Handler):
@@ -103,22 +102,3 @@ class GossipBroadcastHandler(Handler):
         return HandlerResult(
             status=HandlerStatus.PASS
         )
-
-
-class PingHandler(Handler):
-
-    def handle(self, identity, message_content):
-        request = PingRequest()
-        request.ParseFromString(message_content)
-
-        LOGGER.debug("got ping message "
-                     "from %s. sending ack",
-                     identity)
-
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.GOSSIP_ACK)

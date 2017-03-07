@@ -92,17 +92,16 @@ message Message {
         CLIENT_BATCH_STATUS_RESPONSE = 121;
         // Further messages from the stats client through the web api
 
-
         // Temp message types until a discusion can be had about gossip msg
         GOSSIP_MESSAGE = 200;
         GOSSIP_REGISTER = 201;
         GOSSIP_UNREGISTER = 202;
-        GOSSIP_ACK = 203;
-        GOSSIP_PING = 204;
         GOSSIP_BLOCK_REQUEST = 205;
         GOSSIP_BATCH_BY_BATCH_ID_REQUEST = 206;
         GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST = 207;
 
+        NETWORK_PING = 300;
+        NETWORK_ACK = 301;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the

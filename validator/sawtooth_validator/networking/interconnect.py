@@ -20,6 +20,7 @@ import logging
 from threading import Condition
 from threading import Thread
 import uuid
+import time
 
 import zmq
 import zmq.auth
@@ -29,6 +30,7 @@ import zmq.asyncio
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
+from sawtooth_validator.protobuf.network_pb2 import PingRequest
 
 
 LOGGER = logging.getLogger(__name__)
@@ -45,7 +47,8 @@ def get_enum_name(enum_value):
 class _SendReceive(object):
     def __init__(self, connection, address, futures, identity=None,
                  dispatcher=None, secured=False,
-                 server_public_key=None, server_private_key=None):
+                 server_public_key=None, server_private_key=None,
+                 heartbeat=False, heartbeat_interval=10):
         """
         Constructor for _SendReceive.
 
@@ -60,6 +63,9 @@ class _SendReceive(object):
             server_private_key (bytes): A private key corresponding to
                 server_public_key used by the server socket to sign
                 messages are part of the zmq auth handshake.
+            heartbeat (bool): Whether or not to send ping messages.
+            heartbeat_interval (int): Number of seconds between ping
+                messages on an otherwise quiet connection.
         """
         self._connection = connection
         self._dispatcher = dispatcher
@@ -69,11 +75,43 @@ class _SendReceive(object):
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
+        self._heartbeat = heartbeat
+        self._heartbeat_interval = heartbeat_interval
+
         self._event_loop = None
         self._context = None
         self._recv_queue = None
         self._socket = None
         self._condition = Condition()
+
+        self._connected_identities = {}
+
+    @asyncio.coroutine
+    def _send_heartbeat(self):
+        with self._condition:
+            self._condition.wait_for(lambda: self._socket is not None)
+
+        ping = PingRequest()
+
+        while True:
+            if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
+                expired = [ident for ident in self._connected_identities
+                           if time.time() - self._connected_identities[ident] >
+                           self._heartbeat_interval]
+                for identity in expired:
+                    message = validator_pb2.Message(
+                        correlation_id=_generate_id(),
+                        content=ping.SerializeToString(),
+                        message_type=validator_pb2.Message.NETWORK_PING)
+                    fut = future.Future(message.correlation_id,
+                                        message.content,
+                                        has_callback=False)
+                    self._futures.put(fut)
+                    yield from self._send_message(identity, message)
+            yield from asyncio.sleep(self._heartbeat_interval)
+
+    def _received_from_identity(self, identity):
+        self._connected_identities[identity] = time.time()
 
     @asyncio.coroutine
     def _receive_message(self):
@@ -85,6 +123,7 @@ class _SendReceive(object):
         while True:
             if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
                 identity, msg_bytes = yield from self._socket.recv_multipart()
+                self._received_from_identity(identity)
             else:
                 msg_bytes = yield from self._socket.recv()
 
@@ -192,7 +231,13 @@ class _SendReceive(object):
             self._socket.bind(self._address)
 
         self._recv_queue = asyncio.Queue()
+
         asyncio.ensure_future(self._receive_message(), loop=self._event_loop)
+
+        if self._heartbeat:
+            asyncio.ensure_future(self._send_heartbeat(),
+                                  loop=self._event_loop)
+
         with self._condition:
             self._condition.notify_all()
         self._event_loop.run_forever()
@@ -212,7 +257,8 @@ class Interconnect(object):
                  peer_connections=None,
                  secured=False,
                  server_public_key=None,
-                 server_private_key=None):
+                 server_private_key=None,
+                 heartbeat=False):
         """
         Constructor for Interconnect.
 
@@ -225,8 +271,16 @@ class Interconnect(object):
             server_private_key (bytes): A private key corresponding to
                 server_public_key used by the server socket to sign
                 messages are part of the zmq auth handshake.
+            heartbeat (bool): Whether or not to send ping messages.
         """
         self._futures = future.FutureCollection()
+        self._dispatcher = dispatcher
+        self._identity = identity
+        self._secured = secured
+        self._server_public_key = server_public_key
+        self._server_private_key = server_private_key
+        self._heartbeat = heartbeat
+
         self._send_receive_thread = _SendReceive(
             "ServerThread",
             address=endpoint,
@@ -234,7 +288,8 @@ class Interconnect(object):
             futures=self._futures,
             secured=secured,
             server_public_key=server_public_key,
-            server_private_key=server_private_key)
+            server_private_key=server_private_key,
+            heartbeat=heartbeat)
 
         self._thread = None
 
@@ -289,7 +344,8 @@ class Connection(object):
                  identity,
                  secured,
                  server_public_key,
-                 server_private_key):
+                 server_private_key,
+                 heartbeat=False):
         self._futures = future.FutureCollection()
         self._identity = identity
         self._endpoint = endpoint
@@ -297,6 +353,8 @@ class Connection(object):
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
+        self._heartbeat = heartbeat
+
         self._send_receive_thread = _SendReceive(
             "ConnectionThread-{}".format(self._endpoint),
             endpoint,
@@ -305,7 +363,8 @@ class Connection(object):
             identity=identity,
             secured=secured,
             server_public_key=server_public_key,
-            server_private_key=server_private_key)
+            server_private_key=server_private_key,
+            heartbeat=heartbeat)
 
         self._thread = None
 
