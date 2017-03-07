@@ -18,6 +18,7 @@
             [sablono.core :as html :refer-macros [html]]
             [sawtooth.state :refer [app-state]]
             [sawtooth.ledger.keys :refer [address get-key-pair]]
+            [sawtooth.utils :refer [browser]]
             [sawtooth.router :as router]
             [sawtooth.components.core
              :refer-macros [when-new-block handle-event]]
@@ -43,7 +44,17 @@
           [:p "Sawtooth Bond is a proof-of-concept bond trading platform,
               built on the Sawtooth Lake distributed ledger."]
           [:p "To begin you will need to create an identity by generating a new
-              Wallet Import Format (WIF) key or importing an existing one."]]
+              Wallet Import Format (WIF) key or importing an existing one."]
+           (when (or (= :edge (browser)) (= :ie (browser) (not (browser))))
+            [:div.row
+             [:div.alert.alert-danger.col-md-10.col-md-offset-1
+              {:role "alert"}
+              [:span.glyphicon.glyphicon-exclamation-sign {:aria-hidden true}]
+              (cond
+                (= :edge (browser)) " Microsoft Edge is not supported for this demo."
+                (= :ie (browser)) " Internet Explorer is not supported for this demo."
+                :default " Your browser configuration could not be detected.")
+              " We recommend using Google Chrome for the best experience."]])]
          [:div.panel.panel-warning
           [:div.panel-heading "Generate or import your WIF key:"]
           [:div.panel-footer
