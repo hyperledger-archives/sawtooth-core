@@ -145,3 +145,6 @@ class TestContextManager(unittest.TestCase):
 
         # used for replicating state hash through direct merkle tree updates
         self.database_results = dict_database.DictDatabase()
+
+    def tearDown(self):
+        self.context_manager.stop()
