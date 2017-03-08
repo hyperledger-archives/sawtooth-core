@@ -95,6 +95,16 @@ class ApiTest(AioHTTPTestCase):
         self.assert_has_valid_link(response, '/batch_status?id=a,b,c')
 
     @unittest_run_loop
+    async def test_post_no_batches(self):
+        """Verifies a POST /batches with no batches breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        request = await self.post_batch_ids()
+        self.assertEqual(400, request.status)
+
+    @unittest_run_loop
     async def test_post_batch_with_wait(self):
         """Verifies a POST /batches can wait for commit properly.
 

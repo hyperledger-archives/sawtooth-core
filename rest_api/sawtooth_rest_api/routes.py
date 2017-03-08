@@ -46,17 +46,22 @@ class RouteHandler(object):
         """
         Takes protobuf binary from HTTP POST, and sends it to the validator
         """
+        # Parse request
         if request.headers['Content-Type'] != 'application/octet-stream':
             return errors.WrongBodyType()
-        error_traps = [error_handlers.InvalidBatch()]
 
         payload = yield from request.read()
+        if not payload:
+            return errors.EmptyProtobuf()
+
         try:
             batch_list = BatchList()
             batch_list.ParseFromString(payload)
         except DecodeError:
             return errors.BadProtobuf()
 
+        # Query validator
+        error_traps = [error_handlers.InvalidBatch()]
         validator_query = client.ClientBatchSubmitRequest(
             batches=batch_list.batches)
         self._set_wait(request, validator_query)
@@ -67,6 +72,7 @@ class RouteHandler(object):
             validator_query,
             error_traps)
 
+        # Build response
         data = response.get('batch_statuses', None)
         metadata = {
             'link': '{}://{}/batch_status?id={}'.format(
