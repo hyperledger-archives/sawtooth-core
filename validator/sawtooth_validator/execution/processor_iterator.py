@@ -27,15 +27,13 @@ LOGGER = logging.getLogger(__name__)
 class ProcessorIteratorCollection(object):
     """Contains all of the registered (added via __setitem__)
     transaction processors in a _processors (dict) where the keys
-    are ProcessorTypes and the values are ProcessorIterators. To
-    aid in removing all of the Processors of a particular zeromq identity
-    (1 transaction processor can have multiple Handlers which will be stored
-    as Processors)
-
+    are ProcessorTypes and the values are ProcessorIterators.
     """
 
     def __init__(self, processor_iterator_class):
+        # bytes: list of ProcessorType
         self._identities = {}
+        # ProcessorType: ProcessorIterator
         self._processors = {}
         self._proc_iter_class = processor_iterator_class
         self._condition = Condition()
@@ -43,8 +41,8 @@ class ProcessorIteratorCollection(object):
     def __getitem__(self, item):
         """Get a particular ProcessorIterator
 
-        :param item (ProcessorType):
-        :return: (ProcessorIterator)
+        Args:
+            item (ProcessorType): The processor type key.
         """
         with self._condition:
             return self._processors[item]
@@ -56,8 +54,12 @@ class ProcessorIteratorCollection(object):
     def get_next_of_type(self, processor_type):
         """Get the next processor of a particular type
 
-        :param processor_type ProcessorType:
-        :return: Processor or None if processor_type not registered
+        Args:
+            processor_type (ProcessorType): The processor type associated with
+                a zmq identity.
+
+        Returns:
+            (Processor): Information about the transaction processor
         """
         with self._condition:
             if processor_type in self:
@@ -65,11 +67,13 @@ class ProcessorIteratorCollection(object):
             return None
 
     def __setitem__(self, key, value):
-        """Set a ProcessorIterator to a ProcessorType,
-        if the key is already set, add the processor
-        to the iterator.
-        :param key (ProcessorType):
-        :param value (Processor):
+        """Either create a new ProcessorIterator, if none exists for a
+        ProcessorType, or add the Processor to the ProcessorIterator.
+
+        Args:
+            key (ProcessorType): The type of transactions this transaction
+                processor can handle.
+            value (Processor): Information about the transaction processor.
         """
         with self._condition:
             if key not in self._processors:
@@ -88,7 +92,9 @@ class ProcessorIteratorCollection(object):
         """Removes all of the Processors for
         a particular transaction processor zeromq identity.
 
-        :param processor_identity (str): zeromq identity
+        Args:
+            processor_identity (str): The zeromq identity of the transaction
+                processor.
         """
         with self._condition:
             processor_types = self._identities.get(processor_identity)
@@ -112,9 +118,31 @@ class ProcessorIteratorCollection(object):
     def __repr__(self):
         return ",".join([repr(k) for k in self._processors.keys()])
 
-    def wait_to_process(self, item):
+    def cancellable_wait(self, processor_type, cancelled_event):
+        """Waits for a particular processor type to register or until
+        is_cancelled is True. is_cancelled cannot be part of this class
+        since we aren't cancelling all waiting for a processor_type,
+        but just this particular wait.
+
+        Args:
+            processor_type (ProcessorType): The family, version, encoding of
+                the transaction processor.
+            cancelled_event (threading.Event): is_set() will return True when
+                the wait is cancelled.
+
+        Returns:
+            None
+        """
         with self._condition:
-            self._condition.wait_for(lambda: item in self)
+            self._condition.wait_for(lambda: processor_type in self
+                                     or cancelled_event.is_set())
+
+    def notify(self):
+        """Must be called after setting the cancelled_event, when
+        cancelling a wait.
+        """
+        with self._condition:
+            self._condition.notify_all()
 
 
 class Processor(object):
@@ -211,7 +239,7 @@ class RoundRobinProcessorIterator(ProcessorIterator):
 
     def _processor_identities(self):
         with self._lock:
-            return [p.identity for p in self._processors]
+            return [p.connection_id for p in self._processors]
 
     def add_processor(self, processor):
         with self._lock:
