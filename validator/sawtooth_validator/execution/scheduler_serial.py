@@ -41,6 +41,7 @@ class SerialScheduler(Scheduler):
         self._in_progress_transaction = None
         self._final = False
         self._complete = False
+        self._cancelled = False
         self._squash = squash_handler
         self._condition = Condition()
         # contains all txn.signatures where txn is
@@ -150,3 +151,12 @@ class SerialScheduler(Scheduler):
                 self._condition.wait_for(lambda: self._complete)
                 return True
             return False
+
+    def cancel(self):
+        with self._condition:
+            self._cancelled = True
+            self._condition.notify_all()
+
+    def is_cancelled(self):
+        with self._condition:
+            return self._cancelled

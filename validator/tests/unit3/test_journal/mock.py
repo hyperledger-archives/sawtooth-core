@@ -109,6 +109,12 @@ class MockScheduler(Scheduler):
     def count(self):
         raise NotImplementedError()
 
+    def cancel(self):
+        pass
+
+    def is_cancelled(self):
+        return False
+
 
 class MockTransactionExecutor(object):
     def __init__(self):
