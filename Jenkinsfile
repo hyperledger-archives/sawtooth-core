@@ -138,6 +138,11 @@ node ('windows') {
             readTrusted 'validator/packaging/functions.ps1'
         }
 
+        stage("[Windows] Run tests") {
+            bat 'powershell bin\\build_all_windows.ps1'
+            bat 'powershell bin\\run_tests_windows.ps1'
+        }
+
         stage("[Windows] Build installer") {
             bat 'powershell validator\\packaging\\create_package.ps1'
         }
