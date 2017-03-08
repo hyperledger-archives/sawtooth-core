@@ -106,7 +106,28 @@ class Scheduler(object, metaclass=ABCMeta):
 
         Returns:
             True if all transactions have been marked as applied and that the
-            finalize() as been called.
+            finalize() has been called.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def cancel(self):
+        """Cancels the schedule of transactions. The cancelling of a scheduler
+        is an idempotent operation. The iterator will raise
+        StopIteration, completing iteration on the iterator.
+        Returns:
+            None
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def is_cancelled(self):
+        """Returns whether .cancel() has been called on this scheduler.
+
+
+        Returns:
+            A bool specifing if the scheduler's .cancel() method has been
+            called.
         """
         raise NotImplementedError()
 
@@ -164,10 +185,12 @@ class SchedulerIterator(object):
 
             # Return the next transaction, potentially blocking with wait().
             # Exit by throwing StopIteration when the scheduler is complete
-            # and we have returned all the scheduler's transactions.
+            # and we have returned all the scheduler's transactions or the
+            # scheduler was cancelled.
             while True:
                 if (self._scheduler.complete(block=False)
-                        and self._scheduler.count() == self._next_index):
+                        and self._scheduler.count() == self._next_index or
+                        self._scheduler.is_cancelled()):
                     raise StopIteration()
 
                 txn = self._scheduler.next_transaction()
