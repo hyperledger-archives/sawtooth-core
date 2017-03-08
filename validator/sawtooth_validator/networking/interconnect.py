@@ -13,15 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
 import asyncio
+from functools import partial
 import hashlib
 import logging
+import queue
+import sys
 from threading import Condition
 from threading import Thread
-from functools import partial
-import uuid
 import time
+import uuid
 
 import zmq
 import zmq.auth
@@ -45,6 +46,9 @@ def _generate_id():
 
 def get_enum_name(enum_value):
     return validator_pb2.Message.MessageType.Name(enum_value)
+
+
+_STARTUP_COMPLETE_SENTINEL = 1
 
 
 class _SendReceive(object):
@@ -98,6 +102,7 @@ class _SendReceive(object):
         self._context = None
         self._recv_queue = None
         self._socket = None
+        self._auth = None
         self._condition = Condition()
 
         # The last time a message was received over an outbound
@@ -163,7 +168,7 @@ class _SendReceive(object):
                                      " - removing connection.",
                                      self._connection,
                                      self._connection_timeout)
-                        self.stop()
+                        yield from self._stop()
             yield from asyncio.sleep(self._heartbeat_interval)
 
     def _remove_connected_identity(self, zmq_identity):
@@ -266,69 +271,128 @@ class _SendReceive(object):
             self._send_message(zmq_identity, msg),
             self._event_loop)
 
-    def setup(self, socket_type):
+    def setup(self, socket_type, complete_or_error_queue):
+        """Setup the asyncio event loop.
+
+        Args:
+            socket_type (int from zmq.*): One of zmq.DEALER or zmq.ROUTER
+            complete_or_error_queue (queue.Queue): A way to propagate errors
+                back to the calling thread. Needed since this function is
+                directly used in Thread.
+
+        Returns:
+            None
         """
-        :param socket_type: zmq.DEALER or zmq.ROUTER
-        """
-        if self._secured:
-            if self._server_public_key is None or \
-                    self._server_private_key is None:
-                raise LocalConfigurationError("Attempting to start socket "
-                                              "in secure mode, but complete "
-                                              "server keys were not provided")
-
-        self._event_loop = zmq.asyncio.ZMQEventLoop()
-        asyncio.set_event_loop(self._event_loop)
-        self._context = zmq.asyncio.Context()
-        self._socket = self._context.socket(socket_type)
-
-        if socket_type == zmq.DEALER:
-            self._socket.identity = "{}-{}".format(
-                self._zmq_identity,
-                hashlib.sha512(uuid.uuid4().hex.encode()
-                               ).hexdigest()[:23]).encode('ascii')
-
+        try:
             if self._secured:
-                # Generate ephemeral certificates for this connection
-                self._socket.curve_publickey, self._socket.curve_secretkey = \
-                    zmq.curve_keypair()
+                if self._server_public_key is None or \
+                        self._server_private_key is None:
+                    raise LocalConfigurationError(
+                        "Attempting to start socket in secure mode, "
+                        "but complete server keys were not provided")
 
-                self._socket.curve_serverkey = self._server_public_key
+            self._event_loop = zmq.asyncio.ZMQEventLoop()
+            asyncio.set_event_loop(self._event_loop)
+            self._context = zmq.asyncio.Context()
+            self._socket = self._context.socket(socket_type)
 
-            self._dispatcher.add_send_message(self._connection,
-                                              self.send_message)
-            self._socket.connect(self._address)
-        elif socket_type == zmq.ROUTER:
-            if self._secured:
-                auth = AsyncioAuthenticator(self._context)
-                auth.start()
-                auth.configure_curve(domain='*',
-                                     location=zmq.auth.CURVE_ALLOW_ANY)
+            if socket_type == zmq.DEALER:
+                self._socket.identity = "{}-{}".format(
+                    self._zmq_identity,
+                    hashlib.sha512(uuid.uuid4().hex.encode()
+                                   ).hexdigest()[:23]).encode('ascii')
 
-                self._socket.curve_secretkey = self._server_private_key
-                self._socket.curve_publickey = self._server_public_key
-                self._socket.curve_server = True
+                if self._secured:
+                    # Generate ephemeral certificates for this connection
 
-            self._dispatcher.add_send_message(self._connection,
-                                              self.send_message)
-            self._socket.bind(self._address)
+                    pubkey, secretkey = zmq.curve_keypair()
+                    self._socket.curve_publickey = pubkey
+                    self._socket.curve_secretkey = secretkey
+                    self._socket.curve_serverkey = self._server_public_key
 
-        self._recv_queue = asyncio.Queue()
+                self._dispatcher.add_send_message(self._connection,
+                                                  self.send_message)
+                self._socket.connect(self._address)
+            elif socket_type == zmq.ROUTER:
+                if self._secured:
+                    auth = AsyncioAuthenticator(self._context)
+                    self._auth = auth
+                    auth.start()
+                    auth.configure_curve(domain='*',
+                                         location=zmq.auth.CURVE_ALLOW_ANY)
 
-        asyncio.ensure_future(self._receive_message(), loop=self._event_loop)
+                    self._socket.curve_secretkey = self._server_private_key
+                    self._socket.curve_publickey = self._server_public_key
+                    self._socket.curve_server = True
+
+                self._dispatcher.add_send_message(self._connection,
+                                                  self.send_message)
+                self._socket.bind(self._address)
+
+            self._recv_queue = asyncio.Queue()
+            asyncio.ensure_future(self._receive_message(),
+                                  loop=self._event_loop)
+
+        except Exception as e:
+            # Put the exception on the queue where in start we are waiting
+            # for it.
+            complete_or_error_queue.put_nowait(e)
+            raise
 
         if self._heartbeat:
             asyncio.ensure_future(self._do_heartbeat(), loop=self._event_loop)
 
         with self._condition:
             self._condition.notify_all()
-        self._event_loop.run_forever()
 
-    def stop(self):
+        # Put a 'complete with the setup tasks' sentinel on the queue.
+        complete_or_error_queue.put_nowait(_STARTUP_COMPLETE_SENTINEL)
+
+        self._event_loop.run_forever()
+        # event_loop.stop called elsewhere will cause the loop to break out
+        # of run_forever then it can be closed and the context destroyed.
+        self._event_loop.close()
+        self._socket.close(linger=0)
+        self._context.destroy()
+
+    @asyncio.coroutine
+    def _stop_auth(self):
+        if self._auth is not None:
+            self._auth.stop()
+
+    @asyncio.coroutine
+    def _stop(self):
         self._dispatcher.remove_send_message(self._connection)
+        yield from self._stop_auth()
+        for task in asyncio.Task.all_tasks(self._event_loop):
+            task.cancel()
         self._event_loop.stop()
-        self._socket.close()
-        self._context.term()
+
+    def shutdown(self):
+        self._dispatcher.remove_send_message(self._connection)
+        if self._event_loop is None:
+            return
+        if self._event_loop.is_closed():
+            return
+
+        if self._event_loop.is_running():
+            if self._auth is not None:
+                self._event_loop.call_soon_threadsafe(self._auth.stop)
+        else:
+            # event loop was never started, so the only Task that is running
+            # is the Auth Task.
+            self._event_loop.run_until_complete(self._stop_auth())
+        # Cancel all running tasks
+        tasks = asyncio.Task.all_tasks(self._event_loop)
+        for task in tasks:
+            self._event_loop.call_soon_threadsafe(task.cancel)
+        while len(tasks) > 0:
+            for task in tasks.copy():
+                if task.done() is True:
+                    tasks.remove(task)
+            time.sleep(.2)
+        if self._event_loop is not None:
+            self._event_loop.call_soon_threadsafe(self._event_loop.stop)
 
 
 class Interconnect(object):
@@ -424,7 +488,7 @@ class Interconnect(object):
             connection_timeout=self._connection_timeout)
 
         self.outbound_connections[uri] = conn
-        conn.start(daemon=True)
+        conn.start()
 
         self._add_connection(conn)
 
@@ -491,13 +555,25 @@ class Interconnect(object):
         else:
             return connection.send(message_type, data, callback=callback)
 
-    def start(self, daemon=False):
+    def start(self):
+        complete_or_error_queue = queue.Queue()
         self._thread = Thread(target=self._send_receive_thread.setup,
-                              args=(zmq.ROUTER,))
-        self._thread.daemon = daemon
+                              args=(zmq.ROUTER, complete_or_error_queue))
+        self._thread.name = self.__class__.__name__ + self._thread.name
         self._thread.start()
+        # Blocking in startup until the background thread has made it to
+        # running the event loop or error.
+        err = complete_or_error_queue.get(block=True)
+        if err != _STARTUP_COMPLETE_SENTINEL:
+            raise err
 
     def stop(self):
+        self._send_receive_thread.shutdown()
+        self._futures.stop()
+        for conn in self.outbound_connections.values():
+            conn.stop()
+
+    def join_with(self):
         self._thread.join()
 
     def _add_connection(self, connection):
@@ -586,12 +662,17 @@ class OutboundConnection(object):
         self._send_receive_thread.send_message(message)
         return fut
 
-    def start(self, daemon=False):
+    def start(self):
+        complete_or_error_queue = queue.Queue()
         self._thread = Thread(target=self._send_receive_thread.setup,
-                              args=(zmq.DEALER,))
-        self._thread.daemon = daemon
+                              args=(zmq.DEALER, complete_or_error_queue))
+        self._thread.name = self.__class__.__name__ + self._thread.name
 
         self._thread.start()
+        err = complete_or_error_queue.get(block=True)
+        if err != _STARTUP_COMPLETE_SENTINEL:
+            raise err
 
     def stop(self):
-        self._thread.join()
+        self._send_receive_thread.shutdown()
+        self._futures.stop()
