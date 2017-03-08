@@ -22,6 +22,12 @@ class WrongBodyType(web.HTTPBadRequest):
         super().__init__(reason=message)
 
 
+class BadProtobuf(web.HTTPBadRequest):
+    def __init__(self):
+        message = 'There was a problem decoding your Protobuf binary'
+        super().__init__(reason=message)
+
+
 class MissingStatusId(web.HTTPBadRequest):
     def __init__(self):
         message = 'At least one batch id must be specified to check status'

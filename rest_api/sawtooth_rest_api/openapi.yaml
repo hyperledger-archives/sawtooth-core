@@ -13,30 +13,57 @@ paths:
   /batches:
     post:
       summary: Sends a BatchList to the validator
-      description: >
-        Accepts a protobuf formatted `BatchList` as an octet-stream
-        binary file and submits it to the validator to be
-        committed. Note that since the submitted batches are not yet on the
-        blockchain, there will be no `data` object returned with
-        the response, just a `link` to check the committed status.
+      description: |
+        Accepts a protobuf formatted `BatchList` as an octet-stream binary
+        file and submits it to the validator to be committed.
+
+        If the `wait` parameter is set in the url, the API will try to wait to
+        respond until all batches have been committed to the blockchain,
+        returning a `201` response with a `link` to the committed batches.
+
+        If `wait` is set to a positive integer, the API will timeout and return
+        after that time in seconds has elapsed. If set to any non-integer value
+        other than `false` (including simply `?wait`), *the API may still
+        timeout*, but will use its own settings (usually 300s). After timing
+        out, a `200` is returned with a `data` object that include the statuses
+        of each batch (`COMMITTED`, `INVALID`, `PENDING`, or `UNKNOWN`), and a
+        `link` to a `/batch_status` endpoint for further polling.
+
+        If `wait` is not set, or is set to `false`, the API will return
+        immediately with a status of `202`. There will be no `data` object,
+        only a `link` to a `/batch_status` endpoint to be polled to check
+        the status of submitted batches.
       consumes:
         - application/octet-stream
       parameters:
-        -
-          name: BatchList
+        - name: BatchList
           in: body
           description: A binary encoded protobuf BatchList
           schema:
             $ref: "#/definitions/BatchList"
           required: true
-        -
-          name: callback
+        - name: callback
           in: query
           type: string
           description: Callback url
+        - $ref: "#/parameters/wait"
       responses:
+        200:
+          description: Batches submitted, but not all committed
+          schema:
+            properties:
+              data:
+                $ref: "#/definitions/BatchStatuses"
+              link:
+                $ref: "#/definitions/Link"
+        201:
+          description: Successfully committed all Batches in BatchList
+          schema:
+            properties:
+              link:
+                $ref: "#/definitions/Link"
         202:
-          description: Successfully submitted BatchList
+          description: Successfully submitted BatchList for validation
           schema:
             properties:
               link:
@@ -133,10 +160,7 @@ paths:
           description: A comma seperated list of batch ids
           type: string
           required: true
-        - name: wait
-          in: query
-          description: A time in seconds to wait for commit
-          type: integer
+        - $ref: "#/parameters/wait"
       responses:
         200:
           description: Successfully retrieved statuses
@@ -497,6 +521,11 @@ parameters:
     type: string
     default: latest
     description: Index or id of head block
+  wait:
+    name: wait
+    in: query
+    type: integer
+    description: A time in seconds to wait for commit
   fields:
     name: fields
     in: query

@@ -19,6 +19,7 @@ from aiohttp import web
 # pylint: disable=no-name-in-module,import-error
 # needed for the google.protobuf imports to pass pylint
 from google.protobuf.json_format import MessageToDict
+from google.protobuf.message import DecodeError
 from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.client.exceptions import ValidatorConnectionError
@@ -50,26 +51,43 @@ class RouteHandler(object):
         error_traps = [error_handlers.InvalidBatch()]
 
         payload = yield from request.read()
+        try:
+            batch_list = BatchList()
+            batch_list.ParseFromString(payload)
+        except DecodeError:
+            return errors.BadProtobuf()
 
-        # No need to save response, as only contains an already-checked status
-        self._query_validator(
+        validator_query = client.ClientBatchSubmitRequest(
+            batches=batch_list.batches)
+        self._set_wait(request, validator_query)
+
+        response = self._query_validator(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
             client.ClientBatchSubmitResponse,
-            payload,
+            validator_query,
             error_traps)
 
-        # Build link to query submitted batch status
-        batch_list = BatchList()
-        batch_list.ParseFromString(payload)
-        batch_ids = [b.header_signature for b in batch_list.batches]
-        status_link = '{}://{}/batch_status?id={}'.format(
-            request.scheme,
-            request.host,
-            ','.join(batch_ids))
+        data = response.get('batch_statuses', None)
+        metadata = {
+            'link': '{}://{}/batch_status?id={}'.format(
+                request.scheme,
+                request.host,
+                ','.join(b.header_signature for b in batch_list.batches))}
+
+        if data is None:
+            status = 202
+        elif any(s != 'COMMITTED' for _, s in data.items()):
+            status = 200
+        else:
+            status = 201
+            data = None
+            # Replace with /batches link when implemented
+            metadata = None
 
         return RouteHandler._wrap_response(
-            metadata={'link': status_link},
-            status=202)
+            data=data,
+            metadata=metadata,
+            status=status)
 
     @asyncio.coroutine
     def status_list(self, request):
@@ -83,16 +101,9 @@ class RouteHandler(object):
             batch_ids = request.url.query['id'].split(',')
         except KeyError:
             return errors.MissingStatusId()
-        validator_query = client.ClientBatchStatusRequest(batch_ids=batch_ids)
 
-        wait = request.url.query.get('wait', 'false')
-        if wait.lower() != 'false':
-            validator_query.wait_for_commit = True
-            try:
-                validator_query.timeout = int(wait)
-            except ValueError:
-                # By default, waits for 95% of REST API's configured timeout
-                validator_query.timeout = int(self._timeout * 0.95)
+        validator_query = client.ClientBatchStatusRequest(batch_ids=batch_ids)
+        self._set_wait(request, validator_query)
 
         response = self._query_validator(
             Message.CLIENT_BATCH_STATUS_REQUEST,
@@ -273,6 +284,20 @@ class RouteHandler(object):
             link += '&' + '&'.join(queries)
 
         return {'head': head, 'link': link}
+
+    def _set_wait(self, request, validator_query):
+        """
+        Parses the `wait` query parameter, and sets the corresponding
+        fields in a validator query
+        """
+        wait = request.url.query.get('wait', 'false')
+        if wait.lower() != 'false':
+            validator_query.wait_for_commit = True
+            try:
+                validator_query.timeout = int(wait)
+            except ValueError:
+                # By default, waits for 95% of REST API's configured timeout
+                validator_query.timeout = int(self._timeout * 0.95)
 
     @staticmethod
     def _expand_block(block):
