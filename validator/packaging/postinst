@@ -12,6 +12,5 @@ if ! getent group sawtooth > /dev/null; then
 fi
 
 
-chown -R sawtooth:sawtooth /var/lib/sawtooth-validator
-chown -R sawtooth:sawtooth /var/log/sawtooth-validator
-chown -R sawtooth:sawtooth /var/run/sawtooth-validator
+chown -R sawtooth:sawtooth /var/lib/sawtooth
+chown -R sawtooth:sawtooth /var/log/sawtooth
