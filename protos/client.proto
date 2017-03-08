@@ -29,27 +29,46 @@ message Leaf {
 }
 
 // Submits a list of Batches to be added to the blockchain.
+// If `wait_for_commit` is set to true, the validator will wait to respond
+// until all batches are committed, or until the specified `timeout
+// in seconds has elapsed. Defaults to 300.
 message ClientBatchSubmitRequest {
     repeated Batch batches = 1;
+    bool wait_for_commit = 2;
+    int32 timeout = 3;
 }
 
 // This is a response to a submission of one or more Batches.
+// If `wait_for_commit` was set in the request, this response will include a
+// `batch_statuses` hashmap, with the status of each batch submitted.
 // Statuses:
 //   * OK - everything with the request worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * INVALID_BATCH - the batch failed validation, likely due to a bad signature
+// BatchesStatuses:
+//   * COMMITTED - the batch was accepted and has been committed to the chain
+//   * INVALID - the batch failed validation, it should be resubmitted
+//   * UNKNOWN - no status for the batch could be found (possibly invalid)
+//   * PENDING - the batch is still being processed
 message ClientBatchSubmitResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         INVALID_BATCH = 2;
     }
+    enum BatchStatus {
+        COMMITTED = 0;
+        INVALID = 1;
+        UNKNOWN = 2;
+        PENDING = 3;
+    }
     Status status = 1;
+    map<string, BatchStatus> batch_statuses = 2;
 }
 
 // A request for the status of one or more batches, specified by id.
 // If `wait_for_commit` is set to true, the validator will wait to respond
-// until all batches are committed, or until the specified `timeout
+// until all batches are committed, or until the specified `timeout`
 // in seconds has elapsed. Defaults to 300.
 message ClientBatchStatusRequest {
     repeated string batch_ids = 1;

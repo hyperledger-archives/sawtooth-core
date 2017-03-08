@@ -31,6 +31,37 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 
 
+class BatchSubmitFinisher(Handler):
+    def __init__(self, block_store, batch_cache):
+        self._block_store = block_store
+        self._batch_cache = batch_cache
+
+    def handle(self, identity, message_content):
+        helper = _ClientHelper(
+            message_content,
+            client_pb2.ClientBatchSubmitRequest,
+            client_pb2.ClientBatchSubmitResponse,
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE,
+            block_store=self._block_store,
+            batch_cache=self._batch_cache)
+        if helper.has_response():
+            return helper.result
+
+        if not helper.request.wait_for_commit:
+            helper.set_response(helper.status.OK)
+            return helper.result
+
+        batch_ids = [b.header_signature for b in helper.request.batches]
+
+        self._block_store.wait_for_batch_commits(
+            batch_ids=batch_ids,
+            timeout=helper.request.timeout)
+
+        statuses = helper.get_batch_statuses(batch_ids)
+        helper.set_response(helper.status.OK, batch_statuses=statuses)
+        return helper.result
+
+
 class BatchStatusRequest(Handler):
     def __init__(self, block_store, batch_cache):
         self._block_store = block_store
@@ -41,7 +72,9 @@ class BatchStatusRequest(Handler):
             message_content,
             client_pb2.ClientBatchStatusRequest,
             client_pb2.ClientBatchStatusResponse,
-            validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE)
+            validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE,
+            block_store=self._block_store,
+            batch_cache=self._batch_cache)
         if helper.has_response():
             return helper.result
 
@@ -50,17 +83,7 @@ class BatchStatusRequest(Handler):
                 batch_ids=helper.request.batch_ids,
                 timeout=helper.request.timeout)
 
-        statuses = {}
-
-        for batch_id in helper.request.batch_ids:
-            # Once format for ids is formalized, they should be validated here
-            if self._block_store.has_batch(batch_id):
-                statuses[batch_id] = helper.status.COMMITTED
-            elif batch_id in self._batch_cache:
-                statuses[batch_id] = helper.status.PENDING
-            else:
-                statuses[batch_id] = helper.status.UNKNOWN
-
+        statuses = helper.get_batch_statuses(helper.request.batch_ids)
         if not statuses:
             helper.set_response(helper.status.NO_RESOURCE)
         else:
@@ -236,9 +259,10 @@ class _ClientHelper(object):
         result_type - the Message enum for the response
     """
     def __init__(self, content, req_proto, resp_proto, result_type,
-                 tree=None, block_store=None):
+                 tree=None, block_store=None, batch_cache=None):
         self._tree = tree
         self._block_store = block_store
+        self._batch_cache = batch_cache
         self._resp_proto = resp_proto
         self.status = resp_proto
         self.head_id = None
@@ -308,3 +332,14 @@ class _ClientHelper(object):
         header = BlockHeader()
         header.ParseFromString(head.header)
         self._tree.set_merkle_root(header.state_root_hash)
+
+    def get_batch_statuses(self, batch_ids):
+        statuses = {}
+        for batch_id in batch_ids:
+            if self._block_store.has_batch(batch_id):
+                statuses[batch_id] = self.status.COMMITTED
+            elif batch_id in self._batch_cache:
+                statuses[batch_id] = self.status.PENDING
+            else:
+                statuses[batch_id] = self.status.UNKNOWN
+        return statuses
