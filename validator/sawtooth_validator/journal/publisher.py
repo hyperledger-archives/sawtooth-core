@@ -113,9 +113,8 @@ class BlockPublisher(object):
         :return: (BlockBuilder) - The candidate block in a BlockBuilder
         wrapper.
         """
-        prev_state = self._get_previous_block_root_state_hash(chain_head)
-        state_view = self._state_view_factory. \
-            create_view(prev_state)
+        state_view = \
+            self._state_view_factory.create_view(chain_head.state_root_hash)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
             state_view)
 
