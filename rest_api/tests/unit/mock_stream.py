@@ -234,6 +234,20 @@ class _SubmitHandler(_MockHandler):
                 return self._response_proto(
                     status=self._response_proto.INVALID_BATCH)
 
+        # simulate having waited for a batches to be committed
+        if request.wait_for_commit == True and request.timeout > 0:
+            statuses = {}
+            for batch in request.batches:
+                key = batch.header_signature
+                if key == 'pending':
+                    statuses[key] = self._response_proto.PENDING
+                else:
+                    statuses[key] = self._response_proto.COMMITTED
+
+            return self._response_proto(
+                status=self._response_proto.OK,
+                batch_statuses=statuses)
+
         return self._response_proto(status=self._response_proto.OK)
 
 
