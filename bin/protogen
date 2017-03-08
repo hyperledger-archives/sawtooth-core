@@ -50,6 +50,7 @@ def main():
     # 3. Generate PoET protos
     proto_dir = JOIN(TOP_DIR, "poet/sawtooth_poet/protos")
     protoc(proto_dir, "poet", "sawtooth_poet/protobuf")
+    protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
 
 
 def protoc(src_dir, base_dir, pkg):
@@ -61,7 +62,7 @@ def protoc(src_dir, base_dir, pkg):
     init_py = JOIN(pkg_dir, "__init__.py")
     if not os.path.exists(init_py):
         with open(init_py, "w") as fd:
-            pass # Just need it to exist
+            pass  # Just need it to exist
 
     # 3. Create a temp directory for building
     with tempfile.TemporaryDirectory() as tmp_dir:
