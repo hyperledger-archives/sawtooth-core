@@ -224,8 +224,13 @@ class ContextManager(object):
             merged_updates.update(context.get_writable_address_value_dict())
 
         new_root = merkle_root
-        add_value_dict = {address: value.result()
-                          for address, value in merged_updates.items()}
+
+        add_value_dict = {}
+        for k, val_fut in merged_updates.items():
+            value = val_fut.result()
+            if value is not None:
+                add_value_dict[k] = value
+
         new_root = tree.update(set_items=add_value_dict, virtual=virtual)
 
         return new_root
@@ -301,8 +306,15 @@ class ContextManager(object):
                         raise SquashException(
                             "Duplicate address {} in context {}".format(
                                 add, c_id))
-                updates.update({k: v.result() for k, v in
-                                context.get_address_value_dict().items()})
+
+                effective_updates = {}
+                for k, val_fut in context.get_address_value_dict().items():
+                    value = val_fut.result()
+                    if value is not None:
+                        effective_updates[k] = value
+
+                updates.update(effective_updates)
+
             state_hash = tree.update(updates, virtual=False)
             return state_hash
         return _squash
