@@ -16,6 +16,7 @@
 import logging
 import time
 from threading import RLock
+from collections import deque
 
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -224,13 +225,20 @@ class Completer(object):
     def _process_incomplete_blocks(self, key):
         # Keys are either a block_id or batch_id
         if key in self._incomplete_blocks:
-            inc_blocks = self._incomplete_blocks[key]
-            for inc_block in inc_blocks:
-                if self._complete_block(inc_block):
-                    self.block_cache[inc_block.header_signature] = \
-                        inc_block
-                    self._on_block_received(inc_block)
-            del self._incomplete_blocks[key]
+            to_complete = deque()
+            to_complete.append(key)
+
+            while to_complete:
+                my_key = to_complete.popleft()
+                if my_key in self._incomplete_blocks:
+                    inc_blocks = self._incomplete_blocks[my_key]
+                    for inc_block in inc_blocks:
+                        if self._complete_block(inc_block):
+                            self.block_cache[inc_block.header_signature] = \
+                                inc_block
+                            self._on_block_received(inc_block)
+                            to_complete.append(inc_block.header_signature)
+                    del self._incomplete_blocks[my_key]
 
     def _purge_caches(self):
         if self._purge_time < time.time():
