@@ -104,6 +104,9 @@ class Validator(object):
                                        config_view_factory=ConfigViewFactory(
                                            StateViewFactory(merkle_db)))
 
+        # needed for running callbacks from the TransactionExecutor
+        self._service.setup_future_threadpool(max_workers=10)
+
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
 
@@ -129,6 +132,8 @@ class Validator(object):
             heartbeat=True,
             connection_timeout=30,
             max_incoming_connections=100)
+
+        self._network.setup_future_threadpool(max_workers=10)
 
         self._gossip = Gossip(self._network,
                               initial_peer_endpoints=peer_list)

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from concurrent.futures import ThreadPoolExecutor
 from threading import Condition
 from threading import RLock
-from threading import Thread
 import time
 
 
@@ -27,7 +28,7 @@ class FutureResult(object):
 class Future(object):
     def __init__(self, correlation_id, request=None, has_callback=False):
         self.correlation_id = correlation_id
-        self.request = request
+        self._request = request
         self._result = None
         self._condition = Condition()
         self._create_time = time.time()
@@ -49,19 +50,31 @@ class Future(object):
             self._reconcile_time = time.time()
             self._result = result
             self._condition.notify()
-            if self._has_callback:
-                if self._callback_func is None:
-                    self._condition.wait()
-                Thread(target=self._callback_func, args=(
-                       self.request, result)).start()
+
+    def run_callback(self):
+        """Calls the callback_func, passing in the two positional arguments,
+        conditionally waiting if the callback function hasn't been set yet.
+        Meant to be run in a threadpool owned by the FutureCollection.
+
+        Returns:
+            None
+        """
+        if self._has_callback:
+            if self._callback_func is None:
+                self._condition.wait()
+            self._callback_func(self._request, self._result)
 
     def add_callback(self, callback_func):
         """Add a callback to be executed on set_result.
-        The callback must take request and result.
-        request is the bytes serialized request,
-        result is the FutureResult.
+        The callback must take two positional arguments,
+        (bytes), (FutureResult)
 
-        :param callback_func: a function with parameters request and result
+        Args:
+            callback_func (callable): A function with signature
+                (bytes) SerializedProtobuf of the request, (FutureResult)
+
+        Returns:
+            None
         """
         with self._condition:
             self._callback_func = callback_func
@@ -76,9 +89,20 @@ class FutureCollectionKeyError(Exception):
 
 
 class FutureCollection(object):
-    def __init__(self):
+    def __init__(self, max_workers=4):
         self._futures = {}
         self._lock = RLock()
+        self._resolving_threadpool = ThreadPoolExecutor(
+            max_workers=max_workers)
+
+    def stop(self):
+        """Shutdown the threadpool used for running callbacks and wait for
+        all the callbacks to finish running.
+
+        Returns:
+            None
+        """
+        self._resolving_threadpool.shutdown(wait=True)
 
     def put(self, future):
         with self._lock:
@@ -88,6 +112,8 @@ class FutureCollection(object):
         with self._lock:
             future = self.get(correlation_id)
             future.set_result(result)
+            if self._resolving_threadpool is not None:
+                self._resolving_threadpool.submit(future.run_callback)
 
     def get(self, correlation_id):
         with self._lock:
