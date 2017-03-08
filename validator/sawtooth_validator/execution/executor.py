@@ -19,7 +19,6 @@ import logging
 import threading
 import queue
 
-
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
@@ -31,7 +30,7 @@ from sawtooth_validator.execution import processor_iterator
 LOGGER = logging.getLogger(__name__)
 
 
-class TransactionExecutorThread(threading.Thread):
+class TransactionExecutorThread(object):
     """A thread of execution controlled by the TransactionExecutor.
     Provides the functionality that the journal can process on several
     schedulers at once.
@@ -41,7 +40,6 @@ class TransactionExecutorThread(threading.Thread):
                  context_manager,
                  scheduler,
                  processors,
-                 waiters_by_type,
                  waiting_threadpool,
                  config_view_factory):
         """
@@ -70,8 +68,9 @@ class TransactionExecutorThread(threading.Thread):
         self._processors = processors
         self._config_view_factory = config_view_factory
         self._tp_config_key = "sawtooth.validator.transaction_families"
-        self._waiters_by_type = waiters_by_type
+        self._waiters_by_type = _WaitersByType()
         self._waiting_threadpool = waiting_threadpool
+        self._done = False
 
     def _future_done_callback(self, request, result):
         """
@@ -92,7 +91,7 @@ class TransactionExecutorThread(threading.Thread):
             self._scheduler.set_transaction_execution_result(
                 req.signature, False, req.context_id)
 
-    def run(self):
+    def execute_thread(self):
         for txn_info in self._scheduler:
             txn = txn_info.txn
             header = transaction_pb2.TransactionHeader()
@@ -164,6 +163,8 @@ class TransactionExecutorThread(threading.Thread):
                 processor_type=processor_type,
                 content=content)
 
+        self._done = True
+
     def _execute_or_wait_for_processor_type(self, processor_type, content):
         processor = self._processors.get_next_of_type(
             processor_type=processor_type)
@@ -193,6 +194,14 @@ class TransactionExecutorThread(threading.Thread):
                            connection_id=connection_id,
                            callback=self._future_done_callback)
 
+    def is_done(self):
+        return self._done and len(self._waiters_by_type) == 0
+
+    def cancel(self):
+        for waiter in self._waiters_by_type.values():
+            waiter.cancel()
+        self._scheduler.cancel()
+
 
 class TransactionExecutor(object):
     def __init__(self, service, context_manager, config_view_factory):
@@ -218,24 +227,41 @@ class TransactionExecutor(object):
             processor_iterator.RoundRobinProcessorIterator)
         self._config_view_factory = config_view_factory
         self._waiting_threadpool = ThreadPoolExecutor(max_workers=3)
-        self._waiters_by_type = _WaitersByType()
+        self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
+        self._alive_threads = []
+        self._lock = threading.Lock()
 
     def create_scheduler(self, squash_handler, first_state_root):
         return SerialScheduler(squash_handler, first_state_root)
 
+    def _remove_done_threads(self):
+        for t in self._alive_threads.copy():
+            if t.is_done():
+                with self._lock:
+                    self._alive_threads.remove(t)
+
+    def _cancel_threads(self):
+        for t in self._alive_threads:
+            if not t.is_done():
+                t.cancel()
+
     def execute(self, scheduler):
+        self._remove_done_threads()
         t = TransactionExecutorThread(
             service=self._service,
             context_manager=self._context_manager,
             scheduler=scheduler,
             processors=self.processors,
-            waiters_by_type=self._waiters_by_type,
             waiting_threadpool=self._waiting_threadpool,
             config_view_factory=self._config_view_factory)
-        t.start()
+        self._executing_threadpool.submit(t.execute_thread)
+        with self._lock:
+            self._alive_threads.append(t)
 
     def stop(self):
-        self._waiting_threadpool.shutdown(wait=False)
+        self._cancel_threads()
+        self._waiting_threadpool.shutdown(wait=True)
+        self._executing_threadpool.shutdown(wait=True)
 
 
 class _Waiter(object):
@@ -257,6 +283,7 @@ class _Waiter(object):
         self._in_queue = in_queue
         self._send_and_process = send_and_process_func
         self._waiters_by_type = waiters_by_type
+        self._cancelled_event = threading.Event()
 
     def add_to_in_queue(self, content):
         self._in_queue.put_nowait(content)
@@ -266,7 +293,17 @@ class _Waiter(object):
                     self._processor_type.name,
                     self._processor_type.version,
                     self._processor_type.encoding)
-        self._processors.wait_to_process(self._processor_type)
+        # Wait for the processor type to be registered
+        self._processors.cancellable_wait(
+            processor_type=self._processor_type,
+            is_cancelled=self._cancelled_event)
+
+        if self._cancelled_event.is_set():
+            LOGGER.info("waiting cancelled on %s", self._processor_type)
+            # The processing of transactions for a particular ProcessorType
+            # has been cancelled.
+            return
+
         while not self._in_queue.empty():
             content = self._in_queue.get_nowait()
             connection_id = self._processors.get_next_of_type(
@@ -274,6 +311,10 @@ class _Waiter(object):
             self._send_and_process(content, connection_id)
 
         del self._waiters_by_type[self._processor_type]
+
+    def cancel(self):
+        self._cancelled_event.set()
+        self._processors.notify()
 
 
 class _WaitersByType(object):
@@ -300,3 +341,21 @@ class _WaitersByType(object):
     def __delitem__(self, key):
         with self._lock:
             del self._waiters[key]
+
+    def __len__(self):
+        with self._lock:
+            return len(self._waiters)
+
+    def values(self):
+        """
+        Returns (list of _Waiter): All the _Waiter objects.
+        """
+        with self._lock:
+            return list(self._waiters.values())
+
+    def keys(self):
+        """
+        Returns (list of _ProcessorType): All the ProcessorTypes waited for
+        """
+        with self._lock:
+            return list(self._waiters.keys())
