@@ -23,10 +23,19 @@ properties([[$class: 'BuildDiscarderProperty', strategy:
 node ('master') {
     // Create a unique workspace so Jenkins doesn't reuse an existing one
     ws("workspace/${env.BUILD_TAG}") {
-
         stage("Clone Repo") {
             checkout scm
-            // Check commits for signed-off-by
+        }
+
+        if (!(env.BRANCH_NAME == 'master' && env.JOB_BASE_NAME == 'master')) {
+            stage("Check Whitelist") {
+                readTrusted 'bin/whitelist'
+                readTrusted 'MAINTAINERS'
+                sh './bin/whitelist "$CHANGE_AUTHOR" MAINTAINERS'
+            }
+        }
+
+        stage("Check for Signed-Off Commits") {
             sh '''#!/bin/bash -l
                 if [ -v CHANGE_URL ] ;
                 then
@@ -47,20 +56,6 @@ node ('master') {
                     unset IFS;
                 fi
             '''
-        }
-
-        stage("Verify Scripts") {
-            readTrusted 'bin/build_all'
-            readTrusted 'bin/run_tests'
-            readTrusted 'bin/run_lint'
-            readTrusted 'bin/docker_build_all'
-            readTrusted 'bin/run_docker_test'
-            readTrusted 'bin/protogen'
-            readTrusted 'cli/setup.py'
-            readTrusted 'rest_api/setup.py'
-            readTrusted 'sdk/python/setup.py'
-            readTrusted 'signing/setup.py'
-            readTrusted 'validator/setup.py'
         }
 
         // Use a docker container to build and protogen, so that the Jenkins
