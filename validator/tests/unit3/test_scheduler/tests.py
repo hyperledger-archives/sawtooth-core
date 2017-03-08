@@ -79,6 +79,15 @@ def create_batch(transactions, private_key, public_key):
 
 
 class TestSerialScheduler(unittest.TestCase):
+    def setUp(self):
+        self.context_manager = ContextManager(dict_database.DictDatabase())
+        squash_handler = self.context_manager.get_squash_handler()
+        self.first_state_root = self.context_manager.get_first_root()
+        self.scheduler = SerialScheduler(squash_handler, self.first_state_root)
+
+    def tearDown(self):
+        self.context_manager.stop()
+
     def test_transaction_order(self):
         """Tests the that transactions are returned in order added.
 
@@ -93,11 +102,6 @@ class TestSerialScheduler(unittest.TestCase):
         """
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
-
-        context_manager = ContextManager(dict_database.DictDatabase())
-        squash_handler = context_manager.get_squash_handler()
-        first_state_root = context_manager.get_first_root()
-        scheduler = SerialScheduler(squash_handler, first_state_root)
 
         txns = []
 
@@ -117,18 +121,18 @@ class TestSerialScheduler(unittest.TestCase):
                 private_key=private_key,
                 public_key=public_key)
 
-            scheduler.add_batch(batch)
+            self.scheduler.add_batch(batch)
 
-        scheduler.finalize()
+        self.scheduler.finalize()
 
-        iterable1 = iter(scheduler)
-        iterable2 = iter(scheduler)
+        iterable1 = iter(self.scheduler)
+        iterable2 = iter(self.scheduler)
         for txn in txns:
             scheduled_txn_info = next(iterable1)
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
-            scheduler.set_transaction_execution_result(
+            self.scheduler.set_transaction_execution_result(
                 txn.header_signature, False, None)
 
         with self.assertRaises(StopIteration):
@@ -151,11 +155,6 @@ class TestSerialScheduler(unittest.TestCase):
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
 
-        context_manager = ContextManager(dict_database.DictDatabase())
-        squash_handler = context_manager.get_squash_handler()
-        first_state_root = context_manager.get_first_root()
-        scheduler = SerialScheduler(squash_handler, first_state_root)
-
         txn = create_transaction(
             name='a',
             private_key=private_key,
@@ -166,17 +165,17 @@ class TestSerialScheduler(unittest.TestCase):
             private_key=private_key,
             public_key=public_key)
 
-        iterable = iter(scheduler)
+        iterable = iter(self.scheduler)
 
-        scheduler.add_batch(batch)
+        self.scheduler.add_batch(batch)
 
         scheduled_txn_info = next(iterable)
         self.assertIsNotNone(scheduled_txn_info)
         self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
-        scheduler.set_transaction_execution_result(
+        self.scheduler.set_transaction_execution_result(
             txn.header_signature, False, None)
 
-        scheduler.finalize()
+        self.scheduler.finalize()
 
         with self.assertRaises(StopIteration):
             next(iterable)
@@ -197,11 +196,6 @@ class TestSerialScheduler(unittest.TestCase):
         """
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
-
-        context_manager = ContextManager(dict_database.DictDatabase())
-        squash_handler = context_manager.get_squash_handler()
-        first_state_root = context_manager.get_first_root()
-        scheduler = SerialScheduler(squash_handler, first_state_root)
 
         # Create a basic transaction and batch.
         txn = create_transaction(
@@ -237,7 +231,7 @@ class TestSerialScheduler(unittest.TestCase):
         # This is the iterable we are testing, which we will use in the
         # IteratorThread.  We also use it in this thread below to test
         # for StopIteration.
-        iterable = iter(scheduler)
+        iterable = iter(self.scheduler)
 
         # Create and startup thread.
         thread = IteratorThread(iterable=iterable)
@@ -257,7 +251,7 @@ class TestSerialScheduler(unittest.TestCase):
 
         # At this point, the IteratorThread should be waiting next(), so we go
         # ahead and give it a batch.
-        scheduler.add_batch(batch)
+        self.scheduler.add_batch(batch)
 
         # If all goes well, thread.txn_info will get set to the result of the
         # next() call.  If not, it will timeout and thread.txn_info will be
@@ -272,8 +266,8 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertEquals(txn.payload, thread.txn_info.txn.payload)
 
         # Continue with normal shutdown/cleanup.
-        scheduler.finalize()
-        scheduler.set_transaction_execution_result(
+        self.scheduler.finalize()
+        self.scheduler.set_transaction_execution_result(
             txn.header_signature, False, None)
         with self.assertRaises(StopIteration):
             next(iterable)
@@ -299,11 +293,6 @@ class TestSerialScheduler(unittest.TestCase):
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
 
-        context_manager = ContextManager(dict_database.DictDatabase())
-        squash_handler = context_manager.get_squash_handler()
-        first_state_root = context_manager.get_first_root()
-        scheduler = SerialScheduler(squash_handler, first_state_root)
-
         txns = []
 
         for name in ['a', 'b']:
@@ -319,20 +308,20 @@ class TestSerialScheduler(unittest.TestCase):
             private_key=private_key,
             public_key=public_key)
 
-        scheduler.add_batch(batch)
+        self.scheduler.add_batch(batch)
 
-        scheduled_txn_info = scheduler.next_transaction()
+        scheduled_txn_info = self.scheduler.next_transaction()
         self.assertIsNotNone(scheduled_txn_info)
         self.assertEquals('a', scheduled_txn_info.txn.payload.decode())
 
-        self.assertIsNone(scheduler.next_transaction())
+        self.assertIsNone(self.scheduler.next_transaction())
 
-        scheduler.set_transaction_execution_result(
+        self.scheduler.set_transaction_execution_result(
             scheduled_txn_info.txn.header_signature,
             is_valid=False,
             context_id=None)
 
-        scheduled_txn_info = scheduler.next_transaction()
+        scheduled_txn_info = self.scheduler.next_transaction()
         self.assertIsNotNone(scheduled_txn_info)
         self.assertEquals('b', scheduled_txn_info.txn.payload.decode())
 
@@ -352,10 +341,6 @@ class TestSerialScheduler(unittest.TestCase):
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
 
-        context_manager = ContextManager(dict_database.DictDatabase())
-        squash_handler = context_manager.get_squash_handler()
-        first_state_root = context_manager.get_first_root()
-        scheduler = SerialScheduler(squash_handler, first_state_root)
         # 1)
         batch_signatures = []
         for names in [['a', 'b'], ['invalid', 'c']]:
@@ -374,45 +359,45 @@ class TestSerialScheduler(unittest.TestCase):
                 public_key=public_key)
 
             batch_signatures.append(batch.header_signature)
-            scheduler.add_batch(batch)
-        scheduler.finalize()
+            self.scheduler.add_batch(batch)
+        self.scheduler.finalize()
         # 2)
-        sched1 = iter(scheduler)
+        sched1 = iter(self.scheduler)
         invalid_payload = hashlib.sha512('invalid'.encode()).hexdigest()
-        while not scheduler.complete(block=False):
+        while not self.scheduler.complete(block=False):
             txn_info = next(sched1)
             txn_header = transaction_pb2.TransactionHeader()
             txn_header.ParseFromString(txn_info.txn.header)
             inputs_or_outputs = list(txn_header.inputs)
-            c_id = context_manager.create_context(
+            c_id = self.context_manager.create_context(
                 state_hash=txn_info.state_hash,
                 inputs=inputs_or_outputs,
                 outputs=inputs_or_outputs,
                 base_contexts=txn_info.base_context_ids)
             if txn_header.payload_sha512 == invalid_payload:
-                scheduler.set_transaction_execution_result(
+                self.scheduler.set_transaction_execution_result(
                     txn_info.txn.header_signature, False, c_id)
             else:
-                context_manager.set(c_id, [{inputs_or_outputs[0]: 1}])
-                scheduler.set_transaction_execution_result(
+                self.context_manager.set(c_id, [{inputs_or_outputs[0]: 1}])
+                self.scheduler.set_transaction_execution_result(
                     txn_info.txn.header_signature, True, c_id)
 
-        sched2 = iter(scheduler)
+        sched2 = iter(self.scheduler)
         # 3)
         txn_info_a = next(sched2)
-        self.assertEquals(first_state_root, txn_info_a.state_hash)
+        self.assertEquals(self.first_state_root, txn_info_a.state_hash)
 
         txn_a_header = transaction_pb2.TransactionHeader()
         txn_a_header.ParseFromString(txn_info_a.txn.header)
         inputs_or_outputs = list(txn_a_header.inputs)
         address_a = inputs_or_outputs[0]
-        c_id_a = context_manager.create_context(
-            state_hash=first_state_root,
+        c_id_a = self.context_manager.create_context(
+            state_hash=self.first_state_root,
             inputs=inputs_or_outputs,
             outputs=inputs_or_outputs,
-            base_contexts=txn_info.base_context_ids)
-        context_manager.set(c_id_a, [{address_a: 1}])
-        state_root2 = context_manager.commit_context([c_id_a], virtual=False)
+            base_contexts=txn_info_a.base_context_ids)
+        self.context_manager.set(c_id_a, [{address_a: 1}])
+        state_root2 = self.context_manager.commit_context([c_id_a], virtual=False)
         txn_info_b = next(sched2)
 
         self.assertEquals(txn_info_b.state_hash, state_root2)
@@ -421,13 +406,13 @@ class TestSerialScheduler(unittest.TestCase):
         txn_b_header.ParseFromString(txn_info_b.txn.header)
         inputs_or_outputs = list(txn_b_header.inputs)
         address_b = inputs_or_outputs[0]
-        c_id_b = context_manager.create_context(
+        c_id_b = self.context_manager.create_context(
             state_hash=state_root2,
             inputs=inputs_or_outputs,
             outputs=inputs_or_outputs,
-            base_contexts=txn_info.base_context_ids)
-        context_manager.set(c_id_b, [{address_b: 1}])
-        state_root3 = context_manager.commit_context([c_id_b], virtual=False)
+            base_contexts=txn_info_b.base_context_ids)
+        self.context_manager.set(c_id_b, [{address_b: 1}])
+        state_root3 = self.context_manager.commit_context([c_id_b], virtual=False)
         txn_infoInvalid = next(sched2)
 
         self.assertEquals(txn_infoInvalid.state_hash, state_root3)
@@ -435,12 +420,12 @@ class TestSerialScheduler(unittest.TestCase):
         txn_info_c = next(sched2)
         self.assertEquals(txn_info_c.state_hash, state_root3)
         # 4)
-        batch1_result = scheduler.get_batch_execution_result(
+        batch1_result = self.scheduler.get_batch_execution_result(
             batch_signatures[0])
         self.assertTrue(batch1_result.is_valid)
         self.assertEquals(batch1_result.state_hash, state_root3)
 
-        batch2_result = scheduler.get_batch_execution_result(
+        batch2_result = self.scheduler.get_batch_execution_result(
             batch_signatures[1])
         self.assertFalse(batch2_result.is_valid)
         self.assertIsNone(batch2_result.state_hash)

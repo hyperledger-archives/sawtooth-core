@@ -42,6 +42,9 @@ class SquashException(Exception):
     pass
 
 
+_SHUTDOWN_SENTINEL = -1
+
+
 class StateContext(object):
     """A data structure holding address-_ContextFuture pairs and the addresses
     that can be written to and read from.
@@ -183,12 +186,10 @@ class ContextManager(object):
 
         self._context_reader = _ContextReader(database, self._address_queue,
                                               self._inflated_addresses)
-        self._context_reader.setDaemon(True)
         self._context_reader.start()
 
         self._context_writer = _ContextWriter(self._inflated_addresses,
                                               self._contexts)
-        self._context_writer.setDaemon(True)
         self._context_writer.start()
 
     def get_first_root(self):
@@ -401,8 +402,8 @@ class ContextManager(object):
         return _squash
 
     def stop(self):
-        self._context_writer.join(1)
-        self._context_reader.join(1)
+        self._address_queue.put_nowait(_SHUTDOWN_SENTINEL)
+        self._inflated_addresses.put_nowait(_SHUTDOWN_SENTINEL)
 
 
 class _ContextReader(Thread):
@@ -423,6 +424,8 @@ class _ContextReader(Thread):
     def run(self):
         while True:
             context_state_addresslist_tuple = self._addresses.get(block=True)
+            if context_state_addresslist_tuple is _SHUTDOWN_SENTINEL:
+                break
             c_id, state_hash, address_list = context_state_addresslist_tuple
             tree = MerkleDatabase(self._database, state_hash)
             return_values = []
@@ -456,8 +459,11 @@ class _ContextWriter(Thread):
 
     def run(self):
         while True:
-            c_id, inflated_address_list = self._inflated_addresses.get(
+            context_id_list_tuple = self._inflated_addresses.get(
                 block=True)
+            if context_id_list_tuple is _SHUTDOWN_SENTINEL:
+                break
+            c_id, inflated_address_list = context_id_list_tuple
             inflated_value_map = {k: v for k, v in inflated_address_list}
             if c_id in self._contexts:
                 self._contexts[c_id].set_futures(inflated_value_map,
