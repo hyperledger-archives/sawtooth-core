@@ -21,6 +21,7 @@ import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import Block
 from test_client_request_handlers.mocks import MockBlockStore
+from test_client_request_handlers.mocks import make_mock_batch
 from test_client_request_handlers.mocks import make_db_and_store
 from test_client_request_handlers.mocks import make_store_and_cache
 
@@ -86,6 +87,65 @@ class TestStateCurrentRequests(_ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('123', response.merkle_root)
+
+
+class TestBatchSubmitFinisher(_ClientHandlerTestCase):
+    def setUp(self):
+        store, cache = make_store_and_cache()
+
+        self.initialize(
+            handlers.BatchSubmitFinisher(store, cache),
+            client_pb2.ClientBatchSubmitRequest,
+            client_pb2.ClientBatchSubmitResponse,
+            store=store)
+
+    def test_batch_submit_without_wait(self):
+        """Verifies finisher simply returns OK when not set to wait.
+
+        Expects to find:
+            - a response status of OK
+            - no batch_statusus
+        """
+        response = self.make_request(batches=[make_mock_batch('new')])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertFalse(response.batch_statuses)
+
+    def test_batch_submit_bad_request(self):
+        """Verifies finisher breaks properly when sent a bad request.
+
+        Expects to find:
+            - a response status of INTERNAL_ERROR
+        """
+        response = self.make_bad_request(batches=[make_mock_batch('new')])
+
+        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
+
+    def test_batch_submit_with_wait(self):
+        """Verifies finisher works properly when waiting for commit.
+
+        Queries the default mock block store which will have no block with
+        the id 'new' until added by a separate thread.
+
+        Expects to find:
+            - less than 8 seconds to have passed (i.e. did not wait for timeout)
+            - a response status of OK
+            - a status of COMMITTED at key 'new' in batch_statuses
+        """
+        start_time = time()
+        def delayed_add():
+            sleep(2)
+            self._store.add_block('new')
+        Thread(target=delayed_add).start()
+
+        response = self.make_request(
+            batches=[make_mock_batch('new')],
+            wait_for_commit=True,
+            timeout=10)
+
+        self.assertGreater(8, time() - start_time)
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses['new'], self.status.COMMITTED)
 
 
 class TestBatchStatusRequests(_ClientHandlerTestCase):
