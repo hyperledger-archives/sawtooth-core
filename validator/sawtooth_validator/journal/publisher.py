@@ -126,7 +126,8 @@ class BlockPublisher(object):
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
-            previous_block_id=chain_head.header_signature)
+            previous_block_id=chain_head.header_signature,
+            signer_pubkey=self._identity_public_key)
         block_builder = BlockBuilder(block_header)
         if not self._consensus.initialize_block(block_builder.block_header):
             LOGGER.debug("Consensus not ready to build candidate block.")
@@ -157,7 +158,6 @@ class BlockPublisher(object):
         signature from the publishing validator(this validator) needs to
         be added.
         """
-        block.block_header.signer_pubkey = self._identity_public_key
         block_header = block.block_header
         header_bytes = block_header.SerializeToString()
         signature = signing.sign(
