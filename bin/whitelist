@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [[ -z $1 || -z $2 ]]
+then
+    echo "USAGE: $0 [user] [whitelist]"
+    exit 1
+fi
+
+whitelist=$(cat $2 | grep user | sed 's#.*: \(.*$\)#\1#')
+for user in $whitelist
+do
+    if [[ $user == $1 ]]
+    then
+        echo "SUCCESS: User '$1' whitelisted"
+        exit 0
+    fi
+done
+
+echo "FAILED: User '$1' not whitelisted."
+exit 1
