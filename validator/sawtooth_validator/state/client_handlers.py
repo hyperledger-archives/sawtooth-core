@@ -67,7 +67,7 @@ class BatchStatusRequest(Handler):
         self._block_store = block_store
         self._batch_cache = batch_cache
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         helper = _ClientHelper(
             message_content,
             client_pb2.ClientBatchStatusRequest,
@@ -96,7 +96,7 @@ class StateCurrentRequest(Handler):
     def __init__(self, current_root_func):
         self._current_root_func = current_root_func
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         helper = _ClientHelper(
             message_content,
             client_pb2.ClientStateCurrentRequest,
@@ -116,7 +116,7 @@ class StateListRequest(Handler):
         self._tree = MerkleDatabase(database)
         self._block_store = block_store
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         helper = _ClientHelper(
             message_content,
             client_pb2.ClientStateListRequest,
@@ -152,7 +152,7 @@ class StateGetRequest(Handler):
         self._tree = MerkleDatabase(database)
         self._block_store = block_store
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         helper = _ClientHelper(
             message_content,
             client_pb2.ClientStateGetRequest,
@@ -190,7 +190,7 @@ class BlockListRequest(Handler):
     def __init__(self, block_store):
         self._block_store = block_store
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         helper = _ClientHelper(
             message_content,
             client_pb2.ClientBlockListRequest,
@@ -223,7 +223,7 @@ class BlockGetRequest(Handler):
     def __init__(self, block_store):
         self._block_store = block_store
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         helper = _ClientHelper(
             message_content,
             client_pb2.ClientBlockGetRequest,

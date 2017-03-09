@@ -78,10 +78,10 @@ class ProcessorIteratorCollection(object):
                 self._processors[key] = proc_iterator
             else:
                 self._processors[key].add_processor(value)
-            if value.identity not in self._identities:
-                self._identities[value.identity] = [key]
+            if value.connection_id not in self._identities:
+                self._identities[value.connection_id] = [key]
             else:
-                self._identities[value.identity].append(key)
+                self._identities[value.connection_id].append(key)
             self._condition.notify_all()
 
     def remove(self, processor_identity):
@@ -118,16 +118,16 @@ class ProcessorIteratorCollection(object):
 
 
 class Processor(object):
-    def __init__(self, identity, namespaces):
-        self.identity = identity
+    def __init__(self, connection_id, namespaces):
+        self.connection_id = connection_id
         self.namespaces = namespaces
 
     def __repr__(self):
-        return "{}: {}".format(self.identity,
+        return "{}: {}".format(self.connection_id,
                                self.namespaces)
 
     def __eq__(self, other):
-        return self.identity == other.identity
+        return self.connection_id == other.connection_id
 
 
 class ProcessorType(object):

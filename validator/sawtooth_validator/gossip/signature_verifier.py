@@ -112,8 +112,7 @@ def validate_transaction(txn):
 
 class GossipMessageSignatureVerifier(Handler):
 
-    def handle(self, identity, message_content):
-
+    def handle(self, connection_id, message_content):
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
         if gossip_message.content_type == "BLOCK":
@@ -143,7 +142,7 @@ class GossipMessageSignatureVerifier(Handler):
 
 class BatchListSignatureVerifier(Handler):
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         response_proto = client_pb2.ClientBatchSubmitResponse
 
         def make_response(out_status):
@@ -151,7 +150,6 @@ class BatchListSignatureVerifier(Handler):
                 status=HandlerStatus.RETURN,
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
-
         try:
             request = client_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)

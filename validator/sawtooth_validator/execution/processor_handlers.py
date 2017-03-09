@@ -30,14 +30,14 @@ class ProcessorRegisterHandler(Handler):
     def __init__(self, processor_collection):
         self._collection = processor_collection
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         request = processor_pb2.TpRegisterRequest()
         request.ParseFromString(message_content)
 
         LOGGER.info(
-            'registered transaction processor: identity=%s, family=%s, '
+            'registered transaction processor: connection_id=%s, family=%s, '
             'version=%s, encoding=%s, namespaces=%s',
-            identity,
+            connection_id,
             request.family,
             request.version,
             request.encoding,
@@ -49,7 +49,7 @@ class ProcessorRegisterHandler(Handler):
             request.encoding)
 
         processor = processor_iterator.Processor(
-            identity,
+            connection_id,
             request.namespaces)
 
         self._collection[processor_type] = processor
@@ -67,14 +67,14 @@ class ProcessorUnRegisterHandler(Handler):
     def __init__(self, processor_collection):
         self._collection = processor_collection
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         request = processor_pb2.TpUnregisterRequest()
         request.ParseFromString(message_content)
 
         LOGGER.info("try to unregister all transaction processor "
-                    "capabilities for identity %s", identity)
+                    "capabilities for connection_id %s", connection_id)
 
-        self._collection.remove(processor_identity=identity)
+        self._collection.remove(processor_identity=connection_id)
 
         ack = processor_pb2.TpUnregisterResponse()
         ack.status = ack.OK
