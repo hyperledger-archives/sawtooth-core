@@ -33,39 +33,41 @@ def _increment_key(key, offset=1):
     except ValueError:
         return chr(ord(key) + offset)
 
-def _make_mock_transaction(self, txn_id='txn_id', payload='payload'):
-        header = TransactionHeader(
-            batcher_pubkey='pubkey',
-            family_name='family',
-            family_version='0.0',
-            nonce=txn_id,
-            signer_pubkey='pubkey')
+def _make_mock_transaction(base_id='id', payload='payload'):
+    txn_id = 't-' + base_id
+    header = TransactionHeader(
+        batcher_pubkey='pubkey',
+        family_name='family',
+        family_version='0.0',
+        nonce=txn_id,
+        signer_pubkey='pubkey')
 
-        return Transaction(
-            header=header.SerializeToString(),
-            header_signature=txn_id,
-            payload=payload.encode())
+    return Transaction(
+        header=header.SerializeToString(),
+        header_signature=txn_id,
+        payload=payload.encode())
 
-def make_mock_batch(self, batch_id='batch_id'):
-        txn = _make_mock_transaction(batch_id)
+def make_mock_batch(base_id='id'):
+    batch_id = 'b-' + base_id
+    txn = _make_mock_transaction(base_id)
 
-        header = BatchHeader(
-            signer_pubkey='pubkey',
-            transaction_ids=[txn.header_signature])
+    header = BatchHeader(
+        signer_pubkey='pubkey',
+        transaction_ids=[txn.header_signature])
 
-        return Batch(
-            header=header.SerializeToString(),
-            header_signature=batch_id,
-            transactions=[txn])
+    return Batch(
+        header=header.SerializeToString(),
+        header_signature=batch_id,
+        transactions=[txn])
 
 
 class MockBlockStore(BlockStore):
     """
     Creates a block store with a preseeded chain of blocks.
-    With defaults, creates three blocks with ids ranging from '0' to '2',
-    and a single batch, and single transaction each, with matching ids.
-    Using optional root parameter for add_block, it is possible to save
-    meaningful state_root_hashes to a block.
+    With defaults, creates three blocks with ids ranging from 'B-0' to 'B-2',
+    and a single batch, and single transaction in each, with ids prefixed by
+    'b-' or 't-'. Using the optional root parameter for add_block, it is
+    possible to save meaningful state_root_hashes to a block.
     """
     def __init__(self, size=3, start='0'):
         super().__init__(DictDatabase())
@@ -73,7 +75,8 @@ class MockBlockStore(BlockStore):
         for i in range(size):
             self.add_block(_increment_key(start, i))
 
-    def add_block(self, block_id, root='merkle_root'):
+    def add_block(self, base_id, root='merkle_root'):
+        block_id = 'B-' + base_id
         head = self.chain_head
         if head:
             previous_id = head.header_signature
@@ -93,7 +96,7 @@ class MockBlockStore(BlockStore):
         block = Block(
             header=header.SerializeToString(),
             header_signature=block_id,
-            batches=[make_mock_batch(block_id)])
+            batches=[make_mock_batch(base_id)])
 
         self.update_chain([BlockWrapper(block)], [])
 
@@ -101,14 +104,14 @@ class MockBlockStore(BlockStore):
 class MockBatchCache(TimedCache):
     """
     Creates a batch cache (TimedCache), containing a preseeded set of batches.
-    By default includes two batches with ids '2', and '3'.
+    By default includes two batches with ids 'b-2', and 'b-3'.
     """
     def __init__(self, size=2, start='2'):
         super().__init__()
 
         for i in range(size):
-            batch_id = _increment_key(start, i)
-            self[batch_id] = make_mock_batch(batch_id)
+            base_id = _increment_key(start, i)
+            self['b-' + base_id] = make_mock_batch(base_id)
 
 
 def make_db_and_store(size=3, start='a'):
@@ -145,10 +148,12 @@ def make_store_and_cache(size=3):
     Creates and returns two related objects for testing:
         * store - a mock block store, with a default start
         * cache - a batch cache with two batches, one in the store, and one not
-    With defaults, the three block/batch ids in the store will be:
-        * '0', '1', 2'
+    With defaults, the three block ids in the store will be:
+        * 'B-0', 'B-1', B-2'
+    The three batch ids in the store will be:
+        * 'b-0', 'b-1', b-2'
     And the two batch ids in the cache will be:
-        * '2', '3'
+        * 'b-2', 'b-3'
     """
     store = MockBlockStore(size=size)
     cache = MockBatchCache(start=str(size-1))
