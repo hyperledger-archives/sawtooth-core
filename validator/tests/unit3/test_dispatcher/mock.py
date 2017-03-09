@@ -48,14 +48,15 @@ class MockHandler2(dispatch.Handler):
 
 class MockSendMessage(object):
 
-    def __init__(self):
+    def __init__(self, connections):
         self.message_ids = []
         self.identities = []
         self._lock = RLock()
+        self.connections = connections
 
-    def send_message(self, identity, msg):
+    def send_message(self, connection_id, msg):
         with self._lock:
             message = validator_pb2.Message()
             message.ParseFromString(msg.content)
-            self.identities.append(identity)
+            self.identities.append(self.connections[connection_id])
             self.message_ids.append(message.correlation_id)
