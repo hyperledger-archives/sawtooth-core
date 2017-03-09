@@ -65,31 +65,31 @@ def check_directory(path, human_readable_name):
             which is used in logging statements
 
     Returns:
-        bool: True if an error exists, False otherwise.
+        bool: False if an error exists, True otherwise.
     """
     if not os.path.exists(path):
         LOGGER.error("%s directory does not exist: %s",
                      human_readable_name,
                      path)
-        return True
+        return False
 
     if not os.path.isdir(path):
         LOGGER.error("%s directory is not a directory: %s",
                      human_readable_name,
                      path)
-        return True
+        return False
 
-    errors = False
+    errors = True
     if not os.access(path, os.R_OK):
         LOGGER.error("%s directory is not readable: %s",
                      human_readable_name,
                      path)
-        errors = True
+        errors = False
     if not os.access(path, os.W_OK):
         LOGGER.error("%s directory is not writable: %s",
                      human_readable_name,
                      path)
-        errors = True
+        errors = False
     return errors
 
 
@@ -114,9 +114,11 @@ def main(args=sys.argv[1:]):
     # multiple errors before restarting the validator.
     init_errors = False
 
-    if check_directory(path=path_config.data_dir, human_readable_name='Data'):
+    if not check_directory(path=path_config.data_dir,
+                           human_readable_name='Data'):
         init_errors = True
-    if check_directory(path=path_config.log_dir, human_readable_name='Log'):
+    if not check_directory(path=path_config.log_dir,
+                           human_readable_name='Log'):
         init_errors = True
 
     try:
