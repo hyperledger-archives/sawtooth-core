@@ -118,11 +118,8 @@ class WaitTimer(object):
                 previous_certificate_id,
                 local_mean,
                 cls.minimum_wait_time)
-        timer = cls(enclave_timer)
 
-        LOGGER.info('wait timer created; %s', timer)
-
-        return timer
+        return cls(enclave_timer)
 
     @classmethod
     def compute_local_mean(cls, certificates):

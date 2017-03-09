@@ -65,8 +65,6 @@ class SignupInfo(object):
                 most_recent_wait_certificate_id)
         signup_info = cls(enclave_signup_info)
 
-        LOGGER.info("signup info created: %s", signup_info)
-
         return signup_info
 
     @classmethod

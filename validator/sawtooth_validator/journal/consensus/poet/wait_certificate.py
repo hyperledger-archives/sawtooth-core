@@ -90,10 +90,7 @@ class WaitCertificate(object):
                 ValueError(
                     'Failed to create an enclave wait certificate')
 
-        certificate = cls(enclave_certificate)
-        LOGGER.info('wait certificate created: %s', certificate)
-
-        return certificate
+        return cls(enclave_certificate)
 
     @classmethod
     def wait_certificate_from_serialized(cls,
