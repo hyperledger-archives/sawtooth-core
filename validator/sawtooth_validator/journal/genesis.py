@@ -170,7 +170,7 @@ class GenesisController(object):
         LOGGER.debug('Produced state hash %s for genesis block.',
                      state_hash)
 
-        block_builder = GenesisController._generate_genesis_block()
+        block_builder = self._generate_genesis_block()
         block_builder.add_batches(genesis_batches)
         block_builder.set_state_hash(state_hash)
 
@@ -239,13 +239,15 @@ class GenesisController(object):
         except UnknownConsensusModuleError as e:
             raise InvalidGenesisStateError(e)
 
-    @staticmethod
-    def _generate_genesis_block():
+    def _generate_genesis_block(self):
         """
         Returns a blocker wrapper with the basics of the block header in place
         """
         genesis_header = block_pb2.BlockHeader(
-            previous_block_id=NULL_BLOCK_IDENTIFIER, block_num=0)
+            block_num=0,
+            previous_block_id=NULL_BLOCK_IDENTIFIER,
+            signer_pubkey=signing.encode_pubkey(
+                signing.generate_pubkey(self._identity_priv_key), "hex"))
 
         return BlockBuilder(genesis_header)
 
@@ -254,10 +256,6 @@ class GenesisController(object):
         signature from the publishing validator (this validator) needs to
         be added.
         """
-        public_key = signing.encode_pubkey(
-            signing.generate_pubkey(self._identity_priv_key), "hex")
-
-        block.block_header.signer_pubkey = public_key
         block_header = block.block_header
         header_bytes = block_header.SerializeToString()
         signature = signing.sign(
