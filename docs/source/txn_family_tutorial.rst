@@ -17,7 +17,7 @@ Wikipedia at:
     https://en.wikipedia.org/wiki/Tic-tac-toe
 
 A full implementation of the tic-tac-toe transaction family can be found in
-``/project/sawtooth-core/sdk/examples/arcard/sawtooth-xo``.
+``/project/sawtooth-core/sdk/examples/sawtooth_xo/``.
 
 Prerequisites
 =============
@@ -176,7 +176,7 @@ Playing the Game
 All that's left to do is describe how to play tic-tac-toe. The details here
 aren't terribly interesting, and the ``_play_xo`` function could certainly be
 implemented in different ways. To see our implementation, go to
-``/project/sawtooth-core/sdk/examples/arcard/sawtooth-xo``. We choose to
+``/project/sawtooth-core/sdk/examples/sawtooth_xo/``. We choose to
 represent the board as a string of length 9, with each character in the string
 representing a space taken by X, a space taken by O, or a free space. Updating
 the board configuration and the current state of the game proceeds
