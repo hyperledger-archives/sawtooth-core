@@ -22,18 +22,12 @@ node ('master') {
             checkout scm
         }
 
-        stage("Verify scripts") {
-            readTrusted 'bin/build_all'
-            readTrusted 'bin/build_debs'
-            readTrusted 'bin/package_validator'
-            readTrusted 'bin/run_lint'
-            readTrusted 'bin/run_tests'
-            readTrusted 'core/setup.py'
-            readTrusted 'extensions/arcade/setup.py'
-            readTrusted 'extensions/bond/setup.py'
-            readTrusted 'extensions/mktplace/setup.py'
-            readTrusted 'signing/setup.py'
-            readTrusted 'validator/setup.py'
+        if (!(env.BRANCH_NAME == '0-7' && env.JOB_BASE_NAME == '0-7')) {
+            stage("Check Whitelist") {
+                readTrusted 'bin/whitelist'
+                readTrusted 'MAINTAINERS'
+                sh './bin/whitelist "$CHANGE_AUTHOR" MAINTAINERS'
+            }
         }
 
         stage("Build docker build slave") {
