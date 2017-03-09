@@ -14,11 +14,11 @@
 # ------------------------------------------------------------------------------
 import unittest
 
-from sawtooth_poet.protobuf.validator_registry_pb2 import ValidatorInfo
-from sawtooth_poet.protobuf.validator_registry_pb2 import SignUpInfo
+from sawtooth_validator.protobuf.validator_registry_pb2 import ValidatorInfo
+from sawtooth_validator.protobuf.validator_registry_pb2 import SignUpInfo
 
-from sawtooth_poet.validator_registry.state.validator_registry_view import \
-    ValidatorRegistryView
+from sawtooth_validator.journal.consensus.poet.validator_registry_view \
+    import ValidatorRegistryView
 
 from test_validator_registry_view.mocks import MockStateView
 from test_validator_registry_view.utils import to_address
