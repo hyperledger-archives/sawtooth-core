@@ -42,5 +42,5 @@ class PoetForkResolver(ForkResolverInterface):
             Boolean: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
         """
-        LOGGER.debug("PoetBlockPublisher.compare_forks()")
+        LOGGER.debug("PoetForkResolver.compare_forks()")
         return new_fork_head.block_num > cur_fork_head.block_num

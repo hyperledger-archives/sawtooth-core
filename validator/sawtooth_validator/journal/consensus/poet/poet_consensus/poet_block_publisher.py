@@ -27,6 +27,7 @@ from sawtooth_validator.journal.consensus.poet.signup_info import SignupInfo
 from sawtooth_validator.journal.consensus.poet.wait_timer import WaitTimer
 from sawtooth_validator.journal.consensus.poet.wait_certificate \
     import WaitCertificate
+from sawtooth_validator.journal.consensus.poet.poet_consensus import utils
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
@@ -88,27 +89,16 @@ class PoetBlockPublisher(BlockPublisherInterface):
             factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
         self._wait_timer = None
 
-    @staticmethod
-    def _block_id_is_genesis_block(block_id):
-        return block_id == NULL_BLOCK_IDENTIFIER
-
     def _register_signup_information(self, block_header):
         # Find the most-recent block in the block cache, if such a block
         # exists, and get its wait certificate ID
         wait_certificate_id = NULL_BLOCK_IDENTIFIER
         most_recent_block = self._block_cache.block_store.chain_head
         if most_recent_block is not None:
-            wait_certificate_dict = \
-                json.loads(most_recent_block.consensus.decode())
-            serialized_certificate = \
-                wait_certificate_dict.get('SerializedCertificate')
-            signature = wait_certificate_dict.get('Signature')
-
             wait_certificate_id = \
-                WaitCertificate.wait_certificate_from_serialized(
-                    poet_enclave_module=self._poet_enclave_module,
-                    serialized=serialized_certificate,
-                    signature=signature).identifier
+                utils.deserialize_wait_certificate(
+                    block=most_recent_block,
+                    poet_enclave_module=self._poet_enclave_module).identifier
 
         # Create signup information for this validator
         public_key_hash = \
@@ -134,9 +124,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 block_num=block_header.block_num)
         serialized = payload.SerializeToString()
 
-        # Create the validator registry namespace and then the address that
-        # will be used to look up this validator registry transaction.  Seems
-        # like a potential for refactoring..
+        # Create the address that will be used to look up this validator
+        # registry transaction.  Seems like a potential for refactoring..
         validator_entry_address = \
             PoetBlockPublisher._validator_registry_namespace + \
             hashlib.sha256(block_header.signer_pubkey.encode()).hexdigest()
@@ -208,8 +197,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # create the wait timer and certificate.  Note that this is only
         # used for the genesis block.  Going forward after the genesis block,
         # all validators will use generated signup information.
-        if PoetBlockPublisher._block_id_is_genesis_block(
-                block_header.previous_block_id):
+        if utils.block_id_is_genesis(block_header.previous_block_id):
             LOGGER.debug(
                 'Creating genesis block, so will use sealed signup data')
             SignupInfo.unseal_signup_data(
@@ -223,40 +211,16 @@ class PoetBlockPublisher(BlockPublisherInterface):
         elif PoetBlockPublisher._poet_public_key is None:
             self._register_signup_information(block_header=block_header)
 
-        # Create a list of certificates for the wait timer.  This is assuming a
-        # little too much knowledge of the internals of the wait timer for my
-        # liking, but we know that it will use at most
-        # WaitTimer.certificate_sample_length certificates, so we won't bother
-        # making our list any longer.
-        certificates = []
-        block_id = block_header.previous_block_id
-
-        try:
-            while not PoetBlockPublisher._block_id_is_genesis_block(
-                    block_id) and \
-                    len(certificates) < WaitTimer.certificate_sample_length:
-                # Grab the block from the block store, use the consensus
-                # property to reconstitute the wait certificate, and add
-                # the wait certificate to the list.
-                block = self._block_cache.block_store[block_id]
-
-                wait_certificate_dict = json.loads(block.consensus.decode())
-                serialized_certificate = \
-                    wait_certificate_dict.get('SerializedCertificate')
-                signature = wait_certificate_dict.get('Signature')
-
-                wait_certificate = \
-                    WaitCertificate.wait_certificate_from_serialized(
-                        poet_enclave_module=self._poet_enclave_module,
-                        serialized=serialized_certificate,
-                        signature=signature)
-
-                certificates.append(wait_certificate)
-
-                # Move to the previous block
-                block_id = block.previous_block_id
-        except KeyError as ke:
-            LOGGER.error('Error getting block: %s', ke)
+        # Create a list of certificates for the wait timer.  This seems to have
+        # a little too much knowledge of the WaitTimer implementation, but
+        # there is no use getting more than
+        # WaitTimer.certificate_sample_length wait certificates.
+        certificates = \
+            utils.build_certificate_list(
+                block_header=block_header,
+                block_cache=self._block_cache,
+                poet_enclave_module=self._poet_enclave_module,
+                maximum_number=WaitTimer.certificate_sample_length)
 
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
@@ -264,7 +228,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self._poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
-                certificates=certificates)
+                certificates=list(certificates))
 
         LOGGER.debug('Created wait timer: %s', self._wait_timer)
 
