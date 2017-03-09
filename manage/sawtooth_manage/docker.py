@@ -18,6 +18,7 @@ import os
 import subprocess
 import tempfile
 import yaml
+import threading
 
 from sawtooth_manage.node import NodeController
 from sawtooth_manage.exceptions import ManagementError
@@ -51,27 +52,41 @@ class DockerNodeController(NodeController):
 
         self._prefix = 'sawtooth-cluster-0'
 
-    def _construct_start_args(self, node_name):
+        self._lock = threading.Lock()
+
+    def _start_bridge_network(self):
+        try:
+            network_args = ['docker', 'network', 'create', '-d',
+                            'bridge', self._prefix]
+            n_output = subprocess.check_output(network_args)
+            for l in n_output.splitlines():
+                LOGGER.info(l)
+        except subprocess.CalledProcessError as e:
+            raise ManagementError(str(e))
+
+    def _is_bridge_network_started(self):
         try:
             network_ls_args = ['docker', 'network', 'ls', '--filter',
                                'NAME={}'.format(self._prefix), '-q']
             network_output = subprocess.check_output(
                 network_ls_args).splitlines()
+            return len(network_output) > 0
         except subprocess.CalledProcessError as e:
             raise ManagementError(str(e))
 
-        if len(network_output) == 0:
-            try:
-                network_args = ['docker', 'network', 'create', '-d',
-                                'bridge', self._prefix]
-                n_output = subprocess.check_output(network_args)
-                for l in n_output.splitlines():
-                    LOGGER.info(l)
-            except subprocess.CalledProcessError as e:
-                raise ManagementError(str(e))
-        args = ['docker-compose', '-p',
-                self._prefix.replace('-', '') + node_name,
-                'up', '-d']
+    def _load_state(self):
+        state_file_path = os.path.join(self._state_dir, 'state.yaml')
+        with open(state_file_path) as fd:
+            state = yaml.load(fd)
+        return state
+
+    def _construct_start_args(self, node_name, path):
+        args = [
+            'docker-compose',
+                '-p', self._prefix.replace('-', '') + node_name,
+                '-f', path,
+                'up', '-d'
+        ]
 
         return args
 
@@ -99,8 +114,19 @@ class DockerNodeController(NodeController):
         node_name = node_config.node_name
         http_port = node_config.http_port
 
-        args = self._construct_start_args(node_name)
-        LOGGER.debug('starting %s: %s', node_name, self._join_args(args))
+        # The first time a node is started, it should start a bridge
+        # network. Subsequent nodes should wait until the network
+        # has successfully been started.
+        with self._lock:
+            if not self._is_bridge_network_started():
+                self._start_bridge_network()
+
+        compose_file = os.path.join(
+            tempfile.mkdtemp(),
+            'docker-compose.yaml')
+
+        start_args = self._construct_start_args(node_name, compose_file)
+        LOGGER.debug('starting %s: %s', node_name, self._join_args(start_args))
         peers = self._find_peers()
 
         if node_config.genesis:
@@ -114,8 +140,6 @@ class DockerNodeController(NodeController):
             entrypoint = entrypoint.format('--peers ' + " ".join(peers))
         else:
             entrypoint = entrypoint.format('')
-
-        compose_dir = tempfile.mkdtemp()
 
         compose_dict = {
             'version': '2',
@@ -133,9 +157,7 @@ class DockerNodeController(NodeController):
             'networks': {self._prefix: {'external': True}}
         }
 
-        state_file_path = os.path.join(self._state_dir, 'state.yaml')
-        with open(state_file_path) as fd:
-            state = yaml.load(fd)
+        state = self._load_state()
 
         # add the processors
         node_num = node_name[len('validator-'):]
@@ -155,11 +177,10 @@ class DockerNodeController(NodeController):
             [str(http_port) + ":" + str(40000)]
 
         yaml.dump(compose_dict,
-                  open(os.path.join(compose_dir, 'docker-compose.yaml'),
-                       mode='w'))
+                  open(compose_file, mode='w'))
+
         try:
-            os.chdir(compose_dir)
-            output = subprocess.check_output(args)
+            output = subprocess.check_output(start_args)
         except subprocess.CalledProcessError as e:
             processors = state['Processors']
             # check if the docker image is built
@@ -189,9 +210,7 @@ class DockerNodeController(NodeController):
             LOGGER.debug("command output: %s", str(line))
 
     def stop(self, node_name):
-        state_file_path = os.path.join(self._state_dir, 'state.yaml')
-        with open(state_file_path) as fd:
-            state = yaml.load(fd)
+        state = self._load_state()
 
         node_num = node_name[len('validator-'):]
 
