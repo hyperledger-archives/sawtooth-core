@@ -148,5 +148,8 @@ def do_state(args):
 
     if args.subcommand == 'show':
         leaf = rest_client.get_leaf(args.address, args.head)
-        print('DATA: "{}"'.format(b64decode(leaf['data'])))
-        print('HEAD: "{}"'.format(leaf['head']))
+        if leaf is not None:
+            print('DATA: "{}"'.format(b64decode(leaf['data'])))
+            print('HEAD: "{}"'.format(leaf['head']))
+        else:
+            raise CliException('No data available at {}'.format(args.address))

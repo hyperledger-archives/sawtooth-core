@@ -59,15 +59,23 @@ class RestClient(object):
             },
             method='POST')
 
-        result = self._submit_request(batch_request)
-        return json.loads(result.read().decode())
+        code, json_result = self._submit_request(batch_request)
+        if code == 200 or code == 202:
+            return json_result
+        else:
+            raise CliException("({}): {}".format(code, json_result))
 
     def _get(self, path, queries=None):
         query_string = '?' + urlencode(queries) if queries else ''
 
-        response = self._submit_request(self._base_url + path + query_string)
-        result = response.read().decode()
-        return json.loads(result)
+        code, json_result = self._submit_request(
+            self._base_url + path + query_string)
+        if code == 200:
+            return json_result
+        elif code == 404:
+            return None
+        else:
+            raise CliException("({}): {}".format(code, json_result))
 
     def _submit_request(self, url_or_request):
         """Submits the given request, and handles the errors appropriately.
@@ -77,16 +85,17 @@ class RestClient(object):
                 send.
 
         Returns:
-            `http.client.HTTPResponse`: The response from the request.
+            tuple of (int, str): The response status code and the json parsed
+                body, or the error message.
 
         Raises:
-            `CliException`: If any issues occur when making the request or the
-                URL is unavailable.
+            `CliException`: If any issues occur with the URL.
         """
         try:
-            return urllib.urlopen(url_or_request)
+            result = urllib.urlopen(url_or_request)
+            return (result.status, json.loads(result.read().decode()))
         except HTTPError as e:
-            raise CliException('({}) {}'.format(e.code, e.msg))
+            return (e.code, e.msg)
         except URLError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
