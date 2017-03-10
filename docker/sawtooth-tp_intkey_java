@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM ubuntu:xenial
-
-RUN apt-get update && \
-    apt-get install -y -q \
-        openjdk-8-jdk maven
-
+FROM maven:3-jdk-8
 
 ARG PROJECT_DIR="/project/sawtooth-core"
 
-RUN mkdir -p $PROJECT_DIR/sdk/examples/intkey_java
-
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ["bin/tp_intkey_java", "validator:40000"]
+ENTRYPOINT ./bin/tp_intkey_java tcp://validator:40000
