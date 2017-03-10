@@ -60,6 +60,7 @@ for image in \
   sawtooth-test \
   sawtooth-tp_config \
   sawtooth-tp_intkey_java \
+  sawtooth-tp_intkey_javascript \
   sawtooth-tp_intkey_python \
   sawtooth-tp_xo_python \
   sawtooth-tp_validator_registry \
