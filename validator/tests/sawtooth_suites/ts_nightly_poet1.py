@@ -25,7 +25,11 @@ from integration.test_validator_restart_restore \
 from integration.test_validator_restart import TestValidatorShutdownRestart
 from integration.test_validator_shutdown_sigkill_restart \
     import TestValidatorShutdownSigKillRestart
-from integration.test_sawtooth_stats import TestSawtoothStats
+
+from integration.test_sawtooth_stats import TestSawtoothStatsTwistedThread
+
+from integration.test_poet1_int_load import TestPoet1IntLoad
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +49,8 @@ class Poet1NightlyTestSuite(SawtoothTestSuite):
             suite.addTest(TestConvergence('test_bootstrap', urls))
             suite.addTest(TestIntegration('test_intkey_load_ext', urls))
             suite.addTest(TestIntegration('test_missing_dependencies', urls))
-            suite.addTest(TestSawtoothStats('test_sawtooth_stats', urls))
+            suite.addTest(TestSawtoothStatsTwistedThread('test_sawtooth_stats_twisted_thread', urls))
+            suite.addTest(TestPoet1IntLoad('test_poet1_int_load', urls))
             suite.addTest(TestValidatorShutdownRestart(
                 'test_validator_shutdown_restart_ext',
                 urls, self._node_ctrl, self._nodes))
