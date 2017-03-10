@@ -24,10 +24,9 @@ import json
 from base64 import b64decode
 
 import cbor
-# ------------------------------
 
 from sawtooth_integration.intkey.intkey_message_factory \
-    import IntkeyMessageFactory # used by verifier
+    import IntkeyMessageFactory
 
 
 LOGGER = logging.getLogger(__name__)
@@ -63,19 +62,13 @@ class TestIntkeySmoke(unittest.TestCase):
 
         self.verify_empty_state()
 
-        # 2/7/17: The validator seems to stop responding when sent
-        # invalid txns (a bug). The invalid txns are commented out
-        # so the test will pass for the moment, but they should be
-        # be uncommented when that issue is addressed.
-
         batches = (
             populate,
             valid_txns,
-            # invalid_txns,
-            # valid_txns, -- These batches need to be rebuilt, batchs are only
-            # processed once. Resubmitting the same batche results in a nop.
-            # populate,
-            # valid_txns
+            invalid_txns,
+            valid_txns,
+            populate,
+            valid_txns
         )
 
         how_many_updates = 0
@@ -88,6 +81,7 @@ class TestIntkeySmoke(unittest.TestCase):
     # assertions
 
     def post_and_verify(self, batch, how_many_updates):
+        batch = IntkeyMessageFactory().create_batch(batch)
         LOGGER.info('Posting batch')
         _post_batch(batch)
         time.sleep(1)
@@ -97,11 +91,18 @@ class TestIntkeySmoke(unittest.TestCase):
         LOGGER.debug('Verifying state after {} updates'.format(num))
         expected_state = self.verifier.state_after_n_updates(num)
         actual_state = _get_data()
-        self.assertEqual(expected_state, actual_state)
+        LOGGER.info('Current state: {}'.format(actual_state))
+        self.assertEqual(
+            expected_state,
+            actual_state,
+            'Updated state error')
 
     def verify_empty_state(self):
         LOGGER.debug('Verifying empty state')
-        self.assertEqual([], _get_state())
+        self.assertEqual(
+            [],
+            _get_state(),
+            'Empty state error')
 
     # utilities
 
@@ -138,8 +139,8 @@ def _query_rest_api(suffix='', data=None, headers={}):
 
 class IntkeyTestVerifier:
     def __init__(self,
-                 valid=('cow', 'pig', 'sheep', 'goat', 'horse'),
-                 invalid=('lark', 'thrush', 'jay', 'wren', 'finch'),
+                 valid=('lark', 'thrush', 'jay', 'wren', 'finch'),
+                 invalid=('cow', 'pig', 'sheep', 'goat', 'horse'),
                  verbs=('inc', 'inc', 'dec', 'inc', 'dec'),
                  incdec=(1, 2, 3, 5, 8),
                  initial=(415, 325, 538, 437, 651)):
@@ -151,14 +152,9 @@ class IntkeyTestVerifier:
         self.sets = ['set' for _ in range(len(self.initial))]
 
     def make_txn_batches(self):
-        def make_batch(verbs, words, values):
-            txns = zip(verbs, words, values)
-            batch = IntkeyMessageFactory().create_batch(txns)
-            return batch
-
-        populate = make_batch(self.sets, self.valid, self.initial)
-        valid_txns = make_batch(self.verbs, self.valid, self.incdec)
-        invalid_txns = make_batch(self.verbs, self.invalid, self.incdec)
+        populate = tuple(zip(self.sets, self.valid, self.initial))
+        valid_txns = tuple(zip(self.verbs, self.valid, self.incdec))
+        invalid_txns = tuple(zip(self.verbs, self.invalid, self.incdec))
 
         return populate, valid_txns, invalid_txns
 
