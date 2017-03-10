@@ -196,6 +196,23 @@ class RouteHandler(object):
             data=RouteHandler._expand_block(response['block']),
             metadata=RouteHandler._get_metadata(request, response))
 
+    @asyncio.coroutine
+    def batch_list(self, request):
+        """
+        Fetch a list of batches from the validator
+        """
+        head = request.url.query.get('head', '')
+
+        response = self._query_validator(
+            Message.CLIENT_BATCH_LIST_REQUEST,
+            client.ClientBatchListResponse,
+            client.ClientBatchListRequest(head_id=head))
+
+        batches = [RouteHandler._expand_batch(b) for b in response['batches']]
+        return RouteHandler._wrap_response(
+            data=batches,
+            metadata=RouteHandler._get_metadata(request, response))
+
     def _query_validator(self, req_type, resp_proto, content, traps=None):
         """
         Sends a request to the validator and parses the response

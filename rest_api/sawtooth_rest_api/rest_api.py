@@ -60,6 +60,8 @@ def start_rest_api(host, port, stream_url, timeout):
     app.router.add_get('/blocks', handler.block_list)
     app.router.add_get('/blocks/{block_id}', handler.block_get)
 
+    app.router.add_get('/batches', handler.batch_list)
+
     web.run_app(app, host=host, port=port)
 
 
