@@ -27,6 +27,7 @@ from sawtooth_cli.rest_client import RestClient
 
 from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
 from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
+from sawtooth_cli.protobuf.config_pb2 import ConfigCandidates
 from sawtooth_cli.protobuf.setting_pb2 import Setting
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
@@ -88,6 +89,34 @@ def add_config_parser(subparsers, parent_parser):
         nargs='+',
         help='configuration setting, as a key/value pair: <key>=<value>')
 
+    proposal_list_parser = proposal_parsers.add_parser(
+        'list',
+        help='lists the current proposed, but not active, settings')
+
+    proposal_list_parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    proposal_list_parser.add_argument(
+        '--public-key',
+        type=str,
+        default='',
+        help='filters proposals from a particular public key.')
+
+    proposal_list_parser.add_argument(
+        '--filter',
+        type=str,
+        default='',
+        help='filters keys that begin with this value')
+
+    proposal_list_parser.add_argument(
+        '--format',
+        default='default',
+        choices=['default', 'csv', 'json', 'yaml'],
+        help='the format of the output')
+
     # The following parser is for the settings subsection of commands.  These
     # commands display information about the currently applied on-chain
     # settings.
@@ -96,6 +125,7 @@ def add_config_parser(subparsers, parent_parser):
     settings_parsers = settings_parser.add_subparsers(
         title='settings',
         dest='settings_cmd')
+    settings_parsers.required = True
 
     list_parser = settings_parsers.add_parser(
         'list',
@@ -125,6 +155,8 @@ def do_config(args):
     """
     if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
         _do_config_create(args)
+    elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
+        _do_config_proposal_list(args)
     elif args.subcommand == 'settings' and args.settings_cmd == 'list':
         _do_config_list(args)
     else:
@@ -162,6 +194,72 @@ def _do_config_create(args):
         rest_client.send_batches(batch_list)
     else:
         raise AssertionError('No target for create set.')
+
+
+def _do_config_proposal_list(args):
+    """Executes the 'proposal list' subcommand.
+
+    Given a url, optional filters on prefix and public key, this command lists
+    the current pending proposals for settings changes.
+    """
+    rest_client = RestClient(args.url)
+    state_leaf = rest_client.get_leaf(
+        _key_to_address('sawtooth.config.vote.proposals'))
+
+    def _accept(candidate, public_key, prefix):
+        # Check to see if the first public key matches the given public key
+        # (if it is not None).  This public key belongs to the user that
+        # created it.
+        has_pub_key = (not public_key or
+                       candidate.votes[0].public_key == public_key)
+        has_prefix = candidate.proposal.setting.startswith(prefix)
+        return has_prefix and has_pub_key
+
+    if state_leaf is not None:
+        setting_bytes = b64decode(state_leaf['data'])
+        setting = Setting()
+        setting.ParseFromString(setting_bytes)
+
+        candidates_bytes = None
+        for entry in setting.entries:
+            if entry.key == 'sawtooth.config.vote.proposals':
+                candidates_bytes = entry.value
+
+        decoded = b64decode(candidates_bytes)
+        candidates_payload = ConfigCandidates()
+        candidates_payload.ParseFromString(decoded)
+
+        candidates = [c for c in candidates_payload.candidates
+                      if _accept(c, args.public_key, args.filter)]
+    else:
+        candidates = []
+
+    if args.format == 'default':
+        for candidate in candidates:
+            print('{}: {} => {}'.format(
+                candidate.proposal_id,
+                candidate.proposal.setting,
+                candidate.proposal.value))
+    elif args.format == 'csv':
+        writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
+        writer.writerow(['PROPOSAL_ID', 'KEY', 'VALUE'])
+        for candidate in candidates:
+            writer.writerow([
+                candidate.proposal_id,
+                candidate.proposal.setting,
+                candidate.proposal.value])
+    elif args.format == 'json' or args.format == 'yaml':
+        candidates_snapshot = \
+            {c.proposal_id: {c.proposal.setting: c.proposal.value}
+             for c in candidates}
+
+        if args.format == 'json':
+            print(json.dumps(candidates_snapshot, indent=2, sort_keys=True))
+        else:
+            print(yaml.dump(candidates_snapshot,
+                  default_flow_style=False)[0:-1])
+    else:
+        raise AssertionError('Unknown format {}'.format(args.format))
 
 
 def _do_config_list(args):
