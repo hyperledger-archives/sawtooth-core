@@ -18,7 +18,11 @@ import hashlib
 import base64
 import json
 
-from sawtooth_signing import secp256k1_signer as signing
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.client.future import FutureTimeoutError
@@ -117,15 +121,24 @@ def _set_data(state, address, data):
 
 class ValidatorRegistryTransactionHandler(object):
 
-    __REPORT_PRIVATE_KEY_WIF = \
-        '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
+    # The report public key PEM is used to create the public key used to
+    # verify the signature on the attestation verification reports.
+    __REPORT_PUBLIC_KEY_PEM__ = \
+        '-----BEGIN PUBLIC KEY-----\n' \
+        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn\n' \
+        '4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC\n' \
+        'PW6QlkeLI1eqe4DiYb9+J5ANhq4+XkhwgCUUFwpfqSfXWCHimjaGsZHbavl5nv/6\n' \
+        'IbZJL/2YzE37IzJdES16JCfmIUrk6TUqL0WgrWXyweTIoVSbld0M29kToSkMXLsj\n' \
+        '8vbQbTiKwViWhYlzi0cQIo7PiAss66lAW0X6AM7ZJYyAcfSjSLR4guMz76Og8aRk\n' \
+        'jtsjEEkq7Ndz5H8hllWUoHpxGDqLhM9O1/h+QdvTz7luZgpeJ5KB92vYL6yOlSxM\n' \
+        'fQIDAQAB\n' \
+        '-----END PUBLIC KEY-----'
 
     def __init__(self):
-        # Since signing works with WIF-encoded private keys, we don't have to
-        # decode the encoded key string.
-        self._report_private_key = self.__REPORT_PRIVATE_KEY_WIF
-        self._report_public_key = signing.generate_pubkey(
-            self._report_private_key)
+        self._report_public_key = \
+            serialization.load_pem_public_key(
+                self.__REPORT_PUBLIC_KEY_PEM__.encode(),
+                backend=backends.default_backend())
 
     @property
     def family_name(self):
@@ -158,10 +171,13 @@ class ValidatorRegistryTransactionHandler(object):
         if signature is None:
             raise ValueError('Signature is missing from proof data')
 
-        if not signing.verify(
-                verification_report,
-                signature,
-                self._report_public_key):
+        try:
+            self._report_public_key.verify(
+                base64.b64decode(signature.encode()),
+                verification_report.encode(),
+                padding.PKCS1v15(),
+                hashes.SHA256())
+        except InvalidSignature:
             raise ValueError('Verification report signature is invalid')
 
         verification_report_dict = json.loads(verification_report)
