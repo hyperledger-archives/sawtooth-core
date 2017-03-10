@@ -113,7 +113,7 @@ class SendReceiveThread implements Runnable {
     this.context = new ZContext();
     socket = this.context.createSocket(ZMQ.DEALER);
     socket.setIdentity((this.getClass().getName() + UUID.randomUUID().toString()).getBytes());
-    socket.connect("tcp://" + url);
+    socket.connect(url);
     lock.lock();
     try {
       condition.signalAll();
