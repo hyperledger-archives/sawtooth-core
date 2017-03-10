@@ -799,3 +799,98 @@ class TestBlockGetRequests(_ClientHandlerTestCase):
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())
+
+
+class TestBatchListRequests(_ClientHandlerTestCase):
+    def setUp(self):
+        store = MockBlockStore()
+        self.initialize(
+            handlers.BatchListRequest(store),
+            client_pb2.ClientBatchListRequest,
+            client_pb2.ClientBatchListResponse,
+            store=store)
+
+    def test_batch_list_request(self):
+        """Verifies requests for batch lists without parameters work properly.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2' (the latest)
+            - a list of batches with 3 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-2'
+        """
+        response = self.make_request()
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(3, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-2', response.batches[0].header_signature)
+
+    def test_batch_list_bad_request(self):
+        """Verifies requests for lists of batches break with bad protobufs.
+
+        Expects to find:
+            - a status of INTERNAL_ERROR
+            - that batches and head_id are missing
+        """
+        response = self.make_bad_request(head_id='B-1')
+
+        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
+        self.assertFalse(response.head_id)
+        self.assertFalse(response.batches)
+
+    def test_batch_list_bad_request(self):
+        """Verifies requests for lists of batches break with no genesis.
+
+        Expects to find:
+            - a status of NOT_READY
+            - that batches and head_id are missing
+        """
+        self.break_genesis()
+        response = self.make_request()
+
+        self.assertEqual(self.status.NOT_READY, response.status)
+        self.assertFalse(response.head_id)
+        self.assertFalse(response.batches)
+
+    def test_batch_list_with_head(self):
+        """Verifies requests for lists of batches work properly with a head id.
+
+        Queries the default mock block store with '1' as the head:
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-1'
+            - a list of batches with 2 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-1'
+        """
+        response = self.make_request(head_id='B-1')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-1', response.head_id)
+        self.assertEqual(2, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-1', response.batches[0].header_signature)
+
+    def test_batch_list_with_bad_head(self):
+        """Verifies requests for lists of batches break with a bad head.
+
+        Expects to find:
+            - a status of NO_ROOT
+            - that batches and head_id are missing
+        """
+        response = self.make_request(head_id='bad')
+
+        self.assertEqual(self.status.NO_ROOT, response.status)
+        self.assertFalse(response.head_id)
+        self.assertFalse(response.batches)
