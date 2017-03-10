@@ -23,7 +23,6 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 
 import sawtooth.sdk.protobuf.Message;
-import sawtooth.sdk.protobuf.MessageList;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -88,15 +87,13 @@ class SendReceiveThread implements Runnable {
         }
       }
       try {
-        MessageList messageList = MessageList.parseFrom(byteArrayOutputStream.toByteArray());
-        for (Message message: messageList.getMessagesList()) {
-          if (this.futures.containsKey(message.getCorrelationId())) {
-            FutureByteString future = this.futures.get(message.getCorrelationId());
-            future.setResult(message.getContent());
-            this.futures.put(message.getCorrelationId(), future);
-          } else {
-            this.receiveQueue.put(message);
-          }
+        Message message = Message.parseFrom(byteArrayOutputStream.toByteArray());
+        if (this.futures.containsKey(message.getCorrelationId())) {
+          FutureByteString future = this.futures.get(message.getCorrelationId());
+          future.setResult(message.getContent());
+          this.futures.put(message.getCorrelationId(), future);
+        } else {
+          this.receiveQueue.put(message);
         }
       } catch (InterruptedException ie) {
         ie.printStackTrace();
