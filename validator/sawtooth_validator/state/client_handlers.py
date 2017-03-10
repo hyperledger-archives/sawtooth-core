@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import abc
 import logging
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
@@ -31,176 +32,317 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-class BatchSubmitFinisher(Handler):
-    def __init__(self, block_store, batch_cache):
+class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
+    """Parent class for all Client Request Handlers.
+
+    Handles the repetitive tasks of parsing a client request, and formatting
+    the response. Also includes some helper methods common to multiple client
+    handlers. Child classes should not implement the `handle` method directly,
+    instead defining a unique `_respond` method specified below.
+
+    Args:
+        request_proto (class): Protobuf class of the request to be handled
+        response_proto (class): Protobuf class of the response to be sent
+        response_type (enum): Message status of the response
+        tree (MerkleDatabase, optional): State tree to be queried
+        block_store (BlockStoreAdapter, optional): Block chain to be queried
+        batch_cache (TimedCache, optional): A cache of Batches being processed
+
+    Attributes:
+        _status (class): Convenience ref to response_proto for accessing enums
+    """
+
+    def __init__(self, request_proto, response_proto, response_type,
+                 tree=None, block_store=None, batch_cache=None):
+        self._request_proto = request_proto
+        self._response_proto = response_proto
+        self._response_type = response_type
+        self._status = response_proto
+
+        self._tree = tree
         self._block_store = block_store
         self._batch_cache = batch_cache
 
+    class _ResponseFailed(BaseException):
+        """Raised when a response failed to complete and should be sent as is.
+
+        Args:
+            status (enum): Status to be sent with the incomplete response
+
+        Attributes:
+            status (enum): Status to be sent with the incomplete response
+        """
+        def __init__(self, status):
+            super().__init__()
+            self.status = status
+
     def handle(self, identity, message_content):
-        helper = _ClientHelper(
-            message_content,
+        """Handles parsing incoming requests, and wrapping the final response.
+
+        Args:
+            identity (str): ZMQ identity sent over ZMQ socket
+            message_content (bytes): Byte encoded request protobuf to be parsed
+
+        Returns:
+            HandlerResult: result to be sent in response back to client
+        """
+        try:
+            request = self._request_proto()
+            request.ParseFromString(message_content)
+        except DecodeError:
+            LOGGER.info('Protobuf %s failed to deserialize', request)
+            return self._wrap_result(self._status.INTERNAL_ERROR)
+
+        try:
+            response = self._respond(request)
+        except self._ResponseFailed as e:
+            response = e.status
+
+        return self._wrap_result(response)
+
+    @abc.abstractmethod
+    def _respond(self, request):
+        """This method must be implemented by each child to build its response.
+
+        Args:
+            request (object): A parsed request object of the specified protobuf
+
+        Returns:
+            enum: An enum status, or...
+            dict: A dict of attributes for the response protobuf
+        """
+        raise NotImplementedError('Client Handler must have _respond method')
+
+    def _wrap_result(self, response):
+        """Wraps child's response in a HandlerResult to be sent back to client.
+
+        Args:
+            response (enum or dict): Either an integer status enum, or a dict
+                of attributes to be added to the protobuf response.
+        """
+        if isinstance(response, int):
+            response = self._wrap_response(response)
+
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=self._response_proto(**response),
+            message_type=self._response_type)
+
+    def _wrap_response(self, status=None, **kwargs):
+        """Convenience method to wrap a status with any key word args.
+
+        Args:
+            status (enum): enum response status, defaults to OK
+
+        Returns:
+            dict: inlcudes a 'status' attribute and any key word arguments
+        """
+        kwargs['status'] = status if status is not None else self._status.OK
+        return kwargs
+
+    def _get_head_block(self, request):
+        """Fetches the request specified head block, or the chain head.
+
+        Note:
+            This method will fail if `_block_store` has not been set
+
+        Args:
+            request (object): The parsed protobuf request object
+
+        Returns:
+            Block: the block object at the head of the requested chain
+
+        Raises:
+            _ResponseFailed: Failed to retrieve a head block
+        """
+        if request.head_id:
+            try:
+                return self._block_store[request.head_id].block
+            except KeyError as e:
+                LOGGER.debug('Unable to find block "%s" in store', e)
+                raise self._ResponseFailed(self._status.NO_ROOT)
+
+        elif self._block_store.chain_head:
+            return self._block_store.chain_head.block
+
+        else:
+            LOGGER.debug('Unable to get chain head from block store')
+            raise self._ResponseFailed(self._status.NOT_READY)
+
+    def _set_root(self, request):
+        """Sets the root of the merkle tree, returning any head id used.
+
+        Note:
+            This method will fail if `_tree` has not been set
+
+        Args:
+            request (object): The parsed protobuf request object
+
+        Returns:
+            None: if a merkle_root is specified directly, no id is returned
+            str: the id of the head block used to specify the root
+
+        Raises:
+            _ResponseFailed: Failed to set the root if the merkle tree
+        """
+        if request.merkle_root:
+            root = request.merkle_root
+            head_id = None
+        else:
+            head = self._get_head_block(request)
+            header = BlockHeader()
+            header.ParseFromString(head.header)
+            root = header.state_root_hash
+            head_id = head.header_signature
+
+        try:
+            self._tree.set_merkle_root(root)
+        except KeyError as e:
+            LOGGER.debug('Unable to find root "%s" in database', e)
+            raise self._ResponseFailed(self._status.NO_ROOT)
+
+        return head_id
+
+    def _get_statuses(self, batch_ids):
+        """Fetches the committed statuses for a set of batch ids.
+
+        Note:
+            This method will fail without a `_block_store` and `_batch_cache`
+
+        Args:
+            batch_ids (list of str): The set of batch ids to be queried
+
+        Returns:
+            dict of enum: keys are batch ids, and values are their status enum
+        """
+        statuses = {}
+        for batch_id in batch_ids:
+            if self._block_store.has_batch(batch_id):
+                statuses[batch_id] = self._status.COMMITTED
+            elif batch_id in self._batch_cache:
+                statuses[batch_id] = self._status.PENDING
+            else:
+                statuses[batch_id] = self._status.UNKNOWN
+        return statuses
+
+
+class BatchSubmitFinisher(_ClientRequestHandler):
+    def __init__(self, block_store, batch_cache):
+        super().__init__(
             client_pb2.ClientBatchSubmitRequest,
             client_pb2.ClientBatchSubmitResponse,
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE,
-            block_store=self._block_store,
-            batch_cache=self._batch_cache)
-        if helper.has_response():
-            return helper.result
+            block_store=block_store,
+            batch_cache=batch_cache)
 
-        if not helper.request.wait_for_commit:
-            helper.set_response(helper.status.OK)
-            return helper.result
+    def _respond(self, request):
+        if not request.wait_for_commit:
+            return self._status.OK
 
-        batch_ids = [b.header_signature for b in helper.request.batches]
+        batch_ids = [b.header_signature for b in request.batches]
 
         self._block_store.wait_for_batch_commits(
             batch_ids=batch_ids,
-            timeout=helper.request.timeout)
+            timeout=request.timeout)
 
-        statuses = helper.get_batch_statuses(batch_ids)
-        helper.set_response(helper.status.OK, batch_statuses=statuses)
-        return helper.result
+        statuses = self._get_statuses(batch_ids)
+        return self._wrap_response(batch_statuses=statuses)
 
 
-class BatchStatusRequest(Handler):
+class BatchStatusRequest(_ClientRequestHandler):
     def __init__(self, block_store, batch_cache):
-        self._block_store = block_store
-        self._batch_cache = batch_cache
-
-    def handle(self, connection_id, message_content):
-        helper = _ClientHelper(
-            message_content,
+        super().__init__(
             client_pb2.ClientBatchStatusRequest,
             client_pb2.ClientBatchStatusResponse,
             validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE,
-            block_store=self._block_store,
-            batch_cache=self._batch_cache)
-        if helper.has_response():
-            return helper.result
+            block_store=block_store,
+            batch_cache=batch_cache)
 
-        if helper.request.wait_for_commit:
+    def _respond(self, request):
+        if request.wait_for_commit:
             self._block_store.wait_for_batch_commits(
-                batch_ids=helper.request.batch_ids,
-                timeout=helper.request.timeout)
+                batch_ids=request.batch_ids,
+                timeout=request.timeout)
 
-        statuses = helper.get_batch_statuses(helper.request.batch_ids)
+        statuses = self._get_statuses(request.batch_ids)
         if not statuses:
-            helper.set_response(helper.status.NO_RESOURCE)
-        else:
-            helper.set_response(helper.status.OK, batch_statuses=statuses)
+            return self._status.NO_RESOURCE
 
-        return helper.result
+        return self._wrap_response(batch_statuses=statuses)
 
 
-class StateCurrentRequest(Handler):
+class StateCurrentRequest(_ClientRequestHandler):
     def __init__(self, current_root_func):
-        self._current_root_func = current_root_func
-
-    def handle(self, connection_id, message_content):
-        helper = _ClientHelper(
-            message_content,
+        self._get_root = current_root_func
+        super().__init__(
             client_pb2.ClientStateCurrentRequest,
             client_pb2.ClientStateCurrentResponse,
             validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
 
-        if not helper.has_response():
-            helper.set_response(
-                helper.status.OK,
-                merkle_root=self._current_root_func())
-
-        return helper.result
+    def _respond(self, request):
+        return self._wrap_response(merkle_root=self._get_root())
 
 
-class StateListRequest(Handler):
+class StateListRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
-        self._tree = MerkleDatabase(database)
-        self._block_store = block_store
-
-    def handle(self, connection_id, message_content):
-        helper = _ClientHelper(
-            message_content,
+        super().__init__(
             client_pb2.ClientStateListRequest,
             client_pb2.ClientStateListResponse,
             validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE,
-            tree=self._tree,
-            block_store=self._block_store)
+            tree=MerkleDatabase(database),
+            block_store=block_store)
 
-        helper.set_root()
-        if helper.has_response():
-            return helper.result
+    def _respond(self, request):
+        head_id = self._set_root(request)
 
         # Fetch leaves and encode as protobuf
         leaves = [
             client_pb2.Leaf(address=a, data=v) for a, v in
-            self._tree.leaves(helper.request.address or '').items()]
+            self._tree.leaves(request.address or '').items()]
 
-        if leaves:
-            helper.set_response(
-                helper.status.OK,
-                head_id=helper.head_id,
-                leaves=leaves)
-        else:
-            helper.set_response(
-                helper.status.NO_RESOURCE,
-                head_id=helper.head_id)
+        if not leaves:
+            return self._wrap_response(
+                self._status.NO_RESOURCE,
+                head_id=head_id)
 
-        return helper.result
+        return self._wrap_response(head_id=head_id, leaves=leaves)
 
 
-class StateGetRequest(Handler):
+class StateGetRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
-        self._tree = MerkleDatabase(database)
-        self._block_store = block_store
-
-    def handle(self, connection_id, message_content):
-        helper = _ClientHelper(
-            message_content,
+        super().__init__(
             client_pb2.ClientStateGetRequest,
             client_pb2.ClientStateGetResponse,
             validator_pb2.Message.CLIENT_STATE_GET_RESPONSE,
-            tree=self._tree,
-            block_store=self._block_store)
+            tree=MerkleDatabase(database),
+            block_store=block_store)
 
-        helper.set_root()
-        if helper.has_response():
-            return helper.result
+    def _respond(self, request):
+        head_id = self._set_root(request)
 
         # Fetch leaf value
-        address = helper.request.address
         try:
-            value = self._tree.get(address)
+            value = self._tree.get(request.address)
         except KeyError:
-            LOGGER.debug('Unable to find entry at address %s', address)
-            helper.set_response(helper.status.NO_RESOURCE)
-        except ValueError as e:
-            LOGGER.debug('Address %s is a nonleaf', address)
-            LOGGER.debug(e)
-            helper.set_response(helper.status.MISSING_ADDRESS)
+            LOGGER.debug('Unable to find entry at address %s', request.address)
+            return self._status.NO_RESOURCE
+        except ValueError:
+            LOGGER.debug('Address %s is a nonleaf', request.address)
+            return self._status.MISSING_ADDRESS
 
-        if not helper.has_response():
-            helper.set_response(
-                helper.status.OK,
-                head_id=helper.head_id,
-                value=value)
-
-        return helper.result
+        return self._wrap_response(head_id=head_id, value=value)
 
 
-class BlockListRequest(Handler):
+class BlockListRequest(_ClientRequestHandler):
     def __init__(self, block_store):
-        self._block_store = block_store
-
-    def handle(self, connection_id, message_content):
-        helper = _ClientHelper(
-            message_content,
+        super().__init__(
             client_pb2.ClientBlockListRequest,
             client_pb2.ClientBlockListResponse,
             validator_pb2.Message.CLIENT_BLOCK_LIST_RESPONSE,
-            block_store=self._block_store)
+            block_store=block_store)
 
-        blocks = [helper.get_head_block()]
-        if helper.has_response():
-            return helper.result
+    def _respond(self, request):
+        blocks = [self._get_head_block(request)]
 
         # Build block list
         while True:
@@ -211,135 +353,23 @@ class BlockListRequest(Handler):
                 break
             blocks.append(self._block_store[previous_id].block)
 
-        helper.set_response(
-            helper.status.OK,
-            head_id=helper.head_id,
+        return self._wrap_response(
+            head_id=blocks[0].header_signature,
             blocks=blocks)
 
-        return helper.result
 
-
-class BlockGetRequest(Handler):
+class BlockGetRequest(_ClientRequestHandler):
     def __init__(self, block_store):
-        self._block_store = block_store
-
-    def handle(self, connection_id, message_content):
-        helper = _ClientHelper(
-            message_content,
+        super().__init__(
             client_pb2.ClientBlockGetRequest,
             client_pb2.ClientBlockGetResponse,
-            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE)
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
 
-        if helper.has_response():
-            return helper.result
-
-        block_id = helper.request.block_id
-        if block_id in self._block_store:
-            helper.set_response(
-                helper.status.OK,
-                block=self._block_store[block_id].block)
-        else:
-            LOGGER.debug('Unable to find block "%s" in store', block_id)
-            helper.set_response(helper.status.NO_RESOURCE)
-
-        return helper.result
-
-
-class _ClientHelper(object):
-    """
-    Utility class for Client Handlers that simplifies message handling by
-    providing a response that can be set only once, and a single source
-    of frequently used methods.
-
-    Args:
-        handler - the Client Handler using the helper
-        content - the message_content being handled
-        req_proto - protobuf class for the request
-        resp_proto - protobuf class for the response
-        result_type - the Message enum for the response
-    """
-    def __init__(self, content, req_proto, resp_proto, result_type,
-                 tree=None, block_store=None, batch_cache=None):
-        self._tree = tree
-        self._block_store = block_store
-        self._batch_cache = batch_cache
-        self._resp_proto = resp_proto
-        self.status = resp_proto
-        self.head_id = None
-
-        self.result = HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_type=result_type)
-
+    def _respond(self, request):
         try:
-            self.request = req_proto()
-            self.request.ParseFromString(content)
-        except DecodeError:
-            LOGGER.info('Protobuf %s failed to deserialize', self.request)
-            self.set_response(self.status.INTERNAL_ERROR)
-
-    def has_response(self):
-        return self.result.message_out is not None
-
-    def set_response(self, status, **kwargs):
-        if not self.has_response():
-            self.result.message_out = self._resp_proto(status=status, **kwargs)
-
-    def get_head_block(self):
-        """
-        Sets the helper's 'head_id' property, and returns the head block.
-        Uses either a specified head id or the current chain head.
-        """
-        if self.has_response():
-            return
-
-        if self.request.head_id:
-            self.head_id = self.request.head_id
-            try:
-                return self._block_store[self.request.head_id].block
-            except KeyError as e:
-                LOGGER.debug('Unable to find block "%s" in store', e)
-                self.set_response(self.status.NO_ROOT)
-
-        elif self._block_store.chain_head:
-            self.head_id = self._block_store.chain_head.block.header_signature
-            return self._block_store.chain_head.block
-
-        else:
-            LOGGER.debug('Unable to get chain head from block store')
-            self.set_response(self.status.NOT_READY)
-
-    def set_root(self):
-        """
-        Used by handlers that fetch data from the merkle tree. Sets the tree
-        with the proper root, and returns the chain head id if used.
-        """
-        if self.has_response():
-            return
-
-        if self.request.merkle_root:
-            try:
-                self._tree.set_merkle_root(self.request.merkle_root)
-            except KeyError as e:
-                LOGGER.debug('Unable to find root "%s" in database', e)
-                self.set_response(self.status.NO_ROOT)
-            return
-
-        head = self.get_head_block()
-        if self.has_response():
-            return
-
-        header = BlockHeader()
-        header.ParseFromString(head.header)
-        self._tree.set_merkle_root(header.state_root_hash)
-
-    def get_batch_statuses(self, batch_ids):
-        statuses = {}
-        for batch_id in batch_ids:
-            if self._block_store.has_batch(batch_id):
-                statuses[batch_id] = self.status.COMMITTED
-            elif batch_id in self._batch_cache:
-                statuses[batch_id] = self.status.PENDING
-            else:
-                statuses[batch_id] = self.status.UNKNOWN
-        return statuses
+            block = self._block_store[request.block_id].block
+        except KeyError:
+            LOGGER.debug('No block "%s" in store', request.block_id)
+            return self._status.NO_RESOURCE
+        return self._wrap_response(block=block)
