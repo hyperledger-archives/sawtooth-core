@@ -23,10 +23,15 @@ RUN apt-get update && apt-get install -y -q \
     python3-cbor \
     python3-requests \
     python3-yaml \
-    libcrypto++-dev
+    libcrypto++-dev \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev
 
 RUN pip3 install \
     grpcio-tools \
     bitcoin \
     secp256k1 \
-    lmdb
+    lmdb \
+    cryptography
