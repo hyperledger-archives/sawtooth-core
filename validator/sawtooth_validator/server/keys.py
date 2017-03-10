@@ -67,4 +67,4 @@ def load_identity_signing_key(key_dir, key_name):
         raise LocalConfigurationError(
             "Could not decode key contained in file (AssertionError): "
             "{}".format(key_path))
-    return signing.encode_privkey(decoded_key, 'hex')
+    return signing.encode_privkey(decoded_key)
