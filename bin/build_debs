@@ -52,6 +52,7 @@ do
 
     cd $build_dir/$pkg
     if [ $pkg = "validator" ]; then
+        export PYTHONPATH=$build_dir/signing
         python3 setup.py clean --all
         python3 setup.py --command-packages=stdeb.command debianize
 
