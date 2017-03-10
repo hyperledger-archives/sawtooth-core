@@ -16,12 +16,15 @@
 import os
 import unittest
 import traceback
+import logging
 import cbor
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
 from sawtooth_integration.tests.test_tp_intkey import TestIntkey
 
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 def compare_set_request(req1, req2):
     if len(req1.entries) != len(req2.entries):
@@ -40,7 +43,6 @@ class TestSuiteIntkey(unittest.TestCase):
         self.tester = TransactionProcessorTester()
 
     def _set_up(self):
-        # url = "127.0.0.1:40000"
         url = "0.0.0.0:40000"
 
         # 1. Init tester
@@ -48,9 +50,9 @@ class TestSuiteIntkey(unittest.TestCase):
             "state/setrequest", compare_set_request
         )
 
-        print("Test running in PID: {}".format(os.getpid()))
+        LOGGER.info("Test running in PID: %s", str(os.getpid()))
         self.tester.listen(url)
-        print("Listening on {}...".format(url))
+        LOGGER.info("Listening on %s...", str(url))
 
         # 2. Register the transaction processor with the tester
         if not self.tester.register_processor():
