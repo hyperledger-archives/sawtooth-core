@@ -203,6 +203,37 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
 
         return head_id
 
+    def _list_blocks(self, head_id, xform=lambda b: [b]):
+        """Traverses the blockchain, building a list of blocks or derived data.
+
+        Note:
+            This method will fail if `_block_store` has not been set
+
+        Args:
+            head_id (str): The id of the block to start building the chain at
+            xform (function, optional): Creates a list to be added to results:
+                Expected args:
+                    b: The current block
+                Expected return:
+                    list: To be concatenated to the end of current results
+                Default:
+                    Simply returns the current block wrapped in a list
+
+        Returns:
+            list: List of blocks or data from blocks, from newest to oldest
+        """
+        blocks = []
+
+        while head_id in self._block_store:
+            block = self._block_store[head_id].block
+            blocks += xform(block)
+
+            header = BlockHeader()
+            header.ParseFromString(block.header)
+            head_id = header.previous_block_id
+
+        return blocks
+
     def _get_statuses(self, batch_ids):
         """Fetches the committed statuses for a set of batch ids.
 
@@ -342,20 +373,9 @@ class BlockListRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        blocks = [self._get_head_block(request)]
-
-        # Build block list
-        while True:
-            header = BlockHeader()
-            header.ParseFromString(blocks[-1].header)
-            previous_id = header.previous_block_id
-            if previous_id not in self._block_store:
-                break
-            blocks.append(self._block_store[previous_id].block)
-
-        return self._wrap_response(
-            head_id=blocks[0].header_signature,
-            blocks=blocks)
+        head_id = self._get_head_block(request).header_signature
+        blocks = self._list_blocks(head_id)
+        return self._wrap_response(head_id=head_id, blocks=blocks)
 
 
 class BlockGetRequest(_ClientRequestHandler):
@@ -373,3 +393,17 @@ class BlockGetRequest(_ClientRequestHandler):
             LOGGER.debug('No block "%s" in store', request.block_id)
             return self._status.NO_RESOURCE
         return self._wrap_response(block=block)
+
+
+class BatchListRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_pb2.ClientBatchListRequest,
+            client_pb2.ClientBatchListResponse,
+            validator_pb2.Message.CLIENT_BATCH_LIST_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        head_id = self._get_head_block(request).header_signature
+        batches = self._list_blocks(head_id, lambda b: [a for a in b.batches])
+        return self._wrap_response(head_id=head_id, batches=batches)

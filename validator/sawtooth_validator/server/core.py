@@ -292,13 +292,18 @@ class Validator(object):
             thread_pool)
 
         self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
+            client_handlers.BlockListRequest(self._journal.get_block_store()),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
             client_handlers.BlockGetRequest(self._journal.get_block_store()),
             thread_pool)
 
         self._dispatcher.add_handler(
-            validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
-            client_handlers.BlockListRequest(self._journal.get_block_store()),
+            validator_pb2.Message.CLIENT_BATCH_LIST_REQUEST,
+            client_handlers.BatchListRequest(self._journal.get_block_store()),
             thread_pool)
 
         self._dispatcher.add_handler(
