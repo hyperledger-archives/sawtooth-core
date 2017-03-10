@@ -214,6 +214,18 @@ class BlockPublisher(object):
             except SchedulerError as err:
                 LOGGER.debug("Scheduler error processing batch: %s", err)
 
+    def is_batch_already_commited(self, batch):
+        """ Test if a batch is already committed to the chain or
+        is already in the pending queue.
+        """
+        if self._block_cache.block_store.has_batch(batch.header_signature):
+            return True
+        else:
+            for pending in self._pending_batches:
+                if batch.header_signature == pending.header_signature:
+                    return True
+        return False
+
     def on_batch_received(self, batch):
         """
         A new batch is received, send it for validation
@@ -227,7 +239,7 @@ class BlockPublisher(object):
             # BlockPublisher prior to this Batch. So if there is a missing
             # dependency this is an error condition and the batch will be
             # dropped.
-            if self._block_cache.block_store.has_batch(batch.header_signature):
+            if self.is_batch_already_commited(batch):
                 # batch is already committed.
                 LOGGER.debug("Dropping previously committed batch: %s",
                              batch.header_signature)
