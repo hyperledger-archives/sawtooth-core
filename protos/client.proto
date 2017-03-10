@@ -242,7 +242,6 @@ message ClientBlockGetResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
-        NOT_READY = 2;
         NO_RESOURCE = 4;
     }
     Status status = 1;
@@ -274,4 +273,25 @@ message ClientBatchListResponse {
     Status status = 1;
     repeated Batch batches = 2;
     string head_id = 3;
+}
+
+// Fetches a specific batch by its id (header_signature) from the blockchain.
+message ClientBatchGetRequest {
+    string batch_id = 1;
+}
+
+// A response that returns the batch specified by a ClientBatchGetRequest.
+//
+// Statuses:
+//   * OK - everything worked as expected, batch has been fetched
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NO_RESOURCE - no batch with the specified id exists
+message ClientBatchGetResponse {
+    enum Status {
+        OK = 0;
+        INTERNAL_ERROR = 1;
+        NO_RESOURCE = 4;
+    }
+    Status status = 1;
+    Batch batch = 2;
 }

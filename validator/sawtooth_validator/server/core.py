@@ -307,6 +307,11 @@ class Validator(object):
             thread_pool)
 
         self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_GET_REQUEST,
+            client_handlers.BatchGetRequest(self._journal.get_block_store()),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)

@@ -407,3 +407,20 @@ class BatchListRequest(_ClientRequestHandler):
         head_id = self._get_head_block(request).header_signature
         batches = self._list_blocks(head_id, lambda b: [a for a in b.batches])
         return self._wrap_response(head_id=head_id, batches=batches)
+
+
+class BatchGetRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_pb2.ClientBatchGetRequest,
+            client_pb2.ClientBatchGetResponse,
+            validator_pb2.Message.CLIENT_BATCH_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            batch = self._block_store.get_batch(request.batch_id)
+        except ValueError:
+            LOGGER.debug('No batch "%s" in store', request.batch_id)
+            return self._status.NO_RESOURCE
+        return self._wrap_response(batch=batch)
