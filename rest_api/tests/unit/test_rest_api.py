@@ -36,6 +36,7 @@ class ApiTest(AioHTTPTestCase):
         app.router.add_get('/blocks', handlers.block_list)
         app.router.add_get('/blocks/{block_id}', handlers.block_get)
         app.router.add_get('/batches', handlers.batch_list)
+        app.router.add_get('/batches/{batch_id}', handlers.batch_get)
         return app
 
     @unittest_run_loop
@@ -572,7 +573,7 @@ class ApiTest(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):
-        """Verifies a GET /blocks with a bad head breaks properly.
+        """Verifies a GET /blocks/{block_id} with a bad id breaks properly.
 
         Expects to find:
             - a response status of 404
@@ -658,6 +659,45 @@ class ApiTest(AioHTTPTestCase):
             - a response status of 404
         """
         await self.assert_404('/batches?head=bad')
+
+    @unittest_run_loop
+    async def test_batch_get(self):
+        """Verifies a GET /batches/{batch_id} works properly.
+
+        Fetches batch '1' from the default mock store:
+            {
+                header: {signer_pubkey: 'pubkey', ...},
+                header_signature: '1',
+                transactions: [{
+                    header: {nonce: '1', ...},
+                    header_signature: '1',
+                    payload: b'payload'
+                }]
+            }
+
+        Expects to find:
+            - a response status of 200
+            - no head property
+            - a link property that ends in '/batches/1'
+            - a data property that:
+                * is a single batch dict with a header and transactions
+                * transactions property with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/batches/1')
+
+        self.assertNotIn('head', response)
+        self.assert_has_valid_link(response, '/batches/1')
+        self.assertIn('data', response)
+        self.assert_batch_well_formed(response['data'], '1')
+
+    @unittest_run_loop
+    async def test_batch_get_with_bad_id(self):
+        """Verifies a GET /batches/{batch_id} with a bad id breaks properly.
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/batches/bad')
 
     async def post_batch_ids(self, *batch_ids, wait=False):
         batches = [batch_pb2.Batch(

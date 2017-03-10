@@ -48,6 +48,7 @@ class MockStream(object):
         self._add_handler(Message.CLIENT_BLOCK_LIST_REQUEST, _BlockListHandler)
         self._add_handler(Message.CLIENT_BLOCK_GET_REQUEST, _BlockGetHandler)
         self._add_handler(Message.CLIENT_BATCH_LIST_REQUEST, _BatchListHandler)
+        self._add_handler(Message.CLIENT_BATCH_GET_REQUEST, _BatchGetHandler)
 
     def send(self, message_type, content):
         if not self._handlers[message_type]:
@@ -395,3 +396,25 @@ class _BatchListHandler(_MockHandler):
             status=self._response_proto.OK,
             head_id=blocks[0].header_signature,
             batches=batches)
+
+
+class _BatchGetHandler(_MockHandler):
+    def __init__(self):
+        super().__init__(
+            client.ClientBatchGetRequest,
+            client.ClientBatchGetResponse,
+            Message.CLIENT_BATCH_GET_RESPONSE)
+
+    def handle(self, content):
+        request = self._parse_request(content)
+        store = _MockBlockStore()
+
+        block = store.get_block(request.batch_id)
+
+        if not block:
+            return self._response_proto(
+                status=self._response_proto.NO_RESOURCE)
+
+        return self._response_proto(
+            status=self._response_proto.OK,
+            batch=block.batches[0])
