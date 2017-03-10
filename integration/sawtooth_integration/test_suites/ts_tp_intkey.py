@@ -22,6 +22,7 @@ import cbor
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
 from sawtooth_integration.tests.test_tp_intkey import TestIntkey
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
@@ -47,7 +48,7 @@ class TestSuiteIntkey(unittest.TestCase):
 
         # 1. Init tester
         self.tester.register_comparator(
-            "state/setrequest", compare_set_request
+            Message.TP_STATE_SET_REQUEST, compare_set_request
         )
 
         LOGGER.info("Test running in PID: %s", str(os.getpid()))
