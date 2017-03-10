@@ -93,6 +93,14 @@ class MissingBlock(_ErrorTrap):
             message='There is no block with that id')
 
 
+class MissingBatch(_ErrorTrap):
+    def __init__(self):
+        super().__init__(
+            trigger=client.ClientBatchGetResponse.NO_RESOURCE,
+            error=web.HTTPNotFound,
+            message='There is no batch with that id')
+
+
 class BadAddress(_ErrorTrap):
     def __init__(self):
         super().__init__(
