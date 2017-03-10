@@ -792,7 +792,7 @@ class TestBlockGetRequests(_ClientHandlerTestCase):
         """Verifies requests for a specific block break with a bad id.
 
         Expects to find:
-            - a status of INTERNAL_ERROR
+            - a status of NO_RESOURCE
             - that the Block returned, when serialized, is empty
         """
         response = self.make_request(block_id='bad')
@@ -894,3 +894,51 @@ class TestBatchListRequests(_ClientHandlerTestCase):
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
         self.assertFalse(response.batches)
+
+
+class TestBatchGetRequests(_ClientHandlerTestCase):
+    def setUp(self):
+        store = MockBlockStore()
+        self.initialize(
+            handlers.BatchGetRequest(store),
+            client_pb2.ClientBatchGetRequest,
+            client_pb2.ClientBatchGetResponse)
+
+    def test_batch_get_request(self):
+        """Verifies requests for a specific batch by id work properly.
+
+        Queries the default three block mock store for a batch id of 'b-1'.
+        Expects to find:
+            - a status of OK
+            - a batch property which is an instances of Batch
+            - the batch has a header_signature of 'b-1'
+        """
+        response = self.make_request(batch_id='b-1')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertIsInstance(response.batch, Batch)
+        self.assertEqual('b-1', response.batch.header_signature)
+
+    def test_batch_get_bad_request(self):
+        """Verifies requests for a specific batch break with a bad protobuf.
+
+        Expects to find:
+            - a status of INTERNAL_ERROR
+            - that the Batch returned, when serialized, is actually empty
+        """
+        response = self.make_bad_request(batch_id='b-1')
+
+        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
+        self.assertFalse(response.batch.SerializeToString())
+
+    def test_batch_get_with_bad_id(self):
+        """Verifies requests for a specific batch break with a bad id.
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - that the Batch returned, when serialized, is actually empty
+        """
+        response = self.make_request(batch_id='bad')
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.batch.SerializeToString())
