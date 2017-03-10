@@ -111,11 +111,11 @@ class BlockVerifierInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def verify_block(self, block):
+    def verify_block(self, block_wrapper):
         """Check that the block received conforms to the consensus rules.
 
         Args:
-            block (Block): The block to validate.
+            block_wrapper (BlockWrapper): The block to validate.
         Returns:
             Boolean: True if the Block is valid, False if the block is invalid.
         """
