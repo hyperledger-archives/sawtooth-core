@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
 # you may not use this file except in compliance with the License.
@@ -14,24 +14,28 @@
 # ------------------------------------------------------------------------------
 
 import sys
-from functools import reduce
-
 import csv
 import json
 import yaml
 
+from sawtooth_cli import tty
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
 
 
 def add_block_parser(subparsers, parent_parser):
+    """Adds arguments parsers for the batch list and batch show commands
+
+        Args:
+            subparsers: Add parsers to this subparser object
+            parent_parser: The parent argparse.ArgumentParser object
+    """
     parser = subparsers.add_parser('block')
 
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
     grand_parsers.required = True
-    epilog = '''
-    details:
+    epilog = '''details:
         Lists committed blocks from the newest to the oldest, including
     their id (i.e. header signature), batch and transaction count, and
     their signer's public key.
@@ -43,14 +47,13 @@ def add_block_parser(subparsers, parent_parser):
         type=str,
         help="the URL of the validator's REST API")
     list_parser.add_argument(
-        '--format',
+        '-F', '--format',
         action='store',
         default='default',
         choices=['csv', 'json', 'yaml', 'default'],
         help='the format of the output, options: csv, json or yaml')
 
-    epilog = '''
-    details:
+    epilog = '''details:
         Shows the data for a single block, or for a particular property within
     that block or its header. Displays data in YAML (default), or JSON formats.
     '''
@@ -60,15 +63,15 @@ def add_block_parser(subparsers, parent_parser):
         type=str,
         help='the id (i.e. header_signature) of the block')
     show_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify to show a single property from the block or header')
-    show_parser.add_argument(
         '--url',
         type=str,
         help="the URL of the validator's REST API")
     show_parser.add_argument(
-        '--format',
+        '-k', '--key',
+        type=str,
+        help='specify to show a single property from the block or header')
+    show_parser.add_argument(
+        '-F', '--format',
         action='store',
         default='yaml',
         choices=['yaml', 'json'],
@@ -76,7 +79,11 @@ def add_block_parser(subparsers, parent_parser):
 
 
 def do_block(args):
+    """Runs the batch list or batch show command, printing output to the console
 
+        Args:
+            args: The parsed arguments sent to the command at runtime
+    """
     rest_client = RestClient(args.url)
 
     def print_json(data):
@@ -94,50 +101,64 @@ def do_block(args):
         keys = ('num', 'block_id', 'batches', 'txns', 'signer')
         headers = (k.upper() if k != 'batches' else 'BATS' for k in keys)
 
-        def get_block_data(block):
+        def get_data(block):
             batches = block.get('batches', [])
-            txn_count = reduce(
-                lambda t, b: t + len(b.get('transactions', [])),
-                batches,
-                0)
-
+            txns = [t for b in batches for t in b['transactions']]
             return (
                 block['header'].get('block_num', 0),
                 block['header_signature'],
                 len(batches),
-                txn_count,
-                block['header']['signer_pubkey']
-            )
+                len(txns),
+                block['header']['signer_pubkey'])
 
         if args.format == 'default':
-            # Fit within 150 chars, without truncating block id
-            print('{:<3}  {:128.128}  {:<4}  {:<4}  {:11.11}'.format(*headers))
+            # Set column widths based on window and data size
+            window_width = tty.width()
+
+            try:
+                id_width = len(blocks[0]['header_signature'])
+                sign_width = len(blocks[0]['header']['signer_pubkey'])
+            except IndexError:
+                # if no data was returned, use short default widths
+                id_width = 30
+                sign_width = 15
+
+            if sys.stdout.isatty():
+                adjusted = int(window_width) - id_width - 22
+                adjusted = 6 if adjusted < 6 else adjusted
+            else:
+                adjusted = sign_width
+
+            fmts = '{{:<3}}  {{:{i}.{i}}}  {{:<4}}  {{:<4}}  {{:{a}.{a}}}'\
+                .format(i=id_width, a=adjusted)
+
+            # Print data in rows and columns
+            print(fmts.format(*headers))
             for block in blocks:
-                print('{:<3}  {:128.128}  {:<4}  {:<4}  {:8.8}...'.format(
-                    *get_block_data(block)))
+                print(fmts.format(*get_data(block)) +
+                      ('...' if adjusted < sign_width and sign_width else ''))
 
         elif args.format == 'csv':
             try:
                 writer = csv.writer(sys.stdout)
                 writer.writerow(headers)
                 for block in blocks:
-                    writer.writerow(get_block_data(block))
-            except csv.Error:
-                raise CliException('Error writing CSV.')
+                    writer.writerow(get_data(block))
+            except csv.Error as e:
+                raise CliException('Error writing CSV: {}'.format(e))
 
         elif args.format == 'json' or args.format == 'yaml':
-            block_data = list(map(
-                lambda b: dict(zip(keys, get_block_data(b))),
-                blocks
-            ))
+            data = [{k: d for k, d in zip(keys, get_data(b))} for b in blocks]
 
-            if args.format == 'json':
-                print_json(block_data)
+            if args.format == 'yaml':
+                print_yaml(data)
+            elif args.format == 'json':
+                print_json(data)
             else:
-                print_yaml(block_data)
+                raise AssertionError('Missing handler: {}'.format(args.format))
 
         else:
-            raise AssertionError('unknown format: {}'.format(args.format))
+            raise AssertionError('Missing handler: {}'.format(args.format))
 
     if args.subcommand == 'show':
         block = rest_client.get_block(args.block_id)
@@ -156,4 +177,4 @@ def do_block(args):
             elif args.format == 'json':
                 print_json(block)
             else:
-                raise AssertionError('unknown format: {}'.format(args.format))
+                raise AssertionError('Missing handler: {}'.format(args.format))
