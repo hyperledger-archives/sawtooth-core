@@ -32,6 +32,13 @@ class RestClient(object):
         safe_id = urllib.quote(block_id, safe='')
         return self._get('/blocks/' + safe_id)['data']
 
+    def list_batches(self):
+        return self._get('/batches')['data']
+
+    def get_batch(self, batch_id):
+        safe_id = urllib.quote(batch_id, safe='')
+        return self._get('/batches/' + safe_id)['data']
+
     def list_state(self, subtree=None, head=None):
         queries = RestClient._remove_nones(address=subtree, head=head)
         return self._get('/state', queries)
