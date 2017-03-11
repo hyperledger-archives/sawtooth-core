@@ -23,12 +23,10 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.batch_pb2 import BatchList
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf.client_pb2 import ClientBatchSubmitRequest
 from sawtooth_validator.protobuf import network_pb2
-from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -320,17 +318,12 @@ class CompleterBatchListBroadcastHandler(Handler):
         self._gossip = gossip
 
     def handle(self, identity, message_content):
-        batch_list = BatchList()
-        batch_list.ParseFromString(message_content)
-        for batch in batch_list.batches:
+        request = ClientBatchSubmitRequest()
+        request.ParseFromString(message_content)
+        for batch in request.batches:
             self._completer.add_batch(batch)
             self._gossip.broadcast_batch(batch)
-        message = client_pb2.ClientBatchSubmitResponse(
-            status=client_pb2.ClientBatchSubmitResponse.OK)
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=message,
-            message_type=validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+        return HandlerResult(status=HandlerStatus.PASS)
 
 
 class CompleterGossipHandler(Handler):

@@ -46,7 +46,7 @@ def _make_mock_transaction(self, txn_id='txn_id', payload='payload'):
             header_signature=txn_id,
             payload=payload.encode())
 
-def _make_mock_batch(self, batch_id='batch_id'):
+def make_mock_batch(self, batch_id='batch_id'):
         txn = _make_mock_transaction(batch_id)
 
         header = BatchHeader(
@@ -93,7 +93,7 @@ class MockBlockStore(BlockStore):
         block = Block(
             header=header.SerializeToString(),
             header_signature=block_id,
-            batches=[_make_mock_batch(block_id)])
+            batches=[make_mock_batch(block_id)])
 
         self.update_chain([BlockWrapper(block)], [])
 
@@ -108,7 +108,7 @@ class MockBatchCache(TimedCache):
 
         for i in range(size):
             batch_id = _increment_key(start, i)
-            self[batch_id] = _make_mock_batch(batch_id)
+            self[batch_id] = make_mock_batch(batch_id)
 
 
 def make_db_and_store(size=3, start='a'):

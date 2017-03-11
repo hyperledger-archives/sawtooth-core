@@ -20,16 +20,17 @@ from google.protobuf.message import DecodeError
 
 from sawtooth_signing import secp256k1_signer as signing
 
+from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, BatchList
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.protobuf.validator_pb2 import Message
-from sawtooth_validator.protobuf.client_pb2 import ClientBatchSubmitResponse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -54,9 +55,9 @@ def validate_block(block):
     return valid
 
 
-def validate_batch_list(batch_list):
+def validate_batches(batches):
     valid = False
-    for batch in batch_list.batches:
+    for batch in batches:
         valid = validate_batch(batch)
         if valid is False:
             break
@@ -143,20 +144,22 @@ class GossipMessageSignatureVerifier(Handler):
 class BatchListSignatureVerifier(Handler):
 
     def handle(self, identity, message_content):
+        response_proto = client_pb2.ClientBatchSubmitResponse
+
+        def make_response(out_status):
+            return HandlerResult(
+                status=HandlerStatus.RETURN,
+                message_out=response_proto(status=out_status),
+                message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
         try:
-            batch_list = BatchList()
-            batch_list.ParseFromString(message_content)
-            status = validate_batch_list(batch_list)
+            request = client_pb2.ClientBatchSubmitRequest()
+            request.ParseFromString(message_content)
+            status = validate_batches(request.batches)
         except DecodeError:
-            return self._response(ClientBatchSubmitResponse.INTERNAL_ERROR)
+            return make_response(response_proto.INTERNAL_ERROR)
 
         if status is not True:
-            return self._response(ClientBatchSubmitResponse.INVALID_BATCH)
+            return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)
-
-    def _response(self, out_status):
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=ClientBatchSubmitResponse(status=out_status),
-            message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)

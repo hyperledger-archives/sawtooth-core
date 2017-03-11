@@ -43,12 +43,14 @@ class ApiTest(AioHTTPTestCase):
 
         Expects to find:
             - a response status of 202
+            - no data property
             - a link property that ends in '/batches?id=a'
         """
         request = await self.post_batch_ids('a')
         self.assertEqual(202, request.status)
 
         response = await request.json()
+        self.assertNotIn('data', response)
         self.assert_has_valid_link(response, '/batch_status?id=a')
 
     @unittest_run_loop
@@ -82,14 +84,58 @@ class ApiTest(AioHTTPTestCase):
 
         Expects to find:
             - a response status of 202
-            - a link property that ends in '/batches?id=a,b,c'
+            - no data property
+            - a link property that ends in '/batch_status?id=a,b,c'
         """
         request = await self.post_batch_ids('a', 'b', 'c')
         self.assertEqual(202, request.status)
 
         response = await request.json()
+        self.assertNotIn('data', response)
         self.assert_has_valid_link(response, '/batch_status?id=a,b,c')
 
+    @unittest_run_loop
+    async def test_post_no_batches(self):
+        """Verifies a POST /batches with no batches breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        request = await self.post_batch_ids()
+        self.assertEqual(400, request.status)
+
+    @unittest_run_loop
+    async def test_post_batch_with_wait(self):
+        """Verifies a POST /batches can wait for commit properly.
+
+        Expects to find:
+            - a response status of 201
+            - no data property
+        """
+        request = await self.post_batch_ids('a', wait=True)
+        self.assertEqual(201, request.status)
+
+        response = await request.json()
+        self.assertNotIn('data', response)
+
+    @unittest_run_loop
+    async def test_post_batch_with_timeout(self):
+        """Verifies a POST /batches works when timed out while waiting.
+
+        *Note: the mock submit handler marks ids of 'pending' as PENDING
+
+        Expects to find:
+            - a response status of 200
+            - a link property that ends in '/batch_status?id=pending'
+            - a data property that is a dict with the key/value pair:
+                * 'pending': 'PENDING'
+        """
+        request = await self.post_batch_ids('pending', wait=True)
+        self.assertEqual(200, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_link(response, '/batch_status?id=pending')
+        self.assert_has_valid_data_dict(response, {'pending': 'PENDING'})
 
     @unittest_run_loop
     async def test_batch_status_with_one_id(self):
@@ -103,13 +149,33 @@ class ApiTest(AioHTTPTestCase):
         Expects to find:
             - a response status of 200
             - a link property that ends in '/batch_status?id=pending'
-            - a data property that is a dict with the key/value pair
+            - a data property that is a dict with the key/value pair:
                 * 'pending': 'PENDING'
         """
         response = await self.get_json_assert_200('/batch_status?id=pending')
 
         self.assert_has_valid_link(response, '/batch_status?id=pending')
         self.assert_has_valid_data_dict(response, {'pending': 'PENDING'})
+
+    @unittest_run_loop
+    async def test_batch_status_with_wait(self):
+        """Verifies a GET /batch_status with a wait set works properly.
+
+        Fetches from preseeded id/status pairs that look like this with a wait:
+            'committed': COMMITTED
+            'pending': COMMITTED
+             *: UNKNOWN
+
+        Expects to find:
+            - a response status of 200
+            - a link property that ends in '/batch_status?id=pending&wait'
+            - a data property that is a dict with the key/value pair:
+                * 'pending': 'COMMITTED'
+        """
+        response = await self.get_json_assert_200('/batch_status?id=pending&wait')
+
+        self.assert_has_valid_link(response, '/batch_status?id=pending&wait')
+        self.assert_has_valid_data_dict(response, {'pending': 'COMMITTED'})
 
     @unittest_run_loop
     async def test_batch_status_with_many_ids(self):
@@ -123,7 +189,7 @@ class ApiTest(AioHTTPTestCase):
         Expects to find:
             - a response status of 200
             - link property ending in '/batch_status?id=committed,unknown,bad'
-            - a data property that is a dict with the key/value pair
+            - a data property that is a dict with the key/value pairs:
                 * 'committed': 'COMMITTED'
                 * 'unknown': 'UNKNOWN'
                 * 'bad': 'UNKNOWN'
@@ -513,14 +579,14 @@ class ApiTest(AioHTTPTestCase):
         """
         await self.assert_404('/blocks/bad')
 
-    async def post_batch_ids(self, *batch_ids):
+    async def post_batch_ids(self, *batch_ids, wait=False):
         batches = [batch_pb2.Batch(
             header_signature=batch_id,
             header=b'header') for batch_id in batch_ids]
         batch_list = batch_pb2.BatchList(batches=batches)
 
         return await self.client.post(
-            '/batches',
+            '/batches' + ('?wait' if wait else ''),
             data=batch_list.SerializeToString(),
             headers={'content-type': 'application/octet-stream'})
 

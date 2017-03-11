@@ -13,7 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-
+from time import time
+from threading import Condition
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -30,6 +31,7 @@ class BlockStore(MutableMapping):
     """
     def __init__(self, block_db):
         self._block_store = block_db
+        self._commit_condition = Condition()
 
     def __setitem__(self, key, value):
         if key != value.identifier:
@@ -111,8 +113,24 @@ class BlockStore(MutableMapping):
         """
         return self._block_store
 
-    @staticmethod
-    def _build_add_block_ops(blkw):
+    def wait_for_batch_commits(self, batch_ids=None, timeout=None):
+        """Waits for a set of batch ids to be committed to the block chain,
+        and returns True when they have. If timeout is exceeded, returns False.
+        If no batch_ids are passed in, it will return True on the next commit.
+        """
+        batch_ids = batch_ids or []
+        timeout = timeout or 300
+        start_time = time()
+
+        with self._commit_condition:
+            while True:
+                if all(self.has_batch(b) for b in batch_ids):
+                    return True
+                if time() - start_time > timeout:
+                    return False
+                self._commit_condition.wait(timeout - (time() - start_time))
+
+    def _build_add_block_ops(self, blkw):
         """Build the batch operations to add a block to the BlockStore.
 
         :param blkw (BlockWrapper): Block to add BlockStore.
@@ -121,11 +139,13 @@ class BlockStore(MutableMapping):
         """
         out = []
         blk_id = blkw.identifier
-        out.append((blk_id, blkw.block.SerializeToString()))
-        for batch in blkw.batches:
-            out.append((batch.header_signature, blk_id))
-            for txn in batch.transactions:
-                out.append((txn.header_signature, blk_id))
+        with self._commit_condition:
+            out.append((blk_id, blkw.block.SerializeToString()))
+            for batch in blkw.batches:
+                out.append((batch.header_signature, blk_id))
+                for txn in batch.transactions:
+                    out.append((txn.header_signature, blk_id))
+            self._commit_condition.notify_all()
         return out
 
     @staticmethod
