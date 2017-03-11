@@ -78,7 +78,9 @@ class _PoetEnclaveSimulator(object):
         # Create an anti-Sybil ID that is unique for this validator
         cls._anti_sybil_id = \
             hashlib.sha256(
-                kwargs.get('NodeName', 'validator').encode()).hexdigest()
+                kwargs.get(
+                    'NodeName',
+                    datetime.datetime.now().isoformat()).encode()).hexdigest()
 
     @classmethod
     def create_signup_info(cls,

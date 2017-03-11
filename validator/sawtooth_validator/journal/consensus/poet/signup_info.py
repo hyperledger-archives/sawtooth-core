@@ -32,10 +32,10 @@ class SignupInfo(object):
             be persisted and presented at a later time to restore the PoET
             enclave.
     """
-    poet_enclave = None
 
     @classmethod
     def create_signup_info(cls,
+                           poet_enclave_module,
                            validator_address,
                            originator_public_key_hash,
                            most_recent_wait_certificate_id):
@@ -44,6 +44,8 @@ class SignupInfo(object):
         validator network.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             validator_address (str): A string representing the address of the
                 validator requesting signup info.
             originator_public_key_hash (str): A string representing SHA256
@@ -53,48 +55,39 @@ class SignupInfo(object):
                 most-recently-created wait certificate.
 
         Returns:
-            SignupInfo object
+            SignupInfo: A signup info object.
         """
 
         enclave_signup_info = \
-            cls.poet_enclave.create_signup_info(
+            poet_enclave_module.create_signup_info(
                 validator_address,
                 originator_public_key_hash,
                 most_recent_wait_certificate_id)
         signup_info = cls(enclave_signup_info)
 
-        LOGGER.info("signup info created: %s", signup_info)
-
         return signup_info
 
     @classmethod
-    def signup_info_from_serialized(cls, serialized):
+    def signup_info_from_serialized(cls, poet_enclave_module, serialized):
         """
         Converts serialized signup info into an object.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             serialized (str): The serialized signup info
 
         Returns:
-            journal.consensus.poet.signup_info.SignupInfo: A signup
-                info object.
+            SignupInfo: A signup info object.
         """
         enclave_signup_info = \
-            cls.poet_enclave.deserialize_signup_info(serialized)
+            poet_enclave_module.deserialize_signup_info(serialized)
 
         return cls(enclave_signup_info)
 
-    @property
-    def enclave_signup_info(self):
-        if self._enclave_signup_info is None:
-            self._enclave_signup_info = \
-                self.poet_enclave.deserialize_signup_info(
-                    self._serialized_signup_info)
-
-        return self._enclave_signup_info
-
     @classmethod
     def unseal_signup_data(cls,
+                           poet_enclave_module,
                            validator_address,
                            sealed_signup_data):
         """
@@ -102,6 +95,8 @@ class SignupInfo(object):
         re-establishes the PoET 1 enclave state.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             validator_address (str): A string representing the address of the
                 validator that is requesting signup data be unsealed.
             sealed_signup_data: The sealed signup data that was previously
@@ -113,18 +108,20 @@ class SignupInfo(object):
             PoET to sign wait certificates.
         """
         return \
-            cls.poet_enclave.unseal_signup_data(
+            poet_enclave_module.unseal_signup_data(
                 validator_address,
                 sealed_signup_data)
+
+    def _enclave_signup_info(self, poet_enclave_module):
+        return \
+            poet_enclave_module.deserialize_signup_info(
+                self._serialized_signup_info)
 
     def __init__(self, enclave_signup_info):
         self.poet_public_key = enclave_signup_info.poet_public_key
         self.proof_data = enclave_signup_info.proof_data
         self.anti_sybil_id = enclave_signup_info.anti_sybil_id
         self.sealed_signup_data = enclave_signup_info.sealed_signup_data
-
-        self._enclave_signup_info = None
-        self._attestation_verification_rep = None
 
         # We cannot hold the signup info because it cannot be pickled for
         # storage
@@ -138,12 +135,15 @@ class SignupInfo(object):
                 self.anti_sybil_id)
 
     def check_valid(self,
+                    poet_enclave_module,
                     originator_public_key_hash,
                     most_recent_wait_certificate_id):
         """
         Checks the validity of the signup information.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             originator_public_key_hash (str): A string representing SHA256
                 hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
                 originator's public key
@@ -153,8 +153,8 @@ class SignupInfo(object):
         Returns:
             SignupInfo object
         """
-        self.poet_enclave.verify_signup_info(
-            self.enclave_signup_info,
+        poet_enclave_module.verify_signup_info(
+            self._enclave_signup_info(poet_enclave_module),
             originator_public_key_hash,
             most_recent_wait_certificate_id)
 

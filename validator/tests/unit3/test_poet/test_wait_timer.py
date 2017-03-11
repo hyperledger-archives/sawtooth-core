@@ -40,36 +40,47 @@ class TestWaitTimer(unittest.TestCase):
         # This is a little ham-handed, but we need to ensure that the
         # PoET enclave is set back to initial state at the start of every
         # test.
-        SignupInfo.poet_enclave = reload(poet_enclave)
-        wait_timer.WaitTimer.poet_enclave = poet_enclave
+        self.poet_enclave_module = reload(poet_enclave)
 
         args = {"NodeName": "DasValidator"}
-        SignupInfo.poet_enclave.initialize(**args)
+        self.poet_enclave_module.initialize(**args)
 
     def test_create_wait_timer_with_invalid_certificate_list(self):
+        # Need to create signup information first
+        SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
+            validator_address='1060 W Addison Street',
+            originator_public_key_hash=self._originator_public_key_hash,
+            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+
         # Make sure that invalid certificate lists cause error
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=None)
 
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=dict())
 
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=1)
 
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=1.0)
 
         with self.assertRaises(TypeError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates='Not a valid list')
 
@@ -78,11 +89,13 @@ class TestWaitTimer(unittest.TestCase):
         # information is provided causes an error
         with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
         with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=tuple())
 
@@ -90,6 +103,7 @@ class TestWaitTimer(unittest.TestCase):
         # Need to create signup information first
         signup_info = \
             SignupInfo.create_signup_info(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 originator_public_key_hash=self._originator_public_key_hash,
                 most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
@@ -99,6 +113,7 @@ class TestWaitTimer(unittest.TestCase):
         # An empty certificate list should result in a local mean that is
         # the target wait time
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
@@ -113,6 +128,7 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=tuple())
 
@@ -127,23 +143,25 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
         # Ensure that the enclave is set back to initial state
-        SignupInfo.poet_enclave = reload(poet_enclave)
-        wait_timer.WaitTimer.poet_enclave = SignupInfo.poet_enclave
+        self.poet_enclave_module = reload(poet_enclave)
 
         # Make sure that trying to create a wait timer before signup
         # information is provided causes an error
         with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
         with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=tuple())
 
         # Initialize the enclave with sealed signup data
         SignupInfo.unseal_signup_data(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             sealed_signup_data=signup_info.sealed_signup_data)
 
@@ -152,6 +170,7 @@ class TestWaitTimer(unittest.TestCase):
         # An empty certificate list should result in a local mean that is
         # the target wait time
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
@@ -166,6 +185,7 @@ class TestWaitTimer(unittest.TestCase):
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1600 Pennsylvania Avenue NW',
                 certificates=tuple())
 
@@ -208,12 +228,14 @@ class TestWaitTimer(unittest.TestCase):
     def test_has_expired(self):
         # Need to create signup information first
         SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
         # Verify that a timer doesn't expire before its creation time
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
         self.assertFalse(wt.has_expired(wt.request_time - 1))
@@ -221,6 +243,7 @@ class TestWaitTimer(unittest.TestCase):
         # Create a timer and when it has expired, verify that the duration is
         # not greater than actual elapsed time.
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
@@ -231,6 +254,7 @@ class TestWaitTimer(unittest.TestCase):
 
         # Tampering with the duration should not affect wait timer expiration
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
 
@@ -245,6 +269,7 @@ class TestWaitTimer(unittest.TestCase):
         # Tampering with the request time should not affect wait timer
         # expiration
         wt = wait_timer.WaitTimer.create_wait_timer(
+                poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 certificates=[])
         assigned_request_time = wt.request_time

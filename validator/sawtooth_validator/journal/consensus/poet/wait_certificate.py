@@ -39,8 +39,6 @@ class WaitCertificate(object):
     """Represents wait certificates, which include a random wait timer.
 
     Attributes:
-        WaitCertificate.poet_enclave (module): The PoetEnclave module to use
-            for executing enclave functions.
         previous_certificate_id (str): The id of the previous
             certificate.
         local_mean (float): The local mean wait time based on
@@ -55,30 +53,31 @@ class WaitCertificate(object):
         signature (str): The signature of the certificate.
         identifier (str): The identifier of this certificate.
     """
-    poet_enclave = None
 
     @classmethod
     def create_wait_certificate(cls,
+                                poet_enclave_module,
                                 wait_timer,
                                 block_hash):
         """Creates a wait certificate in the enclave and then constructs
         a WaitCertificate object from it.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             wait_timer (WaitTimer): The wait timer for which the wait
                 certificate is being requested.
             block_hash (str): The hash of the block for which this
                 certificate is being created.
 
         Returns:
-            journal.consensus.poet.wait_certificate.WaitCertificate: A new
-                wait certificate.
+            WaitCertificate: A new wait certificate.
         """
 
         enclave_certificate = None
         try:
             enclave_certificate = \
-                cls.poet_enclave.create_wait_certificate(
+                poet_enclave_module.create_wait_certificate(
                     wait_timer.enclave_wait_timer,
                     block_hash)
         except AttributeError as ex:
@@ -91,28 +90,27 @@ class WaitCertificate(object):
                 ValueError(
                     'Failed to create an enclave wait certificate')
 
-        certificate = cls(enclave_certificate)
-        LOGGER.info('wait certificate created: %s', certificate)
-
-        return certificate
+        return cls(enclave_certificate)
 
     @classmethod
     def wait_certificate_from_serialized(cls,
+                                         poet_enclave_module,
                                          serialized,
                                          signature):
         """Converts a serialized wait certificate into an object.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             serialized (str): The serialized wait certificate.
             signature (str): The signature.
 
         Returns:
-            journal.consensus.poet.wait_certificate.WaitCertificate: A wait
-                certificate representing the contents of the serialized wait
-                certificate.
+            WaitCertificate: A wait certificate representing the contents of
+                the serialized wait certificate.
         """
         enclave_certificate = \
-            cls.poet_enclave.deserialize_wait_certificate(
+            poet_enclave_module.deserialize_wait_certificate(
                 serialized,
                 signature)
 
@@ -124,15 +122,14 @@ class WaitCertificate(object):
         return cls(enclave_certificate)
 
     @property
-    def enclave_wait_certificate(self):
-        return \
-            self.poet_enclave.deserialize_wait_certificate(
-                self._serialized_certificate,
-                self.signature)
-
-    @property
     def population_estimate(self):
         return self.local_mean / WaitTimer.target_wait_time
+
+    def _enclave_wait_certificate(self, poet_enclave_module):
+        return \
+            poet_enclave_module.deserialize_wait_certificate(
+                self._serialized_certificate,
+                self.signature)
 
     def __init__(self, enclave_certificate):
         """Initialize the wait certificate from a PoET enclave wait
@@ -163,10 +160,15 @@ class WaitCertificate(object):
                 self.identifier,
                 self.previous_certificate_id)
 
-    def check_valid(self, certificates, poet_public_key):
+    def check_valid(self,
+                    poet_enclave_module,
+                    certificates,
+                    poet_public_key):
         """Determines whether the wait certificate is valid.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             certificates (list): A list of historical certs.
             poet_public_key (str): The PoET public key that corresponds to
                 the private key used to sign the certificate.  This is
@@ -177,7 +179,8 @@ class WaitCertificate(object):
         Returns:
             True if the wait certificate is valid, False otherwise.
         """
-        enclave_certificate = self.enclave_wait_certificate
+        enclave_certificate = \
+            self._enclave_wait_certificate(poet_enclave_module)
         expected_mean = WaitTimer.compute_local_mean(certificates)
 
         if enclave_certificate.duration < WaitTimer.minimum_wait_time:
@@ -208,7 +211,7 @@ class WaitCertificate(object):
                         certificates[-1].identifier))
 
         try:
-            self.poet_enclave.verify_wait_certificate(
+            poet_enclave_module.verify_wait_certificate(
                 enclave_certificate,
                 poet_public_key)
         except Timeout:

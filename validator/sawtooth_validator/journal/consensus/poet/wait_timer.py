@@ -33,8 +33,6 @@ class WaitTimer(object):
         WaitTimer.fixed_duration_blocks (int): If fewer than
             WaitTimer.fixed_duration_blocks exist, then base the local mean
             on a ratio based on InitialWaitTime, rather than the history.
-        WaitTimer.poet_enclave (module): The PoetEnclave module to use for
-            executing enclave functions.
         previous_certificate_id (str): The id of the previous certificate.
         local_mean (float): The local mean wait time based on the history of
             certs.
@@ -48,8 +46,6 @@ class WaitTimer(object):
     initial_wait_time = 3000.0
     certificate_sample_length = 50
     fixed_duration_blocks = certificate_sample_length
-
-    poet_enclave = None
 
     @classmethod
     def _compute_population_estimate(cls, certificates):
@@ -92,12 +88,15 @@ class WaitTimer(object):
 
     @classmethod
     def create_wait_timer(cls,
+                          poet_enclave_module,
                           validator_address,
                           certificates):
         """Creates a wait timer in the enclave and then constructs
         a WaitTimer object.
 
         Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
             validator_address (str): A string representing the address of the
                 validator creating the wait timer.
             certificates (list or tuple): A historical list of certificates.
@@ -114,16 +113,13 @@ class WaitTimer(object):
         # Create an enclave timer object and then use it to create a
         # WaitTimer object
         enclave_timer = \
-            cls.poet_enclave.create_wait_timer(
+            poet_enclave_module.create_wait_timer(
                 validator_address,
                 previous_certificate_id,
                 local_mean,
                 cls.minimum_wait_time)
-        timer = cls(enclave_timer)
 
-        LOGGER.info('wait timer created; %s', timer)
-
-        return timer
+        return cls(enclave_timer)
 
     @classmethod
     def compute_local_mean(cls, certificates):
@@ -161,7 +157,8 @@ class WaitTimer(object):
         """Converts the serialized timer into an eclave timer object.
 
         Returns:
-            poet_enclave.WaitTimer: The deserialized enclave timer object.
+            <poet_enclave_module>.WaitTimer: The deserialized enclave timer
+                object.
         """
         return self._enclave_wait_timer
 
