@@ -116,7 +116,7 @@ Clone or copy the repository into the VM environment:
 
    vagrant@ubuntu $ mkdir -p $HOME/projects
    vagrant@ubuntu $ cd $HOME/projects
-   vagrant@ubuntu $ git clone https://github.com/IntelLedger/sawtooth-core.git
+   vagrant@ubuntu $ git clone https://github.com/hyperledger/sawtooth-core.git
 
 .. note::
 

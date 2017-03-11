@@ -54,7 +54,7 @@ Open up a terminal and run the following:
    % cd $HOME
    % mkdir project
    % cd project
-   % git clone https://github.com/IntelLedger/sawtooth-core.git
+   % git clone https://github.com/hyperledger/sawtooth-core.git 
 
 Environment Startup
 ===================

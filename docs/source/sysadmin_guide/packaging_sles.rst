@@ -98,7 +98,7 @@ Clone or copy the repositories into the SLES environment:
 
    root@sles # mkdir -p $HOME/projects
    root@sles # cd $HOME/projects
-   root@sles # git clone git@github.com:IntelLedger/sawtooth-core.git
+   root@sles # git clone git@github.com:hyperledger/sawtooth-core.git
 
 .. note::
 
