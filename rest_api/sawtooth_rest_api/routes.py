@@ -220,7 +220,11 @@ class RouteHandler(object):
         for trap in traps:
             trap.check(parsed.status)
 
-        return MessageToDict(parsed, preserving_proto_field_name=True)
+        return MessageToDict(
+            parsed,
+            including_default_value_fields=True,
+            preserving_proto_field_name=True,
+        )
 
     @staticmethod
     def _wrap_response(data=None, metadata=None, status=200):
