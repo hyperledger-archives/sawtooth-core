@@ -73,15 +73,16 @@ class RouteHandler(object):
             error_traps)
 
         # Build response
-        data = response.get('batch_statuses', None)
+        data = response['batch_statuses']
         metadata = {
             'link': '{}://{}/batch_status?id={}'.format(
                 request.scheme,
                 request.host,
                 ','.join(b.header_signature for b in batch_list.batches))}
 
-        if data is None:
+        if not data:
             status = 202
+            data = None
         elif any(s != 'COMMITTED' for _, s in data.items()):
             status = 200
         else:
