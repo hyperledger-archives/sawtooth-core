@@ -183,7 +183,10 @@ class RouteHandler(object):
         """
         Fetch a list of blocks from the validator
         """
-        error_traps = [error_handlers.MissingBlock()]
+        error_traps = [
+            error_handlers.MissingBlock(),
+            error_handlers.InvalidBlockId()]
+
         block_id = request.match_info.get('block_id', '')
 
         response = self._query_validator(
@@ -218,7 +221,10 @@ class RouteHandler(object):
         """
         Fetch a particular batch from the validator
         """
-        error_traps = [error_handlers.MissingBatch()]
+        error_traps = [
+            error_handlers.MissingBatch(),
+            error_handlers.InvalidBatchId()]
+
         batch_id = request.match_info.get('batch_id', '')
 
         response = self._query_validator(

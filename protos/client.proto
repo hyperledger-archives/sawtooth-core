@@ -238,11 +238,13 @@ message ClientBlockGetRequest {
 //   * OK - everything worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NO_RESOURCE - no block with the specified id exists
+//   * INVALID_ID - id isn't a valid, it may actually be a batch or txn
 message ClientBlockGetResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         NO_RESOURCE = 4;
+        INVALID_ID = 5;
     }
     Status status = 1;
     Block block = 2;
@@ -286,11 +288,13 @@ message ClientBatchGetRequest {
 //   * OK - everything worked as expected, batch has been fetched
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NO_RESOURCE - no batch with the specified id exists
+//   * INVALID_ID - id isn't a valid, possibly because it is actually a block
 message ClientBatchGetResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         NO_RESOURCE = 4;
+        INVALID_ID = 5;
     }
     Status status = 1;
     Batch batch = 2;

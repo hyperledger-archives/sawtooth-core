@@ -392,6 +392,9 @@ class BlockGetRequest(_ClientRequestHandler):
         except KeyError:
             LOGGER.debug('No block "%s" in store', request.block_id)
             return self._status.NO_RESOURCE
+        except TypeError:
+            LOGGER.debug('"%s" is a batch is, not block', request.block_id)
+            return self._status.INVALID_ID
         return self._wrap_response(block=block)
 
 
@@ -423,4 +426,7 @@ class BatchGetRequest(_ClientRequestHandler):
         except ValueError:
             LOGGER.debug('No batch "%s" in store', request.batch_id)
             return self._status.NO_RESOURCE
+        except KeyError:
+            LOGGER.debug('"%s" is a block id, not batch', request.batch_id)
+            return self._status.INVALID_ID
         return self._wrap_response(batch=batch)
