@@ -800,6 +800,18 @@ class TestBlockGetRequests(_ClientHandlerTestCase):
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())
 
+    def test_block_get_with_batch_id(self):
+        """Verifies requests for a block break properly with a batch id.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that the Block returned, when serialized, is empty
+        """
+        response = self.make_request(block_id='b-1')
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertFalse(response.block.SerializeToString())
+
 
 class TestBatchListRequests(_ClientHandlerTestCase):
     def setUp(self):
@@ -941,4 +953,16 @@ class TestBatchGetRequests(_ClientHandlerTestCase):
         response = self.make_request(batch_id='bad')
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.batch.SerializeToString())
+
+    def test_batch_get_with_block_id(self):
+        """Verifies requests for a batch break properly with a block id.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that the Batch returned, when serialized, is actually empty
+        """
+        response = self.make_request(batch_id='B-1')
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
         self.assertFalse(response.batch.SerializeToString())

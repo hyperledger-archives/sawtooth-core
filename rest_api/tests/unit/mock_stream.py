@@ -366,6 +366,10 @@ class _BlockGetHandler(_MockHandler):
         request = self._parse_request(content)
         store = _MockBlockStore()
 
+        if request.block_id == 'bad':
+            return self._response_proto(
+                status=self._response_proto.INVALID_ID)
+
         block = store.get_block(request.block_id)
         if not block:
             return self._response_proto(
@@ -408,6 +412,10 @@ class _BatchGetHandler(_MockHandler):
     def handle(self, content):
         request = self._parse_request(content)
         store = _MockBlockStore()
+
+        if request.batch_id == 'bad':
+            return self._response_proto(
+                status=self._response_proto.INVALID_ID)
 
         block = store.get_block(request.batch_id)
 

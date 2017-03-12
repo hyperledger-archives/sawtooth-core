@@ -573,12 +573,21 @@ class ApiTest(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):
-        """Verifies a GET /blocks/{block_id} with a bad id breaks properly.
+        """Verifies a GET /blocks/{block_id} with invalid id breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        await self.assert_400('/blocks/bad')
+
+    @unittest_run_loop
+    async def test_block_get_with_missing_id(self):
+        """Verifies a GET /blocks/{block_id} with not found id breaks properly.
 
         Expects to find:
             - a response status of 404
         """
-        await self.assert_404('/blocks/bad')
+        await self.assert_404('/blocks/missing')
 
     @unittest_run_loop
     async def test_batch_list(self):
@@ -692,12 +701,22 @@ class ApiTest(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_batch_get_with_bad_id(self):
-        """Verifies a GET /batches/{batch_id} with a bad id breaks properly.
+        """Verifies a GET /batches/{batch_id} with invalid id breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        await self.assert_400('/batches/bad')
+
+    @unittest_run_loop
+    async def test_batch_get_with_missing_id(self):
+        """Verifies a GET /batches/{batch_id} with not found id breaks properly.
 
         Expects to find:
             - a response status of 404
         """
-        await self.assert_404('/batches/bad')
+        await self.assert_404('/batches/missing')
+
 
     async def post_batch_ids(self, *batch_ids, wait=False):
         batches = [batch_pb2.Batch(
@@ -718,6 +737,9 @@ class ApiTest(AioHTTPTestCase):
     async def get_json_assert_200(self, endpoint):
         request = await self.get_and_assert_status(endpoint, 200)
         return await request.json()
+
+    async def assert_400(self, endpoint):
+        await self.get_and_assert_status(endpoint, 400)
 
     async def assert_404(self, endpoint):
         await self.get_and_assert_status(endpoint, 404)
