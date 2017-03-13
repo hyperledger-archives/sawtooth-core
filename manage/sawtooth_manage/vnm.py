@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from threading import Thread
+
 
 class ValidatorNetworkManager(object):
     def __init__(self,
@@ -23,8 +25,20 @@ class ValidatorNetworkManager(object):
 
     def update(self):
         commands = self._node_command_generator.get_commands()
+
+        # execute commands in parallel
+        threads = []
         for command in commands:
-            command.execute(self._node_controller)
+            thread = Thread(
+                target=command.execute,
+                args=(self._node_controller,))
+            thread.start()
+            threads.append(thread)
+
+        # block until all threads have completed or timed out
+        wait_time = 10
+        for thread in threads:
+            thread.join(wait_time)
 
     def get_node_names(self):
         return self._node_controller.get_node_names()
