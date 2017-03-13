@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 import os
 
-from sawtooth_cli.admin_command.config import ensure_directory
+from sawtooth_cli.admin_command.config import get_data_dir
 from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
@@ -39,12 +39,18 @@ def add_genesis_parser(subparsers, parent_parser):
         help='input files of batches to add to the resulting GenesisData')
 
 
-def do_genesis(args):
+def do_genesis(args, data_dir=None):
     """Given the command args, take an series of input files containing
     GenesisData, combine all the batches into one GenesisData, and output the
     result into a new file.
     """
-    data_dir = ensure_directory('data', '/var/lib/sawtooth')
+
+    if data_dir is None:
+        data_dir = get_data_dir()
+
+    if not os.path.exists(data_dir):
+        raise CliException(
+            "Data directory does not exist: {}".format(data_dir))
 
     genesis_batches = []
     for input_file in args.input_file:

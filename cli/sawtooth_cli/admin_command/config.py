@@ -15,42 +15,73 @@
 
 import os
 import sys
+import toml
 
 
-def ensure_directory(sawtooth_home_path, posix_fallback_path):
-    """Ensures the one of the given sets of directories exists.
-
-    The dirctory in sawtooth_home_path is ensured to exist, if `SAWTOOTH_HOME`
-    exists. If the host operating system is windows, `SAWTOOTH_HOME` is
-    defaulted to `C:\\Program Files (x86)\\Intel\\sawtooth-validator`,
-    Otherwise, the given posix fallback path is ensured to exist.
-
-    Args:
-        sawtooth_home_dirs (str): Subdirectory of `SAWTOOTH_HOME`.
-        posix_fallback_dir (str): Fallback directory path if `SAWTOOTH_HOME` is
-            unset on posix host system.
-
-    Returns:
-        str: The path determined to exist.
+def _get_config_dir():
+    """Returns the sawtooth configuration directory based on the
+    SAWTOOTH_HOME environment variable (if set) or OS defaults.
     """
     if 'SAWTOOTH_HOME' in os.environ:
-        sawtooth_home_dirs = sawtooth_home_path.split('/')
-        sawtooth_dir = os.path.join(os.environ['SAWTOOTH_HOME'],
-                                    *sawtooth_home_dirs)
+        return os.path.join(os.environ['SAWTOOTH_HOME'], 'etc')
     elif os.name == 'nt':
-        default_win_home = \
-            'C:\\Program Files (x86)\\Intel\\sawtooth-validator\\'
-        sawtooth_home_dirs = sawtooth_home_path.split('/')
-        sawtooth_dir = os.path.join(default_win_home, *sawtooth_home_dirs)
+        base_dir = \
+            os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+        return os.path.join(base_dir, 'conf')
     else:
-        sawtooth_dir = posix_fallback_path
+        return '/etc/sawtooth'
 
-    if not os.path.exists(sawtooth_dir):
-        try:
-            os.makedirs(sawtooth_dir, exist_ok=True)
-        except OSError as e:
-            print('Unable to create {}: {}'.format(sawtooth_dir, e),
-                  file=sys.stderr)
-            sys.exit(1)
 
-    return sawtooth_dir
+def _get_dir(toml_config_setting,
+             sawtooth_home_dir,
+             windows_dir,
+             default_dir):
+    """Determines the directory path based on configuration.
+
+    Arguments:
+        toml_config_setting (str): The name of the config setting related
+            to the directory which will appear in path.toml.
+        sawtooth_home_dir (str): The directory under the SAWTOOTH_HOME
+            environment variable.  For example, for 'data' if the data
+            directory is $SAWTOOTH_HOME/data.
+        windows_dir (str): The windows path relative to the computed base
+            directory.
+        default_dir (str): The default path on Linux.
+
+    Returns:
+        directory (str): The path.
+    """
+    conf_file = os.path.join(_get_config_dir(), 'path.toml')
+    if os.path.exists(conf_file):
+        with open(conf_file) as fd:
+            raw_config = fd.read()
+        toml_config = toml.loads(raw_config)
+        if toml_config_setting in toml_config:
+            return toml_config[toml_config_setting]
+
+    if 'SAWTOOTH_HOME' in os.environ:
+        return os.path.join(os.environ['SAWTOOTH_HOME'], sawtooth_home_dir)
+    elif os.name == 'nt':
+        base_dir = \
+            os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+        return os.path.join(base_dir, windows_dir)
+    else:
+        return default_dir
+
+
+def get_data_dir():
+    """Returns the configured data directory."""
+    return _get_dir(
+        toml_config_setting='data_dir',
+        sawtooth_home_dir='data',
+        windows_dir='data',
+        default_dir='/var/lib/sawtooth')
+
+
+def get_key_dir():
+    """Returns the configured key directory."""
+    return _get_dir(
+        toml_config_setting='key_dir',
+        sawtooth_home_dir='keys',
+        windows_dir=os.path.join('conf', 'keys'),
+        default_dir='/etc/sawtooth/keys')
