@@ -126,6 +126,7 @@ test_sdk() {
     # intkey
     run_docker_test tp-intkey-python -s validator -p $ISOLATION_ID
     run_docker_test tp-intkey-java -s validator -p $ISOLATION_ID
+    run_docker_test tp-intkey-javascript -s validator -p $ISOLATION_ID
     run_docker_test intkey-smoke -s integration_test -p $ISOLATION_ID
 
     # xo

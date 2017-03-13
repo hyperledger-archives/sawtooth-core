@@ -18,11 +18,12 @@ version: "2.1"
 services:
 
   tp_intkey:
-    image: sawtooth-tp_intkey_js:$ISOLATION_ID
+    image: sawtooth-tp_intkey_javascript:$ISOLATION_ID
     volumes:
       - ../../..:/project/sawtooth-core
     expose:
       - 40000
+    entrypoint: ./bin/tp_intkey_javascript tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -36,4 +37,5 @@ services:
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/integration"
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"

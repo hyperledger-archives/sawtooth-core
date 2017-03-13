@@ -69,6 +69,8 @@ node ('master') {
             }
             sh 'docker build . -f docker/sawtooth-build-java -t sawtooth-build-java:$BUILD_TAG'
             sh 'docker run -v $(pwd):/project/sawtooth-core sawtooth-build-java:$BUILD_TAG'
+            sh 'docker build . -f docker/sawtooth-build-javascript -t sawtooth-build-javascript:$BUILD_TAG'
+            sh 'docker run -v $(pwd):/project/sawtooth-core sawtooth-build-javascript:$BUILD_TAG'
         }
 
         stage("Run Lint") {
