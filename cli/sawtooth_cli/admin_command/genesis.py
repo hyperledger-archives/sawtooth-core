@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 import os
 
+from sawtooth_cli.admin_command.config import ensure_directory
 from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
@@ -38,11 +39,13 @@ def add_genesis_parser(subparsers, parent_parser):
         help='input files of batches to add to the resulting GenesisData')
 
 
-def do_genesis(args, data_dir):
+def do_genesis(args):
     """Given the command args, take an series of input files containing
     GenesisData, combine all the batches into one GenesisData, and output the
     result into a new file.
     """
+    data_dir = ensure_directory('data', '/var/lib/sawtooth')
+
     genesis_batches = []
     for input_file in args.input_file:
         print('Processing {}...'.format(input_file))
