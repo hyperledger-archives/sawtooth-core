@@ -45,8 +45,8 @@ def get_enum_name(enum_value):
 
 
 class _SendReceive(object):
-    def __init__(self, connection, address, futures, identity=None,
-                 dispatcher=None, secured=False,
+    def __init__(self, connection, address, futures, connections,
+                 zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
                  heartbeat=False, heartbeat_interval=10):
         """
@@ -56,6 +56,14 @@ class _SendReceive(object):
             connection (str): A locally unique identifier for this
                 thread's connection. Used to identify the connection
                 in the dispatcher for transmitting responses.
+            futures (future.FutureCollection): A Map of correlation ids to
+                futures
+            connections (dict): A dictinary that uses a sha512 hash as the keys
+                and either an OutboundConnection or string identiy as values.
+            zmq_identity (bytes): Used to idenitfy the dealer socket
+            address (str): The endpoint to bind or connect to.
+            dispatcher (dispatcher.Dispather): Used to handle messages in a
+                coordinated way.s
             secured (bool): Whether or not to start the socket in
                 secure mode -- using zmq auth.
             server_public_key (bytes): A public key to use in verifying
@@ -71,7 +79,7 @@ class _SendReceive(object):
         self._dispatcher = dispatcher
         self._futures = futures
         self._address = address
-        self._identity = identity
+        self._zmq_identity = zmq_identity
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
@@ -85,6 +93,11 @@ class _SendReceive(object):
         self._condition = Condition()
 
         self._connected_identities = {}
+        self._connections = connections
+
+    @property
+    def connection(self):
+        return self._connection
 
     @asyncio.coroutine
     def _send_heartbeat(self):
@@ -98,7 +111,7 @@ class _SendReceive(object):
                 expired = [ident for ident in self._connected_identities
                            if time.time() - self._connected_identities[ident] >
                            self._heartbeat_interval]
-                for identity in expired:
+                for zmq_identity in expired:
                     message = validator_pb2.Message(
                         correlation_id=_generate_id(),
                         content=ping.SerializeToString(),
@@ -107,29 +120,33 @@ class _SendReceive(object):
                                         message.content,
                                         has_callback=False)
                     self._futures.put(fut)
-                    yield from self._send_message(identity, message)
+                    yield from self._send_message(zmq_identity, message)
             yield from asyncio.sleep(self._heartbeat_interval)
 
-    def _received_from_identity(self, identity):
-        self._connected_identities[identity] = time.time()
+    def _received_from_identity(self, zmq_identity):
+        self._connected_identities[zmq_identity] = time.time()
+        connection_id = hashlib.sha512(zmq_identity).hexdigest()
+        if connection_id not in self._connections:
+            self._connections[connection_id] = ("ZMQ_Identity", zmq_identity)
 
     @asyncio.coroutine
     def _receive_message(self):
         """
         Internal coroutine for receiving messages
         """
+        zmq_identity = None
         with self._condition:
             self._condition.wait_for(lambda: self._socket is not None)
         while True:
             if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                identity, msg_bytes = yield from self._socket.recv_multipart()
-                self._received_from_identity(identity)
+                zmq_identity, msg_bytes = \
+                    yield from self._socket.recv_multipart()
+                self._received_from_identity(zmq_identity)
             else:
                 msg_bytes = yield from self._socket.recv()
 
             message = validator_pb2.Message()
             message.ParseFromString(msg_bytes)
-
             LOGGER.debug("%s receiving %s message: %s bytes",
                          self._connection,
                          get_enum_name(message.message_type),
@@ -141,15 +158,14 @@ class _SendReceive(object):
                     future.FutureResult(message_type=message.message_type,
                                         content=message.content))
             except future.FutureCollectionKeyError:
-                if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                    self._dispatcher.dispatch(self._connection,
-                                              message,
-                                              identity=identity)
+                if zmq_identity is not None:
+                    connection_id = hashlib.sha512(zmq_identity).hexdigest()
                 else:
-                    # Because this is a zmq.DEALER socket, there is no
-                    # outbound identity
-                    self._dispatcher.dispatch(self._connection,
-                                              message)
+                    connection_id = \
+                        hashlib.sha512(self._connection.encode()).hexdigest()
+                self._dispatcher.dispatch(self._connection,
+                                          message,
+                                          connection_id)
             else:
                 my_future = self._futures.get(message.correlation_id)
 
@@ -174,14 +190,21 @@ class _SendReceive(object):
                               msg.SerializeToString()]
         yield from self._socket.send_multipart(message_bundle)
 
-    def send_message(self, msg, identity=None):
+    def send_message(self, msg, connection_id=None):
         """
         :param msg: protobuf validator_pb2.Message
         """
+        zmq_identity = None
+        if connection_id is not None:
+            connection_type, connection = self._connections.get(connection_id)
+            if connection_type == "ZMQ_Identity":
+                zmq_identity = connection
+
         with self._condition:
             self._condition.wait_for(lambda: self._event_loop is not None)
-        asyncio.run_coroutine_threadsafe(self._send_message(identity, msg),
-                                         self._event_loop)
+        asyncio.run_coroutine_threadsafe(
+            self._send_message(zmq_identity, msg),
+            self._event_loop)
 
     def setup(self, socket_type):
         """
@@ -201,7 +224,7 @@ class _SendReceive(object):
 
         if socket_type == zmq.DEALER:
             self._socket.identity = "{}-{}".format(
-                self._identity,
+                self._zmq_identity,
                 hashlib.sha512(uuid.uuid4().hex.encode()
                                ).hexdigest()[:23]).encode('ascii')
 
@@ -253,7 +276,7 @@ class Interconnect(object):
     def __init__(self,
                  endpoint,
                  dispatcher,
-                 identity=None,
+                 zmq_identity=None,
                  peer_connections=None,
                  secured=False,
                  server_public_key=None,
@@ -275,14 +298,17 @@ class Interconnect(object):
         """
         self._futures = future.FutureCollection()
         self._dispatcher = dispatcher
-        self._identity = identity
+        self._zmq_identity = zmq_identity
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
+        self._connections = {}
+        self.outbound_connections = {}
 
         self._send_receive_thread = _SendReceive(
             "ServerThread",
+            connections=self._connections,
             address=endpoint,
             dispatcher=dispatcher,
             futures=self._futures,
@@ -292,40 +318,60 @@ class Interconnect(object):
             heartbeat=heartbeat)
 
         self._thread = None
-
+        self._identities = []
         if peer_connections is not None:
-            self.connections = [
-                Connection(
-                    endpoint=addr,
-                    dispatcher=dispatcher,
-                    identity=identity,
-                    secured=secured,
-                    server_public_key=server_public_key,
-                    server_private_key=server_private_key)
-                for addr in peer_connections]
+            for addr in peer_connections:
+                self.add_connection(addr)
         else:
             self.connections = []
 
-    def send(self, message_type, data, identity, has_callback=False):
+    def add_connection(self, uri):
+        """Adds an outbound connection to the network.
+
+        Args:
+            connection (OutboundConnection): The connection to add.
+        """
+        LOGGER.debug("Adding connection to %s", uri)
+        conn = OutboundConnection(
+            connections=self._connections,
+            endpoint=uri,
+            dispatcher=self._dispatcher,
+            zmq_identity=self._zmq_identity,
+            secured=self._secured,
+            server_public_key=self._server_public_key,
+            server_private_key=self._server_private_key,
+            heartbeat=False)
+
+        self.outbound_connections[uri] = conn
+        conn.start(daemon=True)
+
+        self._add_connection(conn)
+        return conn
+
+    def send(self, message_type, data, connection_id, has_callback=False):
         """
         Send a message of message_type
-        :param identity: the zmq identity of the dealer to send to or None
+        :param connection_id: the identity for the connection to send to
         :param message_type: validator_pb2.Message.* enum value
         :param data: bytes serialized protobuf
         :return: future.Future
         """
-        message = validator_pb2.Message(
-            correlation_id=_generate_id(),
-            content=data,
-            message_type=message_type)
+        connection_type, connection = self._connections.get(connection_id)
+        if connection_type == "ZMQ_Identity":
+            message = validator_pb2.Message(
+                correlation_id=_generate_id(),
+                content=data,
+                message_type=message_type)
 
-        fut = future.Future(message.correlation_id, message.content,
-                            has_callback=has_callback)
-        self._futures.put(fut)
+            fut = future.Future(message.correlation_id, message.content,
+                                has_callback=has_callback)
+            self._futures.put(fut)
 
-        self._send_receive_thread.send_message(msg=message,
-                                               identity=identity)
-        return fut
+            self._send_receive_thread.send_message(msg=message,
+                                                   connection_id=connection_id)
+            return fut
+        else:
+            return connection.send(message_type, data)
 
     def start(self, daemon=False):
         self._thread = Thread(target=self._send_receive_thread.setup,
@@ -336,18 +382,26 @@ class Interconnect(object):
     def stop(self):
         self._thread.join()
 
+    def _add_connection(self, connection):
+        connection_id = \
+            hashlib.sha512(connection.local_id.encode()).hexdigest()
+        if connection_id not in self._connections:
+            self._connections[connection_id] = \
+                ("OutboundConnection", connection)
 
-class Connection(object):
+
+class OutboundConnection(object):
     def __init__(self,
+                 connections,
                  endpoint,
                  dispatcher,
-                 identity,
+                 zmq_identity,
                  secured,
                  server_public_key,
                  server_private_key,
                  heartbeat=False):
         self._futures = future.FutureCollection()
-        self._identity = identity
+        self._zmq_identity = zmq_identity
         self._endpoint = endpoint
         self._dispatcher = dispatcher
         self._secured = secured
@@ -356,17 +410,22 @@ class Connection(object):
         self._heartbeat = heartbeat
 
         self._send_receive_thread = _SendReceive(
-            "ConnectionThread-{}".format(self._endpoint),
+            "OutboundConnectionThread-{}".format(self._endpoint),
             endpoint,
+            connections=connections,
             dispatcher=self._dispatcher,
             futures=self._futures,
-            identity=identity,
+            zmq_identity=zmq_identity,
             secured=secured,
             server_public_key=server_public_key,
             server_private_key=server_private_key,
             heartbeat=heartbeat)
 
         self._thread = None
+
+    @property
+    def local_id(self):
+        return self._send_receive_thread.connection
 
     def send(self, message_type, data):
         """

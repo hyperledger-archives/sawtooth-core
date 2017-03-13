@@ -101,7 +101,7 @@ class Validator(object):
                                        config_view_factory=ConfigViewFactory(
                                            StateViewFactory(merkle_db)))
 
-        identity = hashlib.sha512(
+        zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
 
         network_thread_pool = ThreadPoolExecutor(max_workers=10)
@@ -119,7 +119,7 @@ class Validator(object):
         self._network = Interconnect(
             network_endpoint,
             dispatcher=self._network_dispatcher,
-            identity=identity,
+            zmq_identity=zmq_identity,
             peer_connections=peer_list,
             secured=True,
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',

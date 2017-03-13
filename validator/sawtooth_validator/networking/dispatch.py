@@ -77,12 +77,12 @@ class Dispatcher(Thread):
                          "send_message function was registered",
                          connection)
 
-    def dispatch(self, connection, message, identity=None):
+    def dispatch(self, connection, message, connection_id):
         if message.message_type in self._msg_type_handlers:
             message_id = _gen_message_id()
             self._message_information[message_id] = (
                 connection,
-                identity,
+                connection_id,
                 message,
                 _ManagerCollection(
                     self._msg_type_handlers[message.message_type])
@@ -92,7 +92,7 @@ class Dispatcher(Thread):
             LOGGER.info("received a message of type %s "
                         "from %s but have no handler for that type",
                         get_enum_name(message.message_type),
-                        identity)
+                        connection_id)
 
     def add_handler(self, message_type, handler, executor):
         if not isinstance(handler, Handler):
@@ -106,11 +106,11 @@ class Dispatcher(Thread):
 
     def _process(self, message_id):
         with self._condition:
-            _, identity, \
+            _, connection_id, \
                 message, collection = self._message_information[message_id]
         try:
             handler_manager = next(collection)
-            future = handler_manager.execute(identity, message.content)
+            future = handler_manager.execute(connection_id, message.content)
             future.add_done_callback(partial(self._determine_next, message_id))
         except IndexError:
             # IndexError is raised if done with handlers
@@ -127,7 +127,7 @@ class Dispatcher(Thread):
 
         elif future.result().status == HandlerStatus.RETURN_AND_PASS:
             with self._condition:
-                connection, ident, \
+                connection, connection_id, \
                     original_message, _ = self._message_information[message_id]
 
             message = validator_pb2.Message(
@@ -136,12 +136,12 @@ class Dispatcher(Thread):
                 message_type=future.result().message_type)
 
             self._send_message[connection](msg=message,
-                                           identity=ident)
+                                           connection_id=connection_id)
             self._process(message_id)
 
         elif future.result().status == HandlerStatus.RETURN:
             with self._condition:
-                connection, ident, \
+                connection, connection_id,  \
                     original_message, _ = self._message_information[message_id]
 
                 del self._message_information[message_id]
@@ -150,9 +150,8 @@ class Dispatcher(Thread):
                 content=future.result().message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
                 message_type=future.result().message_type)
-
             self._send_message[connection](msg=message,
-                                           identity=ident)
+                                           connection_id=connection_id)
         with self._condition:
             if len(self._message_information) == 0:
                 self._condition.notify()
@@ -185,8 +184,9 @@ class _HandlerManager(object):
         self._executor = executor
         self._handler = handler
 
-    def execute(self, identity, message):
-        return self._executor.submit(self._handler.handle, identity, message)
+    def execute(self, connection_id, message):
+        return self._executor.submit(
+            self._handler.handle, connection_id, message)
 
 
 class _ManagerCollection(object):
@@ -225,12 +225,11 @@ class HandlerStatus(enum.Enum):
 class Handler(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         """
 
-        :param identity: zmq identity set on the zmq socket
-                         could be a pubkey and used in a
-                         authentication handler.
+        :param connection_id: A unique identifier for the connection that
+                              sent the message
         :param message_content: The bytes to be deserialized
                                 into a protobuf python class
         :return HandlerResult: The status of the handling

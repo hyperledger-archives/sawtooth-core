@@ -25,7 +25,7 @@ class MockHandler1(dispatch.Handler):
     def __init__(self):
         self._time_to_sleep = 2.0
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         if self._time_to_sleep > 0:
             time.sleep(self._time_to_sleep)
             self._time_to_sleep -= 0.1
@@ -35,7 +35,7 @@ class MockHandler1(dispatch.Handler):
 
 class MockHandler2(dispatch.Handler):
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         request = validator_pb2.Message()
         request.ParseFromString(message_content)
         return dispatch.HandlerResult(
@@ -48,14 +48,15 @@ class MockHandler2(dispatch.Handler):
 
 class MockSendMessage(object):
 
-    def __init__(self):
+    def __init__(self, connections):
         self.message_ids = []
         self.identities = []
         self._lock = RLock()
+        self.connections = connections
 
-    def send_message(self, identity, msg):
+    def send_message(self, connection_id, msg):
         with self._lock:
             message = validator_pb2.Message()
             message.ParseFromString(msg.content)
-            self.identities.append(identity)
+            self.identities.append(self.connections[connection_id])
             self.message_ids.append(message.correlation_id)

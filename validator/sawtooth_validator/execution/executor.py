@@ -183,14 +183,14 @@ class TransactionExecutorThread(threading.Thread):
                 self._waiters_by_type[processor_type].add_to_in_queue(
                     content)
         else:
-            identity = processor.identity
-            self._send_and_process_result(content, identity)
+            connection_id = processor.connection_id
+            self._send_and_process_result(content, connection_id)
 
-    def _send_and_process_result(self, content, identity):
+    def _send_and_process_result(self, content, connection_id):
         future = self._service.send(
             validator_pb2.Message.TP_PROCESS_REQUEST,
             content,
-            identity=identity,
+            connection_id=connection_id,
             has_callback=True)
         future.add_callback(self._future_done_callback)
 
@@ -270,9 +270,9 @@ class _Waiter(object):
         self._processors.wait_to_process(self._processor_type)
         while not self._in_queue.empty():
             content = self._in_queue.get_nowait()
-            identity = self._processors.get_next_of_type(
-                self._processor_type).identity
-            self._send_and_process(content, identity)
+            connection_id = self._processors.get_next_of_type(
+                self._processor_type).connection_id
+            self._send_and_process(content, connection_id)
 
         del self._waiters_by_type[self._processor_type]
 

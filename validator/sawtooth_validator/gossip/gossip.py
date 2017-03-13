@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+import hashlib
 from threading import Condition
 
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
@@ -30,43 +31,44 @@ class Gossip(object):
     def __init__(self, network):
         self._condition = Condition()
         self._network = network
-        self._identities = []
+        self._peers = []
 
-    def register_identity(self, identity):
-        """Registers a connected identity.
-
-        Args:
-            identity (str): A unique identifier which identifies an
-                incoming connection on the network server socket.
-        """
-        with self._condition:
-            self._identities.append(identity)
-        LOGGER.debug("Added identity %s, connected identities are now %s",
-                     identity, self._identities)
-
-    def unregister_identity(self, identity):
-        """Removes an identity from the registry.
+    def register_peer(self, connection_id):
+        """Registers a connected connection_id.
 
         Args:
-            identity (str): A unique identifier which identifies an
-                incoming connection on the network server socket.
+            connection_id (str): A unique identifier which identifies an
+                connection on the network server socket.
         """
         with self._condition:
-            if identity in self._identities:
-                self._identities.remove(identity)
-                LOGGER.debug("Removed identity %s, "
+            self._peers.append(connection_id)
+        LOGGER.debug("Added connection_id %s, connected identities are now %s",
+                     connection_id, self._peers)
+
+    def unregister_peer(self, connection_id):
+        """Removes a connection_id from the registry.
+
+        Args:
+            connection_id (str): A unique identifier which identifies an
+                connection on the network server socket.
+        """
+        with self._condition:
+            if connection_id in self._peers:
+                self._peers.remove(connection_id)
+                LOGGER.debug("Removed connection_id %s, "
                              "connected identities are now %s",
-                             identity, self._identities)
+                             connection_id, self._peers)
             else:
-                LOGGER.debug("Attempt to unregister identity %s failed: "
-                             "identity was not registered")
+                LOGGER.debug("Attempt to unregister connection_id %s failed: "
+                             "connection_id was not registered")
 
-    def broadcast_block(self, block):
+    def broadcast_block(self, block, exclude=None):
         gossip_message = GossipMessage(
             content_type="BLOCK",
             content=block.SerializeToString())
 
-        self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
+        self.broadcast(
+            gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
     def broadcast_block_request(self, block_id):
         # Need to define node identity to be able to route directly back
@@ -74,12 +76,13 @@ class Gossip(object):
         self.broadcast(block_request,
                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
 
-    def broadcast_batch(self, batch):
+    def broadcast_batch(self, batch, exclude=None):
         gossip_message = GossipMessage(
             content_type="BATCH",
             content=batch.SerializeToString())
 
-        self.broadcast(gossip_message, validator_pb2.Message.GOSSIP_MESSAGE)
+        self.broadcast(
+            gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
     def broadcast_batch_by_transaction_id_request(self, transaction_ids):
         # Need to define node identity to be able to route directly back
@@ -99,25 +102,33 @@ class Gossip(object):
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def broadcast(self, gossip_message, message_type):
-        # Gossip broadcasts are sent out in two different ways.
-        # 1) To connected identities on our server socket
-        # 2) To outbound connections we have originated
-        for identity in self._identities:
-            self._network.send(message_type,
-                               gossip_message.SerializeToString(),
-                               identity)
-        for connection in self._network.connections:
-            connection.send(message_type, gossip_message.SerializeToString())
+    def broadcast(self, gossip_message, message_type, exclude=None):
+        """Broadcast gossip messages.
 
-    def broadcast_peer_request(self, message_type, message):
-        for connection in self._network.connections:
-            connection.send(message_type, message.SerializeToString())
+        Broadcast the message to all peers unless they are in the excluded
+        list.
+
+        Args:
+            gossip_message: The message to be broadcast.
+            message_type: Type of the message.
+            exclude: A list of connection_ids that should be excluded from this
+                broadcast.
+        """
+        if exclude is None:
+            exclude = []
+        for connection_id in self._peers:
+            if connection_id not in exclude:
+                self._network.send(message_type,
+                                   gossip_message.SerializeToString(),
+                                   connection_id)
 
     def start(self):
-        for connection in self._network.connections:
-            connection.start(daemon=True)
+        for uri in self._network.outbound_connections:
+            connection = self._network.outbound_connections[uri]
+            connection_id = \
+                hashlib.sha512(connection.local_id.encode()).hexdigest()
+            self._peers.append(connection_id)
         register_request = PeerRegisterRequest()
-        self.broadcast_peer_request(
-            validator_pb2.Message.GOSSIP_REGISTER,
-            register_request)
+        self.broadcast(
+            register_request,
+            validator_pb2.Message.GOSSIP_REGISTER)

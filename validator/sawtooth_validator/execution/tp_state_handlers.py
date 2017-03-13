@@ -28,7 +28,7 @@ class TpStateGetHandler(Handler):
     def __init__(self, context_manager):
         self._context_manager = context_manager
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         get_request = state_context_pb2.TpStateGetRequest()
         get_request.ParseFromString(message_content)
         return_values = self._context_manager.get(
@@ -55,7 +55,7 @@ class TpStateSetHandler(Handler):
         """
         self._context_manager = context_manager
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         set_request = state_context_pb2.TpStateSetRequest()
         set_request.ParseFromString(message_content)
         set_values_list = [{e.address: e.data} for e in set_request.entries]

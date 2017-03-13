@@ -317,7 +317,7 @@ class CompleterBatchListBroadcastHandler(Handler):
         self._completer = completer
         self._gossip = gossip
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         request = ClientBatchSubmitRequest()
         request.ParseFromString(message_content)
         for batch in request.batches:
@@ -331,7 +331,7 @@ class CompleterGossipHandler(Handler):
     def __init__(self, completer):
         self._completer = completer
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         gossip_message = network_pb2.GossipMessage()
         gossip_message.ParseFromString(message_content)
         if gossip_message.content_type == "BLOCK":

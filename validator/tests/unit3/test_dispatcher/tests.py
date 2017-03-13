@@ -39,19 +39,23 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
             MockHandler2(),
             thread_pool)
 
-        self.mock_send_message = MockSendMessage()
+        self._message_ids = [str(i) for i in range(10)]
+        self._identities = [str(i) for i in range(10)]
+        self._connections = { chr(int(x)+65):x for x in self._identities}
+
+        self.mock_send_message = MockSendMessage(self._connections)
         self._dispatcher.add_send_message(self._connection,
                                           self.mock_send_message.send_message)
 
-        self._message_ids = [str(i) for i in range(10)]
-        self._identities = [str(i) for i in range(10)]
-        self._messages = [validator_pb2.Message(content=validator_pb2.Message(correlation_id=m_id).SerializeToString(),
-                                                message_type=validator_pb2.Message.DEFAULT)
-                          for m_id in self._message_ids]
+
+        self._messages = [validator_pb2.Message(
+            content=validator_pb2.Message(correlation_id=m_id).SerializeToString(),
+            message_type=validator_pb2.Message.DEFAULT)
+            for m_id in self._message_ids]
 
     def test_correct_identity(self):
         """Tests that if a message is dispatched with a particular identity --
-        having dispatcher.dispatch(connection, message, identity) called --
+        having dispatcher.dispatch(connection, message, connection_id) called --
         that identity will be sent back to the zmq interface with the message.
 
         Each message gets an id 0-9 along with an identity 0-9. These will
@@ -59,12 +63,12 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
         returns of the handlers.
         """
         self._dispatcher.start()
-        for identity, message in zip(self._identities, self._messages):
-            self._dispatcher.dispatch(self._connection, message,
-                                      identity=identity)
+        for connection_id, message in zip(self._connections, self._messages):
+            self._dispatcher.dispatch(
+                self._connection, message, connection_id)
         self._dispatcher.block_until_complete()
-        self.assertEqual(self.mock_send_message.message_ids,
-                         self.mock_send_message.identities)
+        self.assertEqual(sorted(self.mock_send_message.message_ids),
+                         sorted(self.mock_send_message.identities))
 
     def tearDown(self):
         self._dispatcher.stop()
