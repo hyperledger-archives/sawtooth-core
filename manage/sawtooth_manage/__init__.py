@@ -17,6 +17,5 @@
 __all__ = [
     'node',
     'simple',
-    'utils',
     'vnm'
 ]

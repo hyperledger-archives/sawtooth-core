@@ -21,7 +21,32 @@ import yaml
 import re
 
 from sawtooth_manage.node import NodeController
-from sawtooth_manage.utils import get_executable_script
+
+
+def _get_executable_script(script_name):
+    '''
+    Searches PATH environmental variable to find the information needed to
+    execute a script.
+    Args:
+        script_name:  the name of the 'executable' script
+    Returns:
+        ret_val (list<str>): A list containing the python executable, and the
+        full path to the script.  Includes sys.executable, because certain
+        operating systems cannot execute scripts directly.
+    '''
+    ret_val = None
+    if 'PATH' not in os.environ:
+        raise ManagementError('no PATH environmental variable')
+    search_path = os.environ['PATH']
+    for directory in search_path.split(os.pathsep):
+        if os.path.exists(os.path.join(directory, script_name)):
+            ret_val = os.path.join(directory, script_name)
+            break
+    if ret_val is not None:
+        ret_val = [sys.executable, ret_val]
+    else:
+        raise ManagementError("could not locate %s" % (script_name))
+    return ret_val
 
 
 class SubprocessNodeController(NodeController):
@@ -67,8 +92,8 @@ class SubprocessNodeController(NodeController):
             self._rm_wildcard(data_dir, regex)
 
         for cmd in commands:
-            # get_executable_script returns (path, executable)
-            _, executable = get_executable_script(cmd)
+            # _get_executable_script returns (path, executable)
+            _, executable = _get_executable_script(cmd)
 
             # validator takes ports as separate args, but this might change
             if cmd == 'validator':
