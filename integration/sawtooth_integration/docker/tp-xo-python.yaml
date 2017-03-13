@@ -17,7 +17,7 @@ version: "2.1"
 
 services:
 
-  tp_xo:
+  tp_xo_python:
     image: sawtooth-tp_xo_python:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
