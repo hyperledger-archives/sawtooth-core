@@ -53,7 +53,8 @@ class BlockValidator(object):
                  state_view_factory,
                  done_cb,
                  executor,
-                 squash_handler):
+                 squash_handler,
+                 data_dir):
         self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._new_block = new_block
@@ -62,7 +63,7 @@ class BlockValidator(object):
         self._done_cb = done_cb
         self._executor = executor
         self._squash_handler = squash_handler
-
+        self._data_dir = data_dir
         self._result = {
             'new_block': new_block,
             'chain_head': chain_head,
@@ -191,7 +192,9 @@ class BlockValidator(object):
                 state_view = self._state_view_factory.\
                     create_view(prev_state)
                 consensus = self._consensus_module.\
-                    BlockVerifier(self._block_cache, state_view=state_view)
+                    BlockVerifier(block_cache=self._block_cache,
+                                  state_view=state_view,
+                                  data_dir=self._data_dir)
 
                 if valid:
                     valid = self._is_block_complete(blkw)
@@ -287,7 +290,8 @@ class BlockValidator(object):
         """ Compare the two chains and determine which should be the head.
         """
         fork_resolver = self._consensus_module.\
-            ForkResolver(block_cache=self._block_cache)
+            ForkResolver(block_cache=self._block_cache,
+                         data_dir=self._data_dir)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
 
@@ -393,7 +397,8 @@ class ChainController(object):
                  transaction_executor,
                  on_chain_updated,
                  squash_handler,
-                 chain_id_manager):
+                 chain_id_manager,
+                 data_dir):
         """Initialize the ChainController
         Args:
             algorithm to use.
@@ -409,6 +414,8 @@ class ChainController(object):
              system the head block in the chain has been changed.
              squash_handler: a parameter passed when creating transaction
              schedulers.
+             data_dir: path to location where persistent data for the
+             consensus module can be stored.
         Returns:
             None
         """
@@ -420,7 +427,8 @@ class ChainController(object):
         self._executor = executor
         self._transaction_executor = transaction_executor
         self._notify_on_chain_updated = on_chain_updated
-        self._sqaush_handler = squash_handler
+        self._squash_handler = squash_handler
+        self._data_dir = data_dir
 
         self._blocks_processing = {}  # a set of blocks that are
         # currently being processed.
@@ -446,7 +454,6 @@ class ChainController(object):
         return self._chain_head
 
     def _verify_block(self, blkw):
-
         state_view = self._state_view_factory.create_view(
             self.chain_head.header.state_root_hash)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
@@ -460,7 +467,8 @@ class ChainController(object):
             state_view_factory=self._state_view_factory,
             done_cb=self.on_block_validated,
             executor=self._transaction_executor,
-            squash_handler=self._sqaush_handler)
+            squash_handler=self._squash_handler,
+            data_dir=self._data_dir)
         self._blocks_processing[blkw.block.header_signature] = validator
         self._executor.submit(validator.run)
 
@@ -570,7 +578,8 @@ class ChainController(object):
                 state_view_factory=self._state_view_factory,
                 done_cb=self.on_block_validated,
                 executor=self._transaction_executor,
-                squash_handler=self._sqaush_handler)
+                squash_handler=self._sqaush_handler,
+                data_dir=self._data_dir)
 
             valid = validator.validate_block(block, committed_txn)
             if valid:

@@ -142,7 +142,8 @@ class Validator(object):
             transaction_executor=executor,
             squash_handler=context_manager.get_squash_handler(),
             identity_signing_key=identity_signing_key,
-            chain_id_manager=chain_id_manager
+            chain_id_manager=chain_id_manager,
+            data_dir=data_dir,
         )
 
         self._genesis_controller = GenesisController(

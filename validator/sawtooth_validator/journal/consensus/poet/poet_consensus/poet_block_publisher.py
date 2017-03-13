@@ -65,7 +65,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         _validator_registry_namespace + \
         hashlib.sha256('validator_map'.encode()).hexdigest()
 
-    def __init__(self, block_cache, state_view, batch_publisher):
+    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache (BlockCache): Dict interface to the block cache.
@@ -77,10 +77,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 batch_publisher (BatchPublisher): An interface implementing
                     send(txn_list) which wrap the transactions in a batch and
                     broadcast that batch to the network.
+                data_dir: path to location where persistent data for the
+                    consensus module can be stored.
             Returns:
                 none.
         """
-        super().__init__(block_cache, state_view, batch_publisher)
+        super().__init__(block_cache, state_view, batch_publisher, data_dir)
 
         self._block_cache = block_cache
         self._state_view = state_view

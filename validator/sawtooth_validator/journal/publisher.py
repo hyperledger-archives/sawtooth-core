@@ -52,7 +52,8 @@ class BlockPublisher(object):
                  batch_sender,
                  squash_handler,
                  chain_head,
-                 identity_signing_key):
+                 identity_signing_key,
+                 data_dir):
         """
         Initialize the BlockPublisher object
 
@@ -93,6 +94,7 @@ class BlockPublisher(object):
         self._identity_signing_key = identity_signing_key
         self._identity_public_key = signing.encode_pubkey(
             signing.generate_pubkey(self._identity_signing_key), "hex")
+        self._data_dir = data_dir
 
     def _get_previous_block_root_state_hash(self, blkw):
         """ Get the state root hash for the previous block. This
@@ -121,7 +123,8 @@ class BlockPublisher(object):
         self._consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
                            state_view=state_view,
-                           batch_publisher=self._batch_publisher)
+                           batch_publisher=self._batch_publisher,
+                           data_dir=self._data_dir)
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,

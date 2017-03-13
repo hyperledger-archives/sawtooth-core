@@ -99,7 +99,8 @@ class BlockTreeManager(object):
             batch_sender=self.block_sender,
             squash_handler=None,
             chain_head=self.genesis_block,
-            identity_signing_key=self.identity_signing_key)
+            identity_signing_key=self.identity_signing_key,
+            data_dir=None)
 
     @property
     def chain_head(self):
