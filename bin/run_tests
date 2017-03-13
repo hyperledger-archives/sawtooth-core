@@ -38,7 +38,7 @@ export PATH=$PROJECT_DIR/bin:$PATH
 MODULE="all"
 export ISOLATION_ID="latest"
 
-while getopts :p:m:h opt
+while getopts np:m:h opt
 do
     case $opt in
         h)
@@ -51,6 +51,9 @@ do
         p)
             ISOLATION_ID=$OPTARG
             ;;
+        n)
+            NOBUILD=1
+            ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 2
@@ -59,7 +62,10 @@ do
 done
 
 main() {
-    docker_build_all
+    if [ -z $NOBUILD ]
+    then
+      docker_build_all
+    fi
 
     # Start in project directory
     cd $PROJECT_DIR
