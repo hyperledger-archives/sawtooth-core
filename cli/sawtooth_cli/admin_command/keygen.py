@@ -17,7 +17,7 @@ import os
 import sys
 
 from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.admin_command.utils import ensure_directory
+from sawtooth_cli.admin_command.config import ensure_directory
 from sawtooth_signing import secp256k1_signer as signing
 
 

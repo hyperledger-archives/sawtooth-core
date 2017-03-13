@@ -18,14 +18,11 @@ from sawtooth_cli.admin_command.genesis import add_genesis_parser
 from sawtooth_cli.admin_command.genesis import do_genesis
 from sawtooth_cli.admin_command.keygen import add_keygen_parser
 from sawtooth_cli.admin_command.keygen import do_keygen
-from sawtooth_cli.admin_command.utils import ensure_directory
 
 
 def do_admin(args):
-    data_dir = ensure_directory('data', '/var/lib/sawtooth')
-
     if args.admin_cmd == 'genesis':
-        do_genesis(args, data_dir)
+        do_genesis(args)
     elif args.admin_cmd == 'keygen':
         do_keygen(args)
     else:
