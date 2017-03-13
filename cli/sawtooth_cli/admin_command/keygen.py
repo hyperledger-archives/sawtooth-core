@@ -17,7 +17,7 @@ import os
 import sys
 
 from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.admin_command.config import ensure_directory
+from sawtooth_cli.admin_command.config import get_key_dir
 from sawtooth_signing import secp256k1_signer as signing
 
 
@@ -59,7 +59,11 @@ def do_keygen(args):
     else:
         key_name = 'validator'
 
-    key_dir = ensure_directory('etc/keys', '/etc/sawtooth/keys')
+    key_dir = get_key_dir()
+
+    if not os.path.exists(key_dir):
+        raise CliException(
+            "Key directory does not exist: {}".format(key_dir))
 
     wif_filename = os.path.join(key_dir, key_name + '.wif')
     addr_filename = os.path.join(key_dir, key_name + '.addr')
