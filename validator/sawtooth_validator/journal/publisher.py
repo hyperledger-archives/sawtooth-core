@@ -426,9 +426,9 @@ class BlockPublisher(object):
 
                     LOGGER.info("Claimed Block: %s", block)
 
-                    # create a new block based on this one -- opportunistically
-                    # assume the published block is the valid block.
-                    self.on_chain_updated(block)
+                    # We built our candidate, disable processing until
+                    # the chain head is updated.
+                    self.on_chain_updated(None)
         # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.critical("on_check_publish_block exception.")
