@@ -23,7 +23,6 @@ usage() {
     echo "Options:"
     echo "  -h          print usage and exit"
     echo "  -m Module   only run tests of specified module {$MODULES}"
-    echo "  -m Prefix   "
 }
 
 # Exit on non-zero exit code from subcommand
@@ -32,11 +31,10 @@ set -e
 PROJECT_DIR=$(cd $(dirname $(dirname $0)) && pwd)
 
 # Make sawtooth scripts accessible
-export PATH=$PROJECT_DIR/bin:$PATH
+PATH=$PROJECT_DIR/bin:$PATH
 
 # Default args
 MODULE="all"
-export ISOLATION_ID="latest"
 
 while getopts np:m:h opt
 do
@@ -110,7 +108,7 @@ main() {
 
 test_cli() {
     echo "[---Running cli tests---]"
-    run_docker_test ./cli/tests/unit_cli.yaml -s cli -p $ISOLATION_ID
+    run_docker_test ./cli/tests/unit_cli.yaml -s cli
 }
 
 test_core() {
@@ -119,7 +117,7 @@ test_core() {
 
 test_rest_api() {
     echo "[---Running REST API tests---]"
-    run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests -p $ISOLATION_ID
+    run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests
 }
 
 test_sdk() {
@@ -127,33 +125,33 @@ test_sdk() {
     # config
     run_docker_test \
       core_transactions/config/tests/sawtooth_config_test/tp-config.yaml \
-      -s validator -p $ISOLATION_ID
+      -s validator
 
     # intkey
-    run_docker_test tp-intkey-python -s validator -p $ISOLATION_ID
-    run_docker_test tp-intkey-java -s validator -p $ISOLATION_ID
-    run_docker_test tp-intkey-javascript -s validator -p $ISOLATION_ID
-    run_docker_test intkey-smoke -s integration_test -p $ISOLATION_ID
+    run_docker_test tp-intkey-python -s validator
+    run_docker_test tp-intkey-java -s validator
+    run_docker_test tp-intkey-javascript -s validator
+    run_docker_test intkey-smoke -s integration_test
 
     # xo
-    run_docker_test tp-xo-python -s validator -p $ISOLATION_ID
-    run_docker_test xo-smoke -s integration_test -p $ISOLATION_ID
+    run_docker_test tp-xo-python -s validator
+    run_docker_test xo-smoke -s integration_test
 }
 
 test_signing() {
     echo "[---Running signing tests---]"
-    run_docker_test ./signing/tests/unit_signing.yaml -s signing -p $ISOLATION_ID
+    run_docker_test ./signing/tests/unit_signing.yaml -s signing
 }
 
 test_validator() {
     echo "[---Running validator tests---]"
-    run_docker_test ./validator/tests/unit_validator.yaml -s validator -p $ISOLATION_ID
+    run_docker_test ./validator/tests/unit_validator.yaml -s validator
 }
 
 test_poet(){
     echo "[---Running poet---]"
     run_docker_test ./poet/sawtooth_poet/tests/validator_registry_test/tp_validator_registry.yaml \
-    -s validator -p $ISOLATION_ID
+    -s validator
 }
 
 main

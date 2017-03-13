@@ -29,9 +29,6 @@ do
             echo "Add a prefix with -p"
             exit 0
             ;;
-        p)
-            ISOLATION_ID=$OPTARG
-            ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 2

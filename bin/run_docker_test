@@ -31,12 +31,17 @@ def main():
 
     compose_file = _get_compose_file(args.compose_file)
 
-    if not args.prefix.isalnum():
-        raise RunDockerTestError("Prefix must be alphanumeric")
+    if 'ISOLATION_ID' in os.environ:
+        isolation_id = os.environ['ISOLATION_ID']
+    else:
+        isolation_id = 'latest'
+
+    if not isolation_id.isalnum():
+        raise RunDockerTestError("ISOLATION_ID must be alphanumeric")
 
     compose = [
         'docker-compose',
-        '-p', args.prefix,
+        '-p', isolation_id,
         '-f', compose_file
     ]
 
@@ -51,7 +56,7 @@ def main():
     inspect = [
         'docker', 'inspect',
         '-f', "{{.State.ExitCode}}",
-        "{}_{}_1".format(args.prefix, args.test_service)
+        "{}_{}_1".format(isolation_id, args.test_service)
     ]
 
     compose_dict = load_compose_file(compose_file)
@@ -135,13 +140,6 @@ def parse_args():
     parser.add_argument(
         "compose_file",
         help="docker-compose.yaml file that contains the test")
-
-    # Allow passing in a prefix to docker compose.
-    # This can be used to run multiple isolated instances of the test.
-    parser.add_argument(
-        "-p", "--prefix",
-        help="id tests running in parallel, must be alphanumeric",
-        default="test")
 
     parser.add_argument(
         "-s", "--test-service",
