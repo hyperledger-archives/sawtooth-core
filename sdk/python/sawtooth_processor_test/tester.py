@@ -15,6 +15,7 @@
 
 import subprocess
 import asyncio
+import logging
 
 import zmq
 import zmq.asyncio
@@ -25,6 +26,9 @@ from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 from sawtooth_processor_test.message_types import to_protobuf_class
 from sawtooth_processor_test.message_types import to_message_type
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 class UnexpectedMessageException(Exception):
@@ -72,7 +76,7 @@ class TransactionProcessorTester(object):
 
         # User ROUTER socket, the TransactionProcessor uses DEALER
         self._socket = self._context.socket(zmq.ROUTER)
-        print("Binding to " + self._url)
+        LOGGER.info("Binding to " + self._url)
         self._socket.set(zmq.LINGER, 0)
         try:
             self._socket.bind("tcp://" + self._url)
@@ -81,10 +85,10 @@ class TransactionProcessorTester(object):
         except zmq.error.ZMQError:
             netstat = "netstat -lp | grep -e tcp"
             result = subprocess.check_output(netstat, shell=True).decode()
-            print("\n`{}`".format(netstat))
-            print(result)
+            LOGGER.info("\n`%s`", netstat)
+            LOGGER.info(result)
 
-            print("`ps pid`")
+            LOGGER.info("`ps pid`")
             try:
                 lines = result.split('\n')[:-1]
                 for line in lines:
@@ -94,10 +98,9 @@ class TransactionProcessorTester(object):
                         ps = subprocess.check_output(
                             ["ps", pid]
                         ).decode().split('\n')[1]
-                        print(ps)
-                print()
+                        LOGGER.info(ps)
             except BaseException:
-                print("Failed to show process info")
+                LOGGER.info("Failed to show process info")
 
             # Raise the original error again
             raise
@@ -120,10 +123,11 @@ class TransactionProcessorTester(object):
 
             request = TpRegisterRequest()
             request.ParseFromString(message.content)
-            print("Processor registered: {}, {}, {}, {}".format(
-                request.family, request.version,
-                request.encoding, request.namespaces
-            ))
+            LOGGER.info(
+                "Processor registered: %s, %s, %s, %s",
+                str(request.family), str(request.version),
+                str(request.encoding), str(request.namespaces)
+            )
             response = TpRegisterResponse(
                 status=TpRegisterResponse.OK)
             self.send(response, message.correlation_id)
@@ -154,11 +158,12 @@ class TransactionProcessorTester(object):
         :param ident (str) the identity of the zmq.DEALER to send to
         """
 
-        print("Sending {}({}) to {}".format(
-            to_protobuf_class(message.message_type).__name__,
-            message.message_type,
-            ident
-        ))
+        LOGGER.info(
+            "Sending %s(%s) to %s",
+            str(to_protobuf_class(message.message_type).__name__),
+            str(message.message_type),
+            str(ident)
+        )
 
         return await self._socket.send_multipart([
             ident,
@@ -177,11 +182,12 @@ class TransactionProcessorTester(object):
         message = Message()
         message.ParseFromString(result)
 
-        print("Received {}({}) from {}".format(
-            to_protobuf_class(message.message_type).__name__,
-            message.message_type,
-            ident
-        ))
+        LOGGER.info(
+            "Received %s(%s) from %s",
+            str(to_protobuf_class(message.message_type).__name__),
+            str(message.message_type),
+            str(ident)
+        )
 
         return message, ident
 

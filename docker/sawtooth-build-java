@@ -13,10 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# From within sawtooth-core do:
+#   $ docker build . -f docker/sawtooth-build-java -t sawtooth-build-java
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-java
+
 FROM maven:3-jdk-8
 
-ARG PROJECT_DIR="/project/sawtooth-core"
-
-WORKDIR $PROJECT_DIR
-
-ENTRYPOINT ./bin/tp_intkey_java tcp://validator:40000
+CMD cd /project/sawtooth-core/sdk/java \
+ && mvn clean generate-sources package install \
+ && cd /project/sawtooth-core/sdk/examples/intkey_java \
+ && mvn clean compile package
