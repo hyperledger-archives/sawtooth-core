@@ -18,26 +18,6 @@ import sys
 from sawtooth_manage.exceptions import ManagementError
 
 
-def find_txnvalidator():
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    search_path = []
-    if "CURRENCYHOME" in os.environ:
-        search_path.append(os.path.join(os.environ['CURRENCYHOME'], 'bin'))
-
-    search_path.append(os.path.realpath(os.path.join(script_dir, '..', 'bin')))
-
-    if 'PATH' in os.environ:
-        search_path.extend(os.environ['PATH'].split(os.pathsep))
-
-    for directory in search_path:
-        for filename in ['txnvalidator', 'txnvalidator.exe']:
-            if os.path.exists(os.path.join(directory, filename)):
-                return os.path.join(directory, filename)
-
-    return None
-
-
 def get_executable_script(script_name):
     '''
     Searches PATH environmental variable to find the information needed to
