@@ -27,7 +27,6 @@ from sawtooth_manage.exceptions import ManagementError
 
 from sawtooth_manage.node import NodeArguments
 from sawtooth_manage.simple import SimpleNodeCommandGenerator
-from sawtooth_manage.wrap import WrappedNodeController
 from sawtooth_manage.vnm import ValidatorNetworkManager
 
 from sawtooth_manage.docker import DockerNodeController
@@ -87,10 +86,6 @@ def add_cluster_start_parser(subparsers, parent_parser):
         help='the transaction processors that are part of node,'
              'e.g. tp_intkey_python, tp_intkey_java',
         nargs='*')
-
-    parser.add_argument('--wrap', nargs='?', const=None, default=False,
-                        help='use WRAP as CURRENCYHOME (create/use a temp '
-                             'directory if WRAP is unspecified)')
 
 
 def add_cluster_stop_parser(subparsers, parent_parser):
@@ -201,33 +196,6 @@ def get_node_controller(state, args):
         raise CliException(error_msg.format(manage_type))
 
     node_controller = node_controller_type()
-
-    # Optionally decorate with WrappedNodeController
-    args_wrap = False if not hasattr(args, 'wrap') else args.wrap
-
-    if 'Wrap' not in state.keys():
-        # if wrap has not been set in state, set it
-        state['Wrap'] = args_wrap
-    else:
-        # state already knows about a wrapper
-        if args_wrap is not False and args_wrap != state['Wrap']:
-            raise CliException("Already wrapped to %s." % state["Wrap"])
-
-    if state['Wrap'] is not False:
-        wrappable_types = ()
-        if not isinstance(node_controller, wrappable_types):
-            msg = '--wrap currently only implemented for {} management types'
-            raise CliException(msg.format(wrappable_types))
-        # either args or state have indicated a WrappedNodeController
-        if 'ManageWrap' not in state.keys():
-            state['ManageWrap'] = None
-        node_controller = WrappedNodeController(
-            node_controller, data_dir=state['Wrap'],
-            clean_data_dir=state['ManageWrap'])
-        if state['Wrap'] is None:
-            state['Wrap'] = node_controller.get_data_dir()
-            state['ManageWrap'] = True
-        print('{} wrapped to {}'.format(args.cluster_command, state['Wrap']))
 
     # Return out construction:
     return node_controller
