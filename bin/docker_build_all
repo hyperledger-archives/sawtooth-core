@@ -47,15 +47,22 @@ docker_build() {
     tag=$image:$ISOLATION_ID
   fi
   echo "[ Building $image... ]"
+
   docker build -f $image -t $tag . \
     --build-arg https_proxy=$https_proxy \
     --build-arg http_proxy=$http_proxy \
     --build-arg HTTPS_PROXY=$HTTPS_PROXY \
     --build-arg HTTP_PROXY=$HTTP_PROXY
+
+  if [ $image = "sawtooth-build-java" ] || [ $image = "sawtooth-build-javascript" ]; then
+    docker run --rm -v $top_dir:/project/sawtooth-core $tag
+  fi
 }
 
 for image in \
   sawtooth-base \
+  sawtooth-build-java \
+  sawtooth-build-javascript \
   sawtooth-rest_api \
   sawtooth-test \
   sawtooth-tp_config \
