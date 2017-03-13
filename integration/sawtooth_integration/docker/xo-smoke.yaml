@@ -75,9 +75,7 @@ services:
       - validator
       - rest_api
     # Wait for rest_api
-    entrypoint: "bash -c \"\
-      sleep 30 && \
-      nose2-3 -v test_xo_smoke.TestXoSmoke\""
+    entrypoint: nose2-3 -v test_xo_smoke.TestXoSmoke
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
