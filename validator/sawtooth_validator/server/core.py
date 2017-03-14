@@ -120,13 +120,13 @@ class Validator(object):
             network_endpoint,
             dispatcher=self._network_dispatcher,
             zmq_identity=zmq_identity,
-            peer_connections=peer_list,
             secured=True,
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
             server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
             heartbeat=True)
 
-        self._gossip = Gossip(self._network)
+        self._gossip = Gossip(self._network,
+                              initial_peer_endpoints=peer_list)
 
         completer = Completer(block_store, self._gossip)
 

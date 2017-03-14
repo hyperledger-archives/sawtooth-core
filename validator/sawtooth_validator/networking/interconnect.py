@@ -277,7 +277,6 @@ class Interconnect(object):
                  endpoint,
                  dispatcher,
                  zmq_identity=None,
-                 peer_connections=None,
                  secured=False,
                  server_public_key=None,
                  server_private_key=None,
@@ -319,13 +318,8 @@ class Interconnect(object):
 
         self._thread = None
         self._identities = []
-        if peer_connections is not None:
-            for addr in peer_connections:
-                self.add_connection(addr)
-        else:
-            self.connections = []
 
-    def add_connection(self, uri):
+    def add_outbound_connection(self, uri):
         """Adds an outbound connection to the network.
 
         Args:

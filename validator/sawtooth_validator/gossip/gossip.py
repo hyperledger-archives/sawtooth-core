@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
-import hashlib
 from threading import Condition
 
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
@@ -28,9 +27,21 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Gossip(object):
-    def __init__(self, network):
+    def __init__(self, network, initial_peer_endpoints=None):
+        """Constructor for the Gossip object. Gossip defines the
+        overlay network above the lower level networking classes.
+
+        Args:
+            network (networking.Interconnect): Provides inbound and
+                outbound network connections.
+            initial_peer_endpoints ([str]): A list of initial peer endpoints
+                to attempt to connect and peer with. These are specified
+                as zmq-compatible URIs (e.g. tcp://hostname:port).
+        """
         self._condition = Condition()
         self._network = network
+        self._initial_peer_endpoints = initial_peer_endpoints \
+            if initial_peer_endpoints else []
         self._peers = []
 
     def register_peer(self, connection_id):
@@ -123,12 +134,13 @@ class Gossip(object):
                                    connection_id)
 
     def start(self):
-        for uri in self._network.outbound_connections:
-            connection = self._network.outbound_connections[uri]
-            connection_id = \
-                hashlib.sha512(connection.local_id.encode()).hexdigest()
-            self._peers.append(connection_id)
-        register_request = PeerRegisterRequest()
-        self.broadcast(
-            register_request,
-            validator_pb2.Message.GOSSIP_REGISTER)
+        for endpoint in self._initial_peer_endpoints:
+            conn = self._network.add_outbound_connection(endpoint)
+            conn_id = conn.connection_id
+
+            self._peers.append(conn_id)
+
+            register_request = PeerRegisterRequest()
+            self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
+                               register_request.SerializeToString(),
+                               conn_id)
