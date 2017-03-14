@@ -58,74 +58,52 @@ node ('master') {
             '''
         }
 
+        // Set the ISOLATION_ID environment variable for the whole pipeline
+        env.ISOLATION_ID = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
+
         // Use a docker container to build and protogen, so that the Jenkins
         // environment doesn't need all the dependencies.
         stage("Build Test Dependencies") {
-            docker.build('sawtooth-build:$BUILD_TAG', '-f docker/sawtooth-build-ubuntu-xenial .')
-            docker.withServer('tcp://0.0.0.0:4243'){
-                docker.image('sawtooth-build:$BUILD_TAG').inside {
-                    sh './bin/build_all'
-                }
-            }
+            sh './bin/build_all'
         }
 
         stage("Run Lint") {
-            docker.withServer('tcp://0.0.0.0:4243'){
-                docker.image('sawtooth-build:$BUILD_TAG').inside {
-                    sh './bin/run_lint'
-                }
-            }
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_lint'
         }
 
         // Run the tests
         stage("Run Tests") {
-            sh 'ISOLATION_ID=$(printf $BUILD_TAG | sha256sum | cut -c1-64) ./bin/run_tests'
+            sh './bin/run_tests'
         }
 
         stage("Create git archive") {
-            docker.withServer('tcp://0.0.0.0:4243'){
-                docker.image('sawtooth-build:$BUILD_TAG').inside {
-                    sh '''
-                        REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
-                        VERSION=`git describe --dirty`
-                        git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
-                        git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
-                    '''
-                }
-            }
+            sh '''
+                REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
+                VERSION=`git describe --dirty`
+                git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
+                git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
+            '''
         }
 
         stage("Build the packages"){
-            docker.withServer('tcp://0.0.0.0:4243'){
-                docker.image('sawtooth-build:$BUILD_TAG').inside {
-                    sh 'VERSION=AUTO_STRICT ./bin/build_debs'
-                    stash name: 'debs', includes: 'build/debs/*.deb'
-                }
-            }
-        }
-
-        stage("Build docker docs build slave") {
-            sh 'sed -i\'\' -e"s/@@BUILD_TAG@@/$BUILD_TAG/" ci/sawtooth-docker-test'
-            docker.build('sawtooth-docs:$BUILD_TAG', '-f ci/sawtooth-docker-test .')
+            sh 'docker build . -f docker/sawtooth-build-debs -t sawtooth-build-debs:$ISOLATION_ID'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-debs:$ISOLATION_ID'
         }
 
         stage ("Build documentation") {
-            docker.withServer('tcp://0.0.0.0:4243'){
-                docker.image('sawtooth-docs:$BUILD_TAG').inside {
-                    sh 'cd docs && make html latexpdf'
-                }
-            }
-        }
-
-        stage("Remove docker images") {
-            sh 'docker rmi sawtooth-build:$BUILD_TAG'
-            sh 'docker rmi sawtooth-docs:$BUILD_TAG'
+            sh 'docker build . -f docker/sawtooth-build-docs -t sawtooth-build-docs:$ISOLATION_ID'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-docs:$ISOLATION_ID'
         }
 
         stage("Archive Build artifacts") {
             archiveArtifacts artifacts: '*.tgz, *.zip'
             archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
+        }
+
+        stage("Clean up") {
+            sh 'docker rmi sawtooth-build-debs:$ISOLATION_ID'
+            sh 'docker rmi sawtooth-build-docs:$ISOLATION_ID'
         }
     }
 }
