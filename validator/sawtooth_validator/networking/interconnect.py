@@ -86,6 +86,7 @@ class _SendReceive(object):
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
         self._heartbeat_interval = heartbeat_interval
+        self._last_message_time = None
 
         self._event_loop = None
         self._context = None
@@ -101,7 +102,7 @@ class _SendReceive(object):
         return self._connection
 
     @asyncio.coroutine
-    def _send_heartbeat(self):
+    def _do_heartbeat(self):
         with self._condition:
             self._condition.wait_for(lambda: self._socket is not None)
 
@@ -113,16 +114,41 @@ class _SendReceive(object):
                            if time.time() - self._connected_identities[ident] >
                            self._heartbeat_interval]
                 for zmq_identity in expired:
-                    message = validator_pb2.Message(
-                        correlation_id=_generate_id(),
-                        content=ping.SerializeToString(),
-                        message_type=validator_pb2.Message.NETWORK_PING)
-                    fut = future.Future(message.correlation_id,
-                                        message.content,
-                                        has_callback=False)
-                    self._futures.put(fut)
-                    yield from self._send_message(zmq_identity, message)
+                    if time.time() - \
+                            self._connected_identities[zmq_identity] > \
+                            self._heartbeat_interval * 2:
+                        LOGGER.debug("No response from %s in twice the "
+                                     "heartbeat interval - removing "
+                                     "connection.",
+                                     zmq_identity)
+                        self._remove_connected_identity(zmq_identity)
+                    else:
+                        message = validator_pb2.Message(
+                            correlation_id=_generate_id(),
+                            content=ping.SerializeToString(),
+                            message_type=validator_pb2.Message.NETWORK_PING)
+                        fut = future.Future(message.correlation_id,
+                                            message.content,
+                                            has_callback=False)
+                        self._futures.put(fut)
+                        yield from self._send_message(zmq_identity, message)
+            elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
+                if self._last_message_time:
+                    if time.time() - self._last_message_time > \
+                            self._heartbeat_interval * 2:
+                        LOGGER.debug("No response from %s in twice the "
+                                     "heartbeat interval - removing "
+                                     "connection.",
+                                     self._connection)
+                        self.stop()
             yield from asyncio.sleep(self._heartbeat_interval)
+
+    def _remove_connected_identity(self, zmq_identity):
+        if zmq_identity in self._connected_identities:
+            del self._connected_identities[zmq_identity]
+        connection_id = hashlib.sha512(zmq_identity).hexdigest()
+        if connection_id in self._connections:
+            del self._connections[connection_id]
 
     def _received_from_identity(self, zmq_identity):
         self._connected_identities[zmq_identity] = time.time()
@@ -145,6 +171,7 @@ class _SendReceive(object):
                 self._received_from_identity(zmq_identity)
             else:
                 msg_bytes = yield from self._socket.recv()
+                self._last_message_time = time.time()
 
             message = validator_pb2.Message()
             message.ParseFromString(msg_bytes)
@@ -259,8 +286,7 @@ class _SendReceive(object):
         asyncio.ensure_future(self._receive_message(), loop=self._event_loop)
 
         if self._heartbeat:
-            asyncio.ensure_future(self._send_heartbeat(),
-                                  loop=self._event_loop)
+            asyncio.ensure_future(self._do_heartbeat(), loop=self._event_loop)
 
         with self._condition:
             self._condition.notify_all()
@@ -352,7 +378,7 @@ class Interconnect(object):
             secured=self._secured,
             server_public_key=self._server_public_key,
             server_private_key=self._server_private_key,
-            heartbeat=False)
+            heartbeat=True)
 
         self.outbound_connections[uri] = conn
         conn.start(daemon=True)
@@ -410,7 +436,7 @@ class OutboundConnection(object):
                  secured,
                  server_public_key,
                  server_private_key,
-                 heartbeat=False):
+                 heartbeat=True):
         self._futures = future.FutureCollection()
         self._zmq_identity = zmq_identity
         self._endpoint = endpoint
