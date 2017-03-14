@@ -246,7 +246,7 @@ class ConfigurationTransactionHandler(object):
 
         _validate_setting(config_proposal.setting, config_proposal.value)
 
-        if approval_threshold >= 1:
+        if approval_threshold > 1:
             config_candidates = _get_config_candidates(state)
 
             existing_candidate = _first(
