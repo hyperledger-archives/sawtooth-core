@@ -433,6 +433,9 @@ class Interconnect(object):
         :param data: bytes serialized protobuf
         :return: future.Future
         """
+        if connection_id not in self._connections:
+            raise ValueError("Unknown connection id: %s",
+                             connection_id)
         connection_type, connection = self._connections.get(connection_id)
         if connection_type == "ZMQ_Identity":
             message = validator_pb2.Message(
