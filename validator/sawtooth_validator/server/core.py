@@ -185,8 +185,7 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_UNREGISTER_REQUEST,
             processor_handlers.ProcessorUnRegisterHandler(executor.processors),
-            thread_pool
-        )
+            thread_pool)
 
         # Set up base network handlers
         self._network_dispatcher.add_handler(
