@@ -34,7 +34,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
     considered as part of the fork being evaluated. BlockVerifier must be
     independent of block publishing activities.
     """
-    def __init__(self, block_cache, state_view):
+    def __init__(self, block_cache, state_view, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
@@ -43,10 +43,12 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 state_view: A read only view of state for the last committed
                 block in the chain. For the BlockVerifier this is the previous
                 block in the chain.
+                data_dir: path to location where persistent data for the
+                consensus module can be stored.
             Returns:
                 none.
         """
-        super().__init__(block_cache, state_view)
+        super().__init__(block_cache, state_view, data_dir)
 
         self._block_cache = block_cache
         self._state_view = state_view

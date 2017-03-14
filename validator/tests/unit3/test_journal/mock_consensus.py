@@ -23,7 +23,7 @@ from sawtooth_validator.journal.consensus.consensus\
 class BlockPublisher(BlockPublisherInterface):
     """ MockConsensus BlockPublisher
     """
-    def __init__(self, block_cache, state_view, batch_publisher):
+    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
         self._block_cache = block_cache
         self._state_view = state_view
         self.batch_publisher = batch_publisher
@@ -61,7 +61,7 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """MockConsensus BlockVerifier implementation
     """
-    def __init__(self, block_cache, state_view):
+    def __init__(self, block_cache, state_view, data_dir):
         self._block_cache = block_cache
         self._state_view = state_view
 
@@ -72,7 +72,7 @@ class BlockVerifier(BlockVerifierInterface):
 class ForkResolver(ForkResolverInterface):
     """MockConsensus ForkResolver implementation
     """
-    def __init__(self, block_cache):
+    def __init__(self, block_cache, data_dir):
         self._block_cache = block_cache
 
     def compare_forks(self, cur_fork_head, new_fork_head):

@@ -24,8 +24,8 @@ LOGGER = logging.getLogger(__name__)
 class PoetForkResolver(ForkResolverInterface):
     # Provides the fork resolution interface for the BlockValidator to use
     # when deciding between 2 forks.
-    def __init__(self, block_cache):
-        super().__init__(block_cache)
+    def __init__(self, block_cache, data_dir):
+        super().__init__(block_cache, data_dir)
 
         self._block_cache = block_cache
 
@@ -37,7 +37,9 @@ class PoetForkResolver(ForkResolverInterface):
         Args:
             cur_fork_head (Block): The current head of the block chain.
             new_fork_head (Block): The head of the fork that is being
-                evaluated.
+            evaluated.
+            data_dir: path to location where persistent data for the consensus
+            module can be stored.
         Returns:
             Boolean: True if the new chain should replace the current chain.
             False if the new chain should be discarded.

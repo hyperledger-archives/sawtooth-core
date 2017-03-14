@@ -105,6 +105,7 @@ class Journal(object):
                  squash_handler,
                  identity_signing_key,
                  chain_id_manager,
+                 data_dir,
                  block_cache=None):
         """
         Creates a Journal instance.
@@ -122,6 +123,7 @@ class Journal(object):
             identity_signing_key (str): Private key for signing blocks
             chain_id_manager (:obj:`ChainIdManager`) The ChainIdManager
                 instance.
+            data_dir (str): directory for data storage.
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
@@ -145,6 +147,7 @@ class Journal(object):
         self._block_queue = queue.Queue()
         self._chain_thread = None
         self._chain_id_manager = chain_id_manager
+        self._data_dir = data_dir
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
@@ -155,7 +158,8 @@ class Journal(object):
             batch_sender=self._batch_sender,
             squash_handler=self._squash_handler,
             chain_head=self._block_store.chain_head,
-            identity_signing_key=self._identity_signing_key
+            identity_signing_key=self._identity_signing_key,
+            data_dir=self._data_dir
         )
         self._publisher_thread = self._PublisherThread(self._block_publisher,
                                                        self._batch_queue)
@@ -167,7 +171,8 @@ class Journal(object):
             transaction_executor=self._transaction_executor,
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler,
-            chain_id_manager=self._chain_id_manager
+            chain_id_manager=self._chain_id_manager,
+            data_dir=self._data_dir
         )
         self._chain_thread = self._ChainThread(self._chain_controller,
                                                self._block_queue,

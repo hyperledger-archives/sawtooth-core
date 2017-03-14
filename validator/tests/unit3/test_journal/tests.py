@@ -82,7 +82,8 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.blocks.chain_head,
-            identity_signing_key=self.blocks.identity_signing_key)
+            identity_signing_key=self.blocks.identity_signing_key,
+            data_dir=None)
 
         # Test halting the BlockPublisher by setting the chain head to null
         publisher.on_chain_updated(None)
@@ -101,7 +102,8 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.blocks.chain_head,
-            identity_signing_key=self.blocks.identity_signing_key)
+            identity_signing_key=self.blocks.identity_signing_key,
+            data_dir=None)
 
         # initial load of existing state
         publisher.on_chain_updated(self.blocks.chain_head, [], [])
@@ -113,7 +115,7 @@ class TestBlockPublisher(unittest.TestCase):
         # this will be called on a polling every so often or possibly triggered
         # by events in the consensus it's self ... TBD
         publisher.on_check_publish_block()
-        
+
 
 class TestBlockValidator(unittest.TestCase):
     def setUp(self):
@@ -355,7 +357,8 @@ class TestBlockValidator(unittest.TestCase):
             block_cache=self.block_tree_manager.block_cache,
             done_cb=on_block_validated,
             executor=MockTransactionExecutor(),
-            squash_handler=None)
+            squash_handler=None,
+            data_dir=None)
 
     class BlockValidationHandler(object):
         def __init__(self):
@@ -400,7 +403,8 @@ class TestChainController(unittest.TestCase):
             transaction_executor=MockTransactionExecutor(),
             on_chain_updated=chain_updated,
             squash_handler=None,
-            chain_id_manager=None)
+            chain_id_manager=None,
+            data_dir=None)
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -718,7 +722,8 @@ class TestJournal(unittest.TestCase):
                 transaction_executor=self.txn_executor,
                 squash_handler=None,
                 identity_signing_key=btm.identity_signing_key,
-                chain_id_manager=None
+                chain_id_manager=None,
+                data_dir=None
             )
 
             self.gossip.on_batch_received = journal.on_batch_received

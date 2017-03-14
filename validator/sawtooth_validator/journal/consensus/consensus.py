@@ -26,7 +26,7 @@ class BlockPublisherInterface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def __init__(self, block_cache, state_view, batch_publisher):
+    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
@@ -38,6 +38,8 @@ class BlockPublisherInterface(metaclass=ABCMeta):
                 batch_publisher: An interface implementing send(txn_list)
                 which wrap the transactions in a batch and broadcast that
                 batch to the network.
+                data_dir: path to location where persistent data for the
+                consensus module can be stored.
             Returns:
                 none.
         """
@@ -96,7 +98,7 @@ class BlockVerifierInterface(metaclass=ABCMeta):
     # considered as part of the fork being  evaluate. BlockVerifier must be
     # independent of block publishing activities.
     @abstractmethod
-    def __init__(self, block_cache, state_view):
+    def __init__(self, block_cache, state_view, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
@@ -105,6 +107,8 @@ class BlockVerifierInterface(metaclass=ABCMeta):
                 state_view: A read only view of state for the last committed
                 block in the chain. For the BlockVerifier this is the previous
                 block in the chain.
+                data_dir: path to location where persistent data for the
+                consensus module can be stored.
             Returns:
                 none.
         """
@@ -126,7 +130,7 @@ class ForkResolverInterface(metaclass=ABCMeta):
     # Provides the fork resolution interface for the BlockValidator to use
     # when deciding between two forks.
     @abstractmethod
-    def __init__(self, block_cache):
+    def __init__(self, block_cache, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
         StateView is not passed to this object as it is ambiguous as to which
         state it is and all state dependent calculations should have been
@@ -136,6 +140,8 @@ class ForkResolverInterface(metaclass=ABCMeta):
                 block_cache: Dict interface to the block cache. Any predecessor
                 block to blocks handed to this object will be present in this
                 dict.
+                data_dir: path to location where persistent data for the
+                consensus module can be stored.
             Returns:
                 none.
         """

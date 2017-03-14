@@ -25,8 +25,8 @@ from sawtooth_validator.journal.consensus.consensus\
 class BlockPublisher(BlockPublisherInterface):
     """ DevMode BlockPublisher implementation.
     """
-    def __init__(self, block_cache, state_view, batch_publisher):
-        super().__init__(block_cache, state_view, batch_publisher)
+    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
+        super().__init__(block_cache, state_view, batch_publisher, data_dir)
 
         self._block_cache = block_cache
         self._state_view = state_view
@@ -72,8 +72,8 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """DevMode BlockVerifier implementation
     """
-    def __init__(self, block_cache, state_view):
-        super().__init__(block_cache, state_view)
+    def __init__(self, block_cache, state_view, data_dir):
+        super().__init__(block_cache, state_view, data_dir)
 
         self._block_cache = block_cache
         self._state_view = state_view
@@ -85,8 +85,8 @@ class BlockVerifier(BlockVerifierInterface):
 class ForkResolver(ForkResolverInterface):
     """ DevMode ForkResolver implementation
     """
-    def __init__(self, block_cache):
-        super().__init__(block_cache)
+    def __init__(self, block_cache, data_dir):
+        super().__init__(block_cache, data_dir)
 
         self._block_cache = block_cache
 
