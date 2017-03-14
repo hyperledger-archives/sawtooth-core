@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-
-cd ./sdk/java
-mvn clean generate-sources package install
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+cd $top_dir/sdk/java
+mvn --quiet --batch-mode clean generate-sources package install
