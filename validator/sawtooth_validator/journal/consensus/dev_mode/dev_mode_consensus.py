@@ -58,10 +58,9 @@ class BlockPublisher(BlockPublisherInterface):
         hash generation, or create a PoET wait timer.
 
         Args:
-            journal (Journal): the current journal object
-            block (TransactionBlock): the block to initialize.
+            block_header (BlockHeader): the BlockHeader to initialize.
         Returns:
-            none
+            True
         """
         block_header.consensus = b"Devmode"
         self._start_time = time.time()
@@ -69,17 +68,16 @@ class BlockPublisher(BlockPublisherInterface):
             self._min_wait_time, self._max_wait_time)
         return True
 
-    def check_publish_block(self, block):
+    def check_publish_block(self, block_header):
         """Check if a candidate block is ready to be claimed.
 
-        Args:
-            journal (Journal): the current journal object
-            block: the block to be checked if it should be claimed
+        block_header (BlockHeader): the block_header to be checked if it
+            should be claimed
         Returns:
             Boolean: True if the candidate block_header should be claimed.
         """
         if self._valid_block_publishers\
-                and block.block_header.signer_pubkey \
+                and block_header.signer_pubkey \
                 not in self._valid_block_publishers:
             return False
         elif self._min_wait_time == 0:
@@ -94,18 +92,18 @@ class BlockPublisher(BlockPublisherInterface):
         else:
             return False
 
-    def finalize_block(self, block):
+    def finalize_block(self, block_header):
         """Finalize a block to be claimed. Provide any signatures and
         data updates that need to be applied to the block before it is
         signed and broadcast to the network.
 
         Args:
-            journal (Journal): the current journal object
-            block: The candidate block that
+            block_header (BlockHeader): The candidate block that needs to be
+            finalized.
         Returns:
-            None
+            True
         """
-        pass
+        return True
 
 
 class BlockVerifier(BlockVerifierInterface):
@@ -117,11 +115,8 @@ class BlockVerifier(BlockVerifierInterface):
         self._block_cache = block_cache
         self._state_view = state_view
 
-    def verify_block(self, block_state):
-        if block_state.block_header.consensus == b"Devmode":
-            return True
-        else:
-            return block_state.block_header.consensus == b"Devmode"
+    def verify_block(self, block_wrapper):
+        return block_wrapper.header.consensus == b"Devmode"
 
 
 class ForkResolver(ForkResolverInterface):
