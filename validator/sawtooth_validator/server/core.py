@@ -53,6 +53,8 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.networking.handlers import PingHandler
+from sawtooth_validator.networking.handlers import ConnectHandler
+from sawtooth_validator.networking.handlers import DisconnectHandler
 
 
 LOGGER = logging.getLogger(__name__)
@@ -190,6 +192,16 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.NETWORK_PING,
             PingHandler(),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.NETWORK_CONNECT,
+            ConnectHandler(network=self._network),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.NETWORK_DISCONNECT,
+            DisconnectHandler(network=self._network),
             network_thread_pool)
 
         # Set up gossip handlers
