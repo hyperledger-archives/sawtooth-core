@@ -28,7 +28,7 @@ services:
     entrypoint: ./bin/tp_config -vv tcp://validator:40000
     stop_signal: SIGKILL
 
-  tp_intkey:
+  tp_intkey_python:
     image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
@@ -75,10 +75,7 @@ services:
     depends_on:
       - validator
       - rest_api
-    # Wait for rest_api and genesis
-    entrypoint: "bash -c \"\
-      sleep 30 && \
-      nose2-3 -v test_intkey_smoke.TestIntkeySmoke\""
+    entrypoint: nose2-3 -v test_intkey_smoke.TestIntkeySmoke
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

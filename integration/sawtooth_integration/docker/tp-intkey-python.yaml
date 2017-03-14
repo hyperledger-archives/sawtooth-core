@@ -17,7 +17,7 @@ version: "2.1"
 
 services:
 
-  tp_intkey:
+  tp_intkey_python:
     image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
       - ../../..:/project/sawtooth-core

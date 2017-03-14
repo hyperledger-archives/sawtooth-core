@@ -67,10 +67,6 @@ node ('master') {
                     sh './bin/build_all'
                 }
             }
-            sh 'docker build . -f docker/sawtooth-build-java -t sawtooth-build-java:$BUILD_TAG'
-            sh 'docker run -v $(pwd):/project/sawtooth-core sawtooth-build-java:$BUILD_TAG'
-            sh 'docker build . -f docker/sawtooth-build-javascript -t sawtooth-build-javascript:$BUILD_TAG'
-            sh 'docker run -v $(pwd):/project/sawtooth-core sawtooth-build-javascript:$BUILD_TAG'
         }
 
         stage("Run Lint") {
@@ -83,9 +79,7 @@ node ('master') {
 
         // Run the tests
         stage("Run Tests") {
-            // Required docker containers are built by the tests
-            sh './bin/docker_build_all -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
-            sh './bin/run_tests -p $(printf $BUILD_TAG | sha256sum | cut -c1-64)'
+            sh 'ISOLATION_ID=$(printf $BUILD_TAG | sha256sum | cut -c1-64) ./bin/run_tests'
         }
 
         stage("Create git archive") {

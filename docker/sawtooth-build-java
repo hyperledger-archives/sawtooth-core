@@ -19,7 +19,5 @@
 
 FROM maven:3-jdk-8
 
-CMD cd /project/sawtooth-core/sdk/java \
- && mvn clean generate-sources package install \
- && cd /project/sawtooth-core/sdk/examples/intkey_java \
- && mvn clean compile package
+CMD /project/sawtooth-core/bin/build_java_sdk \
+ && /project/sawtooth-core/bin/build_java_intkey

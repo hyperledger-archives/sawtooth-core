@@ -17,7 +17,7 @@ version: "2.1"
 
 services:
 
-  tp_intkey:
+  tp_intkey_java:
     image: sawtooth-tp_intkey_java:$ISOLATION_ID
     volumes:
       - ../../..:/project/sawtooth-core
