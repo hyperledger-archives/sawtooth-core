@@ -64,6 +64,10 @@ RUN apt-get update && apt-get install -y -q \
     python3-yaml \
     python3-toml \
     python3-zmq \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -76,7 +80,8 @@ RUN pip3 install bitcoin && \
     pip3 install sphinx && \
     pip3 install sphinxcontrib-httpdomain && \
     pip3 install sphinxcontrib-openapi && \
-    pip3 install sphinx_rtd_theme
+    pip3 install sphinx_rtd_theme && \
+    pip3 install cryptography
 
 
 USER build
