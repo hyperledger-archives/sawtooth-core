@@ -58,12 +58,13 @@ class _SendReceive(object):
                 in the dispatcher for transmitting responses.
             futures (future.FutureCollection): A Map of correlation ids to
                 futures
-            connections (dict): A dictinary that uses a sha512 hash as the keys
-                and either an OutboundConnection or string identiy as values.
-            zmq_identity (bytes): Used to idenitfy the dealer socket
+            connections (dict): A dictionary that uses a sha512 hash as
+                the keys and either an OutboundConnection or string
+                identity as values.
+            zmq_identity (bytes): Used to identify the dealer socket
             address (str): The endpoint to bind or connect to.
             dispatcher (dispatcher.Dispather): Used to handle messages in a
-                coordinated way.s
+                coordinated way.
             secured (bool): Whether or not to start the socket in
                 secure mode -- using zmq auth.
             server_public_key (bytes): A public key to use in verifying
