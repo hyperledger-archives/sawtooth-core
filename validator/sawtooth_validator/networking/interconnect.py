@@ -19,6 +19,7 @@ import hashlib
 import logging
 from threading import Condition
 from threading import Thread
+from functools import partial
 import uuid
 import time
 
@@ -31,6 +32,8 @@ from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
+from sawtooth_validator.protobuf.network_pb2 import ConnectMessage
+from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
 
 LOGGER = logging.getLogger(__name__)
@@ -363,11 +366,18 @@ class Interconnect(object):
         else:
             return True
 
-    def add_outbound_connection(self, uri):
+    def add_outbound_connection(self, uri,
+                                success_callback=None,
+                                failure_callback=None):
         """Adds an outbound connection to the network.
 
         Args:
-            connection (OutboundConnection): The connection to add.
+            uri (str): The zmq-style (e.g. tcp://hostname:port) uri
+                to attempt to connect to.
+            success_callback (function): The function to call upon
+                connection success.
+            failure_callback (function): The function to call upon
+                connection failure.
         """
         LOGGER.debug("Adding connection to %s", uri)
         conn = OutboundConnection(
@@ -384,7 +394,36 @@ class Interconnect(object):
         conn.start(daemon=True)
 
         self._add_connection(conn)
+
+        connect_message = ConnectMessage()
+        conn.send(validator_pb2.Message.NETWORK_CONNECT,
+                  connect_message.SerializeToString(),
+                  callback=partial(self._connect_callback,
+                                   connection=conn,
+                                   success_callback=success_callback,
+                                   failure_callback=failure_callback))
+
         return conn
+
+    def _connect_callback(self, request, result,
+                          connection=None,
+                          success_callback=None,
+                          failure_callback=None):
+        ack = NetworkAcknowledgement()
+        ack.ParseFromString(result.content)
+
+        if ack.status == ack.ERROR:
+            LOGGER.debug("Received an error response to the NETWORK_CONNECT "
+                         "we sent. Removing connection: %s",
+                         connection.connection_id)
+            self._remove_connection(connection)
+            if failure_callback:
+                failure_callback(connection_id=connection.connection_id)
+        elif ack.status == ack.OK:
+            LOGGER.debug("Connection to %s was acknowledged",
+                         connection.connection_id)
+            if success_callback:
+                success_callback(connection_id=connection.connection_id)
 
     def send(self, message_type, data, connection_id, callback=None):
         """
