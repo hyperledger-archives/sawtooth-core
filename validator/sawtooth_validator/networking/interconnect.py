@@ -383,8 +383,7 @@ class Interconnect(object):
         self._thread.join()
 
     def _add_connection(self, connection):
-        connection_id = \
-            hashlib.sha512(connection.local_id.encode()).hexdigest()
+        connection_id = connection.connection_id
         if connection_id not in self._connections:
             self._connections[connection_id] = \
                 ("OutboundConnection", connection)
@@ -424,8 +423,9 @@ class OutboundConnection(object):
         self._thread = None
 
     @property
-    def local_id(self):
-        return self._send_receive_thread.connection
+    def connection_id(self):
+        return hashlib.sha512(
+                self._send_receive_thread.connection.encode()).hexdigest()
 
     def send(self, message_type, data):
         """
