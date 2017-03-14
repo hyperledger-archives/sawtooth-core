@@ -280,7 +280,8 @@ class Interconnect(object):
                  secured=False,
                  server_public_key=None,
                  server_private_key=None,
-                 heartbeat=False):
+                 heartbeat=False,
+                 max_incoming_connections=100):
         """
         Constructor for Interconnect.
 
@@ -304,6 +305,7 @@ class Interconnect(object):
         self._heartbeat = heartbeat
         self._connections = {}
         self.outbound_connections = {}
+        self._max_incoming_connections = max_incoming_connections
 
         self._send_receive_thread = _SendReceive(
             "ServerThread",
@@ -317,7 +319,22 @@ class Interconnect(object):
             heartbeat=heartbeat)
 
         self._thread = None
-        self._identities = []
+
+    def allow_inbound_connection(self):
+        """Determines if an additional incoming network connection
+        should be permitted.
+
+        Returns:
+            bool
+        """
+        LOGGER.debug("Determining whether inbound connection should "
+                     "be allowed. num connections: %s max %s",
+                     len(self._connections),
+                     self._max_incoming_connections)
+        if len(self._connections) > self._max_incoming_connections:
+            return False
+        else:
+            return True
 
     def add_outbound_connection(self, uri):
         """Adds an outbound connection to the network.

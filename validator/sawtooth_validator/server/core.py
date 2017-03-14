@@ -95,7 +95,8 @@ class Validator(object):
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
                                      secured=False,
-                                     heartbeat=False)
+                                     heartbeat=False,
+                                     max_incoming_connections=20)
         executor = TransactionExecutor(service=self._service,
                                        context_manager=context_manager,
                                        config_view_factory=ConfigViewFactory(
@@ -123,7 +124,8 @@ class Validator(object):
             secured=True,
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
             server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
-            heartbeat=True)
+            heartbeat=True,
+            max_incoming_connections=100)
 
         self._gossip = Gossip(self._network,
                               initial_peer_endpoints=peer_list)
