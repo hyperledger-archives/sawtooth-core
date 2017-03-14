@@ -386,7 +386,7 @@ class Interconnect(object):
         self._add_connection(conn)
         return conn
 
-    def send(self, message_type, data, connection_id, has_callback=False):
+    def send(self, message_type, data, connection_id, callback=None):
         """
         Send a message of message_type
         :param connection_id: the identity for the connection to send to
@@ -402,14 +402,19 @@ class Interconnect(object):
                 message_type=message_type)
 
             fut = future.Future(message.correlation_id, message.content,
-                                has_callback=has_callback)
+                                has_callback=True if callback is not None
+                                else False)
+
+            if callback is not None:
+                fut.add_callback(callback)
+
             self._futures.put(fut)
 
             self._send_receive_thread.send_message(msg=message,
                                                    connection_id=connection_id)
             return fut
         else:
-            return connection.send(message_type, data)
+            return connection.send(message_type, data, callback=callback)
 
     def start(self, daemon=False):
         self._thread = Thread(target=self._send_receive_thread.setup,
