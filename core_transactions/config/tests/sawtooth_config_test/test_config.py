@@ -304,6 +304,44 @@ class TestConfig(unittest.TestCase):
 
         self._expect_ok()
 
+    def test_vote_in_ballot_mode_rejects_a_tie(self):
+        """
+        Tests voting on a given setting, where there is a tie for accept and
+        for reject, with no remaining auth keys.
+        """
+        proposal = ConfigProposal(
+            setting='my.config.setting',
+            value='myvalue',
+            nonce='somenonce'
+        )
+        proposal_id = _to_hash(proposal.SerializeToString())
+        candidate = ConfigCandidate(
+            proposal_id=proposal_id,
+            proposal=proposal,
+            votes=[
+                ConfigCandidate.VoteRecord(
+                    public_key='some_other_pubkey',
+                    vote=ConfigVote.ACCEPT),
+            ])
+
+        candidates = ConfigCandidates(candidates=[candidate])
+
+        self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
+
+        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
+        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_get('sawtooth.config.vote.approval_threshold', '2')
+
+        # expect to update the proposals
+        self._expect_get('sawtooth.config.vote.proposals',
+                         base64.b64encode(candidates.SerializeToString()))
+        self._expect_set('sawtooth.config.vote.proposals',
+                         base64.b64encode(EMPTY_CANDIDATES))
+
+        self._expect_ok()
+
     def test_authorized_keys_accept_no_approval(self):
         """
         Tests setting a value with auth keys and no approval type
