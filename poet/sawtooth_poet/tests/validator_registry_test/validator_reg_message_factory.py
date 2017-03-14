@@ -73,6 +73,11 @@ class ValidatorRegistryMessageFactory(object):
             public=public
         )
         self.pubkey_hash = hashlib.sha256(public.encode()).hexdigest()
+        self._report_private_key = \
+            serialization.load_pem_private_key(
+                self.__REPORT_PRIVATE_KEY_PEM__.encode(),
+                password=None,
+                backend=backends.default_backend())
 
     @property
     def public_key(self):
@@ -88,31 +93,43 @@ class ValidatorRegistryMessageFactory(object):
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
+    # Utility function for creating proof data as we need to be
+    # able to update signatures when verification report changes
+    # Returns a serialized proof data
+    def create_proof_data(self, verification_report, evidence_payload):
+        verification_report_json = json.dumps(verification_report)
+        signature = \
+            self._report_private_key.sign(
+                verification_report_json.encode(),
+                padding.PKCS1v15(),
+                hashes.SHA256())
+        proof_data_dict = {
+            'evidence_payload': evidence_payload,
+            'verification_report': verification_report_json,
+            'signature': base64.b64encode(signature).decode()
+        }
+
+        return json.dumps(proof_data_dict)
+
     # Currently this is done in the enclave
     def create_signup_info(self, originator_public_key_hash,
                            most_recent_wait_certificate_id):
         # First we need to create a public/private key pair for the PoET
         # enclave to use.
-        _poet_private_key = \
+        poet_private_key = \
             "1f70fa2518077ad18483f48e77882d11983b537fa5f7cf158684d2c670fe4f1f"
-        _poet_public_key = \
-            signing.generate_pubkey(_poet_private_key)
+        poet_public_key = \
+            signing.generate_pubkey(poet_private_key)
         # currently not used
         # _active_wait_timer = None
-
-        _report_private_key = \
-            serialization.load_pem_private_key(
-                self.__REPORT_PRIVATE_KEY_PEM__.encode(),
-                password=None,
-                backend=backends.default_backend())
 
         # We are going to fake out the sealing the signup data.
         signup_data = {
             'poet_public_key':
-                signing.encode_pubkey(_poet_public_key, 'hex'),
+                signing.encode_pubkey(poet_public_key, 'hex'),
             'poet_private_key':
                 signing.encode_privkey(
-                    _poet_private_key,
+                    poet_private_key,
                     'hex')
         }
 
@@ -120,7 +137,7 @@ class ValidatorRegistryMessageFactory(object):
         report_data = '{0}{1}'.format(
             originator_public_key_hash.upper(),
             signing.encode_pubkey(
-                _poet_public_key,
+                poet_public_key,
                 'hex').upper()
         )
         quote = {
@@ -128,11 +145,19 @@ class ValidatorRegistryMessageFactory(object):
                 json.dumps(report_data).encode()).hexdigest()
         }
 
+        # Create a fake PSE manifest.  A base64 encoding of the
+        # originator public key hash should suffice.
+        pse_manifest = \
+            base64.b64encode(originator_public_key_hash.encode())
+
+        timestamp = '2017-02-16T15:21:24.437048'
+
         # Fake our "proof" data.
         verification_report = {
+            'epidPseudonym': originator_public_key_hash,
             'id': base64.b64encode(
-                bytes(hashlib.sha256(b'2017-02-16T15:21:24.437048')
-                      .hexdigest().encode())).decode(),
+                hashlib.sha256(
+                    timestamp.encode()).hexdigest().encode()).decode(),
             'isvEnclaveQuoteStatus': 'OK',
             'isvEnclaveQuoteBody':
                 base64.b64encode(
@@ -141,23 +166,17 @@ class ValidatorRegistryMessageFactory(object):
             'pseManifestHash':
                 base64.b64encode(
                     hashlib.sha256(
-                        bytes(b'Do you believe in '
-                              b'manifest destiny?')).hexdigest()
-                    .encode()).decode(),
-            'nonce': most_recent_wait_certificate_id
+                        pse_manifest).hexdigest().encode()).decode(),
+            'nonce': most_recent_wait_certificate_id,
+            'timestamp': timestamp
         }
 
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            _report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
-        proof_data = json.dumps(proof_data_dict)
+        proof_data = \
+            self.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload={
+                    'pse_manifest': pse_manifest.decode()
+                })
 
         return \
             SignUpInfo(

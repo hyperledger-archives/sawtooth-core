@@ -17,11 +17,6 @@ import unittest
 import json
 import base64
 
-from cryptography.hazmat import backends
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-
 from sawtooth_signing import secp256k1_signer as signing
 from validator_registry_test.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
@@ -34,35 +29,6 @@ class TestValidatorRegistry(unittest.TestCase):
     Set of tests to run in a test suite with an existing TPTester and
     transaction processor.
     """
-    __REPORT_PRIVATE_KEY_PEM__ = \
-        '-----BEGIN PRIVATE KEY-----\n' \
-        'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCsy/NmLwZP6Uj0\n' \
-        'p5mIiefgK8VOK7KJ34g3h0/X6aFOd/Ff4j+e23wtQpkxsjVHWLM5SjElGhfpVDhL\n' \
-        '1WAMsQI9bpCWR4sjV6p7gOJhv34nkA2Grj5eSHCAJRQXCl+pJ9dYIeKaNoaxkdtq\n' \
-        '+Xme//ohtkkv/ZjMTfsjMl0RLXokJ+YhSuTpNSovRaCtZfLB5MihVJuV3Qzb2ROh\n' \
-        'KQxcuyPy9tBtOIrBWJaFiXOLRxAijs+ICyzrqUBbRfoAztkljIBx9KNItHiC4zPv\n' \
-        'o6DxpGSO2yMQSSrs13PkfyGWVZSgenEYOouEz07X+H5B29PPuW5mCl4nkoH3a9gv\n' \
-        'rI6VLEx9AgMBAAECggEAImfFge4RCq4/eX85gcc7pRXyBjuLJAqe+7d0fWAmXxJg\n' \
-        'vB+3XTEEi5p8GDoMg7U0kk6kdGe6pRnAz9CffEduU78FCPcbzCCzcD3cVWwkeUok\n' \
-        'd1GQV4OC6vD3DBNjsrGdHg45KU18CjUphCZCQhdjvXynG+gZmWxZecuYXkg4zqPT\n' \
-        'LwOkcdWBPhJ9CbjtiYOtKDZbhcbdfnb2fkxmvnAoz1OWNfVFXh+x7651FrmL2Pga\n' \
-        'xGz5XoxFYYT6DWW1fL6GNuVrd97wkcYUcjazMgunuUMC+6XFxqK+BoqnxeaxnsSt\n' \
-        'G2r0sdVaCyK1sU41ftbEQsc5oYeQ3v5frGZL+BgrYQKBgQDgZnjqnVI/B+9iarx1\n' \
-        'MjAFyhurcKvFvlBtGKUg9Q62V6wI4VZvPnzA2zEaR1J0cZPB1lCcMsFACpuQF2Mr\n' \
-        '3VDyJbnpSG9q05POBtfLjGQdXKtGb8cfXY2SwjzLH/tvxHm3SP+RxvLICQcLX2/y\n' \
-        'GTJ+mY9C6Hs6jIVLOnMWkRWamQKBgQDFITE3Qs3Y0ZwkKfGQMKuqJLRw29Tyzw0n\n' \
-        'XKaVmO/pEzYcXZMPBrFhGvdmNcJLo2fcsmGZnmit8RP4ChwHUlD11dH1Ffqw9FWc\n' \
-        '387i0chlE5FhQPirSM8sWFVmjt2sxC4qFWJoAD/COQtKHgEaVKVc4sH/yRostL1C\n' \
-        'r+7aWuqzhQKBgQDcuC5LJr8VPGrbtPz1kY3mw+r/cG2krRNSm6Egj6oO9KFEgtCP\n' \
-        'zzjKQU9E985EtsqNKI5VdR7cLRLiYf6r0J6j7zO0IAlnXADP768miUqYDuRw/dUw\n' \
-        'JsbwCZneefDI+Mp325d1/egjla2WJCNqUBp4p/Zf62f6KOmbGzzEf6RuUQKBgG2y\n' \
-        'E8YRiaTOt5m0MXUwcEZk2Hg5DF31c/dkalqy2UYU57aPJ8djzQ8hR2x8G9ulWaWJ\n' \
-        'KiCm8s9gaOFNFt3II785NfWxPmh7/qwmKuUzIdWFNxAsbHQ8NvURTqyccaSzIpFO\n' \
-        'hw0inlhBEBQ1cB2r3r06fgQNb2BTT0Itzrd5gkNVAoGBAJcMgeKdBMukT8dKxb4R\n' \
-        '1PgQtFlR3COu2+B00pDyUpROFhHYLw/KlUv5TKrH1k3+E0KM+winVUIcZHlmFyuy\n' \
-        'Ilquaova1YSFXP5cpD+PKtxRV76Qlqt6o+aPywm81licdOAXotT4JyJhrgz9ISnn\n' \
-        'J13KkHoAZ9qd0rX7s37czb3O\n' \
-        '-----END PRIVATE KEY-----'
 
     def __init__(self, test_name, tester):
         super().__init__(test_name)
@@ -72,11 +38,6 @@ class TestValidatorRegistry(unittest.TestCase):
             signing.generate_pubkey(self.private_key), "hex")
         self.factory = ValidatorRegistryMessageFactory(
             private=self.private_key, public=self.public_key)
-        self._report_private_key = \
-            serialization.load_pem_private_key(
-                self.__REPORT_PRIVATE_KEY_PEM__.encode(),
-                password=None,
-                backend=backends.default_backend())
 
     def _expect_invalid_transaction(self):
         self.tester.expect(
@@ -97,7 +58,7 @@ class TestValidatorRegistry(unittest.TestCase):
             verb="reg", name="val_1", id=self.factory.public_key,
             signup_info=signup_info, block_num=0)
 
-        # Send validator registry paylaod
+        # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
@@ -137,7 +98,7 @@ class TestValidatorRegistry(unittest.TestCase):
             verb="reg", name="val_1", id=self.factory.public_key,
             signup_info=signup_info, block_num=0)
 
-        # Send validator registry paylaod
+        # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
@@ -196,7 +157,7 @@ class TestValidatorRegistry(unittest.TestCase):
             signup_info=signup_info,
             block_num=0)
 
-        # Send validator registry paylaod
+        # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
@@ -218,7 +179,7 @@ class TestValidatorRegistry(unittest.TestCase):
             signup_info=signup_info,
             block_num=0)
 
-        # Send validator registry paylaod
+        # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
@@ -241,7 +202,7 @@ class TestValidatorRegistry(unittest.TestCase):
             signup_info=signup_info,
             block_num=0)
 
-        # Send validator registry paylaod
+        # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
@@ -255,20 +216,20 @@ class TestValidatorRegistry(unittest.TestCase):
             signup_info=signup_info,
             block_num=0)
 
-        # Send validator registry paylaod
+        # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
         self._expect_invalid_transaction()
 
-    def test_invalid_verfication_report(self):
+    def test_invalid_verification_report(self):
         """
-        Test that a transaction whose verication report is invalid returns an
-        invalid transaction.
+        Test that a transaction whose verification report is invalid returns
+        an invalid transaction.
         """
         signup_info = self.factory.create_signup_info(
             self.factory.pubkey_hash, "000")
 
-        # Verifcation Report is None
+        # Verification Report is None
         proof_data = signup_info.proof_data
         signup_info.proof_data = json.dumps({})
         self._test_bad_signup_info(signup_info)
@@ -291,24 +252,44 @@ class TestValidatorRegistry(unittest.TestCase):
         self._test_bad_signup_info(signup_info)
 
         # ------------------------------------------------------
-        # No Nonce
+        # No EPID pseudonym
+        proof_data_dict = json.loads(proof_data)
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
+        del verification_report["epidPseudonym"]
 
-        verification_report["nonce"] = None
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
+        self._test_bad_signup_info(signup_info)
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        # ------------------------------------------------------
+        # Altered EPID pseudonym (does not match anti_sybil_id)
+        proof_data_dict = json.loads(proof_data)
+        verification_report = \
+            json.loads(proof_data_dict["verification_report"])
+        verification_report["epidPseudonym"] = "altered"
+
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
+
+        self._test_bad_signup_info(signup_info)
+
+        # ------------------------------------------------------
+        # No Nonce
+        proof_data_dict = json.loads(proof_data)
+        verification_report = \
+            json.loads(proof_data_dict["verification_report"])
+        del verification_report["nonce"]
+
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -327,20 +308,12 @@ class TestValidatorRegistry(unittest.TestCase):
         # no pseManifestStatus
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
-        pse_status = verification_report['pseManifestStatus']
-        verification_report['pseManifestStatus'] = None
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
+        del verification_report['pseManifestStatus']
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -349,18 +322,11 @@ class TestValidatorRegistry(unittest.TestCase):
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
         verification_report['pseManifestStatus'] = "bad"
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -368,20 +334,12 @@ class TestValidatorRegistry(unittest.TestCase):
         # No pseManifestHash
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
-        verification_report['pseManifestStatus'] = pse_status
-        verification_report['pseManifestHash'] = None
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
+        del verification_report['pseManifestHash']
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -390,22 +348,41 @@ class TestValidatorRegistry(unittest.TestCase):
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
         verification_report['pseManifestHash'] = "Bad"
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
+
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
+
+        self._test_bad_signup_info(signup_info)
+
+        # ------------------------------------------------------
+        # Missing evidence payload
+        evidence_payload = proof_data_dict["evidence_payload"]
+        del proof_data_dict["evidence_payload"]
 
         signup_info.proof_data = json.dumps(proof_data_dict)
 
         self._test_bad_signup_info(signup_info)
 
-    def test_invalid_envalve_body(self):
+        # ------------------------------------------------------
+        # Missing PSE manifest
+        del evidence_payload["pse_manifest"]
+        proof_data_dict["evidence_payload"] = evidence_payload
+
+        signup_info.proof_data = json.dumps(proof_data_dict)
+
+        self._test_bad_signup_info(signup_info)
+
+        # ------------------------------------------------------
+        # Bad PSE manifest
+        evidence_payload["pse_manifest"] = "bad"
+
+        signup_info.proof_data = json.dumps(proof_data_dict)
+
+        self._test_bad_signup_info(signup_info)
+
+    def test_invalid_enclave_body(self):
         """
         Test that a transaction whose enclave_body is invalid returns an
         invalid transaction.
@@ -422,38 +399,24 @@ class TestValidatorRegistry(unittest.TestCase):
             json.loads(proof_data_dict["verification_report"])
         enclave_status = verification_report["isvEnclaveQuoteStatus"]
         verification_report["isvEnclaveQuoteStatus"] = None
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
         # ------------------------------------------------------
-        # No isvEnclaveQuoteStatus
+        # Bad isvEnclaveQuoteStatus
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
         verification_report["isvEnclaveQuoteStatus"] = "Bad"
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -463,18 +426,11 @@ class TestValidatorRegistry(unittest.TestCase):
             json.loads(proof_data_dict["verification_report"])
         verification_report["isvEnclaveQuoteStatus"] = enclave_status
         verification_report['isvEnclaveQuoteBody'] = None
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
 
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -488,18 +444,10 @@ class TestValidatorRegistry(unittest.TestCase):
             base64.b64encode(
                 json.dumps(quote).encode()).decode()
 
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
-
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
 
@@ -507,23 +455,15 @@ class TestValidatorRegistry(unittest.TestCase):
         # Bad isvEnclaveQuoteBody
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
-        quote = {"report_body": "none"}
+        quote = {"report_body": "bad"}
 
         verification_report['isvEnclaveQuoteBody'] = \
             base64.b64encode(
                 json.dumps(quote).encode()).decode()
 
-        verification_report_json = json.dumps(verification_report)
-        signature = \
-            self._report_private_key.sign(
-                verification_report_json.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        proof_data_dict = {
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
-
-        signup_info.proof_data = json.dumps(proof_data_dict)
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
