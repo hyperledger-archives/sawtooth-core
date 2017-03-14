@@ -102,6 +102,8 @@ message Message {
 
         NETWORK_PING = 300;
         NETWORK_ACK = 301;
+        NETWORK_CONNECT = 302;
+        NETWORK_DISCONNECT = 303;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
