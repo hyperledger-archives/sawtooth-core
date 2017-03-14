@@ -431,6 +431,11 @@ class Interconnect(object):
             self._connections[connection_id] = \
                 ("OutboundConnection", connection)
 
+    def _remove_connection(self, connection):
+        connection_id = connection.connection_id
+        if connection_id in self._connections:
+            del self._connections[connection_id]
+
 
 class OutboundConnection(object):
     def __init__(self,
