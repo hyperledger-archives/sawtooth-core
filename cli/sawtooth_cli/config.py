@@ -84,6 +84,7 @@ def add_config_parser(subparsers, parent_parser):
         type=str,
         help="the URL of a validator's REST API",
         default='http://localhost:8080')
+
     create_parser.add_argument(
         'setting',
         type=str,
@@ -181,7 +182,7 @@ def do_config(args):
     """Executes the config commands subcommands.
     """
     if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
-        _do_config_create(args)
+        _do_config_proposal_create(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
         _do_config_proposal_list(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
@@ -194,7 +195,7 @@ def do_config(args):
                 args.subcommand))
 
 
-def _do_config_create(args):
+def _do_config_proposal_create(args):
     """Executes the 'proposal create' subcommand.  Given a key file, and a
     series of key/value pairs, it generates batches of sawtooth_config
     transactions in a BatchList instance.  The BatchList is either stored to a
