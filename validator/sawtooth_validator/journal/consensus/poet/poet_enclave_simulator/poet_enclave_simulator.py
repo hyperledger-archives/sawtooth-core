@@ -22,6 +22,12 @@ import hashlib
 import base64
 import time
 
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
+
 from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -53,15 +59,60 @@ class _PoetEnclaveSimulator(object):
     _seal_private_key = signing.generate_privkey()
     _seal_public_key = signing.generate_pubkey(_seal_private_key)
 
-    # The WIF-encoded private report key.  From it, we will create private
-    # key we can use for signing attestation verification reports.
-    __REPORT_PRIVATE_KEY_WIF = \
-        '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
+    # We use the report private key PEM to create the private key used to
+    # sign attestation verification reports.  On the flip side, the report
+    # public key PEM is used to create the public key used to verify the
+    # signature on the attestation verification reports.
+    __REPORT_PRIVATE_KEY_PEM__ = \
+        '-----BEGIN PRIVATE KEY-----\n' \
+        'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCsy/NmLwZP6Uj0\n' \
+        'p5mIiefgK8VOK7KJ34g3h0/X6aFOd/Ff4j+e23wtQpkxsjVHWLM5SjElGhfpVDhL\n' \
+        '1WAMsQI9bpCWR4sjV6p7gOJhv34nkA2Grj5eSHCAJRQXCl+pJ9dYIeKaNoaxkdtq\n' \
+        '+Xme//ohtkkv/ZjMTfsjMl0RLXokJ+YhSuTpNSovRaCtZfLB5MihVJuV3Qzb2ROh\n' \
+        'KQxcuyPy9tBtOIrBWJaFiXOLRxAijs+ICyzrqUBbRfoAztkljIBx9KNItHiC4zPv\n' \
+        'o6DxpGSO2yMQSSrs13PkfyGWVZSgenEYOouEz07X+H5B29PPuW5mCl4nkoH3a9gv\n' \
+        'rI6VLEx9AgMBAAECggEAImfFge4RCq4/eX85gcc7pRXyBjuLJAqe+7d0fWAmXxJg\n' \
+        'vB+3XTEEi5p8GDoMg7U0kk6kdGe6pRnAz9CffEduU78FCPcbzCCzcD3cVWwkeUok\n' \
+        'd1GQV4OC6vD3DBNjsrGdHg45KU18CjUphCZCQhdjvXynG+gZmWxZecuYXkg4zqPT\n' \
+        'LwOkcdWBPhJ9CbjtiYOtKDZbhcbdfnb2fkxmvnAoz1OWNfVFXh+x7651FrmL2Pga\n' \
+        'xGz5XoxFYYT6DWW1fL6GNuVrd97wkcYUcjazMgunuUMC+6XFxqK+BoqnxeaxnsSt\n' \
+        'G2r0sdVaCyK1sU41ftbEQsc5oYeQ3v5frGZL+BgrYQKBgQDgZnjqnVI/B+9iarx1\n' \
+        'MjAFyhurcKvFvlBtGKUg9Q62V6wI4VZvPnzA2zEaR1J0cZPB1lCcMsFACpuQF2Mr\n' \
+        '3VDyJbnpSG9q05POBtfLjGQdXKtGb8cfXY2SwjzLH/tvxHm3SP+RxvLICQcLX2/y\n' \
+        'GTJ+mY9C6Hs6jIVLOnMWkRWamQKBgQDFITE3Qs3Y0ZwkKfGQMKuqJLRw29Tyzw0n\n' \
+        'XKaVmO/pEzYcXZMPBrFhGvdmNcJLo2fcsmGZnmit8RP4ChwHUlD11dH1Ffqw9FWc\n' \
+        '387i0chlE5FhQPirSM8sWFVmjt2sxC4qFWJoAD/COQtKHgEaVKVc4sH/yRostL1C\n' \
+        'r+7aWuqzhQKBgQDcuC5LJr8VPGrbtPz1kY3mw+r/cG2krRNSm6Egj6oO9KFEgtCP\n' \
+        'zzjKQU9E985EtsqNKI5VdR7cLRLiYf6r0J6j7zO0IAlnXADP768miUqYDuRw/dUw\n' \
+        'JsbwCZneefDI+Mp325d1/egjla2WJCNqUBp4p/Zf62f6KOmbGzzEf6RuUQKBgG2y\n' \
+        'E8YRiaTOt5m0MXUwcEZk2Hg5DF31c/dkalqy2UYU57aPJ8djzQ8hR2x8G9ulWaWJ\n' \
+        'KiCm8s9gaOFNFt3II785NfWxPmh7/qwmKuUzIdWFNxAsbHQ8NvURTqyccaSzIpFO\n' \
+        'hw0inlhBEBQ1cB2r3r06fgQNb2BTT0Itzrd5gkNVAoGBAJcMgeKdBMukT8dKxb4R\n' \
+        '1PgQtFlR3COu2+B00pDyUpROFhHYLw/KlUv5TKrH1k3+E0KM+winVUIcZHlmFyuy\n' \
+        'Ilquaova1YSFXP5cpD+PKtxRV76Qlqt6o+aPywm81licdOAXotT4JyJhrgz9ISnn\n' \
+        'J13KkHoAZ9qd0rX7s37czb3O\n' \
+        '-----END PRIVATE KEY-----'
 
-    # Since signing works with WIF-encoded private keys, we don't have to
-    # decode the encoded key string.
-    _report_private_key = __REPORT_PRIVATE_KEY_WIF
-    _report_public_key = signing.generate_pubkey(_report_private_key)
+    __REPORT_PUBLIC_KEY_PEM__ = \
+        '-----BEGIN PUBLIC KEY-----\n' \
+        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn\n' \
+        '4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC\n' \
+        'PW6QlkeLI1eqe4DiYb9+J5ANhq4+XkhwgCUUFwpfqSfXWCHimjaGsZHbavl5nv/6\n' \
+        'IbZJL/2YzE37IzJdES16JCfmIUrk6TUqL0WgrWXyweTIoVSbld0M29kToSkMXLsj\n' \
+        '8vbQbTiKwViWhYlzi0cQIo7PiAss66lAW0X6AM7ZJYyAcfSjSLR4guMz76Og8aRk\n' \
+        'jtsjEEkq7Ndz5H8hllWUoHpxGDqLhM9O1/h+QdvTz7luZgpeJ5KB92vYL6yOlSxM\n' \
+        'fQIDAQAB\n' \
+        '-----END PUBLIC KEY-----'
+
+    _report_private_key = \
+        serialization.load_pem_private_key(
+            __REPORT_PRIVATE_KEY_PEM__.encode(),
+            password=None,
+            backend=backends.default_backend())
+    _report_public_key = \
+        serialization.load_pem_public_key(
+            __REPORT_PUBLIC_KEY_PEM__.encode(),
+            backend=backends.default_backend())
 
     # The anti-sybil ID for this particular validator.  This will get set when
     # the enclave is initialized
@@ -118,12 +169,19 @@ class _PoetEnclaveSimulator(object):
                     dict2json(report_data).encode()).hexdigest()
             }
 
+            # Create a fake PSE manifest.  A base64 encoding of the
+            # originator public key hash should suffice.
+            pse_manifest = \
+                base64.b64encode(originator_public_key_hash.encode())
+
+            timestamp = datetime.datetime.now().isoformat()
+
             # Fake our "proof" data.
             verification_report = {
+                'epidPseudonym': originator_public_key_hash,
                 'id': base64.b64encode(
-                    bytes(hashlib.sha256(
-                        datetime.datetime.now().isoformat().encode())
-                        .hexdigest().encode())).decode(),
+                    hashlib.sha256(
+                        timestamp.encode()).hexdigest().encode()).decode(),
                 'isvEnclaveQuoteStatus': 'OK',
                 'isvEnclaveQuoteBody':
                     base64.b64encode(
@@ -132,18 +190,26 @@ class _PoetEnclaveSimulator(object):
                 'pseManifestHash':
                     base64.b64encode(
                         hashlib.sha256(
-                            bytes(b'Do you believe in '
-                                  b'manifest destiny?')).hexdigest()
-                        .encode()).decode(),
-                'nonce': most_recent_wait_certificate_id
+                            pse_manifest).hexdigest().encode()).decode(),
+                'nonce': most_recent_wait_certificate_id,
+                'timestamp': timestamp
             }
 
+            # Serialize the verification report, sign it, and then put
+            # in the proof data
+            verification_report_json = dict2json(verification_report)
+            signature = \
+                cls._report_private_key.sign(
+                    verification_report_json.encode(),
+                    padding.PKCS1v15(),
+                    hashes.SHA256())
+
             proof_data_dict = {
-                'verification_report': dict2json(verification_report),
-                'signature':
-                    signing.sign(
-                        dict2json(verification_report),
-                        cls._report_private_key)
+                'evidence_payload': {
+                    'pse_manifest': pse_manifest.decode()
+                },
+                'verification_report': verification_report_json,
+                'signature': base64.b64encode(signature).decode()
             }
             proof_data = dict2json(proof_data_dict)
 
@@ -206,13 +272,37 @@ class _PoetEnclaveSimulator(object):
         if signature is None:
             raise ValueError('Signature is missing from proof data')
 
-        if not signing.verify(
-                verification_report,
-                signature,
-                cls._report_public_key):
+        try:
+            cls._report_public_key.verify(
+                base64.b64decode(signature.encode()),
+                verification_report.encode(),
+                padding.PKCS1v15(),
+                hashes.SHA256())
+        except InvalidSignature:
             raise ValueError('Verification report signature is invalid')
 
         verification_report_dict = json2dict(verification_report)
+
+        # Verify that the verification report contains an ID field
+        if 'id' not in verification_report_dict:
+            raise ValueError('Verification report does not contain an ID')
+
+        # Verify that the verification report contains an EPID pseudonym and
+        # that it matches the anti-Sybil ID
+        epid_pseudonym = verification_report_dict.get('epidPseudonym')
+        if epid_pseudonym is None:
+            raise \
+                ValueError(
+                    'Verification report does not contain an EPID pseudonym')
+
+        if epid_pseudonym != signup_info.anti_sybil_id:
+            raise \
+                ValueError(
+                    'The anti-Sybil ID in the verification report [{0}] does '
+                    'not match the one contained in the signup information '
+                    '[{1}]'.format(
+                        epid_pseudonym,
+                        signup_info.anti_sybil_id))
 
         # Verify that the verification report contains a PSE manifest status
         # and it is OK
@@ -223,14 +313,13 @@ class _PoetEnclaveSimulator(object):
                 ValueError(
                     'Verification report does not contain a PSE manifest '
                     'status')
-        if pse_manifest_status != 'OK':
+        if pse_manifest_status.upper() != 'OK':
             raise \
                 ValueError(
                     'PSE manifest status is {} (i.e., not OK)'.format(
                         pse_manifest_status))
 
         # Verify that the verification report contains a PSE manifest hash
-        # and it is the value we expect
         pse_manifest_hash = \
             verification_report_dict.get('pseManifestHash')
         if pse_manifest_hash is None:
@@ -239,22 +328,31 @@ class _PoetEnclaveSimulator(object):
                     'Verification report does not contain a PSE manifest '
                     'hash')
 
+        # Verify that the proof data contains evidence payload
+        evidence_payload = proof_data_dict.get('evidence_payload')
+        if evidence_payload is None:
+            raise ValueError('Evidence payload is missing from proof data')
+
+        # Verify that the evidence payload contains a PSE manifest and then
+        # use it to make sure that the PSE manifest hash is what we expect
+        pse_manifest = evidence_payload.get('pse_manifest')
+        if pse_manifest is None:
+            raise ValueError('Evidence payload does not include PSE manifest')
+
         expected_pse_manifest_hash = \
             base64.b64encode(
                 hashlib.sha256(
-                    bytes(b'Do you believe in '
-                          b'manifest destiny?')).hexdigest()
-                .encode()).decode()
+                    pse_manifest.encode()).hexdigest().encode()).decode()
 
-        if pse_manifest_hash != expected_pse_manifest_hash:
+        if pse_manifest_hash.upper() != expected_pse_manifest_hash.upper():
             raise \
                 ValueError(
                     'PSE manifest hash {0} does not match {1}'.format(
                         pse_manifest_hash,
                         expected_pse_manifest_hash))
 
-        # Verify that the verification report contains an enclave quote and
-        # that its status is OK
+        # Verify that the verification report contains an enclave quote status
+        # and the status is OK
         enclave_quote_status = \
             verification_report_dict.get('isvEnclaveQuoteStatus')
         if enclave_quote_status is None:
@@ -262,12 +360,13 @@ class _PoetEnclaveSimulator(object):
                 ValueError(
                     'Verification report does not contain an enclave quote '
                     'status')
-        if enclave_quote_status != 'OK':
+        if enclave_quote_status.upper() != 'OK':
             raise \
                 ValueError(
                     'Enclave quote status is {} (i.e., not OK)'.format(
                         enclave_quote_status))
 
+        # Verify that the verification report contains an enclave quote
         enclave_quote = verification_report_dict.get('isvEnclaveQuoteBody')
         if enclave_quote is None:
             raise \
@@ -289,7 +388,7 @@ class _PoetEnclaveSimulator(object):
         if report_body is None:
             raise ValueError('Enclave quote does not contain a report body')
 
-        if report_body != expected_report_body:
+        if report_body.upper() != expected_report_body.upper():
             raise \
                 ValueError(
                     'Enclave quote report body {0} does not match {1}'.format(

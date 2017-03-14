@@ -18,7 +18,11 @@ import hashlib
 import base64
 import json
 
-from sawtooth_signing import secp256k1_signer as signing
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.client.future import FutureTimeoutError
@@ -117,15 +121,24 @@ def _set_data(state, address, data):
 
 class ValidatorRegistryTransactionHandler(object):
 
-    __REPORT_PRIVATE_KEY_WIF = \
-        '5Jz5Kaiy3kCiHE537uXcQnJuiNJshf2bZZn43CrALMGoCd3zRuo'
+    # The report public key PEM is used to create the public key used to
+    # verify the signature on the attestation verification reports.
+    __REPORT_PUBLIC_KEY_PEM__ = \
+        '-----BEGIN PUBLIC KEY-----\n' \
+        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn\n' \
+        '4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC\n' \
+        'PW6QlkeLI1eqe4DiYb9+J5ANhq4+XkhwgCUUFwpfqSfXWCHimjaGsZHbavl5nv/6\n' \
+        'IbZJL/2YzE37IzJdES16JCfmIUrk6TUqL0WgrWXyweTIoVSbld0M29kToSkMXLsj\n' \
+        '8vbQbTiKwViWhYlzi0cQIo7PiAss66lAW0X6AM7ZJYyAcfSjSLR4guMz76Og8aRk\n' \
+        'jtsjEEkq7Ndz5H8hllWUoHpxGDqLhM9O1/h+QdvTz7luZgpeJ5KB92vYL6yOlSxM\n' \
+        'fQIDAQAB\n' \
+        '-----END PUBLIC KEY-----'
 
     def __init__(self):
-        # Since signing works with WIF-encoded private keys, we don't have to
-        # decode the encoded key string.
-        self._report_private_key = self.__REPORT_PRIVATE_KEY_WIF
-        self._report_public_key = signing.generate_pubkey(
-            self._report_private_key)
+        self._report_public_key = \
+            serialization.load_pem_public_key(
+                self.__REPORT_PUBLIC_KEY_PEM__.encode(),
+                backend=backends.default_backend())
 
     @property
     def family_name(self):
@@ -158,13 +171,37 @@ class ValidatorRegistryTransactionHandler(object):
         if signature is None:
             raise ValueError('Signature is missing from proof data')
 
-        if not signing.verify(
-                verification_report,
-                signature,
-                self._report_public_key):
+        try:
+            self._report_public_key.verify(
+                base64.b64decode(signature.encode()),
+                verification_report.encode(),
+                padding.PKCS1v15(),
+                hashes.SHA256())
+        except InvalidSignature:
             raise ValueError('Verification report signature is invalid')
 
         verification_report_dict = json.loads(verification_report)
+
+        # Verify that the verification report contains an ID field
+        if 'id' not in verification_report_dict:
+            raise ValueError('Verification report does not contain an ID')
+
+        # Verify that the verification report contains an EPID pseudonym and
+        # that it matches the anti-Sybil ID
+        epid_pseudonym = verification_report_dict.get('epidPseudonym')
+        if epid_pseudonym is None:
+            raise \
+                ValueError(
+                    'Verification report does not contain an EPID pseudonym')
+
+        if epid_pseudonym != signup_info.anti_sybil_id:
+            raise \
+                ValueError(
+                    'The anti-Sybil ID in the verification report [{0}] does '
+                    'not match the one contained in the signup information '
+                    '[{1}]'.format(
+                        epid_pseudonym,
+                        signup_info.anti_sybil_id))
 
         # Verify that the verification report contains a PSE manifest status
         # and it is OK
@@ -175,14 +212,13 @@ class ValidatorRegistryTransactionHandler(object):
                 ValueError(
                     'Verification report does not contain a PSE manifest '
                     'status')
-        if pse_manifest_status != 'OK':
+        if pse_manifest_status.upper() != 'OK':
             raise \
                 ValueError(
                     'PSE manifest status is {} (i.e., not OK)'.format(
                         pse_manifest_status))
 
         # Verify that the verification report contains a PSE manifest hash
-        # and it is the value we expect
         pse_manifest_hash = \
             verification_report_dict.get('pseManifestHash')
         if pse_manifest_hash is None:
@@ -191,14 +227,23 @@ class ValidatorRegistryTransactionHandler(object):
                     'Verification report does not contain a PSE manifest '
                     'hash')
 
+        # Verify that the proof data contains evidence payload
+        evidence_payload = proof_data_dict.get('evidence_payload')
+        if evidence_payload is None:
+            raise ValueError('Evidence payload is missing from proof data')
+
+        # Verify that the evidence payload contains a PSE manifest and then
+        # use it to make sure that the PSE manifest hash is what we expect
+        pse_manifest = evidence_payload.get('pse_manifest')
+        if pse_manifest is None:
+            raise ValueError('Evidence payload does not include PSE manifest')
+
         expected_pse_manifest_hash = \
             base64.b64encode(
                 hashlib.sha256(
-                    bytes(b'Do you believe in '
-                          b'manifest destiny?')).hexdigest()
-                .encode()).decode()
+                    pse_manifest.encode()).hexdigest().encode()).decode()
 
-        if pse_manifest_hash != expected_pse_manifest_hash:
+        if pse_manifest_hash.upper() != expected_pse_manifest_hash.upper():
             raise \
                 ValueError(
                     'PSE manifest hash {0} does not match {1}'.format(
@@ -214,20 +259,21 @@ class ValidatorRegistryTransactionHandler(object):
                 ValueError(
                     'Verification report does not contain an enclave quote '
                     'status')
-        if enclave_quote_status != 'OK':
+        if enclave_quote_status.upper() != 'OK':
             raise \
                 ValueError(
                     'Enclave quote status is {} (i.e., not OK)'.format(
                         enclave_quote_status))
 
+        # Verify that the verification report contains an enclave quote
         enclave_quote = verification_report_dict.get('isvEnclaveQuoteBody')
         if enclave_quote is None:
             raise \
                 ValueError(
                     'Verification report does not contain an enclave quote')
 
-        # # Verify that the enclave quote contains a report body with the value
-        # # we expect (i.e., SHA256(SHA256(OPK)|PPK)
+        # Verify that the enclave quote contains a report body with the value
+        # we expect (i.e., SHA256(SHA256(OPK)|PPK)
         report_data = '{0}{1}'.format(
             originator_public_key_hash.upper(),
             signup_info.poet_public_key.upper()
@@ -241,7 +287,7 @@ class ValidatorRegistryTransactionHandler(object):
         if report_body is None:
             raise ValueError('Enclave quote does not contain a report body')
 
-        if report_body != expected_report_body:
+        if report_body.upper() != expected_report_body.upper():
             raise \
                 ValueError(
                     'Enclave quote report body {0} does not match {1}'.format(

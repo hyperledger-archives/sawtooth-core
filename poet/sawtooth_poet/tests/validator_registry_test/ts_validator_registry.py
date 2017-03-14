@@ -62,9 +62,9 @@ class TestSuiteValidatorRegistry(unittest.TestCase):
             suite.addTest(TestValidatorRegistry(
                 'test_invalid_poet_pubkey', self.tester))
             suite.addTest(TestValidatorRegistry(
-                'test_invalid_verfication_report', self.tester))
+                'test_invalid_verification_report', self.tester))
             suite.addTest(TestValidatorRegistry(
-                'test_invalid_envalve_body', self.tester))
+                'test_invalid_enclave_body', self.tester))
             suite.addTest(TestValidatorRegistry(
                 'test_invalid_pse_manifest', self.tester))
 
