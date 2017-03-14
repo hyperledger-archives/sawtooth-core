@@ -463,21 +463,32 @@ class OutboundConnection(object):
     @property
     def connection_id(self):
         return hashlib.sha512(
-                self._send_receive_thread.connection.encode()).hexdigest()
+            self._send_receive_thread.connection.encode()).hexdigest()
 
-    def send(self, message_type, data):
-        """
-        Send a message of message_type
-        :param message_type: validator_pb2.Message.* enum value
-        :param data: bytes serialized protobuf
-        :return: future.Future
+    def send(self, message_type, data, callback=None):
+        """Sends a message of message_type
+
+        Args:
+            message_type (validator_pb2.Message): enum value
+            data (bytes): serialized protobuf
+            callback (function): a callback function to call when a
+                response to this message is received
+
+        Returns:
+            future.Future
         """
         message = validator_pb2.Message(
             correlation_id=_generate_id(),
             content=data,
             message_type=message_type)
 
-        fut = future.Future(message.correlation_id, message.content)
+        fut = future.Future(message.correlation_id, message.content,
+                            has_callback=True if callback is not None
+                            else False)
+
+        if callback is not None:
+            fut.add_callback(callback)
+
         self._futures.put(fut)
 
         self._send_receive_thread.send_message(message)
