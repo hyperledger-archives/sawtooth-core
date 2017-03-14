@@ -136,6 +136,7 @@ test_sdk() {
     # integration
     run_docker_test intkey-smoke -s integration_test
     run_docker_test xo-smoke -s integration_test
+    run_docker_test two_families -s integration_test
 }
 
 test_signing() {
