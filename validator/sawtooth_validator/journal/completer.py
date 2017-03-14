@@ -56,6 +56,7 @@ class Completer(object):
         self.gossip = gossip
         self.batch_cache = TimedCache(cache_purge_frequency)
         self.block_cache = BlockCache(block_store, cache_purge_frequency)
+        self._block_store = block_store
         # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._seen_txns = TimedCache(cache_purge_frequency)
@@ -281,6 +282,8 @@ class Completer(object):
 
     def get_block(self, block_id):
         with self.lock:
+            if block_id == "HEAD":
+                return self._block_store.chain_head
             if block_id in self.block_cache:
                 return self.block_cache[block_id]
             return None
