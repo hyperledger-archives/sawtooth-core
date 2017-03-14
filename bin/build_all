@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,37 +15,161 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+usage() {
+    echo "Usage:"
+    echo "  $0 [-l Language] [-s Language]"
+    echo
+    echo "Options:"
+    echo "  -h            print usage and exit"
+    echo "  -l Language   only build the specified language(s)"
+    echo "  -x Language   exclude the specified language(s)"
+}
 
-unset PYTHONPATH
+# Exit on non-zero exit code from subcommand
+set -e
+
+# Set sawtooth-core project directory relative to this file
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+docker_dir=$(cd $(dirname $(dirname $0))/docker && pwd)
+
+# Default args
+LANGUAGES=""
+EXCLUDE=""
+
+while getopts x:l:h opt
+do
+    case $opt in
+        h)
+            usage
+            exit 0
+            ;;
+        l)
+            LANGUAGES="$LANGUAGES $OPTARG"
+            ;;
+        x)
+            EXCLUDE="$EXCLUDE $OPTARG"
+            ;;
+
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 2
+            ;;
+    esac
+done
+
+# If no '-m' flags are passed, run these modules
+if [[ $LANGUAGES = "" ]]
+then
+    LANGUAGES="
+        java
+        javascript
+        python
+"
+fi
 
 set -e
 
-echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
-$top_dir/bin/protogen || exit 1
+docker_build() {
+    image=$1
 
-pkgs="
-    signing
-    cli
-    sdk/python
-    rest_api
-    validator
-"
-
-for pkg in $pkgs
-do
-    echo -e "\033[0;32m--- Running clean in $pkg ---\n\033[0m"
-    cd $top_dir/$pkg
-    python3 setup.py clean --all
-done
-
-for pkg in $pkgs
-do
-    echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
-    cd $top_dir/$pkg
-    python3 setup.py build
-    if [ $pkg = "signing" ]; then
-        # Workaround for swig ordering bug.
-        python3 setup.py build
+    # We need to tag all images with an id if we're running in Jenkins, except
+    # for the sawtooth-base image, which should not be tagged.
+    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
+        tag=$image
+    else
+        tag=$image:$ISOLATION_ID
     fi
-done
+
+    echo "[ Building $image... ]"
+
+    # Build the image and pass in any proxy information if set
+    docker build -f $docker_dir/$image -t $tag $docker_dir \
+        --build-arg https_proxy=$https_proxy \
+        --build-arg http_proxy=$http_proxy \
+        --build-arg HTTPS_PROXY=$HTTPS_PROXY \
+        --build-arg HTTP_PROXY=$HTTP_PROXY
+}
+
+docker_run() {
+    image=$1
+
+    # We need to tag all images with an id if we're running in Jenkins, except
+    # for the sawtooth-base image, which should not be tagged.
+    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
+        tag=$image
+    else
+        tag=$image:$ISOLATION_ID
+    fi
+
+    docker run --rm -v $top_dir:/project/sawtooth-core $tag
+}
+
+main() {
+
+    # Start in project directory
+    cd $top_dir
+
+    for language in $LANGUAGES
+    do
+
+        # Check if we are skipping this module
+        skip=0
+        for exclude in $EXCLUDE
+        do
+            if [[ $language == $exclude ]]
+            then
+                skip=1
+                break
+            fi
+        done
+
+        if [[ $skip == 1 ]]
+        then
+            echo "[---Skipping $language---]"
+        else
+            echo "[---Building $language---]"
+            case $language in
+                java)
+                    build_java
+                    ;;
+                javascript)
+                    build_javascript
+                    ;;
+                python)
+                    build_python
+                    ;;
+
+                *)
+                    echo "Module '$language' not found."
+                    ;;
+            esac
+        fi
+    done
+}
+
+build_java() {
+    docker_build sawtooth-build-java
+    docker_run sawtooth-build-java
+    docker_build sawtooth-tp_intkey_java
+}
+
+build_javascript() {
+    docker_build sawtooth-build-javascript
+    docker_run sawtooth-build-javascript
+    docker_build sawtooth-tp_intkey_javascript
+}
+
+build_python() {
+    docker_build sawtooth-base
+    docker_build sawtooth-build-python
+    docker_run sawtooth-build-python
+    docker_build sawtooth-tp_intkey_python
+    docker_build sawtooth-rest_api
+    docker_build sawtooth-test
+    docker_build sawtooth-tp_config
+    docker_build sawtooth-tp_validator_registry
+    docker_build sawtooth-tp_xo_python
+    docker_build sawtooth-validator
+}
+
+main
