@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 from threading import Condition
+from functools import partial
 
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
@@ -22,6 +23,7 @@ from sawtooth_validator.protobuf.network_pb2 import \
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockRequest
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
+from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
 LOGGER = logging.getLogger(__name__)
 
@@ -133,14 +135,35 @@ class Gossip(object):
                                    gossip_message.SerializeToString(),
                                    connection_id)
 
+    def _peer_callback(self, request, result, connection_id):
+        ack = NetworkAcknowledgement()
+        ack.ParseFromString(result.content)
+
+        if ack.status == ack.ERROR:
+            LOGGER.debug("Peering request to %s was NOT successful",
+                         connection_id)
+        elif ack.status == ack.OK:
+            LOGGER.debug("Peering request to %s was successful",
+                         connection_id)
+            self._peers.append(connection_id)
+            self.broadcast_block_request("HEAD")
+
+    def _connect_success_callback(self, connection_id):
+        LOGGER.debug("Connection to %s succeeded", connection_id)
+
+        register_request = PeerRegisterRequest()
+        self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
+                           register_request.SerializeToString(),
+                           connection_id,
+                           callback=partial(self._peer_callback,
+                                            connection_id=connection_id))
+
+    def _connect_failure_callback(self, connection_id):
+        LOGGER.debug("Connection to %s failed", connection_id)
+
     def start(self):
         for endpoint in self._initial_peer_endpoints:
-            conn = self._network.add_outbound_connection(endpoint)
-            conn_id = conn.connection_id
-
-            self._peers.append(conn_id)
-
-            register_request = PeerRegisterRequest()
-            self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
-                               register_request.SerializeToString(),
-                               conn_id)
+            self._network.add_outbound_connection(
+                endpoint,
+                self._connect_success_callback,
+                self._connect_failure_callback)
