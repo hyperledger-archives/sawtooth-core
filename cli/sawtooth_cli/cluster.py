@@ -15,6 +15,7 @@
 
 from __future__ import print_function
 
+import argparse
 from argparse import Namespace
 import logging
 import os
@@ -66,7 +67,17 @@ def add_cluster_status_parser(subparsers, parent_parser):
 
 
 def add_cluster_start_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('start', parents=[parent_parser])
+
+    epilog = '''details:
+    The available transaction processors specified by -P depend upon the
+    method (specified by -m). When using docker, the included processors
+    can be found using the command 'docker images'.
+    '''
+
+    parser = subparsers.add_parser(
+        'start', parents=[parent_parser],
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
         '--count',
@@ -221,6 +232,7 @@ def do_cluster_start(args):
 
     if args.processors is None:
         raise CliException("Use -P to specify one or more processors")
+
     state['Processors'] = args.processors
 
     node_controller = get_node_controller(state, args)
