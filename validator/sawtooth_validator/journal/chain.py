@@ -578,7 +578,7 @@ class ChainController(object):
                 state_view_factory=self._state_view_factory,
                 done_cb=self.on_block_validated,
                 executor=self._transaction_executor,
-                squash_handler=self._sqaush_handler,
+                squash_handler=self._squash_handler,
                 data_dir=self._data_dir)
 
             valid = validator.validate_block(block, committed_txn)
