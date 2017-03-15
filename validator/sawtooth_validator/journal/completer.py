@@ -280,10 +280,17 @@ class Completer(object):
                     if txn.header_signature in self._incomplete_batches:
                         self._process_incomplete_batches(txn.header_signature)
 
+    def get_chain_head(self):
+        """Returns the block which is the current head of the chain.
+
+        Returns:
+            BlockWrapper: The head of the chain.
+        """
+        with self.lock:
+            return self._block_store.chain_head
+
     def get_block(self, block_id):
         with self.lock:
-            if block_id == "HEAD":
-                return self._block_store.chain_head
             if block_id in self.block_cache:
                 return self.block_cache[block_id]
             return None
