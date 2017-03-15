@@ -118,6 +118,7 @@ class ApiTest(AioHTTPTestCase):
         self.assertEqual(201, request.status)
 
         response = await request.json()
+        self.assert_has_valid_link(response, '/batches?id=a')
         self.assertNotIn('data', response)
 
     @unittest_run_loop
