@@ -144,6 +144,9 @@ class Validator(object):
             identity_signing_key=identity_signing_key,
             chain_id_manager=chain_id_manager,
             data_dir=data_dir,
+            check_publish_block_frequency=0.1,
+            block_cache_purge_frequency=30,
+            block_cache_keep_time=300
         )
 
         self._genesis_controller = GenesisController(
