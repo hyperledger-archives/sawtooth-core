@@ -193,6 +193,6 @@ class StatsPrintManager(StatsModule):
                 self.print_all = True
 
     def _print_all_views(self):
-        self.use_curses = False
+        self._console_print.use_curses = False
         for value in self._view_options.values():
             value[1].print_view()
