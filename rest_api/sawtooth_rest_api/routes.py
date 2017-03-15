@@ -72,28 +72,25 @@ class RouteHandler(object):
             validator_query,
             error_traps)
 
-        # Build response
-        data = response['batch_statuses']
-        metadata = {
-            'link': '{}://{}/batch_status?id={}'.format(
-                request.scheme,
-                request.host,
-                ','.join(b.header_signature for b in batch_list.batches))}
+        # Build response envelope
+        data = response['batch_statuses'] or None
+        link = '{}://{}/batch_status?id={}'.format(
+            request.scheme,
+            request.host,
+            ','.join(b.header_signature for b in batch_list.batches))
 
-        if not data:
+        if data is None:
             status = 202
-            data = None
         elif any(s != 'COMMITTED' for _, s in data.items()):
             status = 200
         else:
             status = 201
             data = None
-            # Replace with /batches link when implemented
-            metadata = None
+            link = link.replace('batch_status', 'batches')
 
         return RouteHandler._wrap_response(
             data=data,
-            metadata=metadata,
+            metadata={'link': link},
             status=status)
 
     @asyncio.coroutine
