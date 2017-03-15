@@ -51,7 +51,8 @@ class _SendReceive(object):
     def __init__(self, connection, address, futures, connections,
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
-                 heartbeat=False, heartbeat_interval=10):
+                 heartbeat=False, heartbeat_interval=10,
+                 connection_timeout=60):
         """
         Constructor for _SendReceive.
 
@@ -78,6 +79,8 @@ class _SendReceive(object):
             heartbeat (bool): Whether or not to send ping messages.
             heartbeat_interval (int): Number of seconds between ping
                 messages on an otherwise quiet connection.
+            connection_timeout (int): Number of seconds after which a
+                connection is considered timed out.
         """
         self._connection = connection
         self._dispatcher = dispatcher
@@ -89,7 +92,7 @@ class _SendReceive(object):
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
         self._heartbeat_interval = heartbeat_interval
-        self._last_message_time = None
+        self._connection_timeout = connection_timeout
 
         self._event_loop = None
         self._context = None
@@ -97,12 +100,23 @@ class _SendReceive(object):
         self._socket = None
         self._condition = Condition()
 
-        self._connected_identities = {}
+        # The last time a message was received over an outbound
+        # socket we established.
+        self._last_message_time = None
+
+        # A map of zmq identities to last message received times
+        # for inbound connections to our zmq.ROUTER socket.
+        self._last_message_times = {}
+
         self._connections = connections
 
     @property
     def connection(self):
         return self._connection
+
+    def _is_connection_lost(self, last_timestamp):
+        return (time.time() - last_timestamp >
+                self._connection_timeout)
 
     @asyncio.coroutine
     def _do_heartbeat(self):
@@ -113,17 +127,16 @@ class _SendReceive(object):
 
         while True:
             if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                expired = [ident for ident in self._connected_identities
-                           if time.time() - self._connected_identities[ident] >
+                expired = [ident for ident in self._last_message_times
+                           if time.time() - self._last_message_times[ident] >
                            self._heartbeat_interval]
                 for zmq_identity in expired:
-                    if time.time() - \
-                            self._connected_identities[zmq_identity] > \
-                            self._heartbeat_interval * 2:
-                        LOGGER.debug("No response from %s in twice the "
-                                     "heartbeat interval - removing "
-                                     "connection.",
-                                     zmq_identity)
+                    if self._is_connection_lost(
+                            self._last_message_times[zmq_identity]):
+                        LOGGER.debug("No response from %s in %s seconds"
+                                     " - removing connection.",
+                                     zmq_identity,
+                                     self._connection_timeout)
                         self._remove_connected_identity(zmq_identity)
                     else:
                         message = validator_pb2.Message(
@@ -137,25 +150,24 @@ class _SendReceive(object):
                         yield from self._send_message(zmq_identity, message)
             elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
                 if self._last_message_time:
-                    if time.time() - self._last_message_time > \
-                            self._heartbeat_interval * 2:
-                        LOGGER.debug("No response from %s in twice the "
-                                     "heartbeat interval - removing "
-                                     "connection.",
-                                     self._connection)
+                    if self._is_connection_lost(self._last_message_time):
+                        LOGGER.debug("No response from %s in %s seconds"
+                                     " - removing connection.",
+                                     self._connection,
+                                     self._connection_timeout)
                         self.stop()
             yield from asyncio.sleep(self._heartbeat_interval)
 
     def _remove_connected_identity(self, zmq_identity):
-        if zmq_identity in self._connected_identities:
-            del self._connected_identities[zmq_identity]
         connection_id = hashlib.sha512(zmq_identity).hexdigest()
+        if zmq_identity in self._last_message_times:
+            del self._last_message_times[zmq_identity]
         if connection_id in self._connections:
             del self._connections[connection_id]
 
     def _received_from_identity(self, zmq_identity):
-        self._connected_identities[zmq_identity] = time.time()
         connection_id = hashlib.sha512(zmq_identity).hexdigest()
+        self._last_message_times[zmq_identity] = time.time()
         if connection_id not in self._connections:
             self._connections[connection_id] = ("ZMQ_Identity", zmq_identity)
 
@@ -311,6 +323,7 @@ class Interconnect(object):
                  server_public_key=None,
                  server_private_key=None,
                  heartbeat=False,
+                 connection_timeout=60,
                  max_incoming_connections=100):
         """
         Constructor for Interconnect.
@@ -333,6 +346,7 @@ class Interconnect(object):
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
+        self._connection_timeout = connection_timeout
         self._connections = {}
         self.outbound_connections = {}
         self._max_incoming_connections = max_incoming_connections
@@ -346,7 +360,8 @@ class Interconnect(object):
             secured=secured,
             server_public_key=server_public_key,
             server_private_key=server_private_key,
-            heartbeat=heartbeat)
+            heartbeat=heartbeat,
+            connection_timeout=connection_timeout)
 
         self._thread = None
 
@@ -388,7 +403,8 @@ class Interconnect(object):
             secured=self._secured,
             server_public_key=self._server_public_key,
             server_private_key=self._server_private_key,
-            heartbeat=True)
+            heartbeat=True,
+            connection_timeout=self._connection_timeout)
 
         self.outbound_connections[uri] = conn
         conn.start(daemon=True)
@@ -488,7 +504,8 @@ class OutboundConnection(object):
                  secured,
                  server_public_key,
                  server_private_key,
-                 heartbeat=True):
+                 heartbeat=True,
+                 connection_timeout=60):
         self._futures = future.FutureCollection()
         self._zmq_identity = zmq_identity
         self._endpoint = endpoint
@@ -497,6 +514,7 @@ class OutboundConnection(object):
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
+        self._connection_timeout = connection_timeout
 
         self._send_receive_thread = _SendReceive(
             "OutboundConnectionThread-{}".format(self._endpoint),
@@ -508,7 +526,8 @@ class OutboundConnection(object):
             secured=secured,
             server_public_key=server_public_key,
             server_private_key=server_private_key,
-            heartbeat=heartbeat)
+            heartbeat=heartbeat,
+            connection_timeout=connection_timeout)
 
         self._thread = None
 

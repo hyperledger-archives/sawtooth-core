@@ -127,6 +127,7 @@ class Validator(object):
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
             server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
             heartbeat=True,
+            connection_timeout=30,
             max_incoming_connections=100)
 
         self._gossip = Gossip(self._network,
