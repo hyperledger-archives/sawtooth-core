@@ -53,6 +53,8 @@ from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.networking.handlers import PingHandler
+from sawtooth_validator.networking.handlers import ConnectHandler
+from sawtooth_validator.networking.handlers import DisconnectHandler
 
 
 LOGGER = logging.getLogger(__name__)
@@ -95,7 +97,8 @@ class Validator(object):
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
                                      secured=False,
-                                     heartbeat=False)
+                                     heartbeat=False,
+                                     max_incoming_connections=20)
         executor = TransactionExecutor(service=self._service,
                                        context_manager=context_manager,
                                        config_view_factory=ConfigViewFactory(
@@ -120,13 +123,15 @@ class Validator(object):
             network_endpoint,
             dispatcher=self._network_dispatcher,
             zmq_identity=zmq_identity,
-            peer_connections=peer_list,
             secured=True,
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
             server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
-            heartbeat=True)
+            heartbeat=True,
+            connection_timeout=30,
+            max_incoming_connections=100)
 
-        self._gossip = Gossip(self._network)
+        self._gossip = Gossip(self._network,
+                              initial_peer_endpoints=peer_list)
 
         completer = Completer(block_store, self._gossip)
 
@@ -181,13 +186,22 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_UNREGISTER_REQUEST,
             processor_handlers.ProcessorUnRegisterHandler(executor.processors),
-            thread_pool
-        )
+            thread_pool)
 
         # Set up base network handlers
         self._network_dispatcher.add_handler(
             validator_pb2.Message.NETWORK_PING,
             PingHandler(),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.NETWORK_CONNECT,
+            ConnectHandler(network=self._network),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.NETWORK_DISCONNECT,
+            DisconnectHandler(network=self._network),
             network_thread_pool)
 
         # Set up gossip handlers

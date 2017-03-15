@@ -187,12 +187,10 @@ class TransactionExecutorThread(threading.Thread):
             self._send_and_process_result(content, connection_id)
 
     def _send_and_process_result(self, content, connection_id):
-        future = self._service.send(
-            validator_pb2.Message.TP_PROCESS_REQUEST,
-            content,
-            connection_id=connection_id,
-            has_callback=True)
-        future.add_callback(self._future_done_callback)
+        self._service.send(validator_pb2.Message.TP_PROCESS_REQUEST,
+                           content,
+                           connection_id=connection_id,
+                           callback=self._future_done_callback)
 
 
 class TransactionExecutor(object):

@@ -56,6 +56,7 @@ class Completer(object):
         self.gossip = gossip
         self.batch_cache = TimedCache(cache_purge_frequency)
         self.block_cache = BlockCache(block_store, cache_purge_frequency)
+        self._block_store = block_store
         # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._seen_txns = TimedCache(cache_purge_frequency)
@@ -278,6 +279,15 @@ class Completer(object):
                 for txn in batch.transactions:
                     if txn.header_signature in self._incomplete_batches:
                         self._process_incomplete_batches(txn.header_signature)
+
+    def get_chain_head(self):
+        """Returns the block which is the current head of the chain.
+
+        Returns:
+            BlockWrapper: The head of the chain.
+        """
+        with self.lock:
+            return self._block_store.chain_head
 
     def get_block(self, block_id):
         with self.lock:

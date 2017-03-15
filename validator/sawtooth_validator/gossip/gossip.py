@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
-import hashlib
 from threading import Condition
+from functools import partial
 
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
@@ -23,14 +23,27 @@ from sawtooth_validator.protobuf.network_pb2 import \
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockRequest
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
+from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
 LOGGER = logging.getLogger(__name__)
 
 
 class Gossip(object):
-    def __init__(self, network):
+    def __init__(self, network, initial_peer_endpoints=None):
+        """Constructor for the Gossip object. Gossip defines the
+        overlay network above the lower level networking classes.
+
+        Args:
+            network (networking.Interconnect): Provides inbound and
+                outbound network connections.
+            initial_peer_endpoints ([str]): A list of initial peer endpoints
+                to attempt to connect and peer with. These are specified
+                as zmq-compatible URIs (e.g. tcp://hostname:port).
+        """
         self._condition = Condition()
         self._network = network
+        self._initial_peer_endpoints = initial_peer_endpoints \
+            if initial_peer_endpoints else []
         self._peers = []
 
     def register_peer(self, connection_id):
@@ -118,17 +131,45 @@ class Gossip(object):
             exclude = []
         for connection_id in self._peers:
             if connection_id not in exclude:
-                self._network.send(message_type,
-                                   gossip_message.SerializeToString(),
-                                   connection_id)
+                try:
+                    self._network.send(message_type,
+                                       gossip_message.SerializeToString(),
+                                       connection_id)
+                except ValueError:
+                    LOGGER.debug("Connection %s is no longer valid. "
+                                 "Removing from list of peers.",
+                                 connection_id)
+                    self._peers.remove(connection_id)
+
+    def _peer_callback(self, request, result, connection_id):
+        ack = NetworkAcknowledgement()
+        ack.ParseFromString(result.content)
+
+        if ack.status == ack.ERROR:
+            LOGGER.debug("Peering request to %s was NOT successful",
+                         connection_id)
+        elif ack.status == ack.OK:
+            LOGGER.debug("Peering request to %s was successful",
+                         connection_id)
+            self._peers.append(connection_id)
+            self.broadcast_block_request("HEAD")
+
+    def _connect_success_callback(self, connection_id):
+        LOGGER.debug("Connection to %s succeeded", connection_id)
+
+        register_request = PeerRegisterRequest()
+        self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
+                           register_request.SerializeToString(),
+                           connection_id,
+                           callback=partial(self._peer_callback,
+                                            connection_id=connection_id))
+
+    def _connect_failure_callback(self, connection_id):
+        LOGGER.debug("Connection to %s failed", connection_id)
 
     def start(self):
-        for uri in self._network.outbound_connections:
-            connection = self._network.outbound_connections[uri]
-            connection_id = \
-                hashlib.sha512(connection.local_id.encode()).hexdigest()
-            self._peers.append(connection_id)
-        register_request = PeerRegisterRequest()
-        self.broadcast(
-            register_request,
-            validator_pb2.Message.GOSSIP_REGISTER)
+        for endpoint in self._initial_peer_endpoints:
+            self._network.add_outbound_connection(
+                endpoint,
+                self._connect_success_callback,
+                self._connect_failure_callback)

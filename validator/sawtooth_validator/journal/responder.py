@@ -30,7 +30,10 @@ class Responder(object):
 
     def check_for_block(self, block_id):
         # Ask Completer
-        block = self.completer.get_block(block_id)
+        if block_id == "HEAD":
+            block = self.completer.get_chain_head()
+        else:
+            block = self.completer.get_block(block_id)
         return block
 
     def check_for_batch(self, batch_id):
