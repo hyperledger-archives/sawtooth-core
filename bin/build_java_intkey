@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 cd $top_dir/sdk/examples/intkey_java
-mvn --quiet --batch-mode clean compile package
+mvn --batch-mode clean compile package
