@@ -109,6 +109,7 @@ class _SendReceive(object):
         self._last_message_times = {}
 
         self._connections = connections
+        self._identities_to_connection_ids = {}
 
     @property
     def connection(self):
@@ -117,6 +118,13 @@ class _SendReceive(object):
     def _is_connection_lost(self, last_timestamp):
         return (time.time() - last_timestamp >
                 self._connection_timeout)
+
+    def _identity_to_connection_id(self, zmq_identity):
+        if zmq_identity not in self._identities_to_connection_ids:
+            self._identities_to_connection_ids[zmq_identity] = \
+                hashlib.sha512(zmq_identity).hexdigest()
+
+        return self._identities_to_connection_ids[zmq_identity]
 
     @asyncio.coroutine
     def _do_heartbeat(self):
@@ -159,15 +167,17 @@ class _SendReceive(object):
             yield from asyncio.sleep(self._heartbeat_interval)
 
     def _remove_connected_identity(self, zmq_identity):
-        connection_id = hashlib.sha512(zmq_identity).hexdigest()
         if zmq_identity in self._last_message_times:
             del self._last_message_times[zmq_identity]
+        if zmq_identity in self._identity_to_connection_ids:
+            del self._identity_to_connection_ids[zmq_identity]
+        connection_id = self._identity_to_connection_id(zmq_identity)
         if connection_id in self._connections:
             del self._connections[connection_id]
 
     def _received_from_identity(self, zmq_identity):
-        connection_id = hashlib.sha512(zmq_identity).hexdigest()
         self._last_message_times[zmq_identity] = time.time()
+        connection_id = self._identity_to_connection_id(zmq_identity)
         if connection_id not in self._connections:
             self._connections[connection_id] = ("ZMQ_Identity", zmq_identity)
 
@@ -202,10 +212,12 @@ class _SendReceive(object):
                                         content=message.content))
             except future.FutureCollectionKeyError:
                 if zmq_identity is not None:
-                    connection_id = hashlib.sha512(zmq_identity).hexdigest()
+                    connection_id = \
+                        self._identity_to_connection_id(zmq_identity)
                 else:
                     connection_id = \
-                        hashlib.sha512(self._connection.encode()).hexdigest()
+                        self._identity_to_connection_id(
+                            self._connection.encode())
                 self._dispatcher.dispatch(self._connection,
                                           message,
                                           connection_id)
@@ -238,10 +250,15 @@ class _SendReceive(object):
         :param msg: protobuf validator_pb2.Message
         """
         zmq_identity = None
-        if connection_id is not None:
-            connection_type, connection = self._connections.get(connection_id)
-            if connection_type == "ZMQ_Identity":
-                zmq_identity = connection
+        if connection_id is not None and self._connections is not None:
+            if connection_id in self._connections:
+                connection_type, connection = \
+                    self._connections.get(connection_id)
+                if connection_type == "ZMQ_Identity":
+                    zmq_identity = connection
+            else:
+                LOGGER.debug("Can't send to %s, not in self._connections",
+                             connection_id)
 
         with self._condition:
             self._condition.wait_for(lambda: self._event_loop is not None)
@@ -515,6 +532,7 @@ class OutboundConnection(object):
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
         self._connection_timeout = connection_timeout
+        self._connection_id = None
 
         self._send_receive_thread = _SendReceive(
             "OutboundConnectionThread-{}".format(self._endpoint),
@@ -533,8 +551,11 @@ class OutboundConnection(object):
 
     @property
     def connection_id(self):
-        return hashlib.sha512(
-            self._send_receive_thread.connection.encode()).hexdigest()
+        if not self._connection_id:
+            self._connection_id = hashlib.sha512(
+                self._send_receive_thread.connection.encode()).hexdigest()
+
+        return self._connection_id
 
     def send(self, message_type, data, callback=None):
         """Sends a message of message_type
