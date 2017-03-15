@@ -167,11 +167,12 @@ class RouteHandler(object):
         Fetch a particular block from the validator
         """
         head = request.url.query.get('head', '')
+        block_ids = RouteHandler._get_filter_ids(request)
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client.ClientBlockListResponse,
-            client.ClientBlockListRequest(head_id=head))
+            client.ClientBlockListRequest(head_id=head, block_ids=block_ids))
 
         blocks = [RouteHandler._expand_block(b) for b in response['blocks']]
         return RouteHandler._wrap_response(
@@ -205,11 +206,12 @@ class RouteHandler(object):
         Fetch a list of batches from the validator
         """
         head = request.url.query.get('head', '')
+        batch_ids = RouteHandler._get_filter_ids(request)
 
         response = self._query_validator(
             Message.CLIENT_BATCH_LIST_REQUEST,
             client.ClientBatchListResponse,
-            client.ClientBatchListRequest(head_id=head))
+            client.ClientBatchListRequest(head_id=head, batch_ids=batch_ids))
 
         batches = [RouteHandler._expand_batch(b) for b in response['batches']]
         return RouteHandler._wrap_response(
@@ -384,3 +386,8 @@ class RouteHandler(object):
         header.ParseFromString(header_bytes)
         obj['header'] = MessageToDict(header, preserving_proto_field_name=True)
         return obj
+
+    @staticmethod
+    def _get_filter_ids(request):
+        filter_ids = request.url.query.get('id', '')
+        return filter_ids and filter_ids.split(',')
