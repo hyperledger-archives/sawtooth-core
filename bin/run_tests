@@ -127,15 +127,16 @@ test_sdk() {
       core_transactions/config/tests/sawtooth_config_test/tp-config.yaml \
       -s validator
 
-    # intkey
+    # transaction processor
     run_docker_test tp-intkey-python -s validator
     run_docker_test tp-intkey-java -s validator
     run_docker_test tp-intkey-javascript -s validator
-    run_docker_test intkey-smoke -s integration_test
-
-    # xo
     run_docker_test tp-xo-python -s validator
+
+    # integration
+    run_docker_test intkey-smoke -s integration_test
     run_docker_test xo-smoke -s integration_test
+    run_docker_test two_families -s integration_test
 }
 
 test_signing() {

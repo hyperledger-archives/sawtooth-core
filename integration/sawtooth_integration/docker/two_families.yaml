@@ -25,7 +25,7 @@ services:
       - 40000
     depends_on:
       - validator
-    entrypoint: ./bin/tp_config tcp://validator:40000
+    entrypoint: ./bin/tp_config -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   tp_intkey_python:
@@ -36,7 +36,18 @@ services:
       - 40000
     depends_on:
       - validator
-    entrypoint: ./bin/tp_intkey_python tcp://validator:40000
+    entrypoint: ./bin/tp_intkey_python -vv tcp://validator:40000
+    stop_signal: SIGKILL
+
+  tp_xo_python:
+    image: sawtooth-tp_xo_python:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 40000
+    depends_on:
+      - validator
+    entrypoint: ./bin/tp_xo_python -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -49,7 +60,7 @@ services:
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin keygen && \
         ./bin/sawtooth admin genesis && \
-        ./bin/validator -v\""
+        ./bin/validator -vv\""
     stop_signal: SIGKILL
 
   rest_api:
@@ -71,11 +82,12 @@ services:
     expose:
       - 8080
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
-    entrypoint: python3 -m http.server
     depends_on:
       - validator
       - rest_api
-    entrypoint: nose2-3 -v test_intkey_smoke.TestIntkeySmoke
+    # Wait for rest_api and genesis
+    entrypoint: "bash -c \"\
+      nose2-3 -v test_two_families.TestTwoFamilies\""
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
