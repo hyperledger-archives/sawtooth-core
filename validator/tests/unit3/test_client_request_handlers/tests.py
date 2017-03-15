@@ -752,6 +752,111 @@ class TestBlockListRequests(_ClientHandlerTestCase):
         self.assertFalse(response.head_id)
         self.assertFalse(response.blocks)
 
+    def test_block_list_filtered_by_ids(self):
+        """Verifies requests for lists of blocks work filtered by block ids.
+
+        Queries the default mock block store with three blocks:
+            {header: {block_num: 2 ...}, header_signature: 'B-2' ...},
+            {header: {block_num: 1 ...}, header_signature: 'B-1' ...},
+            {header: {block_num: 0 ...}, header_signature: 'B-0' ...},
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a list of blocks with 2 items
+            - the items are instances of Block
+            - the first item has a header_signature of 'B-0'
+            - the second item has a header_signature of 'B-2'
+        """
+        response = self.make_request(block_ids=['B-0', 'B-2'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(2, len(response.blocks))
+        self.assert_all_instances(response.blocks, Block)
+        self.assertEqual('B-0', response.blocks[0].header_signature)
+        self.assertEqual('B-2', response.blocks[1].header_signature)
+
+    def test_block_list_by_bad_ids(self):
+        """Verifies block list requests break when ids are not found.
+
+        Queries the default mock block store with three blocks:
+            {header: {block_num: 2 ...}, header_signature: 'B-2' ...},
+            {header: {block_num: 1 ...}, header_signature: 'B-1' ...},
+            {header: {block_num: 0 ...}, header_signature: 'B-0' ...},
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - a head_id of 'B-2', the latest
+            - that blocks is missing
+        """
+        response = self.make_request(block_ids=['bad', 'also-bad'])
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertFalse(response.blocks)
+
+    def test_block_list_by_good_and_bad_ids(self):
+        """Verifies block list requests work filtered by good and bad ids.
+
+        Queries the default mock block store with three blocks:
+            {header: {block_num: 2 ...}, header_signature: 'B-2' ...},
+            {header: {block_num: 1 ...}, header_signature: 'B-1' ...},
+            {header: {block_num: 0 ...}, header_signature: 'B-0' ...},
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a list of blocks with 1 items
+            - that item is an instances of Block
+            - that item has a header_signature of 'B-1'
+        """
+        response = self.make_request(block_ids=['bad', 'B-1'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(1, len(response.blocks))
+        self.assert_all_instances(response.blocks, Block)
+        self.assertEqual('B-1', response.blocks[0].header_signature)
+
+    def test_block_list_by_head_and_ids(self):
+        """Verifies block list requests work with both head and block ids.
+
+        Queries the default mock block store with '1' as the head:
+            {header: {block_num: 1 ...}, header_signature: 'B-1' ...},
+            {header: {block_num: 0 ...}, header_signature: 'B-0' ...},
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-1'
+            - a list of blocks with 1 item
+            - that item is an instance of Block
+            - that item has a header_signature of 'B-0'
+        """
+        response = self.make_request(head_id='B-1', block_ids=['B-0'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-1', response.head_id)
+        self.assertEqual(1, len(response.blocks))
+        self.assert_all_instances(response.blocks, Block)
+        self.assertEqual('B-0', response.blocks[0].header_signature)
+
+    def test_block_list_head_ids_mismatch(self):
+        """Verifies block list requests break when ids not found with head.
+
+        Queries the default mock block store with '0' as the head:
+            {header: {block_num: 0 ...}, header_signature: 'B-0' ...},
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - a head_id of 'B-0'
+            - that blocks is missing
+        """
+        response = self.make_request(head_id='B-0', block_ids=['B-1', 'B-2'])
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertEqual('B-0', response.head_id)
+        self.assertFalse(response.blocks)
+
 
 class TestBlockGetRequests(_ClientHandlerTestCase):
     def setUp(self):
@@ -905,6 +1010,112 @@ class TestBatchListRequests(_ClientHandlerTestCase):
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
+        self.assertFalse(response.batches)
+
+    def test_batch_list_filtered_by_ids(self):
+        """Verifies requests for lists of batches work filtered by batch ids.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a list of batches with 2 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-0'
+            - the second item has a header_signature of 'b-2'
+        """
+        response = self.make_request(batch_ids=['b-0', 'b-2'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(2, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-0', response.batches[0].header_signature)
+        self.assertEqual('b-2', response.batches[1].header_signature)
+
+    def test_batch_list_by_bad_ids(self):
+        """Verifies batch list requests break when ids are not found.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - a head_id of 'B-2', the latest
+            - that batches is missing
+        """
+        response = self.make_request(batch_ids=['bad', 'also-bad'])
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertFalse(response.batches)
+
+    def test_batch_list_by_good_and_bad_ids(self):
+        """Verifies batch list requests work filtered by good and bad ids.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a list of batches with 1 items
+            - that item is an instances of Batch
+            - that item has a header_signature of 'b-1'
+        """
+        response = self.make_request(batch_ids=['bad', 'b-1'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(1, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-1', response.batches[0].header_signature)
+
+    def test_batch_list_by_head_and_ids(self):
+        """Verifies batch list requests work with both head and batch ids.
+
+        Queries the default mock block store with '1' as the head:
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-1'
+            - a list of batches with 1 item
+            - that item is an instance of Batch
+            - that item has a header_signature of 'b-0'
+        """
+        response = self.make_request(head_id='B-1', batch_ids=['b-0'])
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-1', response.head_id)
+        self.assertEqual(1, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-0', response.batches[0].header_signature)
+
+    def test_batch_list_head_ids_mismatch(self):
+        """Verifies batch list requests break when ids not found with head.
+
+        Queries the default mock block store with '0' as the head:
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - a head_id of 'B-0'
+            - that batches is missing
+        """
+        response = self.make_request(head_id='B-0', batch_ids=['b-1', 'b-2'])
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertEqual('B-0', response.head_id)
         self.assertFalse(response.batches)
 
 
