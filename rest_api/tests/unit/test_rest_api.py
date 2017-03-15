@@ -537,6 +537,112 @@ class ApiTest(AioHTTPTestCase):
         await self.assert_404('/blocks?head=bad')
 
     @unittest_run_loop
+    async def test_block_list_with_ids(self):
+        """Verifies GET /blocks with the id parameter works properly.
+
+        Fetches blocks from default mock store:
+            {
+                header: {previous_block_id: '1', ...},
+                header_signature: '2',
+                batches: [{
+                    header: {signer_pubkey: 'pubkey', ...},
+                    header_signature: '2',
+                    transactions: [{
+                        header: {nonce: '2', ...},
+                        header_signature: '2',
+                        payload: b'payload'
+                    }]
+                }]
+            },
+            {header: {...}, header_signature: '1', batches: [{...}]},
+            {header: {...}, header_signature: '0', batches: [{...}]}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2', the latest
+            - a link property that ends in '/blocks?head=2&id=0,2'
+            - a data property that:
+                * contains a list of 2 block dicts with a header and batches
+                * batches with 1 batch with a header and transactions
+                * transactions with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/blocks?id=0,2')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/blocks?head=2&id=0,2')
+        self.assert_has_valid_data_list(response, 2)
+        self.assert_block_well_formed(response['data'][0], '0')
+
+    @unittest_run_loop
+    async def test_block_list_with_bad_ids(self):
+        """Verifies GET /blocks with a bad id parameter breaks properly.
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2', the latest
+            - a link property that ends in '/blocks?head=2&id=bad,notgood'
+            - a data property that is an empty list
+        """
+        response = await self.get_json_assert_200('/blocks?id=bad,notgood')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/blocks?head=2&id=bad,notgood')
+        self.assert_has_valid_data_list(response, 0)
+
+    @unittest_run_loop
+    async def test_block_list_with_head_and_ids(self):
+        """Verifies GET /blocks with head and id parameters works properly.
+
+        Fetches blocks from default mock store:
+            {
+                header: {previous_block_id: '1', ...},
+                header_signature: '2',
+                batches: [{
+                    header: {signer_pubkey: 'pubkey', ...},
+                    header_signature: '2',
+                    transactions: [{
+                        header: {nonce: '2', ...},
+                        header_signature: '2',
+                        payload: b'payload'
+                    }]
+                }]
+            },
+            {header: {...}, header_signature: '1', batches: [{...}]},
+            {header: {...}, header_signature: '0', batches: [{...}]}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '1'
+            - a link property that ends in '/blocks?head=1&id=0'
+            - a data property that:
+                * contains a list of 1 block dicts with a header and batches
+                * batches with 1 batch with a header and transactions
+                * transactions with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/blocks?id=0&head=1')
+
+        self.assert_has_valid_head(response, '1')
+        self.assert_has_valid_link(response, '/blocks?head=1&id=0')
+        self.assert_has_valid_data_list(response, 1)
+        self.assert_block_well_formed(response['data'][0], '0')
+
+    @unittest_run_loop
+    async def test_block_list_with_id_head_mismatch(self):
+        """Verifies GET /blocks with ids missing from a specified head work.
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '0'
+            - a link property that ends in '/blocks?head=0&id=1,2'
+            - a data property that is an empty list
+        """
+        response = await self.get_json_assert_200('/blocks?id=1,2&head=0')
+
+        self.assert_has_valid_head(response, '0')
+        self.assert_has_valid_link(response, '/blocks?head=0&id=1,2')
+        self.assert_has_valid_data_list(response, 0)
+
+    @unittest_run_loop
     async def test_block_get(self):
         """Verifies a GET /blocks/{block_id} works properly.
 
@@ -668,6 +774,112 @@ class ApiTest(AioHTTPTestCase):
             - a response status of 404
         """
         await self.assert_404('/batches?head=bad')
+
+    @unittest_run_loop
+    async def test_batch_list_with_ids(self):
+        """Verifies GET /batches with the id parameter works properly.
+
+        Fetches batches from default mock store:
+            {
+                header: {previous_block_id: '1', ...},
+                header_signature: '2',
+                batches: [{
+                    header: {signer_pubkey: 'pubkey', ...},
+                    header_signature: '2',
+                    transactions: [{
+                        header: {nonce: '2', ...},
+                        header_signature: '2',
+                        payload: b'payload'
+                    }]
+                }]
+            },
+            {header: {...}, header_signature: '1', batches: [{...}]},
+            {header: {...}, header_signature: '0', batches: [{...}]}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2', the latest
+            - a link property that ends in '/batches?head=2&id=0,2'
+            - a data property that:
+                * contains a list of 2 batch dicts with a header and batches
+                * batches with 1 batch with a header and transactions
+                * transactions with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/batches?id=0,2')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/batches?head=2&id=0,2')
+        self.assert_has_valid_data_list(response, 2)
+        self.assert_batch_well_formed(response['data'][0], '0')
+
+    @unittest_run_loop
+    async def test_batch_list_with_bad_ids(self):
+        """Verifies GET /batches with a bad id parameter breaks properly.
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2', the latest
+            - a link property that ends in '/batches?head=2&id=bad,notgood'
+            - a data property that is an empty list
+        """
+        response = await self.get_json_assert_200('/batches?id=bad,notgood')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/batches?head=2&id=bad,notgood')
+        self.assert_has_valid_data_list(response, 0)
+
+    @unittest_run_loop
+    async def test_batch_list_with_head_and_ids(self):
+        """Verifies GET /batches with head and id parameters works properly.
+
+        Fetches batches from default mock store:
+            {
+                header: {previous_block_id: '1', ...},
+                header_signature: '2',
+                batches: [{
+                    header: {signer_pubkey: 'pubkey', ...},
+                    header_signature: '2',
+                    transactions: [{
+                        header: {nonce: '2', ...},
+                        header_signature: '2',
+                        payload: b'payload'
+                    }]
+                }]
+            },
+            {header: {...}, header_signature: '1', batches: [{...}]},
+            {header: {...}, header_signature: '0', batches: [{...}]}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '1'
+            - a link property that ends in '/batches?head=1&id=0'
+            - a data property that:
+                * contains a list of 1 batch dicts with a header and batches
+                * batches with 1 batch with a header and transactions
+                * transactions with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/batches?id=0&head=1')
+
+        self.assert_has_valid_head(response, '1')
+        self.assert_has_valid_link(response, '/batches?head=1&id=0')
+        self.assert_has_valid_data_list(response, 1)
+        self.assert_batch_well_formed(response['data'][0], '0')
+
+    @unittest_run_loop
+    async def test_batch_list_with_id_head_mismatch(self):
+        """Verifies GET /batches with ids missing from a specified head work.
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '0'
+            - a link property that ends in '/batches?head=0&id=1,2'
+            - a data property that is an empty list
+        """
+        response = await self.get_json_assert_200('/batches?id=1,2&head=0')
+
+        self.assert_has_valid_head(response, '0')
+        self.assert_has_valid_link(response, '/batches?head=0&id=1,2')
+        self.assert_has_valid_data_list(response, 0)
 
     @unittest_run_loop
     async def test_batch_get(self):
