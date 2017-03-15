@@ -203,36 +203,67 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
 
         return head_id
 
-    def _list_blocks(self, head_id, xform=lambda b: [b]):
-        """Traverses the blockchain, building a list of blocks or derived data.
+    def _list_store_resources(self, request, head_id, filter_ids,
+                              resource_fetcher, block_xform):
+        """Builds a list of blocks or resources derived from blocks,
+        handling multiple possible filter requests:
+            - filtered by a set of ids
+            - filtered by head block
+            - filtered by both id and head block
+            - not filtered (all current resources)
 
         Note:
             This method will fail if `_block_store` has not been set
 
         Args:
-            head_id (str): The id of the block to start building the chain at
-            xform (function, optional): Creates a list to be added to results:
+            request (object): The parsed protobuf request object
+            head_id (str): Either request.head_id, or the current chain head
+            filter_ids (list of str): the resource ids (if any) to filter by
+            resource_fetcher (function): Fetches a resource by its id
                 Expected args:
-                    b: The current block
+                    resource_id: The id of the resource to be fetched
                 Expected return:
-                    list: To be concatenated to the end of current results
-                Default:
-                    Simply returns the current block wrapped in a list
+                    object: The resource to be appended to the results
+            block_xform (function): Transforms a block into a list of resources
+                Expected args:
+                    block: A block object from the block store
+                Expected return:
+                    list: To be concatenated to the end of the results
 
         Returns:
-            list: List of blocks or data from blocks, from newest to oldest
+            list: List of blocks or data from blocks. If filtered by ids,
+                they will be listed in the same order as the id filters,
+                otherwise they will be ordered from newest to oldest
         """
-        blocks = []
+        resources = []
 
-        while head_id in self._block_store:
-            block = self._block_store[head_id].block
-            blocks += xform(block)
+        # Simply fetch by id if filtered by id but not by head block
+        if filter_ids and not request.head_id:
+            for resource_id in filter_ids:
+                try:
+                    resources.append(resource_fetcher(resource_id))
+                except (KeyError, ValueError, TypeError):
+                    # Invalid ids should be omitted, not raise an exception
+                    pass
 
-            header = BlockHeader()
-            header.ParseFromString(block.header)
-            head_id = header.previous_block_id
+        # Traverse block chain to build results for most scenarios
+        else:
+            current_id = head_id
+            while current_id in self._block_store:
+                block = self._block_store[current_id].block
+                resources += block_xform(block)
+                header = BlockHeader()
+                header.ParseFromString(block.header)
+                current_id = header.previous_block_id
 
-        return blocks
+        # If filtering by head AND ids, the traverse results must be winnowed
+        if request.head_id and filter_ids:
+            matches = {
+                r.header_signature: r for r in resources
+                if r.header_signature in filter_ids}
+            resources = [matches[i] for i in filter_ids if i in matches]
+
+        return resources
 
     def _get_statuses(self, batch_ids):
         """Fetches the committed statuses for a set of batch ids.
@@ -374,7 +405,18 @@ class BlockListRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         head_id = self._get_head_block(request).header_signature
-        blocks = self._list_blocks(head_id)
+        blocks = self._list_store_resources(
+            request,
+            head_id,
+            request.block_ids,
+            lambda filter_id: self._block_store[filter_id].block,
+            lambda block: [block])
+
+        if not blocks:
+            return self._wrap_response(
+                self._status.NO_RESOURCE,
+                head_id=head_id)
+
         return self._wrap_response(head_id=head_id, blocks=blocks)
 
 
@@ -408,7 +450,18 @@ class BatchListRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         head_id = self._get_head_block(request).header_signature
-        batches = self._list_blocks(head_id, lambda b: [a for a in b.batches])
+        batches = self._list_store_resources(
+            request,
+            head_id,
+            request.batch_ids,
+            self._block_store.get_batch,
+            lambda block: [a for a in block.batches])
+
+        if not batches:
+            return self._wrap_response(
+                self._status.NO_RESOURCE,
+                head_id=head_id)
+
         return self._wrap_response(head_id=head_id, batches=batches)
 
 

@@ -145,7 +145,7 @@ message ClientStateListRequest {
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NOT_READY - the validator does not yet have a genesis block
 //   * NO_ROOT - the head block or merkle_root specified was not found
-//   * NO_RESOURCE - the head/root sprecidied is valid, but contains no data
+//   * NO_RESOURCE - the head/root specified is valid, but contains no data
 
 message ClientStateListResponse {
     enum Status {
@@ -201,9 +201,10 @@ message ClientStateGetResponse {
 // A request to return a list of blocks from the validator. May include the id
 // of a particular block to be the `head` of the chain being requested. In that
 // case the list will include that block (if found), and all blocks previous
-// to it on the chain.
+// to it on the chain. Can be filtered using specific `block_ids`.
 message ClientBlockListRequest {
     string head_id = 1;
+    repeated string block_ids = 2;
 }
 
 // A response that lists a chain of blocks with the newest at the beginning,
@@ -214,12 +215,14 @@ message ClientBlockListRequest {
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NOT_READY - the validator does not yet have a genesis block
 //   * NO_ROOT - the head block specified was not found
+//   * NO_RESOURCE - no blocks were found with the parameters specified
 message ClientBlockListResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         NOT_READY = 2;
         NO_ROOT = 3;
+        NO_RESOURCE = 4;
     }
     Status status = 1;
     repeated Block blocks = 2;
@@ -253,9 +256,10 @@ message ClientBlockGetResponse {
 // A request to return a list of batches from the validator. May include the id
 // of a particular block to be the `head` of the chain being requested. In that
 // case the list will include the batches from that block, and all batches
-// previous to that block on the chain.
+// previous to that block on the chain. Filter with specific `batch_ids`.
 message ClientBatchListRequest {
     string head_id = 1;
+    repeated string batch_ids = 2;
 }
 
 // A response that lists batches with the newest to oldest.
@@ -265,12 +269,14 @@ message ClientBatchListRequest {
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NOT_READY - the validator does not yet have a genesis block
 //   * NO_ROOT - the head block specified was not found
+//   * NO_RESOURCE - no batches were found with the parameters specified
 message ClientBatchListResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         NOT_READY = 2;
         NO_ROOT = 3;
+        NO_RESOURCE = 4;
     }
     Status status = 1;
     repeated Batch batches = 2;
