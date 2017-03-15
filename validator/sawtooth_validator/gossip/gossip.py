@@ -131,9 +131,15 @@ class Gossip(object):
             exclude = []
         for connection_id in self._peers:
             if connection_id not in exclude:
-                self._network.send(message_type,
-                                   gossip_message.SerializeToString(),
-                                   connection_id)
+                try:
+                    self._network.send(message_type,
+                                       gossip_message.SerializeToString(),
+                                       connection_id)
+                except ValueError:
+                    LOGGER.debug("Connection %s is no longer valid. "
+                                 "Removing from list of peers.",
+                                 connection_id)
+                    self._peers.remove(connection_id)
 
     def _peer_callback(self, request, result, connection_id):
         ack = NetworkAcknowledgement()
