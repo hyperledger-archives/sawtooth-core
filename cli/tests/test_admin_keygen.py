@@ -16,10 +16,11 @@
 import argparse
 import os
 import unittest
+import sys
 
 from sawtooth_signing import secp256k1_signer as signing
 from sawtooth_cli.admin_command import keygen
-from sawtooth_cli.admin_command.utils import ensure_directory
+from sawtooth_cli.admin_command.config import get_key_dir
 from sawtooth_cli.exceptions import CliException
 
 
@@ -28,12 +29,19 @@ class TestKeygen(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._parser = None
-        cls._key_dir = ensure_directory('etc/keys', '/etc/sawtooth/keys')
+        cls._key_dir = get_key_dir()
         cls._key_name = 'test_key'
         cls._wif_filename = os.path.join(cls._key_dir,
                                          cls._key_name + '.wif')
         cls._addr_filename = os.path.join(cls._key_dir,
                                           cls._key_name + '.addr')
+        if not os.path.exists(cls._key_dir):
+            try:
+                os.makedirs(cls._key_dir, exist_ok=True)
+            except OSError as e:
+                print('Unable to create {}: {}'.format(cls._key_dir, e),
+                      file=sys.stderr)
+                sys.exit(1)
 
     def setUp(self):
         self._parser = argparse.ArgumentParser(add_help=False)
