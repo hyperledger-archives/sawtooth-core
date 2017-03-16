@@ -29,6 +29,8 @@ from sawtooth_intkey.client_cli.create_batch import add_create_batch_parser
 from sawtooth_intkey.client_cli.create_batch import do_create_batch
 from sawtooth_intkey.client_cli.load import add_load_parser
 from sawtooth_intkey.client_cli.load import do_load
+from sawtooth_intkey.client_cli.workload import add_workload_parser
+from sawtooth_intkey.client_cli.workload import do_workload
 
 from sawtooth_intkey.client_cli.exceptions import IntKeyCliException
 
@@ -89,6 +91,7 @@ def create_parser(prog_name):
     add_load_parser(subparsers, parent_parser)
     add_populate_parser(subparsers, parent_parser)
     add_create_batch_parser(subparsers, parent_parser)
+    add_workload_parser(subparsers, parent_parser)
 
     return parser
 
@@ -111,6 +114,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
         do_load(args)
     elif args.command == 'create_batch':
         do_create_batch(args)
+    elif args.command == 'workload':
+        do_workload(args)
     else:
         raise IntKeyCliException("invalid command: {}".format(args.command))
 
