@@ -18,8 +18,8 @@ import json
 import logging
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.consensus.poet.wait_certificate \
-    import WaitCertificate
+
+from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 
 LOGGER = logging.getLogger(__name__)
 

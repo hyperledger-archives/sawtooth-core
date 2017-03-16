@@ -13,11 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_validator.journal.consensus.poet.poet_consensus. \
-    poet_block_publisher import PoetBlockPublisher as BlockPublisher
-from sawtooth_validator.journal.consensus.poet.poet_consensus. \
-    poet_block_verifier import PoetBlockVerifier as BlockVerifier
-from sawtooth_validator.journal.consensus.poet.poet_consensus. \
-    poet_fork_resolver import PoetForkResolver as ForkResolver
+from sawtooth_poet.poet_consensus.poet_block_publisher import \
+    PoetBlockPublisher as BlockPublisher
+from sawtooth_poet.poet_consensus.poet_block_verifier import \
+    PoetBlockVerifier as BlockVerifier
+from sawtooth_poet.poet_consensus.poet_fork_resolver \
+    import PoetForkResolver as ForkResolver
 
 __all__ = []

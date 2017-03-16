@@ -18,12 +18,12 @@ import logging
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
 
-from sawtooth_validator.journal.consensus.poet.poet_consensus \
-    import poet_enclave_factory as factory
-from sawtooth_validator.journal.consensus.poet.poet_consensus import utils
-from sawtooth_validator.journal.consensus.poet.wait_timer import WaitTimer
-from sawtooth_validator.journal.consensus.poet.validator_registry_view import \
-    ValidatorRegistryView
+from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
+from sawtooth_poet.poet_consensus import utils
+from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
+
+from sawtooth_poet_common.validator_registry_view.validator_registry_view \
+    import ValidatorRegistryView
 
 LOGGER = logging.getLogger(__name__)
 

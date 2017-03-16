@@ -18,7 +18,8 @@ import importlib
 import logging
 
 from sawtooth_validator.state.config_view import ConfigView
-from sawtooth_validator.journal.consensus.poet import wait_timer
+
+from sawtooth_poet.poet_consensus import wait_timer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,8 +62,8 @@ class PoetEnclaveFactory(object):
                 module_name = \
                     config_view.get_setting(
                         key='sawtooth.poet.enclave_module',
-                        default_value='sawtooth_validator.journal.consensus.'
-                                      'poet.poet_enclave_simulator.'
+                        default_value='sawtooth_poet_simulator.'
+                                      'poet_enclave_simulator.'
                                       'poet_enclave_simulator')
 
                 LOGGER.info('Load PoET enclave module: %s', module_name)

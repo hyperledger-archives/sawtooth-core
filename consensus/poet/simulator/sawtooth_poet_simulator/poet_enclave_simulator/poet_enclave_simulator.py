@@ -32,18 +32,15 @@ from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.common\
-    import json2dict
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.common\
-    import dict2json
+from sawtooth_poet_simulator.poet_enclave_simulator.utils import json2dict
+from sawtooth_poet_simulator.poet_enclave_simulator.utils import dict2json
 
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator\
-    .enclave_signup_info import EnclaveSignupInfo
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator\
-    .enclave_wait_timer import EnclaveWaitTimer
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator\
-    .enclave_wait_certificate import EnclaveWaitCertificate
-
+from sawtooth_poet_simulator.poet_enclave_simulator.enclave_signup_info \
+    import EnclaveSignupInfo
+from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_timer \
+    import EnclaveWaitTimer
+from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_certificate \
+    import EnclaveWaitCertificate
 
 LOGGER = logging.getLogger(__name__)
 

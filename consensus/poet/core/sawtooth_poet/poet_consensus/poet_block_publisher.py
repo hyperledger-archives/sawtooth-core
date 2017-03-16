@@ -18,23 +18,20 @@ import hashlib
 import time
 import json
 
+from sawtooth_signing import secp256k1_signer as signing
+
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
-
-from sawtooth_validator.journal.consensus.poet.poet_consensus \
-    import poet_enclave_factory as factory
-from sawtooth_validator.journal.consensus.poet.signup_info import SignupInfo
-from sawtooth_validator.journal.consensus.poet.wait_timer import WaitTimer
-from sawtooth_validator.journal.consensus.poet.wait_certificate \
-    import WaitCertificate
-from sawtooth_validator.journal.consensus.poet.poet_consensus import utils
-
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
-import sawtooth_validator.protobuf.validator_registry_pb2 as vr_pb
 
-from sawtooth_signing import secp256k1_signer as signing
+from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
+from sawtooth_poet.poet_consensus.signup_info import SignupInfo
+from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
+from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
+from sawtooth_poet.poet_consensus import utils
+
+import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
 LOGGER = logging.getLogger(__name__)
 

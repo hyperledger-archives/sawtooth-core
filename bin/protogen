@@ -48,9 +48,11 @@ def main():
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
     # 3. Generate PoET protos
-    proto_dir = JOIN(TOP_DIR, "poet/sawtooth_poet/protos")
-    protoc(proto_dir, "poet", "sawtooth_poet/protobuf")
-    protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
+    proto_dir = \
+        JOIN(
+            TOP_DIR,
+            "consensus/poet/families/sawtooth_validator_registry/protos")
+    protoc(proto_dir, "consensus/poet/common", "sawtooth_poet_common/protobuf")
 
 
 def protoc(src_dir, base_dir, pkg):

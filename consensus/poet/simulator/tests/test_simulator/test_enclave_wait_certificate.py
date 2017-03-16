@@ -16,10 +16,11 @@
 import unittest
 
 from sawtooth_signing import secp256k1_signer as signing
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.\
-    enclave_wait_timer import EnclaveWaitTimer
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.\
-    enclave_wait_certificate import EnclaveWaitCertificate
+
+from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_timer \
+    import EnclaveWaitTimer
+from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_certificate \
+    import EnclaveWaitCertificate
 
 
 class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):

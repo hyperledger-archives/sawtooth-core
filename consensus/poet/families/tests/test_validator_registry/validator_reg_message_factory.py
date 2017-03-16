@@ -24,11 +24,11 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorInfo
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     SignUpInfo
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorMap
 
 

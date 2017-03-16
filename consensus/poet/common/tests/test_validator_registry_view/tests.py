@@ -14,10 +14,9 @@
 # ------------------------------------------------------------------------------
 import unittest
 
-from sawtooth_validator.protobuf.validator_registry_pb2 import ValidatorInfo
-from sawtooth_validator.protobuf.validator_registry_pb2 import SignUpInfo
-
-from sawtooth_validator.journal.consensus.poet.validator_registry_view \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorInfo
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import SignUpInfo
+from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
 
 from test_validator_registry_view.mocks import MockStateView

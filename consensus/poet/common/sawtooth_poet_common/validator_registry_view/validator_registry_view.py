@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 import hashlib
 
-from sawtooth_validator.protobuf.validator_registry_pb2 import ValidatorInfo
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorInfo
 
 
 _NAMESPACE = hashlib.sha256('validator_registry'.encode()).hexdigest()[0:6]

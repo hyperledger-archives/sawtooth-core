@@ -181,4 +181,10 @@ test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
 }
 
+test_poet(){
+    echo "[---Running poet---]"
+    run_docker_test ./consensus/poet/families/tests/test_validator_registry/tp_validator_registry.yaml \
+    -s validator
+}
+
 main

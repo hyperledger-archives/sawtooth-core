@@ -17,17 +17,16 @@ from importlib import reload
 import time
 import unittest
 
-import sawtooth_validator.journal.consensus.poet.poet_enclave_simulator.\
-    poet_enclave_simulator as poet_enclave
+import sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator \
+    as poet_enclave
 
-from sawtooth_validator.journal.consensus.poet.signup_info import SignupInfo
-from sawtooth_validator.journal.consensus.poet.wait_timer import WaitTimer
-from sawtooth_validator.journal.consensus.poet.wait_certificate \
-    import WaitCertificate
+from sawtooth_poet.poet_consensus.signup_info import SignupInfo
+from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
+from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
-from test_poet.utils import create_random_public_key_hash
+from test_consensus.utils import create_random_public_key_hash
 
 
 class TestWaitCertificate(unittest.TestCase):
@@ -50,7 +49,7 @@ class TestWaitCertificate(unittest.TestCase):
         args = {"NodeName": "DasValidator"}
         self.poet_enclave_module.initialize(**args)
 
-    def test_create_wait_certificate_before_create_signup_info(self):
+    def test_create_before_create_signup_info(self):
         # Make sure that trying to create a wait certificate before signup
         # information is provided causes an error
         with self.assertRaises(ValueError):
@@ -59,7 +58,7 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
-    def test_create_wait_certificate_before_create_wait_timer(self):
+    def test_create_before_create_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
@@ -75,7 +74,7 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
-    def test_create_wait_certificate_before_wait_timer_expires(self):
+    def test_create_before_wait_timer_expires(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
@@ -107,7 +106,7 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
-    def test_create_wait_certificate_after_wait_timer_timed_out(self):
+    def test_create_after_wait_timer_timed_out(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
@@ -143,7 +142,7 @@ class TestWaitCertificate(unittest.TestCase):
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
-    def test_create_wait_certificate_with_wrong_wait_timer(self):
+    def test_create_with_wrong_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
@@ -177,7 +176,7 @@ class TestWaitCertificate(unittest.TestCase):
             wait_timer=valid_wt,
             block_hash="Reader's Digest")
 
-    def test_create_wait_certificate_with_reused_wait_timer(self):
+    def test_create_with_reused_wait_timer(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
@@ -228,7 +227,7 @@ class TestWaitCertificate(unittest.TestCase):
             wait_timer=wt,
             block_hash="Reader's Digest")
 
-    def test_create_wait_certificate(self):
+    def test_create(self):
         # Need to create signup information and wait timer first
         signup_info = \
             SignupInfo.create_signup_info(
@@ -294,7 +293,7 @@ class TestWaitCertificate(unittest.TestCase):
             certificates=[wc],
             poet_public_key=signup_info.poet_public_key)
 
-    def test_wait_certificate_serialization(self):
+    def test_serialization(self):
         # Need to create signup information and wait timer first
         signup_info = \
             SignupInfo.create_signup_info(

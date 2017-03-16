@@ -18,9 +18,9 @@ import json
 import base64
 
 from sawtooth_signing import secp256k1_signer as signing
-from validator_registry_test.validator_reg_message_factory \
+from test_validator_registry.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorRegistryPayload
 
 

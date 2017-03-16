@@ -13,13 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 """
-The Common module defines utility methods used across gossip.
+Utility methods used across enclave simulator.
 """
 
 import json
 from collections import OrderedDict
-
-import cbor
 
 
 def pretty_print_dict(dictionary):
@@ -31,7 +29,8 @@ def pretty_print_dict(dictionary):
     Returns:
         str: pretty-print formatted string.
     """
-    return json.dumps(ascii_encode_dict(dictionary), indent=2, sort_keys=True)
+    return \
+        json.dumps(_ascii_encode_dict(dictionary), indent=2, sort_keys=True)
 
 
 def json2dict(dictionary):
@@ -43,7 +42,7 @@ def json2dict(dictionary):
     Returns:
         dict: a dictionary object reflecting the structure of the JSON.
     """
-    return ascii_encode_dict(json.loads(dictionary))
+    return _ascii_encode_dict(json.loads(dictionary))
 
 
 def dict2json(dictionary):
@@ -55,64 +54,21 @@ def dict2json(dictionary):
     Returns:
         str: a JSON string reflecting the structure of the input dict.
     """
-    return json.dumps(ascii_encode_dict(dictionary))
+    return json.dumps(_ascii_encode_dict(dictionary))
 
 
-def cbor2dict(dictionary):
-    """Deserializes CBOR into a dictionary.
-
-    Args:
-        dictionary (bytes): the CBOR object to deserialize.
-
-    Returns:
-        dict: a dictionary object reflecting the structure of the CBOR.
-    """
-
-    return ascii_encode_dict(cbor.loads(dictionary))
-
-
-def dict2cbor(dictionary):
-    """Serializes a dictionary into CBOR.
-
-    Args:
-        dictionary (dict): a dictionary object to serialize into CBOR.
-
-    Returns:
-        bytes: a CBOR object reflecting the structure of the input dict.
-    """
-
-    return cbor.dumps(_unicode_encode_dict(dictionary), sort_keys=True)
-
-
-def ascii_encode_dict(item):
+def _ascii_encode_dict(item):
     """
     Support method to ensure that JSON is converted to ascii since unicode
     identifiers, in particular, can cause problems
     """
     if isinstance(item, dict):
         return OrderedDict(
-            (ascii_encode_dict(key), ascii_encode_dict(item[key]))
+            (_ascii_encode_dict(key), _ascii_encode_dict(item[key]))
             for key in sorted(item.keys()))
     elif isinstance(item, list):
-        return [ascii_encode_dict(element) for element in item]
+        return [_ascii_encode_dict(element) for element in item]
     elif isinstance(item, str):
         return item
-    else:
-        return item
-
-
-def _unicode_encode_dict(item):
-    """
-    Support method to ensure that JSON is converted to ascii since unicode
-    identifiers, in particular, can cause problems
-    """
-    if isinstance(item, dict):
-        return OrderedDict(
-            (_unicode_encode_dict(key), _unicode_encode_dict(item[key]))
-            for key in sorted(item.keys()))
-    elif isinstance(item, list):
-        return [_unicode_encode_dict(element) for element in item]
-    elif isinstance(item, str):
-        return str(item)
     else:
         return item

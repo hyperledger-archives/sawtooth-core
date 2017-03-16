@@ -7,6 +7,15 @@ PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/extensions/arcade
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/sdk/python
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/sdk/examples
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/rest_api
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/cli
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/common
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/common/tests
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/core
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/core/tests
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/families
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/families/tests
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/simulator
+PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/simulator/tests
 export PYTHONPATH
 
 PATH=$PATH:/project/sawtooth-core/bin

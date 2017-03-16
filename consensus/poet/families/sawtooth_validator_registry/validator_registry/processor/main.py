@@ -20,7 +20,7 @@ import logging
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
-from sawtooth_poet.validator_registry.processor.handler import \
+from sawtooth_validator_registry.validator_registry.processor.handler import \
     ValidatorRegistryTransactionHandler
 
 

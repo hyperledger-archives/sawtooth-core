@@ -30,11 +30,11 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorInfo
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorMap
-from sawtooth_poet.protobuf.validator_registry_pb2 import \
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorRegistryPayload
 
 LOGGER = logging.getLogger(__name__)

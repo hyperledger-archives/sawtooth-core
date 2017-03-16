@@ -19,7 +19,7 @@ import traceback
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
-from validator_registry_test.tests import TestValidatorRegistry
+from test_validator_registry.tests import TestValidatorRegistry
 
 
 class TestSuiteValidatorRegistry(unittest.TestCase):

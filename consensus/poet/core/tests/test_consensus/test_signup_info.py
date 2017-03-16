@@ -15,12 +15,14 @@
 
 import unittest
 
-from sawtooth_validator.journal.consensus.poet.signup_info import SignupInfo
-from sawtooth_validator.journal.consensus.poet.poet_enclave_simulator \
+from sawtooth_poet_simulator.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
+
+from sawtooth_poet.poet_consensus.signup_info import SignupInfo
+
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
-from test_poet.utils import create_random_public_key_hash
+from test_consensus.utils import create_random_public_key_hash
 
 
 class TestSignupInfo(unittest.TestCase):
@@ -33,15 +35,7 @@ class TestSignupInfo(unittest.TestCase):
         cls._originator_public_key_hash = create_random_public_key_hash()
         cls._another_public_key_hash = create_random_public_key_hash()
 
-    @classmethod
-    def _create_random_private_key(cls):
-        return signing.generate_privkey()
-
-    @classmethod
-    def _create_random_public_key(cls):
-        return signing.generate_pubkey(cls._create_random_private_key())
-
-    def test_basic_create_signup_info(self):
+    def test_create(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
@@ -54,7 +48,7 @@ class TestSignupInfo(unittest.TestCase):
         self.assertIsNotNone(signup_info.anti_sybil_id)
         self.assertIsNotNone(signup_info.sealed_signup_data)
 
-    def test_verify_serialized_signup_info(self):
+    def test_serialization(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
@@ -76,7 +70,7 @@ class TestSignupInfo(unittest.TestCase):
             copy_signup_info.anti_sybil_id)
         self.assertIsNone(copy_signup_info.sealed_signup_data)
 
-    def test_verify_unsealing_data(self):
+    def test_unsealing_data(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
@@ -94,7 +88,7 @@ class TestSignupInfo(unittest.TestCase):
             poet_public_key,
             msg="PoET public key in signup info and sealed data don't match")
 
-    def test_verify_signup_info(self):
+    def test_check_valid(self):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
