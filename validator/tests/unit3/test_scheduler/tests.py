@@ -132,6 +132,53 @@ class TestSerialScheduler(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(iterable1)
 
+    def test_completion_on_finalize(self):
+        """Tests that iteration will stop when finalized is called on an
+        otherwise complete scheduler.
+
+        Adds one batch and transaction, then verifies the iterable returns
+        that transaction.  Sets the execution result and then calls finalize.
+        Since the the scheduler is complete (all transactions have had
+        results set, and it's been finalized), we should get a StopIteration.
+
+        This check is useful in making sure the finalize() can occur after
+        all set_transaction_execution_result()s have been performed, because
+        in a normal situation, finalize will probably occur prior to those
+        calls.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        context_manager = ContextManager(dict_database.DictDatabase())
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = SerialScheduler(squash_handler, first_state_root)
+
+        txn = create_transaction(
+            name='a',
+            private_key=private_key,
+            public_key=public_key)
+
+        batch = create_batch(
+            transactions=[txn],
+            private_key=private_key,
+            public_key=public_key)
+
+        iterable = iter(scheduler)
+
+        scheduler.add_batch(batch)
+
+        scheduled_txn_info = next(iterable)
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
+        scheduler.set_transaction_execution_result(
+            txn.header_signature, False, None)
+
+        scheduler.finalize()
+
+        with self.assertRaises(StopIteration):
+            next(iterable)
+
     def test_set_status(self):
         """Tests that set_status() has the correct behavior.
 

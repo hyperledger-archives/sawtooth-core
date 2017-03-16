@@ -133,6 +133,8 @@ class SerialScheduler(Scheduler):
     def finalize(self):
         with self._condition:
             self._final = True
+            if self._txn_queue.empty():
+                self._complete = True
             self._condition.notify_all()
 
     def complete(self, block):
