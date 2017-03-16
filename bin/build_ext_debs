@@ -22,8 +22,8 @@
 
 set -e
 
-build_dir=./projects
-pkg_dir=./packages
+build_dir=$(pwd)/projects
+pkg_dir=$(pwd)/packages
 
 while getopts :p:b:h opt
 do
@@ -51,82 +51,129 @@ do
     esac
 done
 
-mkdir -p ${build_dir} && mkdir -p ${pkg_dir}
+main() {
 
-# WARNING: Order is important
-pip_pkgs='
-chardet
-multidict
-async_timeout
-yarl
-aiohttp
-grpcio
-protobuf
-six
-grpcio-tools
-bitcoin
-setuptools_scm
-pytest-runner==2.6.2
-secp256k1
-'
+    info "Building debs in $build_dir and storing in $pkg_dir"
 
-# secp256k1 needs a couple of libraries not readily available
-libsecp256k1_debs='
-libsecp256k1-0_0.1~20161228-1_amd64.deb
-libsecp256k1-dev_0.1~20161228-1_amd64.deb
-'
+    mkdir -p ${build_dir} && mkdir -p ${pkg_dir}
 
-# Download and install additional secp256k dependencies
-for deb in $libsecp256k1_debs; do
-    wget http://ftp.br.debian.org/debian/pool/main/libs/libsecp256k1/$deb
-    sudo dpkg -i $deb
-    mv $deb $pkg_dir
-done
+    # WARNING: Order is important
+    pip_pkgs='
+    chardet
+    multidict
+    async_timeout
+    yarl
+    aiohttp
+    grpcio
+    protobuf
+    six
+    grpcio-tools
+    bitcoin
+    setuptools_scm
+    pytest-runner==2.6.2
+    secp256k1
+    '
 
-# Install packages so pip doesn't blow up while trying to download
-sudo pip3 install $pip_pkgs
+    # secp256k1 needs a couple of libraries not readily available
+    libsecp256k1_debs='
+    libsecp256k1-0_0.1~20161228-1_amd64.deb
+    libsecp256k1-dev_0.1~20161228-1_amd64.deb
+    '
 
-cd $build_dir
+    # Download and install additional secp256k dependencies
+    info "Downloading and installing libsecp256k1 debs"
+    for deb in $libsecp256k1_debs; do
+        if [[ -e $pkg_dir/$deb ]]
+        then
+            warn "Skipping $deb, already exists at $pkg_dir/$deb"
+        else
+            wget http://ftp.br.debian.org/debian/pool/main/libs/libsecp256k1/$deb
+            sudo dpkg -i $deb
+            mv $deb $pkg_dir
+        fi
+    done
 
-# Download and extract pip packages
-pip3 download --no-binary :all: \
-    --disable-pip-version-check \
-    --no-deps $pip_pkgs
+    info "Installing all pip packages for building"
+    sudo pip3 install $pip_pkgs
 
-# Unpack tarballs
-for file in *.tar.gz; do
-    tar xfz $file;
-done
-rm -f *.tar.gz
+    for pkg in $pip_pkgs; do
+        build_deb $pkg
+    done
 
-for pkg in $pip_pkgs; do
-    # Remove version fixing and fix async-timeout inconsistency
-    pkg=$(echo "$pkg" | sed -e 's/==.*//' -e 's/async_/async-/')
+    info "Uninstalling packages installed by pip"
+    sudo pip3 uninstall -y $pip_pkgs
 
-    cd $build_dir/$pkg*
+    info "Done building packages"
+    echo $(ls -1 $pkg_dir/*.deb)
+}
 
-    # Arcane wizadry to get protobuf to build right
-    if [ $pkg = 'protobuf' ]; then
-        # Grab protoc and .proto files expected by protobuf
-        wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
 
-        # Unpack and relocate
-        mkdir src
-        unzip protoc-3.2.0-linux-x86_64.zip -d src
-        mv src/include/* src/ && mv src/bin/* src/
+warn() {
+    echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
+}
 
-        # Patch bad relative paths
-        sed 's/\.\.\/src/\.\.\/\.\.\/src/' < setup.py > patch.py && mv patch.py setup.py
+build_deb() {
+    cd $build_dir
+
+    pip_pkg_name=$1
+    tar_pkg_name=$(echo "$pip_pkg_name" | \
+        sed -e 's/==.*//' \
+            -e 's/async_/async-/' \
+            -e 's/cryptography-/cryptography_/')
+
+    deb_pkg_name=$(echo "$tar_pkg_name" | \
+        sed -e 's/setuptools_/setuptools-/' \
+            -e 's/cryptography_/cryptography-/')
+
+    if [ -z $(find $pkg_dir -name "*$deb_pkg_name\_*.deb") ]
+    then
+        info "Downloading source code for $pip_pkg_name"
+        pip3 download --no-binary :all: \
+            --disable-pip-version-check \
+            --no-deps $pip_pkg_name
+
+        tarball=$tar_pkg_name*.tar.gz
+        info "Extracting $tarball"
+        tar xfz $tarball;
+        rm -f $tarball 
+
+        info "Building $deb_pkg_name deb"
+        # Remove version fixing and fix async-timeout inconsistency
+
+        cd $build_dir/$tar_pkg_name*
+
+        # Arcane wizadry to get protobuf to build right
+        if [ $tar_pkg_name = 'protobuf' ]; then
+            # Grab protoc and .proto files expected by protobuf
+            wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
+
+            # Unpack and relocate
+            mkdir src
+            unzip protoc-3.2.0-linux-x86_64.zip -d src
+            mv src/include/* src/ && mv src/bin/* src/
+
+            # Patch bad relative paths
+            sed 's/\.\.\/src/\.\.\/\.\.\/src/' < setup.py > patch.py && mv patch.py setup.py
+        fi
+
+        # Build the package
+        sudo python3 setup.py --command-packages=stdeb.command bdist_deb
+        info "Finished building $deb_pkg_name deb"
+
+        info "Installing $deb_pkg_name deb"
+        # Install the package
+        sudo dpkg -i deb_dist/*.deb
+
+        info "Saving $deb_pkg_name deb to $pkg_dir"
+        # Save the package
+        cp deb_dist/*.deb $pkg_dir
+    else
+        warn "Skipping $deb_pkg_name, already exists in $pkg_dir"
     fi
 
-    # Build the package
-    sudo python3 setup.py --command-packages=stdeb.command bdist_deb
+}
 
-    # Install the package
-    sudo dpkg -i deb_dist/*.deb
-
-    # Save the package
-    cp deb_dist/*.deb $pkg_dir
-
-    cd $build_dir
-done
+main
