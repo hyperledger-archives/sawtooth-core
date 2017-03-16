@@ -16,6 +16,8 @@
 import unittest
 import logging
 import hashlib
+import threading
+import time
 
 from sawtooth_signing import secp256k1_signer as signing
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
@@ -176,6 +178,103 @@ class TestSerialScheduler(unittest.TestCase):
 
         scheduler.finalize()
 
+        with self.assertRaises(StopIteration):
+            next(iterable)
+
+    def test_add_batch_after_empty_iteration(self):
+        """Tests that iterations will continue as result of add_batch().
+
+        This test calls next() on a scheduler iterator in a separate thread
+        called the IteratorThread.  The test waits until the IteratorThread
+        is waiting in next(); internal to the scheduler, it will be waiting on
+        a condition variable as there are no transactions to return and the
+        scheduler is not finalized.  Then, the test continues by running
+        add_batch(), which should cause the next() running in the
+        IterableThread to return a transaction.
+
+        This demonstrates the scheduler's ability to wait on an empty iterator
+        but continue as transactions become available via add_batch.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        context_manager = ContextManager(dict_database.DictDatabase())
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = SerialScheduler(squash_handler, first_state_root)
+
+        # Create a basic transaction and batch.
+        txn = create_transaction(
+            name='a',
+            private_key=private_key,
+            public_key=public_key)
+        batch = create_batch(
+            transactions=[txn],
+            private_key=private_key,
+            public_key=public_key)
+
+        # This class is used to run the scheduler's iterator.
+        class IteratorThread(threading.Thread):
+            def __init__(self, iterable):
+                threading.Thread.__init__(self)
+                self._iterable = iterable
+                self.ready = False
+                self.condition = threading.Condition()
+                self.txn_info = None
+
+            def run(self):
+                # Even with this lock here, there is a race condition between
+                # exit of the lock and entry into the iterable.  That is solved
+                # by sleep later in the test.
+                with self.condition:
+                    self.ready = True
+                    self.condition.notify()
+                txn_info = next(self._iterable)
+                with self.condition:
+                    self.txn_info = txn_info
+                    self.condition.notify()
+
+        # This is the iterable we are testing, which we will use in the
+        # IteratorThread.  We also use it in this thread below to test
+        # for StopIteration.
+        iterable = iter(scheduler)
+
+        # Create and startup thread.
+        thread = IteratorThread(iterable=iterable)
+        thread.start()
+
+        # Pause here to make sure the thread is absolutely as far along as
+        # possible; in other words, right before we call next() in it's run()
+        # method.  When this returns, there should be very little time until
+        # the iterator is blocked on a condition variable.
+        with thread.condition:
+            while not thread.ready:
+                thread.condition.wait()
+
+        # May the daemons stay away during this dark time, and may we be
+        # forgiven upon our return.
+        time.sleep(1)
+
+        # At this point, the IteratorThread should be waiting next(), so we go
+        # ahead and give it a batch.
+        scheduler.add_batch(batch)
+
+        # If all goes well, thread.txn_info will get set to the result of the
+        # next() call.  If not, it will timeout and thread.txn_info will be
+        # empty.
+        with thread.condition:
+            if thread.txn_info is None:
+                thread.condition.wait(5)
+
+        # If thread.txn_info is empty, the test failed as iteration did not
+        # continue after add_batch().
+        self.assertIsNotNone(thread.txn_info, "iterable failed to return txn")
+        self.assertEquals(txn.payload, thread.txn_info.txn.payload)
+
+        # Continue with normal shutdown/cleanup.
+        scheduler.finalize()
+        scheduler.set_transaction_execution_result(
+            txn.header_signature, False, None)
         with self.assertRaises(StopIteration):
             next(iterable)
 
