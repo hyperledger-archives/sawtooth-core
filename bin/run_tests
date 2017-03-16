@@ -19,7 +19,10 @@ MODULE_LIST="
 cli
 java_sdk
 javascript_sdk
-poet
+poet_common
+poet_core
+poet_families
+poet_simulator
 python_sdk
 rest_api
 signing
@@ -113,7 +116,22 @@ main() {
                     test_javascript_sdk
                     ;;
                 poet)
-                    test_poet
+                    test_poet_common
+                    test_poet_core
+                    test_poet_families
+                    test_poet_simulator
+                    ;;
+                poet_common)
+                    test_poet_common
+                    ;;
+                poet_core)
+                    test_poet_core
+                    ;;
+                poet_families)
+                    test_poet_families
+                    ;;
+                poet_simulator)
+                    test_poet_simulator
                     ;;
                 python_sdk)
                     test_python_sdk
@@ -148,9 +166,22 @@ test_javascript_sdk() {
     run_docker_test tp-intkey-javascript -s validator
 }
 
-test_poet(){
-    run_docker_test ./poet/sawtooth_poet/tests/validator_registry_test/tp_validator_registry.yaml \
+test_poet_common(){
+    run_docker_test ./consensus/poet/common/tests/test_validator_registry_view/unit_validator_registry_view.yaml \
+    -s poet
+}
+
+test_poet_core(){
+    run_docker_test ./consensus/poet/core/tests/test_consensus/unit_consensus.yaml -s poet
+}
+
+test_poet_families(){
+    run_docker_test ./consensus/poet/families/tests/test_validator_registry/tp_validator_registry.yaml \
     -s validator
+}
+
+test_poet_simulator(){
+    run_docker_test ./consensus/poet/simulator/tests/test_simulator/unit_simulator.yaml -s poet
 }
 
 test_python_sdk() {
@@ -179,12 +210,6 @@ test_signing() {
 
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
-}
-
-test_poet(){
-    echo "[---Running poet---]"
-    run_docker_test ./consensus/poet/families/tests/test_validator_registry/tp_validator_registry.yaml \
-    -s validator
 }
 
 main
