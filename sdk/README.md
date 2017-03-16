@@ -1,21 +1,10 @@
 
-The Next Generation Tutorial
+SDK Examples
 ========
 
 This tutorial walks through the process of starting the prototype validator and
 3 different intkey transaction processors. Also there are two clients to
 generate intkey transactions that can be loaded to the transaction processors.
-
-Tng Branch
-================
-
-Make sure you are running on the latest version of the tng branch:
-
-```
-   % cd project/sawtooth-core
-   % git fetch upstream
-   % git checkout upstream/tng
-```
 
 Environment Startup
 ===================
