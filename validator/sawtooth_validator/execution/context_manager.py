@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
 import hashlib
 import logging
 import time
 
-from threading import Thread
-from threading import Lock
 from threading import Condition
+from threading import Lock
+from threading import Thread
 from queue import Queue
 
 from sawtooth_validator.state.merkle import MerkleDatabase
@@ -42,31 +43,33 @@ class SquashException(Exception):
 
 
 class StateContext(object):
+    """A data structure holding address-_ContextFuture pairs and the addresses
+    that can be written to and read from.
     """
-    Attributes:
-        self._state_hash (str):
-        self._read_list (list):
-        self._write_list (list):
-        self._address_value_dict (dict): a dict with address keys and
-                                    _ContextFuture values
-    """
-    def __init__(self, state_hash, read_list, write_list):
+    def __init__(self, state_hash, read_list, write_list, base_context_ids):
         """
 
         Args:
             state_hash: the Merkle root
-            access_list: a list of tuples ('read', address)...
+            read_list (list of str): Addresses that were listed as inputs on
+                the transaction.
+            write_list (list of str): Addresses that were listed as outputs on
+                the transaction.
+            base_context_ids (list of str): Context ids of contexts that this
+                context is based off of.
         """
         self._state_hash = state_hash
 
-        self._read_list = read_list
-        self._write_list = write_list
+        self._read_list = set(read_list)
+        self._write_list = set(write_list)
 
-        self._address_value_dict = {}
+        self._state = {}
+        self.base_context_ids = base_context_ids
 
         self._id = hashlib.sha256((str(state_hash) + ":" +
                                   str(read_list + write_list) + ":" +
-                                  str(time.time())).encode()).hexdigest()
+                                  time.time().hex()).encode()
+                                  ).hexdigest()
 
     @property
     def session_id(self):
@@ -76,40 +79,71 @@ class StateContext(object):
     def merkle_root(self):
         return self._state_hash
 
-    def initialize_futures(self, address_list):
+    def initialize_futures(self, reads, others):
+        """Set up every address with a _ContextFuture.
+
+        Args:
+            reads (list of str): addresses in the txn's input but not in
+                prior state.
+            others (list of str): addresses that don't have to
+                wait for the background thread.
+        Returns:
+            None
+
+        Raises:
+            ValueError if reads and others are not disjoint.
+
+        """
+        if len(set(reads) & set(others)) > 0:
+            raise ValueError("reads %, others %s must "
+                             "be disjoint", reads, others)
+        for add in reads:
+            self._state[add] = _ContextFuture(address=add, wait_for_tree=True)
+        for add in others:
+            self._state[add] = _ContextFuture(address=add)
+
+    def set_futures(self, address_value_dict, from_tree=False):
         """
 
         Args:
-            address_list (list): a list of addresses
+            address_value_dict (dict of str:bytes): The addresses and values
+                to resolve the futures to.
+            from_tree (bool): Whether the futures are being resolved
 
-        Returns: void
+        Returns:
 
         """
-        for add in address_list:
-            self._address_value_dict[add] = _ContextFuture(add)
-
-    def set_futures(self, address_value_dict):
         for add, val in address_value_dict.items():
-            self._address_value_dict.get(add).set_result(val)
+            self._state.get(add).set_result(val, from_tree=from_tree)
 
     def get_writable_address_value_dict(self):
         add_value_dict = {}
-        for add, val in self._address_value_dict.items():
+        for add, val in self._state.items():
             if add in self._write_list:
                 add_value_dict[add] = val
         return add_value_dict
 
-    def get_address_value_dict(self):
-        return self._address_value_dict
+    def get_state(self):
+        """Return all of the state associated with the context.
+
+        Returns:
+            _state (dict of str: _ContextFuture): The context data
+
+        """
+        return self._state
 
     def get_from_prefetched(self, address_list):
-        """
+        """Get address-ContextFuture tuples for addresses in the address_list.
 
         Args:
             address_list (list): a list of addresses
 
         Returns:
             found_values (list): a list of (address, ContextFuture) tuples
+
+        Raises:
+            AuthorizationException if an address is not within the inputs for
+            the original transaction.
 
         """
         found_values = []
@@ -118,7 +152,7 @@ class StateContext(object):
                 LOGGER.warning("Authorization exception, address: %s", address)
                 raise AuthorizationException(address)
             found_values.append((address,
-                                self._address_value_dict.get(address)))
+                                self._state.get(address)))
         return found_values
 
     def can_set(self, address_value_list):
@@ -139,22 +173,18 @@ class ContextManager(object):
         """
         self._database = database
         self._first_merkle_root = None
-        self._contexts = {}
+        self._contexts = _ThreadsafeContexts()
 
         self._address_queue = Queue()
 
-        inflated_addresses = Queue()
+        self._inflated_addresses = Queue()
 
         self._context_reader = _ContextReader(database, self._address_queue,
-                                              inflated_addresses)
+                                              self._inflated_addresses)
         self._context_reader.setDaemon(True)
         self._context_reader.start()
 
-        # the lock is shared between the ContextManager and
-        # the _ContextWriter because they both access _contexts
-        self._shared_lock = Lock()
-        self._context_writer = _ContextWriter(self._shared_lock,
-                                              inflated_addresses,
+        self._context_writer = _ContextWriter(self._inflated_addresses,
                                               self._contexts)
         self._context_writer.setDaemon(True)
         self._context_writer.start()
@@ -166,39 +196,75 @@ class ContextManager(object):
             self._database).get_merkle_root()
         return self._first_merkle_root
 
-    def create_context(self, state_hash, inputs, outputs):
-        """
-        Part of the interface to the Executor
-        Args:
-            state_hash: (str): Merkle root
-            access_list: (list): list of tuples like [('read', 'address'),...
+    def create_context(self, state_hash, base_contexts, inputs, outputs):
+        """Create a StateContext to run a transaction against.
 
+        Args:
+            state_hash: (str): Merkle root to base state on.
+            base_contexts (list of str): Context ids of contexts that will
+                have their state applied to make this context.
+            inputs (list of str): Addresses that can be read from.
+            outputs (list of str): Addresses that can be written to.
         Returns:
             context_id (str): the unique context_id of the session
 
         """
-        context = StateContext(state_hash, inputs, outputs)
-        with self._shared_lock:
-            context.initialize_futures(inputs + outputs)
-            self._contexts[context.session_id] = context
 
-        self._address_queue.put_nowait(
-            (context.session_id, state_hash, inputs))
-        LOGGER.debug("CREATE_CONTEXT: %s", context.session_id)
+        context = StateContext(
+            state_hash=state_hash,
+            read_list=inputs,
+            write_list=outputs,
+            base_context_ids=base_contexts)
+
+        self._contexts[context.session_id] = context
+        contexts_asked_not_found = [cid for cid in base_contexts
+                                    if cid not in self._contexts]
+        if len(contexts_asked_not_found) > 0:
+            raise KeyError(
+                "Basing a new context off of context ids {} "
+                "that are not in context manager".format(
+                    contexts_asked_not_found))
+        base_context_list = [self._contexts[cid] for cid in base_contexts]
+        # Get the state from the base contexts
+        prior_state = dict()
+        for base_context in base_context_list:
+            prior_state.update(base_context.get_state())
+
+        addresses_already_in_state = set(prior_state.keys())
+        reads = set(inputs) - addresses_already_in_state
+        others = set(addresses_already_in_state | set(outputs)) - set(reads)
+        context.initialize_futures(reads=list(reads),
+                                   others=list(others))
+        # Read the actual values that are based on _ContextFutures before
+        # setting new futures with those values.
+        prior_state_results = dict()
+        for k, val_fut in prior_state.items():
+            value = val_fut.result()
+            prior_state_results[k] = value
+
+        context.set_futures(prior_state_results)
+
+        if len(reads) > 0:
+            self._address_queue.put_nowait(
+                (context.session_id, state_hash, list(reads)))
         return context.session_id
 
     def commit_context(self, context_id_list, virtual):
-        """
-        Part of the interface to the Executor
+        """ Only used in a test ---
+        Commits the state from the contexts referred to in context_id_list
+        to the merkle tree.
+
         Args:
-            context_id_list:
+            context_id_list (list of str): The context ids with state to
+                commit to the merkle tree.
+            virtual (bool): True if the data in contexts shouldn't be
+                written to the merkle tree, but just return a merkle root.
 
         Returns:
             state_hash (str): the new state hash after the context_id_list
                               has been committed
 
         """
-
         if any([c_id not in self._contexts for c_id in context_id_list]):
             raise CommitException("Context Id not in contexts")
         first_id = context_id_list[0]
@@ -210,88 +276,95 @@ class ContextManager(object):
                 "MerkleRoots not all equal, yet asking to merge")
 
         merkle_root = self._contexts[first_id].merkle_root
-        tree = MerkleDatabase(self._database, merkle_root)
-
-        merged_updates = {}
+        tree = MerkleDatabase(self._database, merkle_root=merkle_root)
+        updates = dict()
         for c_id in context_id_list:
-            with self._shared_lock:
-                context = self._contexts[c_id]
-                del self._contexts[c_id]
-            for k in context.get_writable_address_value_dict().keys():
-                if k in merged_updates:
+            context = self._contexts[c_id]
+            for add in context.get_state().keys():
+                if add in updates:
                     raise CommitException(
-                        "Duplicate address {} in context {}".format(k, c_id))
-            merged_updates.update(context.get_writable_address_value_dict())
+                        "Duplicate address {} in context {}".format(
+                            add, c_id))
 
-        new_root = merkle_root
+            effective_updates = {}
+            for k, val_fut in context.get_state().items():
+                value = val_fut.result()
+                if value is not None:
+                    effective_updates[k] = value
 
-        add_value_dict = {}
-        for k, val_fut in merged_updates.items():
-            value = val_fut.result()
-            if value is not None:
-                add_value_dict[k] = value
+            updates.update(effective_updates)
 
-        new_root = tree.update(set_items=add_value_dict, virtual=virtual)
+        state_hash = tree.update(updates, virtual=False)
+        # clean up all contexts that are involved in being squashed.
+        base_c_ids = []
+        for c_id in context_id_list:
+            base_c_ids += self._contexts[c_id].base_context_ids
+        all_context_ids = base_c_ids + context_id_list
+        self.delete_context(all_context_ids)
 
-        return new_root
+        return state_hash
 
     def delete_context(self, context_id_list):
-        """
-        Part of the interface to the Executor.
-        Throws away contexts, eg. InvalidTransaction
+        """Delete contexts from the ContextManager.
+
         Args:
             context_id_list (list): a list of context ids
 
         Returns:
-            void
+            None
 
         """
         for c_id in context_id_list:
-            with self._shared_lock:
-                if c_id in self._contexts:
-                    del self._contexts[c_id]
+            if c_id in self._contexts:
+                del self._contexts[c_id]
 
     def get(self, context_id, address_list):
-        """
+        """Get the values associated with list of addresses, for a specific
+        context referenced by context_id.
 
         Args:
-            context_id (str): the return value of create_context
+            context_id (str): the return value of create_context, referencing
+                a particular context.
             address_list (list): a list of address strs
 
         Returns:
             values_list (list): a list of (address, value) tuples
         """
-        with self._shared_lock:
-            if context_id not in self._contexts:
-                return []
-        with self._shared_lock:
-            context = self._contexts.get(context_id)
+
+        if context_id not in self._contexts:
+            return []
+        context = self._contexts.get(context_id)
         return [(a, f.result())
                 for a, f in context.get_from_prefetched(address_list)]
 
     def set(self, context_id, address_value_list):
-        """
-        speculatively sets addresses to a value,
-        can be destroyed or committed to the merkle store
+        """Within a context, sets addresses to a value.
+
         Args:
             context_id (str): the context id returned by create_context
             address_value_list (list): list of {address: value} dicts
 
-        Returns (boolean): True, or False whether the
+        Returns:
+            (bool): True if the operation is successful, False if
+                the context_id doesn't reference a known context.
 
+        Raises:
+            AuthorizationException if an address is specified to write to
+                that was not in the original transaction's outputs.
         """
-        with self._shared_lock:
-            if context_id not in self._contexts:
-                LOGGER.info("Context_id not in contexts, %s", context_id)
-                return False
-        with self._shared_lock:
-            context = self._contexts.get(context_id)
-            context.can_set(address_value_list)
-            add_value_dict = {}
-            for d in address_value_list:
-                for add, val in d.items():
-                    add_value_dict[add] = val
-            context.set_futures(add_value_dict)
+
+        if context_id not in self._contexts:
+            LOGGER.warning("Context_id not in contexts, %s", context_id)
+            return False
+
+        context = self._contexts.get(context_id)
+        # Where authorization on the address level happens.
+        context.can_set(address_value_list)
+        add_value_dict = {}
+        for d in address_value_list:
+            for add, val in d.items():
+                add_value_dict[add] = val
+        context.set_futures(add_value_dict)
         return True
 
     def get_squash_handler(self):
@@ -299,16 +372,15 @@ class ContextManager(object):
             tree = MerkleDatabase(self._database, state_root)
             updates = dict()
             for c_id in context_ids:
-                with self._shared_lock:
-                    context = self._contexts[c_id]
-                for add in context.get_address_value_dict().keys():
+                context = self._contexts[c_id]
+                for add in context.get_state().keys():
                     if add in updates:
                         raise SquashException(
                             "Duplicate address {} in context {}".format(
                                 add, c_id))
 
                 effective_updates = {}
-                for k, val_fut in context.get_address_value_dict().items():
+                for k, val_fut in context.get_state().items():
                     value = val_fut.result()
                     if value is not None:
                         effective_updates[k] = value
@@ -316,6 +388,13 @@ class ContextManager(object):
                 updates.update(effective_updates)
 
             state_hash = tree.update(updates, virtual=False)
+            # clean up all contexts that are involved in being squashed.
+            base_c_ids = []
+            for c_id in context_ids:
+                base_c_ids += self._contexts[c_id].base_context_ids
+            all_context_ids = base_c_ids + context_ids
+            self.delete_context(all_context_ids)
+
             return state_hash
         return _squash
 
@@ -356,48 +435,93 @@ class _ContextReader(Thread):
 
 
 class _ContextWriter(Thread):
-    """
-    Attributes:
-        _condition (threading.Condition): threading object for notification
-        _inflated_addresses (queue.Queue): each item is a tuple
-                                           (context_id, [(address, value), ...
+    """Reads off of a shared queue from _ContextReader and writes values
+    to the contexts shared with the ContextManager.
+
     """
 
-    def __init__(self, lock, inflated_addresses, contexts):
+    def __init__(self, inflated_addresses, contexts):
+        """
+        Args:
+            inflated_addresses (queue.Queue): Contains the context id of the
+                context to write to, and the address-value pairs.
+            contexts (_ThreadsafeContexts): The datastructures to write the
+                address-value pairs to.
+        """
         super(_ContextWriter, self).__init__()
-        self._lock = lock
         self._inflated_addresses = inflated_addresses
-
         self._contexts = contexts
 
     def run(self):
         while True:
             c_id, inflated_address_list = self._inflated_addresses.get(
                 block=True)
-            with self._lock:
-                if c_id in self._contexts:
-                    self._contexts[c_id].set_futures(
-                        {k: v for k, v in inflated_address_list})
+            inflated_value_map = {k: v for k, v in inflated_address_list}
+            if c_id in self._contexts:
+                self._contexts[c_id].set_futures(inflated_value_map,
+                                                 from_tree=True)
 
 
 class _ContextFuture(object):
-    def __init__(self, address):
+    def __init__(self, address, wait_for_tree=False):
         self.address = address
         self._result = None
         self._result_is_set = False
         self._condition = Condition()
+        self._wait_for_tree = wait_for_tree
+        self._tree_has_set = False
 
     def done(self):
         return self._result_is_set
 
     def result(self):
         with self._condition:
-            if not self._result_is_set:
-                self._condition.wait(2)
-        return self._result
+            self._condition.wait_for(lambda: self._result_is_set)
+            return self._result
 
-    def set_result(self, result):
+    def set_result(self, result, from_tree=False):
+        """Set the addresses's value. If the _ContextFuture needs to be
+        resolved from a read from the MerkleTree first, wait to set the value
+        until _tree_has_set is True.
+
+        Args:
+            result (bytes): The value at an address.
+            from_tree (bool): Whether the value is coming from the MerkleTree,
+                or if it is set from prior state.
+
+        Returns:
+            None
+        """
         with self._condition:
+            if self._wait_for_tree and not from_tree:
+                self._condition.wait_for(lambda: self._tree_has_set)
             self._result = result
             self._result_is_set = True
+            if self._wait_for_tree and from_tree:
+                self._tree_has_set = True
             self._condition.notify_all()
+
+
+class _ThreadsafeContexts(object):
+    def __init__(self):
+        self._lock = Lock()
+        self._data = dict()
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            self._data[key] = value
+
+    def __contains__(self, item):
+        with self._lock:
+            return item in self._data
+
+    def get(self, item):
+        with self._lock:
+            return self._data[item]
+
+    def __delitem__(self, key):
+        with self._lock:
+            del self._data[key]

@@ -201,6 +201,7 @@ class TxnInformation(object):
         state_hash (str): the state hash that
                                  this txn should be applied against
     """
-    def __init__(self, txn, state_hash):
+    def __init__(self, txn, state_hash, base_context_ids):
         self.txn = txn
         self.state_hash = state_hash
+        self.base_context_ids = base_context_ids
