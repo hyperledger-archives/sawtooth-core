@@ -26,6 +26,11 @@ pkgs="
     rest_api
     validator
     manage
+    consensus/poet/cli
+    consensus/poet/common
+    consensus/poet/core
+    consensus/poet/families
+    consensus/poet/simulator
 "
 
 set -e
@@ -59,6 +64,45 @@ do
         cp $top_dir/validator/packaging/postinst debian
 
         dpkg-buildpackage -b -rfakeroot -us -uc
+
+        unset PYTHONPATH
+    elif [ $pkg = "consensus/poet/common" ]; then
+        PYTHONPATH=$build_dir/consensus/poet/common
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common/tests
+        export PYTHONPATH
+        python3 setup.py --command-packages=stdeb.command bdist_deb
+        unset PYTHONPATH
+    elif [ $pkg = "consensus/poet/core" ]; then
+        PYTHONPATH=$build_dir/signing
+        PYTHONPATH=$PYTHONPATH:$build_dir/validator
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common/tests
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/core
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/core/tests
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/simulator
+        export PYTHONPATH
+        python3 setup.py --command-packages=stdeb.command bdist_deb
+        unset PYTHONPATH
+    elif [ $pkg = "consensus/poet/families" ]; then
+        PYTHONPATH=$build_dir/integration
+        PYTHONPATH=$PYTHONPATH:$build_dir/sdk/python
+        PYTHONPATH=$PYTHONPATH:$build_dir/signing
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families/tests
+        export PYTHONPATH
+        python3 setup.py --command-packages=stdeb.command bdist_deb
+        unset PYTHONPATH
+    elif [ $pkg = "consensus/poet/simulator" ]; then
+        PYTHONPATH=$build_dir/signing
+        PYTHONPATH=$PYTHONPATH:$build_dir/validator
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/core
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families
+        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families/tests
+        export PYTHONPATH
+        python3 setup.py --command-packages=stdeb.command bdist_deb
+        unset PYTHONPATH
     else
         python3 setup.py --command-packages=stdeb.command bdist_deb
     fi
