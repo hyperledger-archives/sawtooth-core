@@ -246,6 +246,12 @@ class Stream(object):
         self._send_recieve_thread.daemon = True
         self._send_recieve_thread.start()
 
+    @property
+    def url(self):
+        """ Get the url of the Stream object.
+        """
+        return self._url
+
     def send(self, message_type, content):
         """Send a message to the validator
 
