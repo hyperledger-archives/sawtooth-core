@@ -72,6 +72,10 @@ main() {
     setuptools_scm
     pytest-runner==2.6.2
     secp256k1
+    cryptography-vectors==1.7.2
+    pytz
+    pytest==2.9.0
+    cryptography==1.7.2
     '
 
     # secp256k1 needs a couple of libraries not readily available
