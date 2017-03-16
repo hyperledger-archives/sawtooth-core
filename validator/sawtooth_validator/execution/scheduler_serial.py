@@ -127,7 +127,9 @@ class SerialScheduler(Scheduler):
                 return None
 
             self._in_progress_transaction = txn.header_signature
-            txn_info = TxnInformation(txn, self._last_state_hash)
+            txn_info = TxnInformation(txn=txn,
+                                      state_hash=self._last_state_hash,
+                                      base_context_ids=[])
             self._scheduled_transactions.append(txn_info)
             return txn_info
 

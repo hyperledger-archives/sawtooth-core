@@ -384,9 +384,11 @@ class TestSerialScheduler(unittest.TestCase):
             txn_header = transaction_pb2.TransactionHeader()
             txn_header.ParseFromString(txn_info.txn.header)
             inputs_or_outputs = list(txn_header.inputs)
-            c_id = context_manager.create_context(txn_info.state_hash,
-                                                  inputs_or_outputs,
-                                                  inputs_or_outputs)
+            c_id = context_manager.create_context(
+                state_hash=txn_info.state_hash,
+                inputs=inputs_or_outputs,
+                outputs=inputs_or_outputs,
+                base_contexts=txn_info.base_context_ids)
             if txn_header.payload_sha512 == invalid_payload:
                 scheduler.set_transaction_execution_result(
                     txn_info.txn.header_signature, False, c_id)
@@ -404,9 +406,11 @@ class TestSerialScheduler(unittest.TestCase):
         txn_a_header.ParseFromString(txn_info_a.txn.header)
         inputs_or_outputs = list(txn_a_header.inputs)
         address_a = inputs_or_outputs[0]
-        c_id_a = context_manager.create_context(first_state_root,
-                                                inputs_or_outputs,
-                                                inputs_or_outputs)
+        c_id_a = context_manager.create_context(
+            state_hash=first_state_root,
+            inputs=inputs_or_outputs,
+            outputs=inputs_or_outputs,
+            base_contexts=txn_info.base_context_ids)
         context_manager.set(c_id_a, [{address_a: 1}])
         state_root2 = context_manager.commit_context([c_id_a], virtual=False)
         txn_info_b = next(sched2)
@@ -417,9 +421,11 @@ class TestSerialScheduler(unittest.TestCase):
         txn_b_header.ParseFromString(txn_info_b.txn.header)
         inputs_or_outputs = list(txn_b_header.inputs)
         address_b = inputs_or_outputs[0]
-        c_id_b = context_manager.create_context(state_root2,
-                                                inputs_or_outputs,
-                                                inputs_or_outputs)
+        c_id_b = context_manager.create_context(
+            state_hash=state_root2,
+            inputs=inputs_or_outputs,
+            outputs=inputs_or_outputs,
+            base_contexts=txn_info.base_context_ids)
         context_manager.set(c_id_b, [{address_b: 1}])
         state_root3 = context_manager.commit_context([c_id_b], virtual=False)
         txn_infoInvalid = next(sched2)

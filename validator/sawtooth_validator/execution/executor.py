@@ -148,7 +148,8 @@ class TransactionExecutorThread(threading.Thread):
                 continue
 
             context_id = self._context_manager.create_context(
-                txn_info.state_hash,
+                state_hash=txn_info.state_hash,
+                base_contexts=txn_info.base_context_ids,
                 inputs=list(header.inputs),
                 outputs=list(header.outputs))
             content = processor_pb2.TpProcessRequest(
