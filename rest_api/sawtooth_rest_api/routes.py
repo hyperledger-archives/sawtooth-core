@@ -164,7 +164,7 @@ class RouteHandler(object):
     @asyncio.coroutine
     def block_list(self, request):
         """
-        Fetch a list of blocks from the validator
+        Fetch a particular block from the validator
         """
         head = request.url.query.get('head', '')
 
@@ -183,7 +183,10 @@ class RouteHandler(object):
         """
         Fetch a list of blocks from the validator
         """
-        error_traps = [error_handlers.MissingBlock()]
+        error_traps = [
+            error_handlers.MissingBlock(),
+            error_handlers.InvalidBlockId()]
+
         block_id = request.match_info.get('block_id', '')
 
         response = self._query_validator(
@@ -194,6 +197,44 @@ class RouteHandler(object):
 
         return RouteHandler._wrap_response(
             data=RouteHandler._expand_block(response['block']),
+            metadata=RouteHandler._get_metadata(request, response))
+
+    @asyncio.coroutine
+    def batch_list(self, request):
+        """
+        Fetch a list of batches from the validator
+        """
+        head = request.url.query.get('head', '')
+
+        response = self._query_validator(
+            Message.CLIENT_BATCH_LIST_REQUEST,
+            client.ClientBatchListResponse,
+            client.ClientBatchListRequest(head_id=head))
+
+        batches = [RouteHandler._expand_batch(b) for b in response['batches']]
+        return RouteHandler._wrap_response(
+            data=batches,
+            metadata=RouteHandler._get_metadata(request, response))
+
+    @asyncio.coroutine
+    def batch_get(self, request):
+        """
+        Fetch a particular batch from the validator
+        """
+        error_traps = [
+            error_handlers.MissingBatch(),
+            error_handlers.InvalidBatchId()]
+
+        batch_id = request.match_info.get('batch_id', '')
+
+        response = self._query_validator(
+            Message.CLIENT_BATCH_GET_REQUEST,
+            client.ClientBatchGetResponse,
+            client.ClientBatchGetRequest(batch_id=batch_id),
+            error_traps)
+
+        return RouteHandler._wrap_response(
+            data=RouteHandler._expand_batch(response['batch']),
             metadata=RouteHandler._get_metadata(request, response))
 
     def _query_validator(self, req_type, resp_proto, content, traps=None):

@@ -23,22 +23,21 @@ from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
 
 
-def add_block_parser(subparsers, parent_parser):
+def add_batch_parser(subparsers, parent_parser):
     """Adds arguments parsers for the batch list and batch show commands
 
         Args:
             subparsers: Add parsers to this subparser object
             parent_parser: The parent argparse.ArgumentParser object
     """
-    parser = subparsers.add_parser('block')
+    parser = subparsers.add_parser('batch')
 
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
     grand_parsers.required = True
     epilog = '''details:
-        Lists committed blocks from the newest to the oldest, including
-    their id (i.e. header signature), batch and transaction count, and
-    their signer's public key.
+        Lists committed batches from newest to oldest, including their id (i.e.
+    header signature), transaction count, and their signer's public key.
     '''
 
     list_parser = grand_parsers.add_parser('list', epilog=epilog)
@@ -54,14 +53,14 @@ def add_block_parser(subparsers, parent_parser):
         help='the format of the output, options: csv, json or yaml')
 
     epilog = '''details:
-        Shows the data for a single block, or for a particular property within
-    that block or its header. Displays data in YAML (default), or JSON formats.
+        Shows the data for a single batch, or for a particular property within
+    that batch or its header. Displays data in YAML (default), or JSON formats.
     '''
     show_parser = grand_parsers.add_parser('show', epilog=epilog)
     show_parser.add_argument(
-        'block_id',
+        'batch_id',
         type=str,
-        help='the id (i.e. header_signature) of the block')
+        help='the id (i.e. header_signature) of the batch')
     show_parser.add_argument(
         '--url',
         type=str,
@@ -69,7 +68,7 @@ def add_block_parser(subparsers, parent_parser):
     show_parser.add_argument(
         '-k', '--key',
         type=str,
-        help='specify to show a single property from the block or header')
+        help='specify to show a single property from the batch or header')
     show_parser.add_argument(
         '-F', '--format',
         action='store',
@@ -78,12 +77,13 @@ def add_block_parser(subparsers, parent_parser):
         help='the format of the output, options: yaml (default), or json')
 
 
-def do_block(args):
+def do_batch(args):
     """Runs the batch list or batch show command, printing output to the console
 
         Args:
             args: The parsed arguments sent to the command at runtime
     """
+
     rest_client = RestClient(args.url)
 
     def print_json(data):
@@ -97,58 +97,54 @@ def do_block(args):
         print(yaml.dump(data, default_flow_style=False)[0:-1])
 
     if args.subcommand == 'list':
-        blocks = rest_client.list_blocks()
-        keys = ('num', 'block_id', 'batches', 'txns', 'signer')
-        headers = (k.upper() if k != 'batches' else 'BATS' for k in keys)
+        batches = rest_client.list_batches()
+        keys = ('batch_id', 'txns', 'signer')
+        headers = (k.upper() for k in keys)
 
-        def get_data(block):
-            batches = block.get('batches', [])
-            txns = [t for b in batches for t in b['transactions']]
+        def get_data(batch):
             return (
-                block['header'].get('block_num', 0),
-                block['header_signature'],
-                len(batches),
-                len(txns),
-                block['header']['signer_pubkey'])
+                batch['header_signature'],
+                len(batch.get('transactions', [])),
+                batch['header']['signer_pubkey'])
 
         if args.format == 'default':
             # Set column widths based on window and data size
             window_width = tty.width()
 
             try:
-                id_width = len(blocks[0]['header_signature'])
-                sign_width = len(blocks[0]['header']['signer_pubkey'])
+                id_width = len(batches[0]['header_signature'])
+                sign_width = len(batches[0]['header']['signer_pubkey'])
             except IndexError:
                 # if no data was returned, use short default widths
                 id_width = 30
                 sign_width = 15
 
             if sys.stdout.isatty():
-                adjusted = int(window_width) - id_width - 22
+                adjusted = int(window_width) - id_width - 11
                 adjusted = 6 if adjusted < 6 else adjusted
             else:
                 adjusted = sign_width
 
-            fmts = '{{:<3}}  {{:{i}.{i}}}  {{:<4}}  {{:<4}}  {{:{a}.{a}}}'\
+            fmt_string = '{{:{i}.{i}}}  {{:<4}}  {{:{a}.{a}}}'\
                 .format(i=id_width, a=adjusted)
 
             # Print data in rows and columns
-            print(fmts.format(*headers))
-            for block in blocks:
-                print(fmts.format(*get_data(block)) +
+            print(fmt_string.format(*headers))
+            for batch in batches:
+                print(fmt_string.format(*get_data(batch)) +
                       ('...' if adjusted < sign_width and sign_width else ''))
 
         elif args.format == 'csv':
             try:
                 writer = csv.writer(sys.stdout)
                 writer.writerow(headers)
-                for block in blocks:
-                    writer.writerow(get_data(block))
+                for batch in batches:
+                    writer.writerow(get_data(batch))
             except csv.Error as e:
                 raise CliException('Error writing CSV: {}'.format(e))
 
         elif args.format == 'json' or args.format == 'yaml':
-            data = [{k: d for k, d in zip(keys, get_data(b))} for b in blocks]
+            data = [{k: d for k, d in zip(keys, get_data(b))} for b in batches]
 
             if args.format == 'yaml':
                 print_yaml(data)
@@ -161,20 +157,20 @@ def do_block(args):
             raise AssertionError('Missing handler: {}'.format(args.format))
 
     if args.subcommand == 'show':
-        block = rest_client.get_block(args.block_id)
+        batch = rest_client.get_batch(args.batch_id)
 
         if args.key:
-            if args.key in block:
-                print(block[args.key])
-            elif args.key in block['header']:
-                print(block['header'][args.key])
+            if args.key in batch:
+                print(batch[args.key])
+            elif args.key in batch['header']:
+                print(batch['header'][args.key])
             else:
                 raise CliException(
-                    'key "{}" not found in block or header'.format(args.key))
+                    'key "{}" not found in batch or header'.format(args.key))
         else:
             if args.format == 'yaml':
-                print_yaml(block)
+                print_yaml(batch)
             elif args.format == 'json':
-                print_json(block)
+                print_json(batch)
             else:
                 raise AssertionError('Missing handler: {}'.format(args.format))

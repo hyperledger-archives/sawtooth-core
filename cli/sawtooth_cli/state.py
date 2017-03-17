@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
 # you may not use this file except in compliance with the License.
@@ -20,20 +20,26 @@ import csv
 import json
 import yaml
 
+from sawtooth_cli import tty
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
 
 
 def add_state_parser(subparsers, parent_parser):
+    """Adds arguments parsers for the batch list and batch show commands
+
+        Args:
+            subparsers: Add parsers to this subparser object
+            parent_parser: The parent argparse.ArgumentParser object
+    """
     parser = subparsers.add_parser('state')
 
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
     grand_parsers.required = True
-    epilog = '''
-    details:
-        Lists leaves on the merkle tree, storing state. List can be
-        narrowed using the address of a subtree.
+    epilog = '''details:
+        Lists state in the form of leaves from the merkle tree. List can be
+    narrowed using the address of a subtree.
     '''
 
     list_parser = grand_parsers.add_parser('list', epilog=epilog)
@@ -53,13 +59,13 @@ def add_state_parser(subparsers, parent_parser):
         default=None,
         help='the id of the block to set as the chain head')
     list_parser.add_argument(
-        '--format',
+        '-F', '--format',
         action='store',
         default='default',
+        choices=['csv', 'json', 'yaml', 'default'],
         help='the format of the output, options: csv, json or yaml')
 
-    epilog = '''
-    details:
+    epilog = '''details:
         Shows the data for a single leaf on the merkle tree.
     '''
     show_parser = grand_parsers.add_parser('show', epilog=epilog)
@@ -79,7 +85,11 @@ def add_state_parser(subparsers, parent_parser):
 
 
 def do_state(args):
+    """Runs the batch list or batch show command, printing output to the console
 
+        Args:
+            args: The parsed arguments sent to the command at runtime
+    """
     rest_client = RestClient(args.url)
 
     def print_json(data):
@@ -96,29 +106,42 @@ def do_state(args):
         response = rest_client.list_state(args.subtree, args.head)
         leaves = response['data']
         head = response['head']
-
         keys = ('address', 'size', 'data')
         headers = (k.upper() for k in keys)
-        max_data_width = 15
-        format_string = '{{:{addr}.{addr}}} {{:<4}} {{!s:.{data}}}'.format(
-            addr=len(leaves[0]['address']) if len(leaves) > 0 else 30,
-            data=max_data_width)
 
-        def get_leaf_data(leaf, use_decoded=True):
-            data = leaf['data']
-            decoded_data = b64decode(data)
+        def get_leaf_data(leaf, decode=True):
+            decoded = b64decode(leaf['data'])
             return (
                 leaf['address'],
-                len(decoded_data),
-                decoded_data if use_decoded else data)
+                len(decoded),
+                str(decoded) if decode else leaf['data'])
 
         if args.format == 'default':
-            print(format_string.format(*headers))
+            # Set column widths based on window and data size
+            window_width = tty.width()
+
+            try:
+                addr_width = len(leaves[0]['address'])
+                data_width = len(str(b64decode(leaves[0]['data'])))
+            except IndexError:
+                # if no data was returned, use short default widths
+                addr_width = 30
+                data_width = 15
+
+            if sys.stdout.isatty():
+                adjusted = int(window_width) - addr_width - 11
+                adjusted = 6 if adjusted < 6 else adjusted
+            else:
+                adjusted = data_width
+
+            fmt_string = '{{:{a}.{a}}}  {{:<4}}  {{:{j}.{j}}}'\
+                .format(a=addr_width, j=adjusted)
+
+            # Print data in rows and columns
+            print(fmt_string.format(*headers))
             for leaf in leaves:
-                print_string = format_string.format(*get_leaf_data(leaf))
-                if len(str(leaf['data'])) > max_data_width:
-                    print_string += '...'
-                print(print_string)
+                print(fmt_string.format(*get_leaf_data(leaf)) +
+                      ('...' if adjusted < data_width and data_width else ''))
             print('HEAD BLOCK: "{}"'.format(head))
 
         elif args.format == 'csv':
@@ -127,24 +150,26 @@ def do_state(args):
                 writer.writerow(headers)
                 for leaf in leaves:
                     writer.writerow(get_leaf_data(leaf))
-            except csv.Error:
-                raise CliException('Error writing CSV.')
+            except csv.Error as e:
+                raise CliException('Error writing CSV: {}'.format(e))
             print('(data for head block: "{}")'.format(head))
 
         elif args.format == 'json' or args.format == 'yaml':
             state_data = {
                 'head': head,
-                'data': list(map(
-                    lambda b: dict(zip(keys, get_leaf_data(b, False))),
-                    leaves))}
+                'data': [{k: d for k, d in
+                         zip(keys, get_leaf_data(l, False))}
+                         for l in leaves]}
 
-            if args.format == 'json':
+            if args.format == 'yaml':
+                print_yaml(state_data)
+            elif args.format == 'json':
                 print_json(state_data)
             else:
-                print_yaml(state_data)
+                raise AssertionError('Missing handler: {}'.format(args.format))
 
         else:
-            raise AssertionError('Unknown format: {}'.format(args.format))
+            raise AssertionError('Missing handler: {}'.format(args.format))
 
     if args.subcommand == 'show':
         leaf = rest_client.get_leaf(args.address, args.head)

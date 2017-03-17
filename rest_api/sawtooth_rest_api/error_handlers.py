@@ -93,6 +93,32 @@ class MissingBlock(_ErrorTrap):
             message='There is no block with that id')
 
 
+class InvalidBlockId(_ErrorTrap):
+    def __init__(self):
+        super().__init__(
+            trigger=client.ClientBlockGetResponse.INVALID_ID,
+            error=web.HTTPBadRequest,
+            message='''The specified id is not a valid block id.
+                Did you mean to send this to /batches?''')
+
+
+class MissingBatch(_ErrorTrap):
+    def __init__(self):
+        super().__init__(
+            trigger=client.ClientBatchGetResponse.NO_RESOURCE,
+            error=web.HTTPNotFound,
+            message='There is no batch with that id')
+
+
+class InvalidBatchId(_ErrorTrap):
+    def __init__(self):
+        super().__init__(
+            trigger=client.ClientBatchGetResponse.INVALID_ID,
+            error=web.HTTPBadRequest,
+            message='''The specified id is not a valid batch id.
+                Did you mean to send this to /blocks?''')
+
+
 class BadAddress(_ErrorTrap):
     def __init__(self):
         super().__init__(

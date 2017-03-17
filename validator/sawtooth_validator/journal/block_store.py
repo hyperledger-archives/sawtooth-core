@@ -213,8 +213,7 @@ class BlockStore(MutableMapping):
         The batch with the batch_id.
         """
         if self.has_batch(batch_id):
-            block = self.block_store.get_block_by_batch_id(
-                batch_id)
+            block = self.get_block_by_batch_id(batch_id)
 
             for batch in block.batches:
                 if batch.header_signature == batch_id:

@@ -35,6 +35,8 @@ class ApiTest(AioHTTPTestCase):
         app.router.add_get('/state/{address}', handlers.state_get)
         app.router.add_get('/blocks', handlers.block_list)
         app.router.add_get('/blocks/{block_id}', handlers.block_get)
+        app.router.add_get('/batches', handlers.batch_list)
+        app.router.add_get('/batches/{batch_id}', handlers.batch_get)
         return app
 
     @unittest_run_loop
@@ -504,7 +506,6 @@ class ApiTest(AioHTTPTestCase):
                     }]
                 }]
             },
-            {header: {...}, header_signature: '1', batches: [{...}]},
             {header: {...}, header_signature: '0', batches: [{...}]}
 
         Expects to find:
@@ -572,12 +573,150 @@ class ApiTest(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):
-        """Verifies a GET /blocks with a bad head breaks properly.
+        """Verifies a GET /blocks/{block_id} with invalid id breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        await self.assert_400('/blocks/bad')
+
+    @unittest_run_loop
+    async def test_block_get_with_missing_id(self):
+        """Verifies a GET /blocks/{block_id} with not found id breaks properly.
 
         Expects to find:
             - a response status of 404
         """
-        await self.assert_404('/blocks/bad')
+        await self.assert_404('/blocks/missing')
+
+    @unittest_run_loop
+    async def test_batch_list(self):
+        """Verifies a GET /batches without parameters works properly.
+
+        Fetches all batches from default mock store:
+            {
+                header: {previous_block_id: '1', ...},
+                header_signature: '2',
+                batches: [{
+                    header: {signer_pubkey: 'pubkey', ...},
+                    header_signature: '2',
+                    transactions: [{
+                        header: {nonce: '2', ...},
+                        header_signature: '2',
+                        payload: b'payload'
+                    }]
+                }]
+            },
+            {header: {...}, header_signature: '1', batches: [{...}]},
+            {header: {...}, header_signature: '0', batches: [{...}]}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '2'
+            - a link property that ends in '/batches?head=2'
+            - a data property that:
+                * is a list of 3 batch dicts with a header and transactions
+                * transactions property has 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/batches')
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/batches?head=2')
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_batch_well_formed(response['data'][0], '2')
+
+    @unittest_run_loop
+    async def test_batch_list_with_head(self):
+        """Verifies a GET /batches with a head parameter works properly.
+
+        Fetches batches from '1' and older from the store:
+            {
+                header: {previous_block_id: '1', ...},
+                header_signature: '2',
+                batches: [{
+                    header: {signer_pubkey: 'pubkey', ...},
+                    header_signature: '2',
+                    transactions: [{
+                        header: {nonce: '2', ...},
+                        header_signature: '2',
+                        payload: b'payload'
+                    }]
+                }]
+            },
+            {header: {...}, header_signature: '0', batches: [{...}]}
+
+        Expects to find:
+            - a response status of 200
+            - a head property of '1'
+            - a link property that ends in '/batches?head=1'
+            - a data property that:
+                * is a list of 2 batch dicts with a header and transactions
+                * transactions properties with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/batches?head=1')
+
+        self.assert_has_valid_head(response, '1')
+        self.assert_has_valid_link(response, '/batches?head=1')
+        self.assert_has_valid_data_list(response, 2)
+        self.assert_batch_well_formed(response['data'][0], '1')
+
+    @unittest_run_loop
+    async def test_batch_list_with_bad_head(self):
+        """Verifies a GET /batches with a bad head breaks properly.
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/batches?head=bad')
+
+    @unittest_run_loop
+    async def test_batch_get(self):
+        """Verifies a GET /batches/{batch_id} works properly.
+
+        Fetches batch '1' from the default mock store:
+            {
+                header: {signer_pubkey: 'pubkey', ...},
+                header_signature: '1',
+                transactions: [{
+                    header: {nonce: '1', ...},
+                    header_signature: '1',
+                    payload: b'payload'
+                }]
+            }
+
+        Expects to find:
+            - a response status of 200
+            - no head property
+            - a link property that ends in '/batches/1'
+            - a data property that:
+                * is a single batch dict with a header and transactions
+                * transactions property with 1 transaction with a header
+        """
+        response = await self.get_json_assert_200('/batches/1')
+
+        self.assertNotIn('head', response)
+        self.assert_has_valid_link(response, '/batches/1')
+        self.assertIn('data', response)
+        self.assert_batch_well_formed(response['data'], '1')
+
+    @unittest_run_loop
+    async def test_batch_get_with_bad_id(self):
+        """Verifies a GET /batches/{batch_id} with invalid id breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        await self.assert_400('/batches/bad')
+
+    @unittest_run_loop
+    async def test_batch_get_with_missing_id(self):
+        """Verifies a GET /batches/{batch_id} with not found id breaks properly.
+
+        Expects to find:
+            - a response status of 404
+        """
+        await self.assert_404('/batches/missing')
+
 
     async def post_batch_ids(self, *batch_ids, wait=False):
         batches = [batch_pb2.Batch(
@@ -598,6 +737,9 @@ class ApiTest(AioHTTPTestCase):
     async def get_json_assert_200(self, endpoint):
         request = await self.get_and_assert_status(endpoint, 200)
         return await request.json()
+
+    async def assert_400(self, endpoint):
+        await self.get_and_assert_status(endpoint, 400)
 
     async def assert_404(self, endpoint):
         await self.get_and_assert_status(endpoint, 404)
@@ -654,30 +796,30 @@ class ApiTest(AioHTTPTestCase):
         """Tests a block dict is fully expanded and matches the expected id.
         Assumes the block contains one batch and txn which share the id.
         """
-
-        # Check block and its header
         self.assertIsInstance(block, dict)
         self.assertEqual(expected_id, block['header_signature'])
         self.assertIsInstance(block['header'], dict)
         self.assertEqual(b'consensus', b64decode(block['header']['consensus']))
 
-        # Check batch and its header
         batches = block['batches']
         self.assertIsInstance(batches, list)
         self.assertEqual(1, len(batches))
         self.assert_all_instances(batches, dict)
+        self.assert_batch_well_formed(batches[0], expected_id)
 
-        self.assertEqual(expected_id, batches[0]['header_signature'])
-        self.assertIsInstance(batches[0]['header'], dict)
-        self.assertEqual('pubkey', batches[0]['header']['signer_pubkey'])
+    def assert_batch_well_formed(self, batch, expected_id):
+        self.assertEqual(expected_id, batch['header_signature'])
+        self.assertIsInstance(batch['header'], dict)
+        self.assertEqual('pubkey', batch['header']['signer_pubkey'])
 
-        # Check transaction and its header
-        txns = batches[0]['transactions']
+        txns = batch['transactions']
         self.assertIsInstance(txns, list)
         self.assertEqual(1, len(txns))
         self.assert_all_instances(txns, dict)
+        self.assert_txn_well_formed(txns[0], expected_id)
 
-        self.assertEqual(expected_id, txns[0]['header_signature'])
-        self.assertEqual(b'payload', b64decode(txns[0]['payload']))
-        self.assertIsInstance(txns[0]['header'], dict)
-        self.assertEqual(expected_id, txns[0]['header']['nonce'])
+    def assert_txn_well_formed(self, txn, expected_id):
+        self.assertEqual(expected_id, txn['header_signature'])
+        self.assertEqual(b'payload', b64decode(txn['payload']))
+        self.assertIsInstance(txn['header'], dict)
+        self.assertEqual(expected_id, txn['header']['nonce'])
