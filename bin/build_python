@@ -30,6 +30,11 @@ pkgs="
     sdk/python
     rest_api
     validator
+    consensus/poet/cli
+    consensus/poet/common
+    consensus/poet/core
+    consensus/poet/families
+    consensus/poet/simulator
 "
 
 for pkg in $pkgs

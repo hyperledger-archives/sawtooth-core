@@ -16,6 +16,10 @@
 /cli/sawtooth_cli/protobuf/
 /cli/**/__pycache__/
 
+/consensus/**/__pycache__/
+/consensus/**/build/
+/consensus/**/protobuf/
+
 /core/sawtooth_core.egg-info/
 /core_transactions/config/sawtooth_config/protobuf/
 /core_transactions/**/__pycache__/

@@ -20,7 +20,7 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 set -x
 set -e
 
-for pkg in signing cli sdk sdk/python validator docs core extensions/arcade core_transactions rest_api
+for pkg in signing cli sdk sdk/python validator docs core extensions/arcade core_transactions rest_api consensus/poet
 do
     cd $top_dir/$pkg
     find . -depth -name \*.pyc -exec rm {} \;
@@ -40,6 +40,7 @@ done
 cd $top_dir
 rm -rf build/
 rm -rf cli/sawtooth_cli/protobuf/
+rm -rf consensus/poet/commont/sawtooth_poet_common/protobuf/
 rm -rf core_transactions/config/sawtooth_config/protobuf/
 rm -rf rest_api/sawtooth_rest_api/protobuf/
 rm -rf sdk/python/sawtooth_sdk/protobuf/
