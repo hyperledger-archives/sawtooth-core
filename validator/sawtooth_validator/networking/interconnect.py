@@ -169,8 +169,8 @@ class _SendReceive(object):
     def _remove_connected_identity(self, zmq_identity):
         if zmq_identity in self._last_message_times:
             del self._last_message_times[zmq_identity]
-        if zmq_identity in self._identity_to_connection_ids:
-            del self._identity_to_connection_ids[zmq_identity]
+        if zmq_identity in self._identities_to_connection_ids:
+            del self._identities_to_connection_ids[zmq_identity]
         connection_id = self._identity_to_connection_id(zmq_identity)
         if connection_id in self._connections:
             del self._connections[connection_id]
