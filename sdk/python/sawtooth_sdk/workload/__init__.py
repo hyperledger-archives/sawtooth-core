@@ -12,15 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-
-# ValidatorConnectionError is used internal to the sdk, and
-# any other use can cause undesirable or unexpected behavior.
-class ValidatorConnectionError(Exception):
-    def __init__(self):
-        super().__init__("the connection to the validator was lost")
-
-
-class WorkloadConfigurationError(Exception):
-    def __init__(self):
-        super().__init__("A workload object is not set.")
