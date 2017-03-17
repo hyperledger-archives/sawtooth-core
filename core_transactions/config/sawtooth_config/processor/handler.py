@@ -204,6 +204,7 @@ class ConfigurationTransactionHandler(object):
         if auth_type == 'Ballot':
             return self._apply_ballot_config(pubkey,
                                              config_payload,
+                                             auth_keys,
                                              state)
         elif auth_type == 'None':
             return self._apply_noauth_config(pubkey,
@@ -215,11 +216,13 @@ class ConfigurationTransactionHandler(object):
             raise InternalError(
                 'auth_type {} should not have been allowed'.format(auth_type))
 
-    def _apply_ballot_config(self, pubkey, config_payload, state):
+    def _apply_ballot_config(self, pubkey, config_payload,
+                             authorized_keys, state):
         if config_payload.action == ConfigPayload.PROPOSE:
             return self._apply_proposal(pubkey, config_payload.data, state)
         elif config_payload.action == ConfigPayload.VOTE:
-            return self._apply_vote(pubkey, config_payload.data, state)
+            return self._apply_vote(pubkey, config_payload.data,
+                                    authorized_keys, state)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
@@ -276,7 +279,7 @@ class ConfigurationTransactionHandler(object):
                               config_proposal.setting,
                               config_proposal.value)
 
-    def _apply_vote(self, pubkey, config_vote_data, state):
+    def _apply_vote(self, pubkey, config_vote_data, authorized_keys, state):
         config_vote = ConfigVote()
         config_vote.ParseFromString(config_vote_data)
         proposal_id = config_vote.proposal_id
@@ -317,7 +320,8 @@ class ConfigurationTransactionHandler(object):
                               candidate.proposal.setting,
                               candidate.proposal.value)
             del config_candidates.candidates[candidate_index]
-        elif rejected_count >= approval_threshold:
+        elif rejected_count >= approval_threshold or \
+                rejected_count + accepted_count == len(authorized_keys):
             LOGGER.debug('Proposal for %s was rejected',
                          candidate.proposal.setting)
             del config_candidates.candidates[candidate_index]

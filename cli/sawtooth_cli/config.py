@@ -27,6 +27,7 @@ from sawtooth_cli.rest_client import RestClient
 
 from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
 from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
+from sawtooth_cli.protobuf.config_pb2 import ConfigVote
 from sawtooth_cli.protobuf.config_pb2 import ConfigCandidates
 from sawtooth_cli.protobuf.setting_pb2 import Setting
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
@@ -83,6 +84,7 @@ def add_config_parser(subparsers, parent_parser):
         type=str,
         help="the URL of a validator's REST API",
         default='http://localhost:8080')
+
     create_parser.add_argument(
         'setting',
         type=str,
@@ -116,6 +118,32 @@ def add_config_parser(subparsers, parent_parser):
         default='default',
         choices=['default', 'csv', 'json', 'yaml'],
         help='the format of the output')
+
+    vote_parser = proposal_parsers.add_parser(
+        'vote',
+        help='votes for specific setting change proposals')
+
+    vote_parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    vote_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the signing key for the resulting transaction batch')
+
+    vote_parser.add_argument(
+        'proposal_id',
+        type=str,
+        help='the proposal to vote on')
+
+    vote_parser.add_argument(
+        'vote_value',
+        type=str,
+        choices=['accept', 'reject'],
+        help='the value of the vote')
 
     # The following parser is for the settings subsection of commands.  These
     # commands display information about the currently applied on-chain
@@ -154,9 +182,11 @@ def do_config(args):
     """Executes the config commands subcommands.
     """
     if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
-        _do_config_create(args)
+        _do_config_proposal_create(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
         _do_config_proposal_list(args)
+    elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
+        _do_config_proposal_vote(args)
     elif args.subcommand == 'settings' and args.settings_cmd == 'list':
         _do_config_list(args)
     else:
@@ -165,7 +195,7 @@ def do_config(args):
                 args.subcommand))
 
 
-def _do_config_create(args):
+def _do_config_proposal_create(args):
     """Executes the 'proposal create' subcommand.  Given a key file, and a
     series of key/value pairs, it generates batches of sawtooth_config
     transactions in a BatchList instance.  The BatchList is either stored to a
@@ -202,10 +232,6 @@ def _do_config_proposal_list(args):
     Given a url, optional filters on prefix and public key, this command lists
     the current pending proposals for settings changes.
     """
-    rest_client = RestClient(args.url)
-    state_leaf = rest_client.get_leaf(
-        _key_to_address('sawtooth.config.vote.proposals'))
-
     def _accept(candidate, public_key, prefix):
         # Check to see if the first public key matches the given public key
         # (if it is not None).  This public key belongs to the user that
@@ -215,24 +241,9 @@ def _do_config_proposal_list(args):
         has_prefix = candidate.proposal.setting.startswith(prefix)
         return has_prefix and has_pub_key
 
-    if state_leaf is not None:
-        setting_bytes = b64decode(state_leaf['data'])
-        setting = Setting()
-        setting.ParseFromString(setting_bytes)
-
-        candidates_bytes = None
-        for entry in setting.entries:
-            if entry.key == 'sawtooth.config.vote.proposals':
-                candidates_bytes = entry.value
-
-        decoded = b64decode(candidates_bytes)
-        candidates_payload = ConfigCandidates()
-        candidates_payload.ParseFromString(decoded)
-
-        candidates = [c for c in candidates_payload.candidates
-                      if _accept(c, args.public_key, args.filter)]
-    else:
-        candidates = []
+    candidates_payload = _get_proposals(RestClient(args.url))
+    candidates = [c for c in candidates_payload.candidates
+                  if _accept(c, args.public_key, args.filter)]
 
     if args.format == 'default':
         for candidate in candidates:
@@ -260,6 +271,44 @@ def _do_config_proposal_list(args):
                   default_flow_style=False)[0:-1])
     else:
         raise AssertionError('Unknown format {}'.format(args.format))
+
+
+def _do_config_proposal_vote(args):
+    """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
+    id and a vote value, it generates a batch of sawtooth_config transactions
+    in a BatchList instance.  The BatchList is file or submitted to a
+    validator.
+    """
+    pubkey, signing_key = _read_signing_keys(args.key)
+    rest_client = RestClient(args.url)
+
+    proposals = _get_proposals(rest_client)
+
+    proposal = None
+    for candidate in proposals.candidates:
+        if candidate.proposal_id == args.proposal_id:
+            proposal = candidate
+            break
+
+    if proposal is None:
+        raise CliException('No proposal exists with the given id')
+
+    for vote_record in proposal.votes:
+        if vote_record.public_key == pubkey:
+            raise CliException(
+                'A vote has already been recorded with this signing key')
+
+    txn = _create_vote_txn(
+        pubkey,
+        signing_key,
+        args.proposal_id,
+        proposal.proposal.setting,
+        args.vote_value)
+    batch = _create_batch(pubkey, signing_key, [txn])
+
+    batch_list = BatchList(batches=[batch])
+
+    rest_client.send_batches(batch_list)
 
 
 def _do_config_list(args):
@@ -315,6 +364,29 @@ def _do_config_list(args):
             print(yaml.dump(settings_snapshot, default_flow_style=False)[0:-1])
     else:
         raise AssertionError('Unknown format {}'.format(args.format))
+
+
+def _get_proposals(rest_client):
+    state_leaf = rest_client.get_leaf(
+        _key_to_address('sawtooth.config.vote.proposals'))
+
+    config_candidates = ConfigCandidates()
+
+    if state_leaf is not None:
+        setting_bytes = b64decode(state_leaf['data'])
+        setting = Setting()
+        setting.ParseFromString(setting_bytes)
+
+        candidates_bytes = None
+        for entry in setting.entries:
+            if entry.key == 'sawtooth.config.vote.proposals':
+                candidates_bytes = entry.value
+
+        if candidates_bytes is not None:
+            decoded = b64decode(candidates_bytes)
+            config_candidates.ParseFromString(decoded)
+
+    return config_candidates
 
 
 def _read_signing_keys(key_filename):
@@ -385,8 +457,32 @@ def _create_propose_txn(pubkey, signing_key, setting_key_value):
         value=setting_value,
         nonce=nonce)
     payload = ConfigPayload(data=proposal.SerializeToString(),
-                            action=ConfigPayload.PROPOSE).SerializeToString()
+                            action=ConfigPayload.PROPOSE)
 
+    return _make_txn(pubkey, signing_key, setting_key, payload)
+
+
+def _create_vote_txn(pubkey, signing_key,
+                     proposal_id, setting_key, vote_value):
+    """Creates an individual sawtooth_config transaction for voting on a
+    proposal for a particular setting key.
+    """
+    if vote_value == 'accept':
+        vote_id = ConfigVote.ACCEPT
+    else:
+        vote_id = ConfigVote.REJECT
+
+    vote = ConfigVote(proposal_id=proposal_id, vote=vote_id)
+    payload = ConfigPayload(data=vote.SerializeToString(),
+                            action=ConfigPayload.VOTE)
+
+    return _make_txn(pubkey, signing_key, setting_key, payload)
+
+
+def _make_txn(pubkey, signing_key, setting_key, payload):
+    """Creates and signs a sawtooth_config transaction with with a payload.
+    """
+    serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_pubkey=pubkey,
         family_name='sawtooth_config',
@@ -395,7 +491,7 @@ def _create_propose_txn(pubkey, signing_key, setting_key_value):
         outputs=_config_outputs(setting_key),
         dependencies=[],
         payload_encoding='application/protobuf',
-        payload_sha512=hashlib.sha512(payload).hexdigest(),
+        payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_pubkey=pubkey
     ).SerializeToString()
 
@@ -404,7 +500,7 @@ def _create_propose_txn(pubkey, signing_key, setting_key_value):
     return Transaction(
         header=header,
         header_signature=signature,
-        payload=payload)
+        payload=serialized_payload)
 
 
 def _config_inputs(key):
