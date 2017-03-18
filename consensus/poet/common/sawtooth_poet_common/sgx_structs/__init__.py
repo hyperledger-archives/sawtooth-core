@@ -13,17 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2.1"
+from sawtooth_poet_common.sgx_structs._sgx_attributes import SgxAttributes
+from sawtooth_poet_common.sgx_structs._sgx_basename import SgxBasename
+from sawtooth_poet_common.sgx_structs._sgx_cpu_svn import SgxCpuSvn
+from sawtooth_poet_common.sgx_structs._sgx_key_id import SgxKeyId
+from sawtooth_poet_common.sgx_structs._sgx_measurement import SgxMeasurement
+from sawtooth_poet_common.sgx_structs._sgx_quote import SgxQuote
+from sawtooth_poet_common.sgx_structs._sgx_report import SgxReport
+from sawtooth_poet_common.sgx_structs._sgx_report_body import SgxReportBody
+from sawtooth_poet_common.sgx_structs._sgx_report_data import SgxReportData
 
-services:
-
-  poet:
-    image: sawtooth-test:$ISOLATION_ID
-    volumes:
-      - ../../../../..:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/consensus/poet/common
-    entrypoint: nose2-3 -s tests/test_validator_registry_view -v
-    environment:
-        PYTHONPATH: "\
-          /project/sawtooth-core/consensus/poet/common:\
-          /project/sawtooth-core/consensus/poet/common/tests"
+__all__ = []
