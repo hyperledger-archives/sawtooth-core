@@ -348,10 +348,19 @@ class _BlockListHandler(_MockHandler):
         blocks = store.get_blocks(request.head_id)
         if not blocks:
             return self._response_proto(status=self._response_proto.NO_ROOT)
+        head_id=blocks[0].header_signature
+
+        if request.block_ids:
+            matches = {b.header_signature: b for b in blocks
+                if b.header_signature in request.block_ids}
+            blocks = [matches[i] for i in request.block_ids if i in matches]
+            if not blocks:
+                self._response_proto(status=self._response_proto.NO_RESOURCE)
+
 
         return self._response_proto(
             status=self._response_proto.OK,
-            head_id=blocks[0].header_signature,
+            head_id=head_id,
             blocks=blocks)
 
 
@@ -395,10 +404,18 @@ class _BatchListHandler(_MockHandler):
         batches = [a for b in blocks for a in b.batches]
         if not batches:
             return self._response_proto(status=self._response_proto.NO_ROOT)
+        head_id = blocks[0].header_signature
+
+        if request.batch_ids:
+            matches = {b.header_signature: b for b in batches
+                if b.header_signature in request.batch_ids}
+            batches = [matches[i] for i in request.batch_ids if i in matches]
+            if not batches:
+                self._response_proto(status=self._response_proto.NO_RESOURCE)
 
         return self._response_proto(
             status=self._response_proto.OK,
-            head_id=blocks[0].header_signature,
+            head_id=head_id,
             batches=batches)
 
 
