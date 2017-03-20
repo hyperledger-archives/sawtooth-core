@@ -30,9 +30,6 @@
 
 /manage/**/__pycache__/
 
-/poet/sawtooth_poet/protobuf
-/poet/**/__pycache__/
-
 /rest_api/build/
 /rest_api/sawtooth_rest_api/protobuf/
 /rest_api/**/__pycache__/
@@ -45,6 +42,9 @@
 /sdk/examples/sawtooth_xo/**/__pycache__/
 /sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
+/sdk/examples/intkey_java/dependency-reduced-pom.xml
+/sdk/examples/intkey_java/target/
+/sdk/java/target/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/

@@ -19,6 +19,7 @@ MODULE_LIST="
 cli
 java_sdk
 javascript_sdk
+poet_cli
 poet_common
 poet_core
 poet_families
@@ -116,10 +117,14 @@ main() {
                     test_javascript_sdk
                     ;;
                 poet)
+                    test_poet_cli
                     test_poet_common
                     test_poet_core
                     test_poet_families
                     test_poet_simulator
+                    ;;
+                poet_cli)
+                    test_poet_cli
                     ;;
                 poet_common)
                     test_poet_common
@@ -164,6 +169,11 @@ test_java_sdk() {
 
 test_javascript_sdk() {
     run_docker_test tp-intkey-javascript -s validator
+}
+
+test_poet_cli(){
+    run_docker_test ./consensus/poet/cli/tests/unit_cli.yaml \
+    -s poet
 }
 
 test_poet_common(){
