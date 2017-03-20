@@ -16,10 +16,13 @@
 import unittest
 import json
 import base64
+import hashlib
 
 from sawtooth_signing import secp256k1_signer as signing
 from test_validator_registry.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
+
+from sawtooth_poet_common import sgx_structs
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorRegistryPayload
 
@@ -435,14 +438,16 @@ class TestValidatorRegistry(unittest.TestCase):
         self._test_bad_signup_info(signup_info)
 
         # ------------------------------------------------------
-        # No report body in isvEnclaveQuoteBody
+        # Malformed isvEnclaveQuoteBody (decode the enclave quote, chop off
+        # the last byte, and re-encode)
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
-        quote = {"test": "none"}
 
         verification_report['isvEnclaveQuoteBody'] = \
             base64.b64encode(
-                json.dumps(quote).encode()).decode()
+                base64.b64decode(
+                    verification_report['isvEnclaveQuoteBody'].encode())[1:])\
+            .decode()
 
         signup_info.proof_data = \
             self.factory.create_proof_data(
@@ -452,14 +457,97 @@ class TestValidatorRegistry(unittest.TestCase):
         self._test_bad_signup_info(signup_info)
 
         # ------------------------------------------------------
-        # Bad isvEnclaveQuoteBody
+        # Invalid basename
         verification_report = \
             json.loads(proof_data_dict["verification_report"])
-        quote = {"report_body": "bad"}
+
+        sgx_quote = sgx_structs.SgxQuote()
+        sgx_quote.parse_from_bytes(
+            base64.b64decode(
+                verification_report['isvEnclaveQuoteBody'].encode()))
+        sgx_quote.basename.name = \
+            b'\xCC' * sgx_structs.SgxBasename.STRUCT_SIZE
 
         verification_report['isvEnclaveQuoteBody'] = \
-            base64.b64encode(
-                json.dumps(quote).encode()).decode()
+            base64.b64encode(sgx_quote.serialize_to_bytes()).decode()
+
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
+
+        self._test_bad_signup_info(signup_info)
+
+        # ------------------------------------------------------
+        # Report data is not valid (bad OPK hash)
+        verification_report = \
+            json.loads(proof_data_dict["verification_report"])
+
+        sgx_quote = sgx_structs.SgxQuote()
+        sgx_quote.parse_from_bytes(
+            base64.b64decode(
+                verification_report['isvEnclaveQuoteBody'].encode()))
+
+        hash_input = \
+            '{0}{1}'.format(
+                'Not a valid OPK Hash',
+                signing.encode_pubkey(
+                    self.factory.poet_public_key,
+                    'hex').upper()).encode()
+        sgx_quote.report_body.report_data.d = \
+            hashlib.sha256(hash_input).digest()
+
+        verification_report['isvEnclaveQuoteBody'] = \
+            base64.b64encode(sgx_quote.serialize_to_bytes()).decode()
+
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
+
+        self._test_bad_signup_info(signup_info)
+
+        # ------------------------------------------------------
+        # Report data is not valid (bad PPK)
+        verification_report = \
+            json.loads(proof_data_dict["verification_report"])
+
+        sgx_quote = sgx_structs.SgxQuote()
+        sgx_quote.parse_from_bytes(
+            base64.b64decode(
+                verification_report['isvEnclaveQuoteBody'].encode()))
+
+        hash_input = \
+            '{0}{1}'.format(
+                self.factory.pubkey_hash,
+                "Not a valid PPK").encode()
+        sgx_quote.report_body.report_data.d = \
+            hashlib.sha256(hash_input).digest()
+
+        verification_report['isvEnclaveQuoteBody'] = \
+            base64.b64encode(sgx_quote.serialize_to_bytes()).decode()
+
+        signup_info.proof_data = \
+            self.factory.create_proof_data(
+                verification_report=verification_report,
+                evidence_payload=proof_data_dict.get('evidence_payload'))
+
+        self._test_bad_signup_info(signup_info)
+
+        # ------------------------------------------------------
+        # Invalid enclave measurement
+        verification_report = \
+            json.loads(proof_data_dict["verification_report"])
+
+        sgx_quote = sgx_structs.SgxQuote()
+        sgx_quote.parse_from_bytes(
+            base64.b64decode(
+                verification_report['isvEnclaveQuoteBody'].encode()))
+        sgx_quote.report_body.mr_enclave.m = \
+            b'\xCC' * sgx_structs.SgxMeasurement.STRUCT_SIZE
+
+        verification_report['isvEnclaveQuoteBody'] = \
+            base64.b64encode(sgx_quote.serialize_to_bytes()).decode()
 
         signup_info.proof_data = \
             self.factory.create_proof_data(

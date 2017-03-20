@@ -32,6 +32,8 @@ from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
+from sawtooth_poet_common import sgx_structs
+
 from sawtooth_poet_simulator.poet_enclave_simulator.utils import json2dict
 from sawtooth_poet_simulator.poet_enclave_simulator.utils import dict2json
 
@@ -55,6 +57,17 @@ class _PoetEnclaveSimulator(object):
     # the random wait timeout value
     _seal_private_key = signing.generate_privkey()
     _seal_public_key = signing.generate_pubkey(_seal_private_key)
+
+    # The basename and enclave measurement values we will put into and verify
+    # are in the enclave quote in the attestation verification report.
+    __VALID_BASENAME__ = \
+        bytes.fromhex(
+            'b785c58b77152cbe7fd55ee3851c4990'
+            '00000000000000000000000000000000')
+    __VALID_ENCLAVE_MEASUREMENT__ = \
+        bytes.fromhex(
+            'c99f21955e38dbb03d2ca838d3af6e43'
+            'ef438926ed02db4cc729380c8c7a174e')
 
     # We use the report private key PEM to create the private key used to
     # sign attestation verification reports.  On the flip side, the report
@@ -156,15 +169,32 @@ class _PoetEnclaveSimulator(object):
             sealed_signup_data = \
                 base64.b64encode(bytes(dict2json(signup_data).encode()))
 
-            # Create a fake report
-            report_data = '{0}{1}'.format(
-                originator_public_key_hash.upper(),
-                cls._poet_public_key.upper()
-            )
-            quote = {
-                'report_body': hashlib.sha256(
-                    dict2json(report_data).encode()).hexdigest()
-            }
+            # Build up a fake SGX quote containing:
+            # 1. The basename
+            # 2. The report body that contains:
+            #    a. The enclave measurement
+            #    b. The report data SHA256(SHA256(OPK)|PPK)
+            sgx_basename = \
+                sgx_structs.SgxBasename(name=cls.__VALID_BASENAME__)
+            sgx_measurement = \
+                sgx_structs.SgxMeasurement(
+                    m=cls.__VALID_ENCLAVE_MEASUREMENT__)
+
+            hash_input = \
+                '{0}{1}'.format(
+                    originator_public_key_hash.upper(),
+                    cls._poet_public_key.upper()).encode()
+            report_data = hashlib.sha256(hash_input).digest()
+            sgx_report_data = sgx_structs.SgxReportData(d=report_data)
+            sgx_report_body = \
+                sgx_structs.SgxReportBody(
+                    mr_enclave=sgx_measurement,
+                    report_data=sgx_report_data)
+
+            sgx_quote = \
+                sgx_structs.SgxQuote(
+                    basename=sgx_basename,
+                    report_body=sgx_report_body)
 
             # Create a fake PSE manifest.  A base64 encoding of the
             # originator public key hash should suffice.
@@ -181,8 +211,7 @@ class _PoetEnclaveSimulator(object):
                         timestamp.encode()).hexdigest().encode()).decode(),
                 'isvEnclaveQuoteStatus': 'OK',
                 'isvEnclaveQuoteBody':
-                    base64.b64encode(
-                        dict2json(quote).encode()).decode(),
+                    base64.b64encode(sgx_quote.serialize_to_bytes()).decode(),
                 'pseManifestStatus': 'OK',
                 'pseManifestHash':
                     base64.b64encode(
@@ -370,27 +399,64 @@ class _PoetEnclaveSimulator(object):
                 ValueError(
                     'Verification report does not contain an enclave quote')
 
-        # Verify that the enclave quote contains a report body with the value
-        # we expect (i.e., SHA256(SHA256(OPK)|PPK)
-        report_data = '{0}{1}'.format(
-            originator_public_key_hash.upper(),
-            signup_info.poet_public_key.upper()
-        )
-        expected_report_body = hashlib.sha256(
-            dict2json(report_data).encode()).hexdigest()
+        # The ISV enclave quote body is base 64 encoded, so decode it and then
+        # create an SGX quote structure from it so we can inspect
+        sgx_quote = sgx_structs.SgxQuote()
+        sgx_quote.parse_from_bytes(base64.b64decode(enclave_quote))
 
-        enclave_quote_dict = \
-            json2dict(base64.b64decode(enclave_quote).decode())
-        report_body = enclave_quote_dict.get('report_body')
-        if report_body is None:
-            raise ValueError('Enclave quote does not contain a report body')
+        # The report body should be SHA256(SHA256(OPK)|PPK)
+        #
+        # NOTE - since the code that created the report data is in the enclave
+        # code, this code needs to be kept in sync with it.  Any changes to how
+        # the report data is created, needs to be reflected in how we re-create
+        # the report data for verification.
 
-        if report_body.upper() != expected_report_body.upper():
+        hash_input = \
+            '{0}{1}'.format(
+                originator_public_key_hash.upper(),
+                cls._poet_public_key.upper()).encode()
+        hash_value = hashlib.sha256(hash_input).digest()
+        expected_report_data = \
+            hash_value + \
+            (b'\x00' *
+             (sgx_structs.SgxReportData.STRUCT_SIZE - len(hash_value)))
+
+        if sgx_quote.report_body.report_data.d != expected_report_data:
             raise \
                 ValueError(
-                    'Enclave quote report body {0} does not match {1}'.format(
-                        report_body,
-                        expected_report_body))
+                    'AVR report data [{0}] not equal to [{1}]'.format(
+                        sgx_quote.report_body.report_data.d.hex(),
+                        expected_report_data.hex()))
+
+        # Compare the enclave measurement against the expected valid enclave
+        # measurement.
+        #
+        # NOTE - this is only a temporary check.  Instead of checking against
+        # a predefined enclave measurement value, we should be configured with
+        # a set of one or more enclave measurement values that we will
+        # consider as valid.
+
+        if sgx_quote.report_body.mr_enclave.m != \
+                cls.__VALID_ENCLAVE_MEASUREMENT__:
+            raise \
+                ValueError(
+                    'AVR enclave measurement [{0}] not equal to [{1}]'.format(
+                        sgx_quote.report_body.mr_enclave.m.hex(),
+                        cls.__VALID_ENCLAVE_MEASUREMENT__.hex()))
+
+        # Compare the enclave basename in the verification report against the
+        # expected enclave basename.
+        #
+        # NOTE - this is only a temporary check.  Instead of checking against
+        # a predefined enclave basenme value, we should be configured with a
+        # set of one or more enclave basenames that we will consider as valid.
+
+        if sgx_quote.basename.name != cls.__VALID_BASENAME__:
+            raise \
+                ValueError(
+                    'AVR enclave basename [{0}] not equal to [{1}]'.format(
+                        sgx_quote.basename.name.hex(),
+                        cls.__VALID_BASENAME__.hex()))
 
         # Verify that the wait certificate ID in the verification report
         # matches the provided wait certificate ID.  The wait certificate ID

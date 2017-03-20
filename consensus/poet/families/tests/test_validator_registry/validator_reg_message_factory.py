@@ -24,6 +24,8 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from sawtooth_signing import secp256k1_signer as signing
 
 from sawtooth_processor_test.message_factory import MessageFactory
+
+from sawtooth_poet_common import sgx_structs
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorInfo
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
@@ -33,6 +35,17 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
 
 
 class ValidatorRegistryMessageFactory(object):
+    # The basename and enclave measurement values we will put into the enclave
+    # quote in the attestation verification report.
+    __VALID_BASENAME__ = \
+        bytes.fromhex(
+            'b785c58b77152cbe7fd55ee3851c4990'
+            '00000000000000000000000000000000')
+    __VALID_ENCLAVE_MEASUREMENT__ = \
+        bytes.fromhex(
+            'c99f21955e38dbb03d2ca838d3af6e43'
+            'ef438926ed02db4cc729380c8c7a174e')
+
     __REPORT_PRIVATE_KEY_PEM__ = \
         '-----BEGIN PRIVATE KEY-----\n' \
         'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCsy/NmLwZP6Uj0\n' \
@@ -79,6 +92,13 @@ class ValidatorRegistryMessageFactory(object):
                 password=None,
                 backend=backends.default_backend())
 
+        # First we need to create a public/private key pair for the PoET
+        # enclave to use.
+        self._poet_private_key = \
+            "1f70fa2518077ad18483f48e77882d11983b537fa5f7cf158684d2c670fe4f1f"
+        self.poet_public_key = \
+            signing.generate_pubkey(self._poet_private_key)
+
     @property
     def public_key(self):
         return self._factory.get_public_key()
@@ -114,36 +134,48 @@ class ValidatorRegistryMessageFactory(object):
     # Currently this is done in the enclave
     def create_signup_info(self, originator_public_key_hash,
                            most_recent_wait_certificate_id):
-        # First we need to create a public/private key pair for the PoET
-        # enclave to use.
-        poet_private_key = \
-            "1f70fa2518077ad18483f48e77882d11983b537fa5f7cf158684d2c670fe4f1f"
-        poet_public_key = \
-            signing.generate_pubkey(poet_private_key)
         # currently not used
         # _active_wait_timer = None
 
         # We are going to fake out the sealing the signup data.
         signup_data = {
             'poet_public_key':
-                signing.encode_pubkey(poet_public_key, 'hex'),
+                signing.encode_pubkey(self.poet_public_key, 'hex'),
             'poet_private_key':
                 signing.encode_privkey(
-                    poet_private_key,
+                    self._poet_private_key,
                     'hex')
         }
 
-        # Create a fake report
-        report_data = '{0}{1}'.format(
-            originator_public_key_hash.upper(),
-            signing.encode_pubkey(
-                poet_public_key,
-                'hex').upper()
-        )
-        quote = {
-            'report_body': hashlib.sha256(
-                json.dumps(report_data).encode()).hexdigest()
-        }
+        # Build up a fake SGX quote containing:
+        # 1. The basename
+        # 2. The report body that contains:
+        #    a. The enclave measurement
+        #    b. The report data SHA256(SHA256(OPK)|PPK)
+        sgx_basename = \
+            sgx_structs.SgxBasename(name=self.__VALID_BASENAME__)
+        sgx_measurement = \
+            sgx_structs.SgxMeasurement(
+                m=self.__VALID_ENCLAVE_MEASUREMENT__)
+
+        hash_input = \
+            '{0}{1}'.format(
+                originator_public_key_hash.upper(),
+                signing.encode_pubkey(
+                    self.poet_public_key,
+                    'hex').upper()).encode()
+        report_data = hashlib.sha256(hash_input).digest()
+
+        sgx_report_data = sgx_structs.SgxReportData(d=report_data)
+        sgx_report_body = \
+            sgx_structs.SgxReportBody(
+                mr_enclave=sgx_measurement,
+                report_data=sgx_report_data)
+
+        sgx_quote = \
+            sgx_structs.SgxQuote(
+                basename=sgx_basename,
+                report_body=sgx_report_body)
 
         # Create a fake PSE manifest.  A base64 encoding of the
         # originator public key hash should suffice.
@@ -160,8 +192,7 @@ class ValidatorRegistryMessageFactory(object):
                     timestamp.encode()).hexdigest().encode()).decode(),
             'isvEnclaveQuoteStatus': 'OK',
             'isvEnclaveQuoteBody':
-                base64.b64encode(
-                    json.dumps(quote).encode()).decode(),
+                base64.b64encode(sgx_quote.serialize_to_bytes()).decode(),
             'pseManifestStatus': 'OK',
             'pseManifestHash':
                 base64.b64encode(
