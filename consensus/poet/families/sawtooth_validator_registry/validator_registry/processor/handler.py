@@ -405,7 +405,7 @@ class ValidatorRegistryTransactionHandler(object):
             name=validator_name,
             id=validator_id,
             signup_info=val_reg_payload.signup_info,
-            block_num=val_reg_payload.block_num
+            transaction_id=transaction.signature
         )
 
         _update_validator_state(state,

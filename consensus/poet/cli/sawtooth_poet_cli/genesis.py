@@ -116,7 +116,7 @@ def do_genesis(args):
                 poet_public_key=signup_info.poet_public_key,
                 proof_data=signup_info.proof_data,
                 anti_sybil_id=signup_info.anti_sybil_id),
-            block_num=0)
+        )
     serialized = payload.SerializeToString()
 
     # Create the address that will be used to look up this validator
