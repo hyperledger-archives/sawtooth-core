@@ -38,7 +38,7 @@ class TestValidatorRegistryView(unittest.TestCase):
                 signup_info=SignUpInfo(poet_public_key='my_pubkey',
                                        proof_data='beleive me',
                                        anti_sybil_id='no sybil'),
-                block_num=123
+                transaction_id="signature"
             ).SerializeToString()
         })
         validator_registry_view = ValidatorRegistryView(state_view)
@@ -47,7 +47,7 @@ class TestValidatorRegistryView(unittest.TestCase):
         self.assertEqual('my_id', info.id)
         self.assertEqual('my_validator', info.name)
         self.assertEqual('sure', info.registered)
-        self.assertEqual(123, info.block_num)
+        self.assertEqual("signature", info.transaction_id)
         self.assertEqual('my_pubkey', info.signup_info.poet_public_key)
         self.assertEqual('beleive me', info.signup_info.proof_data)
         self.assertEqual('no sybil', info.signup_info.anti_sybil_id)
@@ -75,7 +75,7 @@ class TestValidatorRegistryView(unittest.TestCase):
                 signup_info=SignUpInfo(poet_public_key='my_pubkey',
                                        proof_data='beleive me',
                                        anti_sybil_id='no sybil'),
-                block_num=123
+                transaction_id="signature"
             ).SerializeToString()
         })
         validator_registry_view = ValidatorRegistryView(state_view)
@@ -106,7 +106,7 @@ class TestValidatorRegistryView(unittest.TestCase):
                 signup_info=SignUpInfo(poet_public_key='my_pubkey',
                                        proof_data='beleive me',
                                        anti_sybil_id='no sybil'),
-                block_num=123
+                transaction_id="signature"
             ).SerializeToString(),
             to_address('another_id'): ValidatorInfo(
                 registered='yep',
@@ -115,7 +115,7 @@ class TestValidatorRegistryView(unittest.TestCase):
                 signup_info=SignUpInfo(poet_public_key='your_pubkey',
                                        proof_data='you betcha',
                                        anti_sybil_id='poor sybil'),
-                block_num=100
+                transaction_id="signature"
             ).SerializeToString()
         })
 

@@ -93,8 +93,15 @@ class MessageFactory(object):
         }
         return TpProcessResponse(status=responses[status])
 
-    def _create_transaction_header(self, payload, inputs, outputs, deps):
-        return TransactionHeader(
+    def _create_transaction_header(self, payload, inputs, outputs, deps,
+                                   set_nonce=True):
+
+        if set_nonce:
+            nonce = str(time.time())
+        else:
+            nonce = ""
+
+        header = TransactionHeader(
             signer_pubkey=self._public,
             family_name=self.family_name,
             family_version=self.family_version,
@@ -104,15 +111,17 @@ class MessageFactory(object):
             payload_encoding=self.encoding,
             payload_sha512=self.sha512(payload),
             batcher_pubkey=self._public,
-            nonce=str(time.time())
-        ).SerializeToString()
+            nonce=nonce
+        )
+        return header.SerializeToString()
 
     def _create_signature(self, header):
         return _sign(header, self._private)
 
-    def _create_header_and_sig(self, payload, inputs, outputs, deps):
+    def _create_header_and_sig(self, payload, inputs, outputs, deps,
+                               set_nonce=True):
         header = self._create_transaction_header(
-            payload, inputs, outputs, deps)
+            payload, inputs, outputs, deps, set_nonce)
         signature = self._create_signature(header)
         return header, signature
 
@@ -125,9 +134,10 @@ class MessageFactory(object):
             payload=payload,
             header_signature=signature)
 
-    def create_tp_process_request(self, payload, inputs, outputs, deps):
+    def create_tp_process_request(self, payload, inputs, outputs, deps,
+                                  set_nonce=True):
         header, signature = self._create_header_and_sig(
-            payload, inputs, outputs, deps)
+            payload, inputs, outputs, deps, set_nonce)
 
         return TpProcessRequest(
             header=header,
