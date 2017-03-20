@@ -22,7 +22,7 @@ services:
     volumes:
       - ../../../../..:/project/sawtooth-core
     working_dir: /project/sawtooth-core/consensus/poet/common
-    entrypoint: nose2-3 -s tests/test_validator_registry_view -v
+    entrypoint: nose2-3 -s tests/test_sgx_structs -v
     environment:
         PYTHONPATH: "\
           /project/sawtooth-core/consensus/poet/common:\

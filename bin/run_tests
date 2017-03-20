@@ -179,6 +179,8 @@ test_poet_cli(){
 test_poet_common(){
     run_docker_test ./consensus/poet/common/tests/test_validator_registry_view/unit_validator_registry_view.yaml \
     -s poet
+    run_docker_test ./consensus/poet/common/tests/test_sgx_structs/unit_sgx_structs.yaml \
+    -s poet
 }
 
 test_poet_core(){

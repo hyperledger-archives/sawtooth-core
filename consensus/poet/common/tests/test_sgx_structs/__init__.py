@@ -12,18 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-version: "2.1"
-
-services:
-
-  poet:
-    image: sawtooth-test:$ISOLATION_ID
-    volumes:
-      - ../../../../..:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/consensus/poet/common
-    entrypoint: nose2-3 -s tests/test_validator_registry_view -v
-    environment:
-        PYTHONPATH: "\
-          /project/sawtooth-core/consensus/poet/common:\
-          /project/sawtooth-core/consensus/poet/common/tests"
