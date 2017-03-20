@@ -16,6 +16,8 @@ import base64
 import json
 import hashlib
 
+from collections import OrderedDict
+
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
@@ -123,11 +125,11 @@ class ValidatorRegistryMessageFactory(object):
                 verification_report_json.encode(),
                 padding.PKCS1v15(),
                 hashes.SHA256())
-        proof_data_dict = {
-            'evidence_payload': evidence_payload,
-            'verification_report': verification_report_json,
-            'signature': base64.b64encode(signature).decode()
-        }
+        proof_data_dict = OrderedDict([
+            ('evidence_payload', evidence_payload),
+            ('verification_report', verification_report_json),
+            ('signature', base64.b64encode(signature).decode())]
+        )
 
         return json.dumps(proof_data_dict)
 
@@ -185,22 +187,22 @@ class ValidatorRegistryMessageFactory(object):
         timestamp = '2017-02-16T15:21:24.437048'
 
         # Fake our "proof" data.
-        verification_report = {
-            'epidPseudonym': originator_public_key_hash,
-            'id': base64.b64encode(
+        verification_report = OrderedDict([
+            ('epidPseudonym', originator_public_key_hash),
+            ('id', base64.b64encode(
                 hashlib.sha256(
-                    timestamp.encode()).hexdigest().encode()).decode(),
-            'isvEnclaveQuoteStatus': 'OK',
-            'isvEnclaveQuoteBody':
-                base64.b64encode(sgx_quote.serialize_to_bytes()).decode(),
-            'pseManifestStatus': 'OK',
-            'pseManifestHash':
+                    timestamp.encode()).hexdigest().encode()).decode()),
+            ('isvEnclaveQuoteStatus', 'OK'),
+            ('isvEnclaveQuoteBody',
+                base64.b64encode(sgx_quote.serialize_to_bytes()).decode()),
+            ('pseManifestStatus', 'OK'),
+            ('pseManifestHash',
                 base64.b64encode(
                     hashlib.sha256(
-                        pse_manifest).hexdigest().encode()).decode(),
-            'nonce': most_recent_wait_certificate_id,
-            'timestamp': timestamp
-        }
+                        pse_manifest).hexdigest().encode()).decode()),
+            ('nonce', most_recent_wait_certificate_id),
+            ('timestamp', timestamp)
+        ])
 
         proof_data = \
             self.create_proof_data(
@@ -226,7 +228,7 @@ class ValidatorRegistryMessageFactory(object):
         ]
 
         return self._factory.create_tp_process_request(
-            payload.SerializeToString(), inputs, outputs, [])
+            payload.SerializeToString(), inputs, outputs, [], False)
 
     def create_get_request_validator_info(self):
         addresses = [self._key_to_address(self.public_key)]
@@ -239,7 +241,9 @@ class ValidatorRegistryMessageFactory(object):
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            block_num=0
+            transaction_id="7a79305e9734fd511386ae877da8770d66c22e4c7b18db8eb2"
+                           "ff6ec16f5a3452749ee49a04ea8a805ec5ec8b5d1fdfbcc6f3"
+                           "bf6374c99c9a906bc2837d0ad25a"
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)
@@ -252,7 +256,9 @@ class ValidatorRegistryMessageFactory(object):
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            block_num=0
+            transaction_id="7a79305e9734fd511386ae877da8770d66c22e4c7b18db8eb2"
+                           "ff6ec16f5a3452749ee49a04ea8a805ec5ec8b5d1fdfbcc6f3"
+                           "bf6374c99c9a906bc2837d0ad25a"
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)

@@ -19,6 +19,7 @@ import base64
 import hashlib
 
 from sawtooth_signing import secp256k1_signer as signing
+
 from test_validator_registry.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
 
@@ -36,9 +37,10 @@ class TestValidatorRegistry(unittest.TestCase):
     def __init__(self, test_name, tester):
         super().__init__(test_name)
         self.tester = tester
-        self.private_key = signing.generate_privkey()
-        self.public_key = signing.encode_pubkey(
-            signing.generate_pubkey(self.private_key), "hex")
+        self.private_key = '5HsjpyQzpeoGAAvNeG5PzQsn1Ght18GgSmDaEUCd1c1HpA2a'\
+                           'vzc'
+        self.public_key = '02f3d385777ab35888fc47af6d123bba6f8b04817a4746e97'\
+                          '446ce1562fc4307d7'
         self.factory = ValidatorRegistryMessageFactory(
             private=self.private_key, public=self.public_key)
 
@@ -59,8 +61,7 @@ class TestValidatorRegistry(unittest.TestCase):
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
-            signup_info=signup_info, block_num=0)
-
+            signup_info=signup_info)
         # Send validator registry payload
         self.tester.send(
             self.factory.create_tp_process_request(payload.id, payload))
@@ -99,7 +100,7 @@ class TestValidatorRegistry(unittest.TestCase):
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
-            signup_info=signup_info, block_num=0)
+            signup_info=signup_info)
 
         # Send validator registry payload
         self.tester.send(
@@ -157,8 +158,7 @@ class TestValidatorRegistry(unittest.TestCase):
             name="val_11111111111111111111111111111111111111111111111111111111"
                  "11111",
             id=self.factory.public_key,
-            signup_info=signup_info,
-            block_num=0)
+            signup_info=signup_info)
 
         # Send validator registry payload
         self.tester.send(
@@ -179,8 +179,8 @@ class TestValidatorRegistry(unittest.TestCase):
             verb="reg",
             name="val_1",
             id="bad",
-            signup_info=signup_info,
-            block_num=0)
+            signup_info=signup_info
+        )
 
         # Send validator registry payload
         self.tester.send(
@@ -202,8 +202,7 @@ class TestValidatorRegistry(unittest.TestCase):
             verb="reg",
             name="val_1",
             id=self.factory.public_key,
-            signup_info=signup_info,
-            block_num=0)
+            signup_info=signup_info)
 
         # Send validator registry payload
         self.tester.send(
@@ -216,8 +215,7 @@ class TestValidatorRegistry(unittest.TestCase):
             verb="reg",
             name="val_1",
             id=self.factory.public_key,
-            signup_info=signup_info,
-            block_num=0)
+            signup_info=signup_info)
 
         # Send validator registry payload
         self.tester.send(

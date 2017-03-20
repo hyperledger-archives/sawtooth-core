@@ -32,9 +32,9 @@ message ValidatorInfo {
     // This is the protocol buffer described below.
     SignUpInfo signup_info = 4;
 
-    // The block number that this ValidatorInfo was set on.
-    // This is used as a form of time to help with the enforcement of the C test.
-    int32 block_num = 5;
+    // The header signature for the ValidatorRegistryPayload transaction. This
+    // will be used to look up the block the ValidatorInfo was committed on.
+    string transaction_id = 5;
 }
 
 
@@ -79,9 +79,5 @@ message ValidatorRegistryPayload {
 
     // This is the protocol buffer described above.
     SignUpInfo signup_info = 4;
-
-    // The block that this transaction is stored on.
-    // This is used as a form of time to help with the enforcement of the C test.
-    int32 block_num = 5;
 
 }

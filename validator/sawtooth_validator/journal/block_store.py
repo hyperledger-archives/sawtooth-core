@@ -196,7 +196,7 @@ class BlockStore(MutableMapping):
             for batch in block.batches:
                 batch_header = BatchHeader()
                 batch_header.ParseFromString(batch.header)
-                if transaction_id in batch_header.transactions_ids:
+                if transaction_id in batch_header.transaction_ids:
                     return batch
         else:
             raise ValueError("Transaction_id %s not found in BlockStore.",
