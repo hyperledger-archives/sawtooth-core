@@ -28,7 +28,7 @@ Prerequisites
 The following tools are required:
 
 * `Vagrant <https://www.vagrantup.com/downloads.html>`_ (1.9.0 or later)
-* `VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_ (5.0.10 r104061
+* `VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_ (5.1.16 r113841 
   or later)
 
 On Windows, you will also need to install:
