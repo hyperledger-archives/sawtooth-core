@@ -115,13 +115,41 @@ on the host:
 Building sawtooth-core
 ======================
 
-The vagrant environment is setup in such a way that installation of the
-software is not required.  However, the C++/swig code must be built.  To
-build, run the following inside vagrant:
+Most of the components of Sawtooth Lake depend partially on code that must
+first be built. This includes C++/swig code and generating protobuf classes for
+each language. Sawtooth Lake also includes SDKs for other languages, including
+Java and JavaScript, which require building. To build the python portion of
+Sawtooth Lake within vagrant, do:
+
+.. code-block:: console
+
+  $ /project/sawtooth-core/bin/build_python
+
+This will allow you to run and test Sawtooth Lake components manually. The
+automated tests for python and all other languages rely on docker to ensure
+reproducibility. To run the automated tests for python, first run the
+following:
+
+.. code-block:: console
+
+  $ /project/sawtooth-core/bin/build_all -l python
+
+This will create docker images for all the python components and run
+`build_python` inside a build container. You can then run the automated tests
+with:
+
+.. code-block:: console
+
+  $ /project/sawtooth-core/bin/run_tests -x java_sdk -x javascript_sdk
+
+If you are not behind a proxy, you can build and test everything Sawtooth Lake
+has to offer with:
 
 .. code-block:: console
 
   $ /project/sawtooth-core/bin/build_all
+  $ /project/sawtooth-core/bin/run_tests
+
 
 Validator Start-up Process
 ==========================
