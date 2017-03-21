@@ -86,12 +86,13 @@ node ('master') {
         }
 
         stage("Build the packages"){
-            sh 'docker build . -f docker/sawtooth-build-debs -t sawtooth-build-debs:$ISOLATION_ID'
+            sh 'docker build . -f ci/sawtooth-build-debs -t sawtooth-build-debs:$ISOLATION_ID'
             sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-debs:$ISOLATION_ID'
+            sh 'docker build --no-cache . -f ci/sawtooth-test-debs -t sawtooth-test-debs:$ISOLATION_ID'
         }
 
         stage ("Build documentation") {
-            sh 'docker build . -f docker/sawtooth-build-docs -t sawtooth-build-docs:$ISOLATION_ID'
+            sh 'docker build . -f ci/sawtooth-build-docs -t sawtooth-build-docs:$ISOLATION_ID'
             sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-docs:$ISOLATION_ID'
         }
 
