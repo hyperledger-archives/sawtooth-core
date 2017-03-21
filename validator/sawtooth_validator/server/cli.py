@@ -144,8 +144,8 @@ def main(args=sys.argv[1:]):
     try:
         validator.start()
     except KeyboardInterrupt:
-        print("Interrupted!", file=sys.stderr)
-        sys.exit(1)
+        LOGGER.info("Initiating graceful "
+                    "shutdown (press Ctrl+C again to force)")
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
@@ -155,3 +155,5 @@ def main(args=sys.argv[1:]):
     except Exception as e:
         LOGGER.exception(e)
         sys.exit(1)
+    finally:
+        validator.stop()
