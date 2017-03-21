@@ -18,7 +18,9 @@ from concurrent.futures import ProcessPoolExecutor
 import hashlib
 import logging
 import os
+import signal
 import time
+import threading
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
@@ -78,7 +80,10 @@ class Validator(object):
         LOGGER.debug('database file is %s', db_filename)
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'n')
+
         context_manager = ContextManager(merkle_db)
+        self._context_manager = context_manager
+
         state_view_factory = StateViewFactory(merkle_db)
 
         block_db_filename = os.path.join(data_dir, 'block-{}.lmdb'.format(
@@ -94,23 +99,26 @@ class Validator(object):
         thread_pool = ThreadPoolExecutor(max_workers=10)
         process_pool = ProcessPoolExecutor(max_workers=3)
 
+        self._thread_pool = thread_pool
+        self._process_pool = process_pool
+
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
                                      secured=False,
                                      heartbeat=False,
                                      max_incoming_connections=20)
+
         executor = TransactionExecutor(service=self._service,
                                        context_manager=context_manager,
                                        config_view_factory=ConfigViewFactory(
                                            StateViewFactory(merkle_db)))
-
-        # needed for running callbacks from the TransactionExecutor
-        self._service.setup_future_threadpool(max_workers=10)
+        self._executor = executor
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
 
         network_thread_pool = ThreadPoolExecutor(max_workers=10)
+        self._network_thread_pool = network_thread_pool
 
         self._network_dispatcher = Dispatcher()
 
@@ -132,8 +140,6 @@ class Validator(object):
             heartbeat=True,
             connection_timeout=30,
             max_incoming_connections=100)
-
-        self._network.setup_future_threadpool(max_workers=10)
 
         self._gossip = Gossip(self._network,
                               initial_peer_endpoints=peer_list)
@@ -334,11 +340,58 @@ class Validator(object):
 
     def _start(self):
         self._network_dispatcher.start()
-        self._network.start(daemon=True)
+        self._network.start()
+
         self._gossip.start()
         self._journal.start()
 
+        signal_event = threading.Event()
+
+        signal.signal(signal.SIGTERM,
+                      lambda sig, fr: signal_event.set())
+        # This is where the main thread will be during the bulk of the
+        # validator's life.
+        while not signal_event.is_set():
+            signal_event.wait(timeout=20)
+
     def stop(self):
-        self._service.stop()
         self._network.stop()
+
+        self._service.stop()
+
+        self._process_pool.shutdown(wait=True)
+        self._network_thread_pool.shutdown(wait=True)
+        self._thread_pool.shutdown(wait=True)
+
+        self._executor.stop()
+        self._context_manager.stop()
+
         self._journal.stop()
+
+        threads = threading.enumerate()
+
+        # This will remove the MainThread, which will exit when we exit with
+        # a sys.exit() or exit of main().
+        threads.remove(threading.current_thread())
+
+        # Several Thread subclasses have a stop method not defined
+        # in superclass.
+        for t in threads:
+            if hasattr(t, 'stop'):
+                t.stop()
+
+        while len(threads) > 0:
+            if len(threads) < 4:
+                LOGGER.info(
+                    "remaining threads: %s",
+                    ", ".join(
+                        ["{} ({})".format(x.name, x.__class__.__name__)
+                         for x in threads]))
+            for t in threads.copy():
+                if not t.is_alive():
+                    t.join()
+                    threads.remove(t)
+                if len(threads) > 0:
+                    time.sleep(1)
+
+        LOGGER.info("All threads have been stopped and joined")
