@@ -100,10 +100,5 @@ node ('master') {
             archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
-
-        stage("Clean up") {
-            sh 'docker rmi sawtooth-build-debs:$ISOLATION_ID'
-            sh 'docker rmi sawtooth-build-docs:$ISOLATION_ID'
-        }
     }
 }
