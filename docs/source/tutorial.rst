@@ -65,8 +65,7 @@ Open up a terminal and run the following:
 Environment Startup
 ===================
 
-In order to start the vagrant VM, change the current working directory to
-sawtooth-core/tools on the host and run:
+In order to start the vagrant VM, run:
 
 .. code-block:: console
 
@@ -94,6 +93,15 @@ without setting up additional accounts or credentials. The logged in user,
 vagrant (uid 1000), also has permissions to execute sudo with no password
 required. Any number of `vagrant ssh` sessions can be established from the
 host.
+
+.. note::
+
+   Occasionally, the configuration files used to create the vagrant
+   environment change and this can result in vagrant asking for a password when
+   doing `vagrant up` or `vagrant ssh`. This is usually a sign that your
+   environment is out of date. If this happens, please follow the instructions
+   below to reset your environment. This is especially common when switching
+   between versions of Sawtooth Lake, eg. 0.7 -> 0.8.
 
 Resetting The Environment
 =========================
