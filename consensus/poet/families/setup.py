@@ -73,11 +73,11 @@ setup(name='sawtooth-poet-families',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[
-          'sawtooth-signing',
-          'sawtooth-sdk',
-          'sawtooth-poet-common',
           'colorlog',
           'cryptography>=1.7.1',
-          'protobuf'
+          'protobuf',
+          'sawtooth-poet-common',
+          'sawtooth-sdk',
+          'sawtooth-signing',
           ],
       entry_points={})

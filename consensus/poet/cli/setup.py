@@ -77,4 +77,8 @@ setup(name='sawtooth-poet-cli',
           'colorlog',
           'protobuf'
           ],
-      entry_points={})
+      entry_points={
+          'console_scripts': [
+              'poet = sawtooth_poet_cli.main:main_wrapper'
+          ]
+      })

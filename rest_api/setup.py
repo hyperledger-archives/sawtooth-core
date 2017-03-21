@@ -1,4 +1,4 @@
-# Copyright 2016, 2017 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,6 +79,6 @@ setup(name='sawtooth-rest-api',
           ],
       entry_points={
           'console_scripts': [
-              'stl-rest-api = sawtooth_rest_api.rest_api:main'
+              'rest_api = sawtooth_rest_api.rest_api:main'
           ]
       })

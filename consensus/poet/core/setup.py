@@ -79,6 +79,6 @@ setup(name='sawtooth-poet-core',
           'cryptography>=1.7.1',
           'colorlog',
           'protobuf',
-          'requests'
+          'requests',
           ],
       entry_points={})
