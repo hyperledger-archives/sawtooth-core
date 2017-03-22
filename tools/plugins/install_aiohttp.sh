@@ -3,6 +3,6 @@
 set -e
 
 pip3 install \
-    aiohttp \
+    aiohttp==1.3.5 \
     cchardet \
     aiodns
