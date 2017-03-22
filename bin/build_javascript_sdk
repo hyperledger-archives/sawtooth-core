@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 cd $top_dir/sdk/javascript
-yarn install --force --no-bin-links
+yarn cache clean && yarn install --force --no-bin-links

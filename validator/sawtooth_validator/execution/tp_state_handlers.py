@@ -19,6 +19,7 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.execution.context_manager import AuthorizationException
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,13 +32,25 @@ class TpStateGetHandler(Handler):
     def handle(self, connection_id, message_content):
         get_request = state_context_pb2.TpStateGetRequest()
         get_request.ParseFromString(message_content)
-        return_values = self._context_manager.get(
-            get_request.context_id, get_request.addresses)
+        try:
+            return_values = self._context_manager.get(
+                get_request.context_id, get_request.addresses)
+        except AuthorizationException:
+            response = \
+                state_context_pb2.TpStateGetResponse(
+                    status=state_context_pb2.
+                    TpStateGetResponse.AUTHORIZATION_ERROR)
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                response,
+                validator_pb2.Message.TP_STATE_GET_RESPONSE)
+
         return_list = return_values if return_values is not None else []
         LOGGER.debug("GET: %s", return_list)
         entry_list = [state_context_pb2.Entry(address=a,
                                               data=d) for a, d in return_list]
-        response = state_context_pb2.TpStateGetResponse()
+        response = state_context_pb2.TpStateGetResponse(
+            status=state_context_pb2.TpStateGetResponse.OK)
         response.entries.extend(entry_list)
         return HandlerResult(
             HandlerStatus.RETURN,
@@ -59,9 +72,21 @@ class TpStateSetHandler(Handler):
         set_request = state_context_pb2.TpStateSetRequest()
         set_request.ParseFromString(message_content)
         set_values_list = [{e.address: e.data} for e in set_request.entries]
-        return_value = self._context_manager.set(set_request.context_id,
-                                                 set_values_list)
-        response = state_context_pb2.TpStateSetResponse()
+        try:
+            return_value = self._context_manager.set(set_request.context_id,
+                                                     set_values_list)
+        except AuthorizationException:
+            response = \
+                state_context_pb2.TpStateSetResponse(
+                    status=state_context_pb2.
+                    TpStateSetResponse.AUTHORIZATION_ERROR)
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                response,
+                validator_pb2.Message.TP_STATE_GET_RESPONSE)
+
+        response = state_context_pb2.TpStateSetResponse(
+            status=state_context_pb2.TpStateGetResponse.OK)
         if return_value is True:
             address_list = [e.address for e in set_request.entries]
             LOGGER.debug("SET: %s", address_list)

@@ -32,7 +32,13 @@ message TpStateGetRequest {
 
 // A response from the contextmanager/validator with a series of State entries
 message TpStateGetResponse {
+    enum Status {
+        OK = 0;
+        AUTHORIZATION_ERROR = 1;
+    }
+
     repeated Entry entries = 1;
+    Status status = 2;
 }
 
 // A request from the handler/tp to put entries in the state of a context
@@ -43,7 +49,13 @@ message TpStateSetRequest {
 
 // A response from the contextmanager/validator with the addresses that were set
 message TpStateSetResponse {
+  enum Status {
+      OK = 0;
+      AUTHORIZATION_ERROR = 1;
+  }
+
     repeated string addresses = 1;
+    Status status = 2;
 }
 
 // A request from the handler/tp to delete state entries at an collection of addresses
