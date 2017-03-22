@@ -53,16 +53,23 @@ class TransactionProcessor(object):
         """
         self._handlers.append(handler)
 
+    def _matches(self, handler, header):
+        return header.family_name == handler.family_name \
+            and header.family_version in handler.family_versions \
+            and header.payload_encoding in handler.encodings
+
     def _find_handler(self, header):
         """Find a handler for a particular (family_name,
         family_versions, payload_encoding)
         :param header transaction_pb2.TransactionHeader:
         :return: handler
         """
-        return list(filter(lambda h: header.family_name == h.family_name and
-                           header.family_version in h.family_versions and
-                           header.payload_encoding in h.encodings,
-                           self._handlers))[0]
+        try:
+            return next(handler for handler in self._handlers
+                        if self._matches(handler, header))
+        except StopIteration:
+            LOGGER.debug("Missing handler for header: %s", header)
+            return None
 
     def _register_requests(self):
         """Returns all of the TpRegisterRequests for handlers
@@ -91,6 +98,13 @@ class TransactionProcessor(object):
         return TpUnregisterRequest()
 
     def _process(self, msg):
+        if msg.message_type != Message.TP_PROCESS_REQUEST:
+            LOGGER.debug(
+                "Transaction Processor recieved invalid message type. "
+                "Message type should be TP_PROCESS_REQUEST,"
+                " but is %s", Message.MessageType.Name(msg.message_type))
+            return
+
         request = TpProcessRequest()
         request.ParseFromString(msg.content)
         state = State(self._stream, request.context_id)
@@ -99,7 +113,10 @@ class TransactionProcessor(object):
         try:
             if not self._stream.is_ready():
                 raise ValidatorConnectionError()
-            self._find_handler(header).apply(request, state)
+            handler = self._find_handler(header)
+            if handler is None:
+                return
+            handler.apply(request, state)
             self._stream.send_back(
                 message_type=Message.TP_PROCESS_RESPONSE,
                 correlation_id=msg.correlation_id,
