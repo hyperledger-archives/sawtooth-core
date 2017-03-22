@@ -64,6 +64,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         the tests expect to find:
             - a status of OK
             - a head_id of 'B-2' (the latest)
+            - the default paging response, showing all 3 resources returned
             - a list of leaves with 3 items
             - that the list contains instances of Leaf
             - that there is a leaf with an address of 'a' and data of b'3'
@@ -72,6 +73,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
         self.assertEqual(3, len(response.leaves))
         self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual(b'3', self._find_value(response.leaves, 'a'))
@@ -81,27 +83,30 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of INTERNAL_ERROR
-            - that leaves and head_id are missing
+            - that head_id, paging, and leaves are missing
         """
         response = self.make_bad_request(head_id='B-1')
 
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
-        self.assertFalse(response.leaves)
         self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.leaves)
+
 
     def test_state_list_no_genesis(self):
         """Verifies requests for lists of data break properly with no genesis.
 
         Expects to find:
             - a status of NOT_READY
-            - that leaves and head_id are missing
+            - that head_id, paging, and leaves are missing
         """
         self.break_genesis()
         response = self.make_request()
 
         self.assertEqual(self.status.NOT_READY, response.status)
-        self.assertFalse(response.leaves)
         self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.leaves)
 
     def test_state_list_with_root(self):
         """Verifies requests for data lists work properly with a merkle root.
@@ -112,6 +117,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - that head_id is missing (queried by root)
+            - a paging response showing all 1 resources returned
             - a list of leaves with 1 item
             - that the list contains instances of Leaf
             - that Leaf has an address of 'a' and data of b'1'
@@ -120,6 +126,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertFalse(response.head_id)
+        self.assert_valid_paging(response, total=1)
         self.assertEqual(1, len(response.leaves))
 
         self.assert_all_instances(response.leaves, client_pb2.Leaf)
@@ -131,12 +138,13 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of NO_ROOT
-            - that leaves and head_id are missing
+            - that head_id, paging, and leaves are missing
         """
         response = self.make_request(merkle_root='bad')
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.leaves)
 
     def test_state_list_with_head(self):
@@ -147,7 +155,8 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of OK
-            - a head_id of '1'
+            - a head_id of 'B-1'
+            - a paging response showing all 2 resources returned
             - a list of leaves with 2 items
             - that the list contains instances of Leaf
             - that there is a leaf with an address of 'a' and data of b'1'
@@ -156,6 +165,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('B-1', response.head_id)
+        self.assert_valid_paging(response, total=2)
         self.assertEqual(2, len(response.leaves))
 
         self.assert_all_instances(response.leaves, client_pb2.Leaf)
@@ -166,12 +176,13 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of NO_ROOT
-            - that leaves and head_id are missing
+            - that head_id, paging, and leaves are missing
         """
         response = self.make_request(head_id='bad')
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.leaves)
 
     def test_state_list_with_address(self):
@@ -183,6 +194,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'B-2' (the latest)
+            - a paging response showing all 1 resources returned
             - a list of leaves with 1 item
             - that the list contains instances of Leaf
             - that Leaf matches the address of 'c' and has data of b'7'
@@ -191,6 +203,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response, total=1)
         self.assertEqual(1, len(response.leaves))
 
         self.assert_all_instances(response.leaves, client_pb2.Leaf)
@@ -202,13 +215,14 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of NO_RESOURCE
-            - a head_id of '2' (the latest chain head id)
-            - that leaves is missing
+            - a head_id of 'B-2' (the latest chain head id)
+            - that paging and leaves are missing
         """
         response = self.make_request(address='bad')
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual('B-2', response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.leaves)
 
     def test_state_list_with_head_and_address(self):
@@ -220,6 +234,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'B-1'
+            - a paging response showing all 1 resources returned
             - a list of leaves with 1 item
             - that the list contains instances of Leaf
             - that Leaf matches the address of 'b', and has data of b'4'
@@ -228,6 +243,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual('B-1', response.head_id)
+        self.assert_valid_paging(response, total=1)
         self.assertEqual(1, len(response.leaves))
 
         self.assert_all_instances(response.leaves, client_pb2.Leaf)
@@ -243,12 +259,13 @@ class TestStateListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of NO_RESOURCE
             - a head_id of 'B-1'
-            - that leaves is missing
+            - that paging and leaves are missing
         """
         response = self.make_request(address='c', head_id='B-1')
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual('B-1', response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.leaves)
 
     def test_state_list_paginated(self):
