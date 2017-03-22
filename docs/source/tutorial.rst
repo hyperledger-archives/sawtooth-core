@@ -47,7 +47,7 @@ ssh which is required by Vagrant. During installation, accept all defaults.
   to control whether or not LF-style line endings are automatically converted
   to CRLF-style line endings. `This setting should be set in such a way that 
   CRLFs are not introduced into your repository 
-  <https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration>`_. 
+  <https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration>`_.
 
 
 Clone Repository
@@ -61,6 +61,17 @@ Open up a terminal and run the following:
    % mkdir project
    % cd project
    % git clone https://github.com/hyperledger/sawtooth-core.git
+
+.. note::
+
+  On a Windows environment, the suggested version of the last command
+  above is:
+
+  .. code-block:: console
+
+      C:\> git clone https://github.com/hyperledger/sawtooth-core.git
+      --config core.autocrlf=false
+
 
 Environment Startup
 ===================
