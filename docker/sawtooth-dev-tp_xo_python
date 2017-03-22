@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM sawtooth-base
+FROM sawtooth-dev-base
 
 RUN mkdir -p /project/sawtooth-core
 
@@ -21,4 +21,4 @@ ARG PROJECT_DIR="/project/sawtooth-core"
 
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ./bin/tp_validator_registry validator:40000
+ENTRYPOINT ./bin/tp_xo_python tcp://validator:40000
