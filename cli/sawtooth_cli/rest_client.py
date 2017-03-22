@@ -18,6 +18,9 @@ import urllib.request as urllib
 from urllib.parse import urlencode
 from urllib.error import URLError, HTTPError
 from http.client import RemoteDisconnected
+# pylint: disable=no-name-in-module,import-error
+# needed for the google.protobuf imports to pass pylint
+from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_cli.exceptions import CliException
 
@@ -69,7 +72,10 @@ class RestClient(object):
         Returns:
             dict: the json result data, as a dict
         """
-        return self._post('/batches', batch_list.SerializeToString())
+        if isinstance(batch_list, BaseMessage):
+            batch_list = batch_list.SerializeToString()
+
+        return self._post('/batches', batch_list)
 
     def _get(self, path, **queries):
         code, json_result = self._submit_request(
