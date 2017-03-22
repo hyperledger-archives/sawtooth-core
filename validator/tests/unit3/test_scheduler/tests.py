@@ -180,6 +180,96 @@ class TestSerialScheduler(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(iterable)
 
+    def test_completion_on_finalize_only_when_done(self):
+        """Tests that iteration will stop when finalized is called on an
+        otherwise complete scheduler.
+
+        Adds one batch and transaction, then verifies the iterable returns
+        that transaction.  Finalizes then sets the execution result. The
+        schedule should not be marked as complete.
+
+        This check is useful in making sure the finalize() can occur after
+        all set_transaction_execution_result()s have been performed, because
+        in a normal situation, finalize will probably occur prior to those
+        calls.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        txn = create_transaction(
+            name='a',
+            private_key=private_key,
+            public_key=public_key)
+
+        batch = create_batch(
+            transactions=[txn],
+            private_key=private_key,
+            public_key=public_key)
+
+        iterable = iter(self.scheduler)
+
+        self.scheduler.add_batch(batch)
+
+        scheduled_txn_info = next(iterable)
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
+        self.scheduler.finalize()
+        self.assertFalse(self.scheduler.complete(block=False))
+        self.scheduler.set_transaction_execution_result(
+            txn.header_signature, False, None)
+        self.assertTrue(self.scheduler.complete(block=False))
+
+        with self.assertRaises(StopIteration):
+            next(iterable)
+
+    def test_completion_on_last_result(self):
+        """Tests the that the schedule is not marked complete until the last
+        result is set.
+
+        Adds three batches with varying number of transactions, then tests
+        that they are returned in the appropriate order when using an iterator.
+        Test that the value of `complete` is false until the last value.
+
+        This test also finalizes the scheduler and verifies that StopIteration
+        is thrown by the iterator, and the complete is true in the at the end.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        txns = []
+
+        for names in [['a', 'b', 'c'], ['d', 'e'], ['f', 'g', 'h', 'i']]:
+            batch_txns = []
+            for name in names:
+                txn = create_transaction(
+                    name=name,
+                    private_key=private_key,
+                    public_key=public_key)
+
+                batch_txns.append(txn)
+                txns.append(txn)
+
+            batch = create_batch(
+                transactions=batch_txns,
+                private_key=private_key,
+                public_key=public_key)
+
+            self.scheduler.add_batch(batch)
+
+        self.scheduler.finalize()
+
+        iterable1 = iter(self.scheduler)
+        for txn in txns:
+            scheduled_txn_info = next(iterable1)
+            self.assertFalse(self.scheduler.complete(block=False))
+            self.scheduler.set_transaction_execution_result(
+                txn.header_signature, False, None)
+
+        self.assertTrue(self.scheduler.complete(block=False))
+
+        with self.assertRaises(StopIteration):
+            next(iterable1)
+
     def test_add_batch_after_empty_iteration(self):
         """Tests that iterations will continue as result of add_batch().
 
