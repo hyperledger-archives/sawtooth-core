@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import unittest
+from sawtooth_validator.protobuf import client_pb2
 
 
 class ClientHandlerTestCase(unittest.TestCase):
@@ -30,7 +31,18 @@ class ClientHandlerTestCase(unittest.TestCase):
         self.roots = roots
 
     def make_request(self, **kwargs):
+        """Serializes kwargs with the protobuf request, sends it to handler
+        """
         return self._handle(self._serialize(**kwargs))
+
+    def make_paged_request(self, **kwargs):
+        """Parses out paging kwargs and adds them into a PagingControls object,
+        before sending it all on to `make_request`
+        """
+        paging_keys = ['start_id', 'end_id', 'start_index', 'count']
+        paging_args = {k: kwargs.pop(k) for k in paging_keys if k in kwargs}
+        paging_request = client_pb2.PagingControls(**paging_args)
+        return self.make_request(paging=paging_request, **kwargs)
 
     def _serialize(self, **kwargs):
         request = self._request_proto(**kwargs)
@@ -57,3 +69,14 @@ class ClientHandlerTestCase(unittest.TestCase):
         """
         for item in items:
             self.assertIsInstance(item, cls)
+
+    def assert_valid_paging(self, response, next_id='', previous_id='',
+                                start_index=0, total=3):
+        """Checks that a response's PagingResponse is set properly.
+        Defaults to expecting a single page with all mock resources.
+        """
+        self.assertIsInstance(response.paging, client_pb2.PagingResponse)
+        self.assertEqual(response.paging.next_id, next_id)
+        self.assertEqual(response.paging.previous_id, previous_id)
+        self.assertEqual(response.paging.start_index, start_index)
+        self.assertEqual(response.paging.total_resources, total)

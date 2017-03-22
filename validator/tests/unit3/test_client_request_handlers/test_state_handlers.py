@@ -251,6 +251,177 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual('B-1', response.head_id)
         self.assertFalse(response.leaves)
 
+    def test_state_list_paginated(self):
+        """Verifies requests for data lists work when paginated just by count.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response with a next_id of 'c'
+            - a list of leaves with 2 items
+            - those items are instances of Leaf
+        """
+        response = self.make_paged_request(count=2)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response, next_id='c')
+        self.assertEqual(2, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+
+    def test_state_list_paginated_by_start_id (self):
+        """Verifies data list requests work paginated by count and start_id.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response with:
+                * a next_id of 'c'
+                * a previous_id of 'a'
+                * a start_index of 1
+                * the default total resource count of 3
+            - a list of leaves with 1 item
+            - that item is an instance of Leaf
+            - that Leaf has an address of 'b' and data of b'5'
+        """
+        response = self.make_paged_request(count=1, start_id='b')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response, 'c', 'a', 1)
+        self.assertEqual(1, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+        self.assertEqual('b', response.leaves[0].address)
+        self.assertEqual(b'5', response.leaves[0].data)
+
+    def test_state_list_paginated_by_end_id (self):
+        """Verifies data list requests work paginated by count and end_id.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response with:
+                * the default empty next_id
+                * a previous_id of 'a'
+                * a start_index of 1
+                * the default total resource count of 3
+            - a list of leaves with 2 items
+            - those items are instances of Leaf
+            - the last leaf has an address of 'c' and data of b'7'
+        """
+        response = self.make_paged_request(count=2, end_id='c')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response, previous_id='a', start_index=1)
+        self.assertEqual(2, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+        self.assertEqual('c', response.leaves[1].address)
+        self.assertEqual(b'7', response.leaves[1].data)
+
+    def test_state_list_paginated_by_index (self):
+        """Verifies data list requests work paginated by count and min_index.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response with a next_id of 'b'
+            - a list of leaves with 1 item
+            - that item is an instance of Leaf
+            - that Leaf has an address of 'a' and data of b'3'
+        """
+        response = self.make_paged_request(count=1, start_index=0)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response, next_id='b')
+        self.assertEqual(1, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+        self.assertEqual('a', response.leaves[0].address)
+        self.assertEqual(b'3', response.leaves[0].data)
+
+    def test_state_list_with_bad_pagination(self):
+        """Verifies data requests break when paging specifies missing leaves.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - a head_id of 'B-2', the latest
+            - that paging and leaves are missing
+        """
+        response = self.make_paged_request(count=3, start_id='bad')
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.leaves)
+
+    def test_state_list_paginated_with_head (self):
+        """Verifies data list requests work with both paging and a head id.
+
+        Queries the second state in the default mock db:
+            {'a': b'2', 'b': b'4'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-1'
+            - a paging response with:
+                * an empty next_id
+                * a previous_id of 'a'
+                * a start_index of 1
+                * a total resource count of 2
+            - a list of leaves with 1 item
+            - that item is an instance of Leaf
+            - that has a header_signature of 'b-0'
+        """
+        response = self.make_paged_request(count=1, start_index=1, head_id='B-1')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-1', response.head_id)
+        self.assert_valid_paging(response, '', 'a', 1, 2)
+        self.assertEqual(1, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+        self.assertEqual('b', response.leaves[0].address)
+        self.assertEqual(b'4', response.leaves[0].data)
+
+    def test_state_list_paginated_with_address (self):
+        """Verifies data list requests work with both paging and an address.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response with a total resource count of 1
+            - a list of leaves with 1 item
+            - that item is an instance of Leaf
+            - that has a header_signature of 'b-0'
+        """
+        response = self.make_paged_request(count=1, start_index=0, address='b')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response, total=1)
+        self.assertEqual(1, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+        self.assertEqual('b', response.leaves[0].address)
+        self.assertEqual(b'5', response.leaves[0].data)
+
 
 class TestStateGetRequests(ClientHandlerTestCase):
     def setUp(self):
