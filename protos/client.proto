@@ -30,7 +30,7 @@ message Leaf {
 
 // Submits a list of Batches to be added to the blockchain.
 // If `wait_for_commit` is set to true, the validator will wait to respond
-// until all batches are committed, or until the specified `timeout
+// until all batches are committed, or until the specified `timeout`
 // in seconds has elapsed. Defaults to 300.
 message ClientBatchSubmitRequest {
     repeated Batch batches = 1;

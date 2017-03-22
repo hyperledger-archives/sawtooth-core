@@ -30,6 +30,7 @@ from sawtooth_validator.protobuf import validator_pb2
 
 
 LOGGER = logging.getLogger(__name__)
+DEFAULT_TIMEOUT = 300
 
 
 class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
@@ -305,7 +306,7 @@ class BatchSubmitFinisher(_ClientRequestHandler):
 
         self._block_store.wait_for_batch_commits(
             batch_ids=batch_ids,
-            timeout=request.timeout)
+            timeout=request.timeout or DEFAULT_TIMEOUT)
 
         statuses = self._get_statuses(batch_ids)
         return self._wrap_response(batch_statuses=statuses)
@@ -324,7 +325,7 @@ class BatchStatusRequest(_ClientRequestHandler):
         if request.wait_for_commit:
             self._block_store.wait_for_batch_commits(
                 batch_ids=request.batch_ids,
-                timeout=request.timeout)
+                timeout=request.timeout or DEFAULT_TIMEOUT)
 
         statuses = self._get_statuses(request.batch_ids)
         if not statuses:
