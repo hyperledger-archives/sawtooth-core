@@ -18,6 +18,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
+import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.Entry;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
@@ -53,7 +54,8 @@ public class State {
    * @return Map where the keys are addresses, values Bytestring
    * @throws InternalError something went wrong processing transaction
    */
-  public Map<String, ByteString> get(Collection<String> addresses) throws InternalError {
+  public Map<String, ByteString> get(Collection<String> addresses)
+      throws InternalError, InvalidTransactionException {
 
     TpStateGetRequest getRequest = TpStateGetRequest.newBuilder()
             .addAllAddresses(addresses)
@@ -77,6 +79,10 @@ public class State {
     }
     Map<String, ByteString> results = new HashMap<String, ByteString>();
     if (getResponse != null) {
+      if (getResponse.getStatus() == TpStateGetResponse.Status.AUTHORIZATION_ERROR) {
+        throw new InvalidTransactionException(
+          "Tried to get unauthorized address " + addresses.toString()) ;
+      }
       for (Entry entry : getResponse.getEntriesList()) {
         results.put(entry.getAddress(), entry.getData());
       }
@@ -92,7 +98,7 @@ public class State {
    * @throws InternalError something went wrong processing transaction
    */
   public Collection<String> set(Collection<java.util.Map.Entry<String,
-          ByteString>> addressValuePairs) throws InternalError {
+          ByteString>> addressValuePairs) throws InternalError, InvalidTransactionException {
     ArrayList<Entry> entryArrayList = new ArrayList<Entry>();
     for (Map.Entry<String, ByteString> entry : addressValuePairs) {
       Entry ourEntry = Entry.newBuilder()
@@ -124,6 +130,10 @@ public class State {
     }
     ArrayList<String> addressesThatWereSet = new ArrayList<String>();
     if (setResponse != null) {
+      if (setResponse.getStatus() == TpStateSetResponse.Status.AUTHORIZATION_ERROR) {
+        throw new InvalidTransactionException(
+          "Tried to set unauthorized address " + addressValuePairs.toString());
+      }
       for (String address : setResponse.getAddressesList()) {
         addressesThatWereSet.add(address);
       }
