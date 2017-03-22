@@ -88,8 +88,10 @@ class SerialScheduler(Scheduler):
                             is_valid=is_valid,
                             state_hash=self._last_state_hash)
 
-            if self._final and self._txn_queue.empty():
-                self._complete = True
+                is_last_batch = \
+                    len(self._batch_statuses) == len(self._last_in_batch)
+                if self._final and is_last_batch:
+                    self._complete = True
             self._condition.notify_all()
 
     def add_batch(self, batch, state_hash=None):
@@ -137,7 +139,7 @@ class SerialScheduler(Scheduler):
     def finalize(self):
         with self._condition:
             self._final = True
-            if self._txn_queue.empty():
+            if len(self._batch_statuses) == len(self._last_in_batch):
                 self._complete = True
             self._condition.notify_all()
 
