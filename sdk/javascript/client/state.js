@@ -18,7 +18,7 @@
 'use strict'
 
 const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
-
+const {InvalidTransaction} = require('sawtooth-sdk/processor/exceptions')
 class State {
   constructor (stream, contextId) {
     this._stream = stream
@@ -32,9 +32,7 @@ class State {
    */
   get (addresses) {
     let getRequest = TpStateGetRequest.encode({addresses, contextId: this._contextId}).finish()
-
     let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST, getRequest)
-
     return future.then((buffer) => {
       let getResponse = TpStateGetResponse.decode(buffer)
 
@@ -42,7 +40,9 @@ class State {
       getResponse.entries.forEach((entry) => {
         results[entry.address] = entry.data
       })
-
+      if (getResponse.status === TpStateGetResponse.Status.AUTHORIZATION_ERROR){
+        throw new InvalidTransaction(`Tried to get unauthorized address ${addresses}`)
+      }
       return results
     })
   }
@@ -62,7 +62,10 @@ class State {
 
     return future.then((buffer) => {
       let setResponse = TpStateSetResponse.decode(buffer)
-
+      if (setResponse.status === TpStateSetResponse.Status.AUTHORIZATION_ERROR){
+        let addresses = Object.keys(addressValuePairs)
+        throw new InvalidTransaction(`Tried to set unauthorized address ${addresses}`)
+      }
       return setResponse.addresses
     })
   }
