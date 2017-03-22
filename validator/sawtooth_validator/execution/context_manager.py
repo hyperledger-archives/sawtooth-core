@@ -149,7 +149,7 @@ class StateContext(object):
         found_values = []
         for address in address_list:
             if address not in self._read_list:
-                LOGGER.warning("Authorization exception, address: %s", address)
+                LOGGER.debug("Authorization exception, address: %s", address)
                 raise AuthorizationException(address)
             found_values.append((address,
                                 self._state.get(address)))
@@ -159,6 +159,8 @@ class StateContext(object):
         for add_value_dict in address_value_list:
             for address in add_value_dict.keys():
                 if address not in self._write_list:
+                    LOGGER.debug("Authorization exception, address: %s",
+                                 address)
                     raise AuthorizationException(address)
 
 
