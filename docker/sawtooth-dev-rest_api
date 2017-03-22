@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM sawtooth-base
+FROM sawtooth-dev-base
+
+RUN pip3 install aiohttp==1.3.5
 
 RUN mkdir -p /project/sawtooth-core
 
@@ -21,4 +23,6 @@ ARG PROJECT_DIR="/project/sawtooth-core"
 
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ./bin/tp_config tcp://validator:40000
+EXPOSE 40000
+
+ENTRYPOINT ./bin/rest_api

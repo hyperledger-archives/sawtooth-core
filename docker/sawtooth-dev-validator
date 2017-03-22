@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM sawtooth-base
+FROM sawtooth-dev-base
 
 RUN mkdir -p /project/sawtooth-core
+RUN mkdir -p /var/log/sawtooth
+RUN mkdir -p /var/lib/sawtooth
+RUN mkdir -p /etc/sawtooth
+RUN mkdir -p /etc/sawtooth/keys
 
 ARG PROJECT_DIR="/project/sawtooth-core"
 
 WORKDIR $PROJECT_DIR
 
-ENTRYPOINT ./bin/tp_intkey_python tcp://validator:40000
+EXPOSE 40000
+
+ENTRYPOINT ./bin/validator
