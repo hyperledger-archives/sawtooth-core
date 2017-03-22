@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y -q \
 
 RUN pip3 install \
     PyYAML \
-    aiohttp
+    aiohttp==1.3.5
 
 VOLUME /project/sawtooth-core
 

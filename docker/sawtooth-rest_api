@@ -15,7 +15,7 @@
 
 FROM sawtooth-base
 
-RUN pip3 install aiohttp
+RUN pip3 install aiohttp==1.3.5
 
 RUN mkdir -p /project/sawtooth-core
 
