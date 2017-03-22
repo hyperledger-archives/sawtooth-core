@@ -53,7 +53,7 @@ class ConfigView(object):
         """
         try:
             state_entry = self._state_view.get(
-                ConfigView._setting_address(key))
+                ConfigView.setting_address(key))
         except KeyError:
             return default_value
 
@@ -95,7 +95,7 @@ class ConfigView(object):
             return default_value
 
     @staticmethod
-    def _setting_address(key):
+    def setting_address(key):
         return CONFIG_STATE_NAMESPACE + \
             hashlib.sha256(key.encode()).hexdigest()
 
