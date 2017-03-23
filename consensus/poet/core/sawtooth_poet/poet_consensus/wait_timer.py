@@ -42,7 +42,7 @@ class WaitTimer(object):
             wait timer
     """
     minimum_wait_time = 1.0
-    target_wait_time = 30.0
+    target_wait_time = 20.0
     initial_wait_time = 3000.0
     certificate_sample_length = 50
     fixed_duration_blocks = certificate_sample_length
