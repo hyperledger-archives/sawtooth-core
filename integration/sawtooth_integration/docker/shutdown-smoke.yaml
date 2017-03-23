@@ -16,57 +16,14 @@
 version: "2.1"
 
 services:
-
-  genesis:
-    image: sawtooth-dev-validator:$ISOLATION_ID
-    container_name: genesis
-    volumes:
-      - ../../../:/project/sawtooth-core
-      - /var/lib/sawtooth
-      - /etc/sawtooth
-    entrypoint: "bash -c \"
-      bin/sawtooth admin keygen --force &&
-      bin/sawtooth admin genesis\""
-
-  validator-genesis:
-    image: sawtooth-dev-validator:$ISOLATION_ID
-    container_name: validator-genesis
-    volumes:
-      - ../../../:/project/sawtooth-core
-    volumes_from:
-      - genesis
-    entrypoint: bin/validator -v
-
-  keygen:
-    image: sawtooth-dev-validator:$ISOLATION_ID
-    container_name: keygen
-    volumes:
-      - ../../../:/project/sawtooth-core
-      - /etc/sawtooth
-    entrypoint: bin/sawtooth admin keygen --force
-
-  validator-non-genesis:
-    image: sawtooth-dev-validator:$ISOLATION_ID
-    container_name: validator-non-genesis
-    depends_on:
-     - validator-genesis
-    volumes_from:
-     - keygen
-    volumes:
-      - ../../../:/project/sawtooth-core
-    entrypoint: bin/validator -v --peers tcp://validator-genesis:8800
-
   integration_test:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
-    depends_on:
-      - validator-non-genesis
-      - validator-genesis
-    entrypoint: "bash -c \"
-      sleep 5 && \
-      nose2-3 -v test_shutdown_smoke.TestShutdownSmoke\""
+    entrypoint: "nose2-3 -v test_shutdown_smoke.TestShutdownSmoke"
     environment:
       PYTHONPATH: "/project/sawtooth-core/integration"
+      ISOLATION_ID: ${ISOLATION_ID}
+      VALIDATOR_IMAGE_NAME: "sawtooth-dev-validator"
