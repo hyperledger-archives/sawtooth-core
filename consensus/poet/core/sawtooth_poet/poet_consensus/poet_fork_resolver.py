@@ -24,10 +24,26 @@ LOGGER = logging.getLogger(__name__)
 class PoetForkResolver(ForkResolverInterface):
     # Provides the fork resolution interface for the BlockValidator to use
     # when deciding between 2 forks.
-    def __init__(self, block_cache, data_dir):
-        super().__init__(block_cache, data_dir)
+    def __init__(self, block_cache, state_view_factory, data_dir):
+        """Initialize the object, is passed (read-only) state access objects.
+            Args:
+                block_cache (BlockCache): Dict interface to the block cache.
+                    Any predecessor block to blocks handed to this object will
+                    be present in this dict.
+                state_view_factory (StateViewFactory): A factory that can be
+                    used to create read-only views of state for a particular
+                    merkle root, in particular the state as it existed when a
+                    particular block was the chain head.
+                data_dir (str): path to location where persistent data for the
+                    consensus module can be stored.
+            Returns:
+                none.
+        """
+        super().__init__(block_cache, state_view_factory, data_dir)
 
         self._block_cache = block_cache
+        self._state_view_factory = state_view_factory
+        self._data_dir = data_dir
 
     def compare_forks(self, cur_fork_head, new_fork_head):
         """Given the head of two forks, return which should be the fork that
@@ -38,8 +54,6 @@ class PoetForkResolver(ForkResolverInterface):
             cur_fork_head (Block): The current head of the block chain.
             new_fork_head (Block): The head of the fork that is being
             evaluated.
-            data_dir: path to location where persistent data for the consensus
-            module can be stored.
         Returns:
             Boolean: True if the new chain should replace the current chain.
             False if the new chain should be discarded.

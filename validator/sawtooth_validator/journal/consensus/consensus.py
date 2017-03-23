@@ -26,15 +26,20 @@ class BlockPublisherInterface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 batch_publisher,
+                 data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
                 block to blocks handed to this object will be present in this
                 dict.
-                state_view: A read only view of state for the last committed
-                block in the chain. For the block publisher this is the block
-                we are building on top of.
+                state_view_factory: A factory that can be used to create read-
+                only views of state for a particular merkle root, in
+                particular the state as it existed when a particular block
+                was the chain head.
                 batch_publisher: An interface implementing send(txn_list)
                 which wrap the transactions in a batch and broadcast that
                 batch to the network.
@@ -98,15 +103,16 @@ class BlockVerifierInterface(metaclass=ABCMeta):
     # considered as part of the fork being  evaluate. BlockVerifier must be
     # independent of block publishing activities.
     @abstractmethod
-    def __init__(self, block_cache, state_view, data_dir):
+    def __init__(self, block_cache, state_view_factory, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
                 block to blocks handed to this object will be present in this
                 dict.
-                state_view: A read only view of state for the last committed
-                block in the chain. For the BlockVerifier this is the previous
-                block in the chain.
+                state_view_factory: A factory that can be used to create read-
+                only views of state for a particular merkle root, in
+                particular the state as it existed when a particular block
+                was the chain head.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
             Returns:
@@ -130,7 +136,7 @@ class ForkResolverInterface(metaclass=ABCMeta):
     # Provides the fork resolution interface for the BlockValidator to use
     # when deciding between two forks.
     @abstractmethod
-    def __init__(self, block_cache, data_dir):
+    def __init__(self, block_cache, state_view_factory, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
         StateView is not passed to this object as it is ambiguous as to which
         state it is and all state dependent calculations should have been
@@ -140,6 +146,10 @@ class ForkResolverInterface(metaclass=ABCMeta):
                 block_cache: Dict interface to the block cache. Any predecessor
                 block to blocks handed to this object will be present in this
                 dict.
+                state_view_factory: A factory that can be used to create read-
+                only views of state for a particular merkle root, in
+                particular the state as it existed when a particular block
+                was the chain head.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
             Returns:

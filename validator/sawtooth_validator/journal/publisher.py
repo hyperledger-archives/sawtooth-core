@@ -122,7 +122,7 @@ class BlockPublisher(object):
 
         self._consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
-                           state_view=state_view,
+                           state_view_factory=self._state_view_factory,
                            batch_publisher=self._batch_publisher,
                            data_dir=self._data_dir)
 

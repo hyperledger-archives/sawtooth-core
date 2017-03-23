@@ -234,7 +234,7 @@ class GenesisController(object):
                 state_view)
             return consensus.BlockPublisher(
                 BlockCache(self._block_store),
-                state_view=state_view,
+                state_view_factory=self._state_view_factory,
                 batch_publisher=BatchPublisher(),
                 data_dir=self._data_dir)
         except UnknownConsensusModuleError as e:

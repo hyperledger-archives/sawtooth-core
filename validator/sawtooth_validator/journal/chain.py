@@ -188,12 +188,9 @@ class BlockValidator(object):
             else:
                 valid = True
 
-                prev_state = self._get_previous_block_root_state_hash(blkw)
-                state_view = self._state_view_factory.\
-                    create_view(prev_state)
                 consensus = self._consensus_module.\
                     BlockVerifier(block_cache=self._block_cache,
-                                  state_view=state_view,
+                                  state_view_factory=self._state_view_factory,
                                   data_dir=self._data_dir)
 
                 if valid:
@@ -291,6 +288,7 @@ class BlockValidator(object):
         """
         fork_resolver = self._consensus_module.\
             ForkResolver(block_cache=self._block_cache,
+                         state_view_factory=self._state_view_factory,
                          data_dir=self._data_dir)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)

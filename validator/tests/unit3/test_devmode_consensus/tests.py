@@ -18,6 +18,8 @@ import unittest
 import logging
 
 from test_journal.mock import MockStateViewFactory
+from test_client_request_handlers.mocks import MockBlockStore
+from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.consensus.dev_mode.dev_mode_consensus\
     import BlockPublisher
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -26,6 +28,7 @@ from sawtooth_validator.protobuf.setting_pb2 import Setting
 
 LOGGER = logging.getLogger(__name__)
 
+
 class TestCheckPublishBlock(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
@@ -33,22 +36,24 @@ class TestCheckPublishBlock(unittest.TestCase):
     def create_block_header(self, signer_pubkey=None):
         return BlockHeader(signer_pubkey=signer_pubkey)
 
-    def create_state_view(self, values):
+    def create_state_view_factory(self, values):
         state_db = {}
         if values is not None:
             for key, value in values.items():
                 state_db[ConfigView.setting_address(key)] = \
                     TestCheckPublishBlock._setting_entry(key, repr(value))
 
-        state_view_factory = MockStateViewFactory(state_db)
-        state_view = state_view_factory.create_view(None)
-        return state_view
+        return MockStateViewFactory(state_db)
 
     def test_default_settings(self):
-        state = self.create_state_view(values=None)
+        factory = self.create_state_view_factory(values=None)
 
-        dev_mode = BlockPublisher(None, state,
-                                  data_dir=None, batch_publisher = None)
+        dev_mode = \
+            BlockPublisher(
+                block_cache=BlockCache(block_store=MockBlockStore()),
+                state_view_factory=factory,
+                batch_publisher=None,
+                data_dir=None)
 
         block_header = self.create_block_header()
 
@@ -56,10 +61,15 @@ class TestCheckPublishBlock(unittest.TestCase):
 
     def test_min_wait_time(self):
         # non zero value of min wait time
-        state = self.create_state_view(
+        factory = self.create_state_view_factory(
             {"sawtooth.consensus.min_wait_time": 1
              })
-        dev_mode = BlockPublisher(None, state, batch_publisher=None, data_dir=None)
+        dev_mode = \
+            BlockPublisher(
+                block_cache=BlockCache(block_store=MockBlockStore()),
+                state_view_factory=factory,
+                batch_publisher=None,
+                data_dir=None)
         block_header = self.create_block_header()
 
         dev_mode.initialize_block(block_header)
@@ -75,17 +85,27 @@ class TestCheckPublishBlock(unittest.TestCase):
         pass
 
     def test_in_valid_block_publisher_list(self):
-        state = self.create_state_view({
+        factory = self.create_state_view_factory({
             "sawtooth.consensus.valid_block_publisher": ["name"]
 
         })
-        dev_mode = BlockPublisher(None, state, batch_publisher=None, data_dir=None)
+        dev_mode = \
+            BlockPublisher(
+                block_cache=BlockCache(block_store=MockBlockStore()),
+                state_view_factory=factory,
+                batch_publisher=None,
+                data_dir=None)
         block_header = self.create_block_header("name")
         self.assertTrue(dev_mode.check_publish_block(block_header))
 
     def test_not_in_valid_block_publisher_list(self):
-        state = self.create_state_view({})
-        dev_mode = BlockPublisher(None, state, batch_publisher=None, data_dir=None)
+        factory = self.create_state_view_factory({})
+        dev_mode = \
+            BlockPublisher(
+                block_cache=BlockCache(block_store=MockBlockStore()),
+                state_view_factory=factory,
+                batch_publisher=None,
+                data_dir=None)
         block_header = self.create_block_header("name")
         self.assertTrue(dev_mode.check_publish_block(block_header))
 

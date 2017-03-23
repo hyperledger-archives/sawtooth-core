@@ -35,22 +35,28 @@ class BlockPublisher(BlockPublisherInterface):
      DevMode Consensus (BlockPublisher) will read these settings
      from the StateView when Constructed.
     """
-
-    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
-        super().__init__(block_cache, state_view, batch_publisher, data_dir)
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 batch_publisher,
+                 data_dir):
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            batch_publisher,
+            data_dir)
 
         self._block_cache = block_cache
-        self._state_view = state_view
+        self._state_view_factory = state_view_factory
 
         self._start_time = 0
         self._wait_time = 0
-        config_view = ConfigView(self._state_view)
-        self._min_wait_time = config_view.get_setting(
-            "sawtooth.consensus.min_wait_time", 0, int)
-        self._max_wait_time = config_view.get_setting(
-            "sawtooth.consensus.max_wait_time", 0, int)
-        self._valid_block_publishers = config_view.get_setting(
-            "sawtooth.consensus.valid_block_publishers", None, list)
+
+        # Set these to default values right now, when we asked to initialize
+        # a block, we will go ahead and check real configuration
+        self._min_wait_time = 0
+        self._max_wait_time = 0
+        self._valid_block_publishers = None
 
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
@@ -62,6 +68,26 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             True
         """
+        # Using the current chain head, we need to create a state view so we
+        # can get our config values.  We are going to special case this until
+        # the genesis consensus is available.  We know that the genesis block
+        # is special cased to have a state view constructed for it.
+        state_root_hash = \
+            self._block_cache.block_store.chain_head.state_root_hash \
+            if self._block_cache.block_store.chain_head is not None \
+            else block_header.state_root_hash
+        state_view = self._state_view_factory.create_view(state_root_hash)
+
+        config_view = ConfigView(state_view)
+        self._min_wait_time = config_view.get_setting(
+            "sawtooth.consensus.min_wait_time", self._min_wait_time, int)
+        self._max_wait_time = config_view.get_setting(
+            "sawtooth.consensus.max_wait_time", self._max_wait_time, int)
+        self._valid_block_publishers = config_view.get_setting(
+            "sawtooth.consensus.valid_block_publishers",
+            self._valid_block_publishers,
+            list)
+
         block_header.consensus = b"Devmode"
         self._start_time = time.time()
         self._wait_time = random.uniform(
@@ -109,11 +135,8 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """DevMode BlockVerifier implementation
     """
-    def __init__(self, block_cache, state_view, data_dir):
-        super().__init__(block_cache, state_view, data_dir)
-
-        self._block_cache = block_cache
-        self._state_view = state_view
+    def __init__(self, block_cache, state_view_factory, data_dir):
+        super().__init__(block_cache, state_view_factory, data_dir)
 
     def verify_block(self, block_wrapper):
         return block_wrapper.header.consensus == b"Devmode"
@@ -123,10 +146,8 @@ class ForkResolver(ForkResolverInterface):
     """Provides the fork resolution interface for the BlockValidator to use
     when deciding between 2 forks.
     """
-    def __init__(self, block_cache, data_dir):
-        super().__init__(block_cache, data_dir)
-
-        self._block_cache = block_cache
+    def __init__(self, block_cache, state_view_factory, data_dir):
+        super().__init__(block_cache, state_view_factory, data_dir)
 
     @staticmethod
     def hash_signer_pubkey(signer_pubkey, header_signature):
