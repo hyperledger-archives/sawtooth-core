@@ -40,12 +40,24 @@ class RestClient(object):
         return self._get('/batches/' + safe_id)['data']
 
     def list_state(self, subtree=None, head=None):
-        queries = RestClient._remove_nones(address=subtree, head=head)
-        return self._get('/state', queries)
+        return self._get('/state', address=subtree, head=head)
 
     def get_leaf(self, address, head=None):
-        queries = RestClient._remove_nones(head=head)
-        return self._get('/state/' + address, queries)
+        return self._get('/state/' + address, head=head)
+
+    def get_statuses(self, batch_ids, wait=None):
+        """Fetches the committed status for a list of batch ids.
+
+        Args:
+            batch_ids (list of str): The ids to get the status of.
+            wait (optional, int): Indicates that the api should wait to
+                respond until the batches are committed or the specified
+                time in seconds has elapsed.
+
+        Returns:
+            dict: A statuses map, with ids as keys, and statuses values
+        """
+        return self._post('/batch_status', batch_ids, wait=wait)['data']
 
     def send_batches(self, batch_list):
         """Sends a list of batches to the validator.
@@ -56,31 +68,35 @@ class RestClient(object):
         Returns:
             dict: the json result data, as a dict
         """
-        data_bytes = batch_list.SerializeToString()
-        batch_request = urllib.Request(
-            self._base_url + '/batches',
-            data=data_bytes,
-            headers={
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': "%d" % len(data_bytes)
-            },
-            method='POST')
+        return self._post('/batches', batch_list.SerializeToString())
 
-        code, json_result = self._submit_request(batch_request)
-        if code == 200 or code == 202:
-            return json_result
-        else:
-            raise CliException("({}): {}".format(code, json_result))
-
-    def _get(self, path, queries=None):
-        query_string = '?' + urlencode(queries) if queries else ''
-
+    def _get(self, path, **queries):
         code, json_result = self._submit_request(
-            self._base_url + path + query_string)
+            self._base_url + path + self._format_queries(queries))
         if code == 200:
             return json_result
         elif code == 404:
             return None
+        else:
+            raise CliException("({}): {}".format(code, json_result))
+
+    def _post(self, path, data, **queries):
+        if isinstance(data, bytes):
+            headers = {'Content-Type': 'application/octet-stream'}
+        else:
+            data = json.dumps(data).encode()
+            headers = {'Content-Type': 'application/json'}
+        headers['Content-Length'] = '%d' % len(data)
+
+        request = urllib.Request(
+            self._base_url + path + self._format_queries(queries),
+            data,
+            headers=headers,
+            method='POST')
+
+        code, json_result = self._submit_request(request)
+        if code == 200 or code == 201 or code == 202:
+            return json_result
         else:
             raise CliException("({}): {}".format(code, json_result))
 
@@ -109,5 +125,6 @@ class RestClient(object):
                  'make sure URL is correct').format(self._base_url))
 
     @staticmethod
-    def _remove_nones(**kwargs):
-        return {k: v for k, v in kwargs.items() if v is not None}
+    def _format_queries(queries):
+        queries = {k: v for k, v in queries.items() if v is not None}
+        return '?' + urlencode(queries) if queries else ''
