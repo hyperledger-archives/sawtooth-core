@@ -71,6 +71,10 @@ node ('master') {
             sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_lint'
         }
 
+        stage("Run Bandit") {
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_bandit || $TRUE'
+        }
+
         // Run the tests
         stage("Run Tests") {
             sh './bin/run_tests -x java_sdk'

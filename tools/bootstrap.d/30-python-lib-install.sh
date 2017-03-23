@@ -2,4 +2,4 @@
 
 set -e
 
-pip3 install pylint
+pip3 install pylint bandit
