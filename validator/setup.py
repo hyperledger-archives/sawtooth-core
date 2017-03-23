@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,10 +92,7 @@ else:
     data_dir = "/var/lib/sawtooth"
 
 data_files = [
-    (conf_dir, [
-        "etc/path.toml.example",
-        "etc/txnvalidator-logging.yaml.example"
-    ]),
+    (conf_dir, ['etc/path.toml.example']),
     (os.path.join(conf_dir, "keys"), []),
     (log_dir, []),
     (data_dir, [])
@@ -116,18 +113,18 @@ setup(
     url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
     install_requires=[
-        'sawtooth-signing',
-        'cbor>=0.1.23',
-        'colorlog',
-        'PyYAML',
-        'protobuf',
-        'requests',
-        'toml',
-        'pyzmq'
-        ],
+        "cbor>=0.1.23",
+        "colorlog",
+        "protobuf",
+        "lmdb",
+        "requests",
+        "sawtooth-signing",
+        "toml",
+        "pyzmq",
+    ],
     data_files=data_files,
     entry_points={
         'console_scripts': [
-            'txnvalidator = txnserver.validator_cli:main_wrapper'
+            'validator = sawtooth_validator.server.cli:main'
         ]
     })

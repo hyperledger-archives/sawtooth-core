@@ -15,109 +15,122 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-
-unset PYTHONPATH
-
-pkgs="
-    signing
-    cli
-    sdk/python
-    rest_api
-    validator
-    manage
-    consensus/poet/cli
-    consensus/poet/common
-    consensus/poet/core
-    consensus/poet/families
-    consensus/poet/simulator
-"
-
 set -e
 
-echo -e "\033[0;32m--- Found protogen ---\n\033[0m"
-$top_dir/bin/protogen
+main() {
+    top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-pkg_dir=$top_dir/build/debs
-mkdir -p $pkg_dir
-rm -f $top_dir/build/debs/*.deb
+    # 1. Run protogen
+    info "Building protobuf classes"
+    $top_dir/bin/protogen
 
-build_dir=/tmp/build-debs
-rm -rf $build_dir
-mkdir -p $build_dir
+    # 2. Clean up any previous builds and create directories
+    pkg_dir=$top_dir/build/debs
+    mkdir -p $pkg_dir
+    rm -f $pkg_dir/*.deb
 
-# Needed when VERSION=AUTO_STRICT
-rsync -aH \
-    $top_dir/ \
-    $build_dir/
+    build_dir=/tmp/build-debs
+    rm -rf $build_dir
+    mkdir -p $build_dir
 
-for pkg in $pkgs
-do
-    echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
+    # 3. Copy to tmp
+    info "Copying source to temp build dir"
+
+    # Needed when VERSION=AUTO_STRICT
+    rsync -aH \
+        $top_dir/ \
+        $build_dir/
+
+    # 4. Build the packages in the correct order
+
+    # Group 1: No internal dependencies
+    build_pkg "signing"
+
+    build_pkg "manage"
+
+    pypath=$build_dir/consensus/poet/common
+    pypath=$pypath:$build_dir/consensus/poet/common/tests
+    build_pkg "consensus/poet/common"  $pypath
+
+    # Group 2: Depends only on 1
+    build_pkg "sdk/python" "$build_dir/sdk/python"
+
+    build_pkg "cli"
+
+    # Group 3: Depends on 1 & 2
+    build_pkg "core_transactions/config"
+
+    build_pkg "rest_api"
+
+    build_pkg "sdk/examples/intkey_python"
+
+    build_pkg "sdk/examples/xo_python"
+
+    build_pkg "validator" "$build_dir/signing"
+
+    pypath=$build_dir/integration
+    pypath=$pypath:$build_dir/sdk/python
+    pypath=$pypath:$build_dir/signing
+    pypath=$pypath:$build_dir/consensus/poet/common
+    pypath=$pypath:$build_dir/consensus/poet/families
+    pypath=$pypath:$build_dir/consensus/poet/families/tests
+    build_pkg "consensus/poet/families" $pypath
+
+    # Group 4: Depends on 1, 2, & 3
+    pypath=$build_dir/signing
+    pypath=$pypath:$build_dir/validator
+    pypath=$pypath:$build_dir/consensus/poet/common
+    pypath=$pypath:$build_dir/consensus/poet/core
+    pypath=$pypath:$build_dir/consensus/poet/families
+    pypath=$pypath:$build_dir/consensus/poet/families/tests
+    build_pkg "consensus/poet/simulator" $pypath
+
+    pypath=$build_dir/signing
+    pypath=$pypath:$build_dir/validator
+    pypath=$pypath:$build_dir/consensus/poet/common
+    pypath=$pypath:$build_dir/consensus/poet/common/tests
+    pypath=$pypath:$build_dir/consensus/poet/core
+    pypath=$pypath:$build_dir/consensus/poet/core/tests
+    pypath=$pypath:$build_dir/consensus/poet/simulator
+    build_pkg "consensus/poet/core" $pypath
+
+    # 5. Copy the packages to the output directory
+    find $build_dir -name \*.deb -exec cp {} $pkg_dir/ \;
+
+    # 6. Display info for all packages build
+    cd $top_dir
+    for pkg in build/debs/*.deb
+    do
+        echo
+        info "Package $pkg"
+        dpkg -I $pkg
+    done
+}
+
+info() {
+    echo -e "\033[0;35m\n[--- $1 ---]\n\033[0m"
+}
+
+build_pkg() {
+    pkg=$1
+    pypath=$2
+
+    info "Building $pkg"
+
+    # 1. Set PYTHONPATH required for unit tests
+    export PYTHONPATH=$pypath
 
     cd $build_dir/$pkg
-    if [ $pkg = "validator" ]; then
-        export PYTHONPATH=$build_dir/signing
-        python3 setup.py clean --all
-        python3 setup.py --command-packages=stdeb.command debianize
 
-        cp $top_dir/validator/packaging/postinst debian
+    # 2. Build the package
+    python3 setup.py --command-packages=stdeb.command debianize
+    dpkg-buildpackage -b -rfakeroot -us -uc
 
-        dpkg-buildpackage -b -rfakeroot -us -uc
+    # 3. Install the package
+    mv ../*.deb ./
+    dpkg -i *.deb
 
-        unset PYTHONPATH
-    elif [ $pkg = "consensus/poet/common" ]; then
-        PYTHONPATH=$build_dir/consensus/poet/common
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common/tests
-        export PYTHONPATH
-        python3 setup.py --command-packages=stdeb.command bdist_deb
-        unset PYTHONPATH
-    elif [ $pkg = "consensus/poet/core" ]; then
-        PYTHONPATH=$build_dir/signing
-        PYTHONPATH=$PYTHONPATH:$build_dir/validator
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common/tests
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/core
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/core/tests
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/simulator
-        export PYTHONPATH
-        python3 setup.py --command-packages=stdeb.command bdist_deb
-        unset PYTHONPATH
-    elif [ $pkg = "consensus/poet/families" ]; then
-        PYTHONPATH=$build_dir/integration
-        PYTHONPATH=$PYTHONPATH:$build_dir/sdk/python
-        PYTHONPATH=$PYTHONPATH:$build_dir/signing
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families/tests
-        export PYTHONPATH
-        python3 setup.py --command-packages=stdeb.command bdist_deb
-        unset PYTHONPATH
-    elif [ $pkg = "consensus/poet/simulator" ]; then
-        PYTHONPATH=$build_dir/signing
-        PYTHONPATH=$PYTHONPATH:$build_dir/validator
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/common
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/core
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families
-        PYTHONPATH=$PYTHONPATH:$build_dir/consensus/poet/families/tests
-        export PYTHONPATH
-        python3 setup.py --command-packages=stdeb.command bdist_deb
-        unset PYTHONPATH
-    else
-        python3 setup.py --command-packages=stdeb.command bdist_deb
-    fi
-    if [ $pkg = "signing" ]; then
-        # Workaround for swig ordering bug.
-        python3 setup.py --command-packages=stdeb.command bdist_deb
-    fi
-done
+    unset PYTHONPATH
+}
 
-find $build_dir -name \*.deb -exec cp {} $pkg_dir/ \;
-
-cd $top_dir
-for pkg in build/debs/*.deb
-do
-    echo
-    echo "Package $pkg:"
-    dpkg -I $pkg | sed -e 's/^/    /'
-done
+main

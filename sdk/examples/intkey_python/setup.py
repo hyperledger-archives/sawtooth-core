@@ -13,14 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from __future__ import print_function
+
 import os
 import shutil
 import subprocess
 import sys
 
-# from distutils.core import setup, Extension, find_packages
-from setuptools import setup, Extension, find_packages
-
+from setuptools import setup, find_packages
 
 def bump_version(version):
     (major, minor, patch) = version.split('.')
@@ -35,15 +35,15 @@ def auto_version(default, strict):
     if len(parts) == 2:
         parts[0] = bump_version(parts[0])
     if default != parts[0]:
-        msg = "setup.py and (bumped?) git describe versions differ: " \
-              "{} != {}".format(default, parts[0])
+        msg = "setup.py and (bumped?) git describe versions differ: {} != {}"\
+            .format(default, parts[0])
         if strict:
-            print >> sys.stderr, "ERROR: " + msg
+            print("ERROR: " + msg, file=sys.stderr)
             sys.exit(1)
         else:
-            print >> sys.stderr, "WARNING: " + msg
-            print >> sys.stderr, "WARNING: using setup.py version {}".format(
-                default)
+            print("WARNING: " + msg, file=sys.stderr)
+            print("WARNING: using setup.py version {}".format(
+                default), file=sys.stderr)
             parts[0] = default
 
     if len(parts) == 2:
@@ -64,16 +64,21 @@ def version(default):
         version = default + ".dev1"
     return version
 
-setup(
-    name='sawtooth-signing',
-    version=version('0.8.1'),
-    description='Sawtooth Lake Signing Library',
-    author='Intel Corporation',
-    url='https://github.com/hyperledger/sawtooth-core',
-    packages=find_packages(),
-    install_requires=[
-        "bitcoin",
-        "secp256k1",
-    ],
-    data_files=[],
-    entry_points={})
+setup(name='sawtooth-intkey',
+      version=version('0.8.1'),
+      description='Sawtooth Lake Intkey Python Example',
+      author='Intel Corporation',
+      url='https://github.com/hyperledger/sawtooth-core',
+      packages=find_packages(),
+      install_requires=[
+          "cbor",
+          "colorlog",
+          "sawtooth-sdk",
+          "sawtooth-signing",
+      ],
+      entry_points={
+          'console_scripts': [
+              'intkey = sawtooth_intkey.client_cli.main:main_wrapper',
+              'tp_intkey_python = sawtooth_intkey.processor.main:main'
+          ]
+      })

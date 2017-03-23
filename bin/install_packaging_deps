@@ -45,6 +45,7 @@ apt-get install -y -q \
     python3-hypothesis \
     python3-idna \
     python3-iso8601 \
+    python3-lmdb \
     python3-pip \
     python3-pkgconfig \
     python3-pretend \
@@ -54,5 +55,6 @@ apt-get install -y -q \
     python3-pytest \
     python3-setuptools \
     python3-stdeb \
+    python3-toml \
     python3-yaml \
     python3-zmq

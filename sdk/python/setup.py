@@ -1,4 +1,4 @@
-# Copyright 2016, 2017 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,7 +65,6 @@ def version(default):
         version = default + ".dev1"
     return version
 
-
 setup(name='sawtooth-sdk',
       version=version('0.8.1'),
       description='Sawtooth Lake Python SDK',
@@ -73,8 +72,7 @@ setup(name='sawtooth-sdk',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[
-          'sawtooth-signing',
-          'protobuf',
-          'pyzmq'
-          ]
-      )
+          "sawtooth-signing",
+          "grpcio-tools",
+          "pyzmq",
+      ])

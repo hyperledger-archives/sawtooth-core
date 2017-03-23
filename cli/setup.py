@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,12 +73,15 @@ setup(name='sawtooth-cli',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[
-          'sawtooth-signing',
           'colorlog',
-          'protobuf'
+          'protobuf',
+          'sawtooth-manage',
+          'sawtooth-signing',
+          'toml',
+          'PyYAML',
           ],
       entry_points={
           'console_scripts': [
-              'sawtooth = sawtooth.cli.main:main_wrapper'
+              'sawtooth = sawtooth_cli.main:main_wrapper'
           ]
       })

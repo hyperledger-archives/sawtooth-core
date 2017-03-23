@@ -78,6 +78,6 @@ setup(name='sawtooth-poet-simulator',
           'sawtooth-poet-common',
           'colorlog',
           'cryptography>=1.7.1',
-          'protobuf'
+          'protobuf',
           ],
       entry_points={})

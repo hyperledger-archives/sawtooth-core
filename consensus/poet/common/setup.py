@@ -68,12 +68,8 @@ def version(default):
 
 setup(name='sawtooth-poet-common',
       version=version('0.8.1'),
-      description='Sawtooth Lake Common Modules',
+      description='Sawtooth Lake PoET Common Modules',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'protobuf'
-          ],
       entry_points={})

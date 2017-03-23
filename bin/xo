@@ -33,10 +33,9 @@ sys.path.insert(0, os.path.join(
 
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'sdk', 'examples'))
+            'sdk', 'examples', 'xo_python'))
 
 from sawtooth_xo.xo_cli import main_wrapper
 
 if __name__ == '__main__':
-
     main_wrapper()

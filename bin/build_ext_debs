@@ -92,20 +92,20 @@ main() {
             warn "Skipping $deb, already exists at $pkg_dir/$deb"
         else
             wget http://ftp.br.debian.org/debian/pool/main/libs/libsecp256k1/$deb
-            sudo dpkg -i $deb
+            dpkg -i $deb
             mv $deb $pkg_dir
         fi
     done
 
     info "Installing all pip packages for building"
-    sudo pip3 install $pip_pkgs
+    pip3 install $pip_pkgs
 
     for pkg in $pip_pkgs; do
         build_deb $pkg
     done
 
     info "Uninstalling packages installed by pip"
-    sudo pip3 uninstall -y $pip_pkgs
+    pip3 uninstall -y $pip_pkgs
 
     info "Done building packages"
     echo $(ls -1 $pkg_dir/*.deb)
@@ -164,12 +164,12 @@ build_deb() {
         fi
 
         # Build the package
-        sudo python3 setup.py --command-packages=stdeb.command bdist_deb
+        python3 setup.py --command-packages=stdeb.command bdist_deb
         info "Finished building $deb_pkg_name deb"
 
         info "Installing $deb_pkg_name deb"
         # Install the package
-        sudo dpkg -i deb_dist/*.deb
+        dpkg -i deb_dist/*.deb
 
         info "Saving $deb_pkg_name deb to $pkg_dir"
         # Save the package
