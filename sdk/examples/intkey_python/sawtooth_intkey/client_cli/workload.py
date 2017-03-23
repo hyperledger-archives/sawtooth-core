@@ -75,10 +75,10 @@ class IntKeyWorkload(Workload):
         self._streams.append(stream)
 
     def on_validator_removed(self, url):
-        with self.lock:
+        with self._lock:
             self._streams = [s for s in self._streams if s.url != url]
             self._pending_batches = \
-                {t: g for t, g in self._pending_batches.iteritems()
+                {t: g for t, g in self._pending_batches.items()
                  if g.stream.url != url}
 
     def on_all_batches_committed(self):
