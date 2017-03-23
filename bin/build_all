@@ -15,9 +15,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Exit on non-zero exit code from subcommand
+set -e
+
+# Default args
+LANGUAGES=""
+EXCLUDE=""
+
+MOUNTED="mounted"
+INSTALLED="installed"
+
 usage() {
     echo "Usage:"
-    echo "  $0 [-l Language] [-s Language]"
+    echo "  $0 [-l Language] [-x Language] {$MOUNTED,$INSTALLED}"
     echo
     echo "Options:"
     echo "  -h            print usage and exit"
@@ -25,18 +35,15 @@ usage() {
     echo "  -x Language   exclude the specified language(s)"
 }
 
-# Exit on non-zero exit code from subcommand
-set -e
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
 
-# Set sawtooth-core project directory relative to this file
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-docker_dir=$(cd $(dirname $(dirname $0))/docker && pwd)
+warn() {
+    echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
+}
 
-# Default args
-LANGUAGES=""
-EXCLUDE=""
-
-while getopts x:l:h opt
+while getopts :x:l:h opt
 do
     case $opt in
         h)
@@ -52,10 +59,26 @@ do
 
         \?)
             echo "Invalid option: -$OPTARG" >&2
-            exit 2
+            usage
+            exit 1
             ;;
     esac
 done
+shift $(($OPTIND-1))
+
+if [[ -z $1 ]]
+then
+    BUILD_MODE=$MOUNTED
+else
+    if [[ $1 == $MOUNTED || $1 == $INSTALLED ]]
+    then
+        BUILD_MODE=$1
+    else
+        echo "Invalid positional argument: $1"
+        usage
+        exit 1
+    fi
+fi
 
 # If no '-m' flags are passed, run these modules
 if [[ $LANGUAGES = "" ]]
@@ -67,47 +90,11 @@ then
 "
 fi
 
-set -e
-
-docker_build() {
-    image=$1
-
-    # We need to tag all images with an id if we're running in Jenkins, except
-    # for the sawtooth-base image, which should not be tagged.
-    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
-        tag=$image
-    else
-        tag=$image:$ISOLATION_ID
-    fi
-
-    echo "[ Building $image... ]"
-
-    # Build the image and pass in any proxy information if set
-    docker build -f $docker_dir/$image -t $tag $docker_dir \
-        --build-arg https_proxy=$https_proxy \
-        --build-arg http_proxy=$http_proxy \
-        --build-arg HTTPS_PROXY=$HTTPS_PROXY \
-        --build-arg HTTP_PROXY=$HTTP_PROXY
-}
-
-docker_run() {
-    image=$1
-
-    # We need to tag all images with an id if we're running in Jenkins, except
-    # for the sawtooth-base image, which should not be tagged.
-    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
-        tag=$image
-    else
-        tag=$image:$ISOLATION_ID
-    fi
-
-    docker run --rm -v $top_dir:/project/sawtooth-core $tag
-}
-
 main() {
 
-    # Start in project directory
-    cd $top_dir
+    info "Building images with sawtooth $BUILD_MODE"
+
+    setup
 
     for language in $LANGUAGES
     do
@@ -125,9 +112,9 @@ main() {
 
         if [[ $skip == 1 ]]
         then
-            echo "[---Skipping $language---]"
+            info "Skipping $language"
         else
-            echo "[---Building $language---]"
+            info "Building $language"
             case $language in
                 java)
                     build_java
@@ -147,29 +134,118 @@ main() {
     done
 }
 
-build_java() {
-    docker_build sawtooth-build-java
-    docker_run sawtooth-build-java
-    docker_build sawtooth-tp_intkey_java
+docker_run() {
+    image=$1
+
+    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-dev-base" ]; then
+        tag=$image
+    else
+        tag=$image:$ISOLATION_ID
+    fi
+
+    docker run --rm -v $top_dir:/project/sawtooth-core $tag
 }
 
-build_javascript() {
-    docker_build sawtooth-build-javascript
-    docker_run sawtooth-build-javascript
-    docker_build sawtooth-tp_intkey_javascript
+docker_build() {
+    image=$1
+
+    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-dev-base" ]
+    then
+        tag=$image
+    else
+        tag=$image:$ISOLATION_ID
+    fi
+
+    info "Building $image..."
+
+    # Build the image and pass in any proxy information if set
+    docker build -f $build_dir/$image -t $tag $build_dir \
+        --build-arg https_proxy=$https_proxy \
+        --build-arg http_proxy=$http_proxy \
+        --build-arg HTTPS_PROXY=$HTTPS_PROXY \
+        --build-arg HTTP_PROXY=$HTTP_PROXY
 }
 
-build_python() {
-    docker_build sawtooth-base
-    docker_build sawtooth-build-python
-    docker_run sawtooth-build-python
-    docker_build sawtooth-tp_intkey_python
-    docker_build sawtooth-rest_api
-    docker_build sawtooth-test
-    docker_build sawtooth-tp_config
-    docker_build sawtooth-tp_validator_registry
-    docker_build sawtooth-tp_xo_python
-    docker_build sawtooth-validator
-}
+if [[ $BUILD_MODE == $MOUNTED ]]
+then
+    setup() {
+        # Set sawtooth-core project directory relative to this file
+        top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+        build_dir=$(cd $(dirname $(dirname $0))/docker && pwd)
+
+        # Start in project directory
+        cd $top_dir
+    }
+
+    build_java() {
+        docker_build sawtooth-build-java
+        docker_run sawtooth-build-java
+        docker_build sawtooth-dev-tp_intkey_java
+    }
+
+    build_javascript() {
+        docker_build sawtooth-build-javascript
+        docker_run sawtooth-build-javascript
+        docker_build sawtooth-dev-tp_intkey_javascript
+    }
+
+    build_python() {
+        docker_build sawtooth-dev-base
+        docker_build sawtooth-build-python
+        docker_run sawtooth-build-python
+        docker_build sawtooth-dev-tp_intkey_python
+        docker_build sawtooth-dev-rest_api
+        docker_build sawtooth-dev-test
+        docker_build sawtooth-dev-tp_config
+        docker_build sawtooth-dev-tp_validator_registry
+        docker_build sawtooth-dev-tp_xo_python
+        docker_build sawtooth-dev-validator
+    }
+fi
+
+if [[ $BUILD_MODE == $INSTALLED ]]
+then
+    setup() {
+        top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+        docker_dir=$top_dir/docker
+        ci_dir=$top_dir/ci
+        bin_dir=$top_dir/bin
+        pkg_dir=$top_dir/build/debs
+
+        build_dir=/tmp/build-sawtooth-docker
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
+        info "Copying Dockerfiles to build dir"
+        rsync -aH $docker_dir/ $build_dir/
+        rsync -aH $ci_dir/ $build_dir/
+        rsync -aH $bin_dir/ $build_dir/bin
+
+        info "Copying debs to build dir"
+        rsync -aH $pkg_dir/ $build_dir/
+
+        # Build the debs
+        docker_build sawtooth-build-debs
+        docker_run   sawtooth-build-debs
+    }
+
+    build_java() {
+        warn "Skipping java images... not implemented"
+    }
+
+    build_javascript() {
+        warn "Skipping javascript images... not implemented"
+    }
+
+    build_python() {
+        docker_build sawtooth-rest_api
+        docker_build sawtooth-tp_config
+        docker_build sawtooth-tp_intkey_python
+        docker_build sawtooth-tp_validator_registry
+        docker_build sawtooth-tp_xo_python
+        docker_build sawtooth-validator
+    }
+
+fi
 
 main
