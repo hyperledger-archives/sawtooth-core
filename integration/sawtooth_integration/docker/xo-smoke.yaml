@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   tp_config:
-    image: sawtooth-tp_config:$ISOLATION_ID
+    image: sawtooth-dev-tp_config:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -29,7 +29,7 @@ services:
     stop_signal: SIGKILL
 
   tp_xo_python:
-    image: sawtooth-tp_xo_python:$ISOLATION_ID
+    image: sawtooth-dev-tp_xo_python:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -40,7 +40,7 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator:$ISOLATION_ID
+    image: sawtooth-dev-validator:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -52,7 +52,7 @@ services:
     stop_signal: SIGKILL
 
   rest_api:
-    image: sawtooth-rest_api:$ISOLATION_ID
+    image: sawtooth-dev-rest_api:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:
@@ -64,7 +64,7 @@ services:
     stop_signal: SIGKILL
 
   integration_test:
-    image: sawtooth-test:$ISOLATION_ID
+    image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
       - ../../../:/project/sawtooth-core
     expose:

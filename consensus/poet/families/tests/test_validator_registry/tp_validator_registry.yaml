@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   tp_validator_registry:
-    image: sawtooth-tp_validator_registry:$ISOLATION_ID
+    image: sawtooth-dev-tp_validator_registry:$ISOLATION_ID
     volumes:
       - ../../../../..:/project/sawtooth-core
     expose:
@@ -31,7 +31,7 @@ services:
             /project/sawtooth-core/sdk/python"
 
   validator:
-    image: sawtooth-test:$ISOLATION_ID
+    image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
       - ../../../../..:/project/sawtooth-core
     expose:
