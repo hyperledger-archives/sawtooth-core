@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y -q \
 
 RUN pip3 install \
     aiohttp==1.3.5 \
+    bandit \
     cryptography \
     grpcio-tools \
     lmdb \
