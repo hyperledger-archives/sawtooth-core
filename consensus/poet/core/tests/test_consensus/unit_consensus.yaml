@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   poet:
-    image: sawtooth-test:$ISOLATION_ID
+    image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
       - ../../../../..:/project/sawtooth-core
     working_dir: /project/sawtooth-core/consensus/poet/core

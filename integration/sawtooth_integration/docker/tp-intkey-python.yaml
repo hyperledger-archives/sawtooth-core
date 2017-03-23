@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   tp_intkey_python:
-    image: sawtooth-tp_intkey_python:$ISOLATION_ID
+    image: sawtooth-dev-tp_intkey_python:$ISOLATION_ID
     volumes:
       - ../../..:/project/sawtooth-core
     expose:
@@ -27,7 +27,7 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-test:$ISOLATION_ID
+    image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
       - ../../..:/project/sawtooth-core
     expose: 
