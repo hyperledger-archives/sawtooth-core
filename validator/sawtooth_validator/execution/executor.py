@@ -296,7 +296,7 @@ class _Waiter(object):
         # Wait for the processor type to be registered
         self._processors.cancellable_wait(
             processor_type=self._processor_type,
-            is_cancelled=self._cancelled_event)
+            cancelled_event=self._cancelled_event)
 
         if self._cancelled_event.is_set():
             LOGGER.info("waiting cancelled on %s", self._processor_type)
