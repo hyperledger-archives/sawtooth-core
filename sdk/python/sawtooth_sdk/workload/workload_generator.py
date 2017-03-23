@@ -173,7 +173,8 @@ class WorkloadGenerator(object):
             self._workload.on_validator_discovered(validator)
 
     def _remove_unresponsive_validator(self, validator):
-        self._validator.remove(validator)
+        if validator in self._validators:
+            self._validators.remove(validator)
         self._workload.on_validator_removed(validator)
 
     def on_new_batch(self, batch_id, stream):
@@ -211,8 +212,8 @@ class WorkloadGenerator(object):
                 response.batch_statuses[batch_id])
 
         except ValidatorConnectionError:
-            LOGGER.warnig("The validator at %s is no longer connected. "
-                          "Removing Validator.", stream.url)
+            LOGGER.warning("The validator at %s is no longer connected. "
+                           "Removing Validator.", stream.url)
             self._remove_unresponsive_validator(stream.url)
             return "UNKNOWN"
 
