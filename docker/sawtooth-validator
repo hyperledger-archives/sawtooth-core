@@ -13,18 +13,30 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM sawtooth-base
+FROM ubuntu:xenial
 
-RUN mkdir -p /project/sawtooth-core
-RUN mkdir -p /var/log/sawtooth
-RUN mkdir -p /var/lib/sawtooth
-RUN mkdir -p /etc/sawtooth
-RUN mkdir -p /etc/sawtooth/keys
+# Install packaging tools
+RUN apt-get update && apt-get install -y -q \
+    dpkg-dev \
+    python3-pkg-resources \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+# Prepare repo directory
+RUN mkdir -p /repo
+WORKDIR /repo
+COPY *.deb /repo/
 
-WORKDIR $PROJECT_DIR
+# Create the local sawtooth repo
+RUN ls -1 /repo \
+ && echo "deb file:/repo ./" > /etc/apt/sources.list.d/sawtooth_local.list \
+ && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
+ && apt-get update
 
-EXPOSE 40000
+RUN apt-get update && apt-get install -y -q --allow-unauthenticated \
+    python3-sawtooth-cli \
+    python3-sawtooth-validator
 
-ENTRYPOINT ./bin/validator
+EXPOSE 40000/tcp
+
+CMD ["validator", "-vv"]

@@ -42,4 +42,5 @@ RUN /home/build/build_ext_debs -p ${pkg_dir} -b ${build_dir}
 WORKDIR /project/sawtooth-core
 
 # Build sawtooth debs
+ENV VERSION=AUTO_STRICT
 ENTRYPOINT ./bin/build_debs && cp ${pkg_dir}/*.deb /project/sawtooth-core/build/debs
