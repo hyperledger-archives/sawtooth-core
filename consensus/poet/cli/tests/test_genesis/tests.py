@@ -19,7 +19,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_poet_cli.main import main
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb

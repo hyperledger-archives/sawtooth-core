@@ -23,7 +23,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_processor_test.message_factory import MessageFactory
 

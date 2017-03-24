@@ -21,7 +21,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
 from sawtooth_sdk.workload.sawtooth_workload import Workload
 from sawtooth_sdk.client.stream import Stream

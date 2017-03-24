@@ -18,7 +18,7 @@ import logging
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader

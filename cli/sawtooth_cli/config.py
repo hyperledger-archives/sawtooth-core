@@ -36,7 +36,7 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 
 CONFIG_NAMESPACE = '000000'

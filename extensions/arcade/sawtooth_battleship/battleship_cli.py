@@ -28,7 +28,7 @@ import sys
 
 from colorlog import ColoredFormatter
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 from sawtooth.exceptions import ClientException
 from sawtooth.exceptions import InvalidTransactionError
 

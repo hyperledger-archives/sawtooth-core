@@ -16,7 +16,7 @@
 import unittest
 import time
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_timer \
     import EnclaveWaitTimer
