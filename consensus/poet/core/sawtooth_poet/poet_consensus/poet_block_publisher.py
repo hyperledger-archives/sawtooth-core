@@ -62,33 +62,42 @@ class PoetBlockPublisher(BlockPublisherInterface):
         _validator_registry_namespace + \
         hashlib.sha256('validator_map'.encode()).hexdigest()
 
-    def __init__(self, block_cache, state_view, batch_publisher, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 batch_publisher,
+                 data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache (BlockCache): Dict interface to the block cache.
                     Any predecessor block to blocks handed to this object will
                     be present in this dict.
-                state_view (StateView): A read only view of state for the last
-                    committed block in the chain. For the block publisher this
-                    is the block we are building on top of.
+                state_view_factory (StateViewFactory): A factory that can be
+                    used to create read-only views of state for a particular
+                    merkle root, in particular the state as it existed when a
+                    particular block was the chain head.
                 batch_publisher (BatchPublisher): An interface implementing
                     send(txn_list) which wrap the transactions in a batch and
                     broadcast that batch to the network.
-                data_dir: path to location where persistent data for the
+                data_dir (str): path to location where persistent data for the
                     consensus module can be stored.
             Returns:
                 none.
         """
-        super().__init__(block_cache, state_view, batch_publisher, data_dir)
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            batch_publisher,
+            data_dir)
 
         self._block_cache = block_cache
-        self._state_view = state_view
+        self._state_view_factory = state_view_factory
         self._batch_publisher = batch_publisher
-        self._poet_enclave_module = \
-            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
+        self._data_dir = data_dir
+
         self._wait_timer = None
 
-    def _register_signup_information(self, block_header):
+    def _register_signup_information(self, block_header, poet_enclave_module):
         # Find the most-recent block in the block cache, if such a block
         # exists, and get its wait certificate ID
         wait_certificate_id = NULL_BLOCK_IDENTIFIER
@@ -97,7 +106,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             wait_certificate_id = \
                 utils.deserialize_wait_certificate(
                     block=most_recent_block,
-                    poet_enclave_module=self._poet_enclave_module).identifier
+                    poet_enclave_module=poet_enclave_module).identifier
 
         # Create signup information for this validator
         public_key_hash = \
@@ -105,7 +114,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 block_header.signer_pubkey.encode()).hexdigest()
         signup_info = \
             SignupInfo.create_signup_info(
-                poet_enclave_module=self._poet_enclave_module,
+                poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 originator_public_key_hash=public_key_hash,
                 most_recent_wait_certificate_id=wait_certificate_id)
@@ -185,6 +194,20 @@ class PoetBlockPublisher(BlockPublisherInterface):
             Boolean: True if the candidate block should be built. False if
             no candidate should be built.
         """
+
+        # Using the current chain head, we need to create a state view so we
+        # can create a PoET enclave.  We are going to special case this until
+        # the genesis consensus is available.  We know that the genesis block
+        # is special cased to have a state view constructed for it.
+        state_root_hash = \
+            self._block_cache.block_store.chain_head.state_root_hash \
+            if self._block_cache.block_store.chain_head is not None \
+            else block_header.state_root_hash
+        state_view = self._state_view_factory.create_view(state_root_hash)
+
+        poet_enclave_module = \
+            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
+
         # HACER: Once we have PoET consensus state, we should be looking in
         # there for the sealed signup data.  For the time being, signup
         # information will be tied to the lifetime of the validator.
@@ -200,7 +223,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             LOGGER.debug(
                 'Creating genesis block, so will use sealed signup data')
             SignupInfo.unseal_signup_data(
-                poet_enclave_module=self._poet_enclave_module,
+                poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 sealed_signup_data=PoetBlockPublisher._sealed_signup_data)
 
@@ -208,7 +231,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # have a public key, we need to create signup information and create a
         # transaction to add it to the validator registry.
         elif PoetBlockPublisher._poet_public_key is None:
-            self._register_signup_information(block_header=block_header)
+            self._register_signup_information(
+                block_header=block_header,
+                poet_enclave_module=poet_enclave_module)
 
         # Create a list of certificates for the wait timer.  This seems to have
         # a little too much knowledge of the WaitTimer implementation, but
@@ -218,14 +243,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
             utils.build_certificate_list(
                 block_header=block_header,
                 block_cache=self._block_cache,
-                poet_enclave_module=self._poet_enclave_module,
+                poet_enclave_module=poet_enclave_module,
                 maximum_number=WaitTimer.certificate_sample_length)
 
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
         self._wait_timer = \
             WaitTimer.create_wait_timer(
-                poet_enclave_module=self._poet_enclave_module,
+                poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 certificates=list(certificates))
 
@@ -266,12 +291,25 @@ class PoetBlockPublisher(BlockPublisherInterface):
             hasher.update(batch_id.encode())
         block_hash = hasher.hexdigest()
 
+        # Using the current chain head, we need to create a state view so we
+        # can create a PoET enclave.  We are going to special case this until
+        # the genesis consensus is available.  We know that the genesis block
+        # is special cased to have a state view constructed for it.
+        state_root_hash = \
+            self._block_cache.block_store.chain_head.state_root_hash \
+            if self._block_cache.block_store.chain_head is not None \
+            else block_header.state_root_hash
+        state_view = self._state_view_factory.create_view(state_root_hash)
+
+        poet_enclave_module = \
+            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
+
         # We need to create a wait certificate for the block and then serialize
         # that into the block header consensus field.
         try:
             wait_certificate = \
                 WaitCertificate.create_wait_certificate(
-                    poet_enclave_module=self._poet_enclave_module,
+                    poet_enclave_module=poet_enclave_module,
                     wait_timer=self._wait_timer,
                     block_hash=block_hash)
             block_header.consensus = \

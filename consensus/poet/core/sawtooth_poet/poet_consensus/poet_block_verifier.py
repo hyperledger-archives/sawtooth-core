@@ -34,26 +34,26 @@ class PoetBlockVerifier(BlockVerifierInterface):
     considered as part of the fork being evaluated. BlockVerifier must be
     independent of block publishing activities.
     """
-    def __init__(self, block_cache, state_view, data_dir):
+    def __init__(self, block_cache, state_view_factory, data_dir):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
-                block_cache: Dict interface to the block cache. Any predecessor
-                block to blocks handed to this object will be present in this
-                dict.
-                state_view: A read only view of state for the last committed
-                block in the chain. For the BlockVerifier this is the previous
-                block in the chain.
-                data_dir: path to location where persistent data for the
-                consensus module can be stored.
+                block_cache (BlockCache): Dict interface to the block cache.
+                    Any predecessor block to blocks handed to this object will
+                    be present in this dict.
+                state_view_factory (StateViewFactory): A factory that can be
+                    used to create read-only views of state for a particular
+                    merkle root, in particular the state as it existed when a
+                    particular block was the chain head.
+                data_dir (str): path to location where persistent data for the
+                    consensus module can be stored.
             Returns:
                 none.
         """
-        super().__init__(block_cache, state_view, data_dir)
+        super().__init__(block_cache, state_view_factory, data_dir)
 
         self._block_cache = block_cache
-        self._state_view = state_view
-        self._poet_enclave_module = \
-            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
+        self._state_view_factory = state_view_factory
+        self._data_dir = data_dir
 
     def verify_block(self, block_wrapper):
         """Check that the block received conforms to the consensus rules.
@@ -68,7 +68,27 @@ class PoetBlockVerifier(BlockVerifierInterface):
         # certificate until we can retrieve the block signer's corresponding
         # public key.  We cannot do that until the genesis block is populated
         # with the "initial" validator's signup information
-        validator_registry_view = ValidatorRegistryView(self._state_view)
+        previous_block = None
+        try:
+            previous_block = \
+                self._block_cache[block_wrapper.previous_block_id]
+        except KeyError:
+            pass
+
+        # Using the previous block, we need to create a state view so we
+        # can create a PoET enclave.  We are going to special case this until
+        # the genesis consensus is available.  We know that the genesis block
+        # is special cased to have a state view constructed for it.
+        state_root_hash = \
+            previous_block.state_root_hash \
+            if previous_block is not None \
+            else block_wrapper.state_root_hash
+        state_view = self._state_view_factory.create_view(state_root_hash)
+
+        poet_enclave_module = \
+            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
+
+        validator_registry_view = ValidatorRegistryView(state_view)
         if len(validator_registry_view.get_validators()) > 0:
             try:
                 # Grab the validator info based upon the block signer's public
@@ -94,7 +114,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
                     utils.build_certificate_list(
                         block_header=block_wrapper.header,
                         block_cache=self._block_cache,
-                        poet_enclave_module=self._poet_enclave_module,
+                        poet_enclave_module=poet_enclave_module,
                         maximum_number=WaitTimer.certificate_sample_length)
 
                 # For the candidate block, reconstitute the wait certificate
@@ -102,9 +122,9 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 wait_certificate = \
                     utils.deserialize_wait_certificate(
                         block=block_wrapper,
-                        poet_enclave_module=self._poet_enclave_module)
+                        poet_enclave_module=poet_enclave_module)
                 wait_certificate.check_valid(
-                    poet_enclave_module=self._poet_enclave_module,
+                    poet_enclave_module=poet_enclave_module,
                     certificates=certificates,
                     poet_public_key=validator_info.signup_info.poet_public_key)
             except KeyError:
