@@ -17,7 +17,7 @@ import logging
 import os
 from pathlib import Path
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_validator.exceptions import InvalidGenesisStateError
 from sawtooth_validator.exceptions import InvalidGenesisConsensusError

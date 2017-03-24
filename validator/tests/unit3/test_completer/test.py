@@ -17,7 +17,7 @@ import random
 import hashlib
 import cbor
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER

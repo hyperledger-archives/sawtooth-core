@@ -18,7 +18,7 @@ import pprint
 import random
 import string
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_validator.database.dict_database import DictDatabase
 

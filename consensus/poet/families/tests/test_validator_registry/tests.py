@@ -18,7 +18,7 @@ import json
 import base64
 import hashlib
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from test_validator_registry.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
