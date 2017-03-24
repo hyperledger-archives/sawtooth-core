@@ -16,6 +16,7 @@
 import logging
 import time
 
+from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 import sawtooth_cli.protobuf.batch_pb2 as batch_pb2
 
@@ -34,9 +35,13 @@ def _split_batch_list(args, batch_list):
 
 
 def do_submit(args):
-    with open(args.filename, mode='rb') as fd:
-        batches = batch_pb2.BatchList()
-        batches.ParseFromString(fd.read())
+
+    try:
+        with open(args.filename, mode='rb') as fd:
+            batches = batch_pb2.BatchList()
+            batches.ParseFromString(fd.read())
+    except IOError as e:
+        raise CliException(e)
 
     rest_client = RestClient(args.url)
 
