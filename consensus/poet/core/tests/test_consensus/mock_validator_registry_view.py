@@ -13,4 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-__all__ = []
+class MockValidatorRegistryView(object):
+    """Simulates a ValidatorRegistryView.
+    """
+
+    def __init__(self, state_dict):
+        self._state_db = state_dict
+
+    def get_validators(self):
+        return self._state_db.keys()
+
+    def has_validator_info(self, validator_id):
+        return validator_id in self._state_db
+
+    def get_validator_info(self, validator_id):
+        return self._state_db[validator_id]
