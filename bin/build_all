@@ -101,7 +101,12 @@ docker_run() {
         tag=$image:$ISOLATION_ID
     fi
 
-    docker run --rm -v $top_dir:/project/sawtooth-core $tag
+    if [ -z $BUILD_TAG ]
+    then
+        docker run -t --rm -v $top_dir:/project/sawtooth-core $tag
+    else
+        docker run --rm -v $top_dir:/project/sawtooth-core $tag
+    fi
 }
 
 main() {
