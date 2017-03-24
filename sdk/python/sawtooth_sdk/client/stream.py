@@ -14,10 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import asyncio
-import hashlib
+import uuid
 import logging
-import random
-import string
 from threading import Event
 from threading import Thread
 from threading import Condition
@@ -44,9 +42,7 @@ RECONNECT_EVENT = -1
 
 
 def _generate_id():
-    return hashlib.sha512(''.join(
-        [random.choice(string.ascii_letters)
-            for _ in range(0, 1024)]).encode('ascii')).hexdigest()
+    return uuid.uuid4().hex.encode()
 
 
 class _SendReceiveThread(Thread):
@@ -207,7 +203,7 @@ class _SendReceiveThread(Thread):
                 self._context = zmq.asyncio.Context()
             if self._sock is None:
                 self._sock = self._context.socket(zmq.DEALER)
-            self._sock.identity = _generate_id()[0:16].encode('ascii')
+            self._sock.identity = _generate_id()[0:16]
             self._sock.connect(self._url)
             self._monitor_fd = "inproc://monitor.s-{}".format(
                 _generate_id()[0:5])

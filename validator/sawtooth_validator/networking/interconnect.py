@@ -41,7 +41,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _generate_id():
-    return hashlib.sha512(uuid.uuid4().hex.encode()).hexdigest()
+    return uuid.uuid4().hex.encode()
 
 
 def get_enum_name(enum_value):

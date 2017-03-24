@@ -15,7 +15,6 @@
 import abc
 import enum
 from functools import partial
-import hashlib
 import logging
 from threading import Condition
 from threading import Thread
@@ -29,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _gen_message_id():
-    return hashlib.sha512(uuid.uuid4().hex.encode()).hexdigest()
+    return uuid.uuid4().hex.encode()
 
 
 class Dispatcher(Thread):
