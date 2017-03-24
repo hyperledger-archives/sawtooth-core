@@ -15,6 +15,7 @@
 
 import abc
 import logging
+from sys import maxsize
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -31,6 +32,8 @@ from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 300
+# Change to something reasonable once all clients implement paging controls
+MAX_PAGE_SIZE = maxsize
 
 
 class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
@@ -289,6 +292,92 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         return statuses
 
 
+class _Pager(object):
+    """A static class containing methods to paginate lists of resources.
+
+    Contains a paginate method, as well as two helpers to fetch index of a
+    resource by its id (either address or header_signature), or conversely
+    to fetch the id by an index.
+    """
+    @classmethod
+    def paginate_resources(cls, request, resources):
+        """Truncates a list of resources based on PagingControls
+
+        Args:
+            request (object): The parsed protobuf request object
+            resources (list of objects): The resources to be paginated
+
+        Returns:
+            list: The paginated list of resources
+            object: The PagingResponse to be sent back to the client
+        """
+        paging = request.paging
+        count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
+
+        # Find the start index from the location marker sent
+        try:
+            if paging.start_id:
+                start_index = cls.index_by_id(paging.start_id, resources)
+            elif paging.end_id:
+                end_index = cls.index_by_id(paging.end_id, resources)
+                start_index = end_index + 1 - count
+            else:
+                start_index = paging.start_index
+        except AssertionError:
+            # With a bad id, return an empty list and no paging object
+            return resources[0:0], None
+
+        paged_resources = resources[start_index: start_index + count]
+
+        paging_response = client_pb2.PagingResponse(
+            next_id=cls.id_by_index(start_index + count, resources),
+            previous_id=cls.id_by_index(start_index - 1, resources),
+            start_index=start_index,
+            total_resources=len(resources))
+
+        return paged_resources, paging_response
+
+    @classmethod
+    def index_by_id(cls, target_id, resources):
+        """Helper method to fetch the index of a resource by its id or address
+
+        Args:
+            resources (list of objects): The resources to be paginated
+            target_id (string): The address or header_signature of the resource
+
+        Returns:
+            integer: The index of the target resource
+
+        Raises:
+            AssertionError: Raised if the target is not found
+        """
+        for index in range(len(resources)):
+            if cls.id_by_index(index, resources) == target_id:
+                return index
+
+        raise AssertionError
+
+    @staticmethod
+    def id_by_index(index, resources):
+        """Helper method to fetch the id or address of a resource by its index
+
+        Args:
+            resources (list of objects): The resources to be paginated
+            index (integer): The index of the target resource
+
+        Returns:
+            str: The address or header_signature of the resource,
+                returns an empty string if not found
+        """
+        if index < 0 or index >= len(resources):
+            return ''
+
+        try:
+            return resources[index].header_signature
+        except AttributeError:
+            return resources[index].address
+
+
 class BatchSubmitFinisher(_ClientRequestHandler):
     def __init__(self, block_store, batch_cache):
         super().__init__(
@@ -363,12 +452,20 @@ class StateListRequest(_ClientRequestHandler):
             client_pb2.Leaf(address=a, data=v) for a, v in
             self._tree.leaves(request.address or '').items()]
 
+        # Order leaves, remove if tree.leaves refactored to be ordered
+        leaves.sort(key=lambda l: l.address)
+
+        leaves, paging = _Pager.paginate_resources(request, leaves)
+
         if not leaves:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
                 head_id=head_id)
 
-        return self._wrap_response(head_id=head_id, leaves=leaves)
+        return self._wrap_response(
+            head_id=head_id,
+            paging=paging,
+            leaves=leaves)
 
 
 class StateGetRequest(_ClientRequestHandler):
@@ -413,12 +510,17 @@ class BlockListRequest(_ClientRequestHandler):
             lambda filter_id: self._block_store[filter_id].block,
             lambda block: [block])
 
+        blocks, paging = _Pager.paginate_resources(request, blocks)
+
         if not blocks:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
                 head_id=head_id)
 
-        return self._wrap_response(head_id=head_id, blocks=blocks)
+        return self._wrap_response(
+            head_id=head_id,
+            paging=paging,
+            blocks=blocks)
 
 
 class BlockGetRequest(_ClientRequestHandler):
@@ -458,12 +560,17 @@ class BatchListRequest(_ClientRequestHandler):
             self._block_store.get_batch,
             lambda block: [a for a in block.batches])
 
+        batches, paging = _Pager.paginate_resources(request, batches)
+
         if not batches:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
                 head_id=head_id)
 
-        return self._wrap_response(head_id=head_id, batches=batches)
+        return self._wrap_response(
+            head_id=head_id,
+            paging=paging,
+            batches=batches)
 
 
 class BatchGetRequest(_ClientRequestHandler):
