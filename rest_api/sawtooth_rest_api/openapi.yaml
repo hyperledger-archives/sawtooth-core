@@ -177,6 +177,42 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
+    post:
+      summary: Fetches the committed statuses for a set of batches
+      description: |
+        Identical to `GET /batch_status`, but takes ids of batches as a JSON
+        formatted POST body rather than a query parameter. This allows for many
+        more batches to be checked and should be used for more than 15 ids.
+
+        Note that since query information is not encoded in the URL, no `link`
+        will be returned with this query.
+      consumes:
+        - application/json
+      parameters:
+        - name: Batch Ids
+          in: body
+          description: A JSON array of batch id strings
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              example: 89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c
+        - $ref: "#/parameters/wait"
+      responses:
+        200:
+          description: Successfully retrieved statuses
+          schema:
+            properties:
+              data:
+                $ref: "#/definitions/BatchStatuses"
+        400:
+          $ref: "#/responses/400BadRequest"
+        500:
+          $ref: "#/responses/500ServerError"
+        503:
+          $ref: "#/responses/503ServiceUnavailable"
+
   /state:
     get:
       summary: Fetches the data for the current state

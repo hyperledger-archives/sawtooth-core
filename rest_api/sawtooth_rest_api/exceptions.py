@@ -34,6 +34,12 @@ class BadProtobuf(web.HTTPBadRequest):
         super().__init__(reason=message)
 
 
+class BadStatusBody(web.HTTPBadRequest):
+    def __init__(self):
+        message = 'Expected a json formatted array of id strings'
+        super().__init__(reason=message)
+
+
 class MissingStatusId(web.HTTPBadRequest):
     def __init__(self):
         message = 'At least one batch id must be specified to check status'
