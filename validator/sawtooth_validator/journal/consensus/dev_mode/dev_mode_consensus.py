@@ -131,8 +131,8 @@ class ForkResolver(ForkResolverInterface):
     @staticmethod
     def hash_signer_pubkey(signer_pubkey, header_signature):
         m = hashlib.md5()
-        m.update(signer_pubkey)
-        m.update(header_signature)
+        m.update(signer_pubkey.encode())
+        m.update(header_signature.encode())
         digest = m.hexdigest()
         number = int(digest, 16)
         return number
@@ -151,11 +151,11 @@ class ForkResolver(ForkResolverInterface):
 
         if new_fork_head.block_num == cur_fork_head.block_num:
             cur_fork_hash = self.hash_signer_pubkey(
-                cur_fork_head.block_header.signer_pubkey,
-                cur_fork_head.block_header.previous_block_id)
+                cur_fork_head.header.signer_pubkey,
+                cur_fork_head.header.previous_block_id)
             new_fork_hash = self.hash_signer_pubkey(
-                new_fork_head.block_header.signer_pubkey,
-                new_fork_head.block_header.previous_block_id)
+                new_fork_head.header.signer_pubkey,
+                new_fork_head.header.previous_block_id)
 
             return new_fork_hash < cur_fork_hash
 
