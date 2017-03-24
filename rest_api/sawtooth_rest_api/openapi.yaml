@@ -561,10 +561,10 @@ parameters:
 definitions:
   Head:
     type: string
-    example: HOAHrdXa1MUUbScI4eF0wVuzg4v5wYKZz6j7rsrWSwLKWUd/cO/XhKOd5oe/PeXKhhS+Tv6nRFxIwFHrrIddlsY=
+    example: 65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
   Link:
     type: string
-    example: https://api.sawtooth.com/state?head=HOAHrdXa1MUUbScI4eF0wVuzg4v5wYKZz6j7rsrWSwLKWUd/cO/XhKOd5oe/PeXKhhS+Tv6nRFxIwFHrrIddlsY=&min_position=1001
+    example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&min_position=1001
   Paging:
     properties:
       next_position:
@@ -662,7 +662,7 @@ definitions:
         $ref: "#/definitions/TransactionHeader"
       header_signature:
         type: string
-        example: GwW07DtqHLEM0gEP/V7LkyGdcbHpAp9aAVSr6Kc3da7jKhqh7F4LVQcRMAstfEkr3gHqUovEg38TczxtBuctC8c=
+        example: 540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a
       payload:
         type: string
         format: binary
@@ -676,14 +676,14 @@ definitions:
         type: array
         items:
           type: string
-          example: GwW07DtqHLEM0gEP/V7LkyGdcbHpAp9aAVSr6Kc3da7jKhqh7F4LVQcRMAstfEkr3gHqUovEg38TczxtBuctC8c=
+          example: 540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a
   Batch:
     properties:
       header:
         $ref: "#/definitions/BatchHeader"
       header_signature:
         type: string
-        example: G6aZORKtrD3KJP0Xii6Y0ahFqAADnUAKdflo6NQNWV9bLljoOI3YOlPMduHwIPgUSBAVU7sEpUtjPpOwfMWEWkM=
+        example: 89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c
       transactions:
         type: array
         items:
@@ -702,7 +702,7 @@ definitions:
         example: 12345
       previous_block_id:
         type: string
-        example: HOAHrdXa1MUUbScI4eF0wVuzg4v5wYKZz6j7rsrWSwLKWUd/cO/XhKOd5oe/PeXKhhS+Tv6nRFxIwFHrrIddlsY=
+        example: 65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
       signer_pubkey:
         type: string
         example: 16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM
@@ -710,7 +710,7 @@ definitions:
         type: array
         items:
           type: string
-          example: G6aZORKtrD3KJP0Xii6Y0ahFqAADnUAKdflo6NQNWV9bLljoOI3YOlPMduHwIPgUSBAVU7sEpUtjPpOwfMWEWkM=
+          example: 89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c
       consensus:
         type: string
         format: binary
@@ -723,7 +723,7 @@ definitions:
         $ref: "#/definitions/BlockHeader"
       header_signature:
         type: string
-        example: HOAHrdXa1MUUbScI4eF0wVuzg4v5wYKZz6j7rsrWSwLKWUd/cO/XhKOd5oe/PeXKhhS+Tv6nRFxIwFHrrIddlsY=
+        example: 65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
       batches:
         type: array
         items:
