@@ -2,5 +2,5 @@
 
 set -e
 
-pip3 install \
-   secp256k1 
+apt-get install -y -q \
+   python3-secp256k1=0.13.2-1

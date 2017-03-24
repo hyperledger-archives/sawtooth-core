@@ -2,5 +2,5 @@
 
 set -e
 
-pip3 install \
-    bitcoin
+apt-get install -y -q \
+    python3-bitcoin=1.1.42-1

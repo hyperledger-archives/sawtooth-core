@@ -2,5 +2,5 @@
 
 set -e
 
-pip3 install \
-    grpcio-tools
+apt-get install -y -q \
+    python3-grpcio-tools=1.1.3-1
