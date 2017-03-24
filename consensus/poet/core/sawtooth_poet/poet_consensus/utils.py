@@ -74,7 +74,7 @@ def build_certificate_list(block_header,
 
     Args:
         block_header (BlockHeader): The header for the block
-        block_cache (BlockCache): The cache of blcoks that are predecessors
+        block_cache (BlockCache): The cache of blocks that are predecessors
             to the block represented by block_header
         poet_enclave_module (module): The PoET enclave module
         maximum_number (int): The maximum number of certificates to return
