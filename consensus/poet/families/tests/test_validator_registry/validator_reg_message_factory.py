@@ -141,12 +141,8 @@ class ValidatorRegistryMessageFactory(object):
 
         # We are going to fake out the sealing the signup data.
         signup_data = {
-            'poet_public_key':
-                signing.encode_pubkey(self.poet_public_key, 'hex'),
-            'poet_private_key':
-                signing.encode_privkey(
-                    self._poet_private_key,
-                    'hex')
+            'poet_public_key': self.poet_public_key,
+            'poet_private_key': self._poet_private_key
         }
 
         # Build up a fake SGX quote containing:
@@ -163,9 +159,7 @@ class ValidatorRegistryMessageFactory(object):
         hash_input = \
             '{0}{1}'.format(
                 originator_public_key_hash.upper(),
-                signing.encode_pubkey(
-                    self.poet_public_key,
-                    'hex').upper()).encode()
+                self.poet_public_key.upper()).encode()
         report_data = hashlib.sha256(hash_input).digest()
 
         sgx_report_data = sgx_structs.SgxReportData(d=report_data)

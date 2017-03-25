@@ -54,8 +54,8 @@ def _sign_message_with_transaction(transaction, message_type, key):
     of a sha256 hexdigest.
     """
     transaction['Nonce'] = time.time()
-    pub = signing.encode_pubkey(signing.generate_pubkey(key), "hex")
-    transaction["PublicKey"] = pub
+    pub = signing.generate_pubkey(key)
+    transaction['PublicKey'] = pub
     sig = signing.sign(_dict2cbor(transaction), key)
     transaction['Signature'] = sig
 
@@ -389,14 +389,11 @@ class SawtoothClient(object):
 
         if keystring:
             LOGGER.debug("set signing key from string\n%s", keystring)
-            self._signing_key = signing.encode_privkey(
-                signing.decode_privkey(keystring, 'wif'), 'hex')
+            self._signing_key = keystring
         elif keyfile:
             LOGGER.debug("set signing key from file %s", keyfile)
             try:
-                self._signing_key = signing.encode_privkey(
-                    signing.decode_privkey(
-                        open(keyfile, "r").read().strip(), 'wif'), 'hex')
+                self._signing_key = open(keyfile, "r").read().strip()
             except IOError as ex:
                 raise ClientException(
                     "Failed to load key file: {}".format(str(ex)))

@@ -33,23 +33,11 @@ __CTX__ = __CONTEXTBASE__.ctx
 
 
 def generate_privkey():
-    return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__))
-
-
-def encode_privkey(privkey, encoding_format='wif'):
-    """Encodes a provided wif encoded privkey in the requested
-    encoding format.
-
-    Args:
-        privkey (str): A wif-encoded private key string
-        encoding_format (str): One of the pybitcointools supported
-            encoding formats
-
+    """ Create a random private key
     Returns:
-        str: An encoded private key in the requested format
+        Serialized private key suitable for subsequent calls to e.g. sign().
     """
-    return _encode_privkey(_decode_privkey(privkey, 'wif'),
-                           encoding_format)
+    return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__))
 
 
 def _encode_privkey(privkey, encoding_format='wif'):
@@ -63,7 +51,7 @@ def _encode_privkey(privkey, encoding_format='wif'):
     return encoded
 
 
-def _decode_privkey_to_bytes(encoded_privkey, encoding_format='wif'):
+def _decode_privkey(encoded_privkey, encoding_format='wif'):
     """
     Args:
         encoded_privkey: an encoded private key string
@@ -88,59 +76,17 @@ def _decode_privkey_to_bytes(encoded_privkey, encoding_format='wif'):
     else:
         raise TypeError("unsupported private key format")
 
-    return priv
-
-
-def decode_privkey(encoded_privkey, encoding_format='wif'):
-    """Decodes a provided encoded privkey to a secp256k1 bytes representation
-
-    Args:
-        encoded_privkey (str): An encoded private key string
-        encoding_format (str): The encoded format of the provided
-            private key. Must be either 'wif' or 'hex'.
-
-    Returns:
-        bytes: A private key in native bytes format
-    """
-    return _decode_privkey_to_bytes(encoded_privkey, encoding_format)
-
-
-def _decode_privkey(encoded_privkey, encoding_format='wif'):
-    """
-    Args:
-        encoded_privkey: an encoded private key string
-        encoding_format: string indicating format such as 'wif'
-
-    Returns:
-        private key object useable with this module
-    """
-    priv = _decode_privkey_to_bytes(encoded_privkey, encoding_format)
     return secp256k1.PrivateKey(priv, ctx=__CTX__)
 
 
 def generate_pubkey(privkey):
-    """
+    """ Generate the public key based on a given private key
     Args:
         privkey: a serialized private key string
     Returns:
         pubkey: a serialized public key string
      """
     return _encode_pubkey(_decode_privkey(privkey).pubkey, 'hex')
-
-
-def encode_pubkey(pubkey, encoding_format='hex'):
-    """Encodes a provided encoded pubkey to a supported encoding_format
-
-    Args:
-        pubkey (str): An encoded public key string
-        encoding_format (str): The encoded format of the provided
-            private key. Must be 'hex'.
-
-    Returns:
-        str: A public key in the requested format
-    """
-    return _encode_pubkey(_decode_pubkey(pubkey, encoding_format),
-                          encoding_format)
 
 
 def _encode_pubkey(pubkey, encoding_format='hex'):
@@ -154,25 +100,6 @@ def _encode_pubkey(pubkey, encoding_format='hex'):
     return enc
 
 
-def decode_pubkey(serialized_pubkey, encoding_format='hex'):
-    """Decodes a provided public key into the requested format
-
-    Args:
-        serialized_pubkey (str): The encoded public key
-        encoding_format (str): The format of the provided encoded
-            public key. Must be 'hex'.
-
-    Returns:
-        bytes: The native bytes representation of the public key
-    """
-    if encoding_format == 'hex':
-        serialized_pubkey = binascii.unhexlify(serialized_pubkey)
-    else:
-        raise ValueError("Unrecognized pubkey encoding format")
-
-    return serialized_pubkey
-
-
 def _decode_pubkey(serialized_pubkey, encoding_format='hex'):
     if encoding_format == 'hex':
         serialized_pubkey = binascii.unhexlify(serialized_pubkey)
@@ -184,7 +111,7 @@ def _decode_pubkey(serialized_pubkey, encoding_format='hex'):
 
 
 def generate_identifier(pubkey):
-    """
+    """ Generate an identifier based on the public key
     Args:
         pubkey: a serialized public key string
 
@@ -195,7 +122,7 @@ def generate_identifier(pubkey):
 
 
 def sign(message, privkey):
-    """
+    """ Signs a message using the specified private key
     Args:
         message: Message string
         privkey: A serialized private key string
@@ -216,7 +143,7 @@ def sign(message, privkey):
 
 
 def verify(message, signature, pubkey):
-    """
+    """ Verification of signature based on message and pubkey
     Args:
         message: Message string
         signature: DER encoded compact signature

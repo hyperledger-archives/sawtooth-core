@@ -17,6 +17,26 @@
 
     This module provides an interface to signing operations that insulates
     the caller from decisions on the underlying crypto system.
+    All keys are returned as serialized strings.
+    All methods expect that serialized format.
+
+    Basic Usage:
+        import sawtooth_signing as signing
+
+        msg = 'this is a message'
+        priv = signing.generate_privkey()
+        pub = signing.generate_pubkey(priv)
+        sig = signing.sign(msg, priv)
+        ver = signing.verify(msg, sig, pub)
+
+        # Store Private Key
+        keyfile = open(filename, 'w')
+        keyfile.write(priv)
+        keyfile.close()
+
+        # Retrieve Private Key
+        keyfile = open(filename, 'r')
+        priv = keyfile.readline()
 
     As new crypto packages are implemented this package serves as a build
     time switch to select the crypto package for that sawtooth network.

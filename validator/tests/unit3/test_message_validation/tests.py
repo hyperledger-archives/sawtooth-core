@@ -33,8 +33,7 @@ from sawtooth_validator.gossip import signature_verifier as verifier
 class TestMessageValidation(unittest.TestCase):
     def setUp(self):
         self.private_key = signing.generate_privkey()
-        self.public_key = signing.encode_pubkey(
-            signing.generate_pubkey(self.private_key), "hex")
+        self.public_key = signing.generate_pubkey(self.private_key)
 
     def broadcast(self, msg):
         pass

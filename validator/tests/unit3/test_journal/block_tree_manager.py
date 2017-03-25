@@ -84,8 +84,7 @@ class BlockTreeManager(object):
 
         self.state_view_factory = MockStateViewFactory(self.state_db)
         self.signing_key = signing.generate_privkey()
-        self.public_key = signing.encode_pubkey(
-            signing.generate_pubkey(self.signing_key), "hex")
+        self.public_key = signing.generate_pubkey(self.signing_key)
 
         self.identity_signing_key = signing.generate_privkey()
         self.genesis_block = self._generate_genesis_block()

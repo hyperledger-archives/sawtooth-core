@@ -32,8 +32,8 @@ class BatchPublisher(object):
         self.identity_signing_key = identity_signing_key
         self._batch_sender = batch_sender
         self._identity_signing_key = identity_signing_key
-        self._identity_public_key = signing.encode_pubkey(
-            signing.generate_pubkey(self._identity_signing_key), "hex")
+        self._identity_public_key = \
+            signing.generate_pubkey(self._identity_signing_key)
 
     def send(self, transactions):
         """ Package up transactions into a batch and send them to the

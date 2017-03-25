@@ -248,8 +248,7 @@ class GenesisController(object):
         genesis_header = block_pb2.BlockHeader(
             block_num=0,
             previous_block_id=NULL_BLOCK_IDENTIFIER,
-            signer_pubkey=signing.encode_pubkey(
-                signing.generate_pubkey(self._identity_priv_key), "hex"))
+            signer_pubkey=signing.generate_pubkey(self._identity_priv_key))
 
         return BlockBuilder(genesis_header)
 
