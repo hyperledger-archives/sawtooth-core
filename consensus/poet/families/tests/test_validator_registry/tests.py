@@ -72,7 +72,7 @@ class TestValidatorRegistry(unittest.TestCase):
 
         # Respond with a empty validator Map
         self.tester.respond(
-            self.factory.create_get_empty_resposne_validator_map(), received)
+            self.factory.create_get_empty_response_validator_map(), received)
 
         # Expect a set the new validator to the ValidatorMap
         received = self.tester.expect(

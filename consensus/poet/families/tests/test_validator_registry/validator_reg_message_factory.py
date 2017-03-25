@@ -273,7 +273,7 @@ class ValidatorRegistryMessageFactory(object):
         addresses = [address]
         return self._factory.create_get_request(addresses)
 
-    def create_get_empty_resposne_validator_map(self):
+    def create_get_empty_response_validator_map(self):
         address = self._key_to_address("validator_map")
         data = ValidatorMap().SerializeToString()
         return self._factory.create_get_response({address: data})
