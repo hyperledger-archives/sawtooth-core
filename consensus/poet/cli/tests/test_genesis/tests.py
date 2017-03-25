@@ -93,6 +93,6 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         privkey = signing.generate_privkey()
         wif_file = os.path.join(self._temp_dir, key_name)
         with open(wif_file, 'w') as wif_fd:
-            wif_fd.write(signing.encode_privkey(privkey))
+            wif_fd.write(privkey)
 
         return signing.generate_pubkey(privkey)

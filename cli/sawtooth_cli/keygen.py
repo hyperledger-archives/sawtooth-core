@@ -81,7 +81,6 @@ def do_keygen(args):
                 'files exist, rerun with --force to overwrite existing files')
 
     privkey = signing.generate_privkey()
-    encoded = signing.encode_privkey(privkey)
     pubkey = signing.generate_pubkey(privkey)
     addr = signing.generate_identifier(pubkey)
 
@@ -93,7 +92,7 @@ def do_keygen(args):
                     print('overwriting file: {}'.format(wif_filename))
                 else:
                     print('writing file: {}'.format(wif_filename))
-            wif_fd.write(encoded)
+            wif_fd.write(privkey)
             wif_fd.write('\n')
 
         addr_exists = os.path.exists(addr_filename)
