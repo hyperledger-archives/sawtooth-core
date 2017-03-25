@@ -15,9 +15,6 @@
 
 import logging
 import os
-import sys
-
-import sawtooth_signing as signing
 
 from sawtooth_validator.exceptions import LocalConfigurationError
 
@@ -47,24 +44,9 @@ def load_identity_signing_key(key_dir, key_name):
     LOGGER.info('Loading signing key: %s', key_path)
     try:
         with open(key_path, 'r') as key_file:
-            wif_key = key_file.read().strip()
+            privkey = key_file.read().strip()
     except IOError as e:
         raise LocalConfigurationError(
             "Could not load key file: {}".format(str(e)))
 
-    try:
-        decoded_key = signing.decode_privkey(wif_key)
-    except AssertionError:
-        # The underlying bitcoin library used by sawtooth_signing asserts to
-        # verify correctness of the format.  While we would not normally both
-        # log the error and raise an exception, in this case we may need the
-        # stacktrace to determine the root cause of the AssertionError, since
-        # there is no message provided as part of it.  We log it as debug,
-        # while the exception is probably handled by the caller as a fatal
-        # startup error.
-        LOGGER.debug(
-            "AssertionError while decoding wif key", exc_info=sys.exc_info())
-        raise LocalConfigurationError(
-            "Could not decode key contained in file (AssertionError): "
-            "{}".format(key_path))
-    return signing.encode_privkey(decoded_key)
+    return privkey

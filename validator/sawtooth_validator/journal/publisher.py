@@ -92,8 +92,8 @@ class BlockPublisher(object):
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
-        self._identity_public_key = signing.encode_pubkey(
-            signing.generate_pubkey(self._identity_signing_key), "hex")
+        self._identity_public_key = \
+            signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
 
     def _get_previous_block_root_state_hash(self, blkw):

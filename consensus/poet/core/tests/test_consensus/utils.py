@@ -44,8 +44,4 @@ def create_random_public_key():
 
 
 def create_random_public_key_hash():
-    return \
-        hashlib.sha256(
-            signing.encode_pubkey(
-                create_random_public_key(),
-                'hex').encode('ascii')).hexdigest()
+    return hashlib.sha256(create_random_public_key().encode()).hexdigest()

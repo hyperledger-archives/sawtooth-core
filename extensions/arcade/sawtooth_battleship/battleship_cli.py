@@ -239,13 +239,12 @@ def do_init(args, config):
                 os.makedirs(os.path.dirname(wif_filename))
 
             privkey = signing.generate_privkey()
-            encoded = signing.encode_privkey(privkey, 'wif')
             pubkey = signing.generate_pubkey(privkey)
             addr = signing.generate_identifier(pubkey)
 
             with open(wif_filename, "w") as wif_fd:
                 print("writing file: {}".format(wif_filename))
-                wif_fd.write(encoded)
+                wif_fd.write(privkey)
                 wif_fd.write("\n")
 
             with open(addr_filename, "w") as addr_fd:

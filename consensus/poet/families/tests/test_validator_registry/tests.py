@@ -18,8 +18,6 @@ import json
 import base64
 import hashlib
 
-import sawtooth_signing as signing
-
 from test_validator_registry.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
 
@@ -489,9 +487,7 @@ class TestValidatorRegistry(unittest.TestCase):
         hash_input = \
             '{0}{1}'.format(
                 'Not a valid OPK Hash',
-                signing.encode_pubkey(
-                    self.factory.poet_public_key,
-                    'hex').upper()).encode()
+                self.factory.poet_public_key).upper().encode()
         sgx_quote.report_body.report_data.d = \
             hashlib.sha256(hash_input).digest()
 

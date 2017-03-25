@@ -204,11 +204,8 @@ def _read_signing_keys(key_filename):
 
     try:
         with open(filename, 'r') as key_file:
-            wif_key = key_file.read().strip()
-            signing_key = signing.encode_privkey(
-                signing.decode_privkey(wif_key, 'wif'), 'hex')
-            pubkey = signing.encode_pubkey(
-                signing.generate_pubkey(signing_key), 'hex')
+            signing_key = key_file.read().strip()
+            pubkey = signing.generate_pubkey(signing_key)
 
             return pubkey, signing_key
     except IOError as e:
