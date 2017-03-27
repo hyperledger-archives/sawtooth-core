@@ -103,10 +103,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
         wait_certificate_id = NULL_BLOCK_IDENTIFIER
         most_recent_block = self._block_cache.block_store.chain_head
         if most_recent_block is not None:
-            wait_certificate_id = \
+            wait_certificate = \
                 utils.deserialize_wait_certificate(
                     block=most_recent_block,
-                    poet_enclave_module=poet_enclave_module).identifier
+                    poet_enclave_module=poet_enclave_module)
+            if wait_certificate is not None:
+                wait_certificate_id = wait_certificate.identifier
 
         # Create signup information for this validator
         public_key_hash = \

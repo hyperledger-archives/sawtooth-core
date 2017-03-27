@@ -45,19 +45,24 @@ def deserialize_wait_certificate(block, poet_enclave_module):
 
     Returns:
         WaitCertificate: The reconstituted wait certificate associated
-            with the block
+            with the block or None if cannot deserialize
     """
     # The wait certificate is a JSON string placed in the consensus
     # field/property of the block header.  Parse the JSON and then use the
     # serialized wait certificate and signature to create a
     # WaitCertificate object.
-    wait_certificate_dict = json.loads(block.header.consensus.decode())
+    wait_certificate = None
+    try:
+        wait_certificate_dict = json.loads(block.header.consensus.decode())
+        wait_certificate = \
+            WaitCertificate.wait_certificate_from_serialized(
+                poet_enclave_module=poet_enclave_module,
+                serialized=wait_certificate_dict['SerializedCertificate'],
+                signature=wait_certificate_dict['Signature'])
+    except (json.decoder.JSONDecodeError, KeyError):
+        pass
 
-    return \
-        WaitCertificate.wait_certificate_from_serialized(
-            poet_enclave_module=poet_enclave_module,
-            serialized=wait_certificate_dict.get('SerializedCertificate'),
-            signature=wait_certificate_dict.get('Signature'))
+    return wait_certificate
 
 
 def build_certificate_list(block_header,
@@ -89,13 +94,18 @@ def build_certificate_list(block_header,
                 len(certificates) < maximum_number:
             # Grab the block from the block store, use the consensus
             # property to reconstitute the wait certificate, and add
-            # the wait certificate to the list.
+            # the wait certificate to the list.  If we get to a block
+            # that does not have a wait certificate, we stop.
             block = block_cache.block_store[block_id]
-
-            certificates.appendleft(
+            wait_certificate = \
                 deserialize_wait_certificate(
                     block=block,
-                    poet_enclave_module=poet_enclave_module))
+                    poet_enclave_module=poet_enclave_module)
+
+            if wait_certificate is None:
+                break
+
+            certificates.appendleft(wait_certificate)
 
             # Move to the previous block
             block_id = block.header.previous_block_id
