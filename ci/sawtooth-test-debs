@@ -30,15 +30,14 @@ WORKDIR ${pkg_dir}
 
 COPY ${host_pkg_dir}/*.deb ${pkg_dir}/
 
-RUN echo "deb file:${pkg_dir} ./" > \
-        /etc/apt/sources.list.d/sawtooth_local.list && \
-    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && \
-    apt-get update
+RUN echo "deb file:${pkg_dir} ./" >> \
+        /etc/apt/sources.list \
+ && echo "deb http://repo.sawtooth.me/ xenial universe" >> \
+        /etc/apt/sources.list \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 \
+        --recv-keys 6B58B1AC10FB5F63 \
+ && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
+ && apt-get update
 
 RUN apt-get update && apt-get install -y -q --allow-unauthenticated \
     $(ls -1 . | grep sawtooth | sed 's|^\(python3-sawtooth-.*\)\_0.8.*$|\1|')
-
-EXPOSE 40000/tcp
-EXPOSE 8080
-
-CMD ["/bin/bash"]
