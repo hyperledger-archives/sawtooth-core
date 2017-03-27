@@ -123,18 +123,27 @@ class PoetBlockVerifier(BlockVerifierInterface):
                     utils.deserialize_wait_certificate(
                         block=block_wrapper,
                         poet_enclave_module=poet_enclave_module)
-                wait_certificate.check_valid(
-                    poet_enclave_module=poet_enclave_module,
-                    certificates=certificates,
-                    poet_public_key=validator_info.signup_info.poet_public_key)
+                if wait_certificate is None:
+                    raise \
+                        ValueError(
+                            'Being asked to verify a block that was not '
+                            'created by PoET consensus module')
+
+                try:
+                    poet_public_key = \
+                        validator_info.signup_info.poet_public_key
+                    wait_certificate.check_valid(
+                        poet_enclave_module=poet_enclave_module,
+                        certificates=certificates,
+                        poet_public_key=poet_public_key)
+                except ValueError as ve:
+                    LOGGER.error('Wait certificate is not valid: %s', str(ve))
+                    LOGGER.warning('We will accept for now')
             except KeyError:
                 LOGGER.error(
                     'Attempted to verify block from validator with no '
                     'validator registry entry')
                 return False
-            except ValueError as ve:
-                LOGGER.error('Wait certificate is not valid: %s', str(ve))
-                LOGGER.warning('We will accept for now')
         else:
             LOGGER.warning(
                 'Block accepted by default because no validators registered')
