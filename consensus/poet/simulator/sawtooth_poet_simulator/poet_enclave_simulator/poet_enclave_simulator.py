@@ -155,13 +155,7 @@ class _PoetEnclaveSimulator(object):
                 signing.generate_pubkey(cls._poet_private_key)
             cls._active_wait_timer = None
 
-            # We are going to fake out sealing the signup data.  Note that
-            # the signing module uses strings for both private (WIF encoded)
-            # and public (hex encoded) key canonical formats.  Therefore, we
-            # don't have to encode before putting in the signup data.  This
-            # also means that on the flip side (unsealing signup data and
-            # verifying signatures using public keys), we don't have to decode
-            # before using.
+            # Simulate sealing (encrypting) the signup data.
             signup_data = {
                 'poet_public_key': cls._poet_public_key,
                 'poet_private_key': cls._poet_private_key
@@ -273,9 +267,6 @@ class _PoetEnclaveSimulator(object):
         signup_data = \
             json2dict(base64.b64decode(sealed_signup_data).decode())
 
-        # Since the signing module uses strings for both private (WIF encoded)
-        # and public (hex encoded) key canonical formats, we don't have to
-        # decode.
         with cls._lock:
             cls._poet_public_key = str(signup_data.get('poet_public_key'))
             cls._poet_private_key = str(signup_data.get('poet_private_key'))
