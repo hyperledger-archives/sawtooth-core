@@ -17,6 +17,7 @@ import json
 import urllib.request as urllib
 from urllib.parse import urlencode
 from urllib.error import URLError, HTTPError
+from http.client import RemoteDisconnected
 
 from sawtooth_cli.exceptions import CliException
 
@@ -103,6 +104,8 @@ class RestClient(object):
             return (result.status, json.loads(result.read().decode()))
         except HTTPError as e:
             return (e.code, e.msg)
+        except RemoteDisconnected as e:
+            raise CliException(e)
         except URLError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
