@@ -13,17 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2.1"
+FROM sawtooth-dev-base
 
-services:
+RUN pip3 install aiohttp==1.3.5
 
-  poet:
-    image: sawtooth-dev-test:$ISOLATION_ID
-    volumes:
-      - ../../../../..:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/consensus/poet/common
-    entrypoint: nose2-3 -s tests/test_sgx_structs -v
-    environment:
-        PYTHONPATH: "\
-          /project/sawtooth-core/consensus/poet/common:\
-          /project/sawtooth-core/consensus/poet/common/tests"
+RUN mkdir -p /project/sawtooth-core
+
+ARG PROJECT_DIR="/project/sawtooth-core"
+
+WORKDIR $PROJECT_DIR
+
+EXPOSE 40000
+
+ENTRYPOINT ./bin/rest_api

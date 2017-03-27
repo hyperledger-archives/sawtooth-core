@@ -13,17 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2.1"
+FROM sawtooth-dev-base
 
-services:
+RUN mkdir -p /project/sawtooth-core
 
-  poet:
-    image: sawtooth-dev-test:$ISOLATION_ID
-    volumes:
-      - ../../../../..:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/consensus/poet/common
-    entrypoint: nose2-3 -s tests/test_sgx_structs -v
-    environment:
-        PYTHONPATH: "\
-          /project/sawtooth-core/consensus/poet/common:\
-          /project/sawtooth-core/consensus/poet/common/tests"
+ARG PROJECT_DIR="/project/sawtooth-core"
+
+WORKDIR $PROJECT_DIR
+
+ENTRYPOINT ./bin/tp_intkey_python tcp://validator:40000
