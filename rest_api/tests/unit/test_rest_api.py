@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 from base64 import b64decode
 from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
@@ -31,6 +32,7 @@ class ApiTest(AioHTTPTestCase):
         app = web.Application(loop=loop)
         app.router.add_post('/batches', handlers.batches_post)
         app.router.add_get('/batch_status', handlers.status_list)
+        app.router.add_post('/batch_status', handlers.status_list)
         app.router.add_get('/state', handlers.state_list)
         app.router.add_get('/state/{address}', handlers.state_get)
         app.router.add_get('/blocks', handlers.block_list)
@@ -216,6 +218,62 @@ class ApiTest(AioHTTPTestCase):
             - a response status of 400
         """
         response = await self.get_and_assert_status('/batch_status', 400)
+
+    @unittest_run_loop
+    async def test_batch_status_as_post(self):
+        """Verifies a POST to /batch_status works properly.
+
+        Fetches from the following preseeded id/status pairs:
+            'committed': COMMITTED
+            'pending': PENDING
+             *: UNKNOWN
+
+        Expects to find:
+            - a response status of 200
+            - an empty link property
+            - a data property that is a dict with the key/value pairs:
+                * 'committed': 'COMMITTED'
+                * 'pending': 'PENDING'
+                * 'bad': 'UNKNOWN'
+        """
+        request = await self.client.post(
+            '/batch_status',
+            data=json.dumps(['committed', 'pending', 'bad']).encode(),
+            headers={'content-type': 'application/json'})
+        self.assertEqual(200, request.status)
+
+        response = await request.json()
+        self.assertNotIn('link', response)
+        self.assert_has_valid_data_dict(response, {
+            'committed': 'COMMITTED',
+            'pending': 'PENDING',
+            'bad': 'UNKNOWN'})
+
+    @unittest_run_loop
+    async def test_batch_status_as_bad_post(self):
+        """Verifies a bad POST to /batch_status breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        request = await self.client.post(
+            '/batch_status',
+            data=json.dumps(['a', 'b', 'c']).encode(),
+            headers={'content-type': 'application/octet-stream'})
+        self.assertEqual(400, request.status)
+
+    @unittest_run_loop
+    async def test_batch_status_as_empty_post(self):
+        """Verifies an empty POST to /batch_status breaks properly.
+
+        Expects to find:
+            - a response status of 400
+        """
+        request = await self.client.post(
+            '/batch_status',
+            data=json.dumps([]).encode(),
+            headers={'content-type': 'application/json'})
+        self.assertEqual(400, request.status)
 
     @unittest_run_loop
     async def test_state_list(self):

@@ -53,6 +53,7 @@ def start_rest_api(host, port, stream_url, timeout):
     # Add routes to the web app
     app.router.add_post('/batches', handler.batches_post)
     app.router.add_get('/batch_status', handler.status_list)
+    app.router.add_post('/batch_status', handler.status_list)
 
     app.router.add_get('/state', handler.state_list)
     app.router.add_get('/state/{address}', handler.state_get)

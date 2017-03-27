@@ -96,15 +96,31 @@ class RouteHandler(object):
     @asyncio.coroutine
     def status_list(self, request):
         """
-        Fetches the status of a set of batches submitted to the validator
+        Fetches the status of a set of batches submitted to the validator.
+        Batch ids can be submitted by query string (GET request), or by a
+        POST body with a JSON formatted list of id strings.
         Will wait for batches to commit if the `wait` parameter is set
         """
         error_traps = [error_handlers.MissingStatus()]
 
-        try:
-            batch_ids = request.url.query['id'].split(',')
-        except KeyError:
-            return errors.MissingStatusId()
+        if request.method == 'POST':
+            if request.headers['Content-Type'] != 'application/json':
+                return errors.BadStatusBody()
+
+            batch_ids = yield from request.json()
+
+            if not isinstance(batch_ids, list):
+                return errors.BadStatusBody()
+            if len(batch_ids) == 0:
+                return errors.MissingStatusId()
+            if not isinstance(batch_ids[0], str):
+                return errors.BadStatusBody()
+
+        else:
+            try:
+                batch_ids = request.url.query['id'].split(',')
+            except KeyError:
+                return errors.MissingStatusId()
 
         validator_query = client.ClientBatchStatusRequest(batch_ids=batch_ids)
         self._set_wait(request, validator_query)
@@ -115,9 +131,14 @@ class RouteHandler(object):
             validator_query,
             error_traps)
 
+        if request.method != 'POST':
+            metadata = RouteHandler._get_metadata(request, response)
+        else:
+            metadata = None
+
         return RouteHandler._wrap_response(
             data=response.get('batch_statuses'),
-            metadata=RouteHandler._get_metadata(request, response))
+            metadata=metadata)
 
     @asyncio.coroutine
     def state_list(self, request):

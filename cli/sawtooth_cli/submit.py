@@ -15,6 +15,7 @@
 
 import logging
 import time
+from sys import maxsize
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
@@ -52,15 +53,45 @@ def do_submit(args):
 
     stop = time.time()
 
-    print("batches: {} batch/sec: {}".format(
+    print('batches: {},  batch/sec: {}'.format(
         str(len(batches.batches)),
         len(batches.batches) / (stop - start)))
+
+    if args.wait and args.wait > 0:
+        batch_ids = [b.header_signature for b in batches.batches]
+        wait_time = 0
+        start_time = time.time()
+
+        while wait_time < args.wait:
+            statuses = rest_client.get_statuses(
+                batch_ids,
+                args.wait - int(wait_time))
+            wait_time = time.time() - start_time
+
+            if all(s == 'COMMITTED' for s in statuses.values()):
+                print('All batches committed in {:.6} sec'.format(wait_time))
+                return
+
+            # Wait a moment so as not to hammer the Rest Api
+            time.sleep(0.2)
+
+        print('Wait timed out! Some batches have not yet been committed...')
+        for batch_id, status in statuses.items():
+            print('{:128.128}  {:8.8}'.format(batch_id, status))
+        exit(1)
 
 
 def add_submit_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'submit',
         parents=[parent_parser])
+
+    parser.add_argument(
+        '--wait',
+        nargs='?',
+        const=maxsize,
+        type=int,
+        help='wait for batches to commit, set an integer to specify a timeout')
 
     parser.add_argument(
         '-f', '--filename',
