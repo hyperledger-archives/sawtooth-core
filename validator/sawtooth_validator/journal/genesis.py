@@ -174,7 +174,7 @@ class GenesisController(object):
         block_builder.add_batches(genesis_batches)
         block_builder.set_state_hash(state_hash)
 
-        block_publisher = self._get_block_publisher(state_hash)
+        block_publisher = self._get_block_publisher(initial_state_root)
         if not block_publisher.initialize_block(block_builder.block_header):
             LOGGER.error('Consensus refused to initialize consensus block.')
             raise InvalidGenesisConsensusError(
@@ -231,6 +231,7 @@ class GenesisController(object):
                         'Consensus cannot send transactions during genesis.')
 
             consensus = ConsensusFactory.get_configured_consensus_module(
+                NULL_BLOCK_IDENTIFIER,
                 state_view)
             return consensus.BlockPublisher(
                 BlockCache(self._block_store),

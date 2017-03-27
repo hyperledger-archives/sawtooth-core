@@ -118,6 +118,7 @@ class BlockPublisher(object):
         state_view = \
             self._state_view_factory.create_view(chain_head.state_root_hash)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
+            chain_head.header_signature,
             state_view)
 
         self._consensus = consensus_module.\

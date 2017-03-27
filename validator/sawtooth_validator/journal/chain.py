@@ -455,6 +455,7 @@ class ChainController(object):
         state_view = self._state_view_factory.create_view(
             self.chain_head.header.state_root_hash)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
+            self.chain_head.header_signature,
             state_view)
 
         validator = BlockValidator(
@@ -555,16 +556,18 @@ class ChainController(object):
         # genesis block from the genesis validator
         if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
             chain_id = self._chain_id_manager.get_block_chain_id()
-            if chain_id != block.identifier:
+            if chain_id is None:
+                self._chain_id_manager.save_block_chain_id(block.identifier)
+            elif chain_id != block.identifier:
                 LOGGER.warning("Block id does not match block chain id. "
                                "Cannot set initial chain head.: %s",
                                block.identifier)
-            elif chain_id is None:
-                self._chain_id_manager.save_block_chain_id(block.identifier)
 
             state_view = self._state_view_factory.create_view(INIT_ROOT_KEY)
             consensus_module = \
-                ConsensusFactory.get_configured_consensus_module(state_view)
+                ConsensusFactory.get_configured_consensus_module(
+                    NULL_BLOCK_IDENTIFIER,
+                    state_view)
 
             committed_txn = TransactionCache(self._block_cache.block_store)
 
