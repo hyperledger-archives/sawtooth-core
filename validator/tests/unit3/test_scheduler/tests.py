@@ -19,7 +19,7 @@ import hashlib
 import threading
 import time
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 

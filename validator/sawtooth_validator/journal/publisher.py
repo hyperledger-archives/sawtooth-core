@@ -15,7 +15,7 @@
 import logging
 from threading import RLock
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 

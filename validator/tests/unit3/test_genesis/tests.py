@@ -20,7 +20,7 @@ import unittest
 from unittest.mock import Mock
 from unittest.mock import patch
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
 from sawtooth_validator.journal.block_store import BlockStore

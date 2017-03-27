@@ -23,7 +23,7 @@ from sawtooth_poet_cli.exceptions import CliException
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb

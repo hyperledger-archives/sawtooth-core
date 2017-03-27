@@ -25,7 +25,7 @@ import time
 
 import cbor
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 from sawtooth_sdk.protobuf import transaction_pb2
 from sawtooth_sdk.protobuf import batch_pb2
 

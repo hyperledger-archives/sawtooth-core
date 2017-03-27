@@ -12,5 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-__all__ = [
-    'pbct']
+
+""" Sawtooth Signing API
+
+    This module provides an interface to signing operations that insulates
+    the caller from decisions on the underlying crypto system.
+
+    As new crypto packages are implemented this package serves as a build
+    time switch to select the crypto package for that sawtooth network.
+
+    For example 'from ed25519_signer import *' would change sawtooth's
+    crypto selection without requiring changes to the API consumers.
+"""
+# pylint: disable=wildcard-import
+from sawtooth_signing.secp256k1_signer import *

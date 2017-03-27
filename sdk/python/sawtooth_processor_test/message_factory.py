@@ -16,7 +16,7 @@
 import hashlib
 import time
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse

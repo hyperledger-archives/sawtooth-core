@@ -23,7 +23,7 @@ import random
 import string
 import time
 import cbor
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2

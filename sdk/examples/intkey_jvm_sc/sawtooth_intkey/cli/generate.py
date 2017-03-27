@@ -22,7 +22,7 @@ import time
 import cProfile
 import argparse
 
-from sawtooth_signing import secp256k1_signer as signing
+import sawtooth_signing as signing
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 from sawtooth_sdk.protobuf import jvm_sc_pb2
