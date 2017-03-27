@@ -8,18 +8,18 @@ require 'yaml'
 crlf_count=0
 
 Dir.glob('*.sh') do |item|
- if open(item).grep(/\r/).length > 0 
+ if open(item).grep(/\r/).length > 0
   crlf_count+=1
- end 
+ end
 end
 
 Dir.glob('bootstrap.d/*.sh') do |item|
- if open(item).grep(/\r/).length > 0 
+ if open(item).grep(/\r/).length > 0
   crlf_count+=1
- end 
+ end
 end
 
-if crlf_count > 0 
+if crlf_count > 0
   puts "One or more bash scripts contain CRLF line endings. Please check out"
   puts "Sawtooth Lake again with the git setting 'core.autocrlf' set to false"
   puts "in your git configuration."
@@ -100,16 +100,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.box = conf['VAGRANT_BOX']
 
-  if conf['VAGRANT_FORWARD_PORTS']
-      config.vm.network "forwarded_port", guest: 8800, host: 8800
-      config.vm.network "forwarded_port", guest: 8900, host: 8900
+#  if conf['VAGRANT_FORWARD_PORTS']
+#      config.vm.network "forwarded_port", guest: 8800, host: 8800
+#      config.vm.network "forwarded_port", guest: 8900, host: 8900
 
-      # rethinkdb
-      config.vm.network "forwarded_port", guest: 18080, host: 18080
+#      # rethinkdb
+#      config.vm.network "forwarded_port", guest: 18080, host: 18080
 
       # nodejs
-      config.vm.network "forwarded_port", guest: 3000, host: 3000
-  end
+#      config.vm.network "forwarded_port", guest: 3000, host: 3000
+#  end
   config.vm.provision :shell, path: "bootstrap.sh"
 
   config.vm.synced_folder "../../", "/project"
