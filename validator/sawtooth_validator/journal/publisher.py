@@ -323,8 +323,7 @@ class BlockPublisher(object):
                     # we don't have a chain head, we cannot build blocks
                     self._candidate_block = None
                     self._consensus = None
-                    self._committed_txn_cache =\
-                        TransactionCache(self._block_cache.block_store)
+
                     for batch in self._pending_batches:
                         self._committed_txn_cache.add_batch(batch)
                 else:
@@ -375,9 +374,12 @@ class BlockPublisher(object):
                                  block)
                     pending_batches.remove(batch)
                     self._pending_batches = pending_batches
+                    self._committed_txn_cache = \
+                        TransactionCache(self._block_cache.block_store)
                     return False
                 else:
                     block.add_batch(batch)
+                    self._committed_txn_cache.add_batch(batch)
                 state_hash = result.state_hash
             else:
                 committed_txn_cache.uncommit_batch(batch)
