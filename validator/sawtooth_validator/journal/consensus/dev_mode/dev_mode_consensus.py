@@ -17,6 +17,7 @@ import time
 import random
 import hashlib
 
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus\
     import BlockPublisherInterface
 from sawtooth_validator.journal.consensus.consensus\
@@ -69,14 +70,11 @@ class BlockPublisher(BlockPublisherInterface):
             True
         """
         # Using the current chain head, we need to create a state view so we
-        # can get our config values.  We are going to special case this until
-        # the genesis consensus is available.  We know that the genesis block
-        # is special cased to have a state view constructed for it.
-        state_root_hash = \
-            self._block_cache.block_store.chain_head.state_root_hash \
-            if self._block_cache.block_store.chain_head is not None \
-            else block_header.state_root_hash
-        state_view = self._state_view_factory.create_view(state_root_hash)
+        # can get our config values.
+        state_view = \
+            BlockWrapper.state_view_for_block(
+                self._block_cache.block_store.chain_head,
+                self._state_view_factory)
 
         config_view = ConfigView(state_view)
         self._min_wait_time = config_view.get_setting(

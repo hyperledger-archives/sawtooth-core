@@ -20,9 +20,10 @@ import json
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
@@ -198,14 +199,11 @@ class PoetBlockPublisher(BlockPublisherInterface):
         """
 
         # Using the current chain head, we need to create a state view so we
-        # can create a PoET enclave.  We are going to special case this until
-        # the genesis consensus is available.  We know that the genesis block
-        # is special cased to have a state view constructed for it.
-        state_root_hash = \
-            self._block_cache.block_store.chain_head.state_root_hash \
-            if self._block_cache.block_store.chain_head is not None \
-            else block_header.state_root_hash
-        state_view = self._state_view_factory.create_view(state_root_hash)
+        # can create a PoET enclave.
+        state_view = \
+            BlockWrapper.state_view_for_block(
+                block_wrapper=self._block_cache.block_store.chain_head,
+                state_view_factory=self._state_view_factory)
 
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
@@ -294,14 +292,11 @@ class PoetBlockPublisher(BlockPublisherInterface):
         block_hash = hasher.hexdigest()
 
         # Using the current chain head, we need to create a state view so we
-        # can create a PoET enclave.  We are going to special case this until
-        # the genesis consensus is available.  We know that the genesis block
-        # is special cased to have a state view constructed for it.
-        state_root_hash = \
-            self._block_cache.block_store.chain_head.state_root_hash \
-            if self._block_cache.block_store.chain_head is not None \
-            else block_header.state_root_hash
-        state_view = self._state_view_factory.create_view(state_root_hash)
+        # can create a PoET enclave.
+        state_view = \
+            BlockWrapper.state_view_for_block(
+                block_wrapper=self._block_cache.block_store.chain_head,
+                state_view_factory=self._state_view_factory)
 
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)

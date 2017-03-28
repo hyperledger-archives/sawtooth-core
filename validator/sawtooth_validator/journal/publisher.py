@@ -21,7 +21,6 @@ from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.batch_publisher import \
     BatchPublisher
 from sawtooth_validator.journal.consensus.consensus_factory import \
@@ -32,8 +31,6 @@ from sawtooth_validator.journal.transaction_cache import TransactionCache
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-
-from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 
 LOGGER = logging.getLogger(__name__)
@@ -96,18 +93,6 @@ class BlockPublisher(object):
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
 
-    def _get_previous_block_root_state_hash(self, blkw):
-        """ Get the state root hash for the previous block. This
-        function handles the origin block correctly.
-        :param blkw: the reference block block.
-        :return: The state root hash of the previous block.
-        """
-        if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
-            return INIT_ROOT_KEY
-        else:
-            prev_blkw = self._block_cache[blkw.previous_block_id]
-            return prev_blkw.state_root_hash
-
     def _build_block(self, chain_head):
         """ Build a candidate block and construct the consensus object to
         validate it.
@@ -115,8 +100,9 @@ class BlockPublisher(object):
         :return: (BlockBuilder) - The candidate block in a BlockBuilder
         wrapper.
         """
-        state_view = \
-            self._state_view_factory.create_view(chain_head.state_root_hash)
+        state_view = BlockWrapper.state_view_for_block(
+            chain_head,
+            self._state_view_factory)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
             chain_head.header_signature,
             state_view)

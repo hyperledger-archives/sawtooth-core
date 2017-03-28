@@ -110,6 +110,39 @@ class BlockWrapper(object):
         """
         return self.header.previous_block_id
 
+    @staticmethod
+    def state_view_for_block(block_wrapper, state_view_factory):
+        """
+        Returns the state view for an arbitrary block.
+
+        Args:
+            block_wrapper (BlockWrapper): The block for which a state
+                view is to be returned
+            state_view_factory (StateViewFactory): The state view factory
+                used to create the StateView object
+
+        Returns:
+            StateView object associated with the block
+        """
+        state_root_hash = \
+            block_wrapper.state_root_hash \
+            if block_wrapper is not None else None
+
+        return state_view_factory.create_view(state_root_hash)
+
+    def get_state_view(self, state_view_factory):
+        """
+        Returns the state view associated with this block
+
+        Args:
+            state_view_factory (StateViewFactory): The state view factory
+                used to create the StateView object
+
+        Returns:
+            StateView object
+        """
+        return BlockWrapper.state_view_for_block(self, state_view_factory)
+
     def __repr__(self):
         return "{}({}, S:{}, P:{})". \
             format(self.identifier, self.block_num,

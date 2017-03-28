@@ -32,13 +32,22 @@ class StateViewFactory(object):
         """
         self._database = database
 
-    def create_view(self, state_root_hash):
+    def create_view(self, state_root_hash=None):
         """Creates a StateView for the given state root hash.
 
+        Args:
+            state_root_hash (str): The state root hash of the state view
+                to return.  If None, returns the state view for the
         Returns:
             StateView: state view locked to the given root hash.
         """
-        return StateView(MerkleDatabase(self._database, state_root_hash))
+        # Create a default Merkle database and if we have a state root hash,
+        # update the Merkle database's root to that
+        merkle_db = MerkleDatabase(self._database)
+        if state_root_hash is not None:
+            merkle_db.set_merkle_root(state_root_hash)
+
+        return StateView(merkle_db)
 
 
 class StateView(object):
