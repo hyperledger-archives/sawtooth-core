@@ -145,7 +145,7 @@ class DockerNodeController(NodeController):
             'version': '2',
             'services': {
                 'validator': {
-                    'image': 'sawtooth-validator',
+                    'image': 'sawtooth-dev-validator',
                     'expose': ['40000', '8800'],
                     'networks': {self._prefix: {},
                                  'default': {'aliases': [node_name]}},
@@ -163,12 +163,26 @@ class DockerNodeController(NodeController):
         node_num = node_name[len('validator-'):]
         for proc in state['Processors']:
             compose_dict['services'][proc] = {
-                'image': 'sawtooth-{}'.format(proc),
+                'image': 'sawtooth-dev-{}'.format(proc),
                 'expose': ['40000'],
                 'links': ['validator'],
                 'volumes': ['/project:/project'],
                 'container_name': '-'.join([self._prefix, proc, node_num]),
                 'entrypoint': 'bin/{} tcp://{}:40000'.format(proc, node_name)
+            }
+
+        # start the rest_api for the genesis node only
+        if node_config.genesis:
+            compose_dict['services']['rest_api'] = {
+                'image': 'sawtooth-dev-rest_api',
+                    'expose': ['40000', '8080'],
+                    'links': ['validator'],
+                    'volumes': ['/project:/project'],
+                    'container_name': '-'.join([self._prefix, 'rest_api', node_num]),
+                    # 'entrypoint': './bin/rest_api --stream-url tcp://sawtooth-cluster-0-validator-000:40000',
+                    # Confirm that node_name works for the host name of validator in docker network
+                    'entrypoint': './bin/rest_api --stream-url tcp://{}:40000'.format(node_name),
+                    'ports': ['8080:8080']
             }
 
         # add the host:container port mapping for validator
@@ -214,7 +228,7 @@ class DockerNodeController(NodeController):
 
         node_num = node_name[len('validator-'):]
 
-        processes = state['Processors'] + ['validator']
+        processes = state['Processors'] + ['validator'] + ['rest_api']
 
         containers = ['-'.join([self._prefix, proc, node_num])
                       for proc in processes]
