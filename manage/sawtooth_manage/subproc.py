@@ -19,6 +19,7 @@ import subprocess
 import time
 import yaml
 import re
+import sys
 
 from sawtooth_manage.node import NodeController
 
