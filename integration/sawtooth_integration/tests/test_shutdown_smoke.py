@@ -16,16 +16,26 @@
 import unittest
 
 import logging
+import os
+import socket
 import subprocess
 import time
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class TestShutdownSmoke(unittest.TestCase):
-    def test_resting_shutdown(self):
-        """Tests that SIGINT and SIGTERM will cause validators with and without
+
+    @classmethod
+    def setUpClass(cls):
+        cls._sawtooth_core = cls._find_host_sawtooth_core()
+        cls._id = os.environ.get("ISOLATION_ID", "latest")
+        cls._validator_image = "{}:{}".format(
+            os.environ.get("VALIDATOR_IMAGE_NAME"),
+            cls._id)
+
+    def test_resting_shutdown_sigint(self):
+        """Tests that SIGINT will cause validators with and without
         genesis to gracefully exit.
 
         Notes:
@@ -38,34 +48,68 @@ class TestShutdownSmoke(unittest.TestCase):
             5) The SIGTERM os signal is sent to both validators.
             6) The validators' return codes are checked and asserted to be 0.
         """
-        # 2)
-        containers = ['validator-genesis', 'validator-non-genesis']
-        for c in containers:
-            self._send_docker_signal('SIGINT', c)
-        # 3)
-        sigint_exit_statuses = self._wait_for_containers_exit_status(
-            containers)
 
-        self.assertEqual(len(sigint_exit_statuses), len(containers))
-        for s in sigint_exit_statuses:
-            self.assertEqual(s, 0)
+        #1)
+        containers = self._startup()
 
-        # 4)
-        for c in containers:
-            self._start_container(c)
+        try:
+            # 2)
+            for c in containers:
+                self._send_docker_signal('SIGINT', c)
+            initial_time = time.time()
+            # 3)
+            sigint_exit_statuses = self._wait_for_containers_exit_status(
+                containers)
 
-        time.sleep(3)
+            end_time = time.time() - initial_time
+            LOGGER.warning("Containers exited with sigint in %s seconds",
+                        end_time)
 
-        # 5)
-        for c in containers:
-            self._send_docker_signal('SIGTERM', c)
 
-        # 6)
-        sigterm_exit_statuses = self._wait_for_containers_exit_status(
-            containers)
-        self.assertEqual(len(sigterm_exit_statuses), len(containers))
-        for s in sigterm_exit_statuses:
-            self.assertEqual(s, 0)
+            self.assertEqual(len(sigint_exit_statuses), len(containers))
+            for s in sigint_exit_statuses:
+                self.assertEqual(s, 0)
+
+            self._log_and_clean_up(containers)
+        except Exception as e:
+            self._log_and_clean_up(containers)
+            self.fail(str(e))
+
+    def test_resting_shutdown_sigterm(self):
+        """Tests that SIGTERM will cause validators with and without
+        genesis to gracefully exit.
+
+        Notes:
+            1) A genesis validator and a non-genesis validator are started with
+            the non-genesis validator specifying the genesis validator as
+            a peer.
+            2) The SIGTERM os signal is sent to both validators.
+            3) The validators' return codes are checked and asserted to be 0.
+        """
+
+            #1)
+        containers = self._startup()
+
+        try:
+            # 2)
+            for c in containers:
+                self._send_docker_signal('SIGTERM', c)
+            initial_time = time.time()
+
+            # 3)
+            sigterm_exit_statuses = self._wait_for_containers_exit_status(
+                containers)
+            end_time = time.time() - initial_time
+            LOGGER.warning("Containers exited with sigterm in %s seconds",
+                        end_time)
+            self.assertEqual(len(sigterm_exit_statuses), len(containers))
+            for s in sigterm_exit_statuses:
+                self.assertEqual(s, 0)
+
+            self._log_and_clean_up(containers)
+        except Exception as e:
+            self._log_and_clean_up(containers)
+            self.fail(str(e))
 
     def _send_docker_signal(self, sig, container_name):
         """
@@ -80,6 +124,14 @@ class TestShutdownSmoke(unittest.TestCase):
         subprocess.run(
                 args, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, check=True)
+
+    def _log_and_clean_up(self, containers):
+        for container in containers:
+            self._docker_logs(container)
+        self._remove_docker_containers(containers)
+
+    def _docker_logs(self, container):
+        return subprocess.check_output(['docker', 'logs', container])
 
     def _wait_for_containers_exit_status(self, containers):
         """Wait for all of the specified containers to exit
@@ -109,3 +161,83 @@ class TestShutdownSmoke(unittest.TestCase):
     def _start_container(self, container):
         start = ['docker', 'start', container]
         subprocess.run(start, timeout=15, check=True)
+
+    def _docker_run(self, args):
+        return subprocess.check_output(['docker', 'run'] + args,
+                                universal_newlines=True).strip('\n')
+
+    def _run_genesis(self):
+        return self._docker_run(
+            ['-d',
+             '-v',
+             '{}:/project/sawtooth-core'.format(self._sawtooth_core),
+             '-v',
+             '/etc/sawtooth',
+             '-v',
+             '/var/lib/sawtooth',
+             '--entrypoint',
+             'bash',
+             self._validator_image,
+             '-c',
+             "bin/sawtooth admin keygen && bin/sawtooth admin genesis"])
+
+    def _start_validator(self, prior_container, early, extra):
+        return self._docker_run(
+            ['-d',
+             '--volumes-from',
+             prior_container,
+             *early,
+             '--entrypoint',
+             'bin/validator',
+             self._validator_image,
+             '-vv',
+             *extra])
+
+    def _remove_docker_containers(self, containers):
+        return subprocess.check_call(['docker', 'rm', '-f'] + containers)
+
+    def _run_keygen_non_genesis(self):
+        return self._docker_run(
+            ['-d',
+             '-v',
+             '{}:/project/sawtooth-core'.format(self._sawtooth_core),
+             '-v',
+             '/etc/sawtooth',
+             '--entrypoint',
+             "bash",
+             self._validator_image,
+             '-c',
+             "bin/sawtooth admin keygen"])
+
+    def _startup(self):
+        containers = []
+        try:
+            genesis = self._run_genesis()
+            self._wait_for_containers_exit_status([genesis])
+            validator_genesis = self._start_validator(genesis, [], [])
+            containers.append(validator_genesis)
+            self._remove_docker_containers([genesis])
+            keygen = self._run_keygen_non_genesis()
+            self._wait_for_containers_exit_status([keygen])
+            validator_non_genesis = self._start_validator(
+                keygen, ['--link', validator_genesis],
+                ['--peers', 'tcp://{}:8800'.format(validator_genesis)])
+            containers.append(validator_non_genesis)
+            self._remove_docker_containers([keygen])
+            # Make sure that the validators have completed startup -- cli path
+            # and key loading, genesis check and creation
+            time.sleep(3)
+            return containers
+        except Exception as e:
+            self._remove_docker_containers(containers)
+            self.fail(str(e))
+
+    @classmethod
+    def _find_host_sawtooth_core(cls):
+        hostname = socket.gethostname()
+        return subprocess.check_output(['docker', 'inspect',
+                                        '--format=\"{{ range .Mounts }}'
+                                        '{{ if and (eq .Destination "/project/sawtooth-core") '
+                                        '(eq .Type "bind") }}{{ .Source }}{{ end }}{{ end }}\"',
+                                        hostname],
+                                       universal_newlines=True).strip('\n').strip('\"')
