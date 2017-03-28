@@ -352,7 +352,7 @@ def do_cluster_stop(args):
 
     # Force kill any targeted nodes that are still up
     for node_name in find_still_up(node_names):
-        print("Node name still up: killling {}".format(node_name))
+        print("Node name still up: killing {}".format(node_name))
         node_controller.kill(node_name)
 
 

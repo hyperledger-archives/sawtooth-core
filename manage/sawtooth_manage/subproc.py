@@ -88,7 +88,7 @@ class SubprocessNodeController(NodeController):
 
         commands = ['validator'] + state['Processors']
         if node_args.genesis:
-            commands = ['sawtooth'] + commands
+            commands = ['sawtooth'] + commands + ['rest_api']
             # clean data dir of existing genesis node artifacts
             data_dir = os.path.join(os.path.expanduser("~"),
                                     'sawtooth', 'data')
@@ -115,6 +115,8 @@ class SubprocessNodeController(NodeController):
 
             elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
+            elif cmd == 'rest_api':
+                flags = '--stream-url', url
             else:
                 flags = (url,)
             handle = subprocess.Popen((executable,) + flags)
