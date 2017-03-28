@@ -20,6 +20,9 @@ import time
 
 from sawtooth_poet_cli import config
 from sawtooth_poet_cli.exceptions import CliException
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
+from sawtooth_poet.poet_consensus.consensus_state_store \
+    import ConsensusStateStore
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
@@ -37,8 +40,6 @@ SGX_MODULE = 'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave'
 VR_NAMESPACE = sha256('validator_registry'.encode()).hexdigest()[0:6]
 VALIDATOR_MAP_ADDRESS = \
     VR_NAMESPACE + sha256('validator_map'.encode()).hexdigest()
-
-SEALED_SIGNUP_DATA_FILE = 'poet_signup_data'
 
 
 def add_genesis_parser(subparsers, parent_parser):
@@ -96,15 +97,16 @@ def do_genesis(args):
         originator_public_key_hash=public_key_hash,
         most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
-    print('Writing sealed signup data to {}'.format(SEALED_SIGNUP_DATA_FILE))
-    try:
-        seal_signup_data_path = os.path.join(config.get_data_dir(),
-                                             SEALED_SIGNUP_DATA_FILE)
-        with open(seal_signup_data_path, 'wb') as data_file:
-            data_file.write(signup_info.sealed_signup_data)
-    except IOError as e:
-        raise CliException(
-            'Unable to store sealed signup data: {}'.format(str(e)))
+    print('Writing sealed signup data to consensus state store')
+
+    consensus_state = ConsensusState()
+    consensus_state.sealed_signup_data = signup_info.sealed_signup_data
+
+    consensus_state_store = \
+        ConsensusStateStore(
+            data_dir=config.get_data_dir(),
+            validator_id=pubkey)
+    consensus_state_store[NULL_BLOCK_IDENTIFIER] = consensus_state
 
     # Create the validator registry payload
     payload = \
