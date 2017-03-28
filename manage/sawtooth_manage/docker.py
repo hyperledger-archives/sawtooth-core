@@ -171,18 +171,18 @@ class DockerNodeController(NodeController):
                 'entrypoint': 'bin/{} tcp://{}:40000'.format(proc, node_name)
             }
 
-        # start the rest_api for the genesis node only
-        if node_config.genesis:
+        # start the rest_api for the first node only
+        if node_num == '000':
             compose_dict['services']['rest_api'] = {
                 'image': 'sawtooth-dev-rest_api',
-                    'expose': ['40000', '8080'],
-                    'links': ['validator'],
-                    'volumes': ['/project:/project'],
-                    'container_name': '-'.join([self._prefix, 'rest_api', node_num]),
-                    # 'entrypoint': './bin/rest_api --stream-url tcp://sawtooth-cluster-0-validator-000:40000',
-                    # Confirm that node_name works for the host name of validator in docker network
-                    'entrypoint': './bin/rest_api --stream-url tcp://{}:40000'.format(node_name),
-                    'ports': ['8080:8080']
+                'expose': ['40000', '8080'],
+                'links': ['validator'],
+                'volumes': ['/project:/project'],
+                'container_name': '-'.join([self._prefix, 'rest_api',
+                                            node_num]),
+                'entrypoint': './bin/rest_api --stream-url tcp://{}:40000'.
+                format(node_name),
+                'ports': ['8080:8080']
             }
 
         # add the host:container port mapping for validator
@@ -228,7 +228,11 @@ class DockerNodeController(NodeController):
 
         node_num = node_name[len('validator-'):]
 
-        processes = state['Processors'] + ['validator'] + ['rest_api']
+        # only first node has a rest_api process associated with it
+        if node_num == '000':
+            processes = state['Processors'] + ['rest_api'] + ['validator']
+        else:
+            processes = state['Processors'] + ['validator']
 
         containers = ['-'.join([self._prefix, proc, node_num])
                       for proc in processes]
