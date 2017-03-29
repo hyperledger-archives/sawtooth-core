@@ -1,0 +1,398 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+from aiohttp import web
+from aiohttp.test_utils import AioHTTPTestCase
+from base64 import b64decode
+
+from sawtooth_rest_api.routes import RouteHandler
+from sawtooth_rest_api.protobuf.client_pb2 import Leaf
+from sawtooth_rest_api.protobuf.block_pb2 import Block
+from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
+from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
+from sawtooth_rest_api.protobuf.batch_pb2 import Batch
+from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
+from sawtooth_rest_api.protobuf.transaction_pb2 import Transaction
+from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
+
+
+class MockStream(object):
+    """Replaces a route handler's stream to allow tests to preset the response
+    to send back as well as run asserts on the protobufs sent to the stream.
+
+    Methods can be accessed using `self.stream` within a test case. MockStream
+    should not be initialized directly.
+    """
+    def __init__(self, test_case, request_type, request_proto, response_proto):
+        self._tests = test_case
+        self._request_type = request_type
+        self._request_proto = request_proto
+        self._response_proto = response_proto
+        self._reset_sent_request()
+        self._reset_response()
+
+    def preset_response(self, status=None, **response_data):
+        """Sets the response that will be returned by the next `send` call.
+        Should be set once before every test call the Rest Api makes to stream.
+
+        Args:
+            status (int, optional): Enum of the response status, defaults to OK
+            response_data (kwargs): Other data to add to the Protobuf response
+        """
+        if status is None:
+            status = self._response_proto.OK
+        self._response = self._response_proto(status=status, **response_data)
+
+    def assert_valid_request_sent(self, **request_data):
+        """Asserts that the last sent request matches the expected data.
+
+        Args:
+            request_data (kwargs): The data expected to be in the last request
+
+        Raises:
+            AssertionError: Raised if no new request was sent previous to call
+        """
+        if not self._sent_request_type or not self._sent_request:
+            raise AssertionError('You must send a request before testing it!')
+
+        self._tests.assertEqual(self._sent_request_type, self._request_type)
+
+        expected_request = self._request_proto(**request_data)
+        self._tests.assertEqual(self._sent_request, expected_request)
+
+        self._reset_sent_request()
+
+    def send(self, message_type, content):
+        """Replaces send method on Stream. Should not be called directly.
+        """
+        request = self._request_proto()
+        request.ParseFromString(content)
+
+        self._sent_request_type = message_type
+        self._sent_request = request
+
+        try:
+            response_bytes = self._response.SerializeToString()
+        except AttributeError:
+            raise AssertionError("Preset a response before sending a request!")
+
+        self._reset_response()
+        return self._MockFuture(response_bytes)
+
+    def _reset_sent_request(self):
+        self._sent_request_type = None
+        self._sent_request = None
+
+    def _reset_response(self):
+        self._response = None
+
+    class _MockFuture(object):
+        class Response(object):
+            def __init__(self, content):
+                self.content = content
+
+        def __init__(self, response_content):
+            self._response = self.Response(response_content)
+
+        def result(self, timeout):
+            return self._response
+
+
+class BaseApiTest(AioHTTPTestCase):
+    """A parent class for Rest Api test cases, providing common functionality.
+    """
+    async def get_application(self, loop):
+        """Each child must implement this method which similar to __init__
+        sets up aiohttp's async test cases.
+
+        Additionally, within this method each child should run the methods
+        `set_status_and_steam`, `build_handlers`, and `build_app` as part of
+        the setup process.
+
+        Args:
+            loop (object): Provided by aiohttp for acync operations,
+                will be needed in order to `build_app`.
+
+        Returns:
+            web.Application: the individual app for this test case
+        """
+        raise NotImplementedError('Rest Api tests need get_application method')
+
+    def set_status_and_stream(self, req_type, req_proto, resp_proto):
+        """Sets the `status` and `stream` properties for the test case.
+
+        Args:
+            req_type (int): Expected enum of the type of Message sent to stream
+            req_proto (class): Protobuf of requests that will be sent to stream
+            resp_proto (class): Protobuf of responses to send back from stream
+        """
+        self.status = resp_proto
+        self.stream = MockStream(self, req_type, req_proto, resp_proto)
+
+    @staticmethod
+    def build_handlers(stream):
+        """Returns Rest Api route handlers modified with some a mock stream.
+
+        Args:
+            stream (object): The MockStream set to `self.stream`
+
+        Returns:
+            RouteHandler: The route handlers to handle test queries
+        """
+        handlers = RouteHandler('tcp://0.0.0.0:40404', 5)
+        handlers._stream = stream
+        return handlers
+
+    @staticmethod
+    def build_app(loop, endpoint, handler):
+        """Returns the final app for `get_application`, with routes set up
+        to be test queried.
+
+        Args:
+            loop (object): The loop provided to `get_application`
+            endpoint (str): The path that will be queried by this test case
+            handler (function): Rest Api handler for queries to the endpoint
+
+        Returns:
+            web.Application: the individual app for this test case
+        """
+        app = web.Application(loop=loop)
+        app.router.add_get(endpoint, handler)
+        app.router.add_post(endpoint, handler)
+        return app
+
+    async def post_batches(self, batches, wait=False):
+        """POSTs batches to '/batches' with an optional wait parameter
+        """
+        batch_bytes = BatchList(batches=batches).SerializeToString()
+        query_string = '?wait' if wait else ''
+        wait_val = '=' + str(wait) if type(wait) == int else ''
+
+        return await self.client.post(
+            '/batches' + query_string + wait_val,
+            data=batch_bytes,
+            headers={'content-type': 'application/octet-stream'})
+
+    async def get_and_assert_status(self, endpoint, status):
+        """GETs from an endpoint and asserts the HTTP status is as expected
+        """
+        request = await self.client.get(endpoint)
+        self.assertEqual(status, request.status)
+        return request
+
+    async def get_json_assert_200(self, endpoint):
+        """GETs from endpoint, asserts a 200 status, returns a parsed response
+        """
+        request = await self.get_and_assert_status(endpoint, 200)
+        return await request.json()
+
+    async def assert_400(self, endpoint):
+        """GETs from an endpoint, and asserts a 400 HTTP status
+        """
+        await self.get_and_assert_status(endpoint, 400)
+
+    async def assert_404(self, endpoint):
+        """GETs from an endpoint, and asserts a 404 HTTP status
+        """
+        await self.get_and_assert_status(endpoint, 404)
+
+    def assert_all_instances(self, items, cls):
+        """Asserts that all items in a collection are instances of a class
+        """
+        for item in items:
+            self.assertIsInstance(item, cls)
+
+    def assert_has_valid_head(self, response, expected):
+        """Asserts a response has a head string with an expected value
+        """
+        self.assertIn('head', response)
+        head = response['head']
+        self.assertIsInstance(head, str)
+        self.assertEqual(head, expected)
+
+    def assert_has_valid_link(self, response, expected_ending):
+        """Asserts a response has a link url string with an expected ending
+        """
+        self.assertIn('link', response)
+        link = response['link']
+        self.assertIsInstance(link, str)
+        self.assertTrue(link.startswith('http'))
+        self.assertTrue(link.endswith(expected_ending))
+
+    def assert_has_valid_data_list(self, response, expected_length):
+        """Asserts a response has a data list of dicts of an expected length.
+        """
+        self.assertIn('data', response)
+        data = response['data']
+        self.assertIsInstance(data, list)
+        self.assert_all_instances(data, dict)
+        self.assertEqual(expected_length, len(data))
+
+    def assert_leaves_match(self, proto_leaves, json_leaves):
+        """Asserts that each JSON leaf matches the original Protobuf leaves
+        """
+        self.assertEqual(len(proto_leaves), len(json_leaves))
+        for pb_leaf, js_leaf in zip(proto_leaves, json_leaves):
+            self.assertIn('address', js_leaf)
+            self.assertIn('data', js_leaf)
+            self.assertEqual(pb_leaf.address, js_leaf['address'])
+            self.assertEqual(pb_leaf.data, b64decode(js_leaf['data']))
+
+    def assert_statuses_match(self, enum_statuses, json_statuses):
+        """Asserts that JSON statuses match the original enum statuses dict
+        """
+        self.assertEqual(len(enum_statuses), len(json_statuses))
+        for batch_id, status_string in json_statuses.items():
+            self.assertIn(batch_id, enum_statuses)
+            status_enum = self.status.BatchStatus.Name(enum_statuses[batch_id])
+            self.assertEqual(status_string, status_enum)
+
+    def assert_blocks_well_formed(self, blocks, *expected_ids):
+        """Asserts a block dict or list of block dicts have expanded headers
+        and match the expected ids. Assumes each block contains one batch and
+        transaction which share its id.
+        """
+        if not isinstance(blocks, list):
+            blocks = [blocks]
+
+        for block, expected_id in zip(blocks, expected_ids):
+            self.assertIsInstance(block, dict)
+            self.assertEqual(expected_id, block['header_signature'])
+            self.assertIsInstance(block['header'], dict)
+            self.assertEqual(b'consensus', b64decode(block['header']['consensus']))
+
+            batches = block['batches']
+            self.assertIsInstance(batches, list)
+            self.assertEqual(1, len(batches))
+            self.assert_all_instances(batches, dict)
+            self.assert_batches_well_formed(batches, expected_id)
+
+    def assert_batches_well_formed(self, batches, *expected_ids):
+        """Asserts a batch dict or list of batch dicts have expanded headers
+        and match the expected ids. Assumes each batch contains one transaction
+        which shares its id.
+        """
+        if not isinstance(batches, list):
+            batches = [batches]
+
+        for batch, expected_id in zip(batches, expected_ids):
+            self.assertEqual(expected_id, batch['header_signature'])
+            self.assertIsInstance(batch['header'], dict)
+            self.assertEqual('pubkey', batch['header']['signer_pubkey'])
+
+            txns = batch['transactions']
+            self.assertIsInstance(txns, list)
+            self.assertEqual(1, len(txns))
+            self.assert_all_instances(txns, dict)
+            self.assert_txns_well_formed(txns, expected_id)
+
+    def assert_txns_well_formed(self, txns, *expected_ids):
+        """Asserts a transaction dict or list of transactions dicts have
+        expanded headers and match the expected ids.
+        """
+
+        if not isinstance(txns, list):
+            txns = [txns]
+
+        for txn, expected_id in zip(txns, expected_ids):
+            self.assertEqual(expected_id, txn['header_signature'])
+            self.assertEqual(b'payload', b64decode(txn['payload']))
+            self.assertIsInstance(txn['header'], dict)
+            self.assertEqual(expected_id, txn['header']['nonce'])
+
+
+class Mocks(object):
+    """A static class with methods that return lists of mock Protobuf objects.
+    """
+    @staticmethod
+    def make_leaves(**leaf_data):
+        """Returns Leaf objects with specfied kwargs turned into
+        addresses and data
+        """
+        return [Leaf(address=a, data=d) for a, d in leaf_data.items()]
+
+    @classmethod
+    def make_blocks(cls, *block_ids):
+        """Returns Block objects with the specified ids, and each with
+        one Batch with one Transaction with matching ids.
+        """
+        blocks = []
+
+        for block_id in block_ids:
+            batches = cls.make_batches(block_id)
+
+            blk_header = BlockHeader(
+                block_num=len(blocks),
+                previous_block_id=blocks[-1].header_signature if blocks else '',
+                signer_pubkey='pubkey',
+                batch_ids=[b.header_signature for b in batches],
+                consensus=b'consensus',
+                state_root_hash='root_hash')
+
+            block = Block(
+                header=blk_header.SerializeToString(),
+                header_signature=block_id,
+                batches=batches)
+
+            blocks.append(block)
+
+        return blocks
+
+    @classmethod
+    def make_batches(cls, *batch_ids):
+        """Returns Batch objects with the specified ids, and each with
+        one Transaction with matching ids.
+        """
+        batches = []
+
+        for batch_id in batch_ids:
+            txns = cls.make_txns(batch_id)
+
+            batch_header = BatchHeader(
+                signer_pubkey='pubkey',
+                transaction_ids=[t.header_signature for t in txns])
+
+            batch = Batch(
+                header=batch_header.SerializeToString(),
+                header_signature=batch_id,
+                transactions=txns)
+
+            batches.append(batch)
+
+        return batches
+
+    @staticmethod
+    def make_txns(*txn_ids):
+        """Returns Transaction objects with the specified ids and a header
+        nonce that matches its id.
+        """
+        txns = []
+
+        for txn_id in txn_ids:
+            txn_header = TransactionHeader(
+                batcher_pubkey='pubkey',
+                family_name='family',
+                family_version='0.0',
+                nonce=txn_id,
+                signer_pubkey='pubkey')
+
+            txn = Transaction(
+                header=txn_header.SerializeToString(),
+                header_signature=txn_id,
+                payload=b'payload')
+
+            txns.append(txn)
+
+        return txns
