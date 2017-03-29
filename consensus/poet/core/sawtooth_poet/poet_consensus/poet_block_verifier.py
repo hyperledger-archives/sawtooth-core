@@ -15,6 +15,7 @@
 
 import logging
 
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
 
@@ -63,11 +64,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
         Returns:
             Boolean: True if the Block is valid, False if the block is invalid.
         """
-        # HACER: If we don't have any validators registered yet, we are going
-        # to immediately approve the block.  We cannot test the block's wait
-        # certificate until we can retrieve the block signer's corresponding
-        # public key.  We cannot do that until the genesis block is populated
-        # with the "initial" validator's signup information
+        # Get the state view for the previous block in the chain so we can
+        # create a PoET enclave and validator registry view
         previous_block = None
         try:
             previous_block = \
@@ -75,15 +73,10 @@ class PoetBlockVerifier(BlockVerifierInterface):
         except KeyError:
             pass
 
-        # Using the previous block, we need to create a state view so we
-        # can create a PoET enclave.  We are going to special case this until
-        # the genesis consensus is available.  We know that the genesis block
-        # is special cased to have a state view constructed for it.
-        state_root_hash = \
-            previous_block.state_root_hash \
-            if previous_block is not None \
-            else block_wrapper.state_root_hash
-        state_view = self._state_view_factory.create_view(state_root_hash)
+        state_view = \
+            BlockWrapper.state_view_for_block(
+                block_wrapper=previous_block,
+                state_view_factory=self._state_view_factory)
 
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
