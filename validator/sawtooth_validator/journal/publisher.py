@@ -269,7 +269,7 @@ class BlockPublisher(object):
         for batch in uncommitted_batches:
             if batch.header_signature not in committed_set:
                 if self._check_batch_dependencies(batch, self.
-                                                  committed_txn_cache):
+                                                  _committed_txn_cache):
                     self._pending_batches.append(batch)
 
         for batch in pending_batches:
