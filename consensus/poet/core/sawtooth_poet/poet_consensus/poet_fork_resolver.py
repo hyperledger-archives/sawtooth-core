@@ -58,5 +58,33 @@ class PoetForkResolver(ForkResolverInterface):
             Boolean: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
         """
-        LOGGER.debug("PoetForkResolver.compare_forks()")
-        return new_fork_head.block_num > cur_fork_head.block_num
+        if new_fork_head.block_num > cur_fork_head.block_num:
+            LOGGER.debug(
+                'Chain with new fork (%d) longer than current (%d)',
+                new_fork_head.block_num,
+                cur_fork_head.block_num)
+            return True
+        elif new_fork_head.block_num < cur_fork_head.block_num:
+            LOGGER.debug(
+                'Chain with current fork (%d) longer than new (%d)',
+                cur_fork_head.block_num,
+                new_fork_head.block_num)
+            return False
+        elif new_fork_head.header_signature > cur_fork_head.header_signature:
+            LOGGER.debug(
+                'Signature of new fork head (%s...%s) > than current '
+                '(%s...%s)',
+                new_fork_head.header_signature[:8],
+                new_fork_head.header_signature[-8:],
+                cur_fork_head.header_signature[:8],
+                cur_fork_head.header_signature[-8:])
+
+        LOGGER.debug(
+            'Signature of current fork head (%s...%s) >= than new '
+            '(%s...%s)',
+            cur_fork_head.header_signature[:8],
+            cur_fork_head.header_signature[-8:],
+            new_fork_head.header_signature[:8],
+            new_fork_head.header_signature[-8:])
+
+        return False
