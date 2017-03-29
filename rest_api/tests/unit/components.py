@@ -208,6 +208,16 @@ class BaseApiTest(AioHTTPTestCase):
         """
         await self.get_and_assert_status(endpoint, 404)
 
+    async def assert_500(self, endpoint):
+        """GETs from an endpoint, and asserts a 500 HTTP status
+        """
+        await self.get_and_assert_status(endpoint, 500)
+
+    async def assert_503(self, endpoint):
+        """GETs from an endpoint, and asserts a 503 HTTP status
+        """
+        await self.get_and_assert_status(endpoint, 503)
+
     def assert_all_instances(self, items, cls):
         """Asserts that all items in a collection are instances of a class
         """

@@ -58,6 +58,22 @@ class PostBatchTests(BaseApiTest):
         self.assert_has_valid_link(response, '/batch_status?id=a')
 
     @unittest_run_loop
+    async def test_post_batch_with_validator_error(self):
+        """Verifies a POST /batches with a validator error breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INTERNAL_ERROR
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        batches = Mocks.make_batches('a')
+        self.stream.preset_response(self.status.INTERNAL_ERROR)
+
+        request = await self.post_batches(batches)
+        self.assertEqual(500, request.status)
+
+    @unittest_run_loop
     async def test_post_json_batch(self):
         """Verifies a POST /batches with a JSON request body breaks properly.
 
@@ -221,6 +237,32 @@ class BatchStatusTests(BaseApiTest):
 
         self.assert_has_valid_link(response, '/batch_status?id=pending')
         self.assert_statuses_match(statuses, response['data'])
+
+    @unittest_run_loop
+    async def test_batch_status_with_validator_error(self):
+        """Verifies a GET /batch_status with a validator error breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INTERNAL_ERROR
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        await self.assert_500('/batch_status?id=pending')
+
+    @unittest_run_loop
+    async def test_batch_status_with_missing_statuses(self):
+        """Verifies a GET /batch_status with no statuses breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of NO_RESOURCE
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        self.stream.preset_response(self.status.NO_RESOURCE)
+        await self.assert_500('/batch_status?id=pending')
 
     @unittest_run_loop
     async def test_batch_status_with_wait(self):

@@ -59,6 +59,32 @@ class BlockListTests(BaseApiTest):
         self.assert_blocks_well_formed(response['data'], '2', '1', '0')
 
     @unittest_run_loop
+    async def test_block_list_with_validator_error(self):
+        """Verifies a GET /blocks with a validator error breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INTERNAL_ERROR
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        await self.assert_500('/blocks')
+
+    @unittest_run_loop
+    async def test_block_list_with_no_genesis(self):
+        """Verifies a GET /blocks with validator not ready breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of NOT_READY
+
+        It should send back a JSON response with:
+            - a status of 503
+        """
+        self.stream.preset_response(self.status.NOT_READY)
+        await self.assert_503('/blocks')
+
+    @unittest_run_loop
     async def test_block_list_with_head(self):
         """Verifies a GET /blocks with a head parameter works properly.
 
@@ -180,27 +206,6 @@ class BlockListTests(BaseApiTest):
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], '0')
 
-    @unittest_run_loop
-    async def test_block_list_with_id_head_mismatch(self):
-        """Verifies GET /blocks with ids missing from a specified head work.
-
-        It will receive a Protobuf response with:
-            - a status of NO_RESOURCE
-            - a head property of '0'
-
-        It should send back a JSON response with:
-            - a response status of 200
-            - a head property of '0'
-            - a link property that ends in '/blocks?head=0&id=1,2'
-            - a data property that is an empty list
-        """
-        self.stream.preset_response(self.status.NO_RESOURCE, head_id='0')
-        response = await self.get_json_assert_200('/blocks?id=1,2&head=0')
-
-        self.assert_has_valid_head(response, '0')
-        self.assert_has_valid_link(response, '/blocks?head=0&id=1,2')
-        self.assert_has_valid_data_list(response, 0)
-
 
 class BlockGetTests(BaseApiTest):
 
@@ -238,6 +243,19 @@ class BlockGetTests(BaseApiTest):
         self.assert_has_valid_link(response, '/blocks/1')
         self.assertIn('data', response)
         self.assert_blocks_well_formed(response['data'], '1')
+
+    @unittest_run_loop
+    async def test_block_get_with_validator_error(self):
+        """Verifies GET /blocks/{block_id} w/ validator error breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INTERNAL_ERROR
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        await self.assert_500('/blocks/1')
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):

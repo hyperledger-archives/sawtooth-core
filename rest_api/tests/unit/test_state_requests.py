@@ -63,6 +63,32 @@ class StateListTests(BaseApiTest):
         self.assert_leaves_match(leaves, response['data'])
 
     @unittest_run_loop
+    async def test_state_list_with_validator_error(self):
+        """Verifies a GET /state with a validator error breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INTERNAL_ERROR
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        await self.assert_500('/state')
+
+    @unittest_run_loop
+    async def test_state_list_with_no_genesis(self):
+        """Verifies a GET /state with validator not ready breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of NOT_READY
+
+        It should send back a JSON response with:
+            - a status of 503
+        """
+        self.stream.preset_response(self.status.NOT_READY)
+        await self.assert_503('/state')
+
+    @unittest_run_loop
     async def test_state_list_with_head(self):
         """Verifies a GET /state works properly with head specified.
 
@@ -186,27 +212,6 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_data_list(response, 1)
         self.assert_leaves_match(leaves, response['data'])
 
-    @unittest_run_loop
-    async def test_state_list_with_head_too_early(self):
-        """Verifies GET /state breaks with head earlier than address filter
-
-        It will receive a Protobuf response with:
-            - a status of NO_RESOURCE
-            - a head id of '0'
-
-        It should send back a JSON response with:
-            - a response status of 200
-            - a head property of '0'
-            - a link property that ends in '/state?head=0&address=b'
-            - a data property that is an empty list
-        """
-        self.stream.preset_response(self.status.NO_RESOURCE, head_id='0')
-        response = await self.get_json_assert_200('/state?address=b&head=0')
-
-        self.assert_has_valid_head(response, '0')
-        self.assert_has_valid_link(response, '/state?head=0&address=b')
-        self.assert_has_valid_data_list(response, 0)
-
 
 class StateGetTests(BaseApiTest):
 
@@ -250,7 +255,33 @@ class StateGetTests(BaseApiTest):
         self.assertEqual(b'3', b64decode(data))
 
     @unittest_run_loop
-    async def test_state_bad_get(self):
+    async def test_state_get_with_validator_error(self):
+        """Verifies a GET /state/{address} with a validator error breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INTERNAL_ERROR
+
+        It should send back a JSON response with:
+            - a status of 500
+        """
+        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        await self.assert_500('/state/a')
+
+    @unittest_run_loop
+    async def test_state_get_with_no_genesis(self):
+        """Verifies a GET /state/{address} with validator not ready breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of NOT_READY
+
+        It should send back a JSON response with:
+            - a status of 503
+        """
+        self.stream.preset_response(self.status.NOT_READY)
+        await self.assert_503('/state/a')
+
+    @unittest_run_loop
+    async def test_state_get_with_bad_address(self):
         """Verifies a GET /state/{address} breaks with a bad address.
 
         It will receive a Protobuf response with:
@@ -305,16 +336,3 @@ class StateGetTests(BaseApiTest):
         """
         self.stream.preset_response(self.status.NO_ROOT)
         await self.assert_404('/state/c?head=bad')
-
-    @unittest_run_loop
-    async def test_state_get_with_early_head(self):
-        """Verifies GET /state/{address} breaks with head earlier than address.
-
-        It will receive a Protobuf response with:
-            - a status of NO_RESOURCE
-
-        It should send back a JSON response with:
-            - a response status of 404
-        """
-        self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/state/c?head=0')
