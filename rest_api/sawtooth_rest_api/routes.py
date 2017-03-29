@@ -101,7 +101,7 @@ class RouteHandler(object):
         POST body with a JSON formatted list of id strings.
         Will wait for batches to commit if the `wait` parameter is set
         """
-        error_traps = [error_handlers.MissingStatus()]
+        error_traps = [error_handlers.StatusesNotReturned()]
 
         if request.method == 'POST':
             if request.headers['Content-Type'] != 'application/json':
