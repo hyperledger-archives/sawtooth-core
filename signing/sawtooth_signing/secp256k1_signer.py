@@ -128,7 +128,7 @@ def sign(message, privkey):
         privkey: A serialized private key string
 
     Returns:
-        A DER encoded compact signature
+        A compact signature (64 byte concatenation of R and S)
     """
     privkey = _decode_privkey(privkey)
     if isinstance(message, str):
@@ -146,7 +146,7 @@ def verify(message, signature, pubkey):
     """ Verification of signature based on message and pubkey
     Args:
         message: Message string
-        signature: DER encoded compact signature
+        signature: A 64 byte compact signature
         pubkey: A serialized Public Key string
 
     Returns:

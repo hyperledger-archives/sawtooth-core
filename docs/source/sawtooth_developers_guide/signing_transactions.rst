@@ -31,14 +31,14 @@ The transaction is serialized in `CBOR <http://cbor.io>`.
 
 **Step 2: Create the signature for the serialized transaction**
 
-The resulting serialized document is signed with the transactors private
+The resulting serialized document is signed with the transactor's private
 ECDSA key using the secp256k1 curve.
 
-The signature uses a `DER encoding
-<https://en.wikipedia.org/wiki/X.690#DER_encoding>` similar to `Bitcoin
-<https://en.bitcoin.it/wiki/Protocol_documentation#Signatures>` and
-OpenSSL.
+The validator expects a 64 byte "compact" signature. (This is a concatenation
+of the R and S fields of the signature. Some libraries will include an
+additional header byte, recovery ID field, or provide DER encoded signatures.
+Sawtooth will reject the signature if it is anything other than 64 bytes.)
 
 **Step 3: Add the signature to the transaction**
 
-Set the value of the "Signature" field to the base64 encoded signature.
+Set the value of the "Signature" field to the 64 byte base64 encoded signature.
