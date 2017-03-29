@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the dependencies needed by the Sawtooth Lake
+#   REST API installed.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-dev-rest_api -t sawtooth-dev-rest_api
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-rest_api
+
 FROM sawtooth-dev-base
 
 RUN pip3 install aiohttp==1.3.5

@@ -13,6 +13,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Tests locally built Sawtooth Lake debs.
+#
+# Build:
+#   $ cd sawtooth-core
+#   $ docker build . -f ci/sawtooth-test-debs -t sawtooth-test-debs
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-test-debs
+
 FROM ubuntu:xenial
 
 RUN apt-get update && apt-get install -y -q \

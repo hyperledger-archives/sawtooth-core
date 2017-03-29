@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the Sawtooth Lake PoET Families package installed from
+#   the Sawtooth Lake Package Repository.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-tp_validator_registry -t sawtooth-tp_validator_registry
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run sawtooth-tp_validator_registry
+
 FROM ubuntu:xenial
 
 RUN echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \

@@ -13,6 +13,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds the python code in the sawtooth-core repo.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-build-python -t sawtooth-build-python
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-python
+
 FROM ubuntu:xenial
 
 # Install base packages

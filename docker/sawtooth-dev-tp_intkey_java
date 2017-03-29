@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the dependencies needed by the Sawtooth Lake
+#   TP Intkey Java installed.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-dev-tp_intkey_java -t sawtooth-dev-tp_intkey_java
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_intkey_java
+
 FROM maven:3-jdk-8
 
 ARG PROJECT_DIR="/project/sawtooth-core"

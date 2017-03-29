@@ -13,9 +13,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# USAGE:
-#   From sawtooth-core:
+# Description:
+#   Builds the environment needed to create the Sawtooth Lake python3 debs.
+#   Running the image will put the Sawtooth Lake debs in
+#   sawtooth-core/build/debs on your local machine.
+#
+# Build:
+#   $ cd sawtooth-core
 #   $ docker build . -f ci/sawtooth-build-debs -t sawtooth-build-debs
+#
+# Run:
+#   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-debs
 
 FROM ubuntu:xenial

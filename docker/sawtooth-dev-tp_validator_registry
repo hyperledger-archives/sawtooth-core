@@ -13,6 +13,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the dependencies needed by the Sawtooth Lake
+#   TP Validator Registry installed.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-dev-tp_validator_registry \
+#     -t sawtooth-dev-tp_validator_registry
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_validator_registry
+
 FROM sawtooth-dev-base
 
 RUN mkdir -p /project/sawtooth-core
