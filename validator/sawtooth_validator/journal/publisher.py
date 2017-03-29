@@ -134,6 +134,7 @@ class BlockPublisher(object):
         block_builder = BlockBuilder(block_header)
         if not self._consensus.initialize_block(block_builder.block_header):
             LOGGER.debug("Consensus not ready to build candidate block.")
+            return None
 
         # create a new scheduler
         self._scheduler = self._transaction_executor.create_scheduler(
