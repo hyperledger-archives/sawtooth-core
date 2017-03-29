@@ -18,6 +18,7 @@ from threading import RLock
 import sawtooth_signing as signing
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
@@ -452,8 +453,9 @@ class ChainController(object):
         return self._chain_head
 
     def _verify_block(self, blkw):
-        state_view = self._state_view_factory.create_view(
-            self.chain_head.header.state_root_hash)
+        state_view = BlockWrapper.state_view_for_block(
+            self.chain_head,
+            self._state_view_factory)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
             self.chain_head.header_signature,
             state_view)
@@ -563,7 +565,7 @@ class ChainController(object):
                                "Cannot set initial chain head.: %s",
                                block.identifier)
 
-            state_view = self._state_view_factory.create_view(INIT_ROOT_KEY)
+            state_view = self._state_view_factory.create_view()
             consensus_module = \
                 ConsensusFactory.get_configured_consensus_module(
                     NULL_BLOCK_IDENTIFIER,
