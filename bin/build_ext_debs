@@ -59,6 +59,9 @@ main() {
 
     # WARNING: Order is important
     pip_pkgs='
+    pycares==2.1.1
+    aiodns==1.1.1
+    cchardet==2.0a3
     chardet==2.3.0
     multidict==2.1.4
     async_timeout==1.2.0
