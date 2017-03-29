@@ -17,8 +17,8 @@ import logging
 import os
 import subprocess
 import tempfile
-import yaml
 import threading
+import yaml
 
 from sawtooth_manage.node import NodeController
 from sawtooth_manage.exceptions import ManagementError
@@ -83,9 +83,9 @@ class DockerNodeController(NodeController):
     def _construct_start_args(self, node_name, path):
         args = [
             'docker-compose',
-                '-p', self._prefix.replace('-', '') + node_name,
-                '-f', path,
-                'up', '-d'
+            '-p', self._prefix.replace('-', '') + node_name,
+            '-f', path,
+            'up', '-d'
         ]
 
         return args
@@ -200,7 +200,7 @@ class DockerNodeController(NodeController):
 
         except OSError as e:
             if e.errno == 2:
-                raise ManagementError("{}:{}".format(str(e), args[0]))
+                raise ManagementError("{}".format(str(e)))
             else:
                 raise e
 
@@ -282,7 +282,7 @@ class DockerNodeController(NodeController):
         except OSError as e:
             if e.errno == 2:
                 raise ManagementError("{}:{}".format(str(e),
-                                                  args[0]))
+                                                     args[0]))
 
         entries = []
         for line in output.decode().split('\n'):
@@ -325,6 +325,7 @@ def _get_unbuilt_images(processors):
 
     return unbuilt
 
+
 def _check_invalid_processors(processors):
     sawtooth_processors = [
         'sawtooth-' + processor
@@ -338,9 +339,11 @@ def _check_invalid_processors(processors):
 
     return invalid
 
+
 def _get_built_images():
     docker_img_cmd = ['docker', 'images', '--format', '{{.Repository}}']
     return subprocess.check_output(docker_img_cmd).decode().split('\n')
+
 
 def _built_in_processor_types():
     image_data_dir = os.path.join(

@@ -206,5 +206,6 @@ PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/manage
 export PYTHONPATH
 lint cli "$SINCE" || retval=1
+lint manage "$SINCE" || retval=1
 
 exit $retval
