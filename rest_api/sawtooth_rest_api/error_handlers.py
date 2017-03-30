@@ -69,12 +69,12 @@ class InvalidBatch(_ErrorTrap):
             message='A submitted batch had an invalid signature')
 
 
-class MissingStatus(_ErrorTrap):
+class StatusesNotReturned(_ErrorTrap):
     def __init__(self):
         super().__init__(
             trigger=client.ClientBatchStatusResponse.NO_RESOURCE,
-            error=web.HTTPNotFound,
-            message='No statuses were found for the specified ids')
+            error=web.HTTPInternalServerError,
+            message='Something went wrong when looking for these statuses')
 
 
 class MissingLeaf(_ErrorTrap):

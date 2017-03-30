@@ -101,7 +101,7 @@ class RouteHandler(object):
         POST body with a JSON formatted list of id strings.
         Will wait for batches to commit if the `wait` parameter is set
         """
-        error_traps = [error_handlers.MissingStatus()]
+        error_traps = [error_handlers.StatusesNotReturned()]
 
         if request.method == 'POST':
             if request.headers['Content-Type'] != 'application/json':
@@ -145,8 +145,8 @@ class RouteHandler(object):
         """
         Fetch a list of data leaves from the validator's state merkle-tree
         """
-        head = request.url.query.get('head', '')
-        address = request.url.query.get('address', '')
+        head = request.url.query.get('head', None)
+        address = request.url.query.get('address', None)
 
         response = self._query_validator(
             Message.CLIENT_STATE_LIST_REQUEST,
@@ -167,7 +167,7 @@ class RouteHandler(object):
             error_handlers.BadAddress()]
 
         address = request.match_info.get('address', '')
-        head = request.url.query.get('head', '')
+        head = request.url.query.get('head', None)
 
         response = self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
@@ -184,7 +184,7 @@ class RouteHandler(object):
         """
         Fetch a particular block from the validator
         """
-        head = request.url.query.get('head', '')
+        head = request.url.query.get('head', None)
         block_ids = RouteHandler._get_filter_ids(request)
 
         response = self._query_validator(
@@ -223,7 +223,7 @@ class RouteHandler(object):
         """
         Fetch a list of batches from the validator
         """
-        head = request.url.query.get('head', '')
+        head = request.url.query.get('head', None)
         batch_ids = RouteHandler._get_filter_ids(request)
 
         response = self._query_validator(
@@ -407,5 +407,5 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_filter_ids(request):
-        filter_ids = request.url.query.get('id', '')
+        filter_ids = request.url.query.get('id', None)
         return filter_ids and filter_ids.split(',')
