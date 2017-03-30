@@ -174,5 +174,6 @@ sawtooth-core
     * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
     * Tools including a Vagrant environment for easily launching a network of
       validators
+    * Dockerfiles to support development or launching a network of validators
     * Source files for this documentation
 
