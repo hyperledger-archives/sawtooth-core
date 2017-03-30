@@ -14,31 +14,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import run, PIPE, CalledProcessError
+import subprocess
 import os
 import sys
 import argparse
 import time
+import traceback
+import logging
 import yaml
 
 
-class RunDockerTestError(Exception):
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
+
+
+class RunDockerTestError(BaseException):
     pass
+
+
+class Timer:
+    def __init__(self, duration):
+        self._duration = duration
+        self._start = 0
+
+    def start(self):
+        self._start = time.time()
+
+    def remaining(self):
+        elapsed = time.time() - self._start
+        return max(self._duration - elapsed, 0)
 
 
 def main():
     args = parse_args()
 
+    # Search for compose file passed
     compose_file = _get_compose_file(args.compose_file)
 
-    if 'ISOLATION_ID' in os.environ:
-        isolation_id = os.environ['ISOLATION_ID']
-    else:
-        isolation_id = 'latest'
+    # Load isolation id if it is set and validate
+    isolation_id = _get_isolation_id()
 
-    if not isolation_id.isalnum():
-        raise RunDockerTestError("ISOLATION_ID must be alphanumeric")
-
+    # Construct commands
     compose = [
         'docker-compose',
         '-p', isolation_id,
@@ -60,63 +76,94 @@ def main():
     ]
 
     compose_dict = load_compose_file(compose_file)
-    if args.test_service not in compose_dict['services']:
-        raise RunDockerTestError(
-            "Test service '{}' does not exist in compose file: '{}'".format(
-                args.test_service, compose_file))
+    _validate_compose_dict(args, compose_dict)
 
-    start_time = time.time()
-    timeout = args.timeout
-
-    if 'ISOLATION_ID' not in os.environ:
-        os.environ['ISOLATION_ID'] = 'latest'
+    timer = Timer(args.timeout)
 
     # Run tests
     try:
+        exit_status = 0
+        timer.start()
+
+        LOGGER.info("Bringing up with %s", str(compose_up))
         try:
-            print("Running: {}".format(compose_up))
-            run(compose_up, check=True, timeout=timeout)
-        except CalledProcessError:
-            raise RunDockerTestError(
-                "Failed to start all docker containers. Do `docker ps -a` to "
-                "list residual containers.")
+            # 1. Run the tests
+            subprocess.run(compose_up, check=True, timeout=timer.remaining())
 
-        end_time = time.time()
-        delta_time = end_time - start_time
-        start_time = end_time
-        timeout = int(timeout - delta_time)
+        except FileNotFoundError as err:
+            LOGGER.error("Bad docker-compose up command")
+            LOGGER.exception(err)
+            exit(1)
 
-        # Get success value of tests
-        try:
-            print("Running: {}".format(inspect))
-            success = run(
-                inspect, stdout=PIPE,
-                timeout=timeout, check=True
-            ).stdout.decode().strip()
-        except CalledProcessError:
-            raise RunDockerTestError(
-                "Aborting.. Could not inspect test services '{}'. Do "
-                "`docker ps -a` to list residual containers.".format(
-                    args.test_service))
+        except subprocess.CalledProcessError as err:
+            LOGGER.error("Failed to start test.")
+            LOGGER.exception(err)
+            exit_status = 1
 
-        end_time = time.time()
-        delta_time = end_time - start_time
-        start_time = end_time
-        timeout = int(timeout - delta_time)
+        except subprocess.TimeoutExpired as err:
+            LOGGER.error("Test timed out.")
+            LOGGER.exception(err)
+            exit_status = 1
 
-        # Clean up
-        try:
-            print("Running: {}".format(compose_down))
-            run(compose_down, check=True, timeout=timeout)
-        except CalledProcessError:
-            raise RunDockerTestError(
-                "Failed to remove all docker containers. Do `docker ps -a` to "
-                "list residual containers.")
+        if exit_status == 0:
+            LOGGER.info("Getting result with: %s", str(inspect))
+            try:
+                # 2. Get the exit code of the test container
+                exit_status = subprocess.run(
+                    inspect, stdout=subprocess.PIPE,
+                    timeout=timer.remaining(), check=True
+                ).stdout.decode().strip()
 
-        exit(int(success))
+            except FileNotFoundError as err:
+                LOGGER.error("Bad docker inspect command")
+                LOGGER.exception(err)
+                exit_status = 1
+
+            except subprocess.CalledProcessError as err:
+                LOGGER.error("Failed to retrieve exit status of test.")
+                LOGGER.exception(err)
+                exit_status = 1
+
+            except subprocess.TimeoutExpired as err:
+                LOGGER.error("Retrieving exit status timed out.")
+                LOGGER.exception(err)
+                exit_status = 1
+
+        LOGGER.info("Shutting down with: %s", str(compose_down))
+        shutdown_success = False
+        for i in range(2):
+            if shutdown_success == False:
+
+                # Always give compose down at least 60 seconds to cleanup
+                timeout = max(timer.remaining(), 60)
+                try:
+                    # 3. Cleanup after the test
+                    subprocess.run(compose_down, check=True, timeout=timeout)
+                    shutdown_success = True
+
+                except FileNotFoundError as err:
+                    LOGGER.error("Bad docker-compose down command.\n")
+                    LOGGER.exception(err)
+
+                except subprocess.CalledProcessError as err:
+                    LOGGER.error("Failed to cleanup after test.")
+                    LOGGER.exception(err)
+
+                except subprocess.TimeoutExpired as err:
+                    LOGGER.error("Shutting down the test timed out.")
+                    LOGGER.exception(err)
+
+        if not shutdown_success:
+            LOGGER.critical(
+                "There are residual containers on the host that need to be"
+                " cleaned up! Do `docker ps -a` and `docker newtork list` to"
+                " see what was left behind!"
+            )
+
+        exit(int(exit_status))
 
     except KeyboardInterrupt:
-        run(compose_down, check=True, timeout=5)
+        subprocess.run(compose_down, check=True, timeout=60)
         exit(1)
 
 
@@ -161,6 +208,26 @@ def parse_args():
     return parser.parse_args()
 
 
+def _validate_compose_dict(args, compose_dict):
+    if args.test_service not in compose_dict['services']:
+        raise RunDockerTestError(
+            "Test service '{}' does not exist in compose file: '{}'".format(
+                args.test_service, compose_file))
+
+
+def _get_isolation_id():
+    if 'ISOLATION_ID' in os.environ:
+        isolation_id = os.environ['ISOLATION_ID']
+    else:
+        isolation_id = 'latest'
+        os.environ['ISOLATION_ID'] = isolation_id
+
+    if not isolation_id.isalnum():
+        raise RunDockerTestError("ISOLATION_ID must be alphanumeric")
+
+    return isolation_id
+
+
 def _get_compose_dir():
     return os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
@@ -191,5 +258,5 @@ if __name__ == "__main__":
         main()
 
     except RunDockerTestError as err:
-        print(err, file=sys.stderr)
+        LOGGER.exception(err)
         exit(1)
