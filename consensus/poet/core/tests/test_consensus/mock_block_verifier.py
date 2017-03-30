@@ -28,3 +28,19 @@ class MockValidatorRegistryView(object):
 
     def get_validator_info(self, validator_id):
         return self._state_db[validator_id]
+
+
+
+class MockCreateWaitCertificate(object):
+    """Simulates a wait_certificate.
+    """
+
+    def __init__(self):
+       self.wait_certificate = "test"
+
+    def create_wait_certificate(self):
+        return self.wait_certificate
+
+    def wait_certificate_check_valid(self):
+        return False
+
