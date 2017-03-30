@@ -129,16 +129,12 @@ class PoetBlockVerifier(BlockVerifierInterface):
                         'Being asked to verify a block that was not '
                         'created by PoET consensus module')
 
-            try:
-                poet_public_key = \
-                    validator_info.signup_info.poet_public_key
-                wait_certificate.check_valid(
-                    poet_enclave_module=poet_enclave_module,
-                    certificates=certificates,
-                    poet_public_key=poet_public_key)
-            except ValueError as ve:
-                LOGGER.error('Wait certificate is not valid: %s', str(ve))
-                LOGGER.warning('We will accept for now')
+            poet_public_key = \
+                validator_info.signup_info.poet_public_key
+            wait_certificate.check_valid(
+                poet_enclave_module=poet_enclave_module,
+                certificates=certificates,
+                poet_public_key=poet_public_key)
         except ValueError as error:
             LOGGER.error('Failed to verify block: %s', error)
             return False
