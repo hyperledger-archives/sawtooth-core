@@ -18,6 +18,7 @@ from base64 import b64decode
 
 import csv
 import json
+import argparse
 import yaml
 
 from sawtooth_cli import tty
@@ -42,7 +43,9 @@ def add_state_parser(subparsers, parent_parser):
     narrowed using the address of a subtree.
     '''
 
-    list_parser = grand_parsers.add_parser('list', epilog=epilog)
+    list_parser = grand_parsers.add_parser(
+        'list', epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     list_parser.add_argument(
         'subtree',
         type=str,
@@ -68,7 +71,9 @@ def add_state_parser(subparsers, parent_parser):
     epilog = '''details:
         Shows the data for a single leaf on the merkle tree.
     '''
-    show_parser = grand_parsers.add_parser('show', epilog=epilog)
+    show_parser = grand_parsers.add_parser(
+        'show', epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     show_parser.add_argument(
         'address',
         type=str,
