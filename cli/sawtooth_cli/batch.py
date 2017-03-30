@@ -16,6 +16,7 @@
 import sys
 import csv
 import json
+import argparse
 import yaml
 
 from sawtooth_cli import tty
@@ -40,7 +41,9 @@ def add_batch_parser(subparsers, parent_parser):
     header signature), transaction count, and their signer's public key.
     '''
 
-    list_parser = grand_parsers.add_parser('list', epilog=epilog)
+    list_parser = grand_parsers.add_parser(
+        'list', epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     list_parser.add_argument(
         '--url',
         type=str,
@@ -56,7 +59,9 @@ def add_batch_parser(subparsers, parent_parser):
         Shows the data for a single batch, or for a particular property within
     that batch or its header. Displays data in YAML (default), or JSON formats.
     '''
-    show_parser = grand_parsers.add_parser('show', epilog=epilog)
+    show_parser = grand_parsers.add_parser(
+        'show', epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     show_parser.add_argument(
         'batch_id',
         type=str,
