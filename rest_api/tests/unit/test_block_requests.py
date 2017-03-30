@@ -206,6 +206,247 @@ class BlockListTests(BaseApiTest):
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], '0')
 
+    @unittest_run_loop
+    async def test_block_list_paginated(self):
+        """Verifies GET /blocks paginated by min id works properly.
+
+        It will receive a Protobuf response with:
+            - a head id of 'd'
+            - a paging response with a start of 1, and 4 total resources
+            - one block with the id 'c'
+
+        It should send a Protobuf request with:
+            - a paging controls with a count of 1, and a start_index of 1
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a head property of 'd'
+            - a link property that ends in '/blocks?head=d&min=1&count=1'
+            - paging that matches the response, with next and previous links
+            - a data property that is a list of 1 dict
+            - and that dict is a full block with the id 'c'
+        """
+        paging = Mocks.make_paging_response(1, 4)
+        blocks = Mocks.make_blocks('c')
+        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+
+        response = await self.get_json_assert_200('/blocks?min=1&count=1')
+        controls = Mocks.make_paging_controls(1, start_index=1)
+        self.stream.assert_valid_request_sent(paging=controls)
+
+        self.assert_has_valid_head(response, 'd')
+        self.assert_has_valid_link(response, '/blocks?head=d&min=1&count=1')
+        self.assert_has_valid_paging(response, paging,
+                                     '/blocks?head=d&min=2&count=1',
+                                     '/blocks?head=d&min=0&count=1')
+        self.assert_has_valid_data_list(response, 1)
+        self.assert_blocks_well_formed(response['data'], 'c')
+
+    @unittest_run_loop
+    async def test_block_list_with_zero_count(self):
+        """Verifies a GET /blocks with a count of zero breaks properly.
+
+        It should send back a JSON response with:
+            - a response status of 400
+        """
+        await self.assert_400('/blocks?min=2&count=0')
+
+    @unittest_run_loop
+    async def test_block_list_with_bad_paging(self):
+        """Verifies a GET /blocks with a bad paging breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INVALID_PAGING
+
+        It should send back a JSON response with:
+            - a response status of 400
+        """
+        self.stream.preset_response(self.status.INVALID_PAGING)
+        await self.assert_400('/blocks?min=-1')
+
+    @unittest_run_loop
+    async def test_block_list_paginated_with_just_count(self):
+        """Verifies GET /blocks paginated just by count works properly.
+
+        It will receive a Protobuf response with:
+            - a head id of 'd'
+            - a paging response with a start of 0, and 4 total resources
+            - two blocks with the ids 'd' and 'c'
+
+        It should send a Protobuf request with:
+            - a paging controls with a count of 2
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a head property of 'd'
+            - a link property that ends in '/blocks?head=d&min=0&count=2'
+            - paging that matches the response with a next link
+            - a data property that is a list of 2 dicts
+            - and those dicts are full blocks with ids 'd' and 'c'
+        """
+        paging = Mocks.make_paging_response(0, 4)
+        blocks = Mocks.make_blocks('d', 'c')
+        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+
+        response = await self.get_json_assert_200('/blocks?count=2')
+        controls = Mocks.make_paging_controls(2)
+        self.stream.assert_valid_request_sent(paging=controls)
+
+        self.assert_has_valid_head(response, 'd')
+        self.assert_has_valid_link(response, '/blocks?head=d&count=2')
+        self.assert_has_valid_paging(response, paging,
+                                     '/blocks?head=d&min=2&count=2')
+        self.assert_has_valid_data_list(response, 2)
+        self.assert_blocks_well_formed(response['data'], 'd', 'c')
+
+    @unittest_run_loop
+    async def test_block_list_paginated_without_count(self):
+        """Verifies GET /blocks paginated without count works properly.
+
+        It will receive a Protobuf response with:
+            - a head id of 'd'
+            - a paging response with a start of 2, and 4 total resources
+            - two blocks with the ids 'b' and 'a'
+
+        It should send a Protobuf request with:
+            - a paging controls with a start_index of 2
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a head property of 'd'
+            - a link property that ends in '/blocks?head=d&min=2&count=2'
+            - paging that matches the response, with a previous link
+            - a data property that is a list of 2 dicts
+            - and those dicts are full blocks with ids 'd' and 'c'
+        """
+        paging = Mocks.make_paging_response(2, 4)
+        blocks = Mocks.make_blocks('b', 'a')
+        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+
+        response = await self.get_json_assert_200('/blocks?min=2')
+        controls = Mocks.make_paging_controls(None, start_index=2)
+        self.stream.assert_valid_request_sent(paging=controls)
+
+        self.assert_has_valid_head(response, 'd')
+        self.assert_has_valid_link(response, '/blocks?head=d&min=2')
+        self.assert_has_valid_paging(response, paging,
+                                     previous_link='/blocks?head=d&min=0&count=2')
+        self.assert_has_valid_data_list(response, 2)
+        self.assert_blocks_well_formed(response['data'], 'b', 'a')
+
+    @unittest_run_loop
+    async def test_block_list_paginated_by_min_id(self):
+        """Verifies GET /blocks paginated by a min id works properly.
+
+        It will receive a Protobuf response with:
+            - a head id of 'd'
+            - a paging response with:
+                * a start_index of 1
+                * total_resources of 4
+                * a previous_id of 'd'
+            - three blocks with the ids 'c', 'b' and 'a'
+
+        It should send a Protobuf request with:
+            - a paging controls with a start_id of 'c'
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a head property of 'd'
+            - a link property that ends in '/blocks?head=d&min=c&count=5'
+            - paging that matches the response, with a previous link
+            - a data property that is a list of 3 dicts
+            - and those dicts are full blocks with ids 'c', 'b', and 'a'
+        """
+        paging = Mocks.make_paging_response(1, 4, previous_id='d')
+        blocks = Mocks.make_blocks('c', 'b', 'a')
+        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+
+        response = await self.get_json_assert_200('/blocks?min=c&count=5')
+        controls = Mocks.make_paging_controls(5, start_id='c')
+        self.stream.assert_valid_request_sent(paging=controls)
+
+        self.assert_has_valid_head(response, 'd')
+        self.assert_has_valid_link(response, '/blocks?head=d&min=c&count=5')
+        self.assert_has_valid_paging(response, paging,
+                                     previous_link='/blocks?head=d&max=d&count=5')
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_blocks_well_formed(response['data'], 'c', 'b', 'a')
+
+    @unittest_run_loop
+    async def test_block_list_paginated_by_max_id(self):
+        """Verifies GET /blocks paginated by a max id works properly.
+
+        It will receive a Protobuf response with:
+            - a head id of 'd'
+            - a paging response with:
+                * a start_index of 1
+                * a total_resources of 4
+                * a previous_id of 'd'
+                * a next_id of 'a'
+            - two blocks with the ids 'c' and 'b'
+
+        It should send a Protobuf request with:
+            - a paging controls with a count of 2 and an end_id of 'b'
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a head property of 'd'
+            - a link property that ends in '/blocks?head=d&max=b&count=2'
+            - paging that matches the response, with next and previous links
+            - a data property that is a list of 2 dicts
+            - and those dicts are full blocks with ids 'c' and 'b'
+        """
+        paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
+        blocks = Mocks.make_blocks('c', 'b')
+        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+
+        response = await self.get_json_assert_200('/blocks?max=b&count=2')
+        controls = Mocks.make_paging_controls(2, end_id='b')
+        self.stream.assert_valid_request_sent(paging=controls)
+
+        self.assert_has_valid_head(response, 'd')
+        self.assert_has_valid_link(response, '/blocks?head=d&max=b&count=2')
+        self.assert_has_valid_paging(response, paging,
+                                     '/blocks?head=d&min=a&count=2',
+                                     '/blocks?head=d&max=d&count=2')
+        self.assert_has_valid_data_list(response, 2)
+        self.assert_blocks_well_formed(response['data'], 'c', 'b')
+
+    @unittest_run_loop
+    async def test_block_list_paginated_by_max_index(self):
+        """Verifies GET /blocks paginated by a max index works properly.
+
+        It will receive a Protobuf response with:
+            - a head id of 'd'
+            - a paging response with a start of 0, and 4 total resources
+            - three blocks with the ids 'd', 'c' and 'b'
+
+        It should send a Protobuf request with:
+            - a paging controls with a count of 2 and an start_index of 0
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a head property of 'd'
+            - a link property that ends in '/blocks?head=d&min=3&count=7'
+            - paging that matches the response, with a next link
+            - a data property that is a list of 2 dicts
+            - and those dicts are full blocks with ids 'd', 'c', and 'b'
+        """
+        paging = Mocks.make_paging_response(0, 4)
+        blocks = Mocks.make_blocks('d', 'c', 'b')
+        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+
+        response = await self.get_json_assert_200('/blocks?max=2&count=7')
+        controls = Mocks.make_paging_controls(3, start_index=0)
+        self.stream.assert_valid_request_sent(paging=controls)
+
+        self.assert_has_valid_head(response, 'd')
+        self.assert_has_valid_link(response, '/blocks?head=d&max=2&count=7')
+        self.assert_has_valid_paging(response, paging,
+                                     '/blocks?head=d&min=3&count=7')
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_blocks_well_formed(response['data'], 'd', 'c', 'b')
+
 
 class BlockGetTests(BaseApiTest):
 

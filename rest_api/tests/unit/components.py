@@ -13,12 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import re
 from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase
 from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf.client_pb2 import Leaf
+from sawtooth_rest_api.protobuf.client_pb2 import PagingControls
+from sawtooth_rest_api.protobuf.client_pb2 import PagingResponse
 from sawtooth_rest_api.protobuf.block_pb2 import Block
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -237,9 +240,37 @@ class BaseApiTest(AioHTTPTestCase):
         """
         self.assertIn('link', response)
         link = response['link']
-        self.assertIsInstance(link, str)
-        self.assertTrue(link.startswith('http'))
-        self.assertTrue(link.endswith(expected_ending))
+        self.assert_valid_url(link, expected_ending)
+
+    def assert_has_valid_paging(self, js_response, pb_paging,
+                                next_link=None, previous_link=None):
+        """Asserts a response has a paging dict with the expected values.
+        The expected values for start_index and total_count are in pb_paging.
+        """
+        self.assertIn('paging', js_response)
+        js_paging = js_response['paging']
+
+        self.assertIn('total_count', js_paging)
+        self.assertEqual(js_paging['total_count'], pb_paging.total_resources)
+
+        # if total resources is zero, no start index should be sent
+        if not pb_paging.total_resources:
+            self.assertNotIn('start_index', js_paging)
+        else:
+            self.assertIn('start_index', js_paging)
+            self.assertEqual(js_paging['start_index'], pb_paging.start_index)
+
+        if next_link is not None:
+            self.assertIn('next', js_paging)
+            self.assert_valid_url(js_paging['next'], next_link)
+        else:
+            self.assertNotIn('next', js_paging)
+
+        if previous_link is not None:
+            self.assertIn('previous', js_paging)
+            self.assert_valid_url(js_paging['previous'], previous_link)
+        else:
+            self.assertNotIn('previous', js_paging)
 
     def assert_has_valid_data_list(self, response, expected_length):
         """Asserts a response has a data list of dicts of an expected length.
@@ -249,6 +280,17 @@ class BaseApiTest(AioHTTPTestCase):
         self.assertIsInstance(data, list)
         self.assert_all_instances(data, dict)
         self.assertEqual(expected_length, len(data))
+
+    def assert_valid_url(self, url, expected_ending=''):
+        """Asserts a url is valid, and ends with the expected value
+        """
+        self.assertIsInstance(url, str)
+        self.assertTrue(url.startswith('http'))
+        try:
+            self.assertTrue(url.endswith(expected_ending))
+        except AssertionError:
+            raise AssertionError(
+                'Expected "{}" to end with "{}"'.format(url, expected_ending))
 
     def assert_leaves_match(self, proto_leaves, json_leaves):
         """Asserts that each JSON leaf matches the original Protobuf leaves
@@ -326,6 +368,26 @@ class BaseApiTest(AioHTTPTestCase):
 class Mocks(object):
     """A static class with methods that return lists of mock Protobuf objects.
     """
+    @staticmethod
+    def make_paging_controls(count=None, start_id=None, end_id=None, start_index=None):
+        """Returns a PagingControls Protobuf
+        """
+        return PagingControls(
+            count=count,
+            start_id=start_id,
+            end_id=end_id,
+            start_index=start_index)
+
+    @staticmethod
+    def make_paging_response(start, total, next_id=None, previous_id=None):
+        """Returns a PagingResponse Protobuf
+        """
+        return PagingResponse(
+            start_index=start,
+            total_resources=total,
+            next_id=next_id,
+            previous_id=previous_id)
+
     @staticmethod
     def make_leaves(**leaf_data):
         """Returns Leaf objects with specfied kwargs turned into
