@@ -17,10 +17,13 @@ import os
 import signal
 import subprocess
 import time
-import yaml
 import re
+import sys
+import traceback
+import yaml
 
 from sawtooth_manage.node import NodeController
+from sawtooth_manage.exceptions import ManagementError
 
 
 def _get_executable_script(script_name):
@@ -87,7 +90,8 @@ class SubprocessNodeController(NodeController):
         if node_args.genesis:
             commands = ['sawtooth'] + commands
             # clean data dir of existing genesis node artifacts
-            data_dir = os.path.join(os.path.expanduser("~"), 'sawtooth', 'data')
+            data_dir = os.path.join(os.path.expanduser("~"),
+                                    'sawtooth', 'data')
             regex = re.compile('.*')
             self._rm_wildcard(data_dir, regex)
 
@@ -99,14 +103,15 @@ class SubprocessNodeController(NodeController):
             if cmd == 'validator':
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
-                peer_list = ['tcp://0.0.0.0:' + str(base_gossip_port + i) for i in range(node_num)]
+                peer_list = ['tcp://0.0.0.0:' + str(base_gossip_port + i)
+                             for i in range(node_num)]
                 peers = ['--peers']
                 peers.extend(peer_list)
                 if peers:
-                    peers = tuple(peers)
+                    peers_flag = tuple(peers)
                 flags = component + network
                 if len(peers) > 1:
-                    flags += peers
+                    flags += peers_flag
 
             elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
@@ -150,7 +155,6 @@ class SubprocessNodeController(NodeController):
                 name = os.path.join(path, each)
                 try:
                     os.remove(name)
-                except:
+                except PermissionError:
                     traceback.print_exc(file=sys.stderr)
                     sys.exit(1)
-
