@@ -29,6 +29,7 @@ import sawtooth.sdk.protobuf.TpProcessResponse;
 import sawtooth.sdk.protobuf.TpRegisterRequest;
 import sawtooth.sdk.protobuf.TpUnregisterRequest;
 import sawtooth.sdk.protobuf.TpUnregisterResponse;
+import sawtooth.sdk.protobuf.TransactionHeader;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
@@ -67,9 +68,9 @@ public class TransactionProcessor implements Runnable {
         if (message == null) {
           message = TransactionProcessor.this.stream.receive(1);
         }
-        TransactionHandler handler = TransactionProcessor.this.handlers.get(0);
         logger.info("Finish processing any left over messages.");
         while (message != null) {
+          TransactionHandler handler = TransactionProcessor.this.findHandler(message);
           TransactionProcessor.process(message, TransactionProcessor.this.stream, handler);
           message = TransactionProcessor.this.stream.receive(1);
         }
@@ -171,14 +172,44 @@ public class TransactionProcessor implements Runnable {
     }
   }
 
+  /**
+  * Find the handler that should be used to process the given message.
+  * @param message The message that has the TpProcessRequest that the header
+  *                that will be checked against the handler.
+  */
+  private TransactionHandler findHandler(Message message) {
+    try {
+      TpProcessRequest transactionRequest = TpProcessRequest
+              .parseFrom(this.currentMessage.getContent());
+      TransactionHeader header = TransactionHeader
+              .parseFrom(transactionRequest.getHeader());
+      for (int  i = 0; i < this.handlers.size(); i++) {
+        TransactionHandler handler = this.handlers.get(i);
+        if (header.getFamilyName().equals(handler.transactionFamilyName())
+            && header.getFamilyVersion().equals(handler.getVersion())
+            && header.getPayloadEncoding().equals(handler.getEncoding())) {
+          return handler;
+        }
+      }
+      logger.info("Missing handler for header: " + header.toString());
+    } catch (InvalidProtocolBufferException ipbe) {
+      logger.info(
+              "Received Message that isn't a TransactionProcessRequest");
+      ipbe.printStackTrace();
+    }
+    return null;
+  }
+
   @Override
   public void run() {
     while (true) {
       if (!this.handlers.isEmpty()) {
         this.currentMessage = this.stream.receive();
-        //FIXME get the right handler based on (encoding, version)...
         if (this.currentMessage != null) {
-          TransactionHandler handler = this.handlers.get(0);
+          TransactionHandler handler = this.findHandler(this.currentMessage);
+          if (handler == null) {
+            break;
+          }
           TransactionProcessor.process(this.currentMessage, this.stream, handler);
           this.currentMessage = null;
 
