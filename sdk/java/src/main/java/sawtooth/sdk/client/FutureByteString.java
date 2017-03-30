@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,13 +16,13 @@ package sawtooth.sdk.client;
 
 import com.google.protobuf.ByteString;
 
-import java.util.concurrent.Future;
+import sawtooth.sdk.processor.exceptions.TimeoutError;
+
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class FutureByteString {
+public class FutureByteString implements Future{
 
   private ByteString result;
   private String correlationId;
@@ -45,8 +45,7 @@ public class FutureByteString {
    * Returns the ByteString result, waiting for it to not be null.
    * @return ByteString protobuf
    */
-  public ByteString getResult() throws InterruptedException,
-      TimeoutException {
+  public ByteString getResult() throws InterruptedException {
     ByteString byteString = null;
     lock.lock();
     try {
@@ -58,6 +57,28 @@ public class FutureByteString {
       lock.unlock();
     }
 
+    return byteString;
+  }
+
+  /**
+   * Returns the ByteString result. If the timeout expires, throws TimeoutError.
+   * @param timeout time to wait for a result.
+   * @return ByteString protobuf
+   */
+  public ByteString getResult(long timeout) throws InterruptedException, TimeoutError {
+    ByteString byteString = null;
+    lock.lock();
+    try {
+      if (result == null) {
+        condition.await(timeout, TimeUnit.SECONDS);
+      }
+      byteString = result;
+    } finally {
+      lock.unlock();
+    }
+    if (byteString == null) {
+      throw new TimeoutError("Future Timed out");
+    }
     return byteString;
   }
 
@@ -89,7 +110,5 @@ public class FutureByteString {
     }
     return answer;
   }
-
-
 
 }
