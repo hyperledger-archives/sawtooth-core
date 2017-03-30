@@ -37,28 +37,34 @@ class StateListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
             - three leaves with addresses/data of:
                 * 'a': b'3'
                 * 'b': b'5'
                 * 'c': b'7'
 
-        It should send an empty Protobuf request of the correct type
+        It should send a Protobuf request with:
+            - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2'
-            - a link property that ends in '/state?head=2'
+            - a link property that ends in '/state?head=2&min=0&count=3'
+            - a paging property that matches the paging response
             - a data property that is a list of 3 leaf dicts
             - three leaves that match those in Protobuf response
         """
+        paging = Mocks.make_paging_response(0, 3)
         leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
-        self.stream.preset_response(head_id='2', leaves=leaves)
+        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_json_assert_200('/state')
-        self.stream.assert_valid_request_sent()
+        controls = Mocks.make_paging_controls()
+        self.stream.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_leaves_match(leaves, response['data'])
 
@@ -94,28 +100,34 @@ class StateListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '1'
+            - a paging response with a start of 0, and 2 total resources
             - two leaves with addresses/data of:
                 * 'a': b'2'
                 * 'b': b'4'
 
         It should send a Protobuf request with:
             - a head_id property of '1'
+            - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/state?head=1'
+            - a link property that ends in '/state?head=1&min=0&count=2'
+            - a paging property that matches the paging response
             - a data property that is a list of 2 leaf dicts
             - three leaves that match those in Protobuf response
         """
+        paging = Mocks.make_paging_response(0, 2)
         leaves = Mocks.make_leaves(a=b'2', b=b'4')
-        self.stream.preset_response(head_id='1', leaves=leaves)
+        self.stream.preset_response(head_id='1', paging=paging, leaves=leaves)
 
         response = await self.get_json_assert_200('/state?head=1')
-        self.stream.assert_valid_request_sent(head_id='1')
+        controls = Mocks.make_paging_controls()
+        self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/state?head=1')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_leaves_match(leaves, response['data'])
 
@@ -138,26 +150,32 @@ class StateListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '2'
+            - a paging response with a start of 0, and 1 total resource
             - one leaf with addresses/data of: 'c': b'7'
 
         It should send a Protobuf request with:
             - an address property of 'c'
+            - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2'
-            - a link property that ends in '/state?head=2&address=c'
+            - a link property that ends in '/state?head=2&min=0&count=1&address=c'
+            - a paging property that matches the paging response
             - a data property that is a list of 1 leaf dict
             - one leaf that matches the Protobuf response
         """
+        paging = Mocks.make_paging_response(0, 1)
         leaves = Mocks.make_leaves(c=b'7')
-        self.stream.preset_response(head_id='2', leaves=leaves)
+        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_json_assert_200('/state?address=c')
-        self.stream.assert_valid_request_sent(address='c')
+        controls = Mocks.make_paging_controls()
+        self.stream.assert_valid_request_sent(address='c', paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2&address=c')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_leaves_match(leaves, response['data'])
 
@@ -173,13 +191,19 @@ class StateListTests(BaseApiTest):
             - a response status of 200
             - a head property of '2'
             - a link property that ends in '/state?head=2&address=bad'
+            - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
-        self.stream.preset_response(self.status.NO_RESOURCE, head_id='2')
+        paging = Mocks.make_paging_response(None, 0)
+        self.stream.preset_response(
+            self.status.NO_RESOURCE,
+            head_id='2',
+            paging=paging)
         response = await self.get_json_assert_200('/state?address=bad')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2&address=bad')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
     @unittest_run_loop
@@ -188,27 +212,35 @@ class StateListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '1'
+            - a paging response with a start of 0, and 1 total resource
             - one leaf with addresses/data of: 'a': b'2'
 
         It should send a Protobuf request with:
             - a head_id property of '1'
             - an address property of 'a'
+            - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/state?head=1&address=a'
+            - a link property that ends in '/state?head=1&min=0&count=1&address=a'
+            - a paging property that matches the paging response
             - a data property that is a list of 1 leaf dict
             - one leaf that matches the Protobuf response
         """
+        paging = Mocks.make_paging_response(0, 1)
         leaves = Mocks.make_leaves(a=b'2')
-        self.stream.preset_response(head_id='1', leaves=leaves)
+        self.stream.preset_response(head_id='1', paging=paging, leaves=leaves)
 
         response = await self.get_json_assert_200('/state?address=a&head=1')
-        self.stream.assert_valid_request_sent(head_id='1', address='a')
+        self.stream.assert_valid_request_sent(
+            head_id='1',
+            address='a',
+            paging=Mocks.make_paging_controls())
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/state?head=1&address=a')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_leaves_match(leaves, response['data'])
 

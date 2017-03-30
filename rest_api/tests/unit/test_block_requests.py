@@ -36,25 +36,31 @@ class BlockListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
             - three blocks with ids '2', '1', and '0'
 
-        It should send an empty Protobuf request of the correct type
+        It should send a Protobuf request with:
+            - empty paging controls
 
         It should send back a JSON response with:
             - a status of 200
             - a head property of '2'
-            - a link property that ends in '/blocks?head=2'
+            - a link property that ends in '/blocks?head=2&min=0&count=3'
+            - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full blocks with ids '2', '1', and '0'
         """
+        paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('2', '1', '0')
-        self.stream.preset_response(head_id='2', blocks=blocks)
+        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_json_assert_200('/blocks')
-        self.stream.assert_valid_request_sent()
+        controls = Mocks.make_paging_controls()
+        self.stream.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/blocks?head=2')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], '2', '1', '0')
 
@@ -90,26 +96,32 @@ class BlockListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '2'
+            - a paging response with a start of 0, and 2 total resources
             - three blocks with ids '1' and '0'
 
         It should send a Protobuf request with:
             - a head_id property of '1'
+            - empty paging controls
 
         It should send back a JSON response with:
             - a status of 200
             - a head property of '1'
-            - a link property that ends in '/blocks?head=1'
+            - a link property that ends in '/blocks?head=1&min=0&count=2'
+            - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids '1' and '0'
         """
+        paging = Mocks.make_paging_response(0, 2)
         blocks = Mocks.make_blocks('1', '0')
-        self.stream.preset_response(head_id='1', blocks=blocks)
+        self.stream.preset_response(head_id='1', paging=paging, blocks=blocks)
 
         response = await self.get_json_assert_200('/blocks?head=1')
-        self.stream.assert_valid_request_sent(head_id='1')
+        controls = Mocks.make_paging_controls()
+        self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/blocks?head=1')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], '1', '0')
 
@@ -130,28 +142,34 @@ class BlockListTests(BaseApiTest):
     async def test_block_list_with_ids(self):
         """Verifies GET /blocks with the id parameter works properly.
 
-        It should send a Protobuf request with:
-            - a block_ids property of ['0', '2']
-
         It will receive a Protobuf response with:
             - a head id of '2'
+            - a paging response with a start of 0, and 2 total resources
             - two blocks with ids '0' and '2'
+
+        It should send a Protobuf request with:
+            - a block_ids property of ['0', '2']
+            - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2', the latest
-            - a link property that ends in '/blocks?head=2&id=0,2'
+            - a link property that ends in '/blocks?head=2&min=0&count=2&id=0,2'
+            - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids '0' and '2'
         """
+        paging = Mocks.make_paging_response(0, 2)
         blocks = Mocks.make_blocks('0', '2')
-        self.stream.preset_response(head_id='2', blocks=blocks)
+        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_json_assert_200('/blocks?id=0,2')
-        self.stream.assert_valid_request_sent(block_ids=['0', '2'])
+        controls = Mocks.make_paging_controls()
+        self.stream.assert_valid_request_sent(block_ids=['0', '2'], paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/blocks?head=2&id=0,2')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], '0', '2')
 
@@ -167,13 +185,19 @@ class BlockListTests(BaseApiTest):
             - a response status of 200
             - a head property of '2', the latest
             - a link property that ends in '/blocks?head=2&id=bad,notgood'
+            - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
-        self.stream.preset_response(self.status.NO_RESOURCE, head_id='2')
+        paging = Mocks.make_paging_response(None, 0)
+        self.stream.preset_response(
+            self.status.NO_RESOURCE,
+            head_id='2',
+            paging=paging)
         response = await self.get_json_assert_200('/blocks?id=bad,notgood')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/blocks?head=2&id=bad,notgood')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
     @unittest_run_loop
@@ -182,27 +206,35 @@ class BlockListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of '1'
+            - a paging response with a start of 0, and 1 total resource
             - one block with an id of '0'
 
         It should send a Protobuf request with:
             - a head_id property of '1'
             - a block_ids property of ['0']
+            - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/blocks?head=1&id=0'
+            - a link property that ends in '/blocks?head=1&min=0&count=1&id=0'
+            - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - and that dict is a full block with an id of '0'
         """
+        paging = Mocks.make_paging_response(0, 1)
         blocks = Mocks.make_blocks('0')
-        self.stream.preset_response(head_id='1', blocks=blocks)
+        self.stream.preset_response(head_id='1', paging=paging, blocks=blocks)
 
         response = await self.get_json_assert_200('/blocks?id=0&head=1')
-        self.stream.assert_valid_request_sent(head_id='1', block_ids=['0'])
+        self.stream.assert_valid_request_sent(
+            head_id='1',
+            block_ids=['0'],
+            paging=Mocks.make_paging_controls())
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/blocks?head=1&id=0')
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], '0')
 
