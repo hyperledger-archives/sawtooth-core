@@ -16,11 +16,12 @@ package sawtooth.sdk.client;
 
 import com.google.protobuf.ByteString;
 
-import sawtooth.sdk.processor.exceptions.TimeoutError;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
 
 public class FutureByteString implements Future{
 
@@ -61,11 +62,11 @@ public class FutureByteString implements Future{
   }
 
   /**
-   * Returns the ByteString result. If the timeout expires, throws TimeoutError.
+   * Returns the ByteString result. If the timeout expires, throws TimeoutException.
    * @param timeout time to wait for a result.
    * @return ByteString protobuf
    */
-  public ByteString getResult(long timeout) throws InterruptedException, TimeoutError {
+  public ByteString getResult(long timeout) throws InterruptedException, TimeoutException {
     ByteString byteString = null;
     lock.lock();
     try {
@@ -77,7 +78,7 @@ public class FutureByteString implements Future{
       lock.unlock();
     }
     if (byteString == null) {
-      throw new TimeoutError("Future Timed out");
+      throw new TimeoutException("Future Timed out");
     }
     return byteString;
   }

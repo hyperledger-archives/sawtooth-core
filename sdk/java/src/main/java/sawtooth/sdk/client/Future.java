@@ -16,12 +16,13 @@ package sawtooth.sdk.client;
 
 import com.google.protobuf.ByteString;
 
-import sawtooth.sdk.processor.exceptions.TimeoutError;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
 
 
 public interface Future{
@@ -29,7 +30,7 @@ public interface Future{
   ByteString getResult() throws InterruptedException,
       ValidatorConnectionError;
 
-  ByteString getResult(long timeout) throws InterruptedException, TimeoutError,
+  ByteString getResult(long timeout) throws InterruptedException, TimeoutException,
       ValidatorConnectionError;
 
   void setResult(ByteString byteString) throws ValidatorConnectionError;
