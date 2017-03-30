@@ -73,9 +73,11 @@ setup(name='sawtooth-rest-api',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[
-          'sawtooth-sdk',
+          'aiodns',
           'aiohttp',
-          'protobuf'
+          'cchardet',
+          'protobuf',
+          'sawtooth-sdk',
           ],
       entry_points={
           'console_scripts': [
