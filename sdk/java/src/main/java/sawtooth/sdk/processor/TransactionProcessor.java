@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,29 +14,74 @@
 
 package sawtooth.sdk.processor;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import sawtooth.sdk.client.Future;
 import sawtooth.sdk.client.State;
 import sawtooth.sdk.client.Stream;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
+import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TpProcessResponse;
 import sawtooth.sdk.protobuf.TpRegisterRequest;
-
+import sawtooth.sdk.protobuf.TpUnregisterRequest;
+import sawtooth.sdk.protobuf.TpUnregisterResponse;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+
 public class TransactionProcessor implements Runnable {
 
-  private final Logger logger = Logger.getLogger(TransactionProcessor.class.getName());
+  private static final Logger logger = Logger.getLogger(TransactionProcessor.class.getName());
 
   private Stream stream;
   private ArrayList<TransactionHandler> handlers;
-  private boolean isRunning;
+  private Message currentMessage;
+  private boolean registered;
+
+  class Shutdown extends Thread {
+    @Override
+    public void run() {
+      logger.info("Start Shutdown of Transaction Processor.");
+      if (!TransactionProcessor.this.registered) {
+        return;
+      }
+      if (TransactionProcessor.this.getCurrentMessage() != null) {
+        logger.info(TransactionProcessor.this.getCurrentMessage().toString());
+      }
+      try {
+        TpUnregisterRequest unregisterRequest = TpUnregisterRequest
+                .newBuilder()
+                .build();
+        logger.info("Send TpUnregisterRequest");
+        Future fut = TransactionProcessor.this.stream.send(
+            Message.MessageType.TP_UNREGISTER_REQUEST, unregisterRequest.toByteString());
+        ByteString response = fut.getResult(1);
+        Message message = TransactionProcessor.this.getCurrentMessage();
+        if (message == null) {
+          message = TransactionProcessor.this.stream.receive(1);
+        }
+        TransactionHandler handler = TransactionProcessor.this.handlers.get(0);
+        logger.info("Finish processing any left over messages.");
+        while (message != null) {
+          TransactionProcessor.process(message, TransactionProcessor.this.stream, handler);
+          message = TransactionProcessor.this.stream.receive(1);
+        }
+      } catch (InterruptedException ie) {
+        ie.printStackTrace();
+      } catch (TimeoutException ter) {
+        logger.info("TimeoutException on shutdown");
+      } catch (ValidatorConnectionError vce) {
+        logger.info(vce.toString());
+      }
+    }
+  }
 
   /**
    * constructor.
@@ -45,7 +90,9 @@ public class TransactionProcessor implements Runnable {
   public TransactionProcessor(String address) {
     this.stream = new Stream(address);
     this.handlers = new ArrayList<TransactionHandler>();
-    this.isRunning = true;
+    this.currentMessage = null;
+    this.registered = false;
+    Runtime.getRuntime().addShutdownHook(new Shutdown());
   }
 
   /**
@@ -60,64 +107,108 @@ public class TransactionProcessor implements Runnable {
             .setEncoding(handler.getEncoding())
             .setVersion(handler.getVersion())
             .build();
-    this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
-    this.handlers.add(handler);
-  }
-
-
-  public void stopRunning() {
-    this.isRunning = false;
-  }
-
-
-  @Override
-  public void run() {
-    while (this.isRunning) {
-      try {
-        Message message = this.stream.receive();
-        TpProcessRequest transactionRequest = TpProcessRequest
-                .parseFrom(message.getContent());
-        State state = new State(this.stream, transactionRequest.getContextId());
-        if (!this.handlers.isEmpty()) {
-
-          //FIXME get the right handler based on (encoding, version)...
-          TransactionHandler handler = this.handlers.get(0);
-          try {
-            handler.apply(transactionRequest, state);
-            TpProcessResponse response = TpProcessResponse.newBuilder()
-                    .setStatus(TpProcessResponse.Status.OK).build();
-
-            this.stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                    message.getCorrelationId(),
-                    response.toByteString());
-          } catch (InvalidTransactionException ite) {
-            ite.printStackTrace();
-            logger.log(Level.WARNING, "Invalid Transaction");
-            TpProcessResponse response = TpProcessResponse.newBuilder()
-                    .setStatus(TpProcessResponse.Status.INVALID_TRANSACTION)
-                    .build();
-            this.stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                    message.getCorrelationId(),
-                    response.toByteString());
-          } catch (InternalError ie) {
-            ie.printStackTrace();
-            logger.log(Level.WARNING, "State Exception!");
-            TpProcessResponse response = TpProcessResponse.newBuilder()
-                    .setStatus(TpProcessResponse.Status.INTERNAL_ERROR)
-                    .build();
-            this.stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                    message.getCorrelationId(),
-                    response.toByteString());
-          }
-        }
-
-
-      } catch (InvalidProtocolBufferException ipbe) {
-        logger.info(
-                "Received Bytestring that wasn't requested that isn't TransactionProcessRequest");
-        ipbe.printStackTrace();
-      }
+    try {
+      Future fut = this.stream.send(
+          Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
+      fut.getResult();
+      this.registered = true;
+      this.handlers.add(handler);
+    } catch (InterruptedException ie) {
+      ie.printStackTrace();
+    } catch (ValidatorConnectionError vce) {
+      logger.info(vce.toString());
     }
   }
 
+  /**
+  * Get the current message that is being processed.
+  */
+  private Message getCurrentMessage() {
+    return this.currentMessage;
+  }
+
+  /**
+  * Used to process a message.
+  * @param message The Message to process.
+  * @param stream The Stream to use to send back responses.
+  * @param handler The handler that should be used to process the message.
+  */
+  private static void process(Message message, Stream stream,
+      TransactionHandler handler) {
+    try {
+      TpProcessRequest transactionRequest = TpProcessRequest
+              .parseFrom(message.getContent());
+      State state = new State(stream, transactionRequest.getContextId());
+      try {
+        handler.apply(transactionRequest, state);
+        TpProcessResponse response = TpProcessResponse.newBuilder()
+                .setStatus(TpProcessResponse.Status.OK).build();
+
+        stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
+                message.getCorrelationId(),
+                response.toByteString());
+      } catch (InvalidTransactionException ite) {
+        logger.log(Level.WARNING, "Invalid Transaction: " + ite.toString());
+        TpProcessResponse response = TpProcessResponse.newBuilder()
+                .setStatus(TpProcessResponse.Status.INVALID_TRANSACTION)
+                .build();
+        stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
+                message.getCorrelationId(),
+                response.toByteString());
+      } catch (InternalError ie) {
+        logger.log(Level.WARNING, "State Exception!: " + ie.toString());
+        TpProcessResponse response = TpProcessResponse.newBuilder()
+                .setStatus(TpProcessResponse.Status.INTERNAL_ERROR)
+                .build();
+        stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
+                message.getCorrelationId(),
+                response.toByteString());
+      }
+
+    } catch (InvalidProtocolBufferException ipbe) {
+      logger.info(
+              "Received Bytestring that wasn't requested that isn't TransactionProcessRequest");
+    }
+  }
+
+  @Override
+  public void run() {
+    while (true) {
+      if (!this.handlers.isEmpty()) {
+        this.currentMessage = this.stream.receive();
+        //FIXME get the right handler based on (encoding, version)...
+        if (this.currentMessage != null) {
+          TransactionHandler handler = this.handlers.get(0);
+          TransactionProcessor.process(this.currentMessage, this.stream, handler);
+          this.currentMessage = null;
+
+        } else {
+          // Disconnect
+          logger.info("The Validator disconnected, trying to register.");
+          this.registered = false;
+          for (int i = 0; i < this.handlers.size(); i++) {
+            TransactionHandler handler = this.handlers.get(i);
+            TpRegisterRequest registerRequest = TpRegisterRequest
+                    .newBuilder()
+                    .setFamily(handler.transactionFamilyName())
+                    .addAllNamespaces(handler.getNameSpaces())
+                    .setEncoding(handler.getEncoding())
+                    .setVersion(handler.getVersion())
+                    .build();
+
+            try {
+              Future fut = this.stream.send(
+                  Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
+              fut.getResult();
+              this.registered = true;
+            } catch (InterruptedException ie) {
+              logger.log(Level.WARNING, ie.toString());
+            }  catch (ValidatorConnectionError vce) {
+              logger.log(Level.WARNING, vce.toString());
+            }
+          }
+        }
+      }
+    }
+  }
 }
