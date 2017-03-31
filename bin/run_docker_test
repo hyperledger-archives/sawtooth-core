@@ -78,56 +78,64 @@ def main():
     compose_dict = load_compose_file(compose_file)
     _validate_compose_dict(args, compose_dict)
 
+    if not args.clean:
+        _check_for_existing_containers(compose_file, compose_dict, isolation_id)
+
     timer = Timer(args.timeout)
+
 
     # Run tests
     try:
-        exit_status = 0
-        timer.start()
+        if not args.clean:
+            exit_status = 0
+            timer.start()
 
-        LOGGER.info("Bringing up with %s", str(compose_up))
-        try:
-            # 1. Run the tests
-            subprocess.run(compose_up, check=True, timeout=timer.remaining())
-
-        except FileNotFoundError as err:
-            LOGGER.error("Bad docker-compose up command")
-            LOGGER.exception(err)
-            exit(1)
-
-        except subprocess.CalledProcessError as err:
-            LOGGER.error("Failed to start test.")
-            LOGGER.exception(err)
-            exit_status = 1
-
-        except subprocess.TimeoutExpired as err:
-            LOGGER.error("Test timed out.")
-            LOGGER.exception(err)
-            exit_status = 1
-
-        if exit_status == 0:
-            LOGGER.info("Getting result with: %s", str(inspect))
+            LOGGER.info("Bringing up with %s", str(compose_up))
             try:
-                # 2. Get the exit code of the test container
-                exit_status = subprocess.run(
-                    inspect, stdout=subprocess.PIPE,
-                    timeout=timer.remaining(), check=True
-                ).stdout.decode().strip()
+                # 1. Run the tests
+                subprocess.run(compose_up, check=True, timeout=timer.remaining())
 
             except FileNotFoundError as err:
-                LOGGER.error("Bad docker inspect command")
+                LOGGER.error("Bad docker-compose up command")
                 LOGGER.exception(err)
-                exit_status = 1
+                exit(1)
 
             except subprocess.CalledProcessError as err:
-                LOGGER.error("Failed to retrieve exit status of test.")
+                LOGGER.error("Failed to start test.")
                 LOGGER.exception(err)
                 exit_status = 1
 
             except subprocess.TimeoutExpired as err:
-                LOGGER.error("Retrieving exit status timed out.")
+                LOGGER.error("Test timed out.")
                 LOGGER.exception(err)
                 exit_status = 1
+
+            if exit_status == 0:
+                LOGGER.info("Getting result with: %s", str(inspect))
+                try:
+                    # 2. Get the exit code of the test container
+                    exit_status = subprocess.run(
+                        inspect, stdout=subprocess.PIPE,
+                        timeout=timer.remaining(), check=True
+                    ).stdout.decode().strip()
+
+                except FileNotFoundError as err:
+                    LOGGER.error("Bad docker inspect command")
+                    LOGGER.exception(err)
+                    exit_status = 1
+
+                except subprocess.CalledProcessError as err:
+                    LOGGER.error("Failed to retrieve exit status of test.")
+                    LOGGER.exception(err)
+                    exit_status = 1
+
+                except subprocess.TimeoutExpired as err:
+                    LOGGER.error("Retrieving exit status timed out.")
+                    LOGGER.exception(err)
+                    exit_status = 1
+
+        else: # cleaning
+            exit_status = 0
 
         LOGGER.info("Shutting down with: %s", str(compose_down))
         shutdown_success = False
@@ -157,7 +165,7 @@ def main():
             LOGGER.critical(
                 "There are residual containers on the host that need to be"
                 " cleaned up! Do `docker ps -a` and `docker newtork list` to"
-                " see what was left behind!"
+                " see what was left behind or use `run_docker_test --clean`!"
             )
 
         exit(int(exit_status))
@@ -194,6 +202,12 @@ def parse_args():
         default="integration_test")
 
     parser.add_argument(
+        "-c", "--clean",
+        help="don't run the test, just cleanup a previous run",
+        action='store_true',
+        default=False)
+
+    parser.add_argument(
         "-n", "--no-build",
         help="don't build docker images",
         action='store_true',
@@ -213,6 +227,49 @@ def _validate_compose_dict(args, compose_dict):
         raise RunDockerTestError(
             "Test service '{}' does not exist in compose file: '{}'".format(
                 args.test_service, compose_file))
+
+
+def _check_for_existing_containers(compose_file, compose_dict, isolation_id):
+    containers = _get_existing_containers()
+
+    for service in compose_dict['services'].keys():
+        container_name_to_create = "{}_{}_1".format(isolation_id, service)
+        for existing_container_name in containers:
+            if container_name_to_create == existing_container_name:
+                raise RunDockerTestError(
+                    "The container '{}' which would be created by this test"
+                    " already exists!\nDo:\n`run_docker_test --clean {}`\nto"
+                    " remove the container, or use docker manually.".format(
+                        container_name_to_create, compose_file
+                    )
+                )
+
+
+def _get_existing_containers():
+    cmd = ['docker', 'ps', '-a', '--format={{.Names}}']
+    success = False
+    try:
+        containers = subprocess.run(
+            cmd, stdout=subprocess.PIPE, check=True, timeout=30
+        ).stdout.decode().strip().split('\n')
+        success = True
+
+    except FileNotFoundError as err:
+        LOGGER.error("Bad docker ps command")
+        LOGGER.exception(err)
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to retrieve exit status of test.")
+        LOGGER.exception(err)
+
+    except subprocess.TimeoutExpired as err:
+        LOGGER.error("Retrieving exit status timed out.")
+        LOGGER.exception(err)
+
+    if not success:
+        raise RunDockerTestError("Failed to get list of docker containers.")
+
+    return containers
 
 
 def _get_isolation_id():
@@ -258,5 +315,5 @@ if __name__ == "__main__":
         main()
 
     except RunDockerTestError as err:
-        LOGGER.exception(err)
+        LOGGER.error(err)
         exit(1)
