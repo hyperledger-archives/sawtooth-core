@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the dependencies needed by most Sawtooth Lake
+#   components installed. This image must be built before any other
+#   sawtooth-dev-* images.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-dev-base -t sawtooth-dev-base
+#
+# Run:
+#   This image should not be run.
+
 FROM ubuntu:xenial
 
 RUN apt-get update && apt-get install -y -q \

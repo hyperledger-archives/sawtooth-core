@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the Sawtooth Lake TP Intkey package installed from
+#   the Sawtooth Lake Package Repository.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-tp_intkey_python -t sawtooth-tp_intkey_python
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run sawtooth-tp_intkey_python
+
 FROM ubuntu:xenial
 
 RUN echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \

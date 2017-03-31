@@ -13,6 +13,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds the environment needed to build the Sawtooth Lake docs
+#   Running the image will put the Sawtooth Lake docs in
+#   sawtooth-core/docs/build on your local machine.
+#
+# Build:
+#   $ cd sawtooth-core
+#   $ docker build . -f ci/sawtooth-build-docs -t sawtooth-build-docs
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-docs
+
 FROM ubuntu:xenial
 
 RUN apt-get update && apt-get install -y -q \

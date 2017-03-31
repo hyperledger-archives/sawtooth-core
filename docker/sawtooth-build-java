@@ -13,8 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# From within sawtooth-core do:
-#   $ docker build . -f docker/sawtooth-build-java -t sawtooth-build-java
+# Description:
+#   Builds the java code in the sawtooth-core repo.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-build-java -t sawtooth-build-java
+#
+# Run:
+#   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-java
 
 FROM maven:3-jdk-8

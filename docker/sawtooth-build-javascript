@@ -13,8 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# From within sawtooth-core do:
-#   $ docker build . -f docker/sawtooth-build-javascript -t sawtooth-build-javascript
+# Description:
+#   Builds the javascript code in the sawtooth-core repo.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-build-javascript -t sawtooth-build-javascript
+#
+# Run:
+#   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-javascript
 
 FROM yarnpkg/node-yarn:0.20-node7

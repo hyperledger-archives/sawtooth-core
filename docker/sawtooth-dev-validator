@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the dependencies needed by the Sawtooth Lake
+#   Validator installed and the necessary directories created.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-dev-validator -t sawtooth-dev-validator
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-validator
+
 FROM sawtooth-dev-base
 
 RUN mkdir -p /project/sawtooth-core

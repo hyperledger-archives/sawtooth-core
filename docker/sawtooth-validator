@@ -13,6 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# Description:
+#   Builds an image with the Sawtooth Lake Validator and CLI packages installed
+#   from the Sawtooth Lake Package Repository.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-validator -t sawtooth-validator
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run sawtooth-validator
+
 FROM ubuntu:xenial
 
 RUN echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \
