@@ -15,7 +15,7 @@
 import argparse
 import sys
 from aiohttp import web
-from sawtooth_rest_api.routes import RouteHandler
+from sawtooth_rest_api.route_handlers import RouteHandler
 
 
 def parse_args(args):

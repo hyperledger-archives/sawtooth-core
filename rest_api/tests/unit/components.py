@@ -17,7 +17,7 @@ from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase
 from base64 import b64decode
 
-from sawtooth_rest_api.routes import RouteHandler
+from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf.client_pb2 import Leaf
 from sawtooth_rest_api.protobuf.block_pb2 import Block
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
