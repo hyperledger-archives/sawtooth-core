@@ -28,6 +28,11 @@ logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
 
+DEFAULT_TIMEOUT = 300
+COMPOSE_DOWN_RETRY_TIMEOUT = 60
+DOCKER_PS_TIMEOUT=30
+
+
 class RunDockerTestError(BaseException):
     pass
 
@@ -142,8 +147,8 @@ def main():
         for i in range(2):
             if shutdown_success == False:
 
-                # Always give compose down at least 60 seconds to cleanup
-                timeout = max(timer.remaining(), 60)
+                # Always give compose down time to cleanup
+                timeout = max(timer.remaining(), COMPOSE_DOWN_RETRY_TIMEOUT)
                 try:
                     # 3. Cleanup after the test
                     subprocess.run(compose_down, check=True, timeout=timeout)
@@ -171,7 +176,8 @@ def main():
         exit(int(exit_status))
 
     except KeyboardInterrupt:
-        subprocess.run(compose_down, check=True, timeout=60)
+        subprocess.run(compose_down, check=True, 
+            timeout=COMPOSE_DOWN_RETRY_TIMEOUT)
         exit(1)
 
 
@@ -217,7 +223,7 @@ def parse_args():
         "-t", "--timeout",
         help="how long to wait before timing out",
         type=int,
-        default=300)
+        default=DEFAULT_TIMEOUT)
 
     return parser.parse_args()
 
@@ -250,7 +256,7 @@ def _get_existing_containers():
     success = False
     try:
         containers = subprocess.run(
-            cmd, stdout=subprocess.PIPE, check=True, timeout=30
+            cmd, stdout=subprocess.PIPE, check=True, timeout=DOCKER_PS_TIMEOUT
         ).stdout.decode().strip().split('\n')
         success = True
 
