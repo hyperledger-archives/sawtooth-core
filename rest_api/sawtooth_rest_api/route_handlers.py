@@ -40,13 +40,41 @@ DEFAULT_TIMEOUT = 300
 
 
 class RouteHandler(object):
+    """Contains a number of aiohttp handlers for endpoints in the Rest Api.
+
+    Each handler takes an aiohttp Request object, and uses the data in
+    that request to send Protobuf message to a validator. The Protobuf response
+    is then parsed, and finally an aiohttp Response object is sent back
+    to the client with JSON formatted data and metadata.
+
+    If something goes wrong, an aiohttp HTTP exception is raised or returned
+    instead.
+
+    Args:
+        stream_url (str): The TCP url to communitcate with the validator
+        timeout (int, optional): The time in seconds before the Api should
+            cancel a request and report that the validator is unavailable.
+    """
     def __init__(self, stream_url, timeout=DEFAULT_TIMEOUT):
         self._stream = Stream(stream_url)
         self._timeout = timeout
 
     async def submit_batches(self, request):
-        """
-        Takes protobuf binary from HTTP POST, and sends it to the validator
+        """Accepts a binary encoded BatchList and submits it to the validator.
+
+        Request:
+            body: octet-stream BatchList of one or more Batches
+            query:
+                - wait: Request should not return until all batches committed
+
+        Response:
+            status:
+                 - 200: Batches submitted, but wait timed out before committed
+                 - 201: All batches submitted and committed
+                 - 202: Batches submitted and pending (not told to wait)
+            data: Status of uncommitted batches (if any, when told to wait)
+            link: /batches or /batch_status link for submitted batches
+
         """
         # Parse request
         if request.headers['Content-Type'] != 'application/octet-stream':
@@ -96,11 +124,17 @@ class RouteHandler(object):
             status=status)
 
     async def list_statuses(self, request):
-        """
-        Fetches the status of a set of batches submitted to the validator.
-        Batch ids can be submitted by query string (GET request), or by a
-        POST body with a JSON formatted list of id strings.
-        Will wait for batches to commit if the `wait` parameter is set
+        """Fetches the committed status of batches by either a POST or GET.
+
+        Request:
+            body: A JSON array of one or more id strings (if POST)
+            query:
+                - id: A comma separated list of up to 15 ids (if GET)
+                - wait: Request should not return until all batches committed
+
+        Response:
+            data: A JSON object, with batch ids as keys, and statuses as values
+            link: The /batch_status link queried (if GET)
         """
         error_traps = [error_handlers.StatusesNotReturned()]
 
@@ -145,8 +179,17 @@ class RouteHandler(object):
             metadata=metadata)
 
     async def list_state(self, request):
-        """
-        Fetch a list of data leaves from the validator's state merkle-tree
+        """Fetches list of data leaves, optionally filtered by address prefix.
+
+        Request:
+            query:
+                - head: The id of the block to use as the head of the chain
+                - address: Return leaves whose addresses begin with this prefix
+
+        Response:
+            data: An array of leaf objects with address and data keys
+            head: The head used for this query (most recent if unspecified)
+            link: The link to this exact query, including head block
         """
         head = request.url.query.get('head', None)
         address = request.url.query.get('address', None)
@@ -161,8 +204,17 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     async def fetch_state(self, request):
-        """
-        Fetch a specific data leaf from the validator's state merkle-tree
+        """Fetches data from a specific address in the validator's state tree.
+
+        Request:
+            query:
+                - head: The id of the block to use as the head of the chain
+                - address: The 70 character address of the data to be fetched
+
+        Response:
+            data: The base64 encoded binary data stored at that address
+            head: The head used for this query (most recent if unspecified)
+            link: The link to this exact query, including head block
         """
         error_traps = [
             error_handlers.MissingLeaf(),
@@ -182,8 +234,17 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     async def list_blocks(self, request):
-        """
-        Fetch a particular block from the validator
+        """Fetches list of blocks from validator, optionally filtered by id.
+
+        Request:
+            query:
+                - head: The id of the block to use as the head of the chain
+                - id: Comma separated list of block ids to include in results
+
+        Response:
+            data: JSON array of fully expanded Block objects
+            head: The head used for this query (most recent if unspecified)
+            link: The link to this exact query, including head block
         """
         head = request.url.query.get('head', None)
         ids = self._get_filter_ids(request)
@@ -199,8 +260,14 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     async def fetch_block(self, request):
-        """
-        Fetch a list of blocks from the validator
+        """Fetches a specific block from the validator, specified by id.
+        Request:
+            path:
+                - block_id: The 128-character id of the block to be fetched
+
+        Response:
+            data: A JSON object with the data from the fully expanded Block
+            link: The link to this exact query
         """
         error_traps = [
             error_handlers.MissingBlock(),
@@ -219,8 +286,17 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     async def list_batches(self, request):
-        """
-        Fetch a list of batches from the validator
+        """Fetches list of batches from validator, optionally filtered by id.
+
+        Request:
+            query:
+                - head: The id of the block to use as the head of the chain
+                - id: Comma separated list of batch ids to include in results
+
+        Response:
+            data: JSON array of fully expanded Batch objects
+            head: The head used for this query (most recent if unspecified)
+            link: The link to this exact query, including head block
         """
         head = request.url.query.get('head', None)
         ids = self._get_filter_ids(request)
@@ -236,8 +312,14 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     async def fetch_batch(self, request):
-        """
-        Fetch a particular batch from the validator
+        """Fetches a specific batch from the validator, specified by id.
+        Request:
+            path:
+                - batch_id: The 128-character id of the block to be fetched
+
+        Response:
+            data: A JSON object with the data from the fully expanded Batch
+            link: The link to this exact query
         """
         error_traps = [
             error_handlers.MissingBatch(),
@@ -256,16 +338,14 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     def _query_validator(self, req_type, resp_proto, content, traps=None):
-        """
-        Sends a request to the validator and parses the response
+        """Sends a request to the validator and parses the response.
         """
         response = self._try_validator_request(req_type, content)
         return self._try_response_parse(resp_proto, response, traps)
 
     def _try_validator_request(self, message_type, content):
-        """
-        Sends a protobuf message to the validator
-        Handles a possible timeout if validator is unresponsive
+        """Serializes and sends a Protobuf message to the validator.
+        Handles timeout errors as needed.
         """
         if isinstance(content, BaseMessage):
             content = content.SerializeToString()
@@ -285,9 +365,9 @@ class RouteHandler(object):
 
     @classmethod
     def _try_response_parse(cls, proto, response, traps=None):
-        """
-        Parses a protobuf response from the validator
-        Raises common validator error statuses as HTTP errors
+        """Parses the Protobuf response from the validator.
+        Uses "error traps" to send back any HTTP error triggered by a Protobuf
+        status, both those common to all handlers, and specified individually.
         """
         parsed = proto()
         parsed.ParseFromString(response)
@@ -314,8 +394,7 @@ class RouteHandler(object):
 
     @staticmethod
     def _wrap_response(data=None, metadata=None, status=200):
-        """
-        Creates a JSON response envelope and sends it back to the client
+        """Creates the JSON response envelope to be sent back to the client.
         """
         envelope = metadata or {}
 
@@ -333,6 +412,9 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_metadata(request, response):
+        """Parses out the head and link properties based on the HTTP Request
+        from the client, and the Protobuf response from the validator.
+        """
         head = response.get('head_id', None)
         if not head:
             return {'link': str(request.url)}
@@ -352,6 +434,8 @@ class RouteHandler(object):
 
     @classmethod
     def _expand_block(cls, block):
+        """Deserializes a Block's header, and the header of its Batches.
+        """
         cls._parse_header(BlockHeader, block)
         if 'batches' in block:
             block['batches'] = [cls._expand_batch(b) for b in block['batches']]
@@ -359,6 +443,8 @@ class RouteHandler(object):
 
     @classmethod
     def _expand_batch(cls, batch):
+        """Deserializes a Batch's header, and the header of its Transactions.
+        """
         cls._parse_header(BatchHeader, batch)
         if 'transactions' in batch:
             batch['transactions'] = [
@@ -367,15 +453,13 @@ class RouteHandler(object):
 
     @classmethod
     def _expand_transaction(cls, transaction):
+        """Deserializes a Transaction's header.
+        """
         return cls._parse_header(TransactionHeader, transaction)
 
     @classmethod
     def _parse_header(cls, header_proto, obj):
-        """
-        A helper method to parse a byte string encoded protobuf 'header'
-        Args:
-            header_proto: The protobuf class of the encoded header
-            obj: The dict formatted object containing the 'header'
+        """Deserializes a base64 encoded Protobuf header.
         """
         header = header_proto()
         header_bytes = base64.b64decode(obj['header'])
@@ -384,9 +468,8 @@ class RouteHandler(object):
         return obj
 
     def _set_wait(self, request, validator_query):
-        """
-        Parses the `wait` query parameter, and sets the corresponding
-        fields in a validator query
+        """Parses the `wait` query parameter, and sets the corresponding
+        `wait_for_commit` and `timeout` properties in the validator query.
         """
         wait = request.url.query.get('wait', 'false')
         if wait.lower() != 'false':
@@ -399,11 +482,15 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_filter_ids(request):
+        """Parses the `id` filter paramter from the url query.
+        """
         filter_ids = request.url.query.get('id', None)
         return filter_ids and filter_ids.split(',')
 
     @staticmethod
     def message_to_dict(message):
+        """Converts a Protobuf object to a python dict with desired settings.
+        """
         return MessageToDict(
             message,
             including_default_value_fields=True,

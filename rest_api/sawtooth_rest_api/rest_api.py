@@ -20,6 +20,8 @@ from sawtooth_rest_api.route_handlers import RouteHandler
 
 
 def parse_args(args):
+    """Parse command line flags added to `rest_api` command.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--port',
                         help='The port for the api to run on',
@@ -38,6 +40,8 @@ def parse_args(args):
 
 
 async def logging_middleware(app, handler):
+    """Simple logging middleware to report the method/route of all requests.
+    """
     async def logging_handler(request):
         print('Handling {} request for {}'.format(
             request.method,
@@ -48,6 +52,8 @@ async def logging_middleware(app, handler):
 
 
 def start_rest_api(host, port, stream_url, timeout):
+    """Builds the web app, adds route handlers, and finally starts the app.
+    """
     app = web.Application(middlewares=[logging_middleware])
 
     # Add routes to the web app
