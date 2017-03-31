@@ -28,7 +28,7 @@ class BlockListTests(BaseApiTest):
             client_pb2.ClientBlockListResponse)
 
         handlers = self.build_handlers(self.stream)
-        return self.build_app(loop, '/blocks', handlers.block_list)
+        return self.build_app(loop, '/blocks', handlers.list_blocks)
 
     @unittest_run_loop
     async def test_block_list(self):
@@ -216,7 +216,7 @@ class BlockGetTests(BaseApiTest):
             client_pb2.ClientBlockGetResponse)
 
         handlers = self.build_handlers(self.stream)
-        return self.build_app(loop, '/blocks/{block_id}', handlers.block_get)
+        return self.build_app(loop, '/blocks/{block_id}', handlers.fetch_block)
 
     @unittest_run_loop
     async def test_block_get(self):

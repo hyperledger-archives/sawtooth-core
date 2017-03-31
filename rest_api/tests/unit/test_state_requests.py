@@ -29,7 +29,7 @@ class StateListTests(BaseApiTest):
             client_pb2.ClientStateListResponse)
 
         handlers = self.build_handlers(self.stream)
-        return self.build_app(loop, '/state', handlers.state_list)
+        return self.build_app(loop, '/state', handlers.list_state)
 
     @unittest_run_loop
     async def test_state_list(self):
@@ -222,7 +222,7 @@ class StateGetTests(BaseApiTest):
             client_pb2.ClientStateGetResponse)
 
         handlers = self.build_handlers(self.stream)
-        return self.build_app(loop, '/state/{address}', handlers.state_get)
+        return self.build_app(loop, '/state/{address}', handlers.fetch_state)
 
     @unittest_run_loop
     async def test_state_get(self):

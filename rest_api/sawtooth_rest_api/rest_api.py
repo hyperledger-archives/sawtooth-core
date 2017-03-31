@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
 import argparse
 import sys
 from aiohttp import web
@@ -47,23 +48,25 @@ async def logging_middleware(app, handler):
 
 
 def start_rest_api(host, port, stream_url, timeout):
+    app = web.Application(middlewares=[logging_middleware])
+
+    # Add routes to the web app
     handler = RouteHandler(stream_url, timeout)
 
-    app = web.Application(middlewares=[logging_middleware])
-    # Add routes to the web app
-    app.router.add_post('/batches', handler.batches_post)
-    app.router.add_get('/batch_status', handler.status_list)
-    app.router.add_post('/batch_status', handler.status_list)
+    app.router.add_post('/batches', handler.submit_batches)
+    app.router.add_get('/batch_status', handler.list_statuses)
+    app.router.add_post('/batch_status', handler.list_statuses)
 
-    app.router.add_get('/state', handler.state_list)
-    app.router.add_get('/state/{address}', handler.state_get)
+    app.router.add_get('/state', handler.list_state)
+    app.router.add_get('/state/{address}', handler.fetch_state)
 
-    app.router.add_get('/blocks', handler.block_list)
-    app.router.add_get('/blocks/{block_id}', handler.block_get)
+    app.router.add_get('/blocks', handler.list_blocks)
+    app.router.add_get('/blocks/{block_id}', handler.fetch_block)
 
-    app.router.add_get('/batches', handler.batch_list)
-    app.router.add_get('/batches/{batch_id}', handler.batch_get)
+    app.router.add_get('/batches', handler.list_batches)
+    app.router.add_get('/batches/{batch_id}', handler.fetch_batch)
 
+    # Start app
     web.run_app(app, host=host, port=port)
 
 

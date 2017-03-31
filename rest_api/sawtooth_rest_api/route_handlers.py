@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-import asyncio
+
 import json
 import base64
 from aiohttp import web
@@ -29,20 +29,22 @@ from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
-from sawtooth_rest_api.protobuf import client_pb2 as client
+from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
+DEFAULT_TIMEOUT = 300
+
+
 class RouteHandler(object):
-    def __init__(self, stream_url, timeout=300):
+    def __init__(self, stream_url, timeout=DEFAULT_TIMEOUT):
         self._stream = Stream(stream_url)
         self._timeout = timeout
 
-    @asyncio.coroutine
-    def batches_post(self, request):
+    async def submit_batches(self, request):
         """
         Takes protobuf binary from HTTP POST, and sends it to the validator
         """
@@ -50,7 +52,7 @@ class RouteHandler(object):
         if request.headers['Content-Type'] != 'application/octet-stream':
             return errors.WrongBodyType()
 
-        payload = yield from request.read()
+        payload = await request.read()
         if not payload:
             return errors.EmptyProtobuf()
 
@@ -62,13 +64,13 @@ class RouteHandler(object):
 
         # Query validator
         error_traps = [error_handlers.InvalidBatch()]
-        validator_query = client.ClientBatchSubmitRequest(
+        validator_query = client_pb2.ClientBatchSubmitRequest(
             batches=batch_list.batches)
         self._set_wait(request, validator_query)
 
         response = self._query_validator(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            client.ClientBatchSubmitResponse,
+            client_pb2.ClientBatchSubmitResponse,
             validator_query,
             error_traps)
 
@@ -88,13 +90,12 @@ class RouteHandler(object):
             data = None
             link = link.replace('batch_status', 'batches')
 
-        return RouteHandler._wrap_response(
+        return self._wrap_response(
             data=data,
             metadata={'link': link},
             status=status)
 
-    @asyncio.coroutine
-    def status_list(self, request):
+    async def list_statuses(self, request):
         """
         Fetches the status of a set of batches submitted to the validator.
         Batch ids can be submitted by query string (GET request), or by a
@@ -103,45 +104,47 @@ class RouteHandler(object):
         """
         error_traps = [error_handlers.StatusesNotReturned()]
 
+        # Parse batch ids from POST body, or query paramaters
         if request.method == 'POST':
             if request.headers['Content-Type'] != 'application/json':
                 return errors.BadStatusBody()
 
-            batch_ids = yield from request.json()
+            ids = await request.json()
 
-            if not isinstance(batch_ids, list):
+            if not isinstance(ids, list):
                 return errors.BadStatusBody()
-            if len(batch_ids) == 0:
+            if len(ids) == 0:
                 return errors.MissingStatusId()
-            if not isinstance(batch_ids[0], str):
+            if not isinstance(ids[0], str):
                 return errors.BadStatusBody()
 
         else:
             try:
-                batch_ids = request.url.query['id'].split(',')
+                ids = request.url.query['id'].split(',')
             except KeyError:
                 return errors.MissingStatusId()
 
-        validator_query = client.ClientBatchStatusRequest(batch_ids=batch_ids)
+        # Query validator
+        validator_query = client_pb2.ClientBatchStatusRequest(batch_ids=ids)
         self._set_wait(request, validator_query)
 
         response = self._query_validator(
             Message.CLIENT_BATCH_STATUS_REQUEST,
-            client.ClientBatchStatusResponse,
+            client_pb2.ClientBatchStatusResponse,
             validator_query,
             error_traps)
 
+        # Send response
         if request.method != 'POST':
-            metadata = RouteHandler._get_metadata(request, response)
+            metadata = self._get_metadata(request, response)
         else:
             metadata = None
 
-        return RouteHandler._wrap_response(
+        return self._wrap_response(
             data=response.get('batch_statuses'),
             metadata=metadata)
 
-    @asyncio.coroutine
-    def state_list(self, request):
+    async def list_state(self, request):
         """
         Fetch a list of data leaves from the validator's state merkle-tree
         """
@@ -150,15 +153,14 @@ class RouteHandler(object):
 
         response = self._query_validator(
             Message.CLIENT_STATE_LIST_REQUEST,
-            client.ClientStateListResponse,
-            client.ClientStateListRequest(head_id=head, address=address))
+            client_pb2.ClientStateListResponse,
+            client_pb2.ClientStateListRequest(head_id=head, address=address))
 
-        return RouteHandler._wrap_response(
+        return self._wrap_response(
             data=response.get('leaves', []),
-            metadata=RouteHandler._get_metadata(request, response))
+            metadata=self._get_metadata(request, response))
 
-    @asyncio.coroutine
-    def state_get(self, request):
+    async def fetch_state(self, request):
         """
         Fetch a specific data leaf from the validator's state merkle-tree
         """
@@ -171,34 +173,32 @@ class RouteHandler(object):
 
         response = self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
-            client.ClientStateGetResponse,
-            client.ClientStateGetRequest(head_id=head, address=address),
+            client_pb2.ClientStateGetResponse,
+            client_pb2.ClientStateGetRequest(head_id=head, address=address),
             error_traps)
 
-        return RouteHandler._wrap_response(
+        return self._wrap_response(
             data=response['value'],
-            metadata=RouteHandler._get_metadata(request, response))
+            metadata=self._get_metadata(request, response))
 
-    @asyncio.coroutine
-    def block_list(self, request):
+    async def list_blocks(self, request):
         """
         Fetch a particular block from the validator
         """
         head = request.url.query.get('head', None)
-        block_ids = RouteHandler._get_filter_ids(request)
+        ids = self._get_filter_ids(request)
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_LIST_REQUEST,
-            client.ClientBlockListResponse,
-            client.ClientBlockListRequest(head_id=head, block_ids=block_ids))
+            client_pb2.ClientBlockListResponse,
+            client_pb2.ClientBlockListRequest(head_id=head, block_ids=ids))
 
-        blocks = [RouteHandler._expand_block(b) for b in response['blocks']]
-        return RouteHandler._wrap_response(
+        blocks = [self._expand_block(b) for b in response['blocks']]
+        return self._wrap_response(
             data=blocks,
-            metadata=RouteHandler._get_metadata(request, response))
+            metadata=self._get_metadata(request, response))
 
-    @asyncio.coroutine
-    def block_get(self, request):
+    async def fetch_block(self, request):
         """
         Fetch a list of blocks from the validator
         """
@@ -210,34 +210,32 @@ class RouteHandler(object):
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_GET_REQUEST,
-            client.ClientBlockGetResponse,
-            client.ClientBlockGetRequest(block_id=block_id),
+            client_pb2.ClientBlockGetResponse,
+            client_pb2.ClientBlockGetRequest(block_id=block_id),
             error_traps)
 
-        return RouteHandler._wrap_response(
-            data=RouteHandler._expand_block(response['block']),
-            metadata=RouteHandler._get_metadata(request, response))
+        return self._wrap_response(
+            data=self._expand_block(response['block']),
+            metadata=self._get_metadata(request, response))
 
-    @asyncio.coroutine
-    def batch_list(self, request):
+    async def list_batches(self, request):
         """
         Fetch a list of batches from the validator
         """
         head = request.url.query.get('head', None)
-        batch_ids = RouteHandler._get_filter_ids(request)
+        ids = self._get_filter_ids(request)
 
         response = self._query_validator(
             Message.CLIENT_BATCH_LIST_REQUEST,
-            client.ClientBatchListResponse,
-            client.ClientBatchListRequest(head_id=head, batch_ids=batch_ids))
+            client_pb2.ClientBatchListResponse,
+            client_pb2.ClientBatchListRequest(head_id=head, batch_ids=ids))
 
-        batches = [RouteHandler._expand_batch(b) for b in response['batches']]
-        return RouteHandler._wrap_response(
+        batches = [self._expand_batch(b) for b in response['batches']]
+        return self._wrap_response(
             data=batches,
-            metadata=RouteHandler._get_metadata(request, response))
+            metadata=self._get_metadata(request, response))
 
-    @asyncio.coroutine
-    def batch_get(self, request):
+    async def fetch_batch(self, request):
         """
         Fetch a particular batch from the validator
         """
@@ -249,20 +247,20 @@ class RouteHandler(object):
 
         response = self._query_validator(
             Message.CLIENT_BATCH_GET_REQUEST,
-            client.ClientBatchGetResponse,
-            client.ClientBatchGetRequest(batch_id=batch_id),
+            client_pb2.ClientBatchGetResponse,
+            client_pb2.ClientBatchGetRequest(batch_id=batch_id),
             error_traps)
 
-        return RouteHandler._wrap_response(
-            data=RouteHandler._expand_batch(response['batch']),
-            metadata=RouteHandler._get_metadata(request, response))
+        return self._wrap_response(
+            data=self._expand_batch(response['batch']),
+            metadata=self._get_metadata(request, response))
 
     def _query_validator(self, req_type, resp_proto, content, traps=None):
         """
         Sends a request to the validator and parses the response
         """
         response = self._try_validator_request(req_type, content)
-        return RouteHandler._try_response_parse(resp_proto, response, traps)
+        return self._try_response_parse(resp_proto, response, traps)
 
     def _try_validator_request(self, message_type, content):
         """
@@ -281,13 +279,12 @@ class RouteHandler(object):
 
         try:
             return response.content
-            # the error is caused by resolving a FutureError
-            # on validator disconnect.
+        # Caused by resolving a FutureError on validator disconnect
         except ValidatorConnectionError:
             raise errors.ValidatorUnavailable()
 
-    @staticmethod
-    def _try_response_parse(proto, response, traps=None):
+    @classmethod
+    def _try_response_parse(cls, proto, response, traps=None):
         """
         Parses a protobuf response from the validator
         Raises common validator error statuses as HTTP errors
@@ -313,11 +310,7 @@ class RouteHandler(object):
         for trap in traps:
             trap.check(parsed.status)
 
-        return MessageToDict(
-            parsed,
-            including_default_value_fields=True,
-            preserving_proto_field_name=True,
-        )
+        return cls.message_to_dict(parsed)
 
     @staticmethod
     def _wrap_response(data=None, metadata=None, status=200):
@@ -350,12 +343,45 @@ class RouteHandler(object):
             request.path,
             head)
 
-        headless = filter(lambda i: i[0] != 'head', request.url.query.items())
-        queries = ['{}={}'.format(k, v) for k, v in headless]
-        if len(queries) > 0:
-            link += '&' + '&'.join(queries)
+        queries = request.url.query.items()
+        headless = ['{}={}'.format(k, v) for k, v in queries if k != 'head']
+        if len(headless) > 0:
+            link += '&' + '&'.join(headless)
 
         return {'head': head, 'link': link}
+
+    @classmethod
+    def _expand_block(cls, block):
+        cls._parse_header(BlockHeader, block)
+        if 'batches' in block:
+            block['batches'] = [cls._expand_batch(b) for b in block['batches']]
+        return block
+
+    @classmethod
+    def _expand_batch(cls, batch):
+        cls._parse_header(BatchHeader, batch)
+        if 'transactions' in batch:
+            batch['transactions'] = [
+                cls._expand_transaction(t) for t in batch['transactions']]
+        return batch
+
+    @classmethod
+    def _expand_transaction(cls, transaction):
+        return cls._parse_header(TransactionHeader, transaction)
+
+    @classmethod
+    def _parse_header(cls, header_proto, obj):
+        """
+        A helper method to parse a byte string encoded protobuf 'header'
+        Args:
+            header_proto: The protobuf class of the encoded header
+            obj: The dict formatted object containing the 'header'
+        """
+        header = header_proto()
+        header_bytes = base64.b64decode(obj['header'])
+        header.ParseFromString(header_bytes)
+        obj['header'] = cls.message_to_dict(header)
+        return obj
 
     def _set_wait(self, request, validator_query):
         """
@@ -372,40 +398,13 @@ class RouteHandler(object):
                 validator_query.timeout = int(self._timeout * 0.95)
 
     @staticmethod
-    def _expand_block(block):
-        RouteHandler._parse_header(BlockHeader, block)
-        if 'batches' in block:
-            block['batches'] = [RouteHandler._expand_batch(b)
-                                for b in block['batches']]
-        return block
-
-    @staticmethod
-    def _expand_batch(batch):
-        RouteHandler._parse_header(BatchHeader, batch)
-        if 'transactions' in batch:
-            batch['transactions'] = [RouteHandler._expand_transaction(t)
-                                     for t in batch['transactions']]
-        return batch
-
-    @staticmethod
-    def _expand_transaction(transaction):
-        return RouteHandler._parse_header(TransactionHeader, transaction)
-
-    @staticmethod
-    def _parse_header(header_proto, obj):
-        """
-        A helper method to parse a byte string encoded protobuf 'header'
-        Args:
-            header_proto: The protobuf class of the encoded header
-            obj: The dict formatted object containing the 'header'
-        """
-        header = header_proto()
-        header_bytes = base64.b64decode(obj['header'])
-        header.ParseFromString(header_bytes)
-        obj['header'] = MessageToDict(header, preserving_proto_field_name=True)
-        return obj
-
-    @staticmethod
     def _get_filter_ids(request):
         filter_ids = request.url.query.get('id', None)
         return filter_ids and filter_ids.split(',')
+
+    @staticmethod
+    def message_to_dict(message):
+        return MessageToDict(
+            message,
+            including_default_value_fields=True,
+            preserving_proto_field_name=True)
