@@ -358,6 +358,7 @@ class TestBlockValidator(unittest.TestCase):
             done_cb=on_block_validated,
             executor=MockTransactionExecutor(),
             squash_handler=None,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None)
 
     class BlockValidationHandler(object):
@@ -404,6 +405,7 @@ class TestChainController(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=None,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None)
 
         init_root = self.chain_ctrl.chain_head

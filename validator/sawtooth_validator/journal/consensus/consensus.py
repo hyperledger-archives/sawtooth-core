@@ -30,7 +30,8 @@ class BlockPublisherInterface(metaclass=ABCMeta):
                  block_cache,
                  state_view_factory,
                  batch_publisher,
-                 data_dir):
+                 data_dir,
+                 validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
@@ -45,6 +46,7 @@ class BlockPublisherInterface(metaclass=ABCMeta):
                 batch to the network.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
+                validator_id: A unique ID for this validator
             Returns:
                 none.
         """
@@ -103,7 +105,11 @@ class BlockVerifierInterface(metaclass=ABCMeta):
     # considered as part of the fork being  evaluate. BlockVerifier must be
     # independent of block publishing activities.
     @abstractmethod
-    def __init__(self, block_cache, state_view_factory, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache: Dict interface to the block cache. Any predecessor
@@ -115,6 +121,7 @@ class BlockVerifierInterface(metaclass=ABCMeta):
                 was the chain head.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
+                validator_id: A unique ID for this validator
             Returns:
                 none.
         """
@@ -136,7 +143,11 @@ class ForkResolverInterface(metaclass=ABCMeta):
     # Provides the fork resolution interface for the BlockValidator to use
     # when deciding between two forks.
     @abstractmethod
-    def __init__(self, block_cache, state_view_factory, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
         """Initialize the object, is passed (read-only) state access objects.
         StateView is not passed to this object as it is ambiguous as to which
         state it is and all state dependent calculations should have been
@@ -152,6 +163,7 @@ class ForkResolverInterface(metaclass=ABCMeta):
                 was the chain head.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
+                validator_id: A unique ID for this validator
             Returns:
                 none.
         """

@@ -30,11 +30,13 @@ class BlockPublisher(BlockPublisherInterface):
                  block_cache,
                  state_view_factory,
                  batch_publisher,
-                 data_dir):
+                 data_dir,
+                 validator_id):
         super().__init__(block_cache,
                          state_view_factory,
                          batch_publisher,
-                         data_dir)
+                         data_dir,
+                         validator_id)
 
     def initialize_block(self, block_header):
         """Initializes the given block header with the consensus field set to
@@ -65,8 +67,16 @@ class BlockVerifier(BlockVerifierInterface):
     other case, verification will fail.  This requires that any block beyond
     the genesis block must use a proper consensus module.
     """
-    def __init__(self, block_cache, state_view_factory, data_dir):
-        super().__init__(block_cache, state_view_factory, data_dir)
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            data_dir,
+            validator_id)
 
     def verify_block(self, block_wrapper):
         """Returns `True` if the previous block id is the NULL_BLOCK_IDENTIFIER
@@ -77,8 +87,16 @@ class BlockVerifier(BlockVerifierInterface):
 class ForkResolver(ForkResolverInterface):
     """The genesis ForkResolver should not ever be used.
     """
-    def __init__(self, block_cache, data_dir):
-        super().__init__(block_cache, data_dir)
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            data_dir,
+            validator_id)
 
     def compare_forks(self, cur_fork_head, new_fork_head):
         """Returns False, acception only the current fork.

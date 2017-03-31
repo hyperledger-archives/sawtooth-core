@@ -203,6 +203,7 @@ class Journal(object):
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler,
             chain_id_manager=self._chain_id_manager,
+            identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir
         )
         self._chain_thread = self._ChainThread(

@@ -27,12 +27,14 @@ class BlockPublisher(BlockPublisherInterface):
                  block_cache,
                  state_view_factory,
                  batch_publisher,
-                 data_dir):
+                 data_dir,
+                 validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             batch_publisher,
-            data_dir)
+            data_dir,
+            validator_id)
 
     def initialize_block(self, block_header):
         """
@@ -67,11 +69,16 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """MockConsensus BlockVerifier implementation
     """
-    def __init__(self, block_cache, state_view_factory, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
-            data_dir)
+            data_dir,
+            validator_id)
 
     def verify_block(self, block_wrapper):
         return block_wrapper.consensus == b"test_mode"
@@ -80,11 +87,16 @@ class BlockVerifier(BlockVerifierInterface):
 class ForkResolver(ForkResolverInterface):
     """MockConsensus ForkResolver implementation
     """
-    def __init__(self, block_cache, state_view_factory, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
-            data_dir)
+            data_dir,
+            validator_id)
 
     def compare_forks(self, cur_fork_head, new_fork_head):
         """

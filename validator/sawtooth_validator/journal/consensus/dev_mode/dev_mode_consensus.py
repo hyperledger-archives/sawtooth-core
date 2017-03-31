@@ -40,12 +40,14 @@ class BlockPublisher(BlockPublisherInterface):
                  block_cache,
                  state_view_factory,
                  batch_publisher,
-                 data_dir):
+                 data_dir,
+                 validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             batch_publisher,
-            data_dir)
+            data_dir,
+            validator_id)
 
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
@@ -133,8 +135,16 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """DevMode BlockVerifier implementation
     """
-    def __init__(self, block_cache, state_view_factory, data_dir):
-        super().__init__(block_cache, state_view_factory, data_dir)
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            data_dir,
+            validator_id)
 
     def verify_block(self, block_wrapper):
         return block_wrapper.header.consensus == b"Devmode"
@@ -144,8 +154,16 @@ class ForkResolver(ForkResolverInterface):
     """Provides the fork resolution interface for the BlockValidator to use
     when deciding between 2 forks.
     """
-    def __init__(self, block_cache, state_view_factory, data_dir):
-        super().__init__(block_cache, state_view_factory, data_dir)
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            data_dir,
+            validator_id)
 
     @staticmethod
     def hash_signer_pubkey(signer_pubkey, header_signature):
