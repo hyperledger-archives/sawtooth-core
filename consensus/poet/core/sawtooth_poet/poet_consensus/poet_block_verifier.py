@@ -15,6 +15,7 @@
 
 import logging
 
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
 
@@ -63,11 +64,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
         Returns:
             Boolean: True if the Block is valid, False if the block is invalid.
         """
-        # HACER: If we don't have any validators registered yet, we are going
-        # to immediately approve the block.  We cannot test the block's wait
-        # certificate until we can retrieve the block signer's corresponding
-        # public key.  We cannot do that until the genesis block is populated
-        # with the "initial" validator's signup information
+        # Get the state view for the previous block in the chain so we can
+        # create a PoET enclave and validator registry view
         previous_block = None
         try:
             previous_block = \
@@ -75,77 +73,70 @@ class PoetBlockVerifier(BlockVerifierInterface):
         except KeyError:
             pass
 
-        # Using the previous block, we need to create a state view so we
-        # can create a PoET enclave.  We are going to special case this until
-        # the genesis consensus is available.  We know that the genesis block
-        # is special cased to have a state view constructed for it.
-        state_root_hash = \
-            previous_block.state_root_hash \
-            if previous_block is not None \
-            else block_wrapper.state_root_hash
-        state_view = self._state_view_factory.create_view(state_root_hash)
+        state_view = \
+            BlockWrapper.state_view_for_block(
+                block_wrapper=previous_block,
+                state_view_factory=self._state_view_factory)
 
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
 
         validator_registry_view = ValidatorRegistryView(state_view)
-        if len(validator_registry_view.get_validators()) > 0:
+        try:
+            # Grab the validator info based upon the block signer's public
+            # key
             try:
-                # Grab the validator info based upon the block signer's public
-                # key
                 validator_info = \
                     validator_registry_view.get_validator_info(
                         block_wrapper.header.signer_pubkey)
-
-                LOGGER.debug(
-                    'Block Signer Name=%s, ID=%s...%s, PoET public key='
-                    '%s...%s',
-                    validator_info.name,
-                    validator_info.id[:8],
-                    validator_info.id[-8:],
-                    validator_info.signup_info.poet_public_key[:8],
-                    validator_info.signup_info.poet_public_key[-8:])
-
-                # Create a list of certificates leading up to this block.
-                # This seems to have a little too much knowledge of the
-                # WaitTimer implementation, but there is no use getting more
-                # than WaitTimer.certificate_sample_length wait certificates.
-                certificates = \
-                    utils.build_certificate_list(
-                        block_header=block_wrapper.header,
-                        block_cache=self._block_cache,
-                        poet_enclave_module=poet_enclave_module,
-                        maximum_number=WaitTimer.certificate_sample_length)
-
-                # For the candidate block, reconstitute the wait certificate
-                # and verify that it is valid
-                wait_certificate = \
-                    utils.deserialize_wait_certificate(
-                        block=block_wrapper,
-                        poet_enclave_module=poet_enclave_module)
-                if wait_certificate is None:
-                    raise \
-                        ValueError(
-                            'Being asked to verify a block that was not '
-                            'created by PoET consensus module')
-
-                try:
-                    poet_public_key = \
-                        validator_info.signup_info.poet_public_key
-                    wait_certificate.check_valid(
-                        poet_enclave_module=poet_enclave_module,
-                        certificates=certificates,
-                        poet_public_key=poet_public_key)
-                except ValueError as ve:
-                    LOGGER.error('Wait certificate is not valid: %s', str(ve))
-                    LOGGER.warning('We will accept for now')
             except KeyError:
-                LOGGER.error(
-                    'Attempted to verify block from validator with no '
-                    'validator registry entry')
-                return False
-        else:
-            LOGGER.warning(
-                'Block accepted by default because no validators registered')
+                raise \
+                    ValueError(
+                        'Received block from an unregistered validator '
+                        '{}...{}'.format(
+                            block_wrapper.header.signer_pubkey[:8],
+                            block_wrapper.header.signer_pubkey[-8:]))
+
+            LOGGER.debug(
+                'Block Signer Name=%s, ID=%s...%s, PoET public key='
+                '%s...%s',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                validator_info.signup_info.poet_public_key[:8],
+                validator_info.signup_info.poet_public_key[-8:])
+
+            # Create a list of certificates leading up to this block.
+            # This seems to have a little too much knowledge of the
+            # WaitTimer implementation, but there is no use getting more
+            # than WaitTimer.certificate_sample_length wait certificates.
+            certificates = \
+                utils.build_certificate_list(
+                    block_header=block_wrapper.header,
+                    block_cache=self._block_cache,
+                    poet_enclave_module=poet_enclave_module,
+                    maximum_number=WaitTimer.certificate_sample_length)
+
+            # For the candidate block, reconstitute the wait certificate
+            # and verify that it is valid
+            wait_certificate = \
+                utils.deserialize_wait_certificate(
+                    block=block_wrapper,
+                    poet_enclave_module=poet_enclave_module)
+            if wait_certificate is None:
+                raise \
+                    ValueError(
+                        'Being asked to verify a block that was not '
+                        'created by PoET consensus module')
+
+            poet_public_key = \
+                validator_info.signup_info.poet_public_key
+            wait_certificate.check_valid(
+                poet_enclave_module=poet_enclave_module,
+                certificates=certificates,
+                poet_public_key=poet_public_key)
+        except ValueError as error:
+            LOGGER.error('Failed to verify block: %s', error)
+            return False
 
         return True

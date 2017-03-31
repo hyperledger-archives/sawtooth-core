@@ -98,7 +98,7 @@ class LMDBNoLockDatabase(database.Database):
         with self._lmdb.begin(write=True, buffers=True) as txn:
             if del_keys is not None:
                 for k in del_keys:
-                    txn.delete(k)
+                    txn.delete(k.encode())
             for k, v in add_pairs:
                 packed = cbor.dumps(v)
                 txn.put(k.encode(), packed, overwrite=True)

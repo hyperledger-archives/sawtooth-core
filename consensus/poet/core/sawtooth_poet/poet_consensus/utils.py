@@ -96,7 +96,7 @@ def build_certificate_list(block_header,
             # property to reconstitute the wait certificate, and add
             # the wait certificate to the list.  If we get to a block
             # that does not have a wait certificate, we stop.
-            block = block_cache.block_store[block_id]
+            block = block_cache[block_id]
             wait_certificate = \
                 deserialize_wait_certificate(
                     block=block,

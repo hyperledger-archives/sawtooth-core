@@ -298,17 +298,17 @@ class BlockValidator(object):
         """
         Compute the batch change sets.
         """
-        committed_txn = []
+        committed_batches = []
         for blkw in new_chain:
             for batch in blkw.batches:
-                committed_txn = committed_txn + list(batch.transactions)
+                committed_batches.append(batch)
 
-        uncommitted_txn = []
+        uncommitted_batches = []
         for blkw in cur_chain:
             for batch in blkw.batches:
-                uncommitted_txn = uncommitted_txn + list(batch.transactions)
+                uncommitted_batches.append(batch)
 
-        return (committed_txn, uncommitted_txn)
+        return (committed_batches, uncommitted_batches)
 
     def run(self):
         """

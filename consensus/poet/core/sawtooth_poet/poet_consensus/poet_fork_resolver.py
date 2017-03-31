@@ -58,5 +58,43 @@ class PoetForkResolver(ForkResolverInterface):
             Boolean: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
         """
-        LOGGER.debug("PoetForkResolver.compare_forks()")
-        return new_fork_head.block_num > cur_fork_head.block_num
+        if new_fork_head.block_num > cur_fork_head.block_num:
+            LOGGER.info(
+                'Chain with new fork head %s...%s longer (%d) than current '
+                'chain head %s...%s (%d)',
+                new_fork_head.header_signature[:8],
+                new_fork_head.header_signature[-8:],
+                new_fork_head.block_num,
+                cur_fork_head.header_signature[:8],
+                cur_fork_head.header_signature[-8:],
+                cur_fork_head.block_num)
+            return True
+        elif new_fork_head.block_num < cur_fork_head.block_num:
+            LOGGER.info(
+                'Chain with current head %s...%s longer (%d) than new fork '
+                'head %s...%s (%d)',
+                cur_fork_head.header_signature[:8],
+                cur_fork_head.header_signature[-8:],
+                cur_fork_head.block_num,
+                new_fork_head.header_signature[:8],
+                new_fork_head.header_signature[-8:],
+                new_fork_head.block_num)
+            return False
+        elif new_fork_head.header_signature > cur_fork_head.header_signature:
+            LOGGER.info(
+                'Signature of new fork head (%s...%s) > than current '
+                '(%s...%s)',
+                new_fork_head.header_signature[:8],
+                new_fork_head.header_signature[-8:],
+                cur_fork_head.header_signature[:8],
+                cur_fork_head.header_signature[-8:])
+            return True
+        else:
+            LOGGER.info(
+                'Signature of current fork head (%s...%s) >= than new '
+                '(%s...%s)',
+                cur_fork_head.header_signature[:8],
+                cur_fork_head.header_signature[-8:],
+                new_fork_head.header_signature[:8],
+                new_fork_head.header_signature[-8:])
+            return False
