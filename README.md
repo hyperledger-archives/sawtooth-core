@@ -10,7 +10,8 @@ It provides an extremely modular and flexible platform for implementing
 transaction-based updates to shared state between
 untrusted parties coordinated by consensus algorithms.
 
-###Incubation Notice
+Incubation Notice
+-----------------
 
 This project is a Hyperledger project in _Incubation_. It was proposed to the 
 community and documented [here](http://bit.ly/1T6eVBH). Information on what 
