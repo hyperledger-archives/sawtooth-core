@@ -65,10 +65,9 @@ public class Stream {
             .setCorrelationId(this.generateId())
             .setMessageType(destination).setContent(contents).build();
 
-    this.sendReceiveThread.sendMessage(message);
     FutureByteString future = new FutureByteString(message.getCorrelationId());
     this.futureHashMap.put(message.getCorrelationId(), future);
-
+    this.sendReceiveThread.sendMessage(message);
     return future;
   }
 
