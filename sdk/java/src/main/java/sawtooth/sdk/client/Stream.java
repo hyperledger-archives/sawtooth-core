@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016,  2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -25,13 +25,15 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The client networking class.
  */
 public class Stream {
-  private ConcurrentHashMap<String, FutureByteString> futureHashMap;
-  private LinkedBlockingQueue<Message> receiveQueue;
+  private ConcurrentHashMap<String, Future> futureHashMap;
+  private LinkedBlockingQueue<SendReceiveThread.MessageWrapper> receiveQueue;
   private SendReceiveThread sendReceiveThread;
   private Thread thread;
 
@@ -42,8 +44,8 @@ public class Stream {
    *
    */
   public Stream(String address) {
-    this.futureHashMap = new ConcurrentHashMap<String, FutureByteString>();
-    this.receiveQueue = new LinkedBlockingQueue<Message>();
+    this.futureHashMap = new ConcurrentHashMap<String, Future>();
+    this.receiveQueue = new LinkedBlockingQueue<SendReceiveThread.MessageWrapper>();
     this.sendReceiveThread = new SendReceiveThread(address,
         futureHashMap, this.receiveQueue);
     this.thread = new Thread(sendReceiveThread);
@@ -57,16 +59,15 @@ public class Stream {
    * @return future a future that will have ByteString that can be deserialized into a,
    *         for example, GetResponse
    */
-  public FutureByteString send(Message.MessageType destination, ByteString contents) {
+  public Future send(Message.MessageType destination, ByteString contents) {
 
     Message message = Message.newBuilder()
             .setCorrelationId(this.generateId())
             .setMessageType(destination).setContent(contents).build();
 
-    this.sendReceiveThread.sendMessage(message);
     FutureByteString future = new FutureByteString(message.getCorrelationId());
     this.futureHashMap.put(message.getCorrelationId(), future);
-
+    this.sendReceiveThread.sendMessage(message);
     return future;
   }
 
@@ -102,14 +103,31 @@ public class Stream {
    * @return result, a protobuf Message
    */
   public Message receive() {
-
-    Message result = null;
+    SendReceiveThread.MessageWrapper result = null;
     try {
       result = this.receiveQueue.take();
     } catch (InterruptedException ie) {
       ie.printStackTrace();
     }
-    return result;
+    return result.message;
+  }
+
+  /**
+   * Get a message that has been received. If the timeout is expired, throws TimeoutException.
+   * @param timeout time to wait for a message.
+   * @return result, a protobuf Message
+   */
+  public Message receive(long timeout) throws TimeoutException {
+    SendReceiveThread.MessageWrapper result = null;
+    try {
+      result = this.receiveQueue.poll(timeout, TimeUnit.SECONDS);
+      if (result == null) {
+        throw new TimeoutException("The recieve queue timed out.");
+      }
+    } catch (InterruptedException ie) {
+      ie.printStackTrace();
+    }
+    return result.message;
   }
 
   /**

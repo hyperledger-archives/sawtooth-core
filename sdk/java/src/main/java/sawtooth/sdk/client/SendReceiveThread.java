@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -22,6 +22,8 @@ import org.zeromq.ZLoop;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 
+import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
+
 import sawtooth.sdk.protobuf.Message;
 
 import java.io.ByteArrayOutputStream;
@@ -44,13 +46,13 @@ class SendReceiveThread implements Runnable {
   private ZMQ.Socket socket;
   private Lock lock = new ReentrantLock();
   private Condition condition = lock.newCondition();
-  private ConcurrentHashMap<String, FutureByteString> futures;
-  private LinkedBlockingQueue<Message> receiveQueue;
+  private ConcurrentHashMap<String, Future> futures;
+  private LinkedBlockingQueue<MessageWrapper> receiveQueue;
   private ZContext context;
 
   public SendReceiveThread(String url,
-                           ConcurrentHashMap<String, FutureByteString> futures,
-                           LinkedBlockingQueue<Message> recvQueue) {
+                           ConcurrentHashMap<String, Future> futures,
+                           LinkedBlockingQueue<MessageWrapper> recvQueue) {
     super();
     this.url = url;
     this.futures = futures;
@@ -59,15 +61,37 @@ class SendReceiveThread implements Runnable {
   }
 
   /**
+   * Inner class for passing messages.
+   */
+  public class MessageWrapper {
+    Message message;
+
+    public MessageWrapper(Message message) {
+      this.message = message;
+    }
+  }
+
+  private class DisconnectThread extends Thread {
+    protected LinkedBlockingQueue<MessageWrapper> receiveQueue;
+    protected ConcurrentHashMap<String, Future> futures;
+
+    public DisconnectThread(LinkedBlockingQueue<MessageWrapper> receiveQueue,
+        ConcurrentHashMap<String, Future> futures) {
+      this.receiveQueue = receiveQueue;
+      this.futures = futures;
+    }
+  }
+
+  /**
    * Inner class for receiving messages.
    */
   private class Receiver implements ZLoop.IZLoopHandler {
 
-    private ConcurrentHashMap<String, FutureByteString> futures;
-    private LinkedBlockingQueue<Message> receiveQueue;
+    private ConcurrentHashMap<String, Future> futures;
+    private LinkedBlockingQueue<MessageWrapper> receiveQueue;
 
-    Receiver(ConcurrentHashMap<String, FutureByteString> futures,
-             LinkedBlockingQueue<Message> receiveQueue) {
+    Receiver(ConcurrentHashMap<String, Future> futures,
+             LinkedBlockingQueue<MessageWrapper> receiveQueue) {
       this.futures = futures;
       this.receiveQueue = receiveQueue;
     }
@@ -89,17 +113,21 @@ class SendReceiveThread implements Runnable {
       try {
         Message message = Message.parseFrom(byteArrayOutputStream.toByteArray());
         if (this.futures.containsKey(message.getCorrelationId())) {
-          FutureByteString future = this.futures.get(message.getCorrelationId());
+          Future future = this.futures.get(message.getCorrelationId());
           future.setResult(message.getContent());
           this.futures.put(message.getCorrelationId(), future);
         } else {
-          this.receiveQueue.put(message);
+          MessageWrapper wrapper = new MessageWrapper(message);
+          this.receiveQueue.put(wrapper);
         }
       } catch (InterruptedException ie) {
         ie.printStackTrace();
       } catch (InvalidProtocolBufferException ipe) {
         ipe.printStackTrace();
+      } catch (ValidatorConnectionError vce) {
+        vce.printStackTrace();
       }
+
 
       return 0;
     }
@@ -109,6 +137,32 @@ class SendReceiveThread implements Runnable {
   public void run() {
     this.context = new ZContext();
     socket = this.context.createSocket(ZMQ.DEALER);
+    socket.monitor("inproc://monitor.s", ZMQ.EVENT_DISCONNECTED);
+    final ZMQ.Socket monitor = this.context.createSocket(ZMQ.PAIR);
+    monitor.connect("inproc://monitor.s");
+    new DisconnectThread(this.receiveQueue, this.futures) {
+      @Override
+      public void run() {
+        while (true) {
+          // blocks until disconnect event recieved
+          ZMQ.Event event = ZMQ.Event.recv(monitor);
+          if (event.getEvent() == ZMQ.EVENT_DISCONNECTED) {
+            try {
+              MessageWrapper disconnectMsg = new MessageWrapper(null);
+              for (String key: this.futures.keySet()) {
+                Future future = new FutureError();
+                this.futures.put(key, future);
+              }
+              this.receiveQueue.clear();
+              this.receiveQueue.put(disconnectMsg);
+            } catch (InterruptedException ie) {
+              ie.printStackTrace();
+            }
+          }
+        }
+      }
+    }.start();
+
     socket.setIdentity((this.getClass().getName() + UUID.randomUUID().toString()).getBytes());
     socket.connect(url);
     lock.lock();

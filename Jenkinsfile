@@ -77,7 +77,7 @@ node ('master') {
 
         // Run the tests
         stage("Run Tests") {
-            sh './bin/run_tests -x java_sdk'
+            sh './bin/run_tests'
         }
 
         stage("Create git archive") {

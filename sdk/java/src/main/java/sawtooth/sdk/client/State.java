@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
+import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Entry;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
@@ -31,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 
 /**
@@ -41,6 +41,7 @@ public class State {
 
   private Stream stream;
   private String contextId;
+  private static final int TIME_OUT = 2;
 
   public State(Stream stream, String contextId) {
     this.stream = stream;
@@ -56,26 +57,23 @@ public class State {
    */
   public Map<String, ByteString> get(Collection<String> addresses)
       throws InternalError, InvalidTransactionException {
-
     TpStateGetRequest getRequest = TpStateGetRequest.newBuilder()
             .addAllAddresses(addresses)
             .setContextId(this.contextId).build();
-    FutureByteString future = stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
+    Future future = stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
         getRequest.toByteString());
     TpStateGetResponse getResponse = null;
     try {
-      getResponse = TpStateGetResponse.parseFrom(future.getResult());
-    } catch (TimeoutException toe) {
-      try {
-        getResponse = TpStateGetResponse.parseFrom(future.getResult());
-      } catch (Exception e) {
-        throw new InternalError(e.toString());
-      }
+      getResponse = TpStateGetResponse.parseFrom(future.getResult(TIME_OUT));
     } catch (InterruptedException iee) {
       throw new InternalError(iee.toString());
     } catch (InvalidProtocolBufferException ipbe) {
       // server didn't respond with a GetResponse
       throw new InternalError(ipbe.toString());
+    } catch (ValidatorConnectionError vce) {
+      throw new InternalError(vce.toString());
+    } catch (Exception e) {
+      throw new InternalError(e.toString());
     }
     Map<String, ByteString> results = new HashMap<String, ByteString>();
     if (getResponse != null) {
@@ -87,6 +85,11 @@ public class State {
         results.put(entry.getAddress(), entry.getData());
       }
     }
+    if (results.isEmpty()) {
+      throw new InternalError(
+        "State Error, no result found for get request:" + addresses.toString());
+    }
+
     return results;
   }
 
@@ -110,23 +113,21 @@ public class State {
     TpStateSetRequest setRequest = TpStateSetRequest.newBuilder()
             .addAllEntries(entryArrayList)
             .setContextId(this.contextId).build();
-    FutureByteString future = stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
+    Future future = stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
         setRequest.toByteString());
     TpStateSetResponse setResponse = null;
     try {
-      setResponse = TpStateSetResponse.parseFrom(future.getResult());
-    } catch (TimeoutException toe) {
-      try {
-        setResponse = TpStateSetResponse.parseFrom(future.getResult());
-      } catch (Exception e) {
-        throw new InternalError(e.toString());
-      }
+      setResponse = TpStateSetResponse.parseFrom(future.getResult(TIME_OUT));
     } catch (InterruptedException iee) {
       throw new InternalError(iee.toString());
 
     } catch (InvalidProtocolBufferException ipbe) {
       // server didn't respond with a SetResponse
       throw new InternalError(ipbe.toString());
+    } catch (ValidatorConnectionError vce) {
+      throw new InternalError(vce.toString());
+    } catch (Exception e) {
+      throw new InternalError(e.toString());
     }
     ArrayList<String> addressesThatWereSet = new ArrayList<String>();
     if (setResponse != null) {
@@ -138,6 +139,7 @@ public class State {
         addressesThatWereSet.add(address);
       }
     }
+
     return addressesThatWereSet;
   }
 
