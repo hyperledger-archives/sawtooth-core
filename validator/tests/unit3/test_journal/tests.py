@@ -15,9 +15,6 @@
 
 import logging
 import unittest
-import time
-
-from sawtooth_signing import pbct as signing
 
 from sawtooth_validator.database.dict_database import DictDatabase
 
