@@ -66,6 +66,8 @@ class BlockPublisher(object):
                 contexts.
             chain_head (:obj:`BlockWrapper`): The initial chain head.
             identity_signing_key (str): Private key for signing blocks
+            data_dir (str): path to location where persistent data for the
+             consensus module can be stored.
         """
         self._lock = RLock()
         self._candidate_block = None  # the next block in potentia
@@ -111,7 +113,8 @@ class BlockPublisher(object):
             BlockPublisher(block_cache=self._block_cache,
                            state_view_factory=self._state_view_factory,
                            batch_publisher=self._batch_publisher,
-                           data_dir=self._data_dir)
+                           data_dir=self._data_dir,
+                           validator_id=self._identity_public_key)
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,

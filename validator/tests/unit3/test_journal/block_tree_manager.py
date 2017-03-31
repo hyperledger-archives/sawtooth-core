@@ -42,7 +42,6 @@ from test_journal.mock import MockBatchSender
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
-from test_journal import mock_consensus
 
 pp = pprint.PrettyPrinter(indent=4)
 

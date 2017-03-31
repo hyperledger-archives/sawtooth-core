@@ -35,7 +35,11 @@ class PoetBlockVerifier(BlockVerifierInterface):
     considered as part of the fork being evaluated. BlockVerifier must be
     independent of block publishing activities.
     """
-    def __init__(self, block_cache, state_view_factory, data_dir):
+    def __init__(self,
+                 block_cache,
+                 state_view_factory,
+                 data_dir,
+                 validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache (BlockCache): Dict interface to the block cache.
@@ -47,14 +51,20 @@ class PoetBlockVerifier(BlockVerifierInterface):
                     particular block was the chain head.
                 data_dir (str): path to location where persistent data for the
                     consensus module can be stored.
+                validator_id (str): A unique ID for this validator
             Returns:
                 none.
         """
-        super().__init__(block_cache, state_view_factory, data_dir)
+        super().__init__(
+            block_cache,
+            state_view_factory,
+            data_dir,
+            validator_id)
 
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._data_dir = data_dir
+        self._validator_id = validator_id
 
     def verify_block(self, block_wrapper):
         """Check that the block received conforms to the consensus rules.

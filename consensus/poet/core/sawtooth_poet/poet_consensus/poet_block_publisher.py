@@ -63,7 +63,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                  block_cache,
                  state_view_factory,
                  batch_publisher,
-                 data_dir):
+                 data_dir,
+                 validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
                 block_cache (BlockCache): Dict interface to the block cache.
@@ -78,6 +79,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     broadcast that batch to the network.
                 data_dir (str): path to location where persistent data for the
                     consensus module can be stored.
+                validator_id (str): A unique ID for this validator
             Returns:
                 none.
         """
@@ -85,12 +87,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
             block_cache,
             state_view_factory,
             batch_publisher,
-            data_dir)
+            data_dir,
+            validator_id)
 
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._batch_publisher = batch_publisher
         self._data_dir = data_dir
+        self._validator_id = validator_id
 
         self._wait_timer = None
 

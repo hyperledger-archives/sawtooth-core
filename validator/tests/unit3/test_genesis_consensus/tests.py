@@ -43,10 +43,12 @@ class TestGenesisBlockPublisher(unittest.TestCase):
         state_view_factory = Mock()
         batch_publisher = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_publisher = BlockPublisher(block_cache,
                                          state_view_factory,
                                          batch_publisher,
-                                         data_dir)
+                                         data_dir,
+                                         validator_id)
 
         block_header = BlockHeader(
             previous_block_id=NULL_BLOCK_IDENTIFIER)
@@ -68,10 +70,12 @@ class TestGenesisBlockPublisher(unittest.TestCase):
         state_view_factory = Mock()
         batch_publisher = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_publisher = BlockPublisher(block_cache,
                                          state_view_factory,
                                          batch_publisher,
-                                         data_dir)
+                                         data_dir,
+                                         validator_id)
 
         block_header = BlockHeader(
             consensus=b'Genesis',
@@ -93,10 +97,12 @@ class TestGenesisBlockPublisher(unittest.TestCase):
         state_view_factory = Mock()
         batch_publisher = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_publisher = BlockPublisher(block_cache,
                                          state_view_factory,
                                          batch_publisher,
-                                         data_dir)
+                                         data_dir,
+                                         validator_id)
 
         block_header = BlockHeader(
             consensus=b'Genesis',
@@ -118,10 +124,12 @@ class TestGenesisBlockPublisher(unittest.TestCase):
         state_view_factory = Mock()
         batch_publisher = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_publisher = BlockPublisher(block_cache,
                                          state_view_factory,
                                          batch_publisher,
-                                         data_dir)
+                                         data_dir,
+                                         validator_id)
 
         block_header = BlockHeader(
             consensus=b'Genesis',
@@ -143,10 +151,12 @@ class TestGenesisBlockPublisher(unittest.TestCase):
         state_view_factory = Mock()
         batch_publisher = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_publisher = BlockPublisher(block_cache,
                                          state_view_factory,
                                          batch_publisher,
-                                         data_dir)
+                                         data_dir,
+                                         validator_id)
 
         block_header = BlockHeader(
             consensus=b'Genesis',
@@ -168,9 +178,11 @@ class TestGenesisBlockVerifier(unittest.TestCase):
         block_cache = Mock()
         state_view_factory = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_verifier = BlockVerifier(block_cache,
                                        state_view_factory,
-                                       data_dir)
+                                       data_dir,
+                                       validator_id)
 
         block = Block(header=BlockHeader(
             previous_block_id=NULL_BLOCK_IDENTIFIER).SerializeToString())
@@ -186,9 +198,11 @@ class TestGenesisBlockVerifier(unittest.TestCase):
         block_cache = Mock()
         state_view_factory = Mock()
         data_dir = 'mock_dir'
+        validator_id = 'validator_001'
         block_verifier = BlockVerifier(block_cache,
                                        state_view_factory,
-                                       data_dir)
+                                       data_dir,
+                                       validator_id)
 
         block = Block(header=BlockHeader(
             previous_block_id='some_prev_block_id').SerializeToString())
