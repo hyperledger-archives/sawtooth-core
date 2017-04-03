@@ -13,33 +13,28 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import logging
-import json
+import unittest
 from unittest.mock import patch
 
 from test_consensus.mock_block_verifier import MockValidatorRegistryView
 from test_consensus.mock_block_verifier import MockCreateWaitCertificate
+# from sawtooth_poet.poet_consensus import poet_block_verifier
 from sawtooth_poet.poet_consensus import BlockVerifier
 from tests.unit3.test_journal.mock import MockStateViewFactory
-from tests.unit3.test_client_request_handlers.mocks import MockBlockStore
+from tests.unit3.test_client_request_handlers.mocks \
+    import MockBlockStore
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.state.config_view import ConfigView
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.journal.block_wrapper import BlockStatus
-from sawtooth_poet.poet_consensus import utils
-from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
-from test_validator_registry_view.mocks import MockStateView
-from test_validator_registry_view.utils import to_address
-from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorInfo
-from sawtooth_poet_common.protobuf.validator_registry_pb2 import SignUpInfo
-from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
-from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorInfo
 
 LOGGER = logging.getLogger(__name__)
+
 
 class TestPoetBlockVerifier(unittest.TestCase):
     def __init__(self, test_name):
@@ -50,9 +45,9 @@ class TestPoetBlockVerifier(unittest.TestCase):
     def create_block_wrapper(self):
         block = Block()
         block_wrapper = BlockWrapper(status=BlockStatus.Valid,
-                block=block, weight=0)
+                                     block=block,
+                                     weight=0)
         return block_wrapper
-
 
     def create_block_header(self, signer_pubkey=None):
         return BlockHeader(signer_pubkey=signer_pubkey)
@@ -62,13 +57,17 @@ class TestPoetBlockVerifier(unittest.TestCase):
         if values is not None:
             for key, value in values.items():
                 state_db[ConfigView.setting_address(key)] = \
-                    TestPoetBlockVerifier._setting_entry(key, repr(value))
+                    TestPoetBlockVerifier._setting_entry(
+                        key,
+                        repr(value))
         return MockStateViewFactory(state_db)
 
-
-    @patch('sawtooth_poet.poet_consensus.poet_block_verifier.ValidatorRegistryView')
-    def test_verify_block_empty_validator_registry_view(self, mock_validator_registry_view):
-        mock_validator_registry_view.return_value = MockValidatorRegistryView({})
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.ValidatorRegistryView')
+    def test_verify_block_empty_validator_registry_view(
+            self, mock_validator_registry_view):
+        mock_validator_registry_view.return_value = \
+            MockValidatorRegistryView({})
 
         factory = self.create_state_view_factory(values=None)
         block_wrapper = self.create_block_wrapper()
@@ -77,36 +76,41 @@ class TestPoetBlockVerifier(unittest.TestCase):
             BlockVerifier(
                 block_cache=BlockCache(block_store=MockBlockStore()),
                 state_view_factory=factory,
-                data_dir=None)
+                data_dir=None,
+                validator_id='Validator_001')
 
-        self.assertTrue(poet_block_verifier.verify_block(block_wrapper))
+        self.assertFalse(poet_block_verifier.verify_block(block_wrapper))
 
-
-    @patch('sawtooth_poet.poet_consensus.poet_block_verifier.ValidatorRegistryView')
-    def test_verify_block_wait_certificate_bad_consensus(self, mock_validator_registry_view):
-        mock_validator_registry_view.return_value = MockValidatorRegistryView({})
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.ValidatorRegistryView')
+    def test_verify_block_wait_certificate_bad_consensus(
+            self, mock_validator_registry_view):
+        mock_validator_registry_view.return_value = \
+            MockValidatorRegistryView({})
 
         block_wrapper = self.create_block_wrapper()
         block_wrapper.header.consensus = b"bad data"
+        block_wrapper.header.signer_pubkey = 'Validator_001'
 
-        LOGGER.info('block_wrapper.consensus: %s', block_wrapper.consensus)
         factory = self.create_state_view_factory(values=None)
 
         poet_block_verifier = \
             BlockVerifier(
                 block_cache=BlockCache(block_store=MockBlockStore()),
                 state_view_factory=factory,
-                data_dir=None)
+                data_dir=None,
+                validator_id='Validator_001')
 
         self.assertFalse(poet_block_verifier.verify_block(block_wrapper))
 
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.utils.deserialize_wait_certificate')
+    def test_verify_block_wait_certificate_is_none(self, mock_deserialize):
 
-    @patch('sawtooth_poet.poet_consensus.poet_block_verifier.ValidatorRegistryView')
-    def test_verify_block_wait_certificate_is_none(self, mock_validator_registry_view):
-        mock_validator_registry_view.return_value = MockValidatorRegistryView({})
+        # get wait certificate
+        mock_deserialize.return_value = None
 
         block_wrapper = self.create_block_wrapper()
-        wait_certificate = MockCreateWaitCertificate().create_wait_certificate()
 
         factory = self.create_state_view_factory(values=None)
 
@@ -114,30 +118,79 @@ class TestPoetBlockVerifier(unittest.TestCase):
             BlockVerifier(
                 block_cache=BlockCache(block_store=MockBlockStore()),
                 state_view_factory=factory,
-                data_dir=None)
+                data_dir=None,
+                validator_id='Validator_001')
 
         self.assertFalse(poet_block_verifier.verify_block(block_wrapper))
 
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.ValidatorRegistryView')
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.utils.build_certificate_list')
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.utils.deserialize_wait_certificate')
+    def test_verify_block_wait_certificate_check_valid(
+            self,
+            mock_deserialize,
+            mock_build_cert_list,
+            mock_validator_registry_view):
 
-    @patch('sawtooth_poet.poet_consensus.poet_block_verifier.ValidatorRegistryView')
-    def test_verify_block_wait_certificate_check_valid(self, mock_validator_registry_view):
-        mock_validator_registry_view.return_value = MockValidatorRegistryView({})
+        # get wait certificate
+        mock_deserialize.return_value = \
+            MockCreateWaitCertificate(fail_flag=None)
+
+        # get get_valiator_info.
+        validator_info = ValidatorInfo(
+            name='Valiator Name',
+            id='Validator_001')
+        mock_validator_registry_view.return_value.\
+            get_validator_info.return_value = validator_info
 
         block_wrapper = self.create_block_wrapper()
-        wait_certificate = MockCreateWaitCertificate().create_wait_certificate()
-        LOGGER.info('wait_certificate: %s', wait_certificate)
-        check_valid = MockCreateWaitCertificate().wait_certificate_check_valid()
-        LOGGER.info('wait_certificate.check_valid: %s', check_valid)
-
         factory = self.create_state_view_factory(values=None)
+
         poet_block_verifier = \
             BlockVerifier(
                 block_cache=BlockCache(block_store=MockBlockStore()),
                 state_view_factory=factory,
-                data_dir=None)
+                data_dir=None,
+                validator_id='Validator_001')
+
+        self.assertTrue(poet_block_verifier.verify_block(block_wrapper))
+
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.ValidatorRegistryView')
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.utils.build_certificate_list')
+    @patch('sawtooth_poet.poet_consensus.'
+           'poet_block_verifier.utils.deserialize_wait_certificate')
+    def test_verify_block_wait_certificate_check_valid_fail(
+            self,
+            mock_deserialize,
+            mock_build_cert_list,
+            mock_validator_registry_view):
+        # get wait certificate
+        mock_deserialize.return_value = \
+            MockCreateWaitCertificate(fail_flag=True)
+
+        # get get_valiator_info.
+        validator_info = ValidatorInfo(
+            name='Valiator Name',
+            id='Validator_001')
+        mock_validator_registry_view.return_value.\
+            get_validator_info.return_value = validator_info
+
+        block_wrapper = self.create_block_wrapper()
+        factory = self.create_state_view_factory(values=None)
+
+        poet_block_verifier = \
+            BlockVerifier(
+                block_cache=BlockCache(block_store=MockBlockStore()),
+                state_view_factory=factory,
+                data_dir=None,
+                validator_id='Validator_001')
 
         self.assertFalse(poet_block_verifier.verify_block(block_wrapper))
-
 
     @staticmethod
     def _setting_entry(key, value):

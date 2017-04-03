@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+
 class MockValidatorRegistryView(object):
     """Simulates a ValidatorRegistryView.
     """
@@ -30,17 +31,21 @@ class MockValidatorRegistryView(object):
         return self._state_db[validator_id]
 
 
-
 class MockCreateWaitCertificate(object):
     """Simulates a wait_certificate.
     """
 
-    def __init__(self):
-       self.wait_certificate = "test"
+    def __init__(self, fail_flag):
+        self.fail_flag = fail_flag
 
-    def create_wait_certificate(self):
-        return self.wait_certificate
-
-    def wait_certificate_check_valid(self):
-        return False
-
+    def check_valid(self,
+                    poet_enclave_module,
+                    certificates,
+                    poet_public_key):
+        if self.fail_flag is not None:
+            pass
+        else:
+            raise \
+                ValueError(
+                    'Mock to fail wait_certificate '
+                    'ccheck_valid')
