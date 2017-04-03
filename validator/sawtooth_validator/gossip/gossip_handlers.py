@@ -21,6 +21,8 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
+from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
@@ -73,6 +75,32 @@ class GossipMessageHandler(Handler):
         ack.status = ack.OK
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
+
+        return HandlerResult(
+            HandlerStatus.RETURN_AND_PASS,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
+
+
+class GossipBlockResponseHandler(Handler):
+    def handle(self, connection_id, message_content):
+        ack = NetworkAcknowledgement()
+        ack.status = ack.OK
+        block_response_message = GossipBlockResponse()
+        block_response_message.ParseFromString(message_content)
+
+        return HandlerResult(
+            HandlerStatus.RETURN_AND_PASS,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
+
+
+class GossipBatchResponseHandler(Handler):
+    def handle(self, connection_id, message_content):
+        ack = NetworkAcknowledgement()
+        ack.status = ack.OK
+        batch_response_message = GossipBatchResponse()
+        batch_response_message.ParseFromString(message_content)
 
         return HandlerResult(
             HandlerStatus.RETURN_AND_PASS,

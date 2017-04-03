@@ -27,6 +27,8 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
+from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
@@ -136,6 +138,44 @@ class GossipMessageSignatureVerifier(Handler):
                              batch.header_signature)
                 return HandlerResult(status=HandlerStatus.PASS)
             LOGGER.debug("batch signature is invalid: %s",
+                         batch.header_signature)
+            return HandlerResult(status=HandlerStatus.DROP)
+
+
+class GossipBlockResponseSignatureVerifier(Handler):
+    def handle(self, connection_id, message_content):
+        block_response_message = GossipBlockResponse()
+        block_response_message.ParseFromString(message_content)
+
+        block = Block()
+        block.ParseFromString(block_response_message.content)
+        status = validate_block(block)
+
+        if status is True:
+            LOGGER.debug("requested block passes signature verification %s",
+                         block.header_signature)
+            return HandlerResult(status=HandlerStatus.PASS)
+        else:
+            LOGGER.debug("requested block's signature is invalid: %s",
+                         block.header_signature)
+            return HandlerResult(status=HandlerStatus.DROP)
+
+
+class GossipBatchResponseSignatureVerifier(Handler):
+    def handle(self, connection_id, message_content):
+        batch_response_message = GossipBatchResponse()
+        batch_response_message.ParseFromString(message_content)
+
+        batch = Batch()
+        batch.ParseFromString(batch_response_message.content)
+        status = validate_batch(batch)
+
+        if status is True:
+            LOGGER.debug("requested batch passes signature verification %s",
+                         batch.header_signature)
+            return HandlerResult(status=HandlerStatus.PASS)
+        else:
+            LOGGER.debug("requested batch's signature is invalid: %s",
                          batch.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
 

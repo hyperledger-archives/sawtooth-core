@@ -354,3 +354,33 @@ class CompleterGossipHandler(Handler):
             self._completer.add_batch(batch)
         return HandlerResult(
             status=HandlerStatus.PASS)
+
+
+class CompleterGossipBlockResponseHandler(Handler):
+    def __init__(self, completer):
+        self._completer = completer
+
+    def handle(self, connection_id, message_content):
+        block_response_message = network_pb2.GossipBlockResponse()
+        block_response_message.ParseFromString(message_content)
+
+        block = Block()
+        block.ParseFromString(block_response_message.content)
+        self._completer.add_block(block)
+
+        return HandlerResult(status=HandlerStatus.PASS)
+
+
+class CompleterGossipBatchResponseHandler(Handler):
+    def __init__(self, completer):
+        self._completer = completer
+
+    def handle(self, connection_id, message_content):
+        batch_response_message = network_pb2.GossipBatchResponse()
+        batch_response_message.ParseFromString(message_content)
+
+        batch = Batch()
+        batch.ParseFromString(batch_response_message.content)
+        self._completer.add_batch(batch)
+
+        return HandlerResult(status=HandlerStatus.PASS)

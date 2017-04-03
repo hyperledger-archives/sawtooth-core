@@ -33,6 +33,10 @@ from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.completer import CompleterGossipHandler
 from sawtooth_validator.journal.completer import \
+    CompleterGossipBlockResponseHandler
+from sawtooth_validator.journal.completer import \
+    CompleterGossipBatchResponseHandler
+from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
@@ -52,6 +56,10 @@ from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
+from sawtooth_validator.gossip.gossip_handlers import \
+    GossipBlockResponseHandler
+from sawtooth_validator.gossip.gossip_handlers import \
+    GossipBatchResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.networking.handlers import PingHandler
@@ -266,6 +274,25 @@ class Validator(object):
             BlockResponderHandler(responder, self._gossip),
             network_thread_pool)
 
+        # GOSSIP_BLOCK_RESPONSE 1) Sends ack to the sender
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            GossipBlockResponseHandler(),
+            network_thread_pool)
+
+        # GOSSIP_BLOCK_RESPONSE 2) Verifies signature
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            signature_verifier.GossipBlockResponseSignatureVerifier(),
+            process_pool)
+
+        # GOSSIP_BLOCK_RESPONSE 3) Send message to completer
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            CompleterGossipBlockResponseHandler(
+                completer),
+            network_thread_pool)
+
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
             BatchByBatchIdResponderHandler(responder, self._gossip),
@@ -274,6 +301,25 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
             BatchByTransactionIdResponderHandler(responder, self._gossip),
+            network_thread_pool)
+
+        # GOSSIP_BATCH_RESPONSE 1) Sends ack to the sender
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            GossipBatchResponseHandler(),
+            network_thread_pool)
+
+        # GOSSIP_BATCH_RESPONSE 2) Verifies signature
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            signature_verifier.GossipBatchResponseSignatureVerifier(),
+            process_pool)
+
+        # GOSSIP_BATCH_RESPONSE 3) Send message to completer
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            CompleterGossipBatchResponseHandler(
+                completer),
             network_thread_pool)
 
         self._dispatcher.add_handler(
