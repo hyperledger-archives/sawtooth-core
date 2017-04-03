@@ -229,22 +229,32 @@ class Validator(object):
             PeerUnregisterHandler(gossip=self._gossip),
             network_thread_pool)
 
+        # GOSSIP_MESSAGE 1) Sends acknowledgement to the sender
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipMessageHandler(),
             network_thread_pool)
 
+        # GOSSIP_MESSAGE 2) Verifies signature
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
             process_pool)
 
+        # GOSSIP_MESSAGE 3) Determines if we should broadcast the
+        # message to our peers. It is important that this occur prior
+        # to the sending of the message to the completer, as this step
+        # relies on whether the  gossip message has previously been
+        # seen by the validator to determine whether or not forwarding
+        # should occur
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipBroadcastHandler(
-                gossip=self._gossip),
+                gossip=self._gossip,
+                completer=completer),
             network_thread_pool)
 
+        # GOSSIP_MESSAGE 4) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(

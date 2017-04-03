@@ -82,8 +82,9 @@ class GossipMessageHandler(Handler):
 
 class GossipBroadcastHandler(Handler):
 
-    def __init__(self, gossip):
+    def __init__(self, gossip, completer):
         self._gossip = gossip
+        self._completer = completer
 
     def handle(self, connection_id, message_content):
         exclude = [connection_id]
@@ -92,11 +93,15 @@ class GossipBroadcastHandler(Handler):
         if gossip_message.content_type == "BATCH":
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
-            self._gossip.broadcast_batch(batch, exclude)
+            # If we already have this batch, don't forward it
+            if not self._completer.get_batch(batch.header_signature):
+                self._gossip.broadcast_batch(batch, exclude)
         elif gossip_message.content_type == "BLOCK":
             block = Block()
             block.ParseFromString(gossip_message.content)
-            self._gossip.broadcast_block(block, exclude)
+            # If we already have this block, don't forward it
+            if not self._completer.get_block(block.header_signature):
+                self._gossip.broadcast_block(block, exclude)
         else:
             LOGGER.info("received %s, not BATCH or BLOCK",
                         gossip_message.content_type)
