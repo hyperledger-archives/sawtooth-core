@@ -162,9 +162,9 @@ class BlockValidator(object):
             for dep in txn_hdr.dependencies:
                 if dep not in committed_txn:
                     LOGGER.debug("Block rejected due missing" +
-                                 " transaction dependency, transaction {}"
-                                 " depends on {}",
-                                 txn.header_signature, dep)
+                                 " transaction dependency, transaction %s"
+                                 " depends on %s",
+                                 txn.header_signature[:8], dep[:8])
                     return False
             committed_txn.add_txn(txn.header_signature)
         return True
