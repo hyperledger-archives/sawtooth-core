@@ -115,6 +115,16 @@ class Gossip(object):
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
+    def send(self, message_type, message, connection_id):
+        """Sends a message via the network.
+
+        Args:
+            message_type (str): The type of the message.
+            message (bytes): The message to be sent.
+            connection_id (str): The connection to send it to.
+        """
+        self._network.send(message_type, message, connection_id)
+
     def broadcast(self, gossip_message, message_type, exclude=None):
         """Broadcast gossip messages.
 

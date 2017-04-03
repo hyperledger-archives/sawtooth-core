@@ -65,6 +65,22 @@ message GossipBlockRequest {
 
 }
 
+message GossipBlockResponse {
+    // The block
+    bytes content = 1;
+
+    // The identity of the validator that requested the block
+    bytes node_id = 2;
+}
+
+message GossipBatchResponse {
+    //The batch
+    bytes content = 1;
+
+    // The identity of the validator that requested the batch
+    bytes node_id = 2;
+}
+
 message GossipBatchByBatchIdRequest {
     // The id of the batch that is being requested
     string id = 1;
