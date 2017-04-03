@@ -44,7 +44,7 @@ transactions file. Run the following command to generate the file
 batches.intkey:
 
 ```
-   % ./bin/intkey generate
+   % ./bin/intkey create_batch
 ```
 
 Before we can load the transactions we need to start a validator and a
@@ -58,7 +58,7 @@ In a new terminal, run the following to start the transaction processor:
 
 ```
    %cd /project/sawtooth-core
-   % ./bin/tp_intkey
+   % ./bin/tp_intkey_python
 ```
 
 Finally, it is time to load the transactions. In a new terminal, run:
@@ -93,7 +93,7 @@ The transactions files need to be generated. Run the following command to
 generate the file batches.intkey:
 
 ```
-   % ./bin/intkey generate
+   % ./bin/intkey create_batch
 ```
 
 Before we can load the transactions we need to start a validator and a
@@ -107,7 +107,7 @@ In a new terminal, run the following to start the transaction processor:
 
 ```
    %cd /project/sawtooth-core
-   % ./bin/run_java_intkey
+   % ./bin/tp_intkey_java tcp://localhost:40000
 ```
 
 Finally, it is time to load the transactions. In a new terminal, run:
@@ -141,7 +141,7 @@ sawtooth-core/sdk/examples/intkey_jvm_sc. To do this, run the following scripts:
 Next the IntKey Smart Contract needs be compiled so the class file exists:
 
 ```
-   % cd /project/sawtooth-core/sdk/examples/intkey_jvm_sc
+   % cd /project/sawtooth-core/sdk/examples/intkey_jvm_sc/sawtooth-intkey
    % javac Intkey.java
 ```
 
@@ -164,12 +164,12 @@ In a new terminal, run the following to start the transaction processor:
 
 ```
    % cd /project/sawtooth-core
-   % ./bin/run_jvm_sc
+   % ./bin/tp_intkey_jvm_sc
 ```
 
 Finally, it is time to load the transactions. In a new terminal
 
 ```
    % cd /project/sawtooth-core
-   % ./bin/intkey_java load
+   % ./bin/intkey_jvm load
 ```
