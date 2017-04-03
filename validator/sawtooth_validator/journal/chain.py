@@ -406,8 +406,8 @@ class BlockValidator(object):
             LOGGER.error("Block validation failed with unexpected error: %s",
                          self._new_block)
             LOGGER.exception(exc)
-            self._done_cb(False)  # callback to clean up the block out of the
-            # processing list.
+            # callback to clean up the block out of the processing list.
+            self._done_cb(False, self._result)
 
 
 class ChainController(object):
