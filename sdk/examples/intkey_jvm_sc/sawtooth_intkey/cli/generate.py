@@ -164,7 +164,7 @@ def do_generate(args):
         if len(txns) < 10:
             key = random.choice(words)
             keys.append(key)
-            value = str(random.randint(0, 1000))
+            value = str(random.randint(500, 1000))
             key_addr = get_address("intkey", key)
             addresses.append(key_addr)
             txn = create_jvm_sc_transaction(

@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -191,7 +191,7 @@ public class JvmScHandler implements TransactionHandler{
             output = dataToByteArray(updateMap);
             args.add(output);
           } else {
-            args.add("Not found".getBytes());
+            args.add(dataToByteArray("Not found"));
           }
         } else {
           args.add(temp[1].getBytes());

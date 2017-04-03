@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -35,7 +35,7 @@ public class Intkey {
     if (args.size() < 3) {
       throw new Exception("Wrong number of args. Should have 3.");
     }
-    if (!(getString(args.get(2)).equals("Not found"))) {
+    if (!(getString(args.get(2)).contains("Not found"))) {
 
       Map<String, Integer> check = (HashMap<String, Integer>) dataFromByteArray(args.get(2));
       if (check.containsKey(getString(args.get(0)))) {
