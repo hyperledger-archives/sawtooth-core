@@ -80,4 +80,8 @@ setup(name='sawtooth-poet-families',
           'sawtooth-sdk',
           'sawtooth-signing',
           ],
-      entry_points={})
+      entry_points={
+          'console_scripts': [
+              'tp_validator_registry = sawtooth_validator_registry.validator_registry.processor.main:main'
+          ]
+      })
