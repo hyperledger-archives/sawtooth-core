@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import time
 import argparse
 import cbor
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_sdk.client.stream import Stream
 
 sys.path.insert(0, os.path.join(
@@ -40,31 +40,29 @@ def _split_batch_list(batch_list):
 
 
 def do_load(args):
-    print "Do load"
-    with open(args.filename) as fd:
+    print("Do load")
+    with open(args.filename, 'rb') as fd:
         batches = batch_pb2.BatchList()
         batches.ParseFromString(fd.read())
 
     stream = Stream(args.url)
-    stream.connect()
-
     futures = []
     start = time.time()
 
     for batch_list in _split_batch_list(batches):
         future = stream.send(
-            message_type='system/load',
+            message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
             content=batch_list.SerializeToString())
         futures.append(future)
 
     for future in futures:
         result = future.result()
-        assert(result.message_type == 'system/load-response')
+        assert(result.message_type == Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
     stop = time.time()
-    print "batches: {} batch/sec: {}".format(
+    print("batches: {} batch/sec: {}".format(
         str(len(batches.batches)),
-        len(batches.batches) / (stop - start))
+        len(batches.batches) / (stop - start)))
 
     stream.close()
 
@@ -85,4 +83,4 @@ def add_load_parser(subparsers, parent_parser):
         '-U', '--url',
         type=str,
         help='connection URL for validator',
-        default='localhost:40000')
+        default='tcp://localhost:40000')
