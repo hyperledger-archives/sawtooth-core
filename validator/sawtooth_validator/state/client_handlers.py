@@ -312,6 +312,9 @@ class _Pager(object):
             list: The paginated list of resources
             object: The PagingResponse to be sent back to the client
         """
+        if len(resources) == 0:
+            return resources, client_pb2.PagingResponse(total_resources=0)
+
         paging = request.paging
         count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
 
@@ -466,7 +469,8 @@ class StateListRequest(_ClientRequestHandler):
         if not leaves:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id)
+                head_id=head_id,
+                paging=paging)
 
         return self._wrap_response(
             head_id=head_id,
@@ -524,7 +528,8 @@ class BlockListRequest(_ClientRequestHandler):
         if not blocks:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id)
+                head_id=head_id,
+                paging=paging)
 
         return self._wrap_response(
             head_id=head_id,
@@ -577,7 +582,8 @@ class BatchListRequest(_ClientRequestHandler):
         if not batches:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id)
+                head_id=head_id,
+                paging=paging)
 
         return self._wrap_response(
             head_id=head_id,
