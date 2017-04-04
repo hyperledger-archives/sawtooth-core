@@ -190,18 +190,24 @@ class RouteHandler(object):
             data: An array of leaf objects with address and data keys
             head: The head used for this query (most recent if unspecified)
             link: The link to this exact query, including head block
+            paging: Paging info and nav, like total resources and a next link
         """
-        head = request.url.query.get('head', None)
-        address = request.url.query.get('address', None)
+        paging_controls = self._get_paging_controls(request)
+        validator_query = client_pb2.ClientStateListRequest(
+            head_id=request.url.query.get('head', None),
+            address=request.url.query.get('address', None),
+            paging=self._make_paging_message(paging_controls))
 
         response = self._query_validator(
             Message.CLIENT_STATE_LIST_REQUEST,
             client_pb2.ClientStateListResponse,
-            client_pb2.ClientStateListRequest(head_id=head, address=address))
+            validator_query)
 
-        return self._wrap_response(
-            data=response.get('leaves', []),
-            metadata=self._get_metadata(request, response))
+        return self._wrap_paginated_response(
+            request=request,
+            response=response,
+            controls=paging_controls,
+            data=response.get('leaves', []))
 
     async def fetch_state(self, request):
         """Fetches data from a specific address in the validator's state tree.
@@ -245,19 +251,24 @@ class RouteHandler(object):
             data: JSON array of fully expanded Block objects
             head: The head used for this query (most recent if unspecified)
             link: The link to this exact query, including head block
+            paging: Paging info and nav, like total resources and a next link
         """
-        head = request.url.query.get('head', None)
-        ids = self._get_filter_ids(request)
+        paging_controls = self._get_paging_controls(request)
+        validator_query = client_pb2.ClientBlockListRequest(
+            head_id=request.url.query.get('head', None),
+            block_ids=self._get_filter_ids(request),
+            paging=self._make_paging_message(paging_controls))
 
         response = self._query_validator(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_pb2.ClientBlockListResponse,
-            client_pb2.ClientBlockListRequest(head_id=head, block_ids=ids))
+            validator_query)
 
-        blocks = [self._expand_block(b) for b in response['blocks']]
-        return self._wrap_response(
-            data=blocks,
-            metadata=self._get_metadata(request, response))
+        return self._wrap_paginated_response(
+            request=request,
+            response=response,
+            controls=paging_controls,
+            data=[self._expand_block(b) for b in response['blocks']])
 
     async def fetch_block(self, request):
         """Fetches a specific block from the validator, specified by id.
@@ -297,19 +308,24 @@ class RouteHandler(object):
             data: JSON array of fully expanded Batch objects
             head: The head used for this query (most recent if unspecified)
             link: The link to this exact query, including head block
+            paging: Paging info and nav, like total resources and a next link
         """
-        head = request.url.query.get('head', None)
-        ids = self._get_filter_ids(request)
+        paging_controls = self._get_paging_controls(request)
+        validator_query = client_pb2.ClientBatchListRequest(
+            head_id=request.url.query.get('head', None),
+            batch_ids=self._get_filter_ids(request),
+            paging=self._make_paging_message(paging_controls))
 
         response = self._query_validator(
             Message.CLIENT_BATCH_LIST_REQUEST,
             client_pb2.ClientBatchListResponse,
-            client_pb2.ClientBatchListRequest(head_id=head, batch_ids=ids))
+            validator_query)
 
-        batches = [self._expand_batch(b) for b in response['batches']]
-        return self._wrap_response(
-            data=batches,
-            metadata=self._get_metadata(request, response))
+        return self._wrap_paginated_response(
+            request=request,
+            response=response,
+            controls=paging_controls,
+            data=[self._expand_batch(b) for b in response['batches']])
 
     async def fetch_batch(self, request):
         """Fetches a specific batch from the validator, specified by id.
@@ -367,7 +383,7 @@ class RouteHandler(object):
     def _try_response_parse(cls, proto, response, traps=None):
         """Parses the Protobuf response from the validator.
         Uses "error traps" to send back any HTTP error triggered by a Protobuf
-        status, both those common to all handlers, and specified individually.
+        status, both those common to many handlers, and specified individually.
         """
         parsed = proto()
         parsed.ParseFromString(response)
@@ -378,12 +394,19 @@ class RouteHandler(object):
         except AttributeError:
             # Not every protobuf has every status enum, so pass AttributeErrors
             pass
+
         try:
             traps.append(error_handlers.NotReady(proto.NOT_READY))
         except AttributeError:
             pass
+
         try:
             traps.append(error_handlers.MissingHead(proto.NO_ROOT))
+        except AttributeError:
+            pass
+
+        try:
+            traps.append(error_handlers.InvalidPaging(proto.INVALID_PAGING))
         except AttributeError:
             pass
 
@@ -410,27 +433,98 @@ class RouteHandler(object):
                 separators=(',', ': '),
                 sort_keys=True))
 
-    @staticmethod
-    def _get_metadata(request, response):
+    @classmethod
+    def _wrap_paginated_response(cls, request, response, controls, data):
+        """Builds the metadata for a pagingated response and wraps everying in
+        a JSON encoded web.Response
+        """
+        head = response['head_id']
+        link = cls._build_url(request, head)
+
+        paging_response = response['paging']
+        total = paging_response['total_resources']
+        paging = {'total_count': total}
+
+        # If there are no resources, there should be nothing else in paging
+        if total == 0:
+            return cls._wrap_response(
+                data=data,
+                metadata={'head': head, 'link': link, 'paging': paging})
+
+        count = controls.get('count', len(data))
+        start = paging_response['start_index']
+        paging['start_index'] = start
+
+        # Builds paging urls specific to this response
+        def build_pg_url(min_pos=None, max_pos=None):
+            return cls._build_url(request, head, count, min_pos, max_pos)
+
+        # Build paging urls based on ids
+        if 'start_id' in controls or 'end_id' in controls:
+            if paging_response['next_id']:
+                paging['next'] = build_pg_url(paging_response['next_id'])
+            if paging_response['previous_id']:
+                paging['previous'] = build_pg_url(
+                    max_pos=paging_response['previous_id'])
+
+        # Build paging urls based on indexes
+        else:
+            end_index = controls.get('end_index', None)
+            if end_index is None and start + count < total:
+                paging['next'] = build_pg_url(start + count)
+            elif end_index is not None and end_index + 1 < total:
+                paging['next'] = build_pg_url(end_index + 1)
+            if start - count >= 0:
+                paging['previous'] = build_pg_url(start - count)
+
+        return cls._wrap_response(
+            data=data,
+            metadata={'head': head, 'link': link, 'paging': paging})
+
+    @classmethod
+    def _get_metadata(cls, request, response):
         """Parses out the head and link properties based on the HTTP Request
         from the client, and the Protobuf response from the validator.
         """
         head = response.get('head_id', None)
-        if not head:
-            return {'link': str(request.url)}
+        metadata = {'link': cls._build_url(request, head)}
 
-        link = '{}://{}{}?head={}'.format(
-            request.scheme,
-            request.host,
-            request.path,
-            head)
+        if head is not None:
+            metadata['head'] = head
+        return metadata
 
-        queries = request.url.query.items()
-        headless = ['{}={}'.format(k, v) for k, v in queries if k != 'head']
-        if len(headless) > 0:
-            link += '&' + '&'.join(headless)
+    @classmethod
+    def _build_url(cls, request, head=None, count=None,
+                   min_pos=None, max_pos=None):
+        """Builds a response URL to send back in response envelope.
+        """
+        query = request.url.query.copy()
 
-        return {'head': head, 'link': link}
+        if head is not None:
+            url = '{}://{}{}?head={}'.format(
+                request.scheme,
+                request.host,
+                request.path,
+                head)
+            query.pop('head', None)
+        else:
+            return str(request.url)
+
+        if min_pos is not None:
+            url += '&{}={}'.format('min', min_pos)
+        elif max_pos is not None:
+            url += '&{}={}'.format('max', max_pos)
+        else:
+            queries = ['{}={}'.format(k, v) for k, v in query.items()]
+            return url + '&' + '&'.join(queries) if queries else url
+
+        url += '&{}={}'.format('count', count)
+        query.pop('min', None)
+        query.pop('max', None)
+        query.pop('count', None)
+
+        queries = ['{}={}'.format(k, v) for k, v in query.items()]
+        return url + '&' + '&'.join(queries) if queries else url
 
     @classmethod
     def _expand_block(cls, block):
@@ -466,6 +560,63 @@ class RouteHandler(object):
         header.ParseFromString(header_bytes)
         obj['header'] = cls.message_to_dict(header)
         return obj
+
+    @staticmethod
+    def _get_paging_controls(request):
+        """Parses min, max, and/or count queries into A paging controls dict.
+        """
+        min_pos = request.url.query.get('min', None)
+        max_pos = request.url.query.get('max', None)
+        count = request.url.query.get('count', None)
+        controls = {}
+
+        if count == '0':
+            raise errors.BadCount()
+        elif count is not None:
+            try:
+                controls['count'] = int(count)
+            except ValueError:
+                raise errors.BadCount()
+
+        if min_pos is not None:
+            try:
+                controls['start_index'] = int(min_pos)
+            except ValueError:
+                controls['start_id'] = min_pos
+
+        elif max_pos is not None:
+            try:
+                controls['end_index'] = int(max_pos)
+            except ValueError:
+                controls['end_id'] = max_pos
+
+        return controls
+
+    @staticmethod
+    def _make_paging_message(controls):
+        """Turns a raw paging controls dict into Protobuf PagingControls.
+        """
+        count = controls.get('count', None)
+        end_index = controls.get('end_index', None)
+
+        # an end_index must be changed to start_index, possibly modifying count
+        if end_index is not None:
+            if count is None:
+                start_index = 0
+                count = end_index
+            elif count > end_index + 1:
+                start_index = 0
+                count = end_index + 1
+            else:
+                start_index = end_index + 1 - count
+        else:
+            start_index = controls.get('start_index', None)
+
+        return client_pb2.PagingControls(
+            start_id=controls.get('start_id', None),
+            end_id=controls.get('end_id', None),
+            start_index=start_index,
+            count=count)
 
     def _set_wait(self, request, validator_query):
         """Parses the `wait` query parameter, and sets the corresponding

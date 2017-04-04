@@ -61,6 +61,13 @@ class MissingHead(_ErrorTrap):
         super().__init__(trigger, error, message)
 
 
+class InvalidPaging(_ErrorTrap):
+    def __init__(self, trigger):
+        error = web.HTTPBadRequest
+        message = '"min", "max", or "count" were invalid or out of range'
+        super().__init__(trigger, error, message)
+
+
 class InvalidBatch(_ErrorTrap):
     def __init__(self):
         super().__init__(
