@@ -627,6 +627,11 @@ class ChainController(object):
                     self._set_genesis(block)
                     return
 
+                # If we are already currently processing this block, then
+                # don't bother trying to schedule it again.
+                if block.identifier in self._blocks_processing:
+                    return
+
                 self._block_cache[block.identifier] = block
                 self._blocks_pending[block.identifier] = []
                 LOGGER.debug("Block received: %s", block)
