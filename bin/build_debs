@@ -76,6 +76,8 @@ main() {
     pypath=$pypath:$build_dir/consensus/poet/families/tests
     build_pkg "consensus/poet/families" $pypath
 
+    build_pkg "consensus/poet/cli" $pypath
+
     # Group 4: Depends on 1, 2, & 3
     pypath=$build_dir/signing
     pypath=$pypath:$build_dir/validator
