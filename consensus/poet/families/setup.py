@@ -75,7 +75,6 @@ setup(name='sawtooth-poet-families',
       install_requires=[
           'colorlog',
           'cryptography>=1.7.1',
-          'protobuf',
           'sawtooth-poet-common',
           'sawtooth-sdk',
           'sawtooth-signing',

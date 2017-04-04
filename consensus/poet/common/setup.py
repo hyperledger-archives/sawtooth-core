@@ -72,4 +72,7 @@ setup(name='sawtooth-poet-common',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
+      install_requires=[
+          'protobuf',
+          ],
       entry_points={})
