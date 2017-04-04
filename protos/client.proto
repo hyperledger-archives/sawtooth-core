@@ -175,6 +175,7 @@ message ClientStateListRequest {
 //   * NOT_READY - the validator does not yet have a genesis block
 //   * NO_ROOT - the head block or merkle_root specified was not found
 //   * NO_RESOURCE - the head/root specified is valid, but contains no data
+//   * INVALID_PAGING - the paging controls were malformed or out of range
 
 message ClientStateListResponse {
     enum Status {
@@ -183,6 +184,7 @@ message ClientStateListResponse {
         NOT_READY = 2;
         NO_ROOT = 3;
         NO_RESOURCE = 4;
+        INVALID_PAGING = 5;
     }
     Status status = 1;
     repeated Leaf leaves = 2;
@@ -247,6 +249,7 @@ message ClientBlockListRequest {
 //   * NOT_READY - the validator does not yet have a genesis block
 //   * NO_ROOT - the head block specified was not found
 //   * NO_RESOURCE - no blocks were found with the parameters specified
+//   * INVALID_PAGING - the paging controls were malformed or out of range
 message ClientBlockListResponse {
     enum Status {
         OK = 0;
@@ -254,6 +257,7 @@ message ClientBlockListResponse {
         NOT_READY = 2;
         NO_ROOT = 3;
         NO_RESOURCE = 4;
+        INVALID_PAGING = 5;
     }
     Status status = 1;
     repeated Block blocks = 2;
@@ -303,6 +307,7 @@ message ClientBatchListRequest {
 //   * NOT_READY - the validator does not yet have a genesis block
 //   * NO_ROOT - the head block specified was not found
 //   * NO_RESOURCE - no batches were found with the parameters specified
+//   * INVALID_PAGING - the paging controls were malformed or out of range
 message ClientBatchListResponse {
     enum Status {
         OK = 0;
@@ -310,6 +315,7 @@ message ClientBatchListResponse {
         NOT_READY = 2;
         NO_ROOT = 3;
         NO_RESOURCE = 4;
+        INVALID_PAGING = 5;
     }
     Status status = 1;
     repeated Batch batches = 2;

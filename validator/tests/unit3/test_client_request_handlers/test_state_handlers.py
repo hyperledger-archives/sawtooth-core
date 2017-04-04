@@ -376,14 +376,13 @@ class TestStateListRequests(ClientHandlerTestCase):
             {'a': b'3', 'b': b'5', 'c': b'7'}
 
         Expects to find:
-            - a status of NO_RESOURCE
-            - a head_id of 'B-2', the latest
-            - that paging and leaves are missing
+            - a status of INVALID_PAGING
+            - that head_id, paging, and leaves are missing
         """
-        response = self.make_paged_request(count=3, start_id='bad')
+        response = self.make_paged_request(count=3, start_index=7)
 
-        self.assertEqual(self.status.NO_RESOURCE, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(self.status.INVALID_PAGING, response.status)
+        self.assertFalse(response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.leaves)
 

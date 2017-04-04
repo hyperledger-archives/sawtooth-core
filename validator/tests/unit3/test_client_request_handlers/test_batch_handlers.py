@@ -356,14 +356,13 @@ class TestBatchListRequests(ClientHandlerTestCase):
             {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
 
         Expects to find:
-            - a status of NO_RESOURCE
-            - a head_id of 'B-2', the latest
-            - that paging and batches are missing
+            - a status of INVALID_PAGING
+            - that head_id, paging, and batches are missing
         """
         response = self.make_paged_request(count=3, start_id='bad')
 
-        self.assertEqual(self.status.NO_RESOURCE, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual(self.status.INVALID_PAGING, response.status)
+        self.assertFalse(response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.batches)
 
