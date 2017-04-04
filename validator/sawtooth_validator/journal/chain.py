@@ -483,27 +483,29 @@ class ChainController(object):
     def chain_head(self):
         return self._chain_head
 
-    def _verify_block(self, blkw):
-        state_view = BlockWrapper.state_view_for_block(
-            self.chain_head,
-            self._state_view_factory)
-        consensus_module = ConsensusFactory.get_configured_consensus_module(
-            self.chain_head.header_signature,
-            state_view)
+    def _submit_blocks_for_verification(self, blocks):
+        for blkw in blocks:
+            state_view = BlockWrapper.state_view_for_block(
+                self.chain_head,
+                self._state_view_factory)
+            consensus_module = \
+                ConsensusFactory.get_configured_consensus_module(
+                    self.chain_head.header_signature,
+                    state_view)
 
-        validator = BlockValidator(
-            consensus_module=consensus_module,
-            new_block=blkw,
-            chain_head=self._chain_head,
-            block_cache=self._block_cache,
-            state_view_factory=self._state_view_factory,
-            done_cb=self.on_block_validated,
-            executor=self._transaction_executor,
-            squash_handler=self._squash_handler,
-            identity_signing_key=self._identity_signing_key,
-            data_dir=self._data_dir)
-        self._blocks_processing[blkw.block.header_signature] = validator
-        self._executor.submit(validator.run)
+            validator = BlockValidator(
+                consensus_module=consensus_module,
+                new_block=blkw,
+                chain_head=self._chain_head,
+                block_cache=self._block_cache,
+                state_view_factory=self._state_view_factory,
+                done_cb=self.on_block_validated,
+                executor=self._transaction_executor,
+                squash_handler=self._squash_handler,
+                identity_signing_key=self._identity_signing_key,
+                data_dir=self._data_dir)
+            self._blocks_processing[blkw.block.header_signature] = validator
+            self._executor.submit(validator.run)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
@@ -523,11 +525,38 @@ class ChainController(object):
                 # remove from the processing list
                 del self._blocks_processing[new_block.identifier]
 
+                # Remove this block from the pending queue, obtaining any
+                # immediate descendants of this block in the process.
+                descendant_blocks = \
+                    self._blocks_pending.pop(new_block.identifier, [])
+
                 # if the head has changed, since we started the work.
                 if result["chain_head"] != self._chain_head:
-                    # chain has advanced since work started.
-                    # the block validation work we have done is saved.
-                    self._verify_block(new_block)
+                    LOGGER.info(
+                        'Chain head updated from %s to %s while processing '
+                        'block: %s',
+                        result["chain_head"],
+                        self._chain_head,
+                        new_block)
+
+                    # If any immediate descendant blocks arrived while this
+                    # block was being processed, then submit them for
+                    # verification.  Otherwise, add this block back to the
+                    # pending queue and resubmit it for verification.
+                    if descendant_blocks:
+                        LOGGER.debug(
+                            'Verify descendant blocks: %s (%s)',
+                            new_block,
+                            [block.identifier[:8] for block in
+                             descendant_blocks])
+                        self._submit_blocks_for_verification(
+                            descendant_blocks)
+                    else:
+                        LOGGER.debug('Verify block again: %s ', new_block)
+                        self._blocks_pending[new_block.identifier] = []
+                        self._submit_blocks_for_verification([new_block])
+
+                # If the head is to be updated to the new block.
                 elif commit_new_block:
                     self._chain_head = new_block
 
@@ -543,11 +572,46 @@ class ChainController(object):
                                                   result["uncommitted_batches"]
                                                   )
 
-                    pending_blocks = \
-                        self._blocks_pending.pop(
-                            self._chain_head.block.header_signature, [])
-                    for pending_block in pending_blocks:
-                        self._verify_block(pending_block)
+                    # Submit any immediate descendant blocks for verification
+                    LOGGER.debug(
+                        'Verify descendant blocks: %s (%s)',
+                        new_block,
+                        [block.identifier[:8] for block in descendant_blocks])
+                    self._submit_blocks_for_verification(descendant_blocks)
+
+                # If the block was determine to be invalid.
+                elif new_block.status == BlockStatus.Invalid:
+                    # Since the block is invalid, we will never accept any
+                    # blocks that are descendants of this block.  We are going
+                    # to go through the pending blocks and remove all
+                    # descendants we find and mark the corresponding block
+                    # as invalid.
+                    while descendant_blocks:
+                        pending_block = descendant_blocks.pop()
+                        pending_block.status = BlockStatus.Invalid
+
+                        LOGGER.debug(
+                            'Marking descendant block invalid: %s',
+                            pending_block)
+
+                        descendant_blocks.extend(
+                            self._blocks_pending.pop(
+                                pending_block.identifier,
+                                []))
+
+                # The block is otherwise valid, but we have determined we
+                # don't want it as the chain head.
+                else:
+                    LOGGER.info('Rejected new chain head: %s', new_block)
+
+                    # Submit for verification any immediate descendant blocks
+                    # that arrived while we were processing this block.
+                    LOGGER.debug(
+                        'Verify descendant blocks: %s (%s)',
+                        new_block,
+                        [block.identifier[:8] for block in descendant_blocks])
+                    self._submit_blocks_for_verification(descendant_blocks)
+
         # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.exception(exc)
@@ -580,7 +644,7 @@ class ChainController(object):
                         pending_blocks
                 else:
                     # schedule this block for validation.
-                    self._verify_block(block)
+                    self._submit_blocks_for_verification([block])
         # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.exception(exc)
