@@ -151,7 +151,7 @@ class BlockValidator(object):
         chain.
 
         :param batch: the batch to verify
-        :param committed_txn(TransactionCache): Current set of commited
+        :param committed_txn(TransactionCache): Current set of committed
         transaction, updated during processing.
         :return:
         Boolean: True if all dependencies are present.
@@ -509,7 +509,7 @@ class ChainController(object):
         """Message back from the block validator, that the validation is
         complete
         Args:
-        commit_new_block (Boolean): wether the new block should become the
+        commit_new_block (Boolean): whether the new block should become the
         chain head or not.
         result (Dict): Map of the results of the fork resolution.
         Returns:
@@ -586,7 +586,7 @@ class ChainController(object):
             LOGGER.exception(exc)
 
     def _set_genesis(self, block):
-        # This is used by a non-genesis journal when it has recieved the
+        # This is used by a non-genesis journal when it has received the
         # genesis block from the genesis validator
         if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
             chain_id = self._chain_id_manager.get_block_chain_id()

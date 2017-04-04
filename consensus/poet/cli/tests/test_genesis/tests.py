@@ -22,6 +22,7 @@ from unittest.mock import patch
 import sawtooth_signing as signing
 
 from sawtooth_poet_cli.main import main
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 
@@ -34,22 +35,28 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
+        self._consensus_state_store = {}
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
 
-    @patch('sawtooth_poet_cli.config.get_data_dir')
-    @patch('sawtooth_poet_cli.config.get_key_dir')
-    def test_run_simulator_genesis(self, get_data_dir_fn, get_key_dir_fn):
+    @patch('sawtooth_poet_cli.genesis.ConsensusStateStore')
+    @patch('sawtooth_poet_cli.genesis.config.get_data_dir')
+    @patch('sawtooth_poet_cli.genesis.config.get_key_dir')
+    def test_run_simulator_genesis(self,
+                                   get_key_dir_fn,
+                                   get_data_dir_fn,
+                                   mock_consensus_state_store):
         """Test generating a Validator Registry transaction, which is written
         to a file.
 
         This test executes the `poet genesis` command. The expected output is:
 
         - a BatchList written to a file at <temp_dir>/poet_genesis.batch
-        - the serialized sealed signup data is written to
-          `<data_dir>/poet_signup_data`
+        - the serialized sealed signup data is written to the consensus state
+          store with key of NULL_BLOCK_IDENTIFIER
         """
+        mock_consensus_state_store.return_value = self._consensus_state_store
         get_data_dir_fn.return_value = self._temp_dir
         get_key_dir_fn.return_value = self._temp_dir
 
@@ -85,9 +92,12 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         self.assertEqual('sawtooth_validator_registry', txn_header.family_name)
 
     def _assert_sealed_signup_data(self):
-        filename = os.path.join(self._temp_dir, 'poet_signup_data')
-        with open(filename, 'rb') as data_file:
-            self.assertTrue(len(data_file.read()) > 0)
+        # Assert that the proper entry was created in the consensus state store
+        # and that the sealed signup data contains something
+        consensus_state = \
+            self._consensus_state_store.get(NULL_BLOCK_IDENTIFIER)
+        self.assertIsNotNone(consensus_state)
+        self.assertIsNotNone(consensus_state.sealed_signup_data)
 
     def _create_key(self, key_name='validator.wif'):
         privkey = signing.generate_privkey()

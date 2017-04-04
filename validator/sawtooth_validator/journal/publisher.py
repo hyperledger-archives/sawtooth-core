@@ -70,7 +70,7 @@ class BlockPublisher(object):
              consensus module can be stored.
         """
         self._lock = RLock()
-        self._candidate_block = None  # the next block in potentia
+        self._candidate_block = None  # the next block in potential chain
         self._consensus = None
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
