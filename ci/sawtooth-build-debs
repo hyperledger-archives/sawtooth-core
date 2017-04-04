@@ -37,7 +37,7 @@ RUN mkdir -p /home/build/packages && mkdir -p /home/build/projects
 ENV build_dir=/home/build/projects pkg_dir=/home/build/packages
 
 # Install build deps
-COPY ./bin/install_packaging_deps /home/build/install_packaging_deps
+COPY install_packaging_deps /home/build/install_packaging_deps
 RUN apt-get update \
  && /home/build/install_packaging_deps \
  && apt-get clean \
