@@ -1,4 +1,4 @@
-/* Copyright 2016 Intel Corporation
+/* Copyright 2016, 2017 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -24,7 +24,7 @@ public class JvmScTransactionProcessor{
    */
   public static void main(String[] args) {
 
-    TransactionProcessor transactionProcessor = new TransactionProcessor("localhost:40000");
+    TransactionProcessor transactionProcessor = new TransactionProcessor("tcp://localhost:40000");
     transactionProcessor.addHandler(new JvmScHandler());
     Thread thread = new Thread(transactionProcessor);
     thread.start();

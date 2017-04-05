@@ -1,5 +1,5 @@
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import os
 import random
 import sys
 import time
-import cProfile
+import string
 import argparse
 
 import sawtooth_signing as signing
@@ -73,7 +73,7 @@ def create_jvm_sc_transaction(verb, private_key, public_key,
 
     addresses.append(addr)
     header = transaction_pb2.TransactionHeader(
-        signer=public_key,
+        signer_pubkey=public_key,
         family_name='jvm_sc',
         family_version='1.0',
         inputs=addresses,
@@ -81,7 +81,8 @@ def create_jvm_sc_transaction(verb, private_key, public_key,
         dependencies=[],
         payload_encoding="application/protobuf",
         payload_sha512=payload.sha512(),
-        batcher=public_key)
+        batcher_pubkey=public_key,
+        nonce=str(time.time()))
     header_bytes = header.SerializeToString()
 
     signature = signing.sign(header_bytes, private_key)
@@ -89,17 +90,17 @@ def create_jvm_sc_transaction(verb, private_key, public_key,
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
         payload=payload.payload_bytes,
-        signature=signature)
+        header_signature=signature)
 
     return transaction
 
 
 def create_batch(transactions, private_key, public_key):
-    transaction_signatures = [t.signature for t in transactions]
+    transaction_signatures = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer=public_key,
-        transaction_signatures=transaction_signatures)
+        signer_pubkey=public_key,
+        transaction_ids=transaction_signatures)
 
     header_bytes = header.SerializeToString()
 
@@ -108,25 +109,28 @@ def create_batch(transactions, private_key, public_key):
     batch = batch_pb2.Batch(
         header=header_bytes,
         transactions=transactions,
-        signature=signature)
+        header_signature=signature)
 
     return batch
 
 
 def get_address(namespace, data):
-    jvm_sc_prefix = hashlib.sha512(namespace).hexdigest()[0:6]
-    addr = jvm_sc_prefix + hashlib.sha512(data).hexdigest()
+    jvm_sc_prefix = hashlib.sha512(namespace.encode()).hexdigest()[0:6]
+    try:
+        addr = jvm_sc_prefix + hashlib.sha512(data).hexdigest()
+    except TypeError:
+        addr = jvm_sc_prefix + hashlib.sha512(data.encode()).hexdigest()
     return addr
 
 def generate_word():
-    return ''.join([random.choice(string.ascii_letters) for _ in xrange(0, 6)])
+    return ''.join([random.choice(string.ascii_letters) for _ in range(0, 6)])
 
 def generate_word_list(count):
     if os.path.isfile('/usr/share/dict/words'):
         with open('/usr/share/dict/words', 'r') as fd:
             return [x.strip() for x in fd.readlines()[0:count]]
     else:
-        return [generate_word() for _ in xrange(0, count)]
+        return [generate_word() for _ in range(0, count)]
 
 
 def do_generate(args):
@@ -137,10 +141,10 @@ def do_generate(args):
 
     txns = []
     batches = []
-    bytecode = ""
+    bytecode = b''
     with open(args.contract, "rb") as fd:
         byte = fd.readline()
-        while byte != "":
+        while byte != b'':
             bytecode += byte
             byte = fd.readline()
 
@@ -160,7 +164,7 @@ def do_generate(args):
         if len(txns) < 10:
             key = random.choice(words)
             keys.append(key)
-            value = str(random.randint(0, 1000))
+            value = str(random.randint(500, 1000))
             key_addr = get_address("intkey", key)
             addresses.append(key_addr)
             txn = create_jvm_sc_transaction(
@@ -200,8 +204,8 @@ def do_generate(args):
             txns = []
 
     batch_list = batch_pb2.BatchList(batches=batches)
-    print "Writing to {}...".format(args.output)
-    with open(args.output, "w") as fd:
+    print("Writing to {}...".format(args.output))
+    with open(args.output, "wb") as fd:
         fd.write(batch_list.SerializeToString())
 
 
