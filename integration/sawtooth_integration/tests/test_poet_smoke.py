@@ -27,7 +27,7 @@ from base64 import b64decode
 
 import cbor
 
-from sawtooth_integration.intkey.intkey_message_factory \
+from sawtooth_integration.message_factories.intkey_message_factory \
     import IntkeyMessageFactory
 from sawtooth_cli.rest_client import RestClient
 
