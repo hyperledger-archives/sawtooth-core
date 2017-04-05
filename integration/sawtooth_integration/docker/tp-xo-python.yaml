@@ -18,24 +18,25 @@ version: "2.1"
 services:
 
   tp_xo_python:
-    image: sawtooth-dev-tp_xo_python:$ISOLATION_ID
+    image: sawtooth-tp_xo_python:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_xo_python tcp://validator:40000
+    command: tp_xo_python -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose: 
       - 40000
-    working_dir: /project/sawtooth-core/integration/sawtooth_integration/test_suites
-    entrypoint: nose2-3 -v ts_tp_xo.TestSuiteXo
+    command: nose2-3 -v -s
+      /project/sawtooth-core/integration/sawtooth_integration/test_suites
+      ts_tp_xo.TestSuiteXo
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+      PYTHONPATH: "/project/sawtooth-core/sdk/python/:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"

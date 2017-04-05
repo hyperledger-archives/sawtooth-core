@@ -58,6 +58,7 @@ def main():
 
     # Load isolation id if it is set and validate
     isolation_id = _get_isolation_id()
+    _setup_environ(isolation_id)
 
     # Construct commands
     compose = [
@@ -283,12 +284,21 @@ def _get_isolation_id():
         isolation_id = os.environ['ISOLATION_ID']
     else:
         isolation_id = 'latest'
-        os.environ['ISOLATION_ID'] = isolation_id
 
     if not isolation_id.isalnum():
         raise RunDockerTestError("ISOLATION_ID must be alphanumeric")
 
     return isolation_id
+
+
+def _setup_environ(isolation_id):
+    os.environ['ISOLATION_ID'] = isolation_id
+    os.environ['SAWTOOTH_CORE'] = os.path.dirname(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        )
+    )
+    print(os.environ['SAWTOOTH_CORE'])
 
 
 def _get_compose_dir():

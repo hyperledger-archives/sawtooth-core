@@ -175,11 +175,10 @@ class TestShutdownSmoke(unittest.TestCase):
              '/etc/sawtooth',
              '-v',
              '/var/lib/sawtooth',
-             '--entrypoint',
-             'bash',
              self._validator_image,
+             'bash',
              '-c',
-             "bin/sawtooth admin keygen && bin/sawtooth admin genesis"])
+             "sawtooth admin keygen && sawtooth admin genesis"])
 
     def _start_validator(self, prior_container, early, extra):
         return self._docker_run(
@@ -187,9 +186,8 @@ class TestShutdownSmoke(unittest.TestCase):
              '--volumes-from',
              prior_container,
              *early,
-             '--entrypoint',
-             'bin/validator',
              self._validator_image,
+             'validator',
              '-vv',
              *extra])
 
@@ -203,11 +201,10 @@ class TestShutdownSmoke(unittest.TestCase):
              '{}:/project/sawtooth-core'.format(self._sawtooth_core),
              '-v',
              '/etc/sawtooth',
-             '--entrypoint',
-             "bash",
              self._validator_image,
+             "bash",
              '-c',
-             "bin/sawtooth admin keygen"])
+             "sawtooth admin keygen"])
 
     def _startup(self):
         containers = []
