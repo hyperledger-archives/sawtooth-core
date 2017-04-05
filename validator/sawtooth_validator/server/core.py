@@ -87,7 +87,7 @@ class Validator(object):
                                        network_endpoint[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
-        merkle_db = LMDBNoLockDatabase(db_filename, 'n')
+        merkle_db = LMDBNoLockDatabase(db_filename, 'c')
 
         context_manager = ContextManager(merkle_db)
         self._context_manager = context_manager
@@ -98,7 +98,7 @@ class Validator(object):
                                          network_endpoint[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
 
-        block_db = LMDBNoLockDatabase(block_db_filename, 'n')
+        block_db = LMDBNoLockDatabase(block_db_filename, 'c')
         block_store = BlockStore(block_db)
 
         # setup network
