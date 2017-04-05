@@ -20,9 +20,9 @@ services:
   poet:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../../../..:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/consensus/poet/simulator
-    entrypoint: nose2-3 -s tests -v
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    command: nose2-3 -v -s
+        /project/sawtooth-core/consensus/poet/simulator/tests
     environment:
         PYTHONPATH: "\
           /project/sawtooth-core/validator:\

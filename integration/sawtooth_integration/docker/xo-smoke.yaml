@@ -18,64 +18,65 @@ version: "2.1"
 services:
 
   tp_config:
-    image: sawtooth-dev-tp_config:$ISOLATION_ID
+    image: sawtooth-tp_config:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
     depends_on:
       - validator
-    entrypoint: ./bin/tp_config tcp://validator:40000
+    command: tp_config -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   tp_xo_python:
-    image: sawtooth-dev-tp_xo_python:$ISOLATION_ID
+    image: sawtooth-tp_xo_python:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
     depends_on:
       - validator
-    entrypoint: ./bin/tp_xo_python tcp://validator:40000
+    command: tp_xo_python -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-dev-validator:$ISOLATION_ID
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8800
-    entrypoint: "bash -c \"\
-        ./bin/sawtooth admin keygen && \
-        ./bin/sawtooth admin genesis && \
-        ./bin/validator --public-uri tcp://validator:8800 -v\""
+    command: "bash -c \"\
+        sawtooth admin keygen && \
+        sawtooth admin genesis && \
+        validator --public-uri tcp://validator:8800 -v\""
     stop_signal: SIGKILL
 
   rest_api:
-    image: sawtooth-dev-rest_api:$ISOLATION_ID
+    image: sawtooth-rest_api:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8080
     depends_on:
      - validator
-    entrypoint: ./bin/rest_api --stream-url tcp://validator:40000
+    command: rest_api --stream-url tcp://validator:40000
     stop_signal: SIGKILL
 
   integration_test:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
-    working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
     depends_on:
       - validator
       - rest_api
     # Wait for rest_api
-    entrypoint: nose2-3 -v test_xo_smoke.TestXoSmoke
+    command: nose2-3 -v -s
+      /project/sawtooth-core/integration/sawtooth_integration/tests
+      test_xo_smoke.TestXoSmoke
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

@@ -18,12 +18,12 @@ version: "2.1"
 services:
 
   tp_validator_registry:
-    image: sawtooth-dev-tp_validator_registry:$ISOLATION_ID
+    image: sawtooth-tp_validator_registry:$ISOLATION_ID
     volumes:
-      - ../../..:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_validator_registry tcp://validator:40000
+    command: tp_validator_registry -vv tcp://validator:40000
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families:\
@@ -33,11 +33,12 @@ services:
   validator:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../..:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    working_dir: /project/sawtooth-core/integration/sawtooth_integration/test_suites
-    entrypoint: nose2-3 -v ts_tp_validator_registry.TestSuiteValidatorRegistry --log-capture
+    command: nose2-3 -v -s
+        /project/sawtooth-core/integration/sawtooth_integration/test_suites
+        ts_tp_validator_registry.TestSuiteValidatorRegistry
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families:\

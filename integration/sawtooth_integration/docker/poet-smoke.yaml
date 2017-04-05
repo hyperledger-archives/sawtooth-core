@@ -18,21 +18,21 @@ version: "2.1"
 services:
 
   validator-0:
-    image: sawtooth-dev-validator:$ISOLATION_ID
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8800
-    entrypoint: "bash -c \"\
-        ./bin/sawtooth admin keygen --force && \
-        ./bin/sawtooth config proposal create \
+    command: "bash -c \"\
+        sawtooth admin keygen --force && \
+        sawtooth config proposal create \
           -k /etc/sawtooth/keys/validator.wif \
           sawtooth.consensus.algorithm=poet \
           -o config.batch && \
-        ./bin/poet genesis -o poet.batch && \
-        ./bin/sawtooth admin genesis config.batch poet.batch && \
-        ./bin/validator --public-uri tcp://validator-0:8800 -vv\""
+        poet genesis -o poet.batch && \
+        sawtooth admin genesis config.batch poet.batch && \
+        validator -v --public-uri tcp://validator-0:8800\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -40,17 +40,17 @@ services:
     stop_signal: SIGKILL
 
   validator-1:
-    image: sawtooth-dev-validator:$ISOLATION_ID
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8800
     depends_on:
       - validator-0
-    entrypoint: "bash -c \"\
-        ./bin/sawtooth admin keygen --force && \
-        ./bin/validator -vv \
+    command: "bash -c \"\
+        sawtooth admin keygen --force && \
+        validator -v \
           --public-uri tcp://validator-1:8800 --peers tcp://validator-0:8800\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -59,18 +59,18 @@ services:
     stop_signal: SIGKILL
 
   validator-2:
-    image: sawtooth-dev-validator:$ISOLATION_ID
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8800
     depends_on:
       - validator-0
       - validator-1
-    entrypoint: "bash -c \"\
-        ./bin/sawtooth admin keygen --force && \
-        ./bin/validator -vv \
+    command: "bash -c \"\
+        sawtooth admin keygen --force && \
+        validator -v \
           --public-uri tcp://validator-2:8800 --peers tcp://validator-0:8800 tcp://validator-1:8800\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -79,118 +79,118 @@ services:
     stop_signal: SIGKILL
 
   rest-api-0:
-    image: sawtooth-dev-rest_api:$ISOLATION_ID
+    image: sawtooth-rest_api:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8080
-    entrypoint: ./bin/rest_api --stream-url tcp://validator-0:40000
+    command: rest_api --stream-url tcp://validator-0:40000
     stop_signal: SIGKILL
 
   rest-api-1:
-    image: sawtooth-dev-rest_api:$ISOLATION_ID
+    image: sawtooth-rest_api:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8080
-    entrypoint: ./bin/rest_api --stream-url tcp://validator-1:40000
+    command: rest_api --stream-url tcp://validator-1:40000
     stop_signal: SIGKILL
 
   rest-api-2:
-    image: sawtooth-dev-rest_api:$ISOLATION_ID
+    image: sawtooth-rest_api:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
       - 8080
-    entrypoint: ./bin/rest_api --stream-url tcp://validator-2:40000
+    command: rest_api --stream-url tcp://validator-2:40000
     stop_signal: SIGKILL
 
   tp-intkey-0:
-    image: sawtooth-dev-tp_intkey_python:$ISOLATION_ID
+    image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_intkey_python tcp://validator-0:40000
+    command: tp_intkey_python tcp://validator-0:40000
     stop_signal: SIGKILL
 
   tp-intkey-1:
-    image: sawtooth-dev-tp_intkey_python:$ISOLATION_ID
+    image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_intkey_python tcp://validator-1:40000
+    command: tp_intkey_python tcp://validator-1:40000
     stop_signal: SIGKILL
 
   tp-intkey-2:
-    image: sawtooth-dev-tp_intkey_python:$ISOLATION_ID
+    image: sawtooth-tp_intkey_python:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_intkey_python tcp://validator-2:40000
+    command: tp_intkey_python tcp://validator-2:40000
     stop_signal: SIGKILL
 
   tp-config-0:
-    image: sawtooth-dev-tp_config:$ISOLATION_ID
+    image: sawtooth-tp_config:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_config -v tcp://validator-0:40000
+    command: tp_config -v tcp://validator-0:40000
     stop_signal: SIGKILL
 
   tp-config-1:
-    image: sawtooth-dev-tp_config:$ISOLATION_ID
+    image: sawtooth-tp_config:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_config -v tcp://validator-1:40000
+    command: tp_config -v tcp://validator-1:40000
     stop_signal: SIGKILL
 
   tp-config-2:
-    image: sawtooth-dev-tp_config:$ISOLATION_ID
+    image: sawtooth-tp_config:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_config -v tcp://validator-2:40000
+    command: tp_config -v tcp://validator-2:40000
     stop_signal: SIGKILL
 
   tp-validator-registry-0:
-    image: sawtooth-dev-tp_validator_registry:$ISOLATION_ID
+    image: sawtooth-tp_validator_registry:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_validator_registry -v tcp://validator-0:40000
+    command: tp_validator_registry -v tcp://validator-0:40000
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
 
   tp-validator-registry-1:
-    image: sawtooth-dev-tp_validator_registry:$ISOLATION_ID
+    image: sawtooth-tp_validator_registry:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_validator_registry -v tcp://validator-1:40000
+    command: tp_validator_registry -v tcp://validator-1:40000
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
 
   tp-validator-registry-2:
-    image: sawtooth-dev-tp_validator_registry:$ISOLATION_ID
+    image: sawtooth-tp_validator_registry:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    entrypoint: ./bin/tp_validator_registry -v tcp://validator-2:40000
+    command: tp_validator_registry -v tcp://validator-2:40000
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
@@ -198,15 +198,16 @@ services:
   integration_test:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
-    working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
     depends_on:
       - rest-api-0
       - rest-api-1
       - rest-api-2
-    entrypoint: nose2-3 -v test_poet_smoke.TestPoetSmoke
+    command: nose2-3 -v -s
+        /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_poet_smoke.TestPoetSmoke
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
