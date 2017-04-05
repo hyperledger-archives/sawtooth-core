@@ -29,6 +29,28 @@ from sawtooth_poet.poet_consensus.consensus_state import ValidatorState
 LOGGER = logging.getLogger(__name__)
 
 
+def _block_for_id(block_id, block_cache):
+    """A convenience method retrieving a block given a block ID.  Takes care
+    of the special case of NULL_BLOCK_IDENTIFIER.
+
+    Args:
+        block_id (str): The ID of block to retrieve.
+        block_cache (BlockCache): Block cache from which block will be
+            retrieved.
+
+    Returns:
+        BlockWrapper for block, or None for no block found.
+    """
+    block = None
+    try:
+        block = \
+            None if block_id_is_genesis(block_id) else block_cache[block_id]
+    except KeyError:
+        LOGGER.error('Failed to retrieve block: %s', block_id[:8])
+
+    return block
+
+
 def block_id_is_genesis(block_id):
     """Determines if the block ID represents the genesis block.
 
@@ -167,6 +189,22 @@ def create_validator_state(validator_info, current_validator_state):
             total_block_claim_count=total_block_claim_count)
 
 
+BlockInfo = \
+    collections.namedtuple(
+        'BlockInfo',
+        ['wait_certificate', 'validator_info'])
+
+""" Instead of creating a full-fledged class, let's use a named tuple for
+the block info.  The block info represents the information we need to
+create consensus state.  A block info object contains:
+
+wait_certificate (WaitCertificate): The PoET wait certificate object for
+    the block
+validator_info (ValidatorInfo): The validator registry information for the
+    validator that claimed the block
+"""
+
+
 def get_consensus_state_for_block_id(
         block_id,
         block_cache,
@@ -191,82 +229,116 @@ def get_consensus_state_for_block_id(
             referenced by block_id
     """
 
+    consensus_state = None
+    previous_wait_certificate = None
+    blocks = collections.OrderedDict()
+
     # Starting at the chain head, walk the block store backwards until we
     # either get to the root or we get a block for which we have already
     # created consensus state
-    block = \
-        block_cache[block_id] if block_id != NULL_BLOCK_IDENTIFIER else None
-    consensus_state = None
-    block_ids = collections.deque()
+    while True:
+        block = _block_for_id(block_id=block_id, block_cache=block_cache)
+        if block is None:
+            break
 
-    while block is not None:
         # Try to fetch the consensus state.  If that succeeds, we can
         # stop walking back as we can now build on that consensus
         # state.
-        consensus_state = consensus_state_store.get(block.identifier)
+        consensus_state = consensus_state_store.get(block_id=block_id)
         if consensus_state is not None:
             break
 
-        # If this is a PoET block, then we want to create consensus state
-        # for it when we are done
-        if deserialize_wait_certificate(block, poet_enclave_module):
+        wait_certificate = \
+            deserialize_wait_certificate(
+                block=block,
+                poet_enclave_module=poet_enclave_module)
+
+        # If this is a PoET block (i.e., it has a wait certificate), get the
+        # validator info for the validator that signed this block and add the
+        # block information we will need to set validator state in the block's
+        # consensus state.
+        if wait_certificate is not None:
+            state_view = \
+                state_view_factory.create_view(
+                    state_root_hash=block.state_root_hash)
+            validator_registry_view = \
+                ValidatorRegistryView(state_view=state_view)
+            validator_info = \
+                validator_registry_view.get_validator_info(
+                    validator_id=block.header.signer_pubkey)
+
             LOGGER.debug(
-                'We need to build consensus state for block ID %s...%s',
-                block.identifier[:8],
-                block.identifier[-8:])
-            block_ids.appendleft(block.identifier)
+                'We need to build consensus state for block: %s...%s',
+                block_id[:8],
+                block_id[-8:])
+
+            blocks[block_id] = \
+                BlockInfo(
+                    wait_certificate=wait_certificate,
+                    validator_info=validator_info)
+
+        # Otherwise, this is a non-PoET block.  If we don't have any blocks
+        # yet or the last block we processed was a PoET block, put a
+        # placeholder in the list so that when we get to it we know that we
+        # need to reset the statistics.
+        elif len(blocks) == 0 or previous_wait_certificate is not None:
+            blocks[block_id] = \
+                BlockInfo(
+                    wait_certificate=None,
+                    validator_info=None)
+
+        previous_wait_certificate = wait_certificate
 
         # Move to the previous block
-        block = \
-            block_cache[block.previous_block_id] \
-            if block.previous_block_id != NULL_BLOCK_IDENTIFIER else None
+        block_id = block.previous_block_id
 
-    # If didn't find any consensus state, see if there is any "before" any
+    # If we didn't find any consensus state, see if there is any "before" any
     # blocks were created (this might be because we are the first validator
     # and PoET signup information was created, including sealed signup data
     # that was saved in the consensus state store).
     if consensus_state is None:
-        consensus_state = consensus_state_store.get(NULL_BLOCK_IDENTIFIER)
+        consensus_state = \
+            consensus_state_store.get(block_id=NULL_BLOCK_IDENTIFIER)
 
     # At this point, if we have not found any consensus state, we need to
     # create default state from which we can build upon
     if consensus_state is None:
         consensus_state = ConsensusState()
 
-    # Now, walking forward through the blocks for which we were supposed to
-    # create consensus state, we are going to create and store state for each
-    # one so that the next time we don't have to walk so far back through the
-    # block chain.
-    for identifier in block_ids:
-        block = block_cache[identifier]
+    # Now, walk through the blocks for which we were supposed to create
+    # consensus state, from oldest to newest (i.e., in the reverse order in
+    # which they were added), and store state for PoET blocks so that the next
+    # time we don't have to walk so far back through the block chain.
+    for block_id, block_info in reversed(blocks.items()):
+        # If the block was not a PoET block (i.e., didn't have a wait
+        # certificate), reset the consensus state statistics, but retain
+        # any sealed signup data we might have.  We are not going to store
+        # this in the consensus state store, but we will use it as the
+        # starting for the next PoET block.
+        if block_info.wait_certificate is None:
+            sealed_signup_data = consensus_state.sealed_signup_data
+            consensus_state = ConsensusState()
+            consensus_state.sealed_signup_data = sealed_signup_data
 
-        # Get the validator registry view for this block's state view and
-        # then fetch the validator info for the validator that signed this
-        # block.
-        state_view = state_view_factory.create_view(block.state_root_hash)
-        validator_registry_view = ValidatorRegistryView(state_view)
+        # Otherwise, we need to fetch the current validator state for the
+        # validator which claimed the block, set/update the consensus state
+        # object, and then associate the consensus state with the appropriate
+        # block in the consensus state store.
+        else:
+            validator_state = \
+                consensus_state.get_validator_state(
+                    validator_id=block_info.validator_info.id)
+            consensus_state.set_validator_state(
+                validator_id=block_info.validator_info.id,
+                validator_state=create_validator_state(
+                    validator_info=block_info.validator_info,
+                    current_validator_state=validator_state))
 
-        validator_id = block.header.signer_pubkey
-        validator_info = \
-            validator_registry_view.get_validator_info(
-                validator_id=validator_id)
+            LOGGER.debug(
+                'Store consensus state for block: %s...%s',
+                block_id[:8],
+                block_id[-8:])
 
-        # Fetch the current validator state, set/update the validator state
-        # in the consensus state object, and then create the consensus state
-        # in the consensus state store and associate it with this block
-        validator_state = \
-            consensus_state.get_validator_state(validator_id=validator_id)
-        consensus_state.set_validator_state(
-            validator_id=validator_id,
-            validator_state=create_validator_state(
-                validator_info=validator_info,
-                current_validator_state=validator_state))
-
-        LOGGER.debug(
-            'Store consensus state for block ID %s...%s',
-            identifier[:8],
-            identifier[-8:])
-
-        consensus_state_store[identifier] = consensus_state
+            consensus_state_store[block_id] = consensus_state
 
     return consensus_state
