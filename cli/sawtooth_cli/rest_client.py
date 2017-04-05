@@ -80,6 +80,14 @@ class RestClient(object):
     def _get(self, path, **queries):
         code, json_result = self._submit_request(
             self._base_url + path + self._format_queries(queries))
+
+        # concat any additional pages of data
+        while 'next' in json_result.get('paging', {}):
+            previous_data = json_result.get('data', [])
+            code, json_result = self._submit_request(
+                json_result['paging']['next'])
+            json_result['data'] = previous_data + json_result.get('data', [])
+
         if code == 200:
             return json_result
         elif code == 404:
