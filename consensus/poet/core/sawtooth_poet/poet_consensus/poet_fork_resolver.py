@@ -153,8 +153,7 @@ class PoetForkResolver(ForkResolverInterface):
                         new_fork_head.header.signer_pubkey)
 
                 # Get the consensus state for the new fork head's previous
-                # block, update the validator state for the new fork head,
-                # and then store the updated consensus state for this block.
+                # block, update the validator state for the new fork head
                 consensus_state = \
                     utils.get_consensus_state_for_block_id(
                         block_id=new_fork_head.previous_block_id,
@@ -172,11 +171,7 @@ class PoetForkResolver(ForkResolverInterface):
                         validator_info=validator_info,
                         current_validator_state=validator_state))
 
-                LOGGER.debug(
-                    'Store consensus state for block ID %s...%s',
-                    new_fork_head.identifier[:8],
-                    new_fork_head.identifier[-8:])
-
+                # Store the updated consensus state for this block.
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
             except KeyError:

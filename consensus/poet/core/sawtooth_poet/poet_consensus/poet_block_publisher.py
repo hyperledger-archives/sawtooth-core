@@ -29,6 +29,7 @@ import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
+from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 from sawtooth_poet.poet_consensus.poet_key_state_store \
     import PoetKeyState
@@ -261,20 +262,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # the PoET enclave to using the correct keys.
         elif validator_info.signup_info.poet_public_key != \
                 PoetBlockPublisher._poet_public_key:
-            LOGGER.debug(
-                'Our Validator Registry Entry: Name=%s, ID=%s...%s, PoET '
-                'public key=%s...%s',
-                validator_info.name,
-                validator_info.id[:8],
-                validator_info.id[-8:],
-                validator_info.signup_info.poet_public_key[:8],
-                validator_info.signup_info.poet_public_key[-8:])
-
             # Retrieve the key state corresponding to the PoET public key and
             # use it to re-establish the key used by the enclave.
             poet_key_state = \
                 self._poet_key_state_store[
                     validator_info.signup_info.poet_public_key]
+
             PoetBlockPublisher._poet_public_key = \
                 SignupInfo.unseal_signup_data(
                     poet_enclave_module=poet_enclave_module,
@@ -292,6 +285,58 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 'Unseal signup data: %s...%s',
                 poet_key_state.sealed_signup_data[:8],
                 poet_key_state.sealed_signup_data[-8:])
+
+        # Using the consensus state for the block upon which we want to
+        # build, check to see how many blocks we have claimed on this chain
+        # with this PoET key.  If we have hit the key block claim limit, then
+        # we need to check if the key has been refreshed.
+        consensus_state = \
+            utils.get_consensus_state_for_block_id(
+                block_id=block_header.previous_block_id,
+                block_cache=self._block_cache,
+                state_view_factory=self._state_view_factory,
+                consensus_state_store=self._consensus_state_store,
+                poet_enclave_module=poet_enclave_module)
+        validator_state = \
+            consensus_state.get_validator_state(self._validator_id)
+        key_block_claim_limit = \
+            PoetConfigView(state_view).key_block_claim_limit
+
+        if validator_state is not None and \
+                validator_state.poet_public_key == \
+                PoetBlockPublisher._poet_public_key and \
+                validator_state.key_block_claim_count >= \
+                key_block_claim_limit:
+            # Because we have hit the limit, check to see if we have already
+            # submitted a validator registry transaction with new signup
+            # information, and therefore a new PoET public key.  If not, then
+            # mark this PoET public key in the store as having been refreshed
+            # and register new signup information.  Regardless, since we have
+            # hit the key block claim limit, we won't even bother initializing
+            # a block on this chain as it will be rejected by other
+            # validators.
+            poet_key_state = \
+                self._poet_key_state_store[
+                    PoetBlockPublisher._poet_public_key]
+            if not poet_key_state.has_been_refreshed:
+                LOGGER.info(
+                    'Reached block claim limit (%d) for key for key: %s...%s',
+                    key_block_claim_limit,
+                    PoetBlockPublisher._poet_public_key[:8],
+                    PoetBlockPublisher._poet_public_key[-8:])
+
+                sealed_signup_data = poet_key_state.sealed_signup_data
+                self._poet_key_state_store[
+                    PoetBlockPublisher._poet_public_key] = \
+                    PoetKeyState(
+                        sealed_signup_data=sealed_signup_data,
+                        has_been_refreshed=True)
+
+                self._register_signup_information(
+                    block_header=block_header,
+                    poet_enclave_module=poet_enclave_module)
+
+            return False
 
         # Create a list of certificates for the wait timer.  This seems to
         # have a little too much knowledge of the WaitTimer implementation,
