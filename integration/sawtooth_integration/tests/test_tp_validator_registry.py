@@ -18,7 +18,7 @@ import json
 import base64
 import hashlib
 
-from test_validator_registry.validator_reg_message_factory \
+from sawtooth_integration.message_factories.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
 
 from sawtooth_poet_common import sgx_structs

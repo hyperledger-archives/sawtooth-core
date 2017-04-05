@@ -22,7 +22,6 @@ javascript_sdk
 poet_cli
 poet_common
 poet_core
-poet_families
 poet_simulator
 python_sdk
 rest_api
@@ -132,9 +131,6 @@ main() {
                 poet_core)
                     test_poet_core
                     ;;
-                poet_families)
-                    test_poet_families
-                    ;;
                 poet_simulator)
                     test_poet_simulator
                     ;;
@@ -189,11 +185,6 @@ test_poet_core(){
     run_docker_test ./consensus/poet/core/tests/test_consensus/unit_consensus.yaml -s poet
 }
 
-test_poet_families(){
-    run_docker_test ./consensus/poet/families/tests/test_validator_registry/tp_validator_registry.yaml \
-    -s validator
-}
-
 test_poet_simulator(){
     run_docker_test ./consensus/poet/simulator/tests/test_simulator/unit_simulator.yaml -s poet
 }
@@ -201,6 +192,7 @@ test_poet_simulator(){
 test_python_sdk() {
     # transaction processors
     run_docker_test tp-config -s validator
+    run_docker_test tp-validator-registry -s validator
     run_docker_test tp-intkey-python -s validator
     run_docker_test tp-xo-python -s validator
 
