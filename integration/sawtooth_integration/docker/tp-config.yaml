@@ -20,7 +20,7 @@ services:
   tp_config:
     image: sawtooth-dev-tp_config:$ISOLATION_ID
     volumes:
-      - ../../../..:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose:
       - 40000
     entrypoint: ./bin/tp_config tcp://validator:40000
@@ -29,11 +29,11 @@ services:
   validator:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../../..:/project/sawtooth-core
+      - ../../..:/project/sawtooth-core
     expose: 
       - 40000
-    working_dir: /project/sawtooth-core/core_transactions/config/tests
-    entrypoint: nose2-3 sawtooth_config_test.ts_config.TestSuiteConfig
+    working_dir: /project/sawtooth-core/integration/sawtooth_integration/test_suites
+    entrypoint: nose2-3 -v ts_config.TestSuiteConfig
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/core_transactions/config:\

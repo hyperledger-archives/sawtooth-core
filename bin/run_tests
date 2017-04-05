@@ -199,12 +199,8 @@ test_poet_simulator(){
 }
 
 test_python_sdk() {
-    # config
-    run_docker_test \
-      core_transactions/config/tests/sawtooth_config_test/tp-config.yaml \
-      -s validator
-
-    # transaction processor
+    # transaction processors
+    run_docker_test tp-config -s validator
     run_docker_test tp-intkey-python -s validator
     run_docker_test tp-xo-python -s validator
 
