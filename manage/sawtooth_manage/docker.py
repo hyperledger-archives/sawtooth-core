@@ -25,6 +25,9 @@ from sawtooth_manage.exceptions import ManagementError
 
 
 LOGGER = logging.getLogger(__name__)
+SAWTOOTH_CORE = os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.realpath(__file__)
+)))
 
 
 class _StateEntry(object):
@@ -130,28 +133,28 @@ class DockerNodeController(NodeController):
         peers = self._find_peers()
 
         if node_config.genesis:
-            entrypoint = 'bash -c "./bin/sawtooth admin keygen && \
-            ./bin/sawtooth admin genesis && \
-            ./bin/validator {} -v"'
+            command = 'bash -c "sawtooth admin keygen && \
+            sawtooth admin genesis && \
+            validator {} -v"'
         else:
-            entrypoint = 'bash -c "./bin/sawtooth admin keygen && \
-            ./bin/validator {} -v"'
+            command = 'bash -c "sawtooth admin keygen && \
+            validator {} -v"'
         if len(peers) > 0:
-            entrypoint = entrypoint.format('--peers ' + " ".join(peers))
+            command = command.format('--peers ' + " ".join(peers))
         else:
-            entrypoint = entrypoint.format('')
+            command = command.format('')
 
         compose_dict = {
             'version': '2',
             'services': {
                 'validator': {
-                    'image': 'sawtooth-dev-validator',
+                    'image': 'sawtooth-validator',
                     'expose': ['40000', '8800'],
                     'networks': {self._prefix: {},
                                  'default': {'aliases': [node_name]}},
-                    'volumes': ['/project:/project'],
+                    'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                     'container_name': self._prefix + '-' + node_name,
-                    'entrypoint': entrypoint
+                    'command': command
                 }
             },
             'networks': {self._prefix: {'external': True}}
@@ -164,24 +167,24 @@ class DockerNodeController(NodeController):
         processors = state['Processors']
         for proc in processors:
             compose_dict['services'][proc] = {
-                'image': 'sawtooth-dev-{}'.format(proc),
+                'image': 'sawtooth-{}'.format(proc),
                 'expose': ['40000'],
                 'links': ['validator'],
-                'volumes': ['/project:/project'],
+                'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, proc, node_num]),
-                'entrypoint': 'bin/{} tcp://{}:40000'.format(proc, node_name)
+                'command': '{} tcp://{}:40000'.format(proc, node_name)
             }
 
         # start the rest_api for the first node only
         if node_num == '000':
             compose_dict['services']['rest_api'] = {
-                'image': 'sawtooth-dev-rest_api',
+                'image': 'sawtooth-rest_api',
                 'expose': ['40000', '8080'],
                 'links': ['validator'],
-                'volumes': ['/project:/project'],
+                'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, 'rest_api',
                                             node_num]),
-                'entrypoint': './bin/rest_api --stream-url tcp://{}:40000'.
+                'command': 'rest_api --stream-url tcp://{}:40000'.
                 format(node_name),
                 'ports': ['8080:8080']
             }
