@@ -15,7 +15,6 @@
 
 import abc
 import logging
-from sys import maxsize
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -32,8 +31,7 @@ from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 300
-# Change to something reasonable once all clients implement paging controls
-MAX_PAGE_SIZE = maxsize
+MAX_PAGE_SIZE = 1000
 
 
 class _ResponseFailed(BaseException):
