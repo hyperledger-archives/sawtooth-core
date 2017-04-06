@@ -161,7 +161,8 @@ class DockerNodeController(NodeController):
 
         # add the processors
         node_num = node_name[len('validator-'):]
-        for proc in state['Processors']:
+        processors = state['Processors']
+        for proc in processors:
             compose_dict['services'][proc] = {
                 'image': 'sawtooth-dev-{}'.format(proc),
                 'expose': ['40000'],
@@ -195,23 +196,9 @@ class DockerNodeController(NodeController):
 
         try:
             output = subprocess.check_output(start_args)
-        except subprocess.CalledProcessError as e:
-            processors = state['Processors']
-            # check if the docker image is built
-            unbuilt = _get_unbuilt_images(processors)
-            if unbuilt:
-                raise ManagementError(
-                    'Docker images not built: {}. Try running '
-                    '"docker_build_all"'.format(
-                        ', '.join(unbuilt)))
-
-            invalid = _check_invalid_processors(processors)
-            if invalid:
-                raise ManagementError(
-                    'No such processor: {}'.format(', '.join(invalid)))
-
-            raise ManagementError(str(e))
-
+        except subprocess.CalledProcessError:
+            raise ManagementError(
+                'Possibly unbuilt processors: {}'.format(processors))
         except OSError as e:
             if e.errno == 2:
                 raise ManagementError("{}".format(str(e)))
@@ -326,44 +313,3 @@ class DockerNodeController(NodeController):
             if node_name == entry.name:
                 return entry.status.startswith("Up")
         return False
-
-
-# docker image checking -- these need to be kept up to date
-
-def _get_unbuilt_images(processors):
-    sawtooth_processors = [
-        'sawtooth-' + processor
-        for processor in processors + ['validator']
-    ]
-    built_ins = _built_in_processor_types()
-    built_images = _get_built_images()
-
-    unbuilt = [image for image in sawtooth_processors
-               if image not in built_images and image in built_ins]
-
-    return unbuilt
-
-
-def _check_invalid_processors(processors):
-    sawtooth_processors = [
-        'sawtooth-' + processor
-        for processor in processors + ['validator']
-    ]
-    built_ins = _built_in_processor_types()
-    built_images = _get_built_images()
-
-    invalid = [image for image in sawtooth_processors
-               if image not in built_images and image not in built_ins]
-
-    return invalid
-
-
-def _get_built_images():
-    docker_img_cmd = ['docker', 'images', '--format', '{{.Repository}}']
-    return subprocess.check_output(docker_img_cmd).decode().split('\n')
-
-
-def _built_in_processor_types():
-    image_data_dir = os.path.join(
-        os.path.dirname(__file__), '..', '..', 'docker')
-    return os.listdir(image_data_dir)
