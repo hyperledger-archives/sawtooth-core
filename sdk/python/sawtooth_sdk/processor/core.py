@@ -47,6 +47,10 @@ class TransactionProcessor(object):
         self._url = url
         self._handlers = []
 
+    @property
+    def zmq_id(self):
+        return self._stream.zmq_id
+
     def add_handler(self, handler):
         """Add a transaction family handler
         :param handler:

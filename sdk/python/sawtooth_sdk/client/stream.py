@@ -73,6 +73,7 @@ class _SendReceiveThread(Thread):
         self._context = None
         self._ready_event = ready_event
         self._condition = Condition()
+        self.identity = _generate_id()[0:16]
 
     @asyncio.coroutine
     def _receive_message(self):
@@ -203,7 +204,7 @@ class _SendReceiveThread(Thread):
                 self._context = zmq.asyncio.Context()
             if self._sock is None:
                 self._sock = self._context.socket(zmq.DEALER)
-            self._sock.identity = _generate_id()[0:16]
+            self._sock.identity = self.identity
             self._sock.connect(self._url)
             self._monitor_fd = "inproc://monitor.s-{}".format(
                 _generate_id()[0:5])
@@ -247,6 +248,10 @@ class Stream(object):
         """ Get the url of the Stream object.
         """
         return self._url
+
+    @property
+    def zmq_id(self):
+        return self._send_recieve_thread.identity
 
     def send(self, message_type, content):
         """Send a message to the validator
