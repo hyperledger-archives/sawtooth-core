@@ -56,11 +56,12 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
+      - 8800
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin keygen && \
         ./bin/sawtooth admin genesis && \
-        ./bin/validator -vv\""
+        ./bin/validator --public-uri tcp://validator:8800 -vv\""
     stop_signal: SIGKILL
 
   rest_api:

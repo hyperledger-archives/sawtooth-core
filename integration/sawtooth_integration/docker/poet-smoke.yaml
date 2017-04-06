@@ -32,7 +32,7 @@ services:
           -o config.batch && \
         ./bin/poet genesis -o poet.batch && \
         ./bin/sawtooth admin genesis config.batch poet.batch && \
-        ./bin/validator -v\""
+        ./bin/validator --public-uri tcp://validator-0:8800 -vv\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -50,8 +50,8 @@ services:
       - validator-0
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin keygen --force && \
-        ./bin/validator -v \
-          --peers tcp://validator-0:8800\""
+        ./bin/validator -vv \
+          --public-uri tcp://validator-1:8800 --peers tcp://validator-0:8800\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -70,8 +70,8 @@ services:
       - validator-1
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin keygen --force && \
-        ./bin/validator -v \
-          --peers tcp://validator-0:8800 tcp://validator-1:8800\""
+        ./bin/validator -vv \
+          --public-uri tcp://validator-2:8800 --peers tcp://validator-0:8800 tcp://validator-1:8800\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
