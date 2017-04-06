@@ -58,3 +58,10 @@ class UnknownConsensusModuleError(Exception):
     """Error thrown when there is an invalid consensus module configuration.
     """
     pass
+
+
+class PeeringException(Exception):
+    """
+    Indicates that a request to peer with this validator should not be allowed.
+    """
+    pass

@@ -23,7 +23,10 @@ from sawtooth_validator.protobuf.network_pb2 import \
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockRequest
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
+from sawtooth_validator.protobuf.network_pb2 import GetPeersRequest
+from sawtooth_validator.protobuf.network_pb2 import GetPeersResponse
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
+from sawtooth_validator.exceptions import PeeringException
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,19 +47,54 @@ class Gossip(object):
         self._network = network
         self._initial_peer_endpoints = initial_peer_endpoints \
             if initial_peer_endpoints else []
-        self._peers = []
+        self._peers = {}
 
-    def register_peer(self, connection_id):
-        """Registers a connected connection_id.
+    def send_peers(self, connection_id):
+        """Sends a message containing our peers to the
+        connection identified by connection_id.
 
         Args:
             connection_id (str): A unique identifier which identifies an
                 connection on the network server socket.
         """
         with self._condition:
-            self._peers.append(connection_id)
-        LOGGER.debug("Added connection_id %s, connected identities are now %s",
-                     connection_id, self._peers)
+            # Needs to actually be the list of advertised endpoints of
+            # our peers
+            peer_endpoints = list(self._peers.values())
+            if self._public_uri:
+                peer_endpoints.append(self._public_uri)
+            peers_response = GetPeersResponse(peer_endpoints=peer_endpoints)
+            self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
+                               peers_response.SerializeToString(),
+                               connection_id)
+
+    def get_peers(self):
+        """Returns a copy of the gossip peers.
+        """
+        with self._condition:
+            return copy.copy(self._peers)
+
+    def register_peer(self, connection_id, endpoint):
+        """Registers a connected connection_id.
+
+        Args:
+            connection_id (str): A unique identifier which identifies an
+                connection on the network server socket.
+            endpoint (str): The publically reachable endpoint of the new
+                peer
+        """
+        with self._condition:
+            if len(self._peers) < self._maximum_peer_connectivity:
+                self._peers[connection_id] = endpoint
+                LOGGER.debug("Added connection_id %s with endpoint %s, "
+                             "connected identities are now %s",
+                             connection_id, endpoint, self._peers)
+            else:
+                LOGGER.debug("At maximum configured number of peers: %s "
+                             "Rejecting peering request from %s.",
+                             self._maximum_peer_connectivity,
+                             endpoint)
+                raise PeeringException()
 
     def unregister_peer(self, connection_id):
         """Removes a connection_id from the registry.
@@ -67,7 +105,7 @@ class Gossip(object):
         """
         with self._condition:
             if connection_id in self._peers:
-                self._peers.remove(connection_id)
+                del self._peers[connection_id]
                 LOGGER.debug("Removed connection_id %s, "
                              "connected identities are now %s",
                              connection_id, self._peers)
@@ -137,17 +175,21 @@ class Gossip(object):
             exclude: A list of connection_ids that should be excluded from this
                 broadcast.
         """
-        if exclude is None:
-            exclude = []
-        for connection_id in self._peers:
-            if connection_id not in exclude:
-                try:
-                    self._network.send(message_type,
-                                       gossip_message.SerializeToString(),
-                                       connection_id)
-                except ValueError:
-                    LOGGER.debug("Connection %s is no longer valid. "
-                                 "Removing from list of peers.",
+        with self._condition:
+            if exclude is None:
+                exclude = []
+            for connection_id in self._peers:
+                if connection_id not in exclude:
+                    try:
+                        self._network.send(message_type,
+                                           gossip_message.SerializeToString(),
+                                           connection_id)
+                    except ValueError:
+                        LOGGER.debug("Connection %s is no longer valid. "
+                                     "Removing from list of peers.",
+                                     connection_id)
+                        del self._peers[connection_id]
+
                                  connection_id)
                     self._peers.remove(connection_id)
 
@@ -167,12 +209,15 @@ class Gossip(object):
     def _connect_success_callback(self, connection_id):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
-        register_request = PeerRegisterRequest()
+        register_request = PeerRegisterRequest(
+            endpoint=self._public_uri)
+
         self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
                            register_request.SerializeToString(),
                            connection_id,
                            callback=partial(self._peer_callback,
-                                            connection_id=connection_id))
+                                            connection_id=connection_id,
+                                            endpoint=endpoint))
 
     def _connect_failure_callback(self, connection_id):
         LOGGER.debug("Connection to %s failed", connection_id)

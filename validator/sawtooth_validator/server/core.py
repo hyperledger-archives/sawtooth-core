@@ -62,6 +62,8 @@ from sawtooth_validator.gossip.gossip_handlers import \
     GossipBatchResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
+from sawtooth_validator.gossip.gossip_handlers import GetPeersRequestHandler
+from sawtooth_validator.gossip.gossip_handlers import GetPeersResponseHandler
 from sawtooth_validator.networking.handlers import PingHandler
 from sawtooth_validator.networking.handlers import ConnectHandler
 from sawtooth_validator.networking.handlers import DisconnectHandler
@@ -227,6 +229,16 @@ class Validator(object):
             network_thread_pool)
 
         # Set up gossip handlers
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+            GetPeersRequestHandler(gossip=self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
+            GetPeersResponseHandler(gossip=self._gossip),
+            network_thread_pool)
+
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_REGISTER,
             PeerRegisterHandler(gossip=self._gossip),
