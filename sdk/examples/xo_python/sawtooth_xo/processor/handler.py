@@ -14,11 +14,14 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
+import logging
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
+
+LOGGER = logging.getLogger(__name__)
 
 
 class XoTransactionHandler:
@@ -230,7 +233,7 @@ def _display(msg):
         length = len(msg)
         msg = [msg]
 
-    print("+" + (length + 2) * "-" + "+")
+    LOGGER.debug("+" + (length + 2) * "-" + "+")
     for line in msg:
-        print("+ " + line.center(length) + " +")
-    print("+" + (length + 2) * "-" + "+")
+        LOGGER.debug("+ " + line.center(length) + " +")
+    LOGGER.debug("+" + (length + 2) * "-" + "+")
