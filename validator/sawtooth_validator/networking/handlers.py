@@ -35,6 +35,10 @@ class ConnectHandler(Handler):
         message.ParseFromString(message_content)
         LOGGER.debug("got connect message from %s. sending ack",
                      connection_id)
+        LOGGER.debug("Endpoint of connecting node is %s",
+                     message.endpoint)
+        self._network.update_connection_endpoint(connection_id,
+                                                 message.endpoint)
 
         ack = NetworkAcknowledgement()
 

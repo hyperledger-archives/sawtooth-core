@@ -20,6 +20,7 @@ option java_package = "sawtooth.sdk.protobuf";
 // The connect message from a client to the server
 message ConnectMessage {
     string identity = 1;
+    string endpoint = 2;
 }
 
 // The disconnect message from a client to the server
