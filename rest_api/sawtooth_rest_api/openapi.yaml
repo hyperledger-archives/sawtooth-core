@@ -81,8 +81,8 @@ paths:
       parameters:
         - $ref: "#/parameters/head"
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min_position"
-        - $ref: "#/parameters/max_position"
+        - $ref: "#/parameters/min"
+        - $ref: "#/parameters/max"
         - $ref: "#/parameters/sort"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
@@ -228,8 +228,8 @@ paths:
           type: string
           description: A partial address to filter leaves by
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min_position"
-        - $ref: "#/parameters/max_position"
+        - $ref: "#/parameters/min"
+        - $ref: "#/parameters/max"
         - $ref: "#/parameters/sort"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
@@ -277,8 +277,6 @@ paths:
                 $ref: "#/definitions/Head"
               link:
                 $ref: "#/definitions/Link"
-              paging:
-                $ref: "#/definitions/Paging"
         400:
           $ref: "#/responses/400BadRequest"
         404:
@@ -296,8 +294,8 @@ paths:
       parameters:
         - $ref: "#/parameters/head"
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min_position"
-        - $ref: "#/parameters/max_position"
+        - $ref: "#/parameters/min"
+        - $ref: "#/parameters/max"
         - $ref: "#/parameters/sort"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
@@ -360,8 +358,8 @@ paths:
       parameters:
         - $ref: "#/parameters/head"
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min_position"
-        - $ref: "#/parameters/max_position"
+        - $ref: "#/parameters/min"
+        - $ref: "#/parameters/max"
         - $ref: "#/parameters/sort"
         - $ref: "#/parameters/fields"
         - $ref: "#/parameters/omit"
@@ -578,16 +576,16 @@ parameters:
     type: integer
     default: 1000
     description: Number of items to return
-  min_position:
-    name: min_position
+  min:
+    name: min
     in: query
     type: string
-    description: Id/index to start paging (inclusive)
-  max_position:
-    name: max_position
+    description: Id or index to start paging (inclusive)
+  max:
+    name: max
     in: query
     type: string
-    description: Id/index to end paging (non-inclusive)
+    description: Id or index to end paging (inclusive)
   sort:
     name: sort
     in: query
@@ -600,21 +598,21 @@ definitions:
     example: 65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
   Link:
     type: string
-    example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&min_position=1001
+    example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
   Paging:
     properties:
-      next_position:
-        type: string
-        example: 2001
+      start_index:
+        type: integer
+        example: 1000
       total_count:
         type: integer
         example: 54321
       previous:
         type: string
-        example: https://api.sawtooth.com/state?max_position=1001
+        example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&min=0&count=1000
       next:
         type: string
-        example: https://api.sawtooth.com/state?min_position=2001
+        example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&min=2000&count=1000
 
   Error:
     properties:

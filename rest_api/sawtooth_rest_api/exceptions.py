@@ -46,6 +46,12 @@ class MissingStatusId(web.HTTPBadRequest):
         super().__init__(reason=message)
 
 
+class BadCount(web.HTTPBadRequest):
+    def __init__(self):
+        message = 'The "count" parameter must be a non-zero integer'
+        super().__init__(reason=message)
+
+
 class ValidatorUnavailable(web.HTTPServiceUnavailable):
     def __init__(self):
         message = 'Could not reach validator, validator timed out'

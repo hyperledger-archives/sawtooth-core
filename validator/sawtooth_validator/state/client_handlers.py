@@ -15,7 +15,6 @@
 
 import abc
 import logging
-from sys import maxsize
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -32,8 +31,21 @@ from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 300
-# Change to something reasonable once all clients implement paging controls
-MAX_PAGE_SIZE = maxsize
+MAX_PAGE_SIZE = 1000
+
+
+class _ResponseFailed(BaseException):
+    """Raised when a response failed to complete and should be sent as is.
+
+    Args:
+        status (enum): Status to be sent with the incomplete response
+
+    Attributes:
+        status (enum): Status to be sent with the incomplete response
+    """
+    def __init__(self, status):
+        super().__init__()
+        self.status = status
 
 
 class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
@@ -67,19 +79,6 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         self._block_store = block_store
         self._batch_cache = batch_cache
 
-    class _ResponseFailed(BaseException):
-        """Raised when a response failed to complete and should be sent as is.
-
-        Args:
-            status (enum): Status to be sent with the incomplete response
-
-        Attributes:
-            status (enum): Status to be sent with the incomplete response
-        """
-        def __init__(self, status):
-            super().__init__()
-            self.status = status
-
     def handle(self, identity, message_content):
         """Handles parsing incoming requests, and wrapping the final response.
 
@@ -99,7 +98,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
 
         try:
             response = self._respond(request)
-        except self._ResponseFailed as e:
+        except _ResponseFailed as e:
             response = e.status
 
         return self._wrap_result(response)
@@ -157,21 +156,21 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             Block: the block object at the head of the requested chain
 
         Raises:
-            _ResponseFailed: Failed to retrieve a head block
+            ResponseFailed: Failed to retrieve a head block
         """
         if request.head_id:
             try:
                 return self._block_store[request.head_id].block
             except KeyError as e:
                 LOGGER.debug('Unable to find block "%s" in store', e)
-                raise self._ResponseFailed(self._status.NO_ROOT)
+                raise _ResponseFailed(self._status.NO_ROOT)
 
         elif self._block_store.chain_head:
             return self._block_store.chain_head.block
 
         else:
             LOGGER.debug('Unable to get chain head from block store')
-            raise self._ResponseFailed(self._status.NOT_READY)
+            raise _ResponseFailed(self._status.NOT_READY)
 
     def _set_root(self, request):
         """Sets the root of the merkle tree, returning any head id used.
@@ -187,7 +186,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             str: the id of the head block used to specify the root
 
         Raises:
-            _ResponseFailed: Failed to set the root if the merkle tree
+            ResponseFailed: Failed to set the root if the merkle tree
         """
         if request.merkle_root:
             root = request.merkle_root
@@ -203,7 +202,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             self._tree.set_merkle_root(root)
         except KeyError as e:
             LOGGER.debug('Unable to find root "%s" in database', e)
-            raise self._ResponseFailed(self._status.NO_ROOT)
+            raise _ResponseFailed(self._status.NO_ROOT)
 
         return head_id
 
@@ -300,7 +299,7 @@ class _Pager(object):
     to fetch the id by an index.
     """
     @classmethod
-    def paginate_resources(cls, request, resources):
+    def paginate_resources(cls, request, resources, on_fail_status):
         """Truncates a list of resources based on PagingControls
 
         Args:
@@ -311,6 +310,9 @@ class _Pager(object):
             list: The paginated list of resources
             object: The PagingResponse to be sent back to the client
         """
+        if len(resources) == 0:
+            return resources, client_pb2.PagingResponse(total_resources=0)
+
         paging = request.paging
         count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
 
@@ -323,9 +325,11 @@ class _Pager(object):
                 start_index = end_index + 1 - count
             else:
                 start_index = paging.start_index
+
+            if start_index < 0 or start_index >= len(resources):
+                raise AssertionError
         except AssertionError:
-            # With a bad id, return an empty list and no paging object
-            return resources[0:0], None
+            raise _ResponseFailed(on_fail_status)
 
         paged_resources = resources[start_index: start_index + count]
 
@@ -455,12 +459,16 @@ class StateListRequest(_ClientRequestHandler):
         # Order leaves, remove if tree.leaves refactored to be ordered
         leaves.sort(key=lambda l: l.address)
 
-        leaves, paging = _Pager.paginate_resources(request, leaves)
+        leaves, paging = _Pager.paginate_resources(
+            request,
+            leaves,
+            self._status.INVALID_PAGING)
 
         if not leaves:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id)
+                head_id=head_id,
+                paging=paging)
 
         return self._wrap_response(
             head_id=head_id,
@@ -510,12 +518,16 @@ class BlockListRequest(_ClientRequestHandler):
             lambda filter_id: self._block_store[filter_id].block,
             lambda block: [block])
 
-        blocks, paging = _Pager.paginate_resources(request, blocks)
+        blocks, paging = _Pager.paginate_resources(
+            request,
+            blocks,
+            self._status.INVALID_PAGING)
 
         if not blocks:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id)
+                head_id=head_id,
+                paging=paging)
 
         return self._wrap_response(
             head_id=head_id,
@@ -560,12 +572,16 @@ class BatchListRequest(_ClientRequestHandler):
             self._block_store.get_batch,
             lambda block: [a for a in block.batches])
 
-        batches, paging = _Pager.paginate_resources(request, batches)
+        batches, paging = _Pager.paginate_resources(
+            request,
+            batches,
+            self._status.INVALID_PAGING)
 
         if not batches:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id)
+                head_id=head_id,
+                paging=paging)
 
         return self._wrap_response(
             head_id=head_id,

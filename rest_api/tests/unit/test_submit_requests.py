@@ -29,7 +29,7 @@ class PostBatchTests(BaseApiTest):
             client_pb2.ClientBatchSubmitResponse)
 
         handlers = self.build_handlers(self.stream)
-        return self.build_app(loop, '/batches', handlers.batches_post)
+        return self.build_app(loop, '/batches', handlers.submit_batches)
 
     @unittest_run_loop
     async def test_post_batch(self):
@@ -212,7 +212,7 @@ class BatchStatusTests(BaseApiTest):
             client_pb2.ClientBatchStatusResponse)
 
         handlers = self.build_handlers(self.stream)
-        return self.build_app(loop, '/batch_status', handlers.status_list)
+        return self.build_app(loop, '/batch_status', handlers.list_statuses)
 
     @unittest_run_loop
     async def test_batch_status_with_one_id(self):
