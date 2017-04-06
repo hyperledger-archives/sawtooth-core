@@ -18,10 +18,14 @@ import sys
 import argparse
 import os
 
+import sawtooth_signing as signing
+
 from sawtooth_validator.config.path import load_path_config
+from sawtooth_validator.config.logs import get_log_config
 from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.keys import load_identity_signing_key
 from sawtooth_validator.server.log import init_console_logging
+from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
 
@@ -105,28 +109,41 @@ def main(args=sys.argv[1:]):
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
-    for line in path_config.to_toml_string():
-        LOGGER.info("config [path]: %s", line)
-
     # Process initial initialization errors, delaying the sys.exit(1) until
     # all errors have been reported to the user (via LOGGER.error()).  This
     # is intended to provide enough information to the user so they can correct
     # multiple errors before restarting the validator.
     init_errors = False
 
+    try:
+        identity_signing_key = load_identity_signing_key(
+            key_dir=path_config.key_dir,
+            key_name='validator')
+        pubkey = signing.generate_pubkey(identity_signing_key)
+    except LocalConfigurationError as e:
+        log_configuration(log_dir=path_config.log_dir,
+                          name="validator")
+        init_console_logging(verbose_level=verbose_level)
+        LOGGER.error(str(e))
+        init_errors = True
+
+    log_config = get_log_config()
+    if not init_errors:
+        if log_config is not None:
+            log_configuration(log_config=log_config)
+            init_console_logging(verbose_level=verbose_level)
+        else:
+            log_configuration(log_dir=path_config.log_dir,
+                              name="validator-" + pubkey[:8])
+
+    for line in path_config.to_toml_string():
+        LOGGER.info("config [path]: %s", line)
+
     if not check_directory(path=path_config.data_dir,
                            human_readable_name='Data'):
         init_errors = True
     if not check_directory(path=path_config.log_dir,
                            human_readable_name='Log'):
-        init_errors = True
-
-    try:
-        identity_signing_key = load_identity_signing_key(
-            key_dir=path_config.key_dir,
-            key_name='validator')
-    except LocalConfigurationError as e:
-        LOGGER.error(str(e))
         init_errors = True
 
     if init_errors:

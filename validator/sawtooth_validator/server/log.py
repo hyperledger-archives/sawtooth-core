@@ -14,7 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import logging.config
 import sys
+import os
 
 from colorlog import ColoredFormatter
 
@@ -66,3 +68,24 @@ def init_console_logging(verbose_level=2, capture_std_output=False):
     if capture_std_output:
         sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
         sys.stderr = LogWriter(logging.getLogger("STDERR"), logging.ERROR)
+
+
+def log_configuration(log_config=None, log_dir=None, name=None):
+    if log_config is not None:
+        logging.config.dictConfig(log_config)
+    else:
+        log_filename = os.path.join(log_dir, name)
+        debug_handler = logging.FileHandler(log_filename + "-debug.log")
+        debug_handler.setFormatter(logging.Formatter(
+            '[%(asctime)s.%(msecs)03d [%(threadName)s] %(module)s'
+            ' %(levelname)s] %(message)s', "%H:%M:%S"))
+        debug_handler.setLevel(logging.DEBUG)
+
+        error_handler = logging.FileHandler(log_filename + "-error.log")
+        error_handler.setFormatter(logging.Formatter(
+            '[%(asctime)s.%(msecs)03d [%(threadName)s] %(module)s'
+            ' %(levelname)s] %(message)s', "%H:%M:%S"))
+        error_handler.setLevel(logging.ERROR)
+
+        logging.getLogger().addHandler(error_handler)
+        logging.getLogger().addHandler(debug_handler)
