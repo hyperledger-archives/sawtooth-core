@@ -73,9 +73,13 @@ setup(name='sawtooth-poet-cli',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[
-          'sawtooth-signing',
           'colorlog',
-          'protobuf'
+          'protobuf',
+          'sawtooth-poet-common',
+          'sawtooth-poet-core',
+          'sawtooth-signing',
+          'sawtooth-validator',
+          'toml',
           ],
       entry_points={
           'console_scripts': [

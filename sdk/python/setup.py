@@ -73,6 +73,6 @@ setup(name='sawtooth-sdk',
       packages=find_packages(),
       install_requires=[
           "sawtooth-signing",
-          "grpcio-tools",
+          "protobuf",
           "pyzmq",
       ])

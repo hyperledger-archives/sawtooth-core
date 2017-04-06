@@ -81,7 +81,7 @@ def main():
     ]
 
     compose_dict = load_compose_file(compose_file)
-    _validate_compose_dict(args, compose_dict)
+    _validate_compose_dict(args, compose_dict, compose_file)
 
     if not args.clean:
         _check_for_existing_containers(compose_file, compose_dict, isolation_id)
@@ -228,7 +228,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def _validate_compose_dict(args, compose_dict):
+def _validate_compose_dict(args, compose_dict, compose_file):
     if args.test_service not in compose_dict['services']:
         raise RunDockerTestError(
             "Test service '{}' does not exist in compose file: '{}'".format(

@@ -75,9 +75,12 @@ setup(name='sawtooth-poet-families',
       install_requires=[
           'colorlog',
           'cryptography>=1.7.1',
-          'protobuf',
           'sawtooth-poet-common',
           'sawtooth-sdk',
           'sawtooth-signing',
           ],
-      entry_points={})
+      entry_points={
+          'console_scripts': [
+              'tp_validator_registry = sawtooth_validator_registry.validator_registry.processor.main:main'
+          ]
+      })
