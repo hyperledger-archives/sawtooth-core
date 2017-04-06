@@ -16,47 +16,13 @@
 import hashlib
 import sys
 import argparse
-import logging
-
-from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
+from sawtooth_sdk.client.log import init_console_logging
+from sawtooth_sdk.client.log import log_configuration
+from sawtooth_sdk.client.config import get_log_config
+from sawtooth_sdk.client.config import get_log_dir
 from sawtooth_intkey.processor.handler import IntkeyTransactionHandler
-
-
-def create_console_handler(verbose_level):
-    clog = logging.StreamHandler()
-    formatter = ColoredFormatter(
-        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
-        "%(white)s%(message)s",
-        datefmt="%H:%M:%S",
-        reset=True,
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'red',
-        })
-
-    clog.setFormatter(formatter)
-
-    if verbose_level == 0:
-        clog.setLevel(logging.WARN)
-    elif verbose_level == 1:
-        clog.setLevel(logging.INFO)
-    else:
-        clog.setLevel(logging.DEBUG)
-
-    return clog
-
-
-def init_console_logging(verbose_level=2):
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    if verbose_level > 0:
-        logger.addHandler(create_console_handler(verbose_level))
 
 
 def parse_args(args):
@@ -78,9 +44,18 @@ def parse_args(args):
 def main(args=sys.argv[1:]):
     opts = parse_args(args)
 
-    init_console_logging(verbose_level=opts.verbose)
-
     processor = TransactionProcessor(url=opts.endpoint)
+    log_config = get_log_config(filename="intkey_log_config.toml")
+    if log_config is not None:
+        log_configuration(log_config=log_config)
+    else:
+        log_dir = get_log_dir()
+        # use the transaction processor zmq identity for filename
+        log_configuration(
+            log_dir=log_dir,
+            name="intkey_python-" + str(processor.zmq_id)[2:-1])
+
+    init_console_logging(verbose_level=opts.verbose)
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
