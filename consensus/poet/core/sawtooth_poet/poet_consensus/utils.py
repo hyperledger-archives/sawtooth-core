@@ -292,14 +292,6 @@ def get_consensus_state_for_block_id(
         # Move to the previous block
         block_id = block.previous_block_id
 
-    # If we didn't find any consensus state, see if there is any "before" any
-    # blocks were created (this might be because we are the first validator
-    # and PoET signup information was created, including sealed signup data
-    # that was saved in the consensus state store).
-    if consensus_state is None:
-        consensus_state = \
-            consensus_state_store.get(block_id=NULL_BLOCK_IDENTIFIER)
-
     # At this point, if we have not found any consensus state, we need to
     # create default state from which we can build upon
     if consensus_state is None:
@@ -311,14 +303,11 @@ def get_consensus_state_for_block_id(
     # time we don't have to walk so far back through the block chain.
     for block_id, block_info in reversed(blocks.items()):
         # If the block was not a PoET block (i.e., didn't have a wait
-        # certificate), reset the consensus state statistics, but retain
-        # any sealed signup data we might have.  We are not going to store
-        # this in the consensus state store, but we will use it as the
-        # starting for the next PoET block.
+        # certificate), reset the consensus state statistics.  We are not
+        # going to store this in the consensus state store, but we will use it
+        # as the starting for the next PoET block.
         if block_info.wait_certificate is None:
-            sealed_signup_data = consensus_state.sealed_signup_data
             consensus_state = ConsensusState()
-            consensus_state.sealed_signup_data = sealed_signup_data
 
         # Otherwise, we need to fetch the current validator state for the
         # validator which claimed the block, set/update the consensus state

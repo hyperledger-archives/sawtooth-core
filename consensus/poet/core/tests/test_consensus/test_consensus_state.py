@@ -255,9 +255,6 @@ class TestConsensusState(unittest.TestCase):
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
         self.assertEqual(
-            state.sealed_signup_data,
-            doppelganger_state.sealed_signup_data)
-        self.assertEqual(
             state.expected_block_claim_count,
             doppelganger_state.expected_block_claim_count)
 
