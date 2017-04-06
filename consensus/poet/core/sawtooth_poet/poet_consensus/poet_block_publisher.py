@@ -27,10 +27,13 @@ from sawtooth_validator.journal.consensus.consensus \
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
-from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
+from sawtooth_poet.poet_consensus.poet_key_state_store \
+    import PoetKeyState
+from sawtooth_poet.poet_consensus.poet_key_state_store \
+    import PoetKeyStateStore
 from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
 from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 from sawtooth_poet.poet_consensus import utils
@@ -52,7 +55,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
     other consensus algorithms
     """
 
-    _sealed_signup_data = None
     _poet_public_key = None
 
     _validator_registry_namespace = \
@@ -101,7 +103,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
             ConsensusStateStore(
                 data_dir=self._data_dir,
                 validator_id=self._validator_id)
-
+        self._poet_key_state_store = \
+            PoetKeyStateStore(
+                data_dir=self._data_dir,
+                validator_id=self._validator_id)
         self._wait_timer = None
 
     def _register_signup_information(self, block_header, poet_enclave_module):
@@ -175,8 +180,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 payload=serialized,
                 header_signature=signature)
 
-        self._batch_publisher.send([transaction])
-
         LOGGER.info(
             'Register Validator Name=%s, ID=%s...%s, PoET public key=%s...%s',
             payload.name,
@@ -185,11 +188,22 @@ class PoetBlockPublisher(BlockPublisherInterface):
             payload.signup_info.poet_public_key[:8],
             payload.signup_info.poet_public_key[-8:])
 
-        # Cache the sealed signup data and PoET public key in a class
-        # variable until we know that we have been persisted to the
-        # validator registry.
-        PoetBlockPublisher._sealed_signup_data = \
-            signup_info.sealed_signup_data
+        self._batch_publisher.send([transaction])
+
+        # Store the key state so that we can look it up later if need be
+        LOGGER.info(
+            'Save key state PPK=%s...%s => SSD=%s...%s',
+            signup_info.poet_public_key[:8],
+            signup_info.poet_public_key[-8:],
+            signup_info.sealed_signup_data[:8],
+            signup_info.sealed_signup_data[-8:])
+        self._poet_key_state_store[signup_info.poet_public_key] = \
+            PoetKeyState(
+                sealed_signup_data=signup_info.sealed_signup_data,
+                has_been_refreshed=False)
+
+        # Cache the PoET public key in a class to indicate that this is the
+        # current public key for the PoET enclave
         PoetBlockPublisher._poet_public_key = signup_info.poet_public_key
 
     def initialize_block(self, block_header):
@@ -213,111 +227,75 @@ class PoetBlockPublisher(BlockPublisherInterface):
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
 
-        # Check the consensus state to see if we have current sealed signup
-        # information.
-        consensus_state = \
-            utils.get_consensus_state_for_block_id(
-                block_id=block_header.previous_block_id,
-                block_cache=self._block_cache,
-                state_view_factory=self._state_view_factory,
-                consensus_state_store=self._consensus_state_store,
-                poet_enclave_module=poet_enclave_module)
-        if consensus_state is not None and \
-                consensus_state.sealed_signup_data is not None:
-            # Check to see if the sealed signup data we have cached is the
-            # same as what is in the consensus store.  If not, then it is
-            # stale and so we need to unseal it and update our cached copy.
-            if consensus_state.sealed_signup_data != \
-                    PoetBlockPublisher._sealed_signup_data:
-                LOGGER.debug(
-                    'Unseal signup data %s...%s',
-                    consensus_state.sealed_signup_data[:8],
-                    consensus_state.sealed_signup_data[-8:])
-                PoetBlockPublisher._sealed_signup_data = \
-                    consensus_state.sealed_signup_data
-                PoetBlockPublisher._poet_public_key = \
-                    SignupInfo.unseal_signup_data(
-                        poet_enclave_module=poet_enclave_module,
-                        validator_address=block_header.signer_pubkey,
-                        sealed_signup_data=consensus_state.sealed_signup_data)
+        # Get our validator registry entry to see what PoET public key
+        # other validators think we are using.
+        validator_registry_view = ValidatorRegistryView(state_view)
+        validator_info = None
 
-        # Otherwise, if we don't already have a public key, we need to create
-        # signup information and create a transaction to add it to the
-        # validator registry.
-        elif PoetBlockPublisher._poet_public_key is None:
+        try:
+            validator_id = block_header.signer_pubkey
+            validator_info = \
+                validator_registry_view.get_validator_info(
+                    validator_id=validator_id)
+        except KeyError:
+            pass
+
+        # If we don't have a validator registry entry, then check our cached
+        # PoET public key.  If we don't have one, then we need to sign up.
+        # If we do have one, then our validator registry entry has not
+        # percolated through the system, so nothing to to but wait.
+        if validator_info is None:
+            if PoetBlockPublisher._poet_public_key is None:
+                LOGGER.debug(
+                    'No public key found, so going to register new signup '
+                    'information')
+                self._register_signup_information(
+                    block_header=block_header,
+                    poet_enclave_module=poet_enclave_module)
+
+            return False
+
+        # Otherwise, we have a current validator registry entry.  In that
+        # case, we need to make sure that we are using the same PPK that the
+        # other validators think we are using.  If not, then we need to switch
+        # the PoET enclave to using the correct keys.
+        elif validator_info.signup_info.poet_public_key != \
+                PoetBlockPublisher._poet_public_key:
             LOGGER.debug(
-                'No public key found, so going to register new signup '
-                'information')
-            self._register_signup_information(
-                block_header=block_header,
-                poet_enclave_module=poet_enclave_module)
-            return False
+                'Our Validator Registry Entry: Name=%s, ID=%s...%s, PoET '
+                'public key=%s...%s',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                validator_info.signup_info.poet_public_key[:8],
+                validator_info.signup_info.poet_public_key[-8:])
 
-        # Otherwise, at this point we need to check the validator registry to
-        # see if our _current_ validator registry information was added to the
-        # validator registry.
-        else:
-            validator_registry_view = ValidatorRegistryView(state_view)
-            try:
-                validator_id = block_header.signer_pubkey
-                validator_info = \
-                    validator_registry_view.get_validator_info(
-                        validator_id=validator_id)
+            # Retrieve the key state corresponding to the PoET public key and
+            # use it to re-establish the key used by the enclave.
+            poet_key_state = \
+                self._poet_key_state_store[
+                    validator_info.signup_info.poet_public_key]
+            PoetBlockPublisher._poet_public_key = \
+                SignupInfo.unseal_signup_data(
+                    poet_enclave_module=poet_enclave_module,
+                    validator_address=block_header.signer_pubkey,
+                    sealed_signup_data=poet_key_state.sealed_signup_data)
 
-                LOGGER.debug(
-                    'Our Validator Registry Entry: Name=%s, ID=%s...%s, PoET '
-                    'public key=%s...%s',
-                    validator_info.name,
-                    validator_info.id[:8],
-                    validator_info.id[-8:],
-                    validator_info.signup_info.poet_public_key[:8],
-                    validator_info.signup_info.poet_public_key[-8:])
+            assert PoetBlockPublisher._poet_public_key == \
+                validator_info.signup_info.poet_public_key
 
-                # We need to verify that our validator registry entry is
-                # current - basically this means verifying that the PoET
-                # public key that will be used to verify the validity of
-                # our wait certificates is the PoET public key matching our
-                # current private key.
-                if validator_info.signup_info.poet_public_key != \
-                        PoetBlockPublisher._poet_public_key:
-                    LOGGER.debug(
-                        'Our Validator Registry Entry PoET public key '
-                        '(%s...%s) doesn''t match the PoET public key '
-                        'expected (%s...%s)',
-                        validator_info.signup_info.poet_public_key[:8],
-                        validator_info.signup_info.poet_public_key[-8:],
-                        PoetBlockPublisher._poet_public_key[:8],
-                        PoetBlockPublisher._poet_public_key[-8:])
-                    return False
+            LOGGER.debug(
+                'Switched to public key: %s...%s',
+                PoetBlockPublisher._poet_public_key[:8],
+                PoetBlockPublisher._poet_public_key[-8:])
+            LOGGER.debug(
+                'Unseal signup data: %s...%s',
+                poet_key_state.sealed_signup_data[:8],
+                poet_key_state.sealed_signup_data[-8:])
 
-                # At this point, we know that we are in the validator registry
-                # and the entry is current.  We can save the sealed signup
-                # data to the consensus state for the previous block and can
-                # clear out our cached copies of the sealed signup data and
-                # the PoET public key.
-                if consensus_state is None:
-                    consensus_state = ConsensusState()
-                consensus_state.sealed_signup_data = \
-                    PoetBlockPublisher._sealed_signup_data
-
-                self._consensus_state_store[block_header.previous_block_id] = \
-                    consensus_state
-
-                PoetBlockPublisher._sealed_signup_data = None
-                PoetBlockPublisher._poet_public_key = None
-            except KeyError:
-                LOGGER.debug(
-                    'We cannot initialize the block because our PoET signup '
-                    'information is not in the validator registry')
-                return False
-
-            # Since we are registering, don't bother trying to initialize
-            # the block
-            return False
-
-        # Create a list of certificates for the wait timer.  This seems to have
-        # a little too much knowledge of the WaitTimer implementation, but
-        # there is no use getting more than
+        # Create a list of certificates for the wait timer.  This seems to
+        # have a little too much knowledge of the WaitTimer implementation,
+        # but there is no use getting more than
         # WaitTimer.certificate_sample_length wait certificates.
         certificates = \
             utils.build_certificate_list(
