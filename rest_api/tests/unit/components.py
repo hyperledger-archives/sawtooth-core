@@ -31,6 +31,9 @@ from sawtooth_rest_api.protobuf.transaction_pb2 import Transaction
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
+TEST_TIMEOUT = 5
+
+
 class MockStream(object):
     """Replaces a route handler's stream to allow tests to preset the response
     to send back as well as run asserts on the protobufs sent to the stream.
@@ -154,7 +157,7 @@ class BaseApiTest(AioHTTPTestCase):
         Returns:
             RouteHandler: The route handlers to handle test queries
         """
-        handlers = RouteHandler('tcp://0.0.0.0:40404', 5)
+        handlers = RouteHandler('tcp://0.0.0.0:40404', TEST_TIMEOUT)
         handlers._stream = stream
         return handlers
 
