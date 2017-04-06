@@ -27,7 +27,7 @@ class BlockListTests(BaseApiTest):
             client_pb2.ClientBlockListRequest,
             client_pb2.ClientBlockListResponse)
 
-        handlers = self.build_handlers(self.stream)
+        handlers = self.build_handlers(loop, self.stream)
         return self.build_app(loop, '/blocks', handlers.list_blocks)
 
     @unittest_run_loop
@@ -488,7 +488,7 @@ class BlockGetTests(BaseApiTest):
             client_pb2.ClientBlockGetRequest,
             client_pb2.ClientBlockGetResponse)
 
-        handlers = self.build_handlers(self.stream)
+        handlers = self.build_handlers(loop, self.stream)
         return self.build_app(loop, '/blocks/{block_id}', handlers.fetch_block)
 
     @unittest_run_loop

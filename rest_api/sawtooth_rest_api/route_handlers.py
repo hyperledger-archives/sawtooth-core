@@ -15,7 +15,9 @@
 
 import json
 import base64
+from concurrent.futures import ThreadPoolExecutor
 from aiohttp import web
+
 # pylint: disable=no-name-in-module,import-error
 # needed for the google.protobuf imports to pass pylint
 from google.protobuf.json_format import MessageToDict
@@ -55,7 +57,9 @@ class RouteHandler(object):
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, stream_url, timeout=DEFAULT_TIMEOUT):
+    def __init__(self, loop, stream_url, timeout=DEFAULT_TIMEOUT):
+        loop.set_default_executor(ThreadPoolExecutor())
+        self._loop = loop
         self._stream = Stream(stream_url)
         self._timeout = timeout
 
@@ -96,7 +100,7 @@ class RouteHandler(object):
             batches=batch_list.batches)
         self._set_wait(request, validator_query)
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
             client_pb2.ClientBatchSubmitResponse,
             validator_query,
@@ -162,7 +166,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBatchStatusRequest(batch_ids=ids)
         self._set_wait(request, validator_query)
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_BATCH_STATUS_REQUEST,
             client_pb2.ClientBatchStatusResponse,
             validator_query,
@@ -198,7 +202,7 @@ class RouteHandler(object):
             address=request.url.query.get('address', None),
             paging=self._make_paging_message(paging_controls))
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_STATE_LIST_REQUEST,
             client_pb2.ClientStateListResponse,
             validator_query)
@@ -229,7 +233,7 @@ class RouteHandler(object):
         address = request.match_info.get('address', '')
         head = request.url.query.get('head', None)
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
             client_pb2.ClientStateGetResponse,
             client_pb2.ClientStateGetRequest(head_id=head, address=address),
@@ -259,7 +263,7 @@ class RouteHandler(object):
             block_ids=self._get_filter_ids(request),
             paging=self._make_paging_message(paging_controls))
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_pb2.ClientBlockListResponse,
             validator_query)
@@ -286,7 +290,7 @@ class RouteHandler(object):
 
         block_id = request.match_info.get('block_id', '')
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_BLOCK_GET_REQUEST,
             client_pb2.ClientBlockGetResponse,
             client_pb2.ClientBlockGetRequest(block_id=block_id),
@@ -316,7 +320,7 @@ class RouteHandler(object):
             batch_ids=self._get_filter_ids(request),
             paging=self._make_paging_message(paging_controls))
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_BATCH_LIST_REQUEST,
             client_pb2.ClientBatchListResponse,
             validator_query)
@@ -343,7 +347,7 @@ class RouteHandler(object):
 
         batch_id = request.match_info.get('batch_id', '')
 
-        response = self._query_validator(
+        response = await self._query_validator(
             Message.CLIENT_BATCH_GET_REQUEST,
             client_pb2.ClientBatchGetResponse,
             client_pb2.ClientBatchGetRequest(batch_id=batch_id),
@@ -353,13 +357,14 @@ class RouteHandler(object):
             data=self._expand_batch(response['batch']),
             metadata=self._get_metadata(request, response))
 
-    def _query_validator(self, req_type, resp_proto, content, traps=None):
+    async def _query_validator(self, request_type, response_proto,
+                               content, traps=None):
         """Sends a request to the validator and parses the response.
         """
-        response = self._try_validator_request(req_type, content)
-        return self._try_response_parse(resp_proto, response, traps)
+        response = await self._try_validator_request(request_type, content)
+        return self._try_response_parse(response_proto, response, traps)
 
-    def _try_validator_request(self, message_type, content):
+    async def _try_validator_request(self, message_type, content):
         """Serializes and sends a Protobuf message to the validator.
         Handles timeout errors as needed.
         """
@@ -369,7 +374,10 @@ class RouteHandler(object):
         future = self._stream.send(message_type=message_type, content=content)
 
         try:
-            response = future.result(timeout=self._timeout)
+            response = await self._loop.run_in_executor(
+                None,
+                future.result,
+                self._timeout)
         except FutureTimeoutError:
             raise errors.ValidatorUnavailable()
 

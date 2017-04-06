@@ -28,7 +28,7 @@ class PostBatchTests(BaseApiTest):
             client_pb2.ClientBatchSubmitRequest,
             client_pb2.ClientBatchSubmitResponse)
 
-        handlers = self.build_handlers(self.stream)
+        handlers = self.build_handlers(loop, self.stream)
         return self.build_app(loop, '/batches', handlers.submit_batches)
 
     @unittest_run_loop
@@ -211,7 +211,7 @@ class BatchStatusTests(BaseApiTest):
             client_pb2.ClientBatchStatusRequest,
             client_pb2.ClientBatchStatusResponse)
 
-        handlers = self.build_handlers(self.stream)
+        handlers = self.build_handlers(loop, self.stream)
         return self.build_app(loop, '/batch_status', handlers.list_statuses)
 
     @unittest_run_loop
