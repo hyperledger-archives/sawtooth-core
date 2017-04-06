@@ -73,13 +73,28 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    def __init__(self, network_endpoint, component_endpoint, peer_list,
-                 data_dir, identity_signing_key):
+    def __init__(self, network_endpoint, component_endpoint, public_uri,
+                 peering, join_list, peer_list, data_dir,
+                 identity_signing_key):
         """Constructs a validator instance.
 
         Args:
             network_endpoint (str): the network endpoint
             component_endpoint (str): the component endpoint
+            public_uri (str): the zmq-style URI of this validator's
+                publically reachable endpoint
+            peering (str): The type of peering approach. Either 'static'
+                or 'dynamic'. In 'static' mode, no attempted topology
+                buildout occurs -- the validator only attempts to initiate
+                peering connections with endpoints specified in the
+                peer_list. In 'dynamic' mode, the validator will first
+                attempt to initiate peering connections with endpoints
+                specified in the peer_list and then attempt to do a
+                topology buildout starting with peer lists obtained from
+                endpoints in the join_list. In either mode, the validator
+                will accept incoming peer requests up to max_peers.
+            join_list (list of str): a list of addresses to connect
+                to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
             key_dir (str): path to the key directory
@@ -148,11 +163,18 @@ class Validator(object):
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
             server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
             heartbeat=True,
+            public_uri=public_uri,
             connection_timeout=30,
             max_incoming_connections=100)
 
         self._gossip = Gossip(self._network,
-                              initial_peer_endpoints=peer_list)
+                              public_uri=public_uri,
+                              peering_mode=peering,
+                              initial_join_endpoints=join_list,
+                              initial_peer_endpoints=peer_list,
+                              minimum_peer_connectivity=3,
+                              maximum_peer_connectivity=10,
+                              topology_check_frequency=1)
 
         completer = Completer(block_store, self._gossip)
 
@@ -423,6 +445,7 @@ class Validator(object):
             signal_event.wait(timeout=20)
 
     def stop(self):
+        self._gossip.stop()
         self._network.stop()
 
         self._service.stop()

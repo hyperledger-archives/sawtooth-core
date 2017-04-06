@@ -405,6 +405,7 @@ class Interconnect(object):
                  server_public_key=None,
                  server_private_key=None,
                  heartbeat=False,
+                 public_uri=None,
                  connection_timeout=60,
                  max_incoming_connections=100):
         """
@@ -422,6 +423,7 @@ class Interconnect(object):
             heartbeat (bool): Whether or not to send ping messages.
         """
         self._endpoint = endpoint
+        self._public_uri = public_uri
         self._futures = future.FutureCollection()
         self._dispatcher = dispatcher
         self._zmq_identity = zmq_identity

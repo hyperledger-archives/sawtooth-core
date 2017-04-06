@@ -13,6 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+import copy
+import time
+import random
+from threading import Thread
 from threading import Condition
 from functools import partial
 
@@ -32,21 +36,62 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Gossip(object):
-    def __init__(self, network, initial_peer_endpoints=None):
+    def __init__(self, network,
+                 public_uri=None,
+                 peering_mode='static',
+                 initial_join_endpoints=None,
+                 initial_peer_endpoints=None,
+                 minimum_peer_connectivity=3,
+                 maximum_peer_connectivity=10,
+                 topology_check_frequency=1):
         """Constructor for the Gossip object. Gossip defines the
         overlay network above the lower level networking classes.
 
         Args:
             network (networking.Interconnect): Provides inbound and
                 outbound network connections.
+            public_uri (str): The publically accessible zmq-style uri
+                endpoint for this validator.
+            peering_mode (str): The type of peering approach. Either 'static'
+                or 'dynamic'. In 'static' mode, no attempted topology
+                buildout occurs -- the validator only attempts to initiate
+                peering connections with endpoints specified in the
+                peer_list. In 'dynamic' mode, the validator will first
+                attempt to initiate peering connections with endpoints
+                specified in the peer_list and then attempt to do a
+                topology buildout starting with peer lists obtained from
+                endpoints in the join_list. In either mode, the validator
+                will accept incoming peer requests up to max_peers.
+            initial_join_endpoints ([str]): A list of initial endpoints
+                to attempt to connect and gather initial topology buildout
+                information from. These are specified as zmq-compatible
+                URIs (e.g. tcp://hostname:port).
             initial_peer_endpoints ([str]): A list of initial peer endpoints
                 to attempt to connect and peer with. These are specified
                 as zmq-compatible URIs (e.g. tcp://hostname:port).
+            minimum_peer_connectivity (int): If the number of connected
+                peers is below this threshold, the topology builder will
+                continue to attempt to identify new candidate peers to
+                connect with.
+            maximum_peer_connectivity (int): The validator will reject
+                new peer requests if the number of connected peers
+                reaches this threshold.
+            topology_check_frequency (int): The time in seconds between
+                topology update checks.
         """
+        self._peering_mode = peering_mode
         self._condition = Condition()
         self._network = network
+        self._public_uri = public_uri
+        self._initial_join_endpoints = initial_join_endpoints \
+            if initial_join_endpoints else []
         self._initial_peer_endpoints = initial_peer_endpoints \
             if initial_peer_endpoints else []
+        self._minimum_peer_connectivity = minimum_peer_connectivity
+        self._maximum_peer_connectivity = maximum_peer_connectivity
+        self._topology_check_frequency = topology_check_frequency
+
+        self._topology = None
         self._peers = {}
 
     def send_peers(self, connection_id):
@@ -67,6 +112,20 @@ class Gossip(object):
             self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
                                peers_response.SerializeToString(),
                                connection_id)
+
+    def add_candidate_peer_endpoints(self, peer_endpoints):
+        """Adds candidate endpoints to the list of endpoints to
+        attempt to peer with.
+
+        Args:
+            peer_endpoints ([str]): A list of public uri's which the
+                validator can attempt to peer with.
+        """
+        if self._topology:
+            self._topology.add_candidate_peer_endpoints(peer_endpoints)
+        else:
+            LOGGER.debug("Could not add peer endpoints to topology. "
+                         "Topology does not exist.")
 
     def get_peers(self):
         """Returns a copy of the gossip peers.
@@ -126,6 +185,12 @@ class Gossip(object):
         block_request = GossipBlockRequest(block_id=block_id)
         self.broadcast(block_request,
                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
+
+    def send_block_request(self, block_id, connection_id):
+        block_request = GossipBlockRequest(block_id=block_id)
+        self.send(validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
+                  block_request.SerializeToString(),
+                  connection_id)
 
     def broadcast_batch(self, batch, exclude=None):
         gossip_message = GossipMessage(
@@ -190,23 +255,238 @@ class Gossip(object):
                                      connection_id)
                         del self._peers[connection_id]
 
+    def start(self):
+        self._topology = Topology(
+            gossip=self,
+            network=self._network,
+            public_uri=self._public_uri,
+            initial_peer_endpoints=self._initial_peer_endpoints,
+            initial_join_endpoints=self._initial_join_endpoints,
+            peering_mode=self._peering_mode,
+            min_peers=self._minimum_peer_connectivity,
+            max_peers=self._maximum_peer_connectivity,
+            check_frequency=self._topology_check_frequency)
+
+        self._topology.start()
+
+    def stop(self):
+        self._topology.stop()
+
+
+class Topology(Thread):
+    def __init__(self, gossip, network, public_uri,
+                 initial_peer_endpoints, initial_join_endpoints,
+                 peering_mode, min_peers=3, max_peers=10,
+                 check_frequency=1):
+        """Constructor for the Topology class.
+
+        Args:
+            gossip (gossip.Gossip): The gossip overlay network.
+            network (network.Interconnect): The underlying network.
+            public_uri (str): A zmq-style endpoint uri representing
+                this validator's publically reachable endpoint.
+            initial_peer_endpoints ([str]): A list of static peers
+                to attempt to connect and peer with.
+            initial_join_endpoints ([str]): A list of endpoints to
+                connect to and get candidate peer lists to attempt
+                to reach min_peers threshold.
+            peering_mode (str): Either 'static' or 'dynamic'. 'static'
+                only connects to peers in initial_peer_endpoints.
+                'dynamic' connects to peers in initial_peer_endpoints
+                and gets candidate peer lists from initial_join_endpoints.
+            min_peers (int): The minimum number of peers required to stop
+                attempting candidate connections.
+            max_peers (int): The maximum number of active peer connections
+                to allow.
+            check_frequency (int): How often to attempt dynamic connectivity.
+        """
+        super().__init__()
+        self._condition = Condition()
+        self._stopped = False
+        self._peers = []
+        self._gossip = gossip
+        self._network = network
+        self._public_uri = public_uri
+        self._initial_peer_endpoints = initial_peer_endpoints
+        self._initial_join_endpoints = initial_join_endpoints
+        self._peering_mode = peering_mode
+        self._min_peers = min_peers
+        self._max_peers = max_peers
+        self._check_frequency = check_frequency
+
+        self._candidate_peer_endpoints = []
+        # Seconds to wait for messages to arrive
+        self._response_duration = 2
+
+    def start(self):
+        # First, attempt to connect to explicit peers
+        for endpoint in self._initial_peer_endpoints:
+            LOGGER.debug("attempting to peer with %s", endpoint)
+            self._network.add_outbound_connection(
+                endpoint,
+                success_callback=partial(
+                    self._connect_success_peering_callback,
+                    endpoint=endpoint),
+                failure_callback=self._connect_failure_peering_callback)
+
+        if self._peering_mode == 'dynamic':
+            super().start()
+
+    def run(self):
+        while not self._stopped:
+            peers = self._gossip.get_peers()
+            if len(peers) < self._min_peers:
+                LOGGER.debug("Below minimum peer threshold. "
+                             "Doing topology search.")
+
+                self._reset_candidate_peer_endpoints()
+                self._refresh_peer_list(peers)
+
+                peers = self._gossip.get_peers()
+
+                self._get_peers_of_peers(peers)
+                self._get_peers_of_endpoints(peers,
+                                             self._initial_join_endpoints)
+
+                # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
+                time.sleep(self._response_duration)
+
+                peered_endpoints = list(peers.values())
+
+                with self._condition:
+                    unpeered_candidates = list(
+                        set(self._candidate_peer_endpoints) -
+                        set(peered_endpoints) -
+                        set([self._public_uri]))
+
+                LOGGER.debug("Number of peers: %s",
+                             len(peers))
+                LOGGER.debug("Peers are: %s",
+                             list(peers.values()))
+                LOGGER.debug("Unpeered candidates are: %s",
+                             unpeered_candidates)
+
+                if unpeered_candidates:
+                    self._attempt_to_peer_with_endpoint(
+                        random.choice(unpeered_candidates))
+
+            time.sleep(self._check_frequency)
+
+    def stop(self):
+        self._stopped = True
+
+    def add_candidate_peer_endpoints(self, peer_endpoints):
+        """Adds candidate endpoints to the list of endpoints to
+        attempt to peer with.
+
+        Args:
+            peer_endpoints ([str]): A list of public uri's which the
+                validator can attempt to peer with.
+        """
+        with self._condition:
+            for endpoint in peer_endpoints:
+                if endpoint not in self._candidate_peer_endpoints:
+                    self._candidate_peer_endpoints.append(endpoint)
+
+    def _refresh_peer_list(self, peers):
+        for conn_id in peers:
+            try:
+                self._network.get_connection_id_by_endpoint(
+                    peers[conn_id])
+            except KeyError:
+                LOGGER.debug("removing peer %s because "
+                             "connection went away",
+                             peers[conn_id])
+
+                self._gossip.unregister_peer(conn_id)
+
+    def _get_peers_of_peers(self, peers):
+        get_peers_request = GetPeersRequest()
+
+        for conn_id in peers:
+            self._network.send(
+                validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                get_peers_request.SerializeToString(),
+                conn_id)
+
+    def _get_peers_of_endpoints(self, peers, endpoints):
+        get_peers_request = GetPeersRequest()
+
+        for endpoint in endpoints:
+            try:
+                conn_id = self._network.get_connection_id_by_endpoint(
+                    endpoint)
+                if conn_id in peers:
+                    # connected and peered - we've already sent
+                    continue
+                else:
+                    # connected but not peered
+                    self._network.send(
+                        validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                        get_peers_request.SerializeToString(),
+                        conn_id)
+            except KeyError:
+                self._network.add_outbound_connection(
+                    endpoint,
+                    success_callback=self._connect_success_topology_callback,
+                    failure_callback=self._connect_failure_topology_callback)
+
+    def _attempt_to_peer_with_endpoint(self, endpoint):
+        LOGGER.debug("Attempting to connect/peer with %s", endpoint)
+
+        # check if the connection exists, if it does - send,
+        # otherwise create it
+        try:
+            connection_id = \
+                self._network.get_connection_id_by_endpoint(
+                    endpoint)
+
+            register_request = PeerRegisterRequest(
+                endpoint=self._public_uri)
+
+            self._network.send(
+                validator_pb2.Message.GOSSIP_REGISTER,
+                register_request.SerializeToString(),
+                connection_id,
+                callback=partial(self._peer_callback,
+                                 endpoint=endpoint,
+                                 connection_id=connection_id))
+        except KeyError:
+            # if the connection uri wasn't found in the network's
+            # connections, it raises a KeyError and we need to add
+            # a new outbound connection
+            self._network.add_outbound_connection(
+                endpoint,
+                success_callback=partial(
+                    self._connect_success_peering_callback,
+                    endpoint=endpoint),
+                failure_callback=self._connect_failure_peering_callback)
+
+    def _reset_candidate_peer_endpoints(self):
+        with self._condition:
+            self._candidate_peer_endpoints = []
+
+    def _peer_callback(self, request, result, connection_id, endpoint=None):
+        with self._condition:
+            ack = NetworkAcknowledgement()
+            ack.ParseFromString(result.content)
+
+            if ack.status == ack.ERROR:
+                LOGGER.debug("Peering request to %s was NOT successful",
+                             connection_id)
+            elif ack.status == ack.OK:
+                LOGGER.debug("Peering request to %s was successful",
+                             connection_id)
+                if endpoint:
+                    self._gossip.register_peer(connection_id, endpoint)
+                else:
+                    LOGGER.debug("Cannot register peer with no endpoint for "
+                                 "connection_id: %s",
                                  connection_id)
-                    self._peers.remove(connection_id)
 
-    def _peer_callback(self, request, result, connection_id):
-        ack = NetworkAcknowledgement()
-        ack.ParseFromString(result.content)
+                self._gossip.send_block_request("HEAD", connection_id)
 
-        if ack.status == ack.ERROR:
-            LOGGER.debug("Peering request to %s was NOT successful",
-                         connection_id)
-        elif ack.status == ack.OK:
-            LOGGER.debug("Peering request to %s was successful",
-                         connection_id)
-            self._peers.append(connection_id)
-            self.broadcast_block_request("HEAD")
-
-    def _connect_success_callback(self, connection_id):
+    def _connect_success_peering_callback(self, connection_id, endpoint=None):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
         register_request = PeerRegisterRequest(
@@ -219,12 +499,19 @@ class Gossip(object):
                                             connection_id=connection_id,
                                             endpoint=endpoint))
 
-    def _connect_failure_callback(self, connection_id):
+    def _connect_failure_peering_callback(self, connection_id):
         LOGGER.debug("Connection to %s failed", connection_id)
 
-    def start(self):
-        for endpoint in self._initial_peer_endpoints:
-            self._network.add_outbound_connection(
-                endpoint,
-                self._connect_success_callback,
-                self._connect_failure_callback)
+    def _connect_success_topology_callback(self, connection_id):
+        LOGGER.debug("Connection to %s succeeded for topology request",
+                     connection_id)
+
+        get_peers_request = GetPeersRequest()
+
+        self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                           get_peers_request.SerializeToString(),
+                           connection_id)
+
+    def _connect_failure_topology_callback(self, connection_id):
+        LOGGER.debug("Connection to %s failed for topology request",
+                     connection_id)
