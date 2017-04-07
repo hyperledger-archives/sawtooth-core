@@ -382,6 +382,18 @@ class Validator(object):
             thread_pool)
 
         self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_TRANSACTION_LIST_REQUEST,
+            client_handlers.TransactionListRequest(
+                self._journal.get_block_store()),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_TRANSACTION_GET_REQUEST,
+            client_handlers.TransactionGetRequest(
+                self._journal.get_block_store()),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
