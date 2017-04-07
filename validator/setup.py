@@ -84,18 +84,18 @@ else:
 
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
-    log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\logs"
     data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\data"
+    log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\logs"
 else:
     conf_dir = "/etc/sawtooth"
-    log_dir = "/var/log/sawtooth"
     data_dir = "/var/lib/sawtooth"
+    log_dir = "/var/log/sawtooth"
 
 data_files = [
-    (conf_dir, ['etc/path.toml.example']),
+    (conf_dir, ['etc/path.toml.example', 'etc/log_config.toml.example']),
     (os.path.join(conf_dir, "keys"), []),
+    (data_dir, []),
     (log_dir, []),
-    (data_dir, [])
 ]
 
 if os.path.exists("/etc/default"):
