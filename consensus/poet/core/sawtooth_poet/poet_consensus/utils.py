@@ -309,10 +309,12 @@ def get_consensus_state_for_block_id(
         if block_info.wait_certificate is None:
             consensus_state = ConsensusState()
 
-        # Otherwise, we need to fetch the current validator state for the
-        # validator which claimed the block, set/update the consensus state
-        # object, and then associate the consensus state with the appropriate
-        # block in the consensus state store.
+        # Otherwise, update the consensus state statistics and fetch the
+        # validator state for the validator which claimed the block, create
+        # updated validator state for the validator, set/update the validator
+        # state in the consensus state object, and then associate the
+        # consensus state with the corresponding block in the consensus state
+        # store.
         else:
             validator_state = \
                 consensus_state.get_validator_state(
@@ -328,6 +330,7 @@ def get_consensus_state_for_block_id(
                 block_id[:8],
                 block_id[-8:])
 
+            consensus_state.total_block_claim_count += 1
             consensus_state_store[block_id] = consensus_state
 
     return consensus_state

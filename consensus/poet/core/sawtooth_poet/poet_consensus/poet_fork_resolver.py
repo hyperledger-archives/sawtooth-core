@@ -171,9 +171,16 @@ class PoetForkResolver(ForkResolverInterface):
                         validator_info=validator_info,
                         current_validator_state=validator_state))
 
-                # Store the updated consensus state for this block.
+                # Update the consensus-wide statistics and store the updated
+                # consensus state for this block.
+                consensus_state.total_block_claim_count += 1
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
+
+                LOGGER.debug(
+                    'Update consensus state: EBC=%f, TBCC=%d',
+                    consensus_state.expected_block_claim_count,
+                    consensus_state.total_block_claim_count)
             except KeyError:
                 # This _should_ never happen.  The new potential fork head
                 # has to have been a PoET block and for it to be verified
