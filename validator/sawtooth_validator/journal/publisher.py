@@ -125,6 +125,11 @@ class BlockPublisher(object):
             LOGGER.debug("Consensus not ready to build candidate block.")
             return None
 
+        # Cancel the previous scheduler if it did not complete.
+        if self._scheduler is not None \
+                and not self._scheduler.complete(block=False):
+            self._scheduler.cancel()
+
         # create a new scheduler
         self._scheduler = self._transaction_executor.create_scheduler(
             self._squash_handler, chain_head.state_root_hash)
