@@ -63,11 +63,12 @@ node ('master') {
 
         // Use a docker container to build and protogen, so that the Jenkins
         // environment doesn't need all the dependencies.
-        stage("Build Test Dependencies") {
-            sh './bin/build_all'
+        stage("Build Packages and Test Dependencies") {
+            sh './bin/build_all installed'
         }
 
         stage("Run Lint") {
+            sh 'docker build docker/ -f docker/sawtooth-build-python -t sawtooth-build-python:$ISOLATION_ID'
             sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_lint'
         }
 
@@ -87,12 +88,6 @@ node ('master') {
                 git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
                 git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
             '''
-        }
-
-        stage("Build the packages"){
-            sh 'docker build . -f ci/sawtooth-build-debs -t sawtooth-build-debs:$ISOLATION_ID'
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-debs:$ISOLATION_ID'
-            sh 'docker build --no-cache . -f ci/sawtooth-test-debs -t sawtooth-test-debs:$ISOLATION_ID'
         }
 
         stage ("Build documentation") {
