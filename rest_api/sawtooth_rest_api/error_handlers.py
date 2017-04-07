@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from aiohttp import web
-from sawtooth_rest_api.protobuf import client_pb2 as client
+from sawtooth_rest_api.protobuf import client_pb2
 
 
 class _ErrorTrap(object):
@@ -71,7 +71,7 @@ class InvalidPaging(_ErrorTrap):
 class InvalidBatch(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientBatchSubmitResponse.INVALID_BATCH,
+            trigger=client_pb2.ClientBatchSubmitResponse.INVALID_BATCH,
             error=web.HTTPBadRequest,
             message='A submitted batch had an invalid signature')
 
@@ -79,7 +79,7 @@ class InvalidBatch(_ErrorTrap):
 class StatusesNotReturned(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientBatchStatusResponse.NO_RESOURCE,
+            trigger=client_pb2.ClientBatchStatusResponse.NO_RESOURCE,
             error=web.HTTPInternalServerError,
             message='Something went wrong when looking for these statuses')
 
@@ -87,7 +87,7 @@ class StatusesNotReturned(_ErrorTrap):
 class MissingLeaf(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientStateGetResponse.NO_RESOURCE,
+            trigger=client_pb2.ClientStateGetResponse.NO_RESOURCE,
             error=web.HTTPNotFound,
             message='There is no leaf at that address')
 
@@ -95,7 +95,7 @@ class MissingLeaf(_ErrorTrap):
 class MissingBlock(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientBlockGetResponse.NO_RESOURCE,
+            trigger=client_pb2.ClientBlockGetResponse.NO_RESOURCE,
             error=web.HTTPNotFound,
             message='There is no block with that id')
 
@@ -103,7 +103,7 @@ class MissingBlock(_ErrorTrap):
 class MissingBatch(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientBatchGetResponse.NO_RESOURCE,
+            trigger=client_pb2.ClientBatchGetResponse.NO_RESOURCE,
             error=web.HTTPNotFound,
             message='There is no batch with that id')
 
@@ -111,6 +111,6 @@ class MissingBatch(_ErrorTrap):
 class BadAddress(_ErrorTrap):
     def __init__(self):
         super().__init__(
-            trigger=client.ClientStateGetResponse.INVALID_ADDRESS,
+            trigger=client_pb2.ClientStateGetResponse.INVALID_ADDRESS,
             error=web.HTTPBadRequest,
             message='Expected a leaf address, but received a subtree instead')

@@ -45,7 +45,7 @@ class BatchListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2'
-            - a link property that ends in '/batches?head=2&min=0&count=3'
+            - a link property that ends in '/batches?head=2'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full batches with ids '2', '1', and '0'
@@ -106,7 +106,7 @@ class BatchListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/batches?head=1&min=0&count=2'
+            - a link property that ends in '/batches?head=1'
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full batches with ids '1' and '0'
@@ -140,7 +140,7 @@ class BatchListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_batch_list_with_ids(self):
-        """Verifies GET /batches with the id parameter works properly.
+        """Verifies GET /batches with an id filter works properly.
 
         It will receive a Protobuf response with:
             - a head id of '2'
@@ -154,7 +154,7 @@ class BatchListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2', the latest
-            - a link property that ends in '/batches?head=2&min=0&count=2&id=0,2'
+            - a link property that ends in '/batches?head=2&id=0,2'
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full batches with ids '0' and '2'
@@ -175,7 +175,7 @@ class BatchListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_batch_list_with_bad_ids(self):
-        """Verifies GET /batches with a bad id parameter breaks properly.
+        """Verifies GET /batches with a bad id filter breaks properly.
 
         It will receive a Protobuf response with:
             - a status of NO_RESOURCE
@@ -202,7 +202,7 @@ class BatchListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_batch_list_with_head_and_ids(self):
-        """Verifies GET /batches with head and id parameters works properly.
+        """Verifies GET /batches with head and id parameters work properly.
 
         It should send a Protobuf request with:
             - a head_id property of '1'
@@ -217,7 +217,7 @@ class BatchListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/batches?head=1&min=0&count=1&id=0'
+            - a link property that ends in '/batches?head=1&id=0'
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - and that dict is a full batch with an id of '0'
@@ -249,7 +249,7 @@ class BatchListTests(BaseApiTest):
             - one batch with the id 'c'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 1, and a start_index of 1
+            - paging controls with a count of 1, and a start_index of 1
 
         It should send back a JSON response with:
             - a response status of 200
@@ -307,12 +307,12 @@ class BatchListTests(BaseApiTest):
             - two batches with the ids 'd' and 'c'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2
+            - paging controls with a count of 2
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of 'd'
-            - a link property that ends in '/batches?head=d&min=0&count=2'
+            - a link property that ends in '/batches?head=d&count=2'
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
             - and those dicts are full batches with ids 'd' and 'c'
@@ -342,12 +342,12 @@ class BatchListTests(BaseApiTest):
             - two batches with the ids 'b' and 'a'
 
         It should send a Protobuf request with:
-            - a paging controls with a start_index of 2
+            - paging controls with a start_index of 2
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of 'd'
-            - a link property that ends in '/batches?head=d&min=2&count=2'
+            - a link property that ends in '/batches?head=d&min=2'
             - paging that matches the response, with a previous link
             - a data property that is a list of 2 dicts
             - and those dicts are full batches with ids 'd' and 'c'
@@ -380,7 +380,7 @@ class BatchListTests(BaseApiTest):
             - three batches with the ids 'c', 'b' and 'a'
 
         It should send a Protobuf request with:
-            - a paging controls with a start_id of 'c'
+            - paging controls with a count of 5, and a start_id of 'c'
 
         It should send back a JSON response with:
             - a response status of 200
@@ -419,7 +419,7 @@ class BatchListTests(BaseApiTest):
             - two batches with the ids 'c' and 'b'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2 and an end_id of 'b'
+            - paging controls with a count of 2, and an end_id of 'b'
 
         It should send back a JSON response with:
             - a response status of 200
@@ -455,7 +455,7 @@ class BatchListTests(BaseApiTest):
             - three batches with the ids 'd', 'c' and 'b'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2 and an start_index of 0
+            - paging controls with a count of 3, and an start_index of 0
 
         It should send back a JSON response with:
             - a response status of 200
@@ -497,12 +497,10 @@ class BatchGetTests(BaseApiTest):
         """Verifies a GET /batches/{batch_id} works properly.
 
         It should send a Protobuf request with:
-            - a head_id property of '1'
-            - a block_ids property of ['0']
+            - a batch_id property of '1'
 
         It will receive a Protobuf response with:
-            - a head id of '1'
-            - three batches with ids of '2', '1', and '0'
+            - a batch with an id of '1'
 
         It should send back a JSON response with:
             - a response status of 200

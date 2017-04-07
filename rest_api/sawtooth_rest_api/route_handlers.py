@@ -331,9 +331,10 @@ class RouteHandler(object):
 
     async def fetch_batch(self, request):
         """Fetches a specific batch from the validator, specified by id.
+
         Request:
             path:
-                - batch_id: The 128-character id of the block to be fetched
+                - batch_id: The 128-character id of the batch to be fetched
 
         Response:
             data: A JSON object with the data from the fully expanded Batch
