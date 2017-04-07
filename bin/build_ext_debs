@@ -79,6 +79,7 @@ main() {
     pytz==2016.10
     pytest==2.9.0
     cryptography==1.7.2
+    lmdb==0.92
     '
 
     # secp256k1 needs a couple of libraries not readily available
