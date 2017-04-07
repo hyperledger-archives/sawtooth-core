@@ -13,13 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
-import csv
-import json
 import argparse
-import yaml
-
-from sawtooth_cli import tty
+from sawtooth_cli import format_utils as fmt
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
 
@@ -91,22 +86,12 @@ def do_block(args):
     """
     rest_client = RestClient(args.url)
 
-    def print_json(data):
-        print(json.dumps(
-            data,
-            indent=2,
-            separators=(',', ': '),
-            sort_keys=True))
-
-    def print_yaml(data):
-        print(yaml.dump(data, default_flow_style=False)[0:-1])
-
     if args.subcommand == 'list':
         blocks = rest_client.list_blocks()
         keys = ('num', 'block_id', 'batches', 'txns', 'signer')
-        headers = (k.upper() if k != 'batches' else 'BATS' for k in keys)
+        headers = tuple(k.upper() if k != 'batches' else 'BATS' for k in keys)
 
-        def get_data(block):
+        def parse_block_row(block):
             batches = block.get('batches', [])
             txns = [t for b in batches for t in b['transactions']]
             return (
@@ -117,48 +102,19 @@ def do_block(args):
                 block['header']['signer_pubkey'])
 
         if args.format == 'default':
-            # Set column widths based on window and data size
-            window_width = tty.width()
-
-            try:
-                id_width = len(blocks[0]['header_signature'])
-                sign_width = len(blocks[0]['header']['signer_pubkey'])
-            except IndexError:
-                # if no data was returned, use short default widths
-                id_width = 30
-                sign_width = 15
-
-            if sys.stdout.isatty():
-                adjusted = int(window_width) - id_width - 22
-                adjusted = 6 if adjusted < 6 else adjusted
-            else:
-                adjusted = sign_width
-
-            fmts = '{{:<3}}  {{:{i}.{i}}}  {{:<4}}  {{:<4}}  {{:{a}.{a}}}'\
-                .format(i=id_width, a=adjusted)
-
-            # Print data in rows and columns
-            print(fmts.format(*headers))
-            for block in blocks:
-                print(fmts.format(*get_data(block)) +
-                      ('...' if adjusted < sign_width and sign_width else ''))
+            fmt.print_terminal_table(headers, blocks, parse_block_row)
 
         elif args.format == 'csv':
-            try:
-                writer = csv.writer(sys.stdout)
-                writer.writerow(headers)
-                for block in blocks:
-                    writer.writerow(get_data(block))
-            except csv.Error as e:
-                raise CliException('Error writing CSV: {}'.format(e))
+            fmt.print_csv(headers, blocks, parse_block_row)
 
         elif args.format == 'json' or args.format == 'yaml':
-            data = [{k: d for k, d in zip(keys, get_data(b))} for b in blocks]
+            data = [{k: d for k, d in zip(keys, parse_block_row(b))}
+                    for b in blocks]
 
             if args.format == 'yaml':
-                print_yaml(data)
+                fmt.print_yaml(data)
             elif args.format == 'json':
-                print_json(data)
+                fmt.print_json(data)
             else:
                 raise AssertionError('Missing handler: {}'.format(args.format))
 
@@ -166,20 +122,20 @@ def do_block(args):
             raise AssertionError('Missing handler: {}'.format(args.format))
 
     if args.subcommand == 'show':
-        block = rest_client.get_block(args.block_id)
+        output = rest_client.get_block(args.block_id)
 
         if args.key:
-            if args.key in block:
-                print(block[args.key])
-            elif args.key in block['header']:
-                print(block['header'][args.key])
+            if args.key in output:
+                output = output[args.key]
+            elif args.key in output['header']:
+                output = output['header'][args.key]
             else:
                 raise CliException(
                     'key "{}" not found in block or header'.format(args.key))
+
+        if args.format == 'yaml':
+            fmt.print_yaml(output)
+        elif args.format == 'json':
+            fmt.print_json(output)
         else:
-            if args.format == 'yaml':
-                print_yaml(block)
-            elif args.format == 'json':
-                print_json(block)
-            else:
-                raise AssertionError('Missing handler: {}'.format(args.format))
+            raise AssertionError('Missing handler: {}'.format(args.format))
