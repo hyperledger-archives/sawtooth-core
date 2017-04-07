@@ -1,0 +1,72 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  tp_config:
+    image: sawtooth-dev-tp_config:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 40000
+    depends_on:
+      - validator
+    entrypoint: ./bin/tp_config tcp://validator:40000
+    stop_signal: SIGKILL
+
+  validator:
+    image: sawtooth-dev-validator:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 40000
+    entrypoint: "bash -c \"\
+        ./bin/sawtooth admin keygen && \
+        ./bin/sawtooth admin genesis && \
+        ./bin/validator -v\""
+    stop_signal: SIGKILL
+
+  rest_api:
+    image: sawtooth-dev-rest_api:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 40000
+      - 8080
+    depends_on:
+     - validator
+    entrypoint: ./bin/rest_api --stream-url tcp://validator:40000
+    stop_signal: SIGKILL
+
+  integration_test:
+    image: sawtooth-dev-test:$ISOLATION_ID
+    volumes:
+      - ../../../:/project/sawtooth-core
+    expose:
+      - 8080
+    working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
+    depends_on:
+      - validator
+      - rest_api
+    # Wait for rest_api
+    entrypoint: nose2-3 -v test_config_smoke.TestConfigSmoke
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing:\
+        /project/sawtooth-core/cli"
