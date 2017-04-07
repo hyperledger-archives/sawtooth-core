@@ -16,18 +16,18 @@
 # ------------------------------------------------------------------------------
 
 MODULE_LIST="
-cli
-java_sdk
-javascript_sdk
-poet_cli
-poet_common
-poet_core
-poet_families
-poet_simulator
-python_sdk
-rest_api
-signing
-validator
+    signing
+    cli
+    rest_api
+    poet_cli
+    poet_common
+    poet_core
+    poet_simulator
+    validator
+    java_sdk
+    javascript_sdk
+    python_sdk
+    integration
 "
 
 usage() {
@@ -107,14 +107,14 @@ main() {
         else
             echo "[---Running $module tests---]"
             case $module in
+                signing)
+                    test_signing
+                    ;;
                 cli)
                     test_cli
                     ;;
-                java_sdk)
-                    test_java_sdk
-                    ;;
-                javascript_sdk)
-                    test_javascript_sdk
+                rest_api)
+                    test_rest_api
                     ;;
                 poet)
                     test_poet_cli
@@ -132,23 +132,23 @@ main() {
                 poet_core)
                     test_poet_core
                     ;;
-                poet_families)
-                    test_poet_families
-                    ;;
                 poet_simulator)
                     test_poet_simulator
+                    ;;
+                validator)
+                    test_validator
+                    ;;
+                java_sdk)
+                    test_java_sdk
+                    ;;
+                javascript_sdk)
+                    test_javascript_sdk
                     ;;
                 python_sdk)
                     test_python_sdk
                     ;;
-                rest_api)
-                    test_rest_api
-                    ;;
-                signing)
-                    test_signing
-                    ;;
-                validator)
-                    test_validator
+                integration)
+                    test_integration
                     ;;
 
                 *)
@@ -159,18 +159,16 @@ main() {
     done
 }
 
+test_signing() {
+    run_docker_test ./signing/tests/unit_signing.yaml -s signing
+}
+
 test_cli() {
     run_docker_test ./cli/tests/unit_cli.yaml -s cli
 }
 
-test_java_sdk() {
-    run_docker_test tp-intkey-java -s validator
-    run_docker_test intkey-java-smoke -s integration_test
-}
-
-test_javascript_sdk() {
-    run_docker_test tp-intkey-javascript -s validator
-    run_docker_test intkey-javascript-smoke -s integration_test
+test_rest_api() {
+    run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests
 }
 
 test_poet_cli(){
@@ -189,43 +187,38 @@ test_poet_core(){
     run_docker_test ./consensus/poet/core/tests/test_consensus/unit_consensus.yaml -s poet
 }
 
-test_poet_families(){
-    run_docker_test ./consensus/poet/families/tests/test_validator_registry/tp_validator_registry.yaml \
-    -s validator
-}
-
 test_poet_simulator(){
     run_docker_test ./consensus/poet/simulator/tests/test_simulator/unit_simulator.yaml -s poet
-}
-
-test_python_sdk() {
-    # config
-    run_docker_test \
-      core_transactions/config/tests/sawtooth_config_test/tp-config.yaml \
-      -s validator
-
-    # transaction processor
-    run_docker_test tp-intkey-python -s validator
-    run_docker_test tp-xo-python -s validator
-
-    # integration
-    run_docker_test intkey-python-smoke -s integration_test
-    run_docker_test xo-smoke -s integration_test
-    run_docker_test two_families -s integration_test
-    run_docker_test poet-smoke -s integration_test
-}
-
-test_rest_api() {
-    run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests
-}
-
-test_signing() {
-    run_docker_test ./signing/tests/unit_signing.yaml -s signing
 }
 
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
     run_docker_test shutdown-smoke.yaml -s integration_test
+}
+
+test_java_sdk() {
+    run_docker_test tp-intkey-java -s validator
+    run_docker_test intkey-java-smoke -s integration_test
+}
+
+test_javascript_sdk() {
+    run_docker_test tp-intkey-javascript -s validator
+    run_docker_test intkey-javascript-smoke -s integration_test
+}
+
+test_python_sdk() {
+    run_docker_test tp-config -s validator
+    run_docker_test tp-validator-registry -s validator
+    run_docker_test tp-intkey-python -s validator
+    run_docker_test tp-xo-python -s validator
+
+    run_docker_test intkey-python-smoke -s integration_test
+    run_docker_test xo-smoke -s integration_test
+    run_docker_test two_families -s integration_test
+}
+
+test_integration() {
+    run_docker_test poet-smoke -s integration_test
 }
 
 

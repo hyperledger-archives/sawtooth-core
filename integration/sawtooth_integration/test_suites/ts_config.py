@@ -20,7 +20,7 @@ import traceback
 
 from sawtooth_processor_test.tester import TransactionProcessorTester
 
-from sawtooth_config_test.test_config import TestConfig
+from sawtooth_integration.tests.test_tp_config import TestConfig
 
 
 class TestSuiteConfig(unittest.TestCase):

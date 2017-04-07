@@ -15,7 +15,7 @@
 
 import unittest
 
-from sawtooth_integration.xo.xo_message_factory \
+from sawtooth_integration.message_factories.xo_message_factory \
     import XoMessageFactory
 
 

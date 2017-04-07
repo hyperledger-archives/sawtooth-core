@@ -15,7 +15,7 @@
 
 import unittest
 
-from sawtooth_integration.intkey.intkey_message_factory \
+from sawtooth_integration.message_factories.intkey_message_factory \
     import IntkeyMessageFactory
 
 

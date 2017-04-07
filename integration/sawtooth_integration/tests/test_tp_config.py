@@ -18,7 +18,8 @@ import unittest
 import hashlib
 import base64
 
-from sawtooth_config_test.config_message_factory import ConfigMessageFactory
+from sawtooth_integration.message_factories.config_message_factory \
+    import ConfigMessageFactory
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
