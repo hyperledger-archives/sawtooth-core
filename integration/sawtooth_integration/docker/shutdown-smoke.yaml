@@ -19,11 +19,12 @@ services:
   integration_test:
     image: sawtooth-dev-test:$ISOLATION_ID
     volumes:
-      - ../../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
       - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
-    entrypoint: "nose2-3 -v test_shutdown_smoke.TestShutdownSmoke"
+    command: nose2-3 -v -s
+        /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_shutdown_smoke.TestShutdownSmoke
     environment:
       PYTHONPATH: "/project/sawtooth-core/integration"
       ISOLATION_ID: ${ISOLATION_ID}
-      VALIDATOR_IMAGE_NAME: "sawtooth-dev-validator"
+      VALIDATOR_IMAGE_NAME: "sawtooth-validator"

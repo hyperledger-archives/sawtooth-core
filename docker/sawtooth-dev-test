@@ -43,11 +43,3 @@ RUN apt-get update && apt-get install -y -q \
     inetutils-ping \
     python3-nose2 \
     docker-engine
-
-RUN pip3 install \
-    PyYAML \
-    aiohttp==1.3.5
-
-WORKDIR /project/sawtooth-core
-
-ENV PATH="/project/sawtooth-core/bin:$PATH"

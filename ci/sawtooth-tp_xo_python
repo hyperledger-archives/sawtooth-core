@@ -14,19 +14,29 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   TP Intkey installed.
+#   Builds an image with the Sawtooth Lake TP XO package installed from
+#   the Sawtooth Lake Package Repository.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-tp_intkey_python -t sawtooth-dev-tp_intkey_python
+#   $ docker build . -f sawtooth-tp_xo_python -t sawtooth-tp_xo_python
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_intkey_python
+#   $ docker run sawtooth-tp_xo_python
 
-FROM sawtooth-dev-base
+FROM ubuntu:xenial
+
+LABEL "install-type"="repo"
+
+RUN echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63 \
+ && apt-get update \
+ && apt-get install -y -q \
+    python3-sawtooth-xo \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 40000/tcp
 
-CMD ["tp_intkey_python", "tcp://validator:40000"]
+CMD ["tp_xo_python", "-vv"]

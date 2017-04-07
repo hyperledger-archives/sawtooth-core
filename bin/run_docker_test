@@ -58,6 +58,7 @@ def main():
 
     # Load isolation id if it is set and validate
     isolation_id = _get_isolation_id()
+    _setup_environ(isolation_id)
 
     # Construct commands
     compose = [
@@ -74,6 +75,11 @@ def main():
 
     compose_kill = compose + ['kill']
 
+    scrape = [
+        'docker', 'ps', '-a',
+        '--format={{.Names}},{{.Image}},{{.Label "install-type"}}',
+    ]
+
     inspect = [
         'docker', 'inspect',
         '-f', "{{.State.ExitCode}}",
@@ -85,6 +91,11 @@ def main():
 
     if not args.clean:
         _check_for_existing_containers(compose_file, compose_dict, isolation_id)
+
+    for service in compose_dict['services']:
+        scrape += [
+            '--filter', 'name={}_{}_1'.format(isolation_id, service),
+        ]
 
     timer = Timer(args.timeout)
 
@@ -125,7 +136,7 @@ def main():
                     ).stdout.decode().strip()
 
                 except FileNotFoundError as err:
-                    LOGGER.error("Bad docker inspect command")
+                    LOGGER.error("Bad docker inspect or ps command")
                     LOGGER.exception(err)
                     exit_status = 1
 
@@ -138,6 +149,22 @@ def main():
                     LOGGER.error("Retrieving exit status timed out.")
                     LOGGER.exception(err)
                     exit_status = 1
+
+            try:
+                info = subprocess.run(
+                    scrape, stdout=subprocess.PIPE,
+                    timeout=timer.remaining(), check=True
+                ).stdout.decode().strip()
+                for line in info.split('\n'):
+                    container, image, install_type = line.split(',')
+                    LOGGER.info(
+                        "Container {} ran image {} with install-type {}".format(
+                            container, image, install_type
+                        )
+                    )
+
+            except BaseException:
+                LOGGER.error("Could not gather information about image used.")
 
         else: # cleaning
             exit_status = 0
@@ -283,12 +310,21 @@ def _get_isolation_id():
         isolation_id = os.environ['ISOLATION_ID']
     else:
         isolation_id = 'latest'
-        os.environ['ISOLATION_ID'] = isolation_id
 
     if not isolation_id.isalnum():
         raise RunDockerTestError("ISOLATION_ID must be alphanumeric")
 
     return isolation_id
+
+
+def _setup_environ(isolation_id):
+    os.environ['ISOLATION_ID'] = isolation_id
+    os.environ['SAWTOOTH_CORE'] = os.path.dirname(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        )
+    )
+    print(os.environ['SAWTOOTH_CORE'])
 
 
 def _get_compose_dir():
