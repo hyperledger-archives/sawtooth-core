@@ -550,7 +550,10 @@ class BlockGetRequest(_ClientRequestHandler):
             LOGGER.debug('No block "%s" in store', request.block_id)
             return self._status.NO_RESOURCE
         except TypeError:
-            LOGGER.debug('"%s" is a batch is, not block', request.block_id)
+            LOGGER.debug('"%s" is a batch id, not block', request.block_id)
+            return self._status.INVALID_ID
+        except DecodeError:
+            LOGGER.debug('Unable to decode block "%s".', request.block_id)
             return self._status.INVALID_ID
         return self._wrap_response(block=block)
 
@@ -605,5 +608,8 @@ class BatchGetRequest(_ClientRequestHandler):
             return self._status.NO_RESOURCE
         except KeyError:
             LOGGER.debug('"%s" is a block id, not batch', request.batch_id)
+            return self._status.INVALID_ID
+        except DecodeError:
+            LOGGER.debug('Unable to decode batch "%s".', request.batch_id)
             return self._status.INVALID_ID
         return self._wrap_response(batch=batch)
