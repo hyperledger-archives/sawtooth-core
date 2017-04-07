@@ -27,6 +27,7 @@ class PoetConfigView(object):
     """
 
     _DEFAULT_KEY_CLAIM_LIMIT_ = 25
+    _DEFAULT_BLOCK_CLAIM_DELAY_ = 1
 
     def __init__(self, state_view):
         """Initialize a PoetConfigView object.
@@ -87,6 +88,10 @@ class PoetConfigView(object):
     def key_block_claim_limit(self):
         """Return the key block claim limit if config setting exists or
         default if not or value is invalid.
+
+        The key block claim limit is the maximum number of blocks that a
+        validator may claim with a PoET key pair before it needs to refresh
+        its signup information.
         """
         return \
             self._get_config_setting(
@@ -94,3 +99,19 @@ class PoetConfigView(object):
                 value_type=int,
                 default_value=PoetConfigView._DEFAULT_KEY_CLAIM_LIMIT_,
                 validate_function=lambda value: value > 0)
+
+    @property
+    def block_claim_delay(self):
+        """Return the block claim delay if config setting exists or
+        default if not or value is invalid.
+
+        The block claim delay is the number of blocks after a validator's
+        signup information is committed to the validator registry before
+        it can claim a block.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.block_claim_delay',
+                value_type=int,
+                default_value=PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_,
+                validate_function=lambda value: value >= 0)
