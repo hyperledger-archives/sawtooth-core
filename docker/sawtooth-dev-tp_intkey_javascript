@@ -33,8 +33,6 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+EXPOSE 40000/tcp
 
-WORKDIR $PROJECT_DIR
-
-ENTRYPOINT ./bin/tp_intkey_javascript tcp://validator:40000
+CMD ["tp_intkey_javascript", "tcp://validator:40000"]

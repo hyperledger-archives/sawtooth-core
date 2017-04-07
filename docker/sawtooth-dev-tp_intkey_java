@@ -27,8 +27,6 @@
 
 FROM maven:3-jdk-8
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+EXPOSE 40000/tcp
 
-WORKDIR $PROJECT_DIR
-
-ENTRYPOINT ./bin/tp_intkey_java tcp://validator:40000
+CMD ["tp_intkey_java", "tcp://validator:40000"]
