@@ -75,4 +75,5 @@ setup(name='sawtooth-sdk',
           "sawtooth-signing",
           "protobuf",
           "pyzmq",
+          "toml",
       ])
