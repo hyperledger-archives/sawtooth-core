@@ -546,12 +546,9 @@ class BlockGetRequest(_ClientRequestHandler):
     def _respond(self, request):
         try:
             block = self._block_store[request.block_id].block
-        except KeyError:
-            LOGGER.debug('No block "%s" in store', request.block_id)
+        except KeyError as e:
+            LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        except TypeError:
-            LOGGER.debug('"%s" is a batch is, not block', request.block_id)
-            return self._status.INVALID_ID
         return self._wrap_response(block=block)
 
 
@@ -600,10 +597,7 @@ class BatchGetRequest(_ClientRequestHandler):
     def _respond(self, request):
         try:
             batch = self._block_store.get_batch(request.batch_id)
-        except ValueError:
-            LOGGER.debug('No batch "%s" in store', request.batch_id)
+        except ValueError as e:
+            LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        except KeyError:
-            LOGGER.debug('"%s" is a block id, not batch', request.batch_id)
-            return self._status.INVALID_ID
         return self._wrap_response(batch=batch)

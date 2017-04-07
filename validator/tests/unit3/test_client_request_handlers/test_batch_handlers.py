@@ -446,10 +446,10 @@ class TestBatchGetRequests(ClientHandlerTestCase):
         """Verifies requests for a batch break properly with a block id.
 
         Expects to find:
-            - a status of INVALID_ID
+            - a status of NO_RESOURCE
             - that the Batch returned, when serialized, is actually empty
         """
         response = self.make_request(batch_id='B-1')
 
-        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.batch.SerializeToString())

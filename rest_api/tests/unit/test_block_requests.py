@@ -532,19 +532,6 @@ class BlockGetTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):
-        """Verifies a GET /blocks/{block_id} with invalid id breaks properly.
-
-        It will receive a Protobuf response with:
-            - a status of INVALID_ID
-
-        It should send back a JSON response with:
-            - a response status of 400
-        """
-        self.stream.preset_response(self.status.INVALID_ID)
-        await self.assert_400('/blocks/bad')
-
-    @unittest_run_loop
-    async def test_block_get_with_missing_id(self):
         """Verifies a GET /blocks/{block_id} with unfound id breaks properly.
 
         It will receive a Protobuf response with:
@@ -554,4 +541,4 @@ class BlockGetTests(BaseApiTest):
             - a response status of 404
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/blocks/missing')
+        await self.assert_404('/blocks/bad')

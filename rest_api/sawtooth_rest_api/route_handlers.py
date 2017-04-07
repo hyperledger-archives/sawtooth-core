@@ -284,9 +284,7 @@ class RouteHandler(object):
             data: A JSON object with the data from the fully expanded Block
             link: The link to this exact query
         """
-        error_traps = [
-            error_handlers.MissingBlock(),
-            error_handlers.InvalidBlockId()]
+        error_traps = [error_handlers.MissingBlock()]
 
         block_id = request.match_info.get('block_id', '')
 
@@ -341,9 +339,7 @@ class RouteHandler(object):
             data: A JSON object with the data from the fully expanded Batch
             link: The link to this exact query
         """
-        error_traps = [
-            error_handlers.MissingBatch(),
-            error_handlers.InvalidBatchId()]
+        error_traps = [error_handlers.MissingBatch()]
 
         batch_id = request.match_info.get('batch_id', '')
 
