@@ -28,10 +28,6 @@
 
 FROM sawtooth-dev-base
 
-RUN mkdir -p /project/sawtooth-core
+EXPOSE 40000/tcp
 
-ARG PROJECT_DIR="/project/sawtooth-core"
-
-WORKDIR $PROJECT_DIR
-
-ENTRYPOINT ./bin/tp_validator_registry validator:40000
+CMD ["tp_validator_registry", "tcp://validator:40000"]

@@ -27,14 +27,24 @@
 
 FROM yarnpkg/node-yarn:0.20-node7
 
+LABEL "install-type"="mounted"
+
 RUN apt-get update \
  && apt-get install -y -q \
     libzmq3-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+EXPOSE 40000/tcp
 
-WORKDIR $PROJECT_DIR
+RUN mkdir -p /project/sawtooth-core/ \
+ && mkdir -p /var/log/sawtooth \
+ && mkdir -p /var/lib/sawtooth \
+ && mkdir -p /etc/sawtooth \
+ && mkdir -p /etc/sawtooth/keys
 
-ENTRYPOINT ./bin/tp_intkey_javascript tcp://validator:40000
+ENV PATH=$PATH:/project/sawtooth-core/bin
+
+WORKDIR /
+
+CMD ["tp_intkey_javascript", "tcp://validator:40000"]

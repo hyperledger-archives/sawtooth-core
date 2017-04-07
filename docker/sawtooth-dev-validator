@@ -27,10 +27,6 @@
 
 FROM sawtooth-dev-base
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+EXPOSE 40000/tcp
 
-WORKDIR $PROJECT_DIR
-
-EXPOSE 40000
-
-ENTRYPOINT ./bin/validator
+CMD ["bash", "-c", "\"sawtooth admin keygen && validator\""]
