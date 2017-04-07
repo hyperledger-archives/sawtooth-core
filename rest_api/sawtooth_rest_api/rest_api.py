@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import asyncio
 import argparse
 import sys
 from aiohttp import web
@@ -54,10 +55,11 @@ async def logging_middleware(app, handler):
 def start_rest_api(host, port, stream_url, timeout):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
-    app = web.Application(middlewares=[logging_middleware])
+    loop = asyncio.get_event_loop()
+    app = web.Application(loop=loop, middlewares=[logging_middleware])
 
     # Add routes to the web app
-    handler = RouteHandler(stream_url, timeout)
+    handler = RouteHandler(loop, stream_url, timeout)
 
     app.router.add_post('/batches', handler.submit_batches)
     app.router.add_get('/batch_status', handler.list_statuses)

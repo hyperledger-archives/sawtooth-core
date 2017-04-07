@@ -31,6 +31,9 @@ from sawtooth_rest_api.protobuf.transaction_pb2 import Transaction
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
+TEST_TIMEOUT = 5
+
+
 class MockStream(object):
     """Replaces a route handler's stream to allow tests to preset the response
     to send back as well as run asserts on the protobufs sent to the stream.
@@ -145,7 +148,7 @@ class BaseApiTest(AioHTTPTestCase):
         self.stream = MockStream(self, req_type, req_proto, resp_proto)
 
     @staticmethod
-    def build_handlers(stream):
+    def build_handlers(loop, stream):
         """Returns Rest Api route handlers modified with some a mock stream.
 
         Args:
@@ -154,7 +157,7 @@ class BaseApiTest(AioHTTPTestCase):
         Returns:
             RouteHandler: The route handlers to handle test queries
         """
-        handlers = RouteHandler('tcp://0.0.0.0:40404', 5)
+        handlers = RouteHandler(loop, 'tcp://0.0.0.0:40404', TEST_TIMEOUT)
         handlers._stream = stream
         return handlers
 
