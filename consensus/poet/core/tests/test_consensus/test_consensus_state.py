@@ -149,14 +149,22 @@ class TestConsensusState(unittest.TestCase):
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(cbor.dumps(invalid_state))
 
-        # Invalid expected block count
-        for invalid_ebc in [None, 'not a float', (), [], {}]:
+        # Invalid expected block claim count
+        for invalid_ebcc in [None, 'not a float', (), [], {}, -1,
+                             float('nan'), float('inf'), float('-inf')]:
             state = consensus_state.ConsensusState()
-            state.expected_block_claim_count = invalid_ebc
+            state.expected_block_claim_count = invalid_ebcc
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(state.serialize_to_bytes())
 
-        # Invalid expected block count
+        # Invalid total block claim count
+        for invalid_tbcc in [None, 'not an int', (), [], {}, -1]:
+            state = consensus_state.ConsensusState()
+            state.total_block_claim_count = invalid_tbcc
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(state.serialize_to_bytes())
+
+        # Invalid validators
         for invalid_validators in [None, '', 1, 1.1, (), []]:
             state = consensus_state.ConsensusState()
             # pylint: disable=protected-access
@@ -257,6 +265,9 @@ class TestConsensusState(unittest.TestCase):
         self.assertEqual(
             state.expected_block_claim_count,
             doppelganger_state.expected_block_claim_count)
+        self.assertEqual(
+            state.total_block_claim_count,
+            doppelganger_state.total_block_claim_count)
 
         # Now put a couple of validators in, serialize, deserialize, and
         # verify they are in deserialized

@@ -15,6 +15,7 @@
 
 from collections import namedtuple
 
+import math
 import cbor
 
 ValidatorState = \
@@ -22,7 +23,7 @@ ValidatorState = \
         'ValidatorState',
         ['key_block_claim_count',
          'poet_public_key',
-         'total_block_claim_count'
+         'total_block_claim_count',
          ])
 """ Instead of creating a full-fledged class, let's use a named tuple for
 the validator state.  The validator state represents the state for a single
@@ -45,6 +46,8 @@ class ConsensusState(object):
         expected_block_claim_count (float): The number of blocks that a
             validator, based upon the population estimate, would be expected
             to have claimed
+        total_bock_claim_count (int): The number of blocks that have been
+            claimed by all validators
     """
     def __init__(self):
         """Initialize a ConsensusState object
@@ -53,6 +56,7 @@ class ConsensusState(object):
             None
         """
         self.expected_block_claim_count = 0.0
+        self.total_block_claim_count = 0
         self._validators = {}
 
     @staticmethod
@@ -169,13 +173,21 @@ class ConsensusState(object):
 
             self.expected_block_claim_count = \
                 float(self_dict['expected_block_claim_count'])
+            self.total_block_claim_count = \
+                int(self_dict['total_block_claim_count'])
             validators = self_dict['_validators']
 
-            if self.expected_block_claim_count < 0:
+            if not math.isfinite(self.expected_block_claim_count) or \
+                    self.expected_block_claim_count < 0:
                 raise \
                     ValueError(
                         'expected_block_claim_count ({}) is invalid'.format(
                             self.expected_block_claim_count))
+            if self.total_block_claim_count < 0:
+                raise \
+                    ValueError(
+                        'total_block_claim_count ({}) is invalid'.format(
+                            self.total_block_claim_count))
 
             if not isinstance(validators, dict):
                 raise ValueError('_validators is not a dict')
@@ -212,6 +224,7 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'EBCC: {}, V: {}'.format(
+            'Expected: {}, Total: {}, V: {}'.format(
                 self.expected_block_claim_count,
+                self.total_block_claim_count,
                 validators)
