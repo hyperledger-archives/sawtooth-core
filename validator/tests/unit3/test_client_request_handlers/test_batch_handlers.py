@@ -347,7 +347,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual('b-2', response.batches[0].header_signature)
 
-    def test_block_list_with_bad_pagination(self):
+    def test_batch_list_with_bad_pagination(self):
         """Verifies batch requests break when paging specifies missing batches.
 
         Queries the default mock block store:
