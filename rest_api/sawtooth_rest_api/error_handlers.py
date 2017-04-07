@@ -108,6 +108,14 @@ class MissingBatch(_ErrorTrap):
             message='There is no batch with that id')
 
 
+class MissingTransaction(_ErrorTrap):
+    def __init__(self):
+        super().__init__(
+            trigger=client_pb2.ClientTransactionGetResponse.NO_RESOURCE,
+            error=web.HTTPNotFound,
+            message='There is no batch with that id')
+
+
 class BadAddress(_ErrorTrap):
     def __init__(self):
         super().__init__(
