@@ -48,3 +48,9 @@ RUN pip3 install \
     secp256k1 \
     lmdb \
     cryptography
+
+RUN mkdir -p /project/sawtooth-core
+RUN mkdir -p /var/log/sawtooth
+RUN mkdir -p /var/lib/sawtooth
+RUN mkdir -p /etc/sawtooth
+RUN mkdir -p /etc/sawtooth/keys

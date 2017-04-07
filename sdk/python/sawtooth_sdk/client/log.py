@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,20 +15,9 @@
 
 import logging
 import logging.config
-import sys
 import os
 
 from colorlog import ColoredFormatter
-
-
-class LogWriter(object):
-    def __init__(self, logger, level):
-        self.logger = logger
-        self.level = level
-
-    def write(self, line):
-        if line != '\n':
-            self.logger.log(self.level, line.rstrip())
 
 
 def create_console_handler(verbose_level):
@@ -62,12 +51,7 @@ def create_console_handler(verbose_level):
 def init_console_logging(verbose_level=2, capture_std_output=False):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-
     logger.addHandler(create_console_handler(verbose_level))
-
-    if capture_std_output:
-        sys.stdout = LogWriter(logging.getLogger("STDOUT"), logging.INFO)
-        sys.stderr = LogWriter(logging.getLogger("STDERR"), logging.ERROR)
 
 
 def log_configuration(log_config=None, log_dir=None, name=None):
