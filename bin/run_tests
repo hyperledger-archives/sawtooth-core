@@ -165,10 +165,12 @@ test_cli() {
 
 test_java_sdk() {
     run_docker_test tp-intkey-java -s validator
+    run_docker_test intkey-java-smoke -s integration_test
 }
 
 test_javascript_sdk() {
     run_docker_test tp-intkey-javascript -s validator
+    run_docker_test intkey-javascript-smoke -s integration_test
 }
 
 test_poet_cli(){
@@ -207,7 +209,7 @@ test_python_sdk() {
     run_docker_test tp-xo-python -s validator
 
     # integration
-    run_docker_test intkey-smoke -s integration_test
+    run_docker_test intkey-python-smoke -s integration_test
     run_docker_test xo-smoke -s integration_test
     run_docker_test two_families -s integration_test
     # JLJ - Temporarily disable this test while debugging fork resolution
