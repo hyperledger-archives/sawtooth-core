@@ -185,6 +185,7 @@ class BlockValidator(object):
 
             batch = blkw.batches[-1]
             if not self._verify_batches_dependencies(batch, committed_txn):
+                scheduler.cancel()
                 return False
             scheduler.add_batch(batch,
                                 blkw.state_root_hash)
