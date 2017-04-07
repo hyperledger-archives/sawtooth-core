@@ -23,6 +23,8 @@ from threading import Condition
 from threading import Thread
 import time
 import uuid
+from collections import namedtuple
+from enum import Enum
 
 import zmq
 import zmq.auth
@@ -38,6 +40,15 @@ from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class ConnectionType(Enum):
+    OUTBOUND_CONNECTION = 1
+    ZMQ_IDENTITY = 2
+
+
+ConnectionInfo = namedtuple('ConnectionInfo',
+                            ['connection_type', 'connection', 'uri'])
 
 
 def _generate_id():
@@ -185,7 +196,9 @@ class _SendReceive(object):
         connection_id = self._identity_to_connection_id(zmq_identity)
         if connection_id not in self._connections:
             self._connections[connection_id] = \
-                ("ZMQ_Identity", zmq_identity, None)
+                ConnectionInfo(ConnectionType.ZMQ_IDENTITY,
+                               zmq_identity,
+                               None)
 
     @asyncio.coroutine
     def _receive_message(self):
@@ -258,10 +271,10 @@ class _SendReceive(object):
         zmq_identity = None
         if connection_id is not None and self._connections is not None:
             if connection_id in self._connections:
-                connection_type, connection, _ = \
-                    self._connections.get(connection_id)
-                if connection_type == "ZMQ_Identity":
-                    zmq_identity = connection
+                connection_info = self._connections.get(connection_id)
+                if connection_info.connection_type == \
+                        ConnectionType.ZMQ_IDENTITY:
+                    zmq_identity = connection_info.connection
             else:
                 LOGGER.debug("Can't send to %s, not in self._connections",
                              connection_id)
@@ -537,8 +550,9 @@ class Interconnect(object):
         if connection_id not in self._connections:
             raise ValueError("Unknown connection id: %s",
                              connection_id)
-        connection_type, connection, _ = self._connections.get(connection_id)
-        if connection_type == "ZMQ_Identity":
+        connection_info = self._connections.get(connection_id)
+        if connection_info.connection_type == \
+                ConnectionType.ZMQ_IDENTITY:
             message = validator_pb2.Message(
                 correlation_id=_generate_id(),
                 content=data,
@@ -557,7 +571,10 @@ class Interconnect(object):
                                                    connection_id=connection_id)
             return fut
         else:
-            return connection.send(message_type, data, callback=callback)
+            return connection_info.connection.send(
+                message_type,
+                data,
+                callback=callback)
 
     def start(self):
         complete_or_error_queue = queue.Queue()
@@ -590,8 +607,8 @@ class Interconnect(object):
                 reachable endpoint.
         """
         for connection_id in self._connections:
-            (_, _, uri) = self._connections[connection_id]
-            if uri == endpoint:
+            connection_info = self._connections[connection_id]
+            if connection_info.uri == endpoint:
                 return connection_id
         raise KeyError()
 
@@ -607,8 +624,11 @@ class Interconnect(object):
                 reachable endpoint.
         """
         if connection_id in self._connections:
-            (source, conn, _) = self._connections[connection_id]
-            self._connections[connection_id] = (source, conn, endpoint)
+            connection_info = self._connections[connection_id]
+            self._connections[connection_id] = \
+                ConnectionInfo(connection_info.connection_type,
+                               connection_info.connection,
+                               endpoint)
         else:
             LOGGER.debug("Could not update the endpoint %s for "
                          "connection_id %s. The connection does not "
@@ -620,7 +640,9 @@ class Interconnect(object):
         connection_id = connection.connection_id
         if connection_id not in self._connections:
             self._connections[connection_id] = \
-                ("OutboundConnection", connection, uri)
+                ConnectionInfo(ConnectionType.OUTBOUND_CONNECTION,
+                               connection,
+                               uri)
 
     def _remove_connection(self, connection):
         connection_id = connection.connection_id
