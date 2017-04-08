@@ -142,54 +142,95 @@ def build_certificate_list(block_header,
     return list(certificates)
 
 
-def create_validator_state(validator_info,
-                           current_validator_state):
-    """Starting with the current validator state (or None), create validator
+def get_current_validator_state(validator_info,
+                                consensus_state,
+                                block_cache):
+    """Fetches the current validator state for the validator, creating it if
+    necessary.
+
+    Args:
+        validator_info (ValidatorInfo): The validator information
+            corresponding to the consensus state
+        consensus_state (ConsensusState): The consensus state from which
+            validator state should be fetched/derived.
+        block_cache (BlockCache): The block store cache
+
+    Returns:
+        ValidatorState object representing the validator's state at the
+            point in time of the consensus state
+    """
+    # Fetch the validator state.  If it doesn't exist, then create an initial
+    # validator state object, including figuring out the block number in which
+    # the validator was most-recently registered.
+    validator_state = \
+        consensus_state.get_validator_state(
+            validator_id=validator_info.id)
+
+    if validator_state is None:
+        enclosing_block = \
+            block_cache.block_store.get_block_by_transaction_id(
+                validator_info.transaction_id)
+        validator_state = \
+            ValidatorState(
+                commit_block_number=enclosing_block.block_num,
+                key_block_claim_count=0,
+                poet_public_key=validator_info.signup_info.poet_public_key,
+                total_block_claim_count=0)
+
+    return validator_state
+
+
+def create_next_validator_state(validator_info,
+                                current_validator_state,
+                                block_cache):
+    """Starting with the current validator state, create the next validator
      validator state for the validator.
 
     Args:
         validator_info (ValidatorInfo): Information about the validator
         current_validator_state (ValidatorState): The current validator
-            state we are going to update or None if there isn't any and
-            we are to create default validator state
+            state upon which we are going to base the next validator state
+        block_cache (BlockCache): The block store cache
 
     Returns:
-        ValidatorState object
+        ValidatorState object representing new validator state
     """
 
-    # Start with the default validator state (i.e., assuming that none existed
-    # to start with) and update accordingly.  If it does exist and the PoET
-    # public key is the same, then we are just going to update counts.  If it
-    # does exist but the PoET public key has changed, we need to update
-    # statistics and take note of the new key.
-    key_block_claim_count = 1
-    poet_public_key = validator_info.signup_info.poet_public_key
-    total_block_claim_count = 1
+    total_block_claim_count = \
+        current_validator_state.total_block_claim_count + 1
 
-    if current_validator_state is not None:
-        total_block_claim_count = \
-            current_validator_state.total_block_claim_count + 1
+    # If the PoET public keys match, then we are doing a simple statistics
+    # update
+    if validator_info.signup_info.poet_public_key == \
+            current_validator_state.poet_public_key:
+        commit_block_number = current_validator_state.commit_block_number
+        key_block_claim_count = \
+            current_validator_state.key_block_claim_count + 1
 
-        if validator_info.signup_info.poet_public_key == \
-                current_validator_state.poet_public_key:
-            key_block_claim_count = \
-                current_validator_state.key_block_claim_count + 1
+    # Otherwise, we are resetting statistics for the validator.  This includes
+    # using the validator info's transaction ID to get the block number of the
+    # block that committed the validator registry transaction
+    else:
+        commit_block_number = \
+            block_cache.block_store.get_block_by_transaction_id(
+                validator_info.transaction_id).block_num
+        key_block_claim_count = 1
 
     LOGGER.debug(
-        'Create validator state for %s: PPK=%s...%s, KBCC=%d, TBCC=%d, '
-        'UBN=%d',
+        'Create validator state for %s: PPK=%s...%s, CBN=%d, KBCC=%d, '
+        'TBCC=%d',
         validator_info.name,
-        poet_public_key[:8],
-        poet_public_key[-8:],
+        validator_info.signup_info.poet_public_key[:8],
+        validator_info.signup_info.poet_public_key[-8:],
+        commit_block_number,
         key_block_claim_count,
-        total_block_claim_count,
-        0)
+        total_block_claim_count)
 
     return \
         ValidatorState(
-            commit_block_number=0,
+            commit_block_number=commit_block_number,
             key_block_claim_count=key_block_claim_count,
-            poet_public_key=poet_public_key,
+            poet_public_key=validator_info.signup_info.poet_public_key,
             total_block_claim_count=total_block_claim_count)
 
 
@@ -321,13 +362,16 @@ def get_consensus_state_for_block_id(
         # store.
         else:
             validator_state = \
-                consensus_state.get_validator_state(
-                    validator_id=block_info.validator_info.id)
+                get_current_validator_state(
+                    validator_info=block_info.validator_info,
+                    consensus_state=consensus_state,
+                    block_cache=block_cache)
             consensus_state.set_validator_state(
                 validator_id=block_info.validator_info.id,
-                validator_state=create_validator_state(
+                validator_state=create_next_validator_state(
                     validator_info=block_info.validator_info,
-                    current_validator_state=validator_state))
+                    current_validator_state=validator_state,
+                    block_cache=block_cache))
 
             LOGGER.debug(
                 'Store consensus state for block: %s...%s',

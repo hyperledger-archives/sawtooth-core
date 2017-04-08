@@ -298,12 +298,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
         validator_state = \
-            consensus_state.get_validator_state(self._validator_id)
+            utils.get_current_validator_state(
+                validator_info=validator_info,
+                consensus_state=consensus_state,
+                block_cache=self._block_cache)
         key_block_claim_limit = \
             PoetConfigView(state_view).key_block_claim_limit
 
-        if validator_state is not None and \
-                validator_state.poet_public_key == \
+        if validator_state.poet_public_key == \
                 PoetBlockPublisher._poet_public_key and \
                 validator_state.key_block_claim_count >= \
                 key_block_claim_limit:

@@ -163,13 +163,16 @@ class PoetForkResolver(ForkResolverInterface):
                         poet_enclave_module=poet_enclave_module)
 
                 validator_state = \
-                    consensus_state.get_validator_state(
-                        validator_id=validator_info.id)
+                    utils.get_current_validator_state(
+                        validator_info=validator_info,
+                        consensus_state=consensus_state,
+                        block_cache=self._block_cache)
                 consensus_state.set_validator_state(
                     validator_id=validator_info.id,
-                    validator_state=utils.create_validator_state(
+                    validator_state=utils.create_next_validator_state(
                         validator_info=validator_info,
-                        current_validator_state=validator_state))
+                        current_validator_state=validator_state,
+                        block_cache=self._block_cache))
 
                 # Update the consensus-wide statistics and store the updated
                 # consensus state for this block.
