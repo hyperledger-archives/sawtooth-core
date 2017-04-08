@@ -142,7 +142,8 @@ def build_certificate_list(block_header,
     return list(certificates)
 
 
-def create_validator_state(validator_info, current_validator_state):
+def create_validator_state(validator_info,
+                           current_validator_state):
     """Starting with the current validator state (or None), create validator
      validator state for the validator.
 
@@ -175,15 +176,18 @@ def create_validator_state(validator_info, current_validator_state):
                 current_validator_state.key_block_claim_count + 1
 
     LOGGER.debug(
-        'Create validator state for %s: PPK=%s...%s, KBCC=%d, TBCC=%d',
+        'Create validator state for %s: PPK=%s...%s, KBCC=%d, TBCC=%d, '
+        'UBN=%d',
         validator_info.name,
         poet_public_key[:8],
         poet_public_key[-8:],
         key_block_claim_count,
-        total_block_claim_count)
+        total_block_claim_count,
+        0)
 
     return \
         ValidatorState(
+            commit_block_number=0,
             key_block_claim_count=key_block_claim_count,
             poet_public_key=poet_public_key,
             total_block_claim_count=total_block_claim_count)

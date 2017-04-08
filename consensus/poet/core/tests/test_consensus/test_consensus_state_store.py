@@ -112,6 +112,7 @@ class TestConsensusStateStore(unittest.TestCase):
         state.set_validator_state(
             validator_id='Bond, James Bond',
             validator_state=consensus_state.ValidatorState(
+                commit_block_number=0xdeadbeef,
                 key_block_claim_count=1,
                 poet_public_key='skeleton key',
                 total_block_claim_count=2))
@@ -135,6 +136,7 @@ class TestConsensusStateStore(unittest.TestCase):
             retrieved_state.get_validator_state(
                 validator_id='Bond, James Bond')
 
+        self.assertEqual(validator_state.commit_block_number, 0xdeadbeef)
         self.assertEqual(validator_state.key_block_claim_count, 1)
         self.assertEqual(validator_state.poet_public_key, 'skeleton key')
         self.assertEqual(validator_state.total_block_claim_count, 2)
@@ -147,4 +149,4 @@ class TestConsensusStateStore(unittest.TestCase):
         self.assertTrue('key' not in my_dict)
 
         with self.assertRaises(KeyError):
-            state = store['key']
+            _ = store['key']
