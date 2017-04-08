@@ -118,7 +118,7 @@ def do_genesis(args):
     payload = \
         vr_pb.ValidatorRegistryPayload(
             verb='register',
-            name='validator-{}'.format(pubkey[-8:]),
+            name='validator-{}'.format(pubkey[:8]),
             id=pubkey,
             signup_info=vr_pb.SignUpInfo(
                 poet_public_key=signup_info.poet_public_key,
