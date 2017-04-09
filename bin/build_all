@@ -141,7 +141,7 @@ main() {
 docker_run() {
     image=$1
 
-    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-base" ]; then
+    if [ -z $ISOLATION_ID ]; then
         tag=$image
     else
         tag=$image:$ISOLATION_ID
@@ -171,7 +171,7 @@ docker_build() {
     context=$2
     tag=$3
 
-    if [ ! -z $ISOLATION_ID ] && [ ! $image = "sawtooth-base" ]
+    if [ ! -z $ISOLATION_ID ]
     then
         tag=$tag:$ISOLATION_ID
     fi
@@ -206,14 +206,13 @@ then
         docker_build $top_dir/docker/sawtooth-build-python docker/ sawtooth-build-python
         docker_run sawtooth-build-python
 
-        docker_build $top_dir/docker/sawtooth-dev-base docker/ sawtooth-dev-base
-        docker_build $top_dir/docker/sawtooth-dev-rest_api docker/ sawtooth-rest_api
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-rest_api
         docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-dev-test
-        docker_build $top_dir/docker/sawtooth-dev-tp_config docker/ sawtooth-tp_config
-        docker_build $top_dir/docker/sawtooth-dev-tp_intkey_python docker/ sawtooth-tp_intkey_python
-        docker_build $top_dir/docker/sawtooth-dev-tp_validator_registry docker/ sawtooth-tp_validator_registry
-        docker_build $top_dir/docker/sawtooth-dev-tp_xo_python docker/ sawtooth-tp_xo_python
-        docker_build $top_dir/docker/sawtooth-dev-validator docker/ sawtooth-validator
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_config
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_intkey_python
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_validator_registry
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_xo_python
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-validator
     }
 fi
 
