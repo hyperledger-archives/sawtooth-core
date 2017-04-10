@@ -88,7 +88,7 @@
               "."]
           [:p "To begin you will need to create an identity by generating a new
               Wallet Import Format (WIF) key or importing an existing one."]
-           (when (or (= :edge (utils/browser)) (= :ie (utils/browser) (not (utils/browser))))
+           (when (or (= :edge (utils/browser)) (= :ie (utils/browser)) (not (utils/browser)))
             [:div.row
              [:div.alert.alert-danger.col-md-10.col-md-offset-1
               {:role "alert"}
