@@ -441,10 +441,10 @@ class TestBlockGetRequests(ClientHandlerTestCase):
         """Verifies requests for a block break properly with a batch id.
 
         Expects to find:
-            - a status of INVALID_ID
+            - a status of NO_RESOURCE
             - that the Block returned, when serialized, is empty
         """
         response = self.make_request(block_id='b-1')
 
-        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())

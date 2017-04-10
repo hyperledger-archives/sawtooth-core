@@ -74,6 +74,11 @@ def start_rest_api(host, port, stream_url, timeout):
     app.router.add_get('/batches', handler.list_batches)
     app.router.add_get('/batches/{batch_id}', handler.fetch_batch)
 
+    app.router.add_get('/transactions', handler.list_transactions)
+    app.router.add_get(
+        '/transactions/{transaction_id}',
+        handler.fetch_transaction)
+
     # Start app
     web.run_app(app, host=host, port=port)
 

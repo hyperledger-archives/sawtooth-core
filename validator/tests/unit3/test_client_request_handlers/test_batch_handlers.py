@@ -347,7 +347,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual('b-2', response.batches[0].header_signature)
 
-    def test_block_list_with_bad_pagination(self):
+    def test_batch_list_with_bad_pagination(self):
         """Verifies batch requests break when paging specifies missing batches.
 
         Queries the default mock block store:
@@ -446,10 +446,10 @@ class TestBatchGetRequests(ClientHandlerTestCase):
         """Verifies requests for a batch break properly with a block id.
 
         Expects to find:
-            - a status of INVALID_ID
+            - a status of NO_RESOURCE
             - that the Batch returned, when serialized, is actually empty
         """
         response = self.make_request(batch_id='B-1')
 
-        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.batch.SerializeToString())

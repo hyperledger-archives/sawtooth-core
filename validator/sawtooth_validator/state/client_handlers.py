@@ -546,12 +546,9 @@ class BlockGetRequest(_ClientRequestHandler):
     def _respond(self, request):
         try:
             block = self._block_store[request.block_id].block
-        except KeyError:
-            LOGGER.debug('No block "%s" in store', request.block_id)
+        except KeyError as e:
+            LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        except TypeError:
-            LOGGER.debug('"%s" is a batch is, not block', request.block_id)
-            return self._status.INVALID_ID
         return self._wrap_response(block=block)
 
 
@@ -600,10 +597,58 @@ class BatchGetRequest(_ClientRequestHandler):
     def _respond(self, request):
         try:
             batch = self._block_store.get_batch(request.batch_id)
-        except ValueError:
-            LOGGER.debug('No batch "%s" in store', request.batch_id)
+        except ValueError as e:
+            LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        except KeyError:
-            LOGGER.debug('"%s" is a block id, not batch', request.batch_id)
-            return self._status.INVALID_ID
         return self._wrap_response(batch=batch)
+
+
+class TransactionListRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_pb2.ClientTransactionListRequest,
+            client_pb2.ClientTransactionListResponse,
+            validator_pb2.Message.CLIENT_TRANSACTION_LIST_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        head_id = self._get_head_block(request).header_signature
+        transactions = self._list_store_resources(
+            request,
+            head_id,
+            request.transaction_ids,
+            self._block_store.get_transaction,
+            lambda block: [t for a in block.batches for t in a.transactions])
+
+        transactions, paging = _Pager.paginate_resources(
+            request,
+            transactions,
+            self._status.INVALID_PAGING)
+
+        if not transactions:
+            return self._wrap_response(
+                self._status.NO_RESOURCE,
+                head_id=head_id,
+                paging=paging)
+
+        return self._wrap_response(
+            head_id=head_id,
+            paging=paging,
+            transactions=transactions)
+
+
+class TransactionGetRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_pb2.ClientTransactionGetRequest,
+            client_pb2.ClientTransactionGetResponse,
+            validator_pb2.Message.CLIENT_TRANSACTION_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            txn = self._block_store.get_transaction(request.transaction_id)
+        except ValueError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+        return self._wrap_response(transaction=txn)

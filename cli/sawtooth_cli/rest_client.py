@@ -43,6 +43,13 @@ class RestClient(object):
         safe_id = urllib.quote(batch_id, safe='')
         return self._get('/batches/' + safe_id)['data']
 
+    def list_transactions(self):
+        return self._get('/transactions')['data']
+
+    def get_transaction(self, transaction_id):
+        safe_id = urllib.quote(transaction_id, safe='')
+        return self._get('/transactions/' + safe_id)['data']
+
     def list_state(self, subtree=None, head=None):
         return self._get('/state', address=subtree, head=head)
 

@@ -45,7 +45,7 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a status of 200
             - a head property of '2'
-            - a link property that ends in '/blocks?head=2&min=0&count=3'
+            - a link property that ends in '/blocks?head=2'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full blocks with ids '2', '1', and '0'
@@ -106,7 +106,7 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a status of 200
             - a head property of '1'
-            - a link property that ends in '/blocks?head=1&min=0&count=2'
+            - a link property that ends in '/blocks?head=1'
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids '1' and '0'
@@ -140,7 +140,7 @@ class BlockListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_block_list_with_ids(self):
-        """Verifies GET /blocks with the id parameter works properly.
+        """Verifies GET /blocks with an id filter works properly.
 
         It will receive a Protobuf response with:
             - a head id of '2'
@@ -154,7 +154,7 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2', the latest
-            - a link property that ends in '/blocks?head=2&min=0&count=2&id=0,2'
+            - a link property that ends in '/blocks?head=2&id=0,2'
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids '0' and '2'
@@ -175,7 +175,7 @@ class BlockListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_block_list_with_bad_ids(self):
-        """Verifies GET /blocks with a bad id parameter breaks properly.
+        """Verifies GET /blocks with a bad id filter breaks properly.
 
         It will receive a Protobuf response with:
             - a status of NO_RESOURCE
@@ -202,7 +202,7 @@ class BlockListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_block_list_with_head_and_ids(self):
-        """Verifies GET /blocks with head and id parameters works properly.
+        """Verifies GET /blocks with head and id parameters work properly.
 
         It will receive a Protobuf response with:
             - a head id of '1'
@@ -217,7 +217,7 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/blocks?head=1&min=0&count=1&id=0'
+            - a link property that ends in '/blocks?head=1&id=0'
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - and that dict is a full block with an id of '0'
@@ -248,7 +248,7 @@ class BlockListTests(BaseApiTest):
             - one block with the id 'c'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 1, and a start_index of 1
+            - paging controls with a count of 1, and a start_index of 1
 
         It should send back a JSON response with:
             - a response status of 200
@@ -306,12 +306,12 @@ class BlockListTests(BaseApiTest):
             - two blocks with the ids 'd' and 'c'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2
+            - paging controls with a count of 2
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of 'd'
-            - a link property that ends in '/blocks?head=d&min=0&count=2'
+            - a link property that ends in '/blocks?head=d'
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids 'd' and 'c'
@@ -341,7 +341,7 @@ class BlockListTests(BaseApiTest):
             - two blocks with the ids 'b' and 'a'
 
         It should send a Protobuf request with:
-            - a paging controls with a start_index of 2
+            - paging controls with a start_index of 2
 
         It should send back a JSON response with:
             - a response status of 200
@@ -379,7 +379,7 @@ class BlockListTests(BaseApiTest):
             - three blocks with the ids 'c', 'b' and 'a'
 
         It should send a Protobuf request with:
-            - a paging controls with a start_id of 'c'
+            - paging controls with a count of 5, and a start_id of 'c'
 
         It should send back a JSON response with:
             - a response status of 200
@@ -418,7 +418,7 @@ class BlockListTests(BaseApiTest):
             - two blocks with the ids 'c' and 'b'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2 and an end_id of 'b'
+            - paging controls with a count of 2, and an end_id of 'b'
 
         It should send back a JSON response with:
             - a response status of 200
@@ -454,7 +454,7 @@ class BlockListTests(BaseApiTest):
             - three blocks with the ids 'd', 'c' and 'b'
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2 and an start_index of 0
+            - paging controls with a count of 3, and an start_index of 0
 
         It should send back a JSON response with:
             - a response status of 200
@@ -496,7 +496,7 @@ class BlockGetTests(BaseApiTest):
         """Verifies a GET /blocks/{block_id} works properly.
 
         It should send a Protobuf request with:
-            - a block_ids property of '1'
+            - a block_id property of '1'
 
         It will receive a Protobuf response with:
             - a block with an id of '1'
@@ -532,19 +532,6 @@ class BlockGetTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):
-        """Verifies a GET /blocks/{block_id} with invalid id breaks properly.
-
-        It will receive a Protobuf response with:
-            - a status of INVALID_ID
-
-        It should send back a JSON response with:
-            - a response status of 400
-        """
-        self.stream.preset_response(self.status.INVALID_ID)
-        await self.assert_400('/blocks/bad')
-
-    @unittest_run_loop
-    async def test_block_get_with_missing_id(self):
         """Verifies a GET /blocks/{block_id} with unfound id breaks properly.
 
         It will receive a Protobuf response with:
@@ -554,4 +541,4 @@ class BlockGetTests(BaseApiTest):
             - a response status of 404
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/blocks/missing')
+        await self.assert_404('/blocks/bad')

@@ -13,15 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
-from base64 import b64decode
-
-import csv
-import json
 import argparse
-import yaml
-
-from sawtooth_cli import tty
+from base64 import b64decode
+from sawtooth_cli import format_utils as fmt
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
 
@@ -97,24 +91,14 @@ def do_state(args):
     """
     rest_client = RestClient(args.url)
 
-    def print_json(data):
-        print(json.dumps(
-            data,
-            indent=2,
-            separators=(',', ': '),
-            sort_keys=True))
-
-    def print_yaml(data):
-        print(yaml.dump(data, default_flow_style=False)[0:-1])
-
     if args.subcommand == 'list':
         response = rest_client.list_state(args.subtree, args.head)
         leaves = response['data']
         head = response['head']
         keys = ('address', 'size', 'data')
-        headers = (k.upper() for k in keys)
+        headers = tuple(k.upper() for k in keys)
 
-        def get_leaf_data(leaf, decode=True):
+        def parse_leaf_row(leaf, decode=True):
             decoded = b64decode(leaf['data'])
             return (
                 leaf['address'],
@@ -122,54 +106,23 @@ def do_state(args):
                 str(decoded) if decode else leaf['data'])
 
         if args.format == 'default':
-            # Set column widths based on window and data size
-            window_width = tty.width()
-
-            try:
-                addr_width = len(leaves[0]['address'])
-                data_width = len(str(b64decode(leaves[0]['data'])))
-            except IndexError:
-                # if no data was returned, use short default widths
-                addr_width = 30
-                data_width = 15
-
-            if sys.stdout.isatty():
-                adjusted = int(window_width) - addr_width - 11
-                adjusted = 6 if adjusted < 6 else adjusted
-            else:
-                adjusted = data_width
-
-            fmt_string = '{{:{a}.{a}}}  {{:<4}}  {{:{j}.{j}}}'\
-                .format(a=addr_width, j=adjusted)
-
-            # Print data in rows and columns
-            print(fmt_string.format(*headers))
-            for leaf in leaves:
-                print(fmt_string.format(*get_leaf_data(leaf)) +
-                      ('...' if adjusted < data_width and data_width else ''))
+            fmt.print_terminal_table(headers, leaves, parse_leaf_row)
             print('HEAD BLOCK: "{}"'.format(head))
 
         elif args.format == 'csv':
-            try:
-                writer = csv.writer(sys.stdout)
-                writer.writerow(headers)
-                for leaf in leaves:
-                    writer.writerow(get_leaf_data(leaf))
-            except csv.Error as e:
-                raise CliException('Error writing CSV: {}'.format(e))
+            fmt.print_csv(headers, leaves, parse_leaf_row)
             print('(data for head block: "{}")'.format(head))
 
         elif args.format == 'json' or args.format == 'yaml':
             state_data = {
                 'head': head,
-                'data': [{k: d for k, d in
-                         zip(keys, get_leaf_data(l, False))}
+                'data': [{k: d for k, d in zip(keys, parse_leaf_row(l, False))}
                          for l in leaves]}
 
             if args.format == 'yaml':
-                print_yaml(state_data)
+                fmt.print_yaml(state_data)
             elif args.format == 'json':
-                print_json(state_data)
+                fmt.print_json(state_data)
             else:
                 raise AssertionError('Missing handler: {}'.format(args.format))
 
@@ -177,9 +130,9 @@ def do_state(args):
             raise AssertionError('Missing handler: {}'.format(args.format))
 
     if args.subcommand == 'show':
-        leaf = rest_client.get_leaf(args.address, args.head)
-        if leaf is not None:
-            print('DATA: "{}"'.format(b64decode(leaf['data'])))
-            print('HEAD: "{}"'.format(leaf['head']))
+        output = rest_client.get_leaf(args.address, args.head)
+        if output is not None:
+            print('DATA: "{}"'.format(b64decode(output['data'])))
+            print('HEAD: "{}"'.format(output['head']))
         else:
             raise CliException('No data available at {}'.format(args.address))

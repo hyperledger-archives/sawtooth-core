@@ -34,7 +34,7 @@ def size():
         # in case of failure, use dimensions of a full screen 13" laptop
         rows, columns = DEFAULT_HEIGHT, DEFAULT_WIDTH
 
-    return rows, columns
+    return int(rows), int(columns)
 
 
 def height():

@@ -42,13 +42,17 @@ class BlockStore(MutableMapping):
 
     def __getitem__(self, key):
         stored_block = self._block_store[key]
-        if stored_block is not None:
+
+        # Block id strings are stored under batch/txn ids for reference.
+        # Only Blocks, not ids or Nones, should be returned by __getitem__.
+        if isinstance(stored_block, bytes):
             block = Block()
             block.ParseFromString(stored_block)
             return BlockWrapper(
                 status=BlockStatus.Valid,
                 block=block)
-        raise KeyError("Key {} not found.".format(key))
+
+        raise KeyError('Block "{}" not found in store'.format(key))
 
     def __delitem__(self, key):
         del self._block_store[key]
@@ -166,13 +170,19 @@ class BlockStore(MutableMapping):
         return out
 
     def get_block_by_transaction_id(self, txn_id):
-        return self.__getitem__(self._block_store[txn_id])
+        try:
+            return self.__getitem__(self._block_store[txn_id])
+        except KeyError:
+            raise ValueError('Transaction "%s" not in BlockStore', txn_id)
 
     def has_transaction(self, txn_id):
         return txn_id in self._block_store
 
     def get_block_by_batch_id(self, batch_id):
-        return self.__getitem__(self._block_store[batch_id])
+        try:
+            return self.__getitem__(self._block_store[batch_id])
+        except KeyError:
+            raise ValueError('Batch "%s" not in BlockStore', batch_id)
 
     def has_batch(self, batch_id):
         return batch_id in self._block_store
@@ -190,17 +200,15 @@ class BlockStore(MutableMapping):
         The batch that has the transaction.
         """
         if self.has_transaction(transaction_id):
-            block = self.get_block_by_transaction_id(
-                transaction_id)
+            block = self.get_block_by_transaction_id(transaction_id)
             # Find batch in block
             for batch in block.batches:
                 batch_header = BatchHeader()
                 batch_header.ParseFromString(batch.header)
                 if transaction_id in batch_header.transaction_ids:
                     return batch
-        else:
-            raise ValueError("Transaction_id %s not found in BlockStore.",
-                             transaction_id)
+
+        raise ValueError('Transaction "%s" not in BlockStore', transaction_id)
 
     def get_batch(self, batch_id):
         """
@@ -220,3 +228,24 @@ class BlockStore(MutableMapping):
                     return batch
 
         raise ValueError("Batch_id %s not found in BlockStore.", batch_id)
+
+    def get_transaction(self, transaction_id):
+        """Returns a Transaction object from the block store by its id.
+
+        Params:
+            transaction_id (str): The header_signature of the desired txn
+
+        Returns:
+            Transaction: The specified transaction
+
+        Raises:
+            ValueError: The transaction is not in the block store
+        """
+        if self.has_transaction(transaction_id):
+            batch = self.get_batch_by_transaction(transaction_id)
+            # Find transaction in batch
+            for txn in batch.transactions:
+                if txn.header_signature == transaction_id:
+                    return txn
+
+        raise ValueError('Transaction "%s" not in BlockStore', transaction_id)
