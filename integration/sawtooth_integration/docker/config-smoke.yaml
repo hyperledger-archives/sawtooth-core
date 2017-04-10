@@ -37,7 +37,7 @@ services:
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin keygen && \
         ./bin/sawtooth admin genesis && \
-        ./bin/validator -v\""
+        ./bin/validator -v --public-uri http://validator:8080\""
     stop_signal: SIGKILL
 
   rest_api:
