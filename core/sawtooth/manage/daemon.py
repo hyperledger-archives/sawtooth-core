@@ -35,14 +35,6 @@ class DaemonNodeController(NodeController):
         self._host_name = host_name
         self._verbose = verbose
         self._base_config = get_validator_configuration([], {})
-        # Additional configuration for the genesis validator
-        self._genesis_cfg = {
-            "InitialConnectivity": 0,
-        }
-        # Additional configuration for the non-genesis validators
-        self._non_genesis_cfg = {
-            "InitialConnectivity": 1,
-        }
 
         if state_dir is None:
             state_dir = \
@@ -77,13 +69,11 @@ class DaemonNodeController(NodeController):
         if not os.path.exists(config_dir):
             os.makedirs(config_dir)
         config_file = '{}_bootstrap.json'.format(node_name)
-        cfg = self._non_genesis_cfg
         if node_args.genesis:
-            cfg = self._genesis_cfg
+            cmd += ['--initial-connectivity', '0']
+        else:
+            cmd += ['--initial-connectivity', '1']
 
-        with open(os.path.join(config_dir, config_file), 'w') as f:
-            f.write(json.dumps(cfg, indent=4))
-        cmd += ['--config', config_file]
         return cmd
 
     def is_running(self, node_name):

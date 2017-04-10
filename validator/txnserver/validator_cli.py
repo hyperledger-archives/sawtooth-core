@@ -239,6 +239,9 @@ def parse_command_line(args):
                         help='Specify transaction families to load. Multiple'
                              ' -F options can be specified.',
                         action='append')
+    parser.add_argument('--initial-connectivity',
+                        help='minimum number of peers',
+                        type=int)
 
     result = parser.parse_args(args)
 
@@ -300,7 +303,8 @@ def get_configuration(args, os_name=os.name, config_files_required=None):
             ('daemon', 'Daemonize'),
             ('check_elevated', 'CheckElevated'),
             ('listen', 'Listen'),
-            ('family', 'TransactionFamilies')
+            ('family', 'TransactionFamilies'),
+            ('initial_connectivity', 'InitialConnectivity')
         ], options)
 
     return get_validator_configuration(options.config, options_config, os_name,
