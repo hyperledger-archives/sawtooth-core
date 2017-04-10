@@ -288,7 +288,7 @@ and run the following commands:
 
    $ cd sawtooth-core/
    $ sawtooth keygen --key-dir /home/ubuntu/sawtooth/keys/ validator
-   $ validator -vv
+   $ validator -vv --public-uri tcp://localhost:8800
 
 .. note::
 
