@@ -20,6 +20,7 @@ import os
 import socket
 import subprocess
 import time
+import uuid
 
 LOGGER = logging.getLogger(__name__)
 
@@ -214,14 +215,21 @@ class TestShutdownSmoke(unittest.TestCase):
         try:
             genesis = self._run_genesis()
             self._wait_for_containers_exit_status([genesis])
-            validator_genesis = self._start_validator(genesis, [], [])
+            genesis_name = str(uuid.uuid4())
+            validator_genesis = self._start_validator(
+                genesis,
+                ['--name', genesis_name],
+                ['--public-uri', 'tcp://{}:8800'.format(genesis_name)])
             containers.append(validator_genesis)
             self._remove_docker_containers([genesis])
             keygen = self._run_keygen_non_genesis()
             self._wait_for_containers_exit_status([keygen])
+            validator_1_name = str(uuid.uuid4())
             validator_non_genesis = self._start_validator(
-                keygen, ['--link', validator_genesis],
-                ['--peers', 'tcp://{}:8800'.format(validator_genesis)])
+                keygen, ['--link', validator_genesis,
+                         '--name', validator_1_name],
+                ['--peers', 'tcp://{}:8800'.format(genesis_name),
+                 '--public-uri', 'tcp://{}:8800'.format(validator_1_name)])
             containers.append(validator_non_genesis)
             self._remove_docker_containers([keygen])
             # Make sure that the validators have completed startup -- cli path

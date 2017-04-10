@@ -23,11 +23,58 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
+from sawtooth_validator.protobuf.network_pb2 import GetPeersRequest
+from sawtooth_validator.protobuf.network_pb2 import GetPeersResponse
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
 from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
+from sawtooth_validator.exceptions import PeeringException
 
 LOGGER = logging.getLogger(__name__)
+
+
+class GetPeersRequestHandler(Handler):
+    def __init__(self, gossip):
+        self._gossip = gossip
+
+    def handle(self, connection_id, message_content):
+        request = GetPeersRequest()
+        request.ParseFromString(message_content)
+        LOGGER.debug("got peers request message "
+                     "from %s. sending ack", connection_id)
+
+        self._gossip.send_peers(connection_id)
+
+        ack = NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
+
+
+class GetPeersResponseHandler(Handler):
+    def __init__(self, gossip):
+        self._gossip = gossip
+
+    def handle(self, connection_id, message_content):
+        response = GetPeersResponse()
+        response.ParseFromString(message_content)
+        LOGGER.debug("got peers response message "
+                     "from %s. sending ack", connection_id)
+
+        LOGGER.debug("PEERS RESPONSE ENDPOINTS: %s", response.peer_endpoints)
+
+        self._gossip.add_candidate_peer_endpoints(response.peer_endpoints)
+
+        ack = NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class PeerRegisterHandler(Handler):
@@ -39,9 +86,13 @@ class PeerRegisterHandler(Handler):
         request.ParseFromString(message_content)
         LOGGER.debug("got peer register message "
                      "from %s. sending ack", connection_id)
-        self._gossip.register_peer(connection_id)
+
         ack = NetworkAcknowledgement()
-        ack.status = ack.OK
+        try:
+            self._gossip.register_peer(connection_id, request.endpoint)
+            ack.status = ack.OK
+        except PeeringException:
+            ack.status = ack.ERROR
 
         return HandlerResult(
             HandlerStatus.RETURN,

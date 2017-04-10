@@ -48,6 +48,27 @@ def parse_args(args):
                         help='Validator component service endpoint',
                         default='tcp://0.0.0.0:40000',
                         type=str)
+    parser.add_argument('--peering',
+                        help='The type of peering approach the validator '
+                             'should take. Choices are \'static\' which '
+                             'only attempts to peer with candidates '
+                             'provided with the --peers option, and '
+                             '\'dynamic\' which will do topology buildouts. '
+                             'If \'dynamic\' is provided, any static peers '
+                             'will be processed first, prior to the topology '
+                             'buildout starting',
+                        choices=['static', 'dynamic'],
+                        default='static',
+                        type=str)
+    parser.add_argument('--public-uri',
+                        help='Advertised network endpoint URL',
+                        required=True,
+                        type=str)
+    parser.add_argument('--join',
+                        help='uri(s) to connect to in order to initially '
+                             'connect to the validator network, in the '
+                             'format tcp://hostname:port',
+                        nargs='+')
     parser.add_argument('--peers',
                         help='A list of peers to attempt to connect to '
                              'in the format tcp://hostname:port',
@@ -153,6 +174,9 @@ def main(args=sys.argv[1:]):
 
     validator = Validator(opts.network_endpoint,
                           opts.component_endpoint,
+                          opts.public_uri,
+                          opts.peering,
+                          opts.join,
                           opts.peers,
                           path_config.data_dir,
                           identity_signing_key)

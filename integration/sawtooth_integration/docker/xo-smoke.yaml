@@ -45,10 +45,11 @@ services:
       - ../../../:/project/sawtooth-core
     expose:
       - 40000
+      - 8800
     entrypoint: "bash -c \"\
         ./bin/sawtooth admin keygen && \
         ./bin/sawtooth admin genesis && \
-        ./bin/validator -v\""
+        ./bin/validator --public-uri tcp://validator:8800 -v\""
     stop_signal: SIGKILL
 
   rest_api:

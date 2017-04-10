@@ -20,6 +20,7 @@ option java_package = "sawtooth.sdk.protobuf";
 // The connect message from a client to the server
 message ConnectMessage {
     string identity = 1;
+    string endpoint = 2;
 }
 
 // The disconnect message from a client to the server
@@ -30,11 +31,20 @@ message DisconnectMessage {
 // The registration request from a peer to the validator
 message PeerRegisterRequest {
     string identity = 1;
+    string endpoint = 2;
 }
 
 // The unregistration request from a peer to the validator
 message PeerUnregisterRequest {
     string identity = 1;
+}
+
+message GetPeersRequest {
+    string identity = 1;
+}
+
+message GetPeersResponse {
+    repeated string peer_endpoints = 1;
 }
 
 message PingRequest {
