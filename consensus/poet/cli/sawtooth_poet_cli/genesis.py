@@ -20,10 +20,11 @@ import time
 
 from sawtooth_poet_cli import config
 from sawtooth_poet_cli.exceptions import CliException
-from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
-from sawtooth_poet.poet_consensus.consensus_state_store \
-    import ConsensusStateStore
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
+from sawtooth_poet.poet_consensus.poet_key_state_store \
+    import PoetKeyState
+from sawtooth_poet.poet_consensus.poet_key_state_store \
+    import PoetKeyStateStore
 import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
 import sawtooth_signing as signing
@@ -97,16 +98,21 @@ def do_genesis(args):
         originator_public_key_hash=public_key_hash,
         most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
 
-    print('Writing sealed signup data to consensus state store')
+    print(
+        'Writing key state for PoET public key: {}...{}'.format(
+            signup_info.poet_public_key[:8],
+            signup_info.poet_public_key[-8:]))
 
-    consensus_state = ConsensusState()
-    consensus_state.sealed_signup_data = signup_info.sealed_signup_data
-
-    consensus_state_store = \
-        ConsensusStateStore(
+    # Store the newly-created PoET key state, associating it with its
+    # corresponding public key
+    poet_key_state_store = \
+        PoetKeyStateStore(
             data_dir=config.get_data_dir(),
             validator_id=pubkey)
-    consensus_state_store[NULL_BLOCK_IDENTIFIER] = consensus_state
+    poet_key_state_store[signup_info.poet_public_key] = \
+        PoetKeyState(
+            sealed_signup_data=signup_info.sealed_signup_data,
+            has_been_refreshed=False)
 
     # Create the validator registry payload
     payload = \

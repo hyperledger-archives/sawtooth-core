@@ -19,6 +19,9 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
 
+from sawtooth_poet.poet_consensus.consensus_state_store \
+    import ConsensusStateStore
+from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus import utils
 from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
@@ -65,6 +68,10 @@ class PoetBlockVerifier(BlockVerifierInterface):
         self._state_view_factory = state_view_factory
         self._data_dir = data_dir
         self._validator_id = validator_id
+        self._consensus_state_store = \
+            ConsensusStateStore(
+                data_dir=self._data_dir,
+                validator_id=self._validator_id)
 
     def verify_block(self, block_wrapper):
         """Check that the block received conforms to the consensus rules.
@@ -145,6 +152,37 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 poet_enclave_module=poet_enclave_module,
                 certificates=certificates,
                 poet_public_key=poet_public_key)
+
+            # Get the consensus state for the block that is being built
+            # upon, fetch the validator state for this validator, and then
+            # see if that validator has already claimed the key bock limit
+            # for its current PoET key pair.  If so, then we reject the
+            # block.
+            consensus_state = \
+                utils.get_consensus_state_for_block_id(
+                    block_id=block_wrapper.previous_block_id,
+                    block_cache=self._block_cache,
+                    state_view_factory=self._state_view_factory,
+                    consensus_state_store=self._consensus_state_store,
+                    poet_enclave_module=poet_enclave_module)
+            validator_state = \
+                consensus_state.get_validator_state(
+                    validator_id=validator_info.id)
+
+            poet_config_view = PoetConfigView(state_view=state_view)
+
+            if validator_state is not None and \
+                    validator_state.poet_public_key == poet_public_key and \
+                    validator_state.key_block_claim_count >= \
+                    poet_config_view.key_block_claim_limit:
+                raise \
+                    ValueError(
+                        'Validator {} has already reached claim block limit '
+                        'for current PoET key pair: {} >= {}'.format(
+                            validator_info.name,
+                            validator_state.key_block_claim_count,
+                            poet_config_view.key_block_claim_limit))
+
         except ValueError as error:
             LOGGER.error('Failed to verify block: %s', error)
             return False

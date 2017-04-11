@@ -42,9 +42,6 @@ class ConsensusState(object):
     the block chain).
 
     Attributes:
-        sealed_signup_data (str): The encoded sealed signup data that was
-            received from the most recent creation of signup information
-            for the validator
         expected_block_claim_count (float): The number of blocks that a
             validator, based upon the population estimate, would be expected
             to have claimed
@@ -55,7 +52,6 @@ class ConsensusState(object):
         Returns:
             None
         """
-        self.sealed_signup_data = None
         self.expected_block_claim_count = 0.0
         self._validators = {}
 
@@ -171,8 +167,6 @@ class ConsensusState(object):
                         'buffer is not a valid serialization of a '
                         'ConsensusState object')
 
-            self.sealed_signup_data = \
-                self_dict.get('sealed_signup_data', None)
             self.expected_block_claim_count = \
                 float(self_dict['expected_block_claim_count'])
             validators = self_dict['_validators']
@@ -207,9 +201,6 @@ class ConsensusState(object):
                     'Error parsing ConsensusState buffer: {}'.format(error))
 
     def __str__(self):
-        sealed_signup_data = \
-            '0' * 16 if self.sealed_signup_data is None \
-            else self.sealed_signup_data
         validators = \
             ['{}...{}: {{KBCC: {}, PPK: {}...{}, TBCC: {}}}'.format(
                 key[:8],
@@ -221,8 +212,6 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'SSD: {}...{}, EBCC: {}, V: {}'.format(
-                sealed_signup_data[:8],
-                sealed_signup_data[-8:],
+            'EBCC: {}, V: {}'.format(
                 self.expected_block_claim_count,
                 validators)
