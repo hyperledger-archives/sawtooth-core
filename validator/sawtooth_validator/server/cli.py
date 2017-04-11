@@ -152,7 +152,8 @@ def main(args=sys.argv[1:]):
     if not init_errors:
         if log_config is not None:
             log_configuration(log_config=log_config)
-            init_console_logging(verbose_level=verbose_level)
+            if log_config.get('root') is not None:
+                init_console_logging(verbose_level=verbose_level)
         else:
             log_configuration(log_dir=path_config.log_dir,
                               name="validator-" + pubkey[:8])
