@@ -22,6 +22,7 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
 
+from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state import ValidatorState
@@ -183,6 +184,8 @@ def get_current_validator_state(validator_info,
 
 def create_next_validator_state(validator_info,
                                 current_validator_state,
+                                current_block_count,
+                                poet_config_view,
                                 block_cache):
     """Starting with the current validator state, create the next validator
      validator state for the validator.
@@ -191,6 +194,9 @@ def create_next_validator_state(validator_info,
         validator_info (ValidatorInfo): Information about the validator
         current_validator_state (ValidatorState): The current validator
             state upon which we are going to base the next validator state
+        current_block_count (int): The number of blocks in the chain
+        poet_config_view (PoetConfigView): The current PoET configuration
+            view
         block_cache (BlockCache): The block store cache
 
     Returns:
@@ -199,6 +205,16 @@ def create_next_validator_state(validator_info,
 
     total_block_claim_count = \
         current_validator_state.total_block_claim_count + 1
+
+    # If we are now beyond the fixed duration blocks (i.e., blocks for which
+    # the wait timer local mean is a simple ratio of target to initial wait
+    # time), then also increment the number of blocks for this validator that
+    # are governed by the zTest.
+    if current_block_count > poet_config_view.fixed_duration_block_count:
+        ztest_block_claim_count = \
+            current_validator_state.ztest_block_claim_count + 1
+    else:
+        ztest_block_claim_count = 0
 
     # If the PoET public keys match, then we are doing a simple statistics
     # update
@@ -219,13 +235,14 @@ def create_next_validator_state(validator_info,
 
     LOGGER.debug(
         'Create validator state for %s: PPK=%s...%s, CBN=%d, KBCC=%d, '
-        'TBCC=%d',
+        'TBCC=%d, ZBCC=%d',
         validator_info.name,
         validator_info.signup_info.poet_public_key[:8],
         validator_info.signup_info.poet_public_key[-8:],
         commit_block_number,
         key_block_claim_count,
-        total_block_claim_count)
+        total_block_claim_count,
+        ztest_block_claim_count)
 
     return \
         ValidatorState(
@@ -233,13 +250,13 @@ def create_next_validator_state(validator_info,
             key_block_claim_count=key_block_claim_count,
             poet_public_key=validator_info.signup_info.poet_public_key,
             total_block_claim_count=total_block_claim_count,
-            ztest_block_claim_count=0)
+            ztest_block_claim_count=ztest_block_claim_count)
 
 
 BlockInfo = \
     collections.namedtuple(
         'BlockInfo',
-        ['wait_certificate', 'validator_info'])
+        ['wait_certificate', 'validator_info', 'poet_config_view'])
 
 """ Instead of creating a full-fledged class, let's use a named tuple for
 the block info.  The block info represents the information we need to
@@ -249,6 +266,8 @@ wait_certificate (WaitCertificate): The PoET wait certificate object for
     the block
 validator_info (ValidatorInfo): The validator registry information for the
     validator that claimed the block
+poet_config_view (PoetConfigView): The PoET cofiguration view associated with
+    the block
 """
 
 
@@ -322,7 +341,8 @@ def get_consensus_state_for_block_id(
             blocks[block_id] = \
                 BlockInfo(
                     wait_certificate=wait_certificate,
-                    validator_info=validator_info)
+                    validator_info=validator_info,
+                    poet_config_view=PoetConfigView(state_view))
 
         # Otherwise, this is a non-PoET block.  If we don't have any blocks
         # yet or the last block we processed was a PoET block, put a
@@ -332,7 +352,8 @@ def get_consensus_state_for_block_id(
             blocks[block_id] = \
                 BlockInfo(
                     wait_certificate=None,
-                    validator_info=None)
+                    validator_info=None,
+                    poet_config_view=None)
 
         previous_wait_certificate = wait_certificate
 
@@ -363,6 +384,18 @@ def get_consensus_state_for_block_id(
         # consensus state with the corresponding block in the consensus state
         # store.
         else:
+            consensus_state.total_block_claim_count += 1
+
+            # In order to perform the zTest we need to calculate for this
+            # block the expected number of blocks a validator should have
+            # won based upon the population estimate and keep track of the
+            # number of blocks covered by the zTest.
+            if consensus_state.total_block_claim_count > \
+                    block_info.poet_config_view.fixed_duration_block_count:
+                consensus_state.expected_block_claim_count += \
+                    1.0 / block_info.wait_certificate.population_estimate
+                consensus_state.ztest_block_claim_count += 1
+
             validator_state = \
                 get_current_validator_state(
                     validator_info=block_info.validator_info,
@@ -373,14 +406,19 @@ def get_consensus_state_for_block_id(
                 validator_state=create_next_validator_state(
                     validator_info=block_info.validator_info,
                     current_validator_state=validator_state,
+                    current_block_count=consensus_state.
+                    total_block_claim_count,
+                    poet_config_view=block_info.poet_config_view,
                     block_cache=block_cache))
 
             LOGGER.debug(
-                'Store consensus state for block: %s...%s',
+                'Create consensus state: BID=%s, EBC=%f, TBCC=%d, '
+                'ZBCC=%d',
                 block_id[:8],
-                block_id[-8:])
+                consensus_state.expected_block_claim_count,
+                consensus_state.total_block_claim_count,
+                consensus_state.ztest_block_claim_count)
 
-            consensus_state.total_block_claim_count += 1
             consensus_state_store[block_id] = consensus_state
 
     return consensus_state
