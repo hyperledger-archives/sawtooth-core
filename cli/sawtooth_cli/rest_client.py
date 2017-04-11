@@ -89,7 +89,7 @@ class RestClient(object):
             self._base_url + path + self._format_queries(queries))
 
         # concat any additional pages of data
-        while 'next' in json_result.get('paging', {}):
+        while code == 200 and 'next' in json_result.get('paging', {}):
             previous_data = json_result.get('data', [])
             code, json_result = self._submit_request(
                 json_result['paging']['next'])
