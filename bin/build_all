@@ -96,7 +96,6 @@ main() {
 
     # Set sawtooth-core project directory relative to this file
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-    build_dir=$(cd $(dirname $(dirname $0))/docker && pwd)
 
     # Start in project directory
     cd $top_dir
@@ -142,12 +141,13 @@ main() {
 docker_run() {
     image=$1
 
-    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-dev-base" ]; then
+    if [ -z $ISOLATION_ID ]; then
         tag=$image
     else
         tag=$image:$ISOLATION_ID
     fi
 
+    info "Running $image"
     if [ -z $BUILD_TAG ]
     then
         docker run -t --rm -v $top_dir:/project/sawtooth-core \
@@ -168,18 +168,18 @@ docker_run() {
 
 docker_build() {
     image=$1
+    context=$2
+    tag=$3
 
-    if [ -z $ISOLATION_ID ] || [ $image = "sawtooth-dev-base" ]
+    if [ ! -z $ISOLATION_ID ]
     then
-        tag=$image
-    else
-        tag=$image:$ISOLATION_ID
+        tag=$tag:$ISOLATION_ID
     fi
 
-    info "Building $image..."
+    info "Building $tag from $image"
 
     # Build the image and pass in any proxy information if set
-    docker build -f $build_dir/$image -t $tag $build_dir \
+    docker build -f $image -t $tag $context \
         --build-arg https_proxy=$https_proxy \
         --build-arg http_proxy=$http_proxy \
         --build-arg HTTPS_PROXY=$HTTPS_PROXY \
@@ -189,49 +189,87 @@ docker_build() {
 if [[ $BUILD_MODE == $MOUNTED ]]
 then
     build_java() {
-        docker_build sawtooth-build-java
+        docker_build docker/sawtooth-build-java docker/ sawtooth-build-java
         docker_run sawtooth-build-java
-        docker_build sawtooth-dev-tp_intkey_java
+
+        docker_build docker/sawtooth-dev-tp_intkey_java docker/ sawtooth-tp_intkey_java
     }
 
     build_javascript() {
-        docker_build sawtooth-build-javascript
+        docker_build docker/sawtooth-build-javascript docker/ sawtooth-build-javascript
         docker_run sawtooth-build-javascript
-        docker_build sawtooth-dev-tp_intkey_javascript
+
+        docker_build docker/sawtooth-dev-tp_intkey_javascript docker/ sawtooth-tp_intkey_javascript
     }
 
     build_python() {
-        docker_build sawtooth-dev-base
-        docker_build sawtooth-build-python
+        docker_build $top_dir/docker/sawtooth-build-python docker/ sawtooth-build-python
         docker_run sawtooth-build-python
-        docker_build sawtooth-dev-tp_intkey_python
-        docker_build sawtooth-dev-rest_api
-        docker_build sawtooth-dev-test
-        docker_build sawtooth-dev-tp_config
-        docker_build sawtooth-dev-tp_validator_registry
-        docker_build sawtooth-dev-tp_xo_python
-        docker_build sawtooth-dev-validator
+
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-rest_api
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-dev-test
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_config
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_intkey_python
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_validator_registry
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-tp_xo_python
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-validator
     }
 fi
 
 if [[ $BUILD_MODE == $INSTALLED ]]
 then
     build_java() {
-        warn "Skipping java images... not implemented"
+        warn "Installed java images not implemented, building mounted instead"
+        docker_build docker/sawtooth-build-java docker/ sawtooth-build-java
+        docker_run sawtooth-build-java
+
+        docker_build docker/sawtooth-dev-tp_intkey_java docker/ sawtooth-tp_intkey_java
     }
 
     build_javascript() {
-        warn "Skipping javascript images... not implemented"
+        warn "Installed javascript images not implemented, building mounted instead"
+        docker_build docker/sawtooth-build-javascript docker/ sawtooth-build-javascript
+        docker_run sawtooth-build-javascript
+
+        docker_build docker/sawtooth-dev-tp_intkey_javascript docker/ sawtooth-tp_intkey_javascript
     }
 
     build_python() {
-        docker_build sawtooth-all
-        docker_build sawtooth-rest_api
-        docker_build sawtooth-tp_config
-        docker_build sawtooth-tp_intkey_python
-        docker_build sawtooth-tp_validator_registry
-        docker_build sawtooth-tp_xo_python
-        docker_build sawtooth-validator
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
+        cp $top_dir/bin/install_packaging_deps $build_dir
+        cp $top_dir/ci/sawtooth-build-debs $build_dir
+        docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+        docker_run sawtooth-build-debs
+
+        docker_build $top_dir/docker/sawtooth-build-python docker/ sawtooth-build-python
+        docker_run sawtooth-build-python
+
+        docker_build $top_dir/docker/sawtooth-dev-test docker/ sawtooth-dev-test
+
+        cp $top_dir/build/debs/*.deb $build_dir/
+        cp $top_dir/docker/sawtooth-int-* $build_dir/
+        ls $build_dir
+
+        docker_build $build_dir/sawtooth-int-rest_api \
+            $build_dir/ sawtooth-rest_api
+
+        docker_build $build_dir/sawtooth-int-tp_config \
+            $build_dir/ sawtooth-tp_config
+
+        docker_build $build_dir/sawtooth-int-tp_intkey_python \
+            $build_dir/ sawtooth-tp_intkey_python
+
+        docker_build $build_dir/sawtooth-int-tp_validator_registry \
+            $build_dir/ sawtooth-tp_validator_registry
+
+        docker_build $build_dir/sawtooth-int-tp_xo_python \
+            $build_dir/ sawtooth-tp_xo_python
+
+        docker_build $build_dir/sawtooth-int-validator \
+            $build_dir/ sawtooth-validator
     }
 
 fi

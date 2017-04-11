@@ -14,27 +14,30 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   REST API installed.
+#   Builds an image with the Sawtooth Lake Validator and CLI packages installed
+#   from the Sawtooth Lake Package Repository.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-rest_api -t sawtooth-dev-rest_api
+#   $ docker build . -f sawtooth-validator -t sawtooth-validator
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-rest_api
+#   $ docker run sawtooth-validator
 
-FROM sawtooth-dev-base
+FROM ubuntu:xenial
 
-RUN pip3 install aiohttp==1.3.5
+LABEL "install-type"="repo"
 
-RUN mkdir -p /project/sawtooth-core
+RUN echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63 \
+ && apt-get update \
+ && apt-get install -y -q \
+    python3-sawtooth-cli \
+    python3-sawtooth-validator \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+EXPOSE 40000/tcp
 
-WORKDIR $PROJECT_DIR
-
-EXPOSE 40000
-
-ENTRYPOINT ./bin/rest_api
+CMD ["validator", "-vv"]

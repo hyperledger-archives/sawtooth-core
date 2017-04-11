@@ -20,11 +20,7 @@ set -e
 main() {
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-    # 1. Run protogen
-    info "Building protobuf classes"
-    $top_dir/bin/protogen
-
-    # 2. Clean up any previous builds and create directories
+    # 1. Clean up any previous builds and create directories
     pkg_dir=$top_dir/build/debs
     mkdir -p $pkg_dir
     rm -f $pkg_dir/*.deb
@@ -33,13 +29,25 @@ main() {
     rm -rf $build_dir
     mkdir -p $build_dir
 
-    # 3. Copy to tmp
+    # 2. Copy to tmp
     info "Copying source to temp build dir"
 
-    # Needed when VERSION=AUTO_STRICT
     rsync -aH \
+        --exclude="build" \
+        --exclude="docs" \
+        --exclude="target" \
+        --exclude="node-modules" \
+        --exclude="*.pyc" \
+        --exclude="*.swp" \
+        --exclude="*_pb2.py" \
+        --exclude="__pycache__" \
+        --exclude="tools" \
         $top_dir/ \
         $build_dir/
+
+    # 3. Run protogen
+    info "Building protobuf classes"
+    $build_dir/bin/protogen
 
     # 4. Build the packages in the correct order
 
@@ -76,8 +84,6 @@ main() {
     pypath=$pypath:$build_dir/consensus/poet/families/tests
     build_pkg "consensus/poet/families" $pypath
 
-    build_pkg "consensus/poet/cli" $pypath
-
     # Group 4: Depends on 1, 2, & 3
     pypath=$build_dir/signing
     pypath=$pypath:$build_dir/validator
@@ -95,6 +101,9 @@ main() {
     pypath=$pypath:$build_dir/consensus/poet/core/tests
     pypath=$pypath:$build_dir/consensus/poet/simulator
     build_pkg "consensus/poet/core" $pypath
+
+    # Group 5: Depends on 1-4
+    build_pkg "consensus/poet/cli" $pypath
 
     # 5. Copy the packages to the output directory
     find $build_dir -name \*.deb -exec cp {} $pkg_dir/ \;

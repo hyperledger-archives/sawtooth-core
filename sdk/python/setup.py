@@ -65,14 +65,34 @@ def version(default):
         version = default + ".dev1"
     return version
 
+
+if os.name == 'nt':
+    conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
+    data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\data"
+    log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\logs"
+else:
+    conf_dir = "/etc/sawtooth"
+    data_dir = "/var/lib/sawtooth"
+    log_dir = "/var/log/sawtooth"
+
+data_files = [
+    (conf_dir, []),
+    (os.path.join(conf_dir, "keys"), []),
+    (data_dir, []),
+    (log_dir, []),
+]
+
+
 setup(name='sawtooth-sdk',
       version=version('0.8.1'),
       description='Sawtooth Lake Python SDK',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
+      data_files=data_files,
       install_requires=[
           "sawtooth-signing",
           "protobuf",
           "pyzmq",
+          "toml",
       ])

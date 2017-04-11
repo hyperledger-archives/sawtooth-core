@@ -27,8 +27,18 @@
 
 FROM maven:3-jdk-8
 
-ARG PROJECT_DIR="/project/sawtooth-core"
+LABEL "install-type"="mounted"
 
-WORKDIR $PROJECT_DIR
+EXPOSE 40000/tcp
 
-ENTRYPOINT ./bin/tp_intkey_java tcp://validator:40000
+RUN mkdir -p /project/sawtooth-core/ \
+ && mkdir -p /var/log/sawtooth \
+ && mkdir -p /var/lib/sawtooth \
+ && mkdir -p /etc/sawtooth \
+ && mkdir -p /etc/sawtooth/keys
+
+ENV PATH=$PATH:/project/sawtooth-core/bin
+
+WORKDIR /
+
+CMD ["tp_intkey_java", "tcp://validator:40000"]
