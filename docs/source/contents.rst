@@ -11,9 +11,7 @@ Table of Contents
    architecture.rst
    sawtooth_developers_guide.rst
    rest_api.rst
+   sysadmin_guide.rst
    sawtooth_cli.rst
    community.rst
    faq.rst
-
-
-
