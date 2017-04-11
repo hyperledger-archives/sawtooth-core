@@ -42,6 +42,7 @@ class SerialScheduler(Scheduler):
         self._final = False
         self._complete = False
         self._cancelled = False
+        self._last_context_id = None
         self._squash = squash_handler
         self._condition = Condition()
         # contains all txn.signatures where txn is
@@ -70,19 +71,23 @@ class SerialScheduler(Scheduler):
             if txn_signature not in self._txn_to_batch:
                 raise ValueError("transaction not in any batches: {}".format(
                     txn_signature))
+
+            batch_signature = self._txn_to_batch[txn_signature]
             if is_valid:
-                # txn is valid, get a new state hash
-                state_hash = self._squash(self._last_state_hash, [context_id])
-                self._last_state_hash = state_hash
+                self._last_context_id = context_id
+
             else:
                 # txn is invalid, preemptively fail the batch
-                batch_signature = self._txn_to_batch[txn_signature]
                 self._batch_statuses[batch_signature] = \
                     BatchExecutionResult(is_valid=is_valid, state_hash=None)
             if txn_signature in self._last_in_batch:
-                batch_signature = self._txn_to_batch[txn_signature]
+                self._last_context_id = None
                 if batch_signature not in self._batch_statuses:
                     # because of the else clause above, txn is valid here
+                    state_hash = self._squash(self._last_state_hash,
+                                              [context_id])
+                    self._last_state_hash = state_hash
+
                     self._batch_statuses[batch_signature] = \
                         BatchExecutionResult(
                             is_valid=is_valid,
@@ -130,9 +135,11 @@ class SerialScheduler(Scheduler):
                 return None
 
             self._in_progress_transaction = txn.header_signature
+            base_contexts = [] if self._last_context_id is None \
+                else [self._last_context_id]
             txn_info = TxnInformation(txn=txn,
                                       state_hash=self._last_state_hash,
-                                      base_context_ids=[])
+                                      base_context_ids=base_contexts)
             self._scheduled_transactions.append(txn_info)
             return txn_info
 
