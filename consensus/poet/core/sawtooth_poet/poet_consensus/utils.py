@@ -175,7 +175,8 @@ def get_current_validator_state(validator_info,
                 commit_block_number=enclosing_block.block_num,
                 key_block_claim_count=0,
                 poet_public_key=validator_info.signup_info.poet_public_key,
-                total_block_claim_count=0)
+                total_block_claim_count=0,
+                ztest_block_claim_count=0)
 
     return validator_state
 
@@ -231,7 +232,8 @@ def create_next_validator_state(validator_info,
             commit_block_number=commit_block_number,
             key_block_claim_count=key_block_claim_count,
             poet_public_key=validator_info.signup_info.poet_public_key,
-            total_block_claim_count=total_block_claim_count)
+            total_block_claim_count=total_block_claim_count,
+            ztest_block_claim_count=0)
 
 
 BlockInfo = \

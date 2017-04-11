@@ -109,13 +109,16 @@ class TestConsensusStateStore(unittest.TestCase):
         # Store consensus state
         state = consensus_state.ConsensusState()
         state.expected_block_claim_count = 3.14
+        state.total_block_claim_count = 2
+        state.ztest_block_claim_count = 1
         state.set_validator_state(
             validator_id='Bond, James Bond',
             validator_state=consensus_state.ValidatorState(
                 commit_block_number=0xdeadbeef,
                 key_block_claim_count=1,
                 poet_public_key='skeleton key',
-                total_block_claim_count=2))
+                total_block_claim_count=2,
+                ztest_block_claim_count=1))
 
         store['key'] = state
 
@@ -140,6 +143,7 @@ class TestConsensusStateStore(unittest.TestCase):
         self.assertEqual(validator_state.key_block_claim_count, 1)
         self.assertEqual(validator_state.poet_public_key, 'skeleton key')
         self.assertEqual(validator_state.total_block_claim_count, 2)
+        self.assertEqual(validator_state.ztest_block_claim_count, 1)
 
         # Delete the key and then verify length and does not contain key
         del store['key']

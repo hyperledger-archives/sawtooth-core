@@ -24,7 +24,8 @@ ValidatorState = \
         ['commit_block_number',
          'key_block_claim_count',
          'poet_public_key',
-         'total_block_claim_count'
+         'total_block_claim_count',
+         'ztest_block_claim_count'
          ])
 """ Instead of creating a full-fledged class, let's use a named tuple for
 the validator state.  The validator state represents the state for a single
@@ -38,6 +39,12 @@ claimed using the current PoET public key
 poet_public_key (str): The current PoET public key for the validator
 total_block_claim_count (int): The total number of the blocks that the
     validator has claimed
+ztest_block_claim_count (int): The number of blocks that the validator has
+    claimed that should be considered when applying the zTest (i.e., trying
+    to determine if a validator is trying to claim blocks more often than
+    statistically expected).  Note that this is not the same as the total
+    number of blocks claimed as the initial blocks with a fixed local mean are
+    not considered for zTest.
 """
 
 
@@ -50,8 +57,14 @@ class ConsensusState(object):
         expected_block_claim_count (float): The number of blocks that a
             validator, based upon the population estimate, would be expected
             to have claimed
-        total_bock_claim_count (int): The number of blocks that have been
+        total_block_claim_count (int): The number of blocks that have been
             claimed by all validators
+        ztest_block_claim_count (int): The number of blocks claimed by all
+            validators that should be considered when applying the zTest
+            (i.e., trying to determine if a validator is trying to claim
+            blocks more often than statistically expected).  Note that this is
+            not the same as the total number of blocks claimed as the initial
+            blocks with a fixed local mean are not considered for zTest.
     """
     def __init__(self):
         """Initialize a ConsensusState object
@@ -61,6 +74,7 @@ class ConsensusState(object):
         """
         self.expected_block_claim_count = 0.0
         self.total_block_claim_count = 0
+        self.ztest_block_claim_count = 0
         self._validators = {}
 
     @staticmethod
@@ -104,6 +118,23 @@ class ConsensusState(object):
                     'key_block_claim_count ({})'.format(
                         validator_state.total_block_claim_count,
                         validator_state.key_block_claim_count))
+
+        if not isinstance(
+                validator_state.ztest_block_claim_count, int) \
+                or validator_state.ztest_block_claim_count < 0:
+            raise \
+                ValueError(
+                    'ztest_block_claim_count ({}) is invalid'.format(
+                        validator_state.ztest_block_claim_count))
+
+        if validator_state.ztest_block_claim_count > \
+                validator_state.total_block_claim_count:
+            raise \
+                ValueError(
+                    'total_block_claim_count ({}) is less than '
+                    'ztest_block_claim_count ({})'.format(
+                        validator_state.total_block_claim_count,
+                        validator_state.ztest_block_claim_count))
 
     def get_validator_state(self, validator_id, default=None):
         """Return the consensus state for a particular validator
@@ -187,6 +218,8 @@ class ConsensusState(object):
                 float(self_dict['expected_block_claim_count'])
             self.total_block_claim_count = \
                 int(self_dict['total_block_claim_count'])
+            self.ztest_block_claim_count = \
+                int(self_dict['ztest_block_claim_count'])
             validators = self_dict['_validators']
 
             if not math.isfinite(self.expected_block_claim_count) or \
@@ -199,6 +232,18 @@ class ConsensusState(object):
                 raise \
                     ValueError(
                         'total_block_claim_count ({}) is invalid'.format(
+                            self.total_block_claim_count))
+            if self.ztest_block_claim_count < 0:
+                raise \
+                    ValueError(
+                        'ztest_block_claim_count ({}) is invalid'.format(
+                            self.ztest_block_claim_count))
+            if self.ztest_block_claim_count >= self.total_block_claim_count:
+                raise \
+                    ValueError(
+                        'ztest_block_claim_count ({}) must be less than '
+                        'total_block_claim_count ({})'.format(
+                            self.ztest_block_claim_count,
                             self.total_block_claim_count))
 
             if not isinstance(validators, dict):
@@ -226,14 +271,13 @@ class ConsensusState(object):
 
     def __str__(self):
         validators = \
-            ['{}...{}: {{CBN: {}, KBCC: {}, PPK: {}...{}, TBCC: {}}}'.format(
+            ['{}: {{CBN: {}, KBCC: {}, PPK: {}, TBCC: {}, ZBCC: {}}}'.format(
                 key[:8],
-                key[-8:],
                 value.commit_block_number,
                 value.key_block_claim_count,
                 value.poet_public_key[:8],
-                value.poet_public_key[-8:],
-                value.total_block_claim_count) for
+                value.total_block_claim_count,
+                value.ztest_block_claim_count) for
              key, value in self._validators.items()]
 
         return \
