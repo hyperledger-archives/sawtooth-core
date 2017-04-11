@@ -36,7 +36,7 @@ class TestPoetConfigView(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(
             poet_config_view.key_block_claim_limit,
-            PoetConfigView._DEFAULT_KEY_CLAIM_LIMIT_)
+            PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_)
 
         _, kwargs = \
             mock_config_view.return_value.get_setting.call_args
@@ -45,7 +45,7 @@ class TestPoetConfigView(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(
             kwargs['default_value'],
-            PoetConfigView._DEFAULT_KEY_CLAIM_LIMIT_)
+            PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_)
         self.assertEqual(kwargs['value_type'], int)
 
         # Underlying config setting is not a valid value
@@ -54,13 +54,13 @@ class TestPoetConfigView(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(
             poet_config_view.key_block_claim_limit,
-            PoetConfigView._DEFAULT_KEY_CLAIM_LIMIT_)
+            PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_)
 
         mock_config_view.return_value.get_setting.return_value = 0
         # pylint: disable=protected-access
         self.assertEqual(
             poet_config_view.key_block_claim_limit,
-            PoetConfigView._DEFAULT_KEY_CLAIM_LIMIT_)
+            PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 1
@@ -82,7 +82,7 @@ class TestPoetConfigView(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(
             poet_config_view.block_claim_delay,
-            PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_)
+            PoetConfigView._BLOCK_CLAIM_DELAY_)
 
         _, kwargs = \
             mock_config_view.return_value.get_setting.call_args
@@ -91,7 +91,7 @@ class TestPoetConfigView(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(
             kwargs['default_value'],
-            PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_)
+            PoetConfigView._BLOCK_CLAIM_DELAY_)
         self.assertEqual(kwargs['value_type'], int)
 
         # Underlying config setting is not a valid value
@@ -100,7 +100,7 @@ class TestPoetConfigView(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(
             poet_config_view.block_claim_delay,
-            PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_)
+            PoetConfigView._BLOCK_CLAIM_DELAY_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 0
@@ -110,4 +110,52 @@ class TestPoetConfigView(unittest.TestCase):
         mock_config_view.return_value.get_setting.return_value = 1
         self.assertEqual(
             poet_config_view.block_claim_delay,
+            1)
+
+    def test_fixed_duration_block_count(self, mock_config_view):
+        """Verify that retrieving fixed duration block count works for invalid
+        cases (missing, invalid format, invalid value) as well as valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.fixed_duration_block_count,
+            PoetConfigView._FIXED_DURATION_BLOCK_COUNT_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(
+            kwargs['key'],
+            'sawtooth.poet.fixed_duration_block_count')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            kwargs['default_value'],
+            PoetConfigView._FIXED_DURATION_BLOCK_COUNT_)
+        self.assertEqual(kwargs['value_type'], int)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        mock_config_view.return_value.get_setting.return_value = -1
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.fixed_duration_block_count,
+            PoetConfigView._FIXED_DURATION_BLOCK_COUNT_)
+
+        mock_config_view.return_value.get_setting.return_value = 0
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.fixed_duration_block_count,
+            PoetConfigView._FIXED_DURATION_BLOCK_COUNT_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 1
+        self.assertEqual(
+            poet_config_view.fixed_duration_block_count,
             1)

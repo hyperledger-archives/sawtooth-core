@@ -26,8 +26,9 @@ class PoetConfigView(object):
     or that are invalid, default values are returned.
     """
 
-    _DEFAULT_KEY_CLAIM_LIMIT_ = 25
-    _DEFAULT_BLOCK_CLAIM_DELAY_ = 1
+    _KEY_BLOCK_CLAIM_LIMIT_ = 25
+    _BLOCK_CLAIM_DELAY_ = 1
+    _FIXED_DURATION_BLOCK_COUNT_ = 50
 
     def __init__(self, state_view):
         """Initialize a PoetConfigView object.
@@ -86,8 +87,8 @@ class PoetConfigView(object):
 
     @property
     def key_block_claim_limit(self):
-        """Return the key block claim limit if config setting exists or
-        default if not or value is invalid.
+        """Return the key block claim limit if config setting exists and
+        is valid, otherwise return the default.
 
         The key block claim limit is the maximum number of blocks that a
         validator may claim with a PoET key pair before it needs to refresh
@@ -97,13 +98,13 @@ class PoetConfigView(object):
             self._get_config_setting(
                 name='sawtooth.poet.key_block_claim_limit',
                 value_type=int,
-                default_value=PoetConfigView._DEFAULT_KEY_CLAIM_LIMIT_,
+                default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
                 validate_function=lambda value: value > 0)
 
     @property
     def block_claim_delay(self):
-        """Return the block claim delay if config setting exists or
-        default if not or value is invalid.
+        """Return the block claim delay if config setting exists and
+        is valid, otherwise return the default.
 
         The block claim delay is the number of blocks after a validator's
         signup information is committed to the validator registry before
@@ -113,5 +114,22 @@ class PoetConfigView(object):
             self._get_config_setting(
                 name='sawtooth.poet.block_claim_delay',
                 value_type=int,
-                default_value=PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_,
+                default_value=PoetConfigView._BLOCK_CLAIM_DELAY_,
                 validate_function=lambda value: value >= 0)
+
+    @property
+    def fixed_duration_block_count(self):
+        """Return the fixed duration block count if config setting exists and
+        is valid, otherwise return the default.
+
+        The fixed duration block count is the number of initial blocks in
+        the chain that, as a validator network starts up, will have their
+        local mean based on a ratio of the target and initial wait times
+        instead of the history of wait timer local means.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.fixed_duration_block_count',
+                value_type=int,
+                default_value=PoetConfigView._FIXED_DURATION_BLOCK_COUNT_,
+                validate_function=lambda value: value > 0)
