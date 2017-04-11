@@ -17,4 +17,41 @@
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-bandit -ll -r .
+directories="
+    build
+    cli/build
+    cli/tests
+    consensus/poet/cli/build
+    consensus/poet/cli/tests
+    consensus/poet/common/build
+    consensus/poet/common/tests
+    consensus/poet/core/build
+    consensus/poet/core/tests
+    consensus/poet/families/build
+    consensus/poet/families/tests
+    consensus/poet/simulator/build
+    consensus/poet/simulator/tests
+    core_transactions/config/tests
+    integration
+    rest_api/build
+    rest_api/tests
+    sdk/python/build
+    sdk/python/sawtooth_processor_test
+    signing/build
+    signing/tests
+    validator/build
+    validator/tests
+"
+
+for dir in $directories
+do
+    if [ -z $ignore ]
+    then
+        ignore="$top_dir/$dir"
+    else
+        ignore="$ignore,$top_dir/$dir"
+    fi
+done
+
+bandit -ll -r --ignore-nosec $top_dir \
+    --exclude $ignore
