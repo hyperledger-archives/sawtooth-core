@@ -103,14 +103,17 @@ class SubprocessNodeController(NodeController):
             if cmd == 'validator':
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
-                peer_list = ['tcp://0.0.0.0:' + str(base_gossip_port + i)
+                public_uri = '--public-uri', 'tcp://localhost:{}'.\
+                    format(gossip_port_num)
+                peer_list = ['tcp://localhost:' + str(base_gossip_port + i)
                              for i in range(node_num)]
                 peers = ['--peers']
-                peers.extend(peer_list)
+                peer_list_comma_sep = [",".join(peer_list)]
+                peers.extend(peer_list_comma_sep)
                 if peers:
                     peers_flag = tuple(peers)
-                flags = component + network
-                if len(peers) > 1:
+                flags = component + network + public_uri
+                if len(peer_list) > 0:
                     flags += peers_flag
 
             elif cmd == 'sawtooth':
