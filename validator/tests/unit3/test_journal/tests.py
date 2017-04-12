@@ -64,54 +64,247 @@ class TestBlockCache(unittest.TestCase):
 
 
 class TestBlockPublisher(unittest.TestCase):
+    '''
+    The block publisher has three main functions, and in these tests
+    those functions are given the following wrappers for convenience:
+        * on_batch_received -> receive_batches
+        * on_chain_updated -> update_chain_head
+        * on_check_publish_block -> publish_block
+
+    After publishing a block, publish_block sends its block to the
+    mock block sender, and that block is named result_block. This block
+    is what is checked by the test assertions.
+
+    The basic pattern for the publisher tests (with variations) is:
+        0) make a list of batches (usually in setUp);
+        1) receive the batches;
+        2) publish a block;
+        3) verify the block (checking that it contains the correct batches,
+           or checking that it doesn't exist, or whatever).
+    
+    The publisher chain head might be updated several times in a test.
+    '''
+
     def setUp(self):
-        self.blocks = BlockTreeManager()
+        self.block_tree_manager = BlockTreeManager()
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.state_view_factory = MockStateViewFactory({})
 
-    def test_no_chain_head(self):
-        publisher = BlockPublisher(
+        self.publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
-            block_cache=self.blocks.block_cache,
+            block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             squash_handler=None,
-            chain_head=self.blocks.chain_head,
-            identity_signing_key=self.blocks.identity_signing_key,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None)
 
-        # Test halting the BlockPublisher by setting the chain head to null
-        publisher.on_chain_updated(None)
+        self.init_chain_head = self.block_tree_manager.chain_head
 
-        batch = Batch()
-        publisher.on_batch_received(batch)
-        publisher.on_check_publish_block()
-        self.assertIsNone(self.block_sender.new_block)
+        self.result_block = None
+
+        # A list of batches is created at the beginning of each test.
+        # The test assertions and the publisher function wrappers
+        # take these batches as a default argument.
+        self.batch_count = 8
+        self.batches = self.make_batches()
 
     def test_publish(self):
-        publisher = BlockPublisher(
-            transaction_executor=MockTransactionExecutor(),
-            block_cache=self.blocks.block_cache,
-            state_view_factory=self.state_view_factory,
-            block_sender=self.block_sender,
-            batch_sender=self.batch_sender,
-            squash_handler=None,
-            chain_head=self.blocks.chain_head,
-            identity_signing_key=self.blocks.identity_signing_key,
-            data_dir=None)
+        '''
+        Publish a block with several batches
+        '''
+        self.receive_batches()
 
-        # initial load of existing state
-        publisher.on_chain_updated(self.blocks.chain_head, [], [])
+        self.publish_block()
 
-        # repeat as necessary
-        batch = Batch()
-        publisher.on_batch_received(batch)
-        # current dev_mode consensus always claims blocks when asked.
-        # this will be called on a polling every so often or possibly triggered
-        # by events in the consensus it's self ... TBD
-        publisher.on_check_publish_block()
+        self.verify_block()
+
+    def test_reject_duplicate_batches_from_receive(self):
+        '''
+        Test that duplicate batches from on_batch_received are rejected
+        '''
+        for i in range(5):
+            self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_reject_duplicate_batches_from_store(self):
+        '''
+        Test that duplicate batches from block store are rejected
+        '''
+        self.update_chain_head(None)
+
+        self.update_chain_head(
+            head=self.init_chain_head,
+            uncommitted=self.batches)
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_no_chain_head(self):
+        '''
+        Test that nothing gets published with a null chain head,
+        then test that publishing resumes after updating
+        '''
+        self.update_chain_head(None)
+
+        self.receive_batches()
+
+        # try to publish block (failing)
+        self.publish_block()
+
+        self.assert_no_block_published()
+
+        # reset chain head several times,
+        # making sure batches remain queued
+        for i in range(3):
+            self.update_chain_head(None)
+            self.update_chain_head(self.init_chain_head)
+
+        # try to publish block (succeeding)
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_committed_batches(self):
+        '''
+        Test that batches committed upon updating the chain head
+        are not included in the next block.
+        '''
+        self.update_chain_head(None)
+
+        self.update_chain_head(
+            head=self.init_chain_head,
+            committed=self.batches)
+
+        new_batches = self.make_batches(batch_count=12)
+
+        self.receive_batches(new_batches)
+
+        self.publish_block()
+
+        self.verify_block(new_batches)
+
+    def test_uncommitted_batches(self):
+        '''
+        Test that batches uncommitted upon updating the chain head
+        are included in the next block.
+        '''
+        self.update_chain_head(None)
+
+        self.update_chain_head(
+            head=self.init_chain_head,
+            uncommitted=self.batches)
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_empty_pending_queue(self):
+        '''
+        Test that no block is published if the pending queue is empty
+        '''
+        # try to publish with no pending queue (failing)
+        self.publish_block()
+
+        self.assert_no_block_published()
+
+        # receive batches, then try again (succeeding)
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    # assertions
+
+    def assert_block_published(self):
+        self.assertIsNotNone(
+            self.result_block,
+            'Block should have been published')
+
+    def assert_no_block_published(self):
+        self.assertIsNone(
+            self.result_block,
+            'Block should not have been published')
+
+    def assert_batch_in_block(self, batch):
+        self.assertIn(
+            batch,
+            tuple(self.result_block.batches),
+            'Batch not in block')
+
+    def assert_batches_in_block(self, batches=None):
+        if batches is None:
+            batches = self.batches
+
+        for batch in batches:
+            self.assert_batch_in_block(batch)
+
+    def assert_block_batch_count(self, batch_count=None):
+        if batch_count is None:
+            batch_count = self.batch_count
+
+        self.assertEqual(
+            len(self.result_block.batches),
+            batch_count,
+            'Wrong batch count in block')
+
+    def verify_block(self, batches=None):
+        if batches is None:
+            batches = self.batches
+
+        batch_count = None if batches is None else len(batches)
+
+        self.assert_block_published()
+        self.assert_batches_in_block(batches)
+        self.assert_block_batch_count(batch_count)
+
+        self.result_block = None
+
+    # publisher functions
+
+    def receive_batch(self, batch):
+        self.publisher.on_batch_received(batch)
+
+    def receive_batches(self, batches=None):
+        if batches is None:
+            batches = self.batches
+
+        for batch in batches:
+            self.receive_batch(batch)
+
+    def publish_block(self):
+        self.publisher.on_check_publish_block()
+        self.result_block = self.block_sender.new_block
+
+    def update_chain_head(self, head, committed=None, uncommitted=None):
+        self.publisher.on_chain_updated(
+            chain_head=head,
+            committed_batches=committed,
+            uncommitted_batches=uncommitted)
+
+    # batches
+
+    def make_batch(self, payload='batch'):
+        return self.block_tree_manager._generate_batch(payload)
+
+    def make_batches(self, batch_count=None):
+        if batch_count is None:
+            batch_count = self.batch_count
+
+        return [
+            self.make_batch('batch_' + str(i))
+            for i in range(batch_count)
+        ]
 
 
 class TestBlockValidator(unittest.TestCase):
