@@ -270,7 +270,8 @@ class Gossip(object):
         self._topology.start()
 
     def stop(self):
-        self._topology.stop()
+        if self._topology:
+            self._topology.stop()
 
 
 class Topology(Thread):
