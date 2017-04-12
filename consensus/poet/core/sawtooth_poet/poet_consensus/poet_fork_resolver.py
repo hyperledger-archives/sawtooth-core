@@ -163,17 +163,27 @@ class PoetForkResolver(ForkResolverInterface):
                         poet_enclave_module=poet_enclave_module)
 
                 validator_state = \
-                    consensus_state.get_validator_state(
-                        validator_id=validator_info.id)
+                    utils.get_current_validator_state(
+                        validator_info=validator_info,
+                        consensus_state=consensus_state,
+                        block_cache=self._block_cache)
                 consensus_state.set_validator_state(
                     validator_id=validator_info.id,
-                    validator_state=utils.create_validator_state(
+                    validator_state=utils.create_next_validator_state(
                         validator_info=validator_info,
-                        current_validator_state=validator_state))
+                        current_validator_state=validator_state,
+                        block_cache=self._block_cache))
 
-                # Store the updated consensus state for this block.
+                # Update the consensus-wide statistics and store the updated
+                # consensus state for this block.
+                consensus_state.total_block_claim_count += 1
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
+
+                LOGGER.debug(
+                    'Update consensus state: EBC=%f, TBCC=%d',
+                    consensus_state.expected_block_claim_count,
+                    consensus_state.total_block_claim_count)
             except KeyError:
                 # This _should_ never happen.  The new potential fork head
                 # has to have been a PoET block and for it to be verified

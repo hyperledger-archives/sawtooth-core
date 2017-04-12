@@ -39,9 +39,11 @@ class TestConsensusState(unittest.TestCase):
             state.get_validator_state(
                 validator_id='Bond, James Bond',
                 default=consensus_state.ValidatorState(
+                    commit_block_number=0xdeadbeef,
                     key_block_claim_count=1,
                     poet_public_key='my key',
                     total_block_claim_count=2))
+        self.assertEqual(validator_state.commit_block_number, 0xdeadbeef)
         self.assertEqual(validator_state.key_block_claim_count, 1)
         self.assertEqual(validator_state.poet_public_key, 'my key')
         self.assertEqual(validator_state.total_block_claim_count, 2)
@@ -53,12 +55,24 @@ class TestConsensusState(unittest.TestCase):
         """
         state = consensus_state.ConsensusState()
 
+        # Test invalid commit block number in validator state
+        for invalid_cbn in [None, (), [], {}, '1', 1.1, -1]:
+            with self.assertRaises(ValueError):
+                state.set_validator_state(
+                    validator_id='Bond, James Bond',
+                    validator_state=consensus_state.ValidatorState(
+                        commit_block_number=invalid_cbn,
+                        key_block_claim_count=0,
+                        poet_public_key='my key',
+                        total_block_claim_count=0))
+
         # Test invalid key block claim counts in validator state
         for invalid_kbcc in [None, (), [], {}, '1', 1.1, -1]:
             with self.assertRaises(ValueError):
                 state.set_validator_state(
                     validator_id='Bond, James Bond',
                     validator_state=consensus_state.ValidatorState(
+                        commit_block_number=0xdeadbeef,
                         key_block_claim_count=invalid_kbcc,
                         poet_public_key='my key',
                         total_block_claim_count=0))
@@ -69,16 +83,18 @@ class TestConsensusState(unittest.TestCase):
                 state.set_validator_state(
                     validator_id='Bond, James Bond',
                     validator_state=consensus_state.ValidatorState(
+                        commit_block_number=0xdeadbeef,
                         key_block_claim_count=0,
                         poet_public_key=invalid_ppk,
                         total_block_claim_count=0))
 
-        # Test total block claim count in validator state
+        # Test invalid total block claim count in validator state
         for invalid_tbcc in [None, (), [], {}, '1', 1.1, -1]:
             with self.assertRaises(ValueError):
                 state.set_validator_state(
                     validator_id='Bond, James Bond',
                     validator_state=consensus_state.ValidatorState(
+                        commit_block_number=0xdeadbeef,
                         key_block_claim_count=0,
                         poet_public_key='my key',
                         total_block_claim_count=invalid_tbcc))
@@ -88,6 +104,7 @@ class TestConsensusState(unittest.TestCase):
             state.set_validator_state(
                 validator_id='Bond, James Bond',
                 validator_state=consensus_state.ValidatorState(
+                    commit_block_number=0xdeadbeef,
                     key_block_claim_count=2,
                     poet_public_key='my key',
                     total_block_claim_count=1))
@@ -95,6 +112,7 @@ class TestConsensusState(unittest.TestCase):
         # Verify that can retrieve after set and validator state matches
         validator_state = \
             consensus_state.ValidatorState(
+                commit_block_number=0xdeadbeef,
                 key_block_claim_count=0,
                 poet_public_key='my key',
                 total_block_claim_count=0)
@@ -105,6 +123,9 @@ class TestConsensusState(unittest.TestCase):
         retrieved_validator_state = \
             state.get_validator_state(validator_id='Bond, James Bond')
 
+        self.assertEqual(
+            validator_state.commit_block_number,
+            retrieved_validator_state.commit_block_number)
         self.assertEqual(
             validator_state.key_block_claim_count,
             retrieved_validator_state.key_block_claim_count)
@@ -118,6 +139,7 @@ class TestConsensusState(unittest.TestCase):
         # Verify that updating an existing validator state matches on get
         validator_state = \
             consensus_state.ValidatorState(
+                commit_block_number=0xfeedbeef,
                 key_block_claim_count=1,
                 poet_public_key='my new key',
                 total_block_claim_count=2)
@@ -128,6 +150,9 @@ class TestConsensusState(unittest.TestCase):
         retrieved_validator_state = \
             state.get_validator_state(validator_id='Bond, James Bond')
 
+        self.assertEqual(
+            validator_state.commit_block_number,
+            retrieved_validator_state.commit_block_number)
         self.assertEqual(
             validator_state.key_block_claim_count,
             retrieved_validator_state.key_block_claim_count)
@@ -149,14 +174,22 @@ class TestConsensusState(unittest.TestCase):
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(cbor.dumps(invalid_state))
 
-        # Invalid expected block count
-        for invalid_ebc in [None, 'not a float', (), [], {}]:
+        # Invalid expected block claim count
+        for invalid_ebcc in [None, 'not a float', (), [], {}, -1,
+                             float('nan'), float('inf'), float('-inf')]:
             state = consensus_state.ConsensusState()
-            state.expected_block_claim_count = invalid_ebc
+            state.expected_block_claim_count = invalid_ebcc
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(state.serialize_to_bytes())
 
-        # Invalid expected block count
+        # Invalid total block claim count
+        for invalid_tbcc in [None, 'not an int', (), [], {}, -1]:
+            state = consensus_state.ConsensusState()
+            state.total_block_claim_count = invalid_tbcc
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(state.serialize_to_bytes())
+
+        # Invalid validators
         for invalid_validators in [None, '', 1, 1.1, (), []]:
             state = consensus_state.ConsensusState()
             # pylint: disable=protected-access
@@ -168,6 +201,7 @@ class TestConsensusState(unittest.TestCase):
         state.set_validator_state(
             validator_id='Bond, James Bond',
             validator_state=consensus_state.ValidatorState(
+                commit_block_number=0xdeadbeef,
                 key_block_claim_count=1,
                 poet_public_key='key',
                 total_block_claim_count=1))
@@ -184,6 +218,24 @@ class TestConsensusState(unittest.TestCase):
         # Circumvent testing of validator state validity so that we can
         # serialize to invalid data to verify deserializing
 
+        # Test invalid commit block number in validator state
+        for invalid_cbn in [None, (), [], {}, '1', 1.1, -1]:
+            state = consensus_state.ConsensusState()
+            with mock.patch(
+                    'sawtooth_poet.poet_consensus.consensus_state.'
+                    'ConsensusState._check_validator_state'):
+                state.set_validator_state(
+                    validator_id='Bond, James Bond',
+                    validator_state=consensus_state.ValidatorState(
+                        commit_block_number=invalid_cbn,
+                        key_block_claim_count=0,
+                        poet_public_key='key 1',
+                        total_block_claim_count=1))
+
+            serialized = state.serialize_to_bytes()
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(serialized)
+
         # Test invalid key block claim counts in validator state
         for invalid_kbcc in [None, (), [], {}, '1', 1.1, -1]:
             state = consensus_state.ConsensusState()
@@ -193,6 +245,7 @@ class TestConsensusState(unittest.TestCase):
                 state.set_validator_state(
                     validator_id='Bond, James Bond',
                     validator_state=consensus_state.ValidatorState(
+                        commit_block_number=0xdeadbeef,
                         key_block_claim_count=invalid_kbcc,
                         poet_public_key='key 1',
                         total_block_claim_count=1))
@@ -210,6 +263,7 @@ class TestConsensusState(unittest.TestCase):
                 state.set_validator_state(
                     validator_id='Bond, James Bond',
                     validator_state=consensus_state.ValidatorState(
+                        commit_block_number=0xdeadbeef,
                         key_block_claim_count=1,
                         poet_public_key=invalid_ppk,
                         total_block_claim_count=1))
@@ -227,6 +281,7 @@ class TestConsensusState(unittest.TestCase):
                 state.set_validator_state(
                     validator_id='Bond, James Bond',
                     validator_state=consensus_state.ValidatorState(
+                        commit_block_number=0xdeadbeef,
                         key_block_claim_count=1,
                         poet_public_key='key',
                         total_block_claim_count=invalid_tbcc))
@@ -242,6 +297,7 @@ class TestConsensusState(unittest.TestCase):
             state.set_validator_state(
                 validator_id='Bond, James Bond',
                 validator_state=consensus_state.ValidatorState(
+                    commit_block_number=0xdeadbeef,
                     key_block_claim_count=2,
                     poet_public_key='key',
                     total_block_claim_count=1))
@@ -257,16 +313,21 @@ class TestConsensusState(unittest.TestCase):
         self.assertEqual(
             state.expected_block_claim_count,
             doppelganger_state.expected_block_claim_count)
+        self.assertEqual(
+            state.total_block_claim_count,
+            doppelganger_state.total_block_claim_count)
 
         # Now put a couple of validators in, serialize, deserialize, and
         # verify they are in deserialized
         validator_state_1 = \
             consensus_state.ValidatorState(
+                commit_block_number=0xdeadbeef,
                 key_block_claim_count=1,
                 poet_public_key='key 1',
                 total_block_claim_count=2)
         validator_state_2 = \
             consensus_state.ValidatorState(
+                commit_block_number=0xfeedbeef,
                 key_block_claim_count=3,
                 poet_public_key='key 2',
                 total_block_claim_count=4)
@@ -285,6 +346,9 @@ class TestConsensusState(unittest.TestCase):
                 validator_id='Bond, James Bond')
 
         self.assertEqual(
+            validator_state.commit_block_number,
+            validator_state_1.commit_block_number)
+        self.assertEqual(
             validator_state.key_block_claim_count,
             validator_state_1.key_block_claim_count)
         self.assertEqual(
@@ -298,6 +362,9 @@ class TestConsensusState(unittest.TestCase):
             doppelganger_state.get_validator_state(
                 validator_id='Smart, Maxwell Smart')
 
+        self.assertEqual(
+            validator_state.commit_block_number,
+            validator_state_2.commit_block_number)
         self.assertEqual(
             validator_state.key_block_claim_count,
             validator_state_2.key_block_claim_count)

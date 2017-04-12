@@ -15,12 +15,14 @@
 
 from collections import namedtuple
 
+import math
 import cbor
 
 ValidatorState = \
     namedtuple(
         'ValidatorState',
-        ['key_block_claim_count',
+        ['commit_block_number',
+         'key_block_claim_count',
          'poet_public_key',
          'total_block_claim_count'
          ])
@@ -28,6 +30,9 @@ ValidatorState = \
 the validator state.  The validator state represents the state for a single
 validator at a point in time.  A validator state object contains:
 
+commit_block_number (int): The block number of the committed block that
+    contains the validator registry transaction which updated the validator's
+    PoET public key to the value found in poet_public_key
 key_block_claim_count (int): The number of blocks that the validator has
 claimed using the current PoET public key
 poet_public_key (str): The current PoET public key for the validator
@@ -45,6 +50,8 @@ class ConsensusState(object):
         expected_block_claim_count (float): The number of blocks that a
             validator, based upon the population estimate, would be expected
             to have claimed
+        total_bock_claim_count (int): The number of blocks that have been
+            claimed by all validators
     """
     def __init__(self):
         """Initialize a ConsensusState object
@@ -53,10 +60,18 @@ class ConsensusState(object):
             None
         """
         self.expected_block_claim_count = 0.0
+        self.total_block_claim_count = 0
         self._validators = {}
 
     @staticmethod
     def _check_validator_state(validator_state):
+        if not isinstance(validator_state.commit_block_number, int) \
+                or validator_state.commit_block_number < 0:
+            raise \
+                ValueError(
+                    'commit_block_number ({}) is invalid'.format(
+                        validator_state.commit_block_number))
+
         if not isinstance(
                 validator_state.key_block_claim_count, int) \
                 or validator_state.key_block_claim_count < 0:
@@ -72,6 +87,7 @@ class ConsensusState(object):
                 ValueError(
                     'poet_public_key ({}) is invalid'.format(
                         validator_state.poet_public_key))
+
         if not isinstance(
                 validator_state.total_block_claim_count, int) \
                 or validator_state.total_block_claim_count < 0:
@@ -169,13 +185,21 @@ class ConsensusState(object):
 
             self.expected_block_claim_count = \
                 float(self_dict['expected_block_claim_count'])
+            self.total_block_claim_count = \
+                int(self_dict['total_block_claim_count'])
             validators = self_dict['_validators']
 
-            if self.expected_block_claim_count < 0:
+            if not math.isfinite(self.expected_block_claim_count) or \
+                    self.expected_block_claim_count < 0:
                 raise \
                     ValueError(
                         'expected_block_claim_count ({}) is invalid'.format(
                             self.expected_block_claim_count))
+            if self.total_block_claim_count < 0:
+                raise \
+                    ValueError(
+                        'total_block_claim_count ({}) is invalid'.format(
+                            self.total_block_claim_count))
 
             if not isinstance(validators, dict):
                 raise ValueError('_validators is not a dict')
@@ -202,9 +226,10 @@ class ConsensusState(object):
 
     def __str__(self):
         validators = \
-            ['{}...{}: {{KBCC: {}, PPK: {}...{}, TBCC: {}}}'.format(
+            ['{}...{}: {{CBN: {}, KBCC: {}, PPK: {}...{}, TBCC: {}}}'.format(
                 key[:8],
                 key[-8:],
+                value.commit_block_number,
                 value.key_block_claim_count,
                 value.poet_public_key[:8],
                 value.poet_public_key[-8:],
@@ -212,6 +237,7 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'EBCC: {}, V: {}'.format(
+            'Expected: {}, Total: {}, V: {}'.format(
                 self.expected_block_claim_count,
+                self.total_block_claim_count,
                 validators)

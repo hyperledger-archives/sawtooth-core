@@ -67,3 +67,47 @@ class TestPoetConfigView(unittest.TestCase):
         self.assertEqual(
             poet_config_view.key_block_claim_limit,
             1)
+
+    def test_block_claim_delay(self, mock_config_view):
+        """Verify that retrieving block claim delay works for invalid
+        cases (missing, invalid format, invalid value) as well as valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.block_claim_delay,
+            PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(kwargs['key'], 'sawtooth.poet.block_claim_delay')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            kwargs['default_value'],
+            PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_)
+        self.assertEqual(kwargs['value_type'], int)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        mock_config_view.return_value.get_setting.return_value = -1
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.block_claim_delay,
+            PoetConfigView._DEFAULT_BLOCK_CLAIM_DELAY_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 0
+        self.assertEqual(
+            poet_config_view.block_claim_delay,
+            0)
+        mock_config_view.return_value.get_setting.return_value = 1
+        self.assertEqual(
+            poet_config_view.block_claim_delay,
+            1)
