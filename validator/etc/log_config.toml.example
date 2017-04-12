@@ -28,8 +28,8 @@ filename = "example-error.log"
 [loggers."sawtooth_validator.networking.interconnect"]
 level = "DEBUG"
 propagate = true
-handlers = [ "interconnect",]
+handlers = [ "interconnect"]
 
 [root]
 level = "DEBUG"
-handlers = [ "error", "debug",]
+handlers = [ "error", "debug"]
