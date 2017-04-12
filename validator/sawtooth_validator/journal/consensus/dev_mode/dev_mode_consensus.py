@@ -167,7 +167,7 @@ class ForkResolver(ForkResolverInterface):
 
     @staticmethod
     def hash_signer_pubkey(signer_pubkey, header_signature):
-        m = hashlib.md5()
+        m = hashlib.sha256()
         m.update(signer_pubkey.encode())
         m.update(header_signature.encode())
         digest = m.hexdigest()
