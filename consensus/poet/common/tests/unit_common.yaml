@@ -22,7 +22,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3 -v -s
-        /project/sawtooth-core/consensus/poet/common/tests/test_sgx_structs
+        /project/sawtooth-core/consensus/poet/common/tests
     environment:
         PYTHONPATH: "\
           /project/sawtooth-core/consensus/poet/common:\
