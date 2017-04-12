@@ -34,14 +34,12 @@ main() {
 
     rsync -aH \
         --exclude="build" \
-        --exclude="docs" \
         --exclude="target" \
         --exclude="node-modules" \
         --exclude="*.pyc" \
         --exclude="*.swp" \
         --exclude="*_pb2.py" \
         --exclude="__pycache__" \
-        --exclude="tools" \
         $top_dir/ \
         $build_dir/
 
