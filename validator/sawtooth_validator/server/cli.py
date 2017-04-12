@@ -67,12 +67,22 @@ def parse_args(args):
     parser.add_argument('--join',
                         help='uri(s) to connect to in order to initially '
                              'connect to the validator network, in the '
-                             'format tcp://hostname:port',
-                        nargs='+')
+                             'format tcp://hostname:port. Multiple --join '
+                             'arguments can be provided, and a single '
+                             '--join argument will accept a comma separated '
+                             'list of tcp://hostname:port,tcp://hostname:port '
+                             'parameters',
+                        action='append',
+                        type=str)
     parser.add_argument('--peers',
                         help='A list of peers to attempt to connect to '
-                             'in the format tcp://hostname:port',
-                        nargs='+')
+                             'in the format tcp://hostname:port. Multiple '
+                             '--peers arguments can be provided, and a single '
+                             '--peers argument will accept a comma separated '
+                             'list of tcp://hostname:port,tcp://hostname:port '
+                             'parameters',
+                        action='append',
+                        type=str)
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
@@ -118,9 +128,26 @@ def check_directory(path, human_readable_name):
     return errors
 
 
+def _split_comma_append_args(arg_list):
+    new_arg_list = []
+
+    for arg in arg_list:
+        new_arg_list.extend([x.strip() for x in arg.split(',')])
+
+    return new_arg_list
+
+
 def main(args=sys.argv[1:]):
     opts = parse_args(args)
     verbose_level = opts.verbose
+
+    # Determine if any args which support delimited lists should be
+    # modified
+    if opts.peers:
+        opts.peers = _split_comma_append_args(opts.peers)
+
+    if opts.join:
+        opts.join = _split_comma_append_args(opts.join)
 
     init_console_logging(verbose_level=verbose_level)
 
