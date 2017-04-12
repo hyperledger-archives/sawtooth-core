@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import math
 import logging
 
 from sawtooth_validator.state.config_view import ConfigView
@@ -29,6 +30,8 @@ class PoetConfigView(object):
     _KEY_BLOCK_CLAIM_LIMIT_ = 25
     _BLOCK_CLAIM_DELAY_ = 1
     _FIXED_DURATION_BLOCK_COUNT_ = 50
+    _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
+    _ZTEST_MINIMUM_WIN_COUNT_ = 3
 
     def __init__(self, state_view):
         """Initialize a PoetConfigView object.
@@ -133,3 +136,45 @@ class PoetConfigView(object):
                 value_type=int,
                 default_value=PoetConfigView._FIXED_DURATION_BLOCK_COUNT_,
                 validate_function=lambda value: value > 0)
+
+    @property
+    def ztest_maximum_win_deviation(self):
+        """Return the zTest maximum win deviation if config setting exists and
+        is valid, otherwise return the default.
+
+        The zTest maximum win deviation specifies the maximum allowed
+        deviation from the expected win frequency for a particular validator
+        before the zTest will fail and the claimed block will be rejected.
+        The deviation corresponds to a confidence interval (i.e., how
+        confident we are that we have truly detected a validator winning at
+        a frequency we consider too frequent):
+
+        3.075 ==> 99.9%
+        2.575 ==> 99.5%
+        2.321 ==> 99%
+        1.645 ==> 95%
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.ztest_maximum_win_deviation',
+                value_type=float,
+                default_value=PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_,
+                validate_function=lambda value:
+                    math.isfinite(value) and value > 0)
+
+    @property
+    def ztest_minimum_win_count(self):
+        """Return the zTest minimum win count if config setting exists and is
+        valid, otherwise return the default.
+
+        The zTest minimum win count is the number of blocks a validator
+        must have successfully claimed (after the fixed duration block count
+        has been exceeded) before the zTest will be applied to the validator's
+        attempt to claim further blocks.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.ztest_minimum_win_count',
+                value_type=int,
+                default_value=PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_,
+                validate_function=lambda value: value >= 0)

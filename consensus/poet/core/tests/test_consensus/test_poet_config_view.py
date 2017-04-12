@@ -159,3 +159,113 @@ class TestPoetConfigView(unittest.TestCase):
         self.assertEqual(
             poet_config_view.fixed_duration_block_count,
             1)
+
+    def test_ztest_maximum_win_deviation(self, mock_config_view):
+        """Verify that retrieving zTest maximum win deviation works for
+        invalid cases (missing, invalid format, invalid value) as well as
+        valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(
+            kwargs['key'],
+            'sawtooth.poet.ztest_maximum_win_deviation')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            kwargs['default_value'],
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+        self.assertEqual(kwargs['value_type'], float)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        mock_config_view.return_value.get_setting.return_value = -1.0
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+
+        mock_config_view.return_value.get_setting.return_value = 0.0
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+
+        mock_config_view.return_value.get_setting.return_value = float('nan')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+
+        mock_config_view.return_value.get_setting.return_value = float('inf')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+
+        mock_config_view.return_value.get_setting.return_value = float('-inf')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 2.575
+        self.assertEqual(
+            poet_config_view.ztest_maximum_win_deviation,
+            2.575)
+
+    def test_ztest_minimum_win_count(self, mock_config_view):
+        """Verify that retrieving zTest minimum win observations works for
+        invalid cases (missing, invalid format, invalid value) as well as
+        valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_minimum_win_count,
+            PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(
+            kwargs['key'],
+            'sawtooth.poet.ztest_minimum_win_count')
+        # pylint: disable=protected-access
+        self.assertEqual(
+            kwargs['default_value'],
+            PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_)
+        self.assertEqual(kwargs['value_type'], int)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        mock_config_view.return_value.get_setting.return_value = -1
+        # pylint: disable=protected-access
+        self.assertEqual(
+            poet_config_view.ztest_minimum_win_count,
+            PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 0
+        self.assertEqual(
+            poet_config_view.ztest_minimum_win_count,
+            0)
