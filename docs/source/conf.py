@@ -249,8 +249,6 @@ latex_documents = [
   ('architecture', 'SawtoothLakeArchitecture.tex', u'Sawtooth Lake Architecture',
    u'Intel Corporation', 'howto'),
   ('sawtooth_developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Lake Developer\'s Guide',
-   u'Intel Corporation', 'howto'),
-  ('sysadmin_guide', 'SawtoothLakeSysadminGuide.tex', u'Sawtooth Lake Systems Administrator\'s Guide',
    u'Intel Corporation', 'howto')
 ]
 
