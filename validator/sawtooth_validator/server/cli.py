@@ -42,11 +42,11 @@ def parse_args(args):
                         type=str)
     parser.add_argument('--network-endpoint',
                         help='Network endpoint URL',
-                        default='tcp://*:8800',
+                        default='tcp://127.0.0.1:8800',
                         type=str)
     parser.add_argument('--component-endpoint',
                         help='Validator component service endpoint',
-                        default='tcp://0.0.0.0:40000',
+                        default='tcp://127.0.0.1:40000',
                         type=str)
     parser.add_argument('--peering',
                         help='The type of peering approach the validator '

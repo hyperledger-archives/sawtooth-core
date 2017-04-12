@@ -29,7 +29,7 @@ def parse_args(args):
                         default=8080)
     parser.add_argument('--host',
                         help='The host for the api to run on',
-                        default="0.0.0.0")
+                        default="127.0.0.1")
     parser.add_argument('--stream-url',
                         help='The url to connect to a running Validator',
                         default='tcp://localhost:40000')
