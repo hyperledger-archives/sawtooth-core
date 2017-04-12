@@ -17,6 +17,7 @@ import logging
 import hashlib
 import time
 import json
+import math
 
 import sawtooth_signing as signing
 
@@ -393,11 +394,51 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
-        self._wait_timer = \
+        wait_timer = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 certificates=list(certificates))
+
+        # NOTE - we do the zTest after we create the wait timer because we
+        # need its population estimate to see if this block would be accepted
+        # by other validators based upon the zTest.
+
+        # If there are enough blocks in the block chain that we should
+        # apply the zTest (i.e., we have progressed past the blocks for
+        # which the local mean is calculated as a fixed ratio of the
+        # target to initial wait times) and this validator has already
+        # claimed more then the zTest minimum number of observable wins,
+        # then ensure that the validator that claimed this block is not
+        # winning elections more often than statistically expected
+        # (i.e., the zTest).
+        if consensus_state.total_block_claim_count >= \
+                poet_config_view.fixed_duration_block_count and \
+                validator_state.ztest_block_claim_count >= \
+                poet_config_view.ztest_minimum_win_count:
+            # Remember to account for the fact that the candidate block
+            # should be included in the zTest calculation as we want to
+            # determine if the candidate block would violate the zTest.
+
+            # If allowing the validator to claim this block would result
+            # in expected block claim count would suggest, we need to
+            # determine if its claim total is outside the allowed maximum
+            # win deviation that dictates our confidence interval that we
+            # detect claiming too often. If so, then we reject the block.
+            observed_wins = validator_state.ztest_block_claim_count + 1
+            expected_wins = \
+                consensus_state.expected_block_claim_count + \
+                1.0 / wait_timer.population_estimate
+            block_count = consensus_state.ztest_block_claim_count + 1
+            probability = expected_wins / block_count
+            standard_deviation = \
+                math.sqrt(block_count * probability * (1.0 - probability))
+            z_score = (observed_wins - expected_wins) / standard_deviation
+
+            if z_score > poet_config_view.ztest_maximum_win_deviation:
+                return False
+
+        self._wait_timer = wait_timer
 
         LOGGER.debug('Created wait timer: %s', self._wait_timer)
 
