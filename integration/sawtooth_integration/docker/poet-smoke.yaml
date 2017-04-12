@@ -71,7 +71,7 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen --force && \
         validator -v \
-          --public-uri tcp://validator-2:8800 --peers tcp://validator-0:8800 tcp://validator-1:8800\""
+          --public-uri tcp://validator-2:8800 --peers tcp://validator-0:8800,tcp://validator-1:8800\""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
