@@ -21,8 +21,7 @@ import cbor
 ValidatorState = \
     namedtuple(
         'ValidatorState',
-        ['commit_block_number',
-         'key_block_claim_count',
+        ['key_block_claim_count',
          'poet_public_key',
          'total_block_claim_count',
          'ztest_block_claim_count'
@@ -31,9 +30,6 @@ ValidatorState = \
 the validator state.  The validator state represents the state for a single
 validator at a point in time.  A validator state object contains:
 
-commit_block_number (int): The block number of the committed block that
-    contains the validator registry transaction which updated the validator's
-    PoET public key to the value found in poet_public_key
 key_block_claim_count (int): The number of blocks that the validator has
 claimed using the current PoET public key
 poet_public_key (str): The current PoET public key for the validator
@@ -79,13 +75,6 @@ class ConsensusState(object):
 
     @staticmethod
     def _check_validator_state(validator_state):
-        if not isinstance(validator_state.commit_block_number, int) \
-                or validator_state.commit_block_number < 0:
-            raise \
-                ValueError(
-                    'commit_block_number ({}) is invalid'.format(
-                        validator_state.commit_block_number))
-
         if not isinstance(
                 validator_state.key_block_claim_count, int) \
                 or validator_state.key_block_claim_count < 0:
@@ -271,9 +260,8 @@ class ConsensusState(object):
 
     def __str__(self):
         validators = \
-            ['{}: {{CBN: {}, KBCC: {}, PPK: {}, TBCC: {}, ZBCC: {}}}'.format(
+            ['{}: {{KBCC: {}, PPK: {}, TBCC: {}, ZBCC: {}}}'.format(
                 key[:8],
-                value.commit_block_number,
                 value.key_block_claim_count,
                 value.poet_public_key[:8],
                 value.total_block_claim_count,
