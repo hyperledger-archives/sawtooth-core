@@ -149,6 +149,14 @@ class TestConsensusState(unittest.TestCase):
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(cbor.dumps(invalid_state))
 
+        # Invalid aggregate local mean
+        for invalid_alm in [None, 'not a float', (), [], {}, -1,
+                            float('nan'), float('inf'), float('-inf')]:
+            state = consensus_state.ConsensusState()
+            state.aggregate_local_mean = invalid_alm
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(state.serialize_to_bytes())
+
         # Invalid total block claim count
         for invalid_tbcc in [None, 'not an int', (), [], {}, -1]:
             state = consensus_state.ConsensusState()
@@ -264,6 +272,9 @@ class TestConsensusState(unittest.TestCase):
         doppelganger_state = consensus_state.ConsensusState()
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
+        self.assertEqual(
+            state.aggregate_local_mean,
+            doppelganger_state.aggregate_local_mean)
         self.assertEqual(
             state.total_block_claim_count,
             doppelganger_state.total_block_claim_count)

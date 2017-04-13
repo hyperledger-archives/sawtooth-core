@@ -108,6 +108,7 @@ class TestConsensusStateStore(unittest.TestCase):
 
         # Store consensus state
         state = consensus_state.ConsensusState()
+        state.aggregate_local_mean = 2.718
         state.total_block_claim_count = 2
         state.set_validator_state(
             validator_id='Bond, James Bond',
@@ -126,6 +127,13 @@ class TestConsensusStateStore(unittest.TestCase):
 
         # Retrieve the state and verify equality
         retrieved_state = store['key']
+
+        self.assertEqual(
+            state.aggregate_local_mean,
+            retrieved_state.aggregate_local_mean)
+        self.assertEqual(
+            state.total_block_claim_count,
+            retrieved_state.total_block_claim_count)
 
         validator_state = \
             retrieved_state.get_validator_state(

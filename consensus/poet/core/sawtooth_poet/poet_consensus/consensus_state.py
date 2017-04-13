@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import math
 from collections import namedtuple
 
 import cbor
@@ -42,6 +43,8 @@ class ConsensusState(object):
     the block chain).
 
     Attributes:
+        aggregate_local_mean (float): The sum of the local means for the PoET
+            blocks since the last non-PoET block
         total_block_claim_count (int): The number of blocks that have been
             claimed by all validators
     """
@@ -51,6 +54,7 @@ class ConsensusState(object):
         Returns:
             None
         """
+        self.aggregate_local_mean = 0.0
         self.total_block_claim_count = 0
         self._validators = {}
 
@@ -167,10 +171,18 @@ class ConsensusState(object):
                         'buffer is not a valid serialization of a '
                         'ConsensusState object')
 
+            self.aggregate_local_mean = \
+                float(self_dict['aggregate_local_mean'])
             self.total_block_claim_count = \
                 int(self_dict['total_block_claim_count'])
             validators = self_dict['_validators']
 
+            if not math.isfinite(self.aggregate_local_mean) or \
+                    self.aggregate_local_mean < 0:
+                raise \
+                    ValueError(
+                        'aggregate_local_mean ({}) is invalid'.format(
+                            self.aggregate_local_mean))
             if self.total_block_claim_count < 0:
                 raise \
                     ValueError(
@@ -210,6 +222,7 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'TBCC={}, V={}'.format(
+            'ALM={:.4f}, TBCC={}, V={}'.format(
+                self.aggregate_local_mean,
                 self.total_block_claim_count,
                 validators)
