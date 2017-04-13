@@ -57,6 +57,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
     """
 
     _poet_public_key = None
+    _previous_block_id = None
 
     _validator_registry_namespace = \
         hashlib.sha256('validator_registry'.encode()).hexdigest()[0:6]
@@ -218,6 +219,16 @@ class PoetBlockPublisher(BlockPublisherInterface):
             Boolean: True if the candidate block should be built. False if
             no candidate should be built.
         """
+        # If the previous block ID matches our cached one, that means that we
+        # have already determined that even if we initialize the requested
+        # block we would not be able to claim it.  So, instead of wasting time
+        # doing all of the checking again, simply short-circuit the failure so
+        # that the validator can go do something more useful.
+        if block_header.previous_block_id == \
+                PoetBlockPublisher._previous_block_id:
+            return False
+        PoetBlockPublisher._previous_block_id = block_header.previous_block_id
+
         # Using the current chain head, we need to create a state view so we
         # can create a PoET enclave.
         state_view = \
@@ -337,7 +348,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 self._register_signup_information(
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
-
             return False
 
         # Verify that we are abiding by the block claim delay (i.e., waiting a
@@ -392,6 +402,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # policies.
 
         self._wait_timer = wait_timer
+        PoetBlockPublisher._previous_block_id = None
 
         LOGGER.debug('Created wait timer: %s', self._wait_timer)
 
