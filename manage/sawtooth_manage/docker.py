@@ -140,7 +140,7 @@ class DockerNodeController(NodeController):
             command = 'bash -c "sawtooth admin keygen && \
             validator {} -v"'
         if len(peers) > 0:
-            command = command.format('--peers ' + " ".join(peers))
+            command = command.format('--peers ' + ",".join(peers))
         else:
             command = command.format('')
 
