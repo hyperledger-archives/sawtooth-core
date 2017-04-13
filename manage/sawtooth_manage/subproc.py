@@ -52,6 +52,13 @@ def _get_executable_script(script_name):
     return ret_val
 
 
+class _StateEntry(object):
+    def __init__(self, name, status, pid):
+        self.name = name
+        self.status = status
+        self.pid = pid
+
+
 class SubprocessNodeController(NodeController):
     def __init__(self, state_dir=None):
         if state_dir is None:
@@ -72,7 +79,6 @@ class SubprocessNodeController(NodeController):
 
     def start(self, node_args):
         state = self._load_state()
-
         node_name = node_args.node_name
         node_num = int(node_name[len('validator-'):])
 
@@ -83,8 +89,6 @@ class SubprocessNodeController(NodeController):
         base_gossip_port = 8800
         gossip_port_num = str(base_gossip_port + node_num)
         gossip_port = 'tcp://0.0.0.0:' + gossip_port_num
-
-        state['Nodes'][node_name]['pid'] = []
 
         commands = ['validator'] + state['Processors']
         if node_args.genesis:
@@ -115,6 +119,7 @@ class SubprocessNodeController(NodeController):
                 flags = component + network + public_uri
                 if len(peer_list) > 0:
                     flags += peers_flag
+                flags += tuple(['-vv'])
 
             elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
@@ -122,10 +127,7 @@ class SubprocessNodeController(NodeController):
                 flags = '--stream-url', url
             else:
                 flags = (url,)
-            handle = subprocess.Popen((executable,) + flags)
-
-            pid = handle.pid
-            state['Nodes'][node_name]['pid'] += [pid]
+            subprocess.Popen((executable,) + flags)
 
         self._save_state(state)
 
@@ -133,8 +135,10 @@ class SubprocessNodeController(NodeController):
             time.sleep(5)
 
     def _send_signal_to_node(self, signal_type, node_name):
-        state = self._load_state()
-        for pid in state['Nodes'][node_name]['pid']:
+        pids = []
+        for entry in self._get_state():
+            pids.append(int(entry.pid))
+        for pid in pids:
             os.kill(pid, int(signal_type))
 
     def stop(self, node_name):
@@ -144,12 +148,16 @@ class SubprocessNodeController(NodeController):
         self._send_signal_to_node(signal.SIGKILL, node_name)
 
     def get_node_names(self):
-        state = self._load_state()
-        return state['Nodes'].keys()
+        node_names = []
+        for entry in self._get_state():
+            node_names.append(entry.name)
+        return node_names
 
     def is_running(self, node_name):
-        status = self._load_state()['Nodes'][node_name]['Status']
-        return True if status == 'Running' else False
+        for entry in self._get_state():
+            if node_name == entry.name:
+                return entry.status.startswith("Up")
+        return False
 
     def create_genesis_block(self, node_args):
         pass
@@ -163,3 +171,28 @@ class SubprocessNodeController(NodeController):
                 except PermissionError:
                     traceback.print_exc(file=sys.stderr)
                     sys.exit(1)
+
+    def _get_state(self):
+        sep = re.compile(r"[\s]+")
+        # Retrieves list of all running validators
+        cmd = 'ps -ef | grep validator'
+
+        try:
+            output = subprocess.check_output(cmd, shell=True)
+        except subprocess.CalledProcessError as e:
+            raise ManagementError(str(e))
+        except OSError as e:
+            if e.errno == 2:
+                raise ManagementError("{}".format(str(e)))
+
+        entries = []
+        for line in output.decode().split('\n'):
+            if (len(line) < 1) or 'grep' in line:
+                continue
+            parts = sep.split(line)
+            entries.append(_StateEntry(
+                name="validator-0{}".format(parts[12][-2:]),
+                pid=parts[1],
+                status='Up'))  # If the process exists, it is up
+
+        return entries
