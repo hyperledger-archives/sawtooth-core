@@ -44,7 +44,7 @@ class TestSuiteIntkey(unittest.TestCase):
         self.tester = TransactionProcessorTester()
 
     def _set_up(self):
-        url = "0.0.0.0:40000"
+        url = "eth0:40000"
 
         # 1. Init tester
         self.tester.register_comparator(
