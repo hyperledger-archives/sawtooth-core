@@ -172,7 +172,6 @@ def load_state(start=False):
             os.makedirs(dir_name)
         state = {
             'DesiredState': 'Stopped',
-            'Nodes': {}
         }
         # Ensure state file exists
         save_state(state)
@@ -215,10 +214,6 @@ def get_node_controller(state, args):
 def do_cluster_start(args):
     state = load_state(start=True)
 
-    # Check State for Running validators, if stopped clear out nodes.
-    if state["DesiredState"] == "Stopped":
-        state["Nodes"] = {}
-
     manage_type = DEFAULT_MANAGE if args.manage is None else args.manage
 
     if "Manage" not in state or state["DesiredState"] == "Stopped":
@@ -257,7 +252,6 @@ def do_cluster_start(args):
 
     for i in range(0, args.count):
         node_name = "validator-{:0>3}".format(i)
-
         if node_name in existing_nodes and vnm.is_running(node_name):
             print("Already running: {}".format(node_name))
             continue
@@ -275,10 +269,6 @@ def do_cluster_start(args):
 
         node_command_generator.start(node_args)
 
-        state["Nodes"][node_name] = {
-            "Status": "Running", "Index": i,
-            "HttpPort": str(http_port), "GossipPort": str(gossip_port)}
-
     save_state(state)
 
     print('Starting validators')
@@ -288,8 +278,6 @@ def do_cluster_start(args):
     except ManagementError as e:
         raise CliException(str(e))
 
-    node_names = state['Nodes'].keys()
-
     subprocess_manage = 'subprocess', 'subprocess-legacy'
     if state["Manage"] in subprocess_manage:
         print('Validators ready')
@@ -298,6 +286,7 @@ def do_cluster_start(args):
                 time.sleep(128)
         except KeyboardInterrupt:
             print()
+            node_names = vnm.get_node_names()
             ns = Namespace(cluster_command='stop', command='cluster',
                            node_names=node_names, verbose=None)
             do_cluster_stop(ns)
@@ -317,34 +306,13 @@ def do_cluster_stop(args):
     else:
         node_names = vnm.get_node_names()
 
-    state_nodes = state["Nodes"]
-
     # if node_names is empty, stop doesn't get called
     for node_name in node_names:
-        if node_name not in state_nodes:
-            raise CliException(
-                "{} is not a known node name".format(node_name))
-        if state_nodes[node_name]['Status'] == 'Stopped':
-            raise CliException('{} already stopped'.format(node_name))
 
         node_command_generator.stop(node_name)
 
-        # Update status of Nodes
-        node_status = 'Stopped' if node_name in state_nodes else 'Unknown'
-        state_nodes[node_name]['Status'] = node_status
-
-    if len(args.node_names) == 0 and len(node_names) == 0:
-        for node_name in state_nodes:
-            state_nodes[node_name]["Status"] = "Unknown"
-
-    # If none of the nodes are running set overall State to Stopped
     state["DesiredState"] = "Stopped"
-    for node in state_nodes:
-        if state_nodes[node]["Status"] == "Running":
-            state["DesiredState"] = "Running"
 
-    # Update state of nodes
-    state["Nodes"] = state_nodes
     save_state(state)
 
     print('Stopping validators')
@@ -379,30 +347,23 @@ def do_cluster_status(args):
 
     if len(args.node_names) > 0:
         node_names = args.node_names
-        node_superset = state['Nodes']
-        nodes = {}
+        node_superset = vnm.get_node_names()
         for node_name in args.node_names:
             try:
-                nodes[node_name] = node_superset[node_name]
+                node_name in node_superset
             except KeyError:
                 raise CliException(
                     "{} is not a known node name".format(node_name))
     else:
         node_names = vnm.get_node_names()
-        nodes = state['Nodes']
 
     # Check expected status of nodes vs what is returned from vnm
     print("NodeName".ljust(15), "Status".ljust(10))
-    for node_name in nodes:
-        if node_name not in node_names and \
-                (nodes[node_name]["Status"] == "Running" or
-                    nodes[node_name]["Status"] == "No Response"):
-            print(node_name.ljust(15), "Not Running".ljust(10))
-        else:
-            status = vnm.status(node_name)
-            if status == "UNKNOWN":
-                status = "Not Running"
-            print(node_name.ljust(15), status.ljust(10))
+    for node_name in node_names:
+        status = vnm.status(node_name)
+        if status == "UNKNOWN":
+            status = "Not Running"
+        print(node_name.ljust(15), status.ljust(10))
 
 
 def do_cluster_extend(args):
@@ -414,7 +375,10 @@ def do_cluster_extend(args):
         node_controller=node_controller,
         node_command_generator=node_command_generator)
 
-    existing_nodes = state["Nodes"]
+    try:
+        existing_nodes = vnm.get_node_names()
+    except ManagementError as e:
+        raise CliException(str(e))
 
     desired_stated = state["DesiredState"]
 
@@ -443,10 +407,6 @@ def do_cluster_extend(args):
         node_args = NodeArguments(node_name, http_port=http_port,
                                   gossip_port=gossip_port, genesis=genesis)
         node_command_generator.start(node_args)
-
-        state["Nodes"][node_name] = {
-            "Status": "Running", "Index": i,
-            "HttpPort": str(http_port), "GossipPort": str(gossip_port)}
 
     save_state(state)
 
