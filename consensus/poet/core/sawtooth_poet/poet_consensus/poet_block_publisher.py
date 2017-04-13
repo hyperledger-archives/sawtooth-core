@@ -57,6 +57,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
     """
 
     _poet_public_key = None
+    _previous_block_id = None
 
     _validator_registry_namespace = \
         hashlib.sha256('validator_registry'.encode()).hexdigest()[0:6]
@@ -218,6 +219,16 @@ class PoetBlockPublisher(BlockPublisherInterface):
             Boolean: True if the candidate block should be built. False if
             no candidate should be built.
         """
+        # If the previous block ID matches our cached one, that means that we
+        # have already determined that even if we initialize the requested
+        # block we would not be able to claim it.  So, instead of wasting time
+        # doing all of the checking again, simply short-circuit the failure so
+        # that the validator can go do something more useful.
+        if block_header.previous_block_id == \
+                PoetBlockPublisher._previous_block_id:
+            return False
+        PoetBlockPublisher._previous_block_id = block_header.previous_block_id
+
         # Using the current chain head, we need to create a state view so we
         # can create a PoET enclave.
         state_view = \
@@ -338,6 +349,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
 
+            LOGGER.error(
+                'Reject building on block %s: Validator has reached maximum '
+                'number of blocks with key pair.',
+                block_header.previous_block_id[:8])
             return False
 
         # Verify that we are abiding by the block claim delay (i.e., waiting a
@@ -350,6 +365,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_registry_view=validator_registry_view,
                 poet_config_view=poet_config_view,
                 block_store=self._block_cache.block_store):
+            LOGGER.error(
+                'Reject building on block %s: Validator has not waited long '
+                'enough since registering validator information.',
+                block_header.previous_block_id[:8])
             return False
 
         # Create a list of certificates for the wait timer.  This seems to
@@ -387,6 +406,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 population_estimate=wait_timer.population_estimate,
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module):
+            LOGGER.error(
+                'Reject building on block %s: Validator is claiming blocks '
+                'too frequently.',
+                block_header.previous_block_id[:8])
             return False
 
         # At this point, we know that if we are able to claim the block we are
@@ -394,6 +417,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # policies.
 
         self._wait_timer = wait_timer
+        PoetBlockPublisher._previous_block_id = None
 
         LOGGER.debug('Created wait timer: %s', self._wait_timer)
 
