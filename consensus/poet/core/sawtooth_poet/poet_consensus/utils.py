@@ -367,9 +367,14 @@ def get_consensus_state_for_block_id(
             consensus_state.total_block_claim_count += 1
             consensus_state_store[block_id] = consensus_state
 
+            consensus_state.aggregate_local_mean += \
+                block_info.wait_certificate.local_mean
+            consensus_state_store[block_id] = consensus_state
+
             LOGGER.debug(
-                'Create consensus state: BID=%s, TBCC=%d',
+                'Create consensus state: BID=%s, ALM=%f, TBCC=%d',
                 block_id[:8],
+                consensus_state.aggregate_local_mean,
                 consensus_state.total_block_claim_count)
 
     return consensus_state

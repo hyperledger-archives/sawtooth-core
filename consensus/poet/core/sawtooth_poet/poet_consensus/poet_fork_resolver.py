@@ -178,13 +178,21 @@ class PoetForkResolver(ForkResolverInterface):
                         validator_info=validator_info,
                         current_validator_state=validator_state))
 
-                # Store the updated consensus state for this block.
+                # Update the aggregate local mean and store the updated
+                # consensus state for this block.
+                wait_certificate = \
+                    utils.deserialize_wait_certificate(
+                        block=new_fork_head,
+                        poet_enclave_module=poet_enclave_module)
+                consensus_state.aggregate_local_mean += \
+                    wait_certificate.local_mean
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
 
                 LOGGER.debug(
-                    'Create consensus state: BID=%s, TBCC=%d',
+                    'Create consensus state: BID=%s, ALM=%f, TBCC=%d',
                     new_fork_head.identifier[:8],
+                    consensus_state.aggregate_local_mean,
                     consensus_state.total_block_claim_count)
             except KeyError:
                 # This _should_ never happen.  The new potential fork head
