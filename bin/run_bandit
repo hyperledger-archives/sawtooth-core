@@ -54,4 +54,6 @@ do
 done
 
 bandit -ll -r --ignore-nosec $top_dir \
-    --exclude $ignore
+    --exclude $ignore \
+    -f html \
+    -o build/bandit.html

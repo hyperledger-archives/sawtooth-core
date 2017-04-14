@@ -97,6 +97,7 @@ node ('master') {
         stage("Archive Build artifacts") {
             archiveArtifacts artifacts: '*.tgz, *.zip'
             archiveArtifacts artifacts: 'build/debs/*.deb'
+            archiveArtifacts artifacts: 'build/bandit.html'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
     }
