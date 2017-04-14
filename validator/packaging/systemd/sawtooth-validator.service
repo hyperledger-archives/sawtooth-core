@@ -1,0 +1,12 @@
+[Unit]
+Description=Sawtooth Validator Server
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-validator
+ExecStart=/usr/bin/validator $SAWTOOTH_VALIDATOR_ARGS
+
+[Install]
+WantedBy=multi-user.target

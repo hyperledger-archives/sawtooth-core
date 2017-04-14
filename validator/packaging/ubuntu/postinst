@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+directories="
+    /var/lib/sawtooth
+    /var/log/sawtooth
+    /etc/sawtooth
+"
+
+user="sawtooth"
+group="sawtooth"
+
+if ! getent passwd $user > /dev/null; then
+    adduser --quiet --system $user
+fi
+
+if ! getent group $group > /dev/null; then
+    addgroup --quiet --system $group
+fi
+
+for dir in $directories
+do
+    chown -R $user:$group $dir
+done
