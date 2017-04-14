@@ -73,9 +73,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/batches')
+        response = await self.get_assert_status('/batches', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_batch_list_with_no_genesis(self):
@@ -86,9 +89,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 503
+            - an error property with a code of 15
         """
         self.stream.preset_response(self.status.NOT_READY)
-        await self.assert_503('/batches')
+        response = await self.get_assert_status('/batches', 503)
+
+        self.assert_has_valid_error(response, 15)
 
     @unittest_run_loop
     async def test_batch_list_with_head(self):
@@ -134,9 +140,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 50
         """
         self.stream.preset_response(self.status.NO_ROOT)
-        await self.assert_404('/batches?head=bad')
+        response = await self.get_assert_status('/batches?head=bad', 404)
+
+        self.assert_has_valid_error(response, 50)
 
     @unittest_run_loop
     async def test_batch_list_with_ids(self):
@@ -281,8 +290,11 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 53
         """
-        await self.assert_400('/batches?min=2&count=0')
+        response = await self.get_assert_status('/batches?min=2&count=0', 400)
+
+        self.assert_has_valid_error(response, 53)
 
     @unittest_run_loop
     async def test_batch_list_with_bad_paging(self):
@@ -293,9 +305,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 54
         """
         self.stream.preset_response(self.status.INVALID_PAGING)
-        await self.assert_400('/batches?min=-1')
+        response = await self.get_assert_status('/batches?min=-1', 400)
+
+        self.assert_has_valid_error(response, 54)
 
     @unittest_run_loop
     async def test_batch_list_paginated_with_just_count(self):
@@ -527,9 +542,12 @@ class BatchGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/batches/1')
+        response = await self.get_assert_status('/batches/1', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_batch_get_with_bad_id(self):
@@ -540,6 +558,9 @@ class BatchGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 71
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/batches/bad')
+        response = await self.get_assert_status('/batches/bad', 404)
+
+        self.assert_has_valid_error(response, 71)

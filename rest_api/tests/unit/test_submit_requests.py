@@ -66,6 +66,7 @@ class PostBatchTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         batches = Mocks.make_batches('a')
         self.stream.preset_response(self.status.INTERNAL_ERROR)
@@ -73,18 +74,25 @@ class PostBatchTests(BaseApiTest):
         request = await self.post_batches(batches)
         self.assertEqual(500, request.status)
 
+        response = await request.json()
+        self.assert_has_valid_error(response, 10)
+
     @unittest_run_loop
     async def test_post_json_batch(self):
         """Verifies a POST /batches with a JSON request body breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 42
         """
         request = await self.client.post(
             '/batches',
             data='{"bad": "data"}',
             headers={'content-type': 'application/json'})
         self.assertEqual(400, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_error(response, 42)
 
     @unittest_run_loop
     async def test_post_invalid_batch(self):
@@ -95,12 +103,16 @@ class PostBatchTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 30
         """
         batches = Mocks.make_batches('bad')
         self.stream.preset_response(self.status.INVALID_BATCH)
 
         request = await self.post_batches(batches)
         self.assertEqual(400, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_error(response, 30)
 
     @unittest_run_loop
     async def test_post_many_batches(self):
@@ -134,9 +146,13 @@ class PostBatchTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 34
         """
         request = await self.post_batches([])
         self.assertEqual(400, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_error(response, 34)
 
     @unittest_run_loop
     async def test_post_batch_with_wait(self):
@@ -247,9 +263,12 @@ class BatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/batch_status?id=pending')
+        response = await self.get_assert_status('/batch_status?id=pending', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_batch_status_with_missing_statuses(self):
@@ -260,9 +279,12 @@ class BatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 27
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_500('/batch_status?id=pending')
+        response = await self.get_assert_status('/batch_status?id=pending', 500)
+
+        self.assert_has_valid_error(response, 27)
 
     @unittest_run_loop
     async def test_batch_status_with_wait(self):
@@ -333,8 +355,11 @@ class BatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 66
         """
-        await self.assert_400('/batch_status')
+        response = await self.get_assert_status('/batch_status', 400)
+
+        self.assert_has_valid_error(response, 66)
 
     @unittest_run_loop
     async def test_batch_status_as_post(self):
@@ -373,11 +398,12 @@ class BatchStatusTests(BaseApiTest):
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_as_bad_post(self):
+    async def test_batch_status_wrong_post_type(self):
         """Verifies a bad POST to /batch_status breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 43
         """
         request = await self.client.post(
             '/batch_status',
@@ -385,15 +411,39 @@ class BatchStatusTests(BaseApiTest):
             headers={'content-type': 'application/octet-stream'})
         self.assertEqual(400, request.status)
 
+        response = await request.json()
+        self.assert_has_valid_error(response, 43)
+
+    @unittest_run_loop
+    async def test_batch_status_as_bad_post(self):
+        """Verifies an empty POST to /batch_status breaks properly.
+
+        It should send back a JSON response with:
+            - a response status of 400
+            - an error property with a code of 46
+        """
+        request = await self.client.post(
+            '/batch_status',
+            data=json.dumps('bad body').encode(),
+            headers={'content-type': 'application/json'})
+        self.assertEqual(400, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_error(response, 46)
+
     @unittest_run_loop
     async def test_batch_status_as_empty_post(self):
         """Verifies an empty POST to /batch_status breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 46
         """
         request = await self.client.post(
             '/batch_status',
             data=json.dumps([]).encode(),
             headers={'content-type': 'application/json'})
         self.assertEqual(400, request.status)
+
+        response = await request.json()
+        self.assert_has_valid_error(response, 46)

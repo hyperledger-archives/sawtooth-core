@@ -73,9 +73,12 @@ class BlockListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/blocks')
+        response = await self.get_assert_status('/blocks', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_block_list_with_no_genesis(self):
@@ -86,9 +89,12 @@ class BlockListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 503
+            - an error property with a code of 15
         """
         self.stream.preset_response(self.status.NOT_READY)
-        await self.assert_503('/blocks')
+        response = await self.get_assert_status('/blocks', 503)
+
+        self.assert_has_valid_error(response, 15)
 
     @unittest_run_loop
     async def test_block_list_with_head(self):
@@ -134,9 +140,12 @@ class BlockListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 404
+            - an error property with a code of 50
         """
         self.stream.preset_response(self.status.NO_ROOT)
-        await self.assert_404('/blocks?head=bad')
+        response = await self.get_assert_status('/blocks?head=bad', 404)
+
+        self.assert_has_valid_error(response, 50)
 
     @unittest_run_loop
     async def test_block_list_with_ids(self):
@@ -280,8 +289,11 @@ class BlockListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 53
         """
-        await self.assert_400('/blocks?min=2&count=0')
+        response = await self.get_assert_status('/blocks?min=2&count=0', 400)
+
+        self.assert_has_valid_error(response, 53)
 
     @unittest_run_loop
     async def test_block_list_with_bad_paging(self):
@@ -292,9 +304,13 @@ class BlockListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 54
         """
         self.stream.preset_response(self.status.INVALID_PAGING)
-        await self.assert_400('/blocks?min=-1')
+        response = await self.get_assert_status('/blocks?min=-1', 400)
+
+        self.assert_has_valid_error(response, 54)
+
 
     @unittest_run_loop
     async def test_block_list_paginated_with_just_count(self):
@@ -526,9 +542,12 @@ class BlockGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/blocks/1')
+        response = await self.get_assert_status('/blocks/1', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_block_get_with_bad_id(self):
@@ -539,6 +558,9 @@ class BlockGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 70
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/blocks/bad')
+        response = await self.get_assert_status('/blocks/bad', 404)
+
+        self.assert_has_valid_error(response, 70)

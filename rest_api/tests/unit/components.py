@@ -191,7 +191,7 @@ class BaseApiTest(AioHTTPTestCase):
             data=batch_bytes,
             headers={'content-type': 'application/octet-stream'})
 
-    async def get_and_assert_status(self, endpoint, status):
+    async def get_assert_status(self, endpoint, status):
         """GETs from endpoint, asserts an HTTP status, returns parsed response
         """
         request = await self.client.get(endpoint)
@@ -202,26 +202,6 @@ class BaseApiTest(AioHTTPTestCase):
         """GETs from endpoint, asserts a 200 status, returns a parsed response
         """
         return await self.get_assert_status(endpoint, 200)
-
-    async def assert_400(self, endpoint):
-        """GETs from an endpoint, and asserts a 400 HTTP status
-        """
-        await self.get_and_assert_status(endpoint, 400)
-
-    async def assert_404(self, endpoint):
-        """GETs from an endpoint, and asserts a 404 HTTP status
-        """
-        await self.get_and_assert_status(endpoint, 404)
-
-    async def assert_500(self, endpoint):
-        """GETs from an endpoint, and asserts a 500 HTTP status
-        """
-        await self.get_and_assert_status(endpoint, 500)
-
-    async def assert_503(self, endpoint):
-        """GETs from an endpoint, and asserts a 503 HTTP status
-        """
-        await self.get_and_assert_status(endpoint, 503)
 
     def assert_all_instances(self, items, cls):
         """Asserts that all items in a collection are instances of a class
@@ -273,6 +253,20 @@ class BaseApiTest(AioHTTPTestCase):
             self.assert_valid_url(js_paging['previous'], previous_link)
         else:
             self.assertNotIn('previous', js_paging)
+
+    def assert_has_valid_error(self, response, expected_code):
+        """Asserts a response has only an error dict with an expected code
+        """
+        self.assertIn('error', response)
+        self.assertEqual(1, len(response))
+
+        error = response['error']
+        self.assertIn('code', error)
+        self.assertEqual(error['code'], expected_code)
+        self.assertIn('title', error)
+        self.assertIsInstance(error['title'], str)
+        self.assertIn('message', error)
+        self.assertIsInstance(error['message'], str)
 
     def assert_has_valid_data_list(self, response, expected_length):
         """Asserts a response has a data list of dicts of an expected length.

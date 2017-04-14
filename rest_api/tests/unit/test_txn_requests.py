@@ -76,9 +76,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/transactions')
+        response = await self.get_assert_status('/transactions', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_txn_list_with_no_genesis(self):
@@ -89,9 +92,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 503
+            - an error property with a code of 15
         """
         self.stream.preset_response(self.status.NOT_READY)
-        await self.assert_503('/transactions')
+        response = await self.get_assert_status('/transactions', 503)
+
+        self.assert_has_valid_error(response, 15)
 
     @unittest_run_loop
     async def test_txn_list_with_head(self):
@@ -139,9 +145,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 50
         """
         self.stream.preset_response(self.status.NO_ROOT)
-        await self.assert_404('/transactions?head=bad')
+        response = await self.get_assert_status('/transactions?head=bad', 404)
+
+        self.assert_has_valid_error(response, 50)
 
     @unittest_run_loop
     async def test_txn_list_with_ids(self):
@@ -290,8 +299,11 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 53
         """
-        await self.assert_400('/transactions?min=2&count=0')
+        response = await self.get_assert_status('/transactions?count=0', 400)
+
+        self.assert_has_valid_error(response, 53)
 
     @unittest_run_loop
     async def test_txn_list_with_bad_paging(self):
@@ -302,9 +314,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 54
         """
         self.stream.preset_response(self.status.INVALID_PAGING)
-        await self.assert_400('/transactions?min=-1')
+        response = await self.get_assert_status('/transactions?min=-1', 400)
+
+        self.assert_has_valid_error(response, 54)
 
     @unittest_run_loop
     async def test_txn_list_paginated_with_just_count(self):
@@ -549,9 +564,12 @@ class TransactionGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/transactions/1')
+        response = await self.get_assert_status('/transactions/1', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_txn_get_with_bad_id(self):
@@ -562,6 +580,9 @@ class TransactionGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 72
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/transactions/bad')
+        response = await self.get_assert_status('/transactions/bad', 404)
+
+        self.assert_has_valid_error(response, 72)
