@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "protobufjs": "^6.2.1",
+    "secp256k1": "^3.2.5",
     "uuid": "^3.0.1",
     "zmq": "2.15.3"
   },
