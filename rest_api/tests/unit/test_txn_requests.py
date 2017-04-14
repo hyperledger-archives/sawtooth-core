@@ -57,7 +57,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('2', '1', '0'))
 
-        response = await self.get_json_assert_200('/transactions')
+        response = await self.get_assert_200('/transactions')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -120,7 +120,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('1', '0'))
 
-        response = await self.get_json_assert_200('/transactions?head=1')
+        response = await self.get_assert_200('/transactions?head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
@@ -168,7 +168,7 @@ class TransactionListTests(BaseApiTest):
         transactions = Mocks.make_txns('0', '2')
         self.stream.preset_response(head_id='2', paging=paging, transactions=transactions)
 
-        response = await self.get_json_assert_200('/transactions?id=0,2')
+        response = await self.get_assert_200('/transactions?id=0,2')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(transaction_ids=['0', '2'], paging=controls)
 
@@ -198,7 +198,7 @@ class TransactionListTests(BaseApiTest):
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
-        response = await self.get_json_assert_200('/transactions?id=bad,notgood')
+        response = await self.get_assert_200('/transactions?id=bad,notgood')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/transactions?head=2&id=bad,notgood')
@@ -233,7 +233,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('0'))
 
-        response = await self.get_json_assert_200('/transactions?id=0&head=1')
+        response = await self.get_assert_200('/transactions?id=0&head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(
             head_id='1',
@@ -272,7 +272,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('c'))
 
-        response = await self.get_json_assert_200('/transactions?min=1&count=1')
+        response = await self.get_assert_200('/transactions?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -332,7 +332,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('d', 'c'))
 
-        response = await self.get_json_assert_200('/transactions?count=2')
+        response = await self.get_assert_200('/transactions?count=2')
         controls = Mocks.make_paging_controls(2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -369,7 +369,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('b', 'a'))
 
-        response = await self.get_json_assert_200('/transactions?min=2')
+        response = await self.get_assert_200('/transactions?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -409,7 +409,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('c', 'b', 'a'))
 
-        response = await self.get_json_assert_200('/transactions?min=c&count=5')
+        response = await self.get_assert_200('/transactions?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -450,7 +450,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('c', 'b'))
 
-        response = await self.get_json_assert_200('/transactions?max=b&count=2')
+        response = await self.get_assert_200('/transactions?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -488,7 +488,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('d', 'c', 'b'))
 
-        response = await self.get_json_assert_200('/transactions?max=2&count=7')
+        response = await self.get_assert_200('/transactions?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -532,7 +532,7 @@ class TransactionGetTests(BaseApiTest):
         """
         self.stream.preset_response(transaction=Mocks.make_txns('1')[0])
 
-        response = await self.get_json_assert_200('/transactions/1')
+        response = await self.get_assert_200('/transactions/1')
         self.stream.assert_valid_request_sent(transaction_id='1')
 
         self.assertNotIn('head', response)

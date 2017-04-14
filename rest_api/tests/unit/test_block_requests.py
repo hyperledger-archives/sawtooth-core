@@ -54,7 +54,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('2', '1', '0')
         self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks')
+        response = await self.get_assert_200('/blocks')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -115,7 +115,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('1', '0')
         self.stream.preset_response(head_id='1', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?head=1')
+        response = await self.get_assert_200('/blocks?head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
@@ -163,7 +163,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('0', '2')
         self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?id=0,2')
+        response = await self.get_assert_200('/blocks?id=0,2')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(block_ids=['0', '2'], paging=controls)
 
@@ -193,7 +193,7 @@ class BlockListTests(BaseApiTest):
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
-        response = await self.get_json_assert_200('/blocks?id=bad,notgood')
+        response = await self.get_assert_200('/blocks?id=bad,notgood')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/blocks?head=2&id=bad,notgood')
@@ -226,7 +226,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('0')
         self.stream.preset_response(head_id='1', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?id=0&head=1')
+        response = await self.get_assert_200('/blocks?id=0&head=1')
         self.stream.assert_valid_request_sent(
             head_id='1',
             block_ids=['0'],
@@ -262,7 +262,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('c')
         self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?min=1&count=1')
+        response = await self.get_assert_200('/blocks?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -320,7 +320,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('d', 'c')
         self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?count=2')
+        response = await self.get_assert_200('/blocks?count=2')
         controls = Mocks.make_paging_controls(2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -355,7 +355,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('b', 'a')
         self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?min=2')
+        response = await self.get_assert_200('/blocks?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -393,7 +393,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('c', 'b', 'a')
         self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?min=c&count=5')
+        response = await self.get_assert_200('/blocks?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -432,7 +432,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('c', 'b')
         self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?max=b&count=2')
+        response = await self.get_assert_200('/blocks?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -468,7 +468,7 @@ class BlockListTests(BaseApiTest):
         blocks = Mocks.make_blocks('d', 'c', 'b')
         self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
 
-        response = await self.get_json_assert_200('/blocks?max=2&count=7')
+        response = await self.get_assert_200('/blocks?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -509,7 +509,7 @@ class BlockGetTests(BaseApiTest):
         """
         self.stream.preset_response(block=Mocks.make_blocks('1')[0])
 
-        response = await self.get_json_assert_200('/blocks/1')
+        response = await self.get_assert_200('/blocks/1')
         self.stream.assert_valid_request_sent(block_id='1')
 
         self.assertNotIn('head', response)

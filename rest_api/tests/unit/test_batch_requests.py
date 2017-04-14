@@ -54,7 +54,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('2', '1', '0')
         self.stream.preset_response(head_id='2', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches')
+        response = await self.get_assert_200('/batches')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -115,7 +115,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('1', '0')
         self.stream.preset_response(head_id='1', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?head=1')
+        response = await self.get_assert_200('/batches?head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
@@ -163,7 +163,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('0', '2')
         self.stream.preset_response(head_id='2', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?id=0,2')
+        response = await self.get_assert_200('/batches?id=0,2')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(batch_ids=['0', '2'], paging=controls)
 
@@ -193,7 +193,7 @@ class BatchListTests(BaseApiTest):
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
-        response = await self.get_json_assert_200('/batches?id=bad,notgood')
+        response = await self.get_assert_200('/batches?id=bad,notgood')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/batches?head=2&id=bad,notgood')
@@ -226,7 +226,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('0')
         self.stream.preset_response(head_id='1', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?id=0&head=1')
+        response = await self.get_assert_200('/batches?id=0&head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(
             head_id='1',
@@ -263,7 +263,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('c')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?min=1&count=1')
+        response = await self.get_assert_200('/batches?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -321,7 +321,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('d', 'c')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?count=2')
+        response = await self.get_assert_200('/batches?count=2')
         controls = Mocks.make_paging_controls(2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -356,7 +356,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('b', 'a')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?min=2')
+        response = await self.get_assert_200('/batches?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -394,7 +394,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('c', 'b', 'a')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?min=c&count=5')
+        response = await self.get_assert_200('/batches?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -433,7 +433,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('c', 'b')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?max=b&count=2')
+        response = await self.get_assert_200('/batches?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -469,7 +469,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('d', 'c', 'b')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?max=2&count=7')
+        response = await self.get_assert_200('/batches?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -510,7 +510,7 @@ class BatchGetTests(BaseApiTest):
         """
         self.stream.preset_response(batch=Mocks.make_batches('1')[0])
 
-        response = await self.get_json_assert_200('/batches/1')
+        response = await self.get_assert_200('/batches/1')
         self.stream.assert_valid_request_sent(batch_id='1')
 
         self.assertNotIn('head', response)

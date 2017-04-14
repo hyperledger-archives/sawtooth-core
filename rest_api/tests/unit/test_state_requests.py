@@ -58,7 +58,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
         self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state')
+        response = await self.get_assert_200('/state')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -121,7 +121,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(a=b'2', b=b'4')
         self.stream.preset_response(head_id='1', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?head=1')
+        response = await self.get_assert_200('/state?head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
@@ -169,7 +169,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(c=b'7')
         self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?address=c')
+        response = await self.get_assert_200('/state?address=c')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(address='c', paging=controls)
 
@@ -199,7 +199,7 @@ class StateListTests(BaseApiTest):
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
-        response = await self.get_json_assert_200('/state?address=bad')
+        response = await self.get_assert_200('/state?address=bad')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2&address=bad')
@@ -232,7 +232,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(a=b'2')
         self.stream.preset_response(head_id='1', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?address=a&head=1')
+        response = await self.get_assert_200('/state?address=a&head=1')
         self.stream.assert_valid_request_sent(
             head_id='1',
             address='a',
@@ -268,7 +268,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(c=b'3')
         self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?min=1&count=1')
+        response = await self.get_assert_200('/state?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -326,7 +326,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(d=b'4', c=b'3')
         self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?count=2')
+        response = await self.get_assert_200('/state?count=2')
         controls = Mocks.make_paging_controls(2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -361,7 +361,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(b=b'2', a=b'1')
         self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?min=2')
+        response = await self.get_assert_200('/state?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -399,7 +399,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(c=b'3', b=b'2', a=b'1')
         self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?min=c&count=5')
+        response = await self.get_assert_200('/state?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -438,7 +438,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(c=b'3', b=b'2')
         self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?max=b&count=2')
+        response = await self.get_assert_200('/state?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -474,7 +474,7 @@ class StateListTests(BaseApiTest):
         leaves = Mocks.make_leaves(d=b'4', c=b'3', b=b'2')
         self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
 
-        response = await self.get_json_assert_200('/state?max=2&count=7')
+        response = await self.get_assert_200('/state?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -516,7 +516,7 @@ class StateGetTests(BaseApiTest):
         """
         self.stream.preset_response(head_id='2', value=b'3')
 
-        response = await self.get_json_assert_200('/state/a')
+        response = await self.get_assert_200('/state/a')
         self.stream.assert_valid_request_sent(address='a')
 
         self.assert_has_valid_head(response, '2')
@@ -586,7 +586,7 @@ class StateGetTests(BaseApiTest):
         """
         self.stream.preset_response(head_id='1', value=b'4')
 
-        response = await self.get_json_assert_200('/state/b?head=1')
+        response = await self.get_assert_200('/state/b?head=1')
         self.stream.assert_valid_request_sent(head_id='1', address='b')
 
         self.assert_has_valid_head(response, '1')

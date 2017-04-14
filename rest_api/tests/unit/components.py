@@ -192,17 +192,16 @@ class BaseApiTest(AioHTTPTestCase):
             headers={'content-type': 'application/octet-stream'})
 
     async def get_and_assert_status(self, endpoint, status):
-        """GETs from an endpoint and asserts the HTTP status is as expected
+        """GETs from endpoint, asserts an HTTP status, returns parsed response
         """
         request = await self.client.get(endpoint)
         self.assertEqual(status, request.status)
-        return request
+        return await request.json()
 
-    async def get_json_assert_200(self, endpoint):
+    async def get_assert_200(self, endpoint):
         """GETs from endpoint, asserts a 200 status, returns a parsed response
         """
-        request = await self.get_and_assert_status(endpoint, 200)
-        return await request.json()
+        return await self.get_assert_status(endpoint, 200)
 
     async def assert_400(self, endpoint):
         """GETs from an endpoint, and asserts a 400 HTTP status

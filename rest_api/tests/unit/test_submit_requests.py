@@ -232,7 +232,7 @@ class BatchStatusTests(BaseApiTest):
         statuses = {'pending': self.status.PENDING}
         self.stream.preset_response(batch_statuses=statuses)
 
-        response = await self.get_json_assert_200('/batch_status?id=pending')
+        response = await self.get_assert_200('/batch_status?id=pending')
         self.stream.assert_valid_request_sent(batch_ids=['pending'])
 
         self.assert_has_valid_link(response, '/batch_status?id=pending')
@@ -284,8 +284,7 @@ class BatchStatusTests(BaseApiTest):
         statuses = {'pending': self.status.COMMITTED}
         self.stream.preset_response(batch_statuses=statuses)
 
-        response = await self.get_json_assert_200(
-            '/batch_status?id=pending&wait')
+        response = await self.get_assert_200('/batch_status?id=pending&wait')
         self.stream.assert_valid_request_sent(
             batch_ids=['pending'],
             wait_for_commit=True,
@@ -318,7 +317,7 @@ class BatchStatusTests(BaseApiTest):
             'bad': self.status.UNKNOWN}
         self.stream.preset_response(batch_statuses=statuses)
 
-        response = await self.get_json_assert_200(
+        response = await self.get_assert_200(
             '/batch_status?id=committed,unknown,bad')
         self.stream.assert_valid_request_sent(
             batch_ids=['committed', 'unknown', 'bad'])
