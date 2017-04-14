@@ -72,6 +72,17 @@ class _CandidateBlock(object):
     def previous_block_id(self):
         return self._block_builder.previous_block_id
 
+    @property
+    def last_batch(self):
+        if self._pending_batches:
+            return self._pending_batches[-1]
+        return None
+
+    @property
+    def can_add_batch(self):
+        return self._max_batches == 0 or\
+            len(self._pending_batches) < self._max_batches
+
     def _check_batch_dependencies(self, batch, committed_txn_cache):
         """Check the dependencies for all transactions in this are present.
         If all are present the committed_txn is updated with all txn in this
@@ -295,7 +306,7 @@ class BlockPublisher(object):
 
         config_view = ConfigView(state_view)
         max_batches = config_view.get_setting(
-            'sawtooth.publisher.max_block_size',
+            'sawtooth.publisher.max_batches_per_block',
             default_value=0, value_type=int)
 
         consensus = consensus_module.\
@@ -328,7 +339,10 @@ class BlockPublisher(object):
                                                 block_builder,
                                                 max_batches)
         for batch in self._pending_batches:
-            self._candidate_block.add_batch(batch)
+            if self._candidate_block.can_add_batch:
+                self._candidate_block.add_batch(batch)
+            else:
+                break
 
     def on_batch_received(self, batch):
         """
@@ -339,7 +353,7 @@ class BlockPublisher(object):
         self._pending_batches.append(batch)
         # if we are building a block then send schedule it for
         # execution.
-        if self._candidate_block:
+        if self._candidate_block and self._candidate_block.can_add_batch:
             self._candidate_block.add_batch(batch)
 
     def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
@@ -411,30 +425,36 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                pending_batch_count = len(self._pending_batches)
                 if self._chain_head is not None and\
                         self._candidate_block is None and\
-                        pending_batch_count != 0:
+                        self._pending_batches:
                     self._build_candidate_block(self._chain_head)
 
                 if self._candidate_block and \
-                        (force or pending_batch_count != 0) and \
+                        (force or self._pending_batches) and \
                         self._candidate_block.check_publish_block():
 
                     pending_batches = []  # will receive the list of batches
                     # that were not added to the block
-
+                    last_batch = self._candidate_block.last_batch
                     block = self._candidate_block.finalize_block(
                         self._identity_signing_key,
                         pending_batches)
                     self._candidate_block = None
-
                     if block:
-                        block = BlockWrapper(block)
-                        self._block_sender.send(block.block)
+                        blkw = BlockWrapper(block)
+                        LOGGER.info("Claimed Block: %s", blkw)
+                        self._block_sender.send(blkw.block)
 
-                        self._pending_batches = pending_batches
-                        LOGGER.info("Claimed Block: %s", block)
+                        # check if we have batches that were not
+                        # sent to the CandidateBlock.
+                        last_batch_index =\
+                            self._pending_batches.index(last_batch)
+                        additional_batches =\
+                            self._pending_batches[last_batch_index + 1:]
+
+                        self._pending_batches =\
+                            pending_batches + additional_batches
 
                         # We built our candidate, disable processing until
                         # the chain head is updated. Only set this if

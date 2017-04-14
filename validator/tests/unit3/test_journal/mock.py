@@ -13,13 +13,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 from concurrent.futures import Executor
+
 from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
+
 from sawtooth_validator.journal.batch_sender import BatchSender
 from sawtooth_validator.journal.block_sender import BlockSender
+
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
+from sawtooth_validator.protobuf.setting_pb2 import Setting
 
+from sawtooth_validator.state.config_view import ConfigView
 
 class SynchronousExecutor(Executor):
     def __init__(self):
@@ -226,3 +231,14 @@ class MockChainIdManager(object):
 
     def get_block_chain_id(self):
         return self._block_chain_id
+
+
+def CreateSetting(key, value):
+    """
+    Create a setting object to include in a MockStateFactory.
+    """
+    addr = ConfigView.setting_address(key)
+
+    setting = Setting()
+    setting.entries.add(key=key, value=repr(value))
+    return addr, setting.SerializeToString()
