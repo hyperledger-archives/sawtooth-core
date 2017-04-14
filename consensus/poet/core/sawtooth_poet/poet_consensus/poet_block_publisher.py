@@ -305,11 +305,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # with this PoET key.  If we have hit the key block claim limit, then
         # we need to check if the key has been refreshed.
         key_block_claim_limit = poet_config_view.key_block_claim_limit
-
-        if validator_state.poet_public_key == \
-                PoetBlockPublisher._poet_public_key and \
-                validator_state.key_block_claim_count >= \
-                key_block_claim_limit:
+        if utils.validator_has_claimed_maximum_number_of_blocks(
+                validator_info=validator_info,
+                validator_state=validator_state,
+                key_block_claim_limit=key_block_claim_limit):
             # Because we have hit the limit, check to see if we have already
             # submitted a validator registry transaction with new signup
             # information, and therefore a new PoET public key.  If not, then
@@ -323,7 +322,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     PoetBlockPublisher._poet_public_key]
             if not poet_key_state.has_been_refreshed:
                 LOGGER.info(
-                    'Reached block claim limit (%d) for key for key: %s...%s',
+                    'Reached block claim limit (%d) for key: %s...%s',
                     key_block_claim_limit,
                     PoetBlockPublisher._poet_public_key[:8],
                     PoetBlockPublisher._poet_public_key[-8:])
@@ -344,41 +343,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # Verify that we are abiding by the block claim delay (i.e., waiting a
         # certain number of blocks since our validator registry was added/
         # updated).
-
-        # While having a block claim delay is nice, it turns out that in
-        # practice the claim delay should not be more than one less than
-        # the number of validators.  It helps to imagine the scenario
-        # where each validator hits their block claim limit in sequential
-        # blocks and their new validator registry information is updated
-        # in the following block by another validator, assuming that there
-        # were no forks.  If there are N validators, once all N validators
-        # have updated their validator registry information, there will
-        # have been N-1 block commits and the Nth validator will only be
-        # able to get its updated validator registry information updated
-        # if the first validator that kicked this off is now able to claim
-        # a block.  If the block claim delay was greater than or equal to
-        # the number of validators, at this point no validators would be
-        # able to claim a block.
-        number_of_validators = \
-            len(validator_registry_view.get_validators())
-        block_claim_delay = \
-            min(
-                poet_config_view.block_claim_delay,
-                number_of_validators - 1)
-
-        # While a validator network is starting up, we need to be careful
-        # about applying the block claim delay because if we are too
-        # aggressive we will get ourselves into a situation where the
-        # block claim delay will prevent any validators from claiming
-        # blocks.  So, until we get at least block_claim_delay blocks
-        # we are going to choose not to enforce the delay.
-        if consensus_state.total_block_claim_count > block_claim_delay:
-            blocks_since_registration = \
-                block_header.block_num - \
-                validator_state.commit_block_number - 1
-
-            if block_claim_delay > blocks_since_registration:
-                return False
+        if utils.validator_has_claimed_too_early(
+                validator_info=validator_info,
+                consensus_state=consensus_state,
+                block_number=block_header.block_num,
+                validator_registry_view=validator_registry_view,
+                poet_config_view=poet_config_view,
+                block_store=self._block_cache.block_store):
+            return False
 
         # Create a list of certificates for the wait timer.  This seems to
         # have a little too much knowledge of the WaitTimer implementation,
@@ -393,11 +365,17 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
-        self._wait_timer = \
+        wait_timer = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 certificates=list(certificates))
+
+        # At this point, we know that if we are able to claim the block we are
+        # initializing, we will not be prevented from doing so because of PoET
+        # policies.
+
+        self._wait_timer = wait_timer
 
         LOGGER.debug('Created wait timer: %s', self._wait_timer)
 

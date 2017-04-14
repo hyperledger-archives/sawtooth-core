@@ -153,7 +153,8 @@ class PoetForkResolver(ForkResolverInterface):
                         new_fork_head.header.signer_pubkey)
 
                 # Get the consensus state for the new fork head's previous
-                # block, update the validator state for the new fork head
+                # block and update the consensus-wide statistics for the new
+                # fork head.
                 consensus_state = \
                     utils.get_consensus_state_for_block_id(
                         block_id=new_fork_head.previous_block_id,
@@ -162,6 +163,10 @@ class PoetForkResolver(ForkResolverInterface):
                         consensus_state_store=self._consensus_state_store,
                         poet_enclave_module=poet_enclave_module)
 
+                consensus_state.total_block_claim_count += 1
+
+                # Get and update the validator state/statistics for the
+                # validator that claimed the new fork head.
                 validator_state = \
                     utils.get_current_validator_state(
                         validator_info=validator_info,
@@ -171,17 +176,15 @@ class PoetForkResolver(ForkResolverInterface):
                     validator_id=validator_info.id,
                     validator_state=utils.create_next_validator_state(
                         validator_info=validator_info,
-                        current_validator_state=validator_state,
-                        block_cache=self._block_cache))
+                        current_validator_state=validator_state))
 
-                # Update the consensus-wide statistics and store the updated
-                # consensus state for this block.
-                consensus_state.total_block_claim_count += 1
+                # Store the updated consensus state for this block.
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
 
                 LOGGER.debug(
-                    'Update consensus state: EBC=%f, TBCC=%d',
+                    'Create consensus state: BID=%s, EBC=%f, TBCC=%d',
+                    new_fork_head.identifier[:8],
                     consensus_state.expected_block_claim_count,
                     consensus_state.total_block_claim_count)
             except KeyError:
