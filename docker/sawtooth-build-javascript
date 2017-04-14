@@ -27,7 +27,7 @@
 FROM yarnpkg/node-yarn:0.20-node7
 
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    libzmq3-dev \
+    libzmq3-dev=4.0.5+dfsg-2+deb8u1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
