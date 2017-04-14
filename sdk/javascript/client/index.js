@@ -17,6 +17,10 @@
 
 'use strict'
 
+const {BatchEncoder, TransactionEncoder} = require('./encoders')
+
 module.exports = {
-  signer: require('./signer')
+  signer: require('./signer'),
+  BatchEncoder,
+  TransactionEncoder
 }
