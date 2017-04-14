@@ -82,50 +82,142 @@ class PoetForkResolver(ForkResolverInterface):
         """
         chosen_fork_head = None
 
-        if new_fork_head.block_num > cur_fork_head.block_num:
-            LOGGER.info(
-                'Chain with new fork head %s...%s longer (%d) than current '
-                'chain head %s...%s (%d)',
-                new_fork_head.header_signature[:8],
-                new_fork_head.header_signature[-8:],
-                new_fork_head.block_num,
-                cur_fork_head.header_signature[:8],
-                cur_fork_head.header_signature[-8:],
-                cur_fork_head.block_num)
-            chosen_fork_head = new_fork_head
-        elif new_fork_head.block_num < cur_fork_head.block_num:
-            LOGGER.info(
-                'Chain with current head %s...%s longer (%d) than new fork '
-                'head %s...%s (%d)',
-                cur_fork_head.header_signature[:8],
-                cur_fork_head.header_signature[-8:],
-                cur_fork_head.block_num,
-                new_fork_head.header_signature[:8],
-                new_fork_head.header_signature[-8:],
-                new_fork_head.block_num)
-            chosen_fork_head = cur_fork_head
-        elif new_fork_head.header_signature > cur_fork_head.header_signature:
-            LOGGER.info(
-                'Signature of new fork head (%s...%s) > than current '
-                '(%s...%s)',
-                new_fork_head.header_signature[:8],
-                new_fork_head.header_signature[-8:],
-                cur_fork_head.header_signature[:8],
-                cur_fork_head.header_signature[-8:])
-            chosen_fork_head = new_fork_head
-        else:
-            LOGGER.info(
-                'Signature of current fork head (%s...%s) >= than new '
-                '(%s...%s)',
-                cur_fork_head.header_signature[:8],
-                cur_fork_head.header_signature[-8:],
-                new_fork_head.header_signature[:8],
-                new_fork_head.header_signature[-8:])
-            chosen_fork_head = cur_fork_head
+        state_view = \
+            BlockWrapper.state_view_for_block(
+                block_wrapper=cur_fork_head,
+                state_view_factory=self._state_view_factory)
+        poet_enclave_module = \
+            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
 
-        # Now that we have chosen a fork for the chain head, if
-        # we chose the new fork, we need to create consensus state
-        # store information for the new fork's chain head.
+        current_fork_wait_certificate = \
+            utils.deserialize_wait_certificate(
+                block=cur_fork_head,
+                poet_enclave_module=poet_enclave_module)
+        new_fork_wait_certificate = \
+            utils.deserialize_wait_certificate(
+                block=new_fork_head,
+                poet_enclave_module=poet_enclave_module)
+
+        # This should never, ever, ever happen (at least we hope), but
+        # defensively protect against having to choose between two non-PoET
+        # fork heads.
+        if current_fork_wait_certificate is None and \
+                new_fork_wait_certificate is None:
+            raise TypeError('Neither block is a PoET block')
+
+        # Criterion#1: We will always choose a PoET block over a non-PoET
+        # block
+        if new_fork_wait_certificate is None:
+            LOGGER.info(
+                'Choose current fork %s: New fork head is not a PoET '
+                'block',
+                cur_fork_head.header_signature[:8])
+            chosen_fork_head = cur_fork_head
+        elif current_fork_wait_certificate is None:
+            LOGGER.info(
+                'Choose new fork %s: Current fork head is not a PoET '
+                'block',
+                new_fork_head.header_signature[:8])
+            chosen_fork_head = new_fork_head
+
+        # Criterion#2: If they share the same immediate previous block,
+        # then the one with the smaller wait duration is chosen
+        elif cur_fork_head.previous_block_id == \
+                new_fork_head.previous_block_id:
+            if current_fork_wait_certificate.duration < \
+                    new_fork_wait_certificate.duration:
+                LOGGER.info(
+                    'Choose current fork %s: Current fork wait duration '
+                    '(%f) less than new fork wait duration (%f)',
+                    cur_fork_head.header_signature[:8],
+                    current_fork_wait_certificate.duration,
+                    new_fork_wait_certificate.duration)
+                chosen_fork_head = cur_fork_head
+            elif new_fork_wait_certificate.duration < \
+                    current_fork_wait_certificate.duration:
+                LOGGER.info(
+                    'Choose new fork %s: New fork wait duration (%f) '
+                    'less than new fork wait duration (%f)',
+                    new_fork_head.header_signature[:8],
+                    new_fork_wait_certificate.duration,
+                    current_fork_wait_certificate.duration)
+                chosen_fork_head = new_fork_head
+
+        # Criterion#3: If they don't share the same immediate previous
+        # block, then the one with the higher aggregate local mean wins
+        else:
+            # Get the consensus state for the current fork head and the
+            # block immediately before the new fork head (as we haven't
+            # committed to the block yet).  So that the new fork doesn't
+            # have to fight with one hand tied behind its back, add the
+            # new fork head's wait certificate local mean to the aggregate
+            # local mean of its immediate predecessor.
+            current_fork_consensus_state = \
+                utils.get_consensus_state_for_block_id(
+                    block_id=cur_fork_head.identifier,
+                    block_cache=self._block_cache,
+                    state_view_factory=self._state_view_factory,
+                    consensus_state_store=self._consensus_state_store,
+                    poet_enclave_module=poet_enclave_module)
+            new_fork_consensus_state = \
+                utils.get_consensus_state_for_block_id(
+                    block_id=new_fork_head.previous_block_id,
+                    block_cache=self._block_cache,
+                    state_view_factory=self._state_view_factory,
+                    consensus_state_store=self._consensus_state_store,
+                    poet_enclave_module=poet_enclave_module)
+            new_fork_consensus_state.aggregate_local_mean += \
+                new_fork_wait_certificate.local_mean
+
+            if current_fork_consensus_state.aggregate_local_mean > \
+                    new_fork_consensus_state.aggregate_local_mean:
+                LOGGER.info(
+                    'Choose current fork %s: Current fork aggregate '
+                    'local mean (%f) greater than new fork aggregate '
+                    'local mean (%f)',
+                    cur_fork_head.header_signature[:8],
+                    current_fork_consensus_state.aggregate_local_mean,
+                    new_fork_consensus_state.aggregate_local_mean)
+                chosen_fork_head = cur_fork_head
+            elif new_fork_consensus_state.aggregate_local_mean > \
+                    current_fork_consensus_state.aggregate_local_mean:
+                LOGGER.info(
+                    'Choose new fork %s: New fork aggregate local mean '
+                    '(%f) greater than current fork aggregate local mean '
+                    '(%f)',
+                    new_fork_head.header_signature[:8],
+                    new_fork_consensus_state.aggregate_local_mean,
+                    current_fork_consensus_state.aggregate_local_mean)
+                chosen_fork_head = new_fork_head
+
+        # Criterion#4: If we have gotten to this point and we have not chosen
+        # yet, we are going to fall back on using the block identifiers
+        # (header signatures) . The lexicographically larger one will be the
+        # chosen one.  The chance that they are equal are infinitesimally
+        # small.
+        if chosen_fork_head is None:
+            if cur_fork_head.header_signature > \
+                    new_fork_head.header_signature:
+                LOGGER.info(
+                    'Choose current fork %s: Current fork header signature'
+                    '(%s) greater than new fork header signature (%s)',
+                    cur_fork_head.header_signature[:8],
+                    cur_fork_head.header_signature[:8],
+                    new_fork_head.header_signature[:8])
+                chosen_fork_head = cur_fork_head
+            else:
+                LOGGER.info(
+                    'Choose new fork %s: New fork header signature (%s) '
+                    'greater than current fork header signature (%s)',
+                    new_fork_head.header_signature[:8],
+                    new_fork_head.header_signature[:8],
+                    cur_fork_head.header_signature[:8])
+                chosen_fork_head = new_fork_head
+
+        # Now that we have chosen a fork for the chain head, if we chose the
+        # new fork and it is a PoET block (i.e., it has a wait certificate),
+        # we need to create consensus state store information for the new
+        # fork's chain head.
         if chosen_fork_head == new_fork_head:
             # Get the state view for the previous block in the chain so we can
             # create a PoET enclave
@@ -140,9 +232,6 @@ class PoetForkResolver(ForkResolverInterface):
                 BlockWrapper.state_view_for_block(
                     block_wrapper=previous_block,
                     state_view_factory=self._state_view_factory)
-
-            poet_enclave_module = \
-                factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
 
             validator_registry_view = ValidatorRegistryView(state_view)
             try:

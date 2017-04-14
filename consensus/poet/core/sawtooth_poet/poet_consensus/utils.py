@@ -82,15 +82,17 @@ def deserialize_wait_certificate(block, poet_enclave_module):
     # serialized wait certificate and signature to create a
     # WaitCertificate object.
     wait_certificate = None
-    try:
-        wait_certificate_dict = json.loads(block.header.consensus.decode())
-        wait_certificate = \
-            WaitCertificate.wait_certificate_from_serialized(
-                poet_enclave_module=poet_enclave_module,
-                serialized=wait_certificate_dict['SerializedCertificate'],
-                signature=wait_certificate_dict['Signature'])
-    except (json.decoder.JSONDecodeError, KeyError):
-        pass
+    if block is not None:
+        try:
+            wait_certificate_dict = \
+                json.loads(block.header.consensus.decode())
+            wait_certificate = \
+                WaitCertificate.wait_certificate_from_serialized(
+                    poet_enclave_module=poet_enclave_module,
+                    serialized=wait_certificate_dict['SerializedCertificate'],
+                    signature=wait_certificate_dict['Signature'])
+        except (json.decoder.JSONDecodeError, KeyError):
+            pass
 
     return wait_certificate
 
