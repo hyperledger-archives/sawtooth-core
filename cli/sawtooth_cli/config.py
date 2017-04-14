@@ -505,7 +505,6 @@ def _config_inputs(key):
     setting key.
     """
     return [
-        _key_to_address('sawtooth.config.authorization_type'),
         _key_to_address('sawtooth.config.vote.proposals'),
         _key_to_address('sawtooth.config.vote.authorized_keys'),
         _key_to_address('sawtooth.config.vote.approval_threshold'),

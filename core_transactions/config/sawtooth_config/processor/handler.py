@@ -40,134 +40,6 @@ CONFIG_NAMESPACE = '000000'
 STATE_TIMEOUT_SEC = 10
 
 
-def _to_hash(value):
-    return hashlib.sha256(value.encode('utf-8')).hexdigest()
-
-
-def _first(a_list, pred):
-    return next((x for x in a_list if pred(x)), None)
-
-
-def _index_of(iterable, obj):
-    return next((i for i, x in enumerate(iterable) if x == obj), -1)
-
-
-def _make_config_key(key):
-    return CONFIG_NAMESPACE + _to_hash(key)
-
-
-def _get_setting_entry(state, address):
-    setting = Setting()
-
-    try:
-        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
-    except FutureTimeoutError:
-        LOGGER.warning('Timeout occured on state.get([%s])', address)
-        raise InternalError('Unable to get {}'.format(address))
-
-    if len(entries_list) != 0:
-        setting.ParseFromString(entries_list[0].data)
-
-    return setting
-
-
-def _get_config_value(state, key, default_value=None):
-    address = _make_config_key(key)
-    setting = _get_setting_entry(state, address)
-    for entry in setting.entries:
-        if key == entry.key:
-            return entry.value
-
-    return default_value
-
-
-def _set_config_value(state, key, value):
-    address = _make_config_key(key)
-    setting = _get_setting_entry(state, address)
-
-    old_value = None
-    old_entry_index = None
-    for i, entry in enumerate(setting.entries):
-        if key == entry.key:
-            old_value = entry.value
-            old_entry_index = i
-
-    if old_entry_index is not None:
-        setting.entries[old_entry_index].value = value
-    else:
-        setting.entries.add(key=key, value=value)
-
-    try:
-        addresses = list(state.set(
-            [StateEntry(address=address,
-                        data=setting.SerializeToString())],
-            timeout=STATE_TIMEOUT_SEC))
-    except FutureTimeoutError:
-        LOGGER.warning(
-            'Timeout occured on state.set([%s, <value>])', address)
-        raise InternalError('Unable to set {}'.format(key))
-
-    if len(addresses) != 1:
-        LOGGER.warning(
-            'Failed to save value on address %s', address)
-        raise InternalError(
-            'Unable to save config value {}'.format(key))
-    LOGGER.info('Config setting %s changed from %s to %s',
-                key, old_value, value)
-
-
-def _get_config_candidates(state):
-    value = _get_config_value(state, 'sawtooth.config.vote.proposals')
-    if not value:
-        return ConfigCandidates(candidates={})
-    else:
-        config_candidates = ConfigCandidates()
-        config_candidates.ParseFromString(base64.b64decode(value))
-        return config_candidates
-
-
-def _save_config_candidates(state, config_candidates):
-    _set_config_value(state,
-                      'sawtooth.config.vote.proposals',
-                      base64.b64encode(config_candidates.SerializeToString()))
-
-
-def _get_auth_type(state):
-    return _get_config_value(state,
-                             'sawtooth.config.authorization_type',
-                             'None')
-
-
-def _get_approval_threshold(state):
-    return int(_get_config_value(state,
-                                 'sawtooth.config.vote.approval_threshold',
-                                 1))
-
-
-def _get_auth_keys(state):
-    value = _get_config_value(state,
-                              'sawtooth.config.vote.authorized_keys',
-                              '')
-    return [v.strip() for v in value.split(',') if len(v) > 0]
-
-
-def _validate_setting(setting, value):
-    if setting == 'sawtooth.config.authorization_type':
-        if value not in ['Ballot', 'None']:
-            raise InvalidTransaction(
-                'authorization_type {} is not allowed'.format(value))
-
-    if setting == 'sawtooth.config.vote.approval_threshold':
-        try:
-            int(value)
-        except ValueError:
-            raise InvalidTransaction('approval_threshold must be an integer')
-
-    if setting == 'sawtooth.config.vote.proposals':
-        raise InvalidTransaction(
-            'Setting sawtooth.config.vote.proposals is read-only')
-
-
 class ConfigurationTransactionHandler(object):
 
     @property
@@ -192,7 +64,6 @@ class ConfigurationTransactionHandler(object):
         txn_header.ParseFromString(transaction.header)
         pubkey = txn_header.signer_pubkey
 
-        auth_type = _get_auth_type(state)
         auth_keys = _get_auth_keys(state)
         if len(auth_keys) > 0 and pubkey not in auth_keys:
             raise InvalidTransaction(
@@ -201,45 +72,17 @@ class ConfigurationTransactionHandler(object):
         config_payload = ConfigPayload()
         config_payload.ParseFromString(transaction.payload)
 
-        if auth_type == 'Ballot':
-            return self._apply_ballot_config(pubkey,
-                                             config_payload,
-                                             auth_keys,
-                                             state)
-        elif auth_type == 'None':
-            return self._apply_noauth_config(pubkey,
-                                             config_payload,
-                                             state)
-        else:
-            LOGGER.error(
-                'auth_type %s should not have been allowed', auth_type)
-            raise InternalError(
-                'auth_type {} should not have been allowed'.format(auth_type))
-
-    def _apply_ballot_config(self, pubkey, config_payload,
-                             authorized_keys, state):
         if config_payload.action == ConfigPayload.PROPOSE:
-            return self._apply_proposal(pubkey, config_payload.data, state)
+            return self._apply_proposal(
+                auth_keys, pubkey, config_payload.data, state)
         elif config_payload.action == ConfigPayload.VOTE:
             return self._apply_vote(pubkey, config_payload.data,
-                                    authorized_keys, state)
+                                    auth_keys, state)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
-    def _apply_noauth_config(self, pubkey, config_payload, state):
-        if config_payload.action == ConfigPayload.PROPOSE:
-            config_proposal = ConfigProposal()
-            config_proposal.ParseFromString(config_payload.data)
-
-            _validate_setting(config_proposal.setting, config_proposal.value)
-            _set_config_value(state,
-                              config_proposal.setting,
-                              config_proposal.value)
-        else:
-            raise InvalidTransaction("'action' must be PROPOSE in 'None' mode")
-
-    def _apply_proposal(self, pubkey, config_proposal_data, state):
+    def _apply_proposal(self, auth_keys, pubkey, config_proposal_data, state):
         config_proposal = ConfigProposal()
         config_proposal.ParseFromString(config_proposal_data)
 
@@ -247,7 +90,9 @@ class ConfigurationTransactionHandler(object):
 
         approval_threshold = _get_approval_threshold(state)
 
-        _validate_setting(config_proposal.setting, config_proposal.value)
+        _validate_setting(auth_keys,
+                          config_proposal.setting,
+                          config_proposal.value)
 
         if approval_threshold > 1:
             config_candidates = _get_config_candidates(state)
@@ -321,7 +166,7 @@ class ConfigurationTransactionHandler(object):
                               candidate.proposal.value)
             del config_candidates.candidates[candidate_index]
         elif rejected_count >= approval_threshold or \
-                rejected_count + accepted_count == len(authorized_keys):
+                (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug('Proposal for %s was rejected',
                          candidate.proposal.setting)
             del config_candidates.candidates[candidate_index]
@@ -330,3 +175,132 @@ class ConfigurationTransactionHandler(object):
                          candidate.proposal.setting)
 
         _save_config_candidates(state, config_candidates)
+
+
+def _get_config_candidates(state):
+    value = _get_config_value(state, 'sawtooth.config.vote.proposals')
+    if not value:
+        return ConfigCandidates(candidates={})
+    else:
+        config_candidates = ConfigCandidates()
+        config_candidates.ParseFromString(base64.b64decode(value))
+        return config_candidates
+
+
+def _save_config_candidates(state, config_candidates):
+    _set_config_value(state,
+                      'sawtooth.config.vote.proposals',
+                      base64.b64encode(config_candidates.SerializeToString()))
+
+
+def _get_approval_threshold(state):
+    return int(_get_config_value(
+        state, 'sawtooth.config.vote.approval_threshold', 1))
+
+
+def _get_auth_keys(state):
+    value = _get_config_value(
+        state, 'sawtooth.config.vote.authorized_keys', '')
+    return _split_ignore_empties(value)
+
+
+def _split_ignore_empties(value):
+    return [v.strip() for v in value.split(',') if len(v) > 0]
+
+
+def _validate_setting(auth_keys, setting, value):
+    if len(auth_keys) == 0 and \
+            setting != 'sawtooth.config.vote.authorized_keys':
+        raise InvalidTransaction(
+            'Cannot set {} until authorized_keys is set.'.format(setting))
+
+    if setting == 'sawtooth.config.vote.authorized_keys':
+        if len(_split_ignore_empties(value)) == 0:
+            raise InvalidTransaction('authorized_keys must not be empty.')
+
+    if setting == 'sawtooth.config.vote.approval_threshold':
+        try:
+            int(value)
+        except ValueError:
+            raise InvalidTransaction('approval_threshold must be an integer')
+
+    if setting == 'sawtooth.config.vote.proposals':
+        raise InvalidTransaction(
+            'Setting sawtooth.config.vote.proposals is read-only')
+
+
+def _get_config_value(state, key, default_value=None):
+    address = _make_config_key(key)
+    setting = _get_setting_entry(state, address)
+    for entry in setting.entries:
+        if key == entry.key:
+            return entry.value
+
+    return default_value
+
+
+def _set_config_value(state, key, value):
+    address = _make_config_key(key)
+    setting = _get_setting_entry(state, address)
+
+    old_value = None
+    old_entry_index = None
+    for i, entry in enumerate(setting.entries):
+        if key == entry.key:
+            old_value = entry.value
+            old_entry_index = i
+
+    if old_entry_index is not None:
+        setting.entries[old_entry_index].value = value
+    else:
+        setting.entries.add(key=key, value=value)
+
+    try:
+        addresses = list(state.set(
+            [StateEntry(address=address,
+                        data=setting.SerializeToString())],
+            timeout=STATE_TIMEOUT_SEC))
+    except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on state.set([%s, <value>])', address)
+        raise InternalError('Unable to set {}'.format(key))
+
+    if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save value on address %s', address)
+        raise InternalError(
+            'Unable to save config value {}'.format(key))
+    if setting != 'sawtooth.config.vote.proposals':
+        LOGGER.info('Config setting %s changed from %s to %s',
+                    key, old_value, value)
+
+
+def _get_setting_entry(state, address):
+    setting = Setting()
+
+    try:
+        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        LOGGER.warning('Timeout occured on state.get([%s])', address)
+        raise InternalError('Unable to get {}'.format(address))
+
+    if len(entries_list) != 0:
+        setting.ParseFromString(entries_list[0].data)
+
+    return setting
+
+
+def _to_hash(value):
+    return hashlib.sha256(value.encode('utf-8')).hexdigest()
+
+
+def _first(a_list, pred):
+    return next((x for x in a_list if pred(x)), None)
+
+
+def _index_of(iterable, obj):
+    return next((i for i, x in enumerate(iterable) if x == obj), -1)
+
+
+def _make_config_key(key):
+    return CONFIG_NAMESPACE + _to_hash(key)

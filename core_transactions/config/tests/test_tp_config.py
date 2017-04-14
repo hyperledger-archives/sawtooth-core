@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import hashlib
 import base64
 
@@ -78,51 +77,54 @@ class TestConfig(TransactionProcessorTestCase):
     def _public_key(self):
         return self.factory.public_key
 
-    def test_set_value_no_auth(self):
-        """
-        Tests setting a value with no auth and no approvale type
-        """
-        self._propose("foo.bar.count", "1")
-
-        self._expect_get('sawtooth.config.authorization_type', 'None')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
-
-        # check the old value and set the new one
-        self._expect_get('foo.bar.count')
-        self._expect_set('foo.bar.count', '1')
-
-        self._expect_ok()
-
-    def test_set_value_bad_auth_type(self):
-        """
-        Tests setting an invalid authorization_type setting
-        """
-        self._propose("sawtooth.config.authorization_type", "foo")
-
-        self._expect_get('sawtooth.config.authorization_type', 'None')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
-
-        self._expect_invalid_transaction()
-
-    def test_error_on_bad_auth_type(self):
-        """
-        Sanity test that we get back an internal error for a bad auth type.
-        """
-        self._propose("foo.bar.count", "1")
-
-        self._expect_get('sawtooth.config.authorization_type', 'CrazyType')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
-
-        self._expect_internal_error()
-
     def test_set_value_bad_approval_threshold(self):
         """
         Tests setting an invalid approval_threshold.
         """
         self._propose("sawtooth.config.vote.approval_threshold", "foo")
 
-        self._expect_get('sawtooth.config.authorization_type', 'None')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key)
+        self._expect_get('sawtooth.config.vote.approval_threshold')
+
+        self._expect_invalid_transaction()
+
+    def test_set_value_empty_authorized_keys(self):
+        """
+        Tests setting an empty set of authorized keys.
+
+        Empty authorized keys should result in an invalid transaction.
+        """
+        self._propose("sawtooth.config.vote.authorized_keys", "")
+
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key)
+        self._expect_get('sawtooth.config.vote.approval_threshold')
+
+        self._expect_invalid_transaction()
+
+    def test_allow_set_authorized_keys_when_initially_empty(self):
+        """Tests that the authorized keys may be set if initially empty.
+        """
+        self._propose("sawtooth.config.vote.authorized_keys", self._public_key)
+
+        self._expect_get('sawtooth.config.vote.authorized_keys')
+        self._expect_get('sawtooth.config.vote.approval_threshold')
+
+        # Check that it is set
+        self._expect_get('sawtooth.config.vote.authorized_keys')
+        self._expect_set('sawtooth.config.vote.authorized_keys',
+                         self._public_key)
+
+        self._expect_ok()
+
+    def test_reject_settings_when_auth_keys_is_empty(self):
+        """Tests that when auth keys is empty, only auth keys maybe set.
+        """
+        self._propose('my.config.setting', 'myvalue')
+
+        self._expect_get('sawtooth.config.vote.authorized_keys')
+        self._expect_get('sawtooth.config.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
@@ -133,19 +135,20 @@ class TestConfig(TransactionProcessorTestCase):
         """
         self._propose('sawtooth.config.vote.proposals', EMPTY_CANDIDATES)
 
-        self._expect_get('sawtooth.config.authorization_type', 'None')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key)
+        self._expect_get('sawtooth.config.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
-    def test_propose_in_ballot_mode(self):
+    def test_propose(self):
         """
         Tests proposing a value in ballot mode.
         """
         self._propose('my.config.setting', 'myvalue')
 
-        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key)
         self._expect_get('sawtooth.config.vote.approval_threshold', '2')
         self._expect_get('sawtooth.config.vote.proposals')
 
@@ -172,7 +175,7 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._expect_ok()
 
-    def test_vote_in_ballot_mode_approved(self):
+    def test_vote_approved(self):
         """
         Tests voting on a given setting, where the setting is approved
         """
@@ -194,8 +197,8 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
 
-        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key + ',some_other_pubkey')
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.config.vote.approval_threshold', '2')
@@ -212,7 +215,7 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._expect_ok()
 
-    def test_vote_in_ballot_mode_counted(self):
+    def test_vote_counted(self):
         """
         Tests voting on a given setting, where the vote is counted only.
         """
@@ -234,8 +237,8 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
 
-        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key + ',some_other_pubkey,third_pubkey')
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.config.vote.approval_threshold', '3')
@@ -262,7 +265,7 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._expect_ok()
 
-    def test_vote_in_ballot_mode_rejected(self):
+    def test_vote_rejected(self):
         """
         Tests voting on a given setting, where the setting is rejected.
         """
@@ -288,8 +291,9 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
 
-        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get(
+            'sawtooth.config.vote.authorized_keys',
+            self._public_key + ',some_other_pubkey,a_rejectors_pubkey')
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.config.vote.approval_threshold', '2')
@@ -302,8 +306,7 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._expect_ok()
 
-    @unittest.expectedFailure  # delete unittest import when this is fixed
-    def test_vote_in_ballot_mode_rejects_a_tie(self):
+    def test_vote_rejects_a_tie(self):
         """
         Tests voting on a given setting, where there is a tie for accept and
         for reject, with no remaining auth keys.
@@ -327,8 +330,8 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
 
-        self._expect_get('sawtooth.config.authorization_type', 'Ballot')
-        self._expect_get('sawtooth.config.vote.authorized_keys', '')
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key + ',some_other_pubkey')
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.config.vote.approval_threshold', '2')
@@ -341,15 +344,15 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._expect_ok()
 
-    def test_authorized_keys_accept_no_approval(self):
+    def test_authorized_keys_accept_no_approval_threshhold(self):
         """
-        Tests setting a value with auth keys and no approval type
+        Tests setting a value with auth keys and no approval threshhold
         """
         self._propose("foo.bar.count", "1")
 
-        self._expect_get('sawtooth.config.authorization_type', 'None')
         self._expect_get('sawtooth.config.vote.authorized_keys',
                          'some_key,' + self._public_key)
+        self._expect_get('sawtooth.config.vote.approval_threshold')
 
         # check the old value and set the new one
         self._expect_get('foo.bar.count')
@@ -363,7 +366,6 @@ class TestConfig(TransactionProcessorTestCase):
         """
         self._propose("foo.bar.count", "1")
 
-        self._expect_get('sawtooth.config.authorization_type', 'None')
         self._expect_get('sawtooth.config.vote.authorized_keys',
                          'some_key,some_other_key')
 
