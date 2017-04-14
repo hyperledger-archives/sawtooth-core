@@ -12,7 +12,7 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 
-package sawtooth.sdk.client;
+package sawtooth.sdk.processor;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;

@@ -12,52 +12,29 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 
-package sawtooth.sdk.client;
+package sawtooth.sdk.messaging;
 
 import com.google.protobuf.ByteString;
 
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class FutureError implements Future{
 
-  /**
-   * Constructor.
-   */
-  public FutureError() {
-  }
 
-  /**
-   * Always raises ValidatorConnectionError.
-   */
-  public ByteString getResult() throws InterruptedException,
-      ValidatorConnectionError {
-    throw new ValidatorConnectionError();
-  }
+public interface Future{
 
-  /**
-   * Always raises ValidatorConnectionError.
-   */
-  public ByteString getResult(long time) throws InterruptedException,
-     ValidatorConnectionError {
-    throw new ValidatorConnectionError();
-  }
+  ByteString getResult() throws InterruptedException,
+      ValidatorConnectionError;
 
-  /**
-   * Always raises ValidatorConnectionError.
-   */
-  public void setResult(ByteString byteString) throws ValidatorConnectionError {
-    throw new ValidatorConnectionError();
-  }
+  ByteString getResult(long timeout) throws InterruptedException, TimeoutException,
+      ValidatorConnectionError;
 
-  /**
-   * Always raises ValidatorConnectionError.
-   */
-  public boolean isDone() throws ValidatorConnectionError {
-    throw new ValidatorConnectionError();
-  }
+  void setResult(ByteString byteString) throws ValidatorConnectionError;
+
+  boolean isDone() throws ValidatorConnectionError;
 
 }

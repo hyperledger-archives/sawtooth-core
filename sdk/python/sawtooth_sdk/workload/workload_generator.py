@@ -21,9 +21,9 @@ from collections import deque
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 
-from sawtooth_sdk.client.future import FutureTimeoutError
-from sawtooth_sdk.client.exceptions import ValidatorConnectionError
-from sawtooth_sdk.client.exceptions import WorkloadConfigurationError
+from sawtooth_sdk.messaging.future import FutureTimeoutError
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.exceptions import WorkloadConfigurationError
 from sawtooth_sdk.protobuf.client_pb2 import ClientBatchStatusRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientBatchStatusResponse
 from sawtooth_sdk.protobuf.validator_pb2 import Message

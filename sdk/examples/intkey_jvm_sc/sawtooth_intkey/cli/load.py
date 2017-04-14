@@ -21,7 +21,7 @@ import argparse
 import cbor
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_sdk.client.stream import Stream
+from sawtooth_sdk.messaging.stream import Stream
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(

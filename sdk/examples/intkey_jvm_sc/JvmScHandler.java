@@ -23,9 +23,9 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import sawtooth.examples.jvmsc.JVMEntry;
 import sawtooth.examples.jvmsc.JVMPayload;
 
-import sawtooth.sdk.client.State;
-import sawtooth.sdk.client.Stream;
-import sawtooth.sdk.client.Utils;
+import sawtooth.sdk.processor.State;
+import sawtooth.sdk.messaging.Stream;
+import sawtooth.sdk.processor.Utils;
 
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;

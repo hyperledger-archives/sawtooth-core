@@ -19,7 +19,7 @@
 
 const assert = require('assert')
 
-const Deferred = require('../../client/deferred')
+const Deferred = require('../../messaging/deferred')
 
 describe('Deferred', () => {
   describe('resolve', () => {

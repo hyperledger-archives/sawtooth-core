@@ -25,12 +25,12 @@ import zmq.asyncio
 
 import sawtooth_sdk.protobuf.validator_pb2 as validator_pb2
 
-from sawtooth_sdk.client.exceptions import ValidatorConnectionError
-from sawtooth_sdk.client.future import Future
-from sawtooth_sdk.client.future import FutureCollection
-from sawtooth_sdk.client.future import FutureCollectionKeyError
-from sawtooth_sdk.client.future import FutureResult
-from sawtooth_sdk.client.future import FutureError
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.future import Future
+from sawtooth_sdk.messaging.future import FutureCollection
+from sawtooth_sdk.messaging.future import FutureCollectionKeyError
+from sawtooth_sdk.messaging.future import FutureResult
+from sawtooth_sdk.messaging.future import FutureError
 
 LOGGER = logging.getLogger(__file__)
 

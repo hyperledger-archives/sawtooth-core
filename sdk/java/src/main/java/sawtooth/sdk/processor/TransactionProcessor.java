@@ -17,9 +17,8 @@ package sawtooth.sdk.processor;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import sawtooth.sdk.client.Future;
-import sawtooth.sdk.client.State;
-import sawtooth.sdk.client.Stream;
+import sawtooth.sdk.messaging.Future;
+import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;

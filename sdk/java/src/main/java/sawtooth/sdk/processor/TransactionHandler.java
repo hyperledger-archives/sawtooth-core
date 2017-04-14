@@ -14,7 +14,6 @@
 
 package sawtooth.sdk.processor;
 
-import sawtooth.sdk.client.State;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
