@@ -64,6 +64,16 @@ def version(default):
         version = default + ".dev1"
     return version
 
+
+data_files = []
+
+if os.path.exists("/etc/default"):
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-tp_intkey_python']))
+
+if os.path.exists("/lib/systemd/system"):
+    data_files.append(('/lib/systemd/system',
+                       ['packaging/systemd/sawtooth-tp_intkey_python.service']))
+
 setup(name='sawtooth-intkey',
       version=version('0.8.2'),
       description='Sawtooth Lake Intkey Python Example',
@@ -76,6 +86,7 @@ setup(name='sawtooth-intkey',
           "sawtooth-sdk",
           "sawtooth-signing",
       ],
+      data_files=data_files,
       entry_points={
           'console_scripts': [
               'intkey = sawtooth_intkey.client_cli.main:main_wrapper',
