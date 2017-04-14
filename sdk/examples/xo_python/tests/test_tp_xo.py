@@ -15,8 +15,7 @@
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
-from sawtooth_integration.message_factories.xo_message_factory \
-    import XoMessageFactory
+from sawtooth_xo.xo_message_factory import XoMessageFactory
 
 
 class TestXo(TransactionProcessorTestCase):

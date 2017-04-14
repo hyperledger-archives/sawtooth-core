@@ -18,17 +18,8 @@ import subprocess
 import shlex
 import time
 import logging
-import operator # used by verifier
-# -- used by rest_api callers --
-import urllib.request
-import urllib.error
-import json
-from base64 import b64decode
 
-import cbor
-
-from sawtooth_integration.message_factories.intkey_message_factory \
-    import IntkeyMessageFactory
+from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_cli.rest_client import RestClient
 
 
