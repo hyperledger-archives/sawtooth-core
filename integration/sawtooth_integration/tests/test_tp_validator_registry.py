@@ -13,11 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import json
 import base64
 import hashlib
 
+from sawtooth_processor_test.transaction_processor_test_case \
+    import TransactionProcessorTestCase
 from sawtooth_integration.message_factories.validator_reg_message_factory \
     import ValidatorRegistryMessageFactory
 
@@ -26,21 +27,18 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorRegistryPayload
 
 
-class TestValidatorRegistry(unittest.TestCase):
-    """
-    Set of tests to run in a test suite with an existing TPTester and
-    transaction processor.
-    """
+PRIVATE = '5HsjpyQzpeoGAAvNeG5PzQsn1Ght18GgSmDaEUCd1c1HpA2avzc'
+PUBLIC = '02f3d385777ab35888fc47af6d123bba6f8b04817a4746e97446ce1562fc4307d7'
 
-    def __init__(self, test_name, tester):
-        super().__init__(test_name)
-        self.tester = tester
-        self.private_key = '5HsjpyQzpeoGAAvNeG5PzQsn1Ght18GgSmDaEUCd1c1HpA2a'\
-                           'vzc'
-        self.public_key = '02f3d385777ab35888fc47af6d123bba6f8b04817a4746e97'\
-                          '446ce1562fc4307d7'
-        self.factory = ValidatorRegistryMessageFactory(
-            private=self.private_key, public=self.public_key)
+
+class TestValidatorRegistry(TransactionProcessorTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.factory = ValidatorRegistryMessageFactory(
+            private=PRIVATE,
+            public=PUBLIC)
 
     def _expect_invalid_transaction(self):
         self.tester.expect(

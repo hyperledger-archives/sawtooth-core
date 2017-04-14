@@ -37,8 +37,8 @@ services:
     expose:
       - 40000
     command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/test_suites
-        ts_tp_validator_registry.TestSuiteValidatorRegistry
+        /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_tp_validator_registry
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families:\
