@@ -15,7 +15,6 @@
 
 from collections import namedtuple
 
-import math
 import cbor
 
 ValidatorState = \
@@ -43,9 +42,6 @@ class ConsensusState(object):
     the block chain).
 
     Attributes:
-        expected_block_claim_count (float): The number of blocks that a
-            validator, based upon the population estimate, would be expected
-            to have claimed
         total_block_claim_count (int): The number of blocks that have been
             claimed by all validators
     """
@@ -55,7 +51,6 @@ class ConsensusState(object):
         Returns:
             None
         """
-        self.expected_block_claim_count = 0.0
         self.total_block_claim_count = 0
         self._validators = {}
 
@@ -172,18 +167,10 @@ class ConsensusState(object):
                         'buffer is not a valid serialization of a '
                         'ConsensusState object')
 
-            self.expected_block_claim_count = \
-                float(self_dict['expected_block_claim_count'])
             self.total_block_claim_count = \
                 int(self_dict['total_block_claim_count'])
             validators = self_dict['_validators']
 
-            if not math.isfinite(self.expected_block_claim_count) or \
-                    self.expected_block_claim_count < 0:
-                raise \
-                    ValueError(
-                        'expected_block_claim_count ({}) is invalid'.format(
-                            self.expected_block_claim_count))
             if self.total_block_claim_count < 0:
                 raise \
                     ValueError(
@@ -215,7 +202,7 @@ class ConsensusState(object):
 
     def __str__(self):
         validators = \
-            ['{}: {{KBCC: {}, PPK: {}, TBCC: {}, }}'.format(
+            ['{}: {{KBCC={}, PPK={}, TBCC={}, }}'.format(
                 key[:8],
                 value.key_block_claim_count,
                 value.poet_public_key[:8],
@@ -223,7 +210,6 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'Expected: {}, Total: {}, V: {}'.format(
-                self.expected_block_claim_count,
+            'TBCC={}, V={}'.format(
                 self.total_block_claim_count,
                 validators)

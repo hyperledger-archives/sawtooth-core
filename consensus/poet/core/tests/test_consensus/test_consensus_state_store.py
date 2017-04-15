@@ -108,7 +108,6 @@ class TestConsensusStateStore(unittest.TestCase):
 
         # Store consensus state
         state = consensus_state.ConsensusState()
-        state.expected_block_claim_count = 3.14
         state.total_block_claim_count = 2
         state.set_validator_state(
             validator_id='Bond, James Bond',
@@ -127,10 +126,6 @@ class TestConsensusStateStore(unittest.TestCase):
 
         # Retrieve the state and verify equality
         retrieved_state = store['key']
-
-        self.assertEqual(
-            state.expected_block_claim_count,
-            retrieved_state.expected_block_claim_count)
 
         validator_state = \
             retrieved_state.get_validator_state(

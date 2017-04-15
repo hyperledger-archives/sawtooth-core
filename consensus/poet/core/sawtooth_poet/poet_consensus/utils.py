@@ -368,9 +368,8 @@ def get_consensus_state_for_block_id(
             consensus_state_store[block_id] = consensus_state
 
             LOGGER.debug(
-                'Create consensus state: BID=%s, EBC=%f, TBCC=%d',
+                'Create consensus state: BID=%s, TBCC=%d',
                 block_id[:8],
-                consensus_state.expected_block_claim_count,
                 consensus_state.total_block_claim_count)
 
     return consensus_state

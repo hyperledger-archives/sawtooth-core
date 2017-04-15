@@ -183,9 +183,8 @@ class PoetForkResolver(ForkResolverInterface):
                     consensus_state
 
                 LOGGER.debug(
-                    'Create consensus state: BID=%s, EBC=%f, TBCC=%d',
+                    'Create consensus state: BID=%s, TBCC=%d',
                     new_fork_head.identifier[:8],
-                    consensus_state.expected_block_claim_count,
                     consensus_state.total_block_claim_count)
             except KeyError:
                 # This _should_ never happen.  The new potential fork head

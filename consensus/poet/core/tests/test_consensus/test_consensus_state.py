@@ -149,14 +149,6 @@ class TestConsensusState(unittest.TestCase):
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(cbor.dumps(invalid_state))
 
-        # Invalid expected block claim count
-        for invalid_ebcc in [None, 'not a float', (), [], {}, -1,
-                             float('nan'), float('inf'), float('-inf')]:
-            state = consensus_state.ConsensusState()
-            state.expected_block_claim_count = invalid_ebcc
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(state.serialize_to_bytes())
-
         # Invalid total block claim count
         for invalid_tbcc in [None, 'not an int', (), [], {}, -1]:
             state = consensus_state.ConsensusState()
@@ -273,9 +265,6 @@ class TestConsensusState(unittest.TestCase):
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
         self.assertEqual(
-            state.expected_block_claim_count,
-            doppelganger_state.expected_block_claim_count)
-        self.assertEqual(
             state.total_block_claim_count,
             doppelganger_state.total_block_claim_count)
 
@@ -301,9 +290,6 @@ class TestConsensusState(unittest.TestCase):
 
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
-        self.assertEqual(
-            state.expected_block_claim_count,
-            doppelganger_state.expected_block_claim_count)
         self.assertEqual(
             state.total_block_claim_count,
             doppelganger_state.total_block_claim_count)
