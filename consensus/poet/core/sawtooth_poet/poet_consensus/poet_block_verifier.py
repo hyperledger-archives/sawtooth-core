@@ -201,4 +201,20 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 block_wrapper.identifier[:8])
             return False
 
+        # Reject the block if the validator is claiming blocks at a rate that
+        # is more frequent than is statistically allowed (i.e., zTest)
+        if utils.validator_has_claimed_too_frequently(
+                validator_info=validator_info,
+                previous_block_id=block_wrapper.previous_block_id,
+                consensus_state=consensus_state,
+                poet_config_view=poet_config_view,
+                population_estimate=wait_certificate.population_estimate,
+                block_cache=self._block_cache,
+                poet_enclave_module=poet_enclave_module):
+            LOGGER.error(
+                'Block %s rejected: Validator is claiming blocks too '
+                'frequently.',
+                block_wrapper.identifier[:8])
+            return False
+
         return True
