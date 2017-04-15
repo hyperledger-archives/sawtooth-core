@@ -371,6 +371,24 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_address=block_header.signer_pubkey,
                 certificates=list(certificates))
 
+        # NOTE - we do the zTest after we create the wait timer because we
+        # need its population estimate to see if this block would be accepted
+        # by other validators based upon the zTest.
+
+        # Check to see if by chance we were to be able to claim this block
+        # if it would result in us winning more frequently than statistically
+        # expected.  If so, then refuse to initialize the block because other
+        # validators will not accept anyway.
+        if utils.validator_has_claimed_too_frequently(
+                validator_info=validator_info,
+                previous_block_id=block_header.previous_block_id,
+                consensus_state=consensus_state,
+                poet_config_view=poet_config_view,
+                population_estimate=wait_timer.population_estimate,
+                block_cache=self._block_cache,
+                poet_enclave_module=poet_enclave_module):
+            return False
+
         # At this point, we know that if we are able to claim the block we are
         # initializing, we will not be prevented from doing so because of PoET
         # policies.
