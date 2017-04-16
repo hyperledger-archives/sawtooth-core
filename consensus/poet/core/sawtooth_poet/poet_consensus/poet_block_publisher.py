@@ -27,6 +27,7 @@ from sawtooth_validator.journal.consensus.consensus \
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
@@ -298,7 +299,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 poet_key_state.sealed_signup_data[-8:])
 
         consensus_state = \
-            utils.get_consensus_state_for_block_id(
+            ConsensusState.consensus_state_for_block_id(
                 block_id=block_header.previous_block_id,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,

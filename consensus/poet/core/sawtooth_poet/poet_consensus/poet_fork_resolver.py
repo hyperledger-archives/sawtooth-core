@@ -15,6 +15,7 @@
 
 import logging
 
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
@@ -153,14 +154,14 @@ class PoetForkResolver(ForkResolverInterface):
             # new fork head's wait certificate local mean to the aggregate
             # local mean of its immediate predecessor.
             current_fork_consensus_state = \
-                utils.get_consensus_state_for_block_id(
+                ConsensusState.consensus_state_for_block_id(
                     block_id=cur_fork_head.identifier,
                     block_cache=self._block_cache,
                     state_view_factory=self._state_view_factory,
                     consensus_state_store=self._consensus_state_store,
                     poet_enclave_module=poet_enclave_module)
             new_fork_consensus_state = \
-                utils.get_consensus_state_for_block_id(
+                ConsensusState.consensus_state_for_block_id(
                     block_id=new_fork_head.previous_block_id,
                     block_cache=self._block_cache,
                     state_view_factory=self._state_view_factory,
@@ -247,7 +248,7 @@ class PoetForkResolver(ForkResolverInterface):
                 # associate the consensus state with the new block in the
                 # store.
                 consensus_state = \
-                    utils.get_consensus_state_for_block_id(
+                    ConsensusState.consensus_state_for_block_id(
                         block_id=new_fork_head.previous_block_id,
                         block_cache=self._block_cache,
                         state_view_factory=self._state_view_factory,

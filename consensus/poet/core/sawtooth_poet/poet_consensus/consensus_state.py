@@ -17,10 +17,15 @@ import math
 import logging
 import collections
 import itertools
+import threading
 
 import cbor
 
 from sawtooth_poet.poet_consensus import utils
+from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
+
+from sawtooth_poet_common.validator_registry_view.validator_registry_view \
+    import ValidatorRegistryView
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,6 +60,23 @@ class ConsensusState(object):
             claimed by all validators
     """
 
+    _BlockInfo = \
+        collections.namedtuple(
+            '_BlockInfo',
+            ['wait_certificate', 'validator_info', 'poet_config_view'])
+
+    """ Instead of creating a full-fledged class, let's use a named tuple for
+    the block info.  The block info represents the information we need to
+    create consensus state.  A block info object contains:
+
+    wait_certificate (WaitCertificate): The PoET wait certificate object for
+        the block
+    validator_info (ValidatorInfo): The validator registry information for the
+        validator that claimed the block
+    poet_config_view (PoetConfigView): The PoET cofiguration view associated
+        with the block
+    """
+
     _EstimateInfo = collections.namedtuple('_EstimateInfo',
                                            ['population_estimate',
                                             'previous_block_id',
@@ -76,6 +98,140 @@ class ConsensusState(object):
     # corresponding _EstimateInfo object.  This is used so that when building
     # the population list, we don't have to always walk back the entire list
     _population_estimate_cache = {}
+    _population_estimate_cache_lock = threading.Lock()
+
+    @staticmethod
+    def consensus_state_for_block_id(block_id,
+                                     block_cache,
+                                     state_view_factory,
+                                     consensus_state_store,
+                                     poet_enclave_module):
+        """Returns the consensus state for the block referenced by block ID,
+            creating it from the consensus state history if necessary.
+
+        Args:
+            block_id (str): The ID of the block for which consensus state will
+                be returned.
+            block_cache (BlockCache): The block store cache
+            state_view_factory (StateViewFactory): A factory that can be used
+                to create state view object corresponding to blocks
+            consensus_state_store (ConsensusStateStore): The consensus state
+                store that is used to store interim consensus state created
+                up to resulting consensus state
+            poet_enclave_module (module): The PoET enclave module
+
+        Returns:
+            ConsensusState object representing the consensus state for the
+                block referenced by block_id
+        """
+
+        consensus_state = None
+        previous_wait_certificate = None
+        blocks = collections.OrderedDict()
+
+        # Starting at the chain head, walk the block store backwards until we
+        # either get to the root or we get a block for which we have already
+        # created consensus state
+        while True:
+            block = \
+                ConsensusState._block_for_id(
+                    block_id=block_id,
+                    block_cache=block_cache)
+            if block is None:
+                break
+
+            # Try to fetch the consensus state.  If that succeeds, we can
+            # stop walking back as we can now build on that consensus
+            # state.
+            consensus_state = consensus_state_store.get(block_id=block_id)
+            if consensus_state is not None:
+                break
+
+            wait_certificate = \
+                utils.deserialize_wait_certificate(
+                    block=block,
+                    poet_enclave_module=poet_enclave_module)
+
+            # If this is a PoET block (i.e., it has a wait certificate), get
+            # the validator info for the validator that signed this block and
+            # add the block information we will need to set validator state in
+            # the block's consensus state.
+            if wait_certificate is not None:
+                state_view = \
+                    state_view_factory.create_view(
+                        state_root_hash=block.state_root_hash)
+                validator_registry_view = \
+                    ValidatorRegistryView(state_view=state_view)
+                validator_info = \
+                    validator_registry_view.get_validator_info(
+                        validator_id=block.header.signer_pubkey)
+
+                LOGGER.debug(
+                    'We need to build consensus state for block: %s...%s',
+                    block_id[:8],
+                    block_id[-8:])
+
+                blocks[block_id] = \
+                    ConsensusState._BlockInfo(
+                        wait_certificate=wait_certificate,
+                        validator_info=validator_info,
+                        poet_config_view=PoetConfigView(state_view))
+
+            # Otherwise, this is a non-PoET block.  If we don't have any blocks
+            # yet or the last block we processed was a PoET block, put a
+            # placeholder in the list so that when we get to it we know that we
+            # need to reset the statistics.
+            elif len(blocks) == 0 or previous_wait_certificate is not None:
+                blocks[block_id] = \
+                    ConsensusState._BlockInfo(
+                        wait_certificate=None,
+                        validator_info=None,
+                        poet_config_view=None)
+
+            previous_wait_certificate = wait_certificate
+
+            # Move to the previous block
+            block_id = block.previous_block_id
+
+        # At this point, if we have not found any consensus state, we need to
+        # create default state from which we can build upon
+        if consensus_state is None:
+            consensus_state = ConsensusState()
+
+        # Now, walk through the blocks for which we were supposed to create
+        # consensus state, from oldest to newest (i.e., in the reverse order in
+        # which they were added), and store state for PoET blocks so that the
+        # next time we don't have to walk so far back through the block chain.
+        for block_id, block_info in reversed(blocks.items()):
+            # If the block was not a PoET block (i.e., didn't have a wait
+            # certificate), reset the consensus state statistics.  We are not
+            # going to store this in the consensus state store, but we will use
+            # it as the starting for the next PoET block.
+            if block_info.wait_certificate is None:
+                consensus_state = ConsensusState()
+
+            # Otherwise, let the consensus state update itself appropriately
+            # based upon the validator claiming a block, and then associate the
+            # consensus state with the new block in the store.
+
+            # validator state for the validator which claimed the block, create
+            # updated validator state for the validator, set/update the
+            # validator state in the consensus state object, and then associate
+            # the consensus state with the corresponding block in the consensus
+            # state store.
+            else:
+                consensus_state.validator_did_claim_block(
+                    validator_info=block_info.validator_info,
+                    wait_certificate=block_info.wait_certificate)
+                consensus_state_store[block_id] = consensus_state
+
+                LOGGER.debug(
+                    'Create consensus state: BID=%s, ALM=%f, TBCC=%d',
+                    block_id[:8],
+                    consensus_state.aggregate_local_mean,
+                    consensus_state.total_block_claim_count)
+
+        return consensus_state
 
     def __init__(self):
         """Initialize a ConsensusState object
@@ -122,6 +278,29 @@ class ConsensusState(object):
                         validator_state.total_block_claim_count,
                         validator_state.key_block_claim_count))
 
+    @staticmethod
+    def _block_for_id(block_id, block_cache):
+        """A convenience method retrieving a block given a block ID.  Takes care
+        of the special case of NULL_BLOCK_IDENTIFIER.
+
+        Args:
+            block_id (str): The ID of block to retrieve.
+            block_cache (BlockCache): Block cache from which block will be
+                retrieved.
+
+        Returns:
+            BlockWrapper for block, or None for no block found.
+        """
+        block = None
+        try:
+            block = \
+                None if utils.block_id_is_genesis(block_id) else \
+                block_cache[block_id]
+        except KeyError:
+            LOGGER.error('Failed to retrieve block: %s', block_id[:8])
+
+        return block
+
     def _build_population_estimate_list(self,
                                         block_id,
                                         poet_config_view,
@@ -156,26 +335,27 @@ class ConsensusState(object):
         number_of_blocks = \
             self.total_block_claim_count - \
             poet_config_view.fixed_duration_block_count
-        for _ in range(number_of_blocks):
-            population_cache_entry = \
-                ConsensusState._population_estimate_cache.get(block_id)
-            if population_cache_entry is None:
-                block = block_cache[block_id]
-                wait_certificate = \
-                    utils.deserialize_wait_certificate(
-                        block=block,
-                        poet_enclave_module=poet_enclave_module)
+        with ConsensusState._population_estimate_cache_lock:
+            for _ in range(number_of_blocks):
                 population_cache_entry = \
-                    ConsensusState._EstimateInfo(
-                        population_estimate=wait_certificate.
-                        population_estimate,
-                        previous_block_id=block.previous_block_id,
-                        validator_id=block.header.signer_pubkey)
-                ConsensusState._population_estimate_cache[block_id] = \
-                    population_cache_entry
+                    ConsensusState._population_estimate_cache.get(block_id)
+                if population_cache_entry is None:
+                    block = block_cache[block_id]
+                    wait_certificate = \
+                        utils.deserialize_wait_certificate(
+                            block=block,
+                            poet_enclave_module=poet_enclave_module)
+                    population_cache_entry = \
+                        ConsensusState._EstimateInfo(
+                            population_estimate=wait_certificate.
+                            population_estimate,
+                            previous_block_id=block.previous_block_id,
+                            validator_id=block.header.signer_pubkey)
+                    ConsensusState._population_estimate_cache[block_id] = \
+                        population_cache_entry
 
-            population_estimate_list.append(population_cache_entry)
-            block_id = population_cache_entry.previous_block_id
+                population_estimate_list.append(population_cache_entry)
+                block_id = population_cache_entry.previous_block_id
 
         return population_estimate_list
 

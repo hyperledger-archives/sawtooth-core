@@ -19,6 +19,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
 
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
@@ -158,7 +159,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
         # Get the consensus state and PoET configuration view for the block
         # that is being built upon
         consensus_state = \
-            utils.get_consensus_state_for_block_id(
+            ConsensusState.consensus_state_for_block_id(
                 block_id=block_wrapper.previous_block_id,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
