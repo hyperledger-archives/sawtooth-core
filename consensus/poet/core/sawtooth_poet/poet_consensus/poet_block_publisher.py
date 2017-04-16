@@ -350,9 +350,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # Verify that we are abiding by the block claim delay (i.e., waiting a
         # certain number of blocks since our validator registry was added/
         # updated).
-        if utils.validator_has_claimed_too_early(
+        if consensus_state.validator_is_claiming_too_early(
                 validator_info=validator_info,
-                consensus_state=consensus_state,
                 block_number=block_header.block_num,
                 validator_registry_view=validator_registry_view,
                 poet_config_view=poet_config_view,

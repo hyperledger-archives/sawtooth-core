@@ -181,9 +181,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
         # of blocks between when the block containing its validator registry
         # transaction was committed to the chain and trying to claim this
         # block
-        if utils.validator_has_claimed_too_early(
+        if consensus_state.validator_is_claiming_too_early(
                 validator_info=validator_info,
-                consensus_state=consensus_state,
                 block_number=block_wrapper.block_num,
                 validator_registry_view=validator_registry_view,
                 poet_config_view=poet_config_view,

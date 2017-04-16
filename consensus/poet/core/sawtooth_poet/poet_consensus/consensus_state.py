@@ -227,6 +227,95 @@ class ConsensusState(object):
 
         return False
 
+    def validator_is_claiming_too_early(self,
+                                        validator_info,
+                                        block_number,
+                                        validator_registry_view,
+                                        poet_config_view,
+                                        block_store):
+        """Determines if a validator has tried to claim a block too early
+        (i.e, has not waited the required number of blocks between when the
+        block containing its validator registry transaction was committed to
+        the chain and trying to claim a block).
+        Args:
+            validator_info (ValidatorInfo): The current validator information
+            block_number (int): The block number of the block that the
+                validator is attempting to claim
+            validator_registry_view (ValidatorRegistry): The current validator
+                registry view
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+            block_store (BlockStore): The block store
+        Returns:
+            Boolean: True if the validator has not waited the required number
+                of blocks before attempting to claim a block, False otherwise
+        """
+
+        # While having a block claim delay is nice, it turns out that in
+        # practice the claim delay should not be more than one less than
+        # the number of validators.  It helps to imagine the scenario
+        # where each validator hits their block claim limit in sequential
+        # blocks and their new validator registry information is updated
+        # in the following block by another validator, assuming that there
+        # were no forks.  If there are N validators, once all N validators
+        # have updated their validator registry information, there will
+        # have been N-1 block commits and the Nth validator will only be
+        # able to get its updated validator registry information updated
+        # if the first validator that kicked this off is now able to claim
+        # a block.  If the block claim delay was greater than or equal to
+        # the number of validators, at this point no validators would be
+        # able to claim a block.
+        number_of_validators = len(validator_registry_view.get_validators())
+        block_claim_delay = \
+            min(poet_config_view.block_claim_delay, number_of_validators - 1)
+
+        # While a validator network is starting up, we need to be careful
+        # about applying the block claim delay because if we are too
+        # aggressive we will get ourselves into a situation where the
+        # block claim delay will prevent any validators from claiming
+        # blocks.  So, until we get at least block_claim_delay blocks
+        # we are going to choose not to enforce the delay.
+        if self.total_block_claim_count <= block_claim_delay:
+            LOGGER.debug(
+                'Skipping block claim delay check.  Only %d block(s) in '
+                'the chain.  Claim delay is %d block(s). %d validator(s) '
+                'registered.',
+                self.total_block_claim_count,
+                block_claim_delay,
+                number_of_validators)
+            return False
+
+        # Figure out the block in which the current validator information
+        # was committed.
+        commit_block = \
+            block_store.get_block_by_transaction_id(
+                validator_info.transaction_id)
+        blocks_claimed_since_registration = \
+            block_number - commit_block.block_num - 1
+
+        if block_claim_delay > blocks_claimed_since_registration:
+            LOGGER.error(
+                'Validator %s (ID=%s...%s): Committed in block %d, trying to '
+                'claim block %d, must wait until block %d',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                commit_block.block_num,
+                block_number,
+                commit_block.block_num + block_claim_delay + 1)
+            return True
+
+        LOGGER.debug(
+            'Validator %s (ID=%s...%s): Committed in block %d, trying to '
+            'claim block %d',
+            validator_info.name,
+            validator_info.id[:8],
+            validator_info.id[-8:],
+            commit_block.block_num,
+            block_number)
+
+        return False
+
     def serialize_to_bytes(self):
         """Serialized the consensus state object to a byte string suitable
         for storage
