@@ -24,6 +24,11 @@ import cbor
 from sawtooth_poet.poet_consensus import consensus_state
 from sawtooth_poet.poet_consensus import consensus_state_store
 
+from sawtooth_poet_common.protobuf.validator_registry_pb2 \
+    import ValidatorInfo
+from sawtooth_poet_common.protobuf.validator_registry_pb2 \
+    import SignUpInfo
+
 
 class TestConsensusStateStore(unittest.TestCase):
     def setUp(self):
@@ -108,15 +113,35 @@ class TestConsensusStateStore(unittest.TestCase):
 
         # Store consensus state
         state = consensus_state.ConsensusState()
-        state.aggregate_local_mean = 2.718
-        state.total_block_claim_count = 2
-        state.set_validator_state(
-            validator_id='Bond, James Bond',
-            validator_state=consensus_state.ValidatorState(
-                key_block_claim_count=1,
-                poet_public_key='skeleton key',
-                total_block_claim_count=2))
+        store['key'] = state
 
+        # Verify the length and contains key
+        self.assertEqual(len(store), 1)
+        self.assertEqual(len(my_dict), 1)
+        self.assertTrue('key' in store)
+        self.assertTrue('key' in my_dict)
+
+        # Retrieve the state and verify equality
+        retrieved_state = store['key']
+
+        self.assertEqual(
+            state.aggregate_local_mean,
+            retrieved_state.aggregate_local_mean)
+        self.assertEqual(
+            state.total_block_claim_count,
+            retrieved_state.total_block_claim_count)
+
+        # Have a validator claim a block and update the store
+        wait_certificate = mock.Mock()
+        wait_certificate.local_mean = 5.0
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+        state.validator_did_claim_block(
+            validator_info=validator_info,
+            wait_certificate=wait_certificate)
         store['key'] = state
 
         # Verify the length and contains key
@@ -137,11 +162,20 @@ class TestConsensusStateStore(unittest.TestCase):
 
         validator_state = \
             retrieved_state.get_validator_state(
-                validator_id='Bond, James Bond')
+                validator_info=validator_info)
+        retrieved_validator_state = \
+            retrieved_state.get_validator_state(
+                validator_info=validator_info)
 
-        self.assertEqual(validator_state.key_block_claim_count, 1)
-        self.assertEqual(validator_state.poet_public_key, 'skeleton key')
-        self.assertEqual(validator_state.total_block_claim_count, 2)
+        self.assertEqual(
+            validator_state.key_block_claim_count,
+            retrieved_validator_state.key_block_claim_count)
+        self.assertEqual(
+            validator_state.poet_public_key,
+            retrieved_validator_state.poet_public_key)
+        self.assertEqual(
+            validator_state.total_block_claim_count,
+            retrieved_validator_state.total_block_claim_count)
 
         # Delete the key and then verify length and does not contain key
         del store['key']

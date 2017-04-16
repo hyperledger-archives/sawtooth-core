@@ -27,7 +27,6 @@ from sawtooth_poet_common.validator_registry_view.validator_registry_view \
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
-from sawtooth_poet.poet_consensus.consensus_state import ValidatorState
 
 LOGGER = logging.getLogger(__name__)
 
@@ -145,83 +144,6 @@ def build_certificate_list(block_header,
         LOGGER.error('Error getting block: %s', ke)
 
     return list(certificates)
-
-
-def get_current_validator_state(validator_info,
-                                consensus_state,
-                                block_cache):
-    """Fetches the current validator state for the validator, creating it if
-    necessary.
-
-    Args:
-        validator_info (ValidatorInfo): The validator information
-            corresponding to the consensus state
-        consensus_state (ConsensusState): The consensus state from which
-            validator state should be fetched/derived.
-        block_cache (BlockCache): The block store cache
-
-    Returns:
-        ValidatorState object representing the validator's state at the
-            point in time of the consensus state
-    """
-    # Fetch the validator state.  If it doesn't exist, then create an initial
-    # validator state object
-    validator_state = \
-        consensus_state.get_validator_state(
-            validator_id=validator_info.id)
-
-    if validator_state is None:
-        validator_state = \
-            ValidatorState(
-                key_block_claim_count=0,
-                poet_public_key=validator_info.signup_info.poet_public_key,
-                total_block_claim_count=0)
-
-    return validator_state
-
-
-def create_next_validator_state(validator_info, current_validator_state):
-    """Starting with the current validator state, create the next validator
-     validator state for the validator.
-
-    Args:
-        validator_info (ValidatorInfo): Information about the validator
-        current_validator_state (ValidatorState): The current validator
-            state upon which we are going to base the next validator state
-
-    Returns:
-        ValidatorState object representing new validator state
-    """
-
-    total_block_claim_count = \
-        current_validator_state.total_block_claim_count + 1
-
-    # If the PoET public keys match, then we are doing a simple statistics
-    # update
-    if validator_info.signup_info.poet_public_key == \
-            current_validator_state.poet_public_key:
-        key_block_claim_count = \
-            current_validator_state.key_block_claim_count + 1
-
-    # Otherwise, we are resetting statistics for the validator.  This includes
-    # using the validator info's transaction ID to get the block number of the
-    # block that committed the validator registry transaction
-    else:
-        key_block_claim_count = 1
-
-    LOGGER.debug(
-        'Create validator state for %s: PPK=%s...%s, KBCC=%d, TBCC=%d',
-        validator_info.name,
-        validator_info.signup_info.poet_public_key[:8],
-        validator_info.signup_info.poet_public_key[-8:],
-        key_block_claim_count,
-        total_block_claim_count)
-
-    return \
-        ValidatorState(
-            key_block_claim_count=key_block_claim_count,
-            poet_public_key=validator_info.signup_info.poet_public_key,
-            total_block_claim_count=total_block_claim_count)
 
 
 _BlockInfo = \
@@ -348,25 +270,19 @@ def get_consensus_state_for_block_id(
         if block_info.wait_certificate is None:
             consensus_state = ConsensusState()
 
-        # Otherwise, update the consensus state statistics and fetch the
+        # Otherwise, let the consensus state update itself appropriately based
+        # upon the validator claiming a block, and then associate the
+        # consensus state with the new block in the store.
+
         # validator state for the validator which claimed the block, create
         # updated validator state for the validator, set/update the validator
         # state in the consensus state object, and then associate the
         # consensus state with the corresponding block in the consensus state
         # store.
         else:
-            validator_state = \
-                get_current_validator_state(
-                    validator_info=block_info.validator_info,
-                    consensus_state=consensus_state,
-                    block_cache=block_cache)
-            consensus_state.set_validator_state(
-                validator_id=block_info.validator_info.id,
-                validator_state=create_next_validator_state(
-                    validator_info=block_info.validator_info,
-                    current_validator_state=validator_state))
-
-            consensus_state.total_block_claim_count += 1
+            consensus_state.validator_did_claim_block(
+                validator_info=block_info.validator_info,
+                wait_certificate=block_info.wait_certificate)
             consensus_state_store[block_id] = consensus_state
 
             consensus_state.aggregate_local_mean += \

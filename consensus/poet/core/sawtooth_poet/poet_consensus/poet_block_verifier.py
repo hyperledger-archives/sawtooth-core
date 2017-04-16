@@ -165,10 +165,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
         validator_state = \
-            utils.get_current_validator_state(
-                validator_info=validator_info,
-                consensus_state=consensus_state,
-                block_cache=self._block_cache)
+            consensus_state.get_validator_state(
+                validator_info=validator_info)
         poet_config_view = PoetConfigView(state_view=state_view)
 
         # Reject the block if the validator has already claimed the key bock

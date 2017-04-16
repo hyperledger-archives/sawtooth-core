@@ -242,8 +242,10 @@ class PoetForkResolver(ForkResolverInterface):
                         new_fork_head.header.signer_pubkey)
 
                 # Get the consensus state for the new fork head's previous
-                # block and update the consensus-wide statistics for the new
-                # fork head.
+                # block, let the consensus state update itself appropriately
+                # based upon the validator claiming a block, and then
+                # associate the consensus state with the new block in the
+                # store.
                 consensus_state = \
                     utils.get_consensus_state_for_block_id(
                         block_id=new_fork_head.previous_block_id,
@@ -251,30 +253,11 @@ class PoetForkResolver(ForkResolverInterface):
                         state_view_factory=self._state_view_factory,
                         consensus_state_store=self._consensus_state_store,
                         poet_enclave_module=poet_enclave_module)
-
-                consensus_state.total_block_claim_count += 1
-
-                # Get and update the validator state/statistics for the
-                # validator that claimed the new fork head.
-                validator_state = \
-                    utils.get_current_validator_state(
-                        validator_info=validator_info,
-                        consensus_state=consensus_state,
-                        block_cache=self._block_cache)
-                consensus_state.set_validator_state(
-                    validator_id=validator_info.id,
-                    validator_state=utils.create_next_validator_state(
-                        validator_info=validator_info,
-                        current_validator_state=validator_state))
-
-                # Update the aggregate local mean and store the updated
-                # consensus state for this block.
-                wait_certificate = \
-                    utils.deserialize_wait_certificate(
+                consensus_state.validator_did_claim_block(
+                    validator_info=validator_info,
+                    wait_certificate=utils.deserialize_wait_certificate(
                         block=new_fork_head,
-                        poet_enclave_module=poet_enclave_module)
-                consensus_state.aggregate_local_mean += \
-                    wait_certificate.local_mean
+                        poet_enclave_module=poet_enclave_module))
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
 

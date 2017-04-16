@@ -14,9 +14,13 @@
 # ------------------------------------------------------------------------------
 
 import math
+import logging
+
 from collections import namedtuple
 
 import cbor
+
+LOGGER = logging.getLogger(__name__)
 
 ValidatorState = \
     namedtuple(
@@ -93,45 +97,87 @@ class ConsensusState(object):
                         validator_state.total_block_claim_count,
                         validator_state.key_block_claim_count))
 
-    def get_validator_state(self, validator_id, default=None):
-        """Return the consensus state for a particular validator
-
+    def get_validator_state(self, validator_info):
+        """Return the validator state for a particular validator
         Args:
-            validator_id (str): The ID of the validator for which consensus
-                state information is being requested
-            default (ValidatorState): The default state to return if the
-                validator ID is not in the list of known validators
-
+            validator_info (ValidatorInfo): The validator information for the
+                validator for which validator or state information is being
+                requested
         Returns:
-            ValidatorState: object corresponding to the validator or the
-                value provided in the default parameter if there is no
-                validator state information for the ID provided
+            ValidatorState: The validator state if it exists or the default
+                initial state if it does not
         """
 
-        assert default is None or isinstance(default, ValidatorState)
+        # Fetch the validator state.  If it doesn't exist, then create a
+        # default validator state object and store it for further requests
+        validator_state = self._validators.get(validator_info.id)
 
-        return self._validators.get(validator_id, default)
+        if validator_state is None:
+            validator_state = \
+                ValidatorState(
+                    key_block_claim_count=0,
+                    poet_public_key=validator_info.signup_info.
+                    poet_public_key,
+                    total_block_claim_count=0)
+            self._validators[validator_info.id] = validator_state
 
-    def set_validator_state(self, validator_id, validator_state):
-        """Sets the consensus state for a particular validator.
+        return validator_state
+
+    def validator_did_claim_block(self,
+                                  validator_info,
+                                  wait_certificate):
+        """For the validator that is referenced by the validator information
+        object, update its state based upon it claiming a block.
 
         Args:
-            validator_id (str): The ID of the validator for which consensus
-                state information is being set
-            validator_state (ValidatorState): The validator state information
-                for the validator
+            validator_info (ValidatorInfo): Information about the validator
+            wait_certificate (WaitCertificate): The wait certificate
+                associated with the block being claimed
 
         Returns:
             None
-
-        Raises:
-            ValueError: Validator state is invalid
         """
+        # Update the consensus state statistics.
+        self.aggregate_local_mean += wait_certificate.local_mean
+        self.total_block_claim_count += 1
 
-        assert isinstance(validator_state, ValidatorState)
+        # We need to fetch the current state for the validator
+        validator_state = \
+            self.get_validator_state(validator_info=validator_info)
 
-        self._check_validator_state(validator_state)
-        self._validators[validator_id] = validator_state
+        total_block_claim_count = \
+            validator_state.total_block_claim_count + 1
+
+        # If the PoET public keys match, then we are doing a simple statistics
+        # update
+        if validator_info.signup_info.poet_public_key == \
+                validator_state.poet_public_key:
+            key_block_claim_count = \
+                validator_state.key_block_claim_count + 1
+
+        # Otherwise, we are resetting statistics for the validator.  This
+        # includes using the validator info's transaction ID to get the block
+        # number of the block that committed the validator registry
+        # transaction.
+        else:
+            key_block_claim_count = 1
+
+        LOGGER.debug(
+            'Update state for %s (ID=%s...%s): PPK=%s...%s, KBCC=%d, TBCC=%d',
+            validator_info.name,
+            validator_info.id[:8],
+            validator_info.id[-8:],
+            validator_info.signup_info.poet_public_key[:8],
+            validator_info.signup_info.poet_public_key[-8:],
+            key_block_claim_count,
+            total_block_claim_count)
+
+        # Update our copy of the validator state
+        self._validators[validator_info.id] = \
+            ValidatorState(
+                key_block_claim_count=key_block_claim_count,
+                poet_public_key=validator_info.signup_info.poet_public_key,
+                total_block_claim_count=total_block_claim_count)
 
     def serialize_to_bytes(self):
         """Serialized the consensus state object to a byte string suitable

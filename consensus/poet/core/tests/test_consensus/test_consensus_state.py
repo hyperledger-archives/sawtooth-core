@@ -21,6 +21,11 @@ import cbor
 
 from sawtooth_poet.poet_consensus import consensus_state
 
+from sawtooth_poet_common.protobuf.validator_registry_pb2 \
+    import ValidatorInfo
+from sawtooth_poet_common.protobuf.validator_registry_pb2 \
+    import SignUpInfo
+
 
 class TestConsensusState(unittest.TestCase):
     def test_get_missing_validator_state(self):
@@ -31,112 +36,90 @@ class TestConsensusState(unittest.TestCase):
 
         # Try to get a non-existent validator ID and verify it returns default
         # value
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
         validator_state = \
-            state.get_validator_state(validator_id='Bond, James Bond')
-        self.assertIsNone(validator_state)
+            state.get_validator_state(validator_info=validator_info)
 
-        validator_state = \
-            state.get_validator_state(
-                validator_id='Bond, James Bond',
-                default=consensus_state.ValidatorState(
-                    key_block_claim_count=1,
-                    poet_public_key='my key',
-                    total_block_claim_count=2))
-        self.assertEqual(validator_state.key_block_claim_count, 1)
-        self.assertEqual(validator_state.poet_public_key, 'my key')
-        self.assertEqual(validator_state.total_block_claim_count, 2)
+        self.assertEqual(validator_state.key_block_claim_count, 0)
+        self.assertEqual(validator_state.poet_public_key, 'key_001')
+        self.assertEqual(validator_state.total_block_claim_count, 0)
 
-    def test_set_validator_state(self):
-        """Verify that trying to set validator state with invalid validator
-        state values/types fail.  Verifying that doing a get after a
-        successful set returns the expected data.
+    def test_validator_did_claim_block(self):
+        """Verify that trying to update consensus and validator state with
+        validators that previous don't and do exist appropriately update the
+        consensus and validator statistics.
         """
         state = consensus_state.ConsensusState()
 
-        # Test invalid key block claim counts in validator state
-        for invalid_kbcc in [None, (), [], {}, '1', 1.1, -1]:
-            with self.assertRaises(ValueError):
-                state.set_validator_state(
-                    validator_id='Bond, James Bond',
-                    validator_state=consensus_state.ValidatorState(
-                        key_block_claim_count=invalid_kbcc,
-                        poet_public_key='my key',
-                        total_block_claim_count=0))
+        wait_certificate = mock.Mock()
+        wait_certificate.local_mean = 5.0
 
-        # Test invalid PoET public key in validator state
-        for invalid_ppk in [None, (), [], {}, 1, 1.1, '']:
-            with self.assertRaises(ValueError):
-                state.set_validator_state(
-                    validator_id='Bond, James Bond',
-                    validator_state=consensus_state.ValidatorState(
-                        key_block_claim_count=0,
-                        poet_public_key=invalid_ppk,
-                        total_block_claim_count=0))
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
 
-        # Test invalid total block claim count in validator state
-        for invalid_tbcc in [None, (), [], {}, '1', 1.1, -1]:
-            with self.assertRaises(ValueError):
-                state.set_validator_state(
-                    validator_id='Bond, James Bond',
-                    validator_state=consensus_state.ValidatorState(
-                        key_block_claim_count=0,
-                        poet_public_key='my key',
-                        total_block_claim_count=invalid_tbcc))
+        # Have a non-existent validator claim a block, which should cause the
+        # consensus state to add and set statistics appropriately.
+        state.validator_did_claim_block(
+            validator_info=validator_info,
+            wait_certificate=wait_certificate)
 
-        # Test with total block claim count < key block claim count
-        with self.assertRaises(ValueError):
-            state.set_validator_state(
-                validator_id='Bond, James Bond',
-                validator_state=consensus_state.ValidatorState(
-                    key_block_claim_count=2,
-                    poet_public_key='my key',
-                    total_block_claim_count=1))
+        self.assertEqual(
+            state.aggregate_local_mean,
+            wait_certificate.local_mean)
+        self.assertEqual(state.total_block_claim_count, 1)
 
-        # Verify that can retrieve after set and validator state matches
         validator_state = \
-            consensus_state.ValidatorState(
-                key_block_claim_count=0,
-                poet_public_key='my key',
-                total_block_claim_count=1)
-        state.set_validator_state(
-            validator_id='Bond, James Bond',
-            validator_state=validator_state)
+            state.get_validator_state(validator_info=validator_info)
 
-        retrieved_validator_state = \
-            state.get_validator_state(validator_id='Bond, James Bond')
+        self.assertEqual(validator_state.key_block_claim_count, 1)
+        self.assertEqual(validator_state.poet_public_key, 'key_001')
+        self.assertEqual(validator_state.total_block_claim_count, 1)
+
+        # Have the existing validator claim another block and verify that
+        # the consensus and validator statistics are updated properly
+        state.validator_did_claim_block(
+            validator_info=validator_info,
+            wait_certificate=wait_certificate)
 
         self.assertEqual(
-            validator_state.key_block_claim_count,
-            retrieved_validator_state.key_block_claim_count)
-        self.assertEqual(
-            validator_state.poet_public_key,
-            retrieved_validator_state.poet_public_key)
-        self.assertEqual(
-            validator_state.total_block_claim_count,
-            retrieved_validator_state.total_block_claim_count)
+            state.aggregate_local_mean,
+            2 * wait_certificate.local_mean)
+        self.assertEqual(state.total_block_claim_count, 2)
 
-        # Verify that updating an existing validator state matches on get
         validator_state = \
-            consensus_state.ValidatorState(
-                key_block_claim_count=1,
-                poet_public_key='my new key',
-                total_block_claim_count=2)
-        state.set_validator_state(
-            validator_id='Bond, James Bond',
-            validator_state=validator_state)
+            state.get_validator_state(validator_info=validator_info)
 
-        retrieved_validator_state = \
-            state.get_validator_state(validator_id='Bond, James Bond')
+        self.assertEqual(validator_state.key_block_claim_count, 2)
+        self.assertEqual(validator_state.poet_public_key, 'key_001')
+        self.assertEqual(validator_state.total_block_claim_count, 2)
+
+        # Have the existing validator claim another block, but with a new key,
+        # and verify that the consensus and validator statistics are updated
+        # properly
+        validator_info.signup_info.poet_public_key = 'key_002'
+
+        state.validator_did_claim_block(
+            validator_info=validator_info,
+            wait_certificate=wait_certificate)
 
         self.assertEqual(
-            validator_state.key_block_claim_count,
-            retrieved_validator_state.key_block_claim_count)
-        self.assertEqual(
-            validator_state.poet_public_key,
-            retrieved_validator_state.poet_public_key)
-        self.assertEqual(
-            validator_state.total_block_claim_count,
-            retrieved_validator_state.total_block_claim_count)
+            state.aggregate_local_mean,
+            3 * wait_certificate.local_mean)
+        self.assertEqual(state.total_block_claim_count, 3)
+
+        validator_state = \
+            state.get_validator_state(validator_info=validator_info)
+
+        self.assertEqual(validator_state.key_block_claim_count, 1)
+        self.assertEqual(validator_state.poet_public_key, 'key_002')
+        self.assertEqual(validator_state.total_block_claim_count, 3)
 
     def test_serialize(self):
         """Verify that deserializing invalid data results in the appropriate
@@ -149,6 +132,17 @@ class TestConsensusState(unittest.TestCase):
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(cbor.dumps(invalid_state))
 
+        # Missing aggregate local mean
+        with mock.patch(
+                'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
+                as mock_loads:
+            mock_loads.return_value = {
+                'total_block_claim_count': 0,
+                '_validators': {}
+            }
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(b'')
+
         # Invalid aggregate local mean
         for invalid_alm in [None, 'not a float', (), [], {}, -1,
                             float('nan'), float('inf'), float('-inf')]:
@@ -156,6 +150,17 @@ class TestConsensusState(unittest.TestCase):
             state.aggregate_local_mean = invalid_alm
             with self.assertRaises(ValueError):
                 state.parse_from_bytes(state.serialize_to_bytes())
+
+        # Missing total block claim count
+        with mock.patch(
+                'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
+                as mock_loads:
+            mock_loads.return_value = {
+                'aggregate_local_mean': 0.0,
+                '_validators': {}
+            }
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(b'')
 
         # Invalid total block claim count
         for invalid_tbcc in [None, 'not an int', (), [], {}, -1]:
@@ -173,13 +178,18 @@ class TestConsensusState(unittest.TestCase):
                 state.parse_from_bytes(state.serialize_to_bytes())
 
         state = consensus_state.ConsensusState()
-        state.total_block_claim_count = 1
-        state.set_validator_state(
-            validator_id='Bond, James Bond',
-            validator_state=consensus_state.ValidatorState(
-                key_block_claim_count=1,
-                poet_public_key='key',
-                total_block_claim_count=1))
+        wait_certificate = mock.Mock()
+        wait_certificate.local_mean = 5.0
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+
+        state.validator_did_claim_block(
+            validator_info=validator_info,
+            wait_certificate=wait_certificate)
         doppelganger_state = consensus_state.ConsensusState()
 
         # Truncate the serialized value on purpose
@@ -190,84 +200,72 @@ class TestConsensusState(unittest.TestCase):
             doppelganger_state.parse_from_bytes(
                 state.serialize_to_bytes()[1:])
 
-        # Circumvent testing of validator state validity so that we can
-        # serialize to invalid data to verify deserializing
-
         # Test invalid key block claim counts in validator state
         for invalid_kbcc in [None, (), [], {}, '1', 1.1, -1]:
             state = consensus_state.ConsensusState()
-            state.total_block_claim_count = 1
             with mock.patch(
-                    'sawtooth_poet.poet_consensus.consensus_state.'
-                    'ConsensusState._check_validator_state'):
-                state.set_validator_state(
-                    validator_id='Bond, James Bond',
-                    validator_state=consensus_state.ValidatorState(
-                        key_block_claim_count=invalid_kbcc,
-                        poet_public_key='key 1',
-                        total_block_claim_count=1))
-
-            serialized = state.serialize_to_bytes()
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(serialized)
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') as mock_loads:
+                mock_loads.return_value = {
+                    'aggregate_local_mean': 0.0,
+                    'total_block_claim_count': 0,
+                    '_validators': {
+                        'validator_001': [invalid_kbcc, 'ppk_001', 0]
+                    }
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
 
         # Test invalid PoET public key in validator state
         for invalid_ppk in [None, (), [], {}, 1, 1.1, '']:
             state = consensus_state.ConsensusState()
-            state.total_block_claim_count = 1
             with mock.patch(
-                    'sawtooth_poet.poet_consensus.consensus_state.'
-                    'ConsensusState._check_validator_state'):
-                state.set_validator_state(
-                    validator_id='Bond, James Bond',
-                    validator_state=consensus_state.ValidatorState(
-                        key_block_claim_count=1,
-                        poet_public_key=invalid_ppk,
-                        total_block_claim_count=1))
-
-            serialized = state.serialize_to_bytes()
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(serialized)
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') as mock_loads:
+                mock_loads.return_value = {
+                    'aggregate_local_mean': 0.0,
+                    'total_block_claim_count': 0,
+                    '_validators': {
+                        'validator_001': [0, invalid_ppk, 0]
+                    }
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
 
         # Test total block claim count in validator state
         for invalid_tbcc in [None, (), [], {}, '1', 1.1, -1]:
             state = consensus_state.ConsensusState()
-            state.total_block_claim_count = 1
             with mock.patch(
-                    'sawtooth_poet.poet_consensus.consensus_state.'
-                    'ConsensusState._check_validator_state'):
-                state.set_validator_state(
-                    validator_id='Bond, James Bond',
-                    validator_state=consensus_state.ValidatorState(
-                        key_block_claim_count=1,
-                        poet_public_key='key',
-                        total_block_claim_count=invalid_tbcc))
-
-            serialized = state.serialize_to_bytes()
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(serialized)
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') as mock_loads:
+                mock_loads.return_value = {
+                    'aggregate_local_mean': 0.0,
+                    'total_block_claim_count': 0,
+                    '_validators': {
+                        'validator_001': [0, 'ppk_001', invalid_tbcc]
+                    }
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
 
         # Test with total block claim count < key block claim count
         state = consensus_state.ConsensusState()
-        state.total_block_claim_count = 1
         with mock.patch(
-                'sawtooth_poet.poet_consensus.consensus_state.'
-                'ConsensusState._check_validator_state'):
-            state.set_validator_state(
-                validator_id='Bond, James Bond',
-                validator_state=consensus_state.ValidatorState(
-                    key_block_claim_count=2,
-                    poet_public_key='key',
-                    total_block_claim_count=1))
-
-        serialized = state.serialize_to_bytes()
-        with self.assertRaises(ValueError):
-            state.parse_from_bytes(serialized)
+                'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                'loads') as mock_loads:
+            mock_loads.return_value = {
+                'aggregate_local_mean': 0.0,
+                'total_block_claim_count': 0,
+                '_validators': {
+                    'validator_001': [2, 'ppk_001', 1]
+                }
+            }
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(b'')
 
         # Simple serialization of new consensus state and then deserialize
         # and compare
         state = consensus_state.ConsensusState()
-        state.total_block_claim_count = 1
 
         doppelganger_state = consensus_state.ConsensusState()
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
@@ -281,54 +279,68 @@ class TestConsensusState(unittest.TestCase):
 
         # Now put a couple of validators in, serialize, deserialize, and
         # verify they are in deserialized
-        validator_state_1 = \
-            consensus_state.ValidatorState(
-                key_block_claim_count=1,
-                poet_public_key='key 1',
-                total_block_claim_count=2)
-        validator_state_2 = \
-            consensus_state.ValidatorState(
-                key_block_claim_count=3,
-                poet_public_key='key 2',
-                total_block_claim_count=4)
+        wait_certificate_1 = mock.Mock()
+        wait_certificate_1.local_mean = 5.0
+        wait_certificate_2 = mock.Mock()
+        wait_certificate_2.local_mean = 5.0
 
-        state.set_validator_state(
-            validator_id='Bond, James Bond',
-            validator_state=validator_state_1)
-        state.set_validator_state(
-            validator_id='Smart, Maxwell Smart',
-            validator_state=validator_state_2)
+        validator_info_1 = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+        validator_info_2 = \
+            ValidatorInfo(
+                id='validator_002',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_002'))
+
+        state.validator_did_claim_block(
+            validator_info=validator_info_1,
+            wait_certificate=wait_certificate_1)
+        state.validator_did_claim_block(
+            validator_info=validator_info_2,
+            wait_certificate=wait_certificate_2)
 
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
+        self.assertEqual(
+            state.aggregate_local_mean,
+            doppelganger_state.aggregate_local_mean)
         self.assertEqual(
             state.total_block_claim_count,
             doppelganger_state.total_block_claim_count)
 
         validator_state = \
+            state.get_validator_state(
+                validator_info=validator_info_1)
+        doppleganger_validator_state = \
             doppelganger_state.get_validator_state(
-                validator_id='Bond, James Bond')
+                validator_info=validator_info_1)
 
         self.assertEqual(
             validator_state.key_block_claim_count,
-            validator_state_1.key_block_claim_count)
+            doppleganger_validator_state.key_block_claim_count)
         self.assertEqual(
             validator_state.poet_public_key,
-            validator_state_1.poet_public_key)
+            doppleganger_validator_state.poet_public_key)
         self.assertEqual(
             validator_state.total_block_claim_count,
-            validator_state_1.total_block_claim_count)
+            doppleganger_validator_state.total_block_claim_count)
 
         validator_state = \
+            state.get_validator_state(
+                validator_info=validator_info_2)
+        doppleganger_validator_state = \
             doppelganger_state.get_validator_state(
-                validator_id='Smart, Maxwell Smart')
+                validator_info=validator_info_2)
 
         self.assertEqual(
             validator_state.key_block_claim_count,
-            validator_state_2.key_block_claim_count)
+            doppleganger_validator_state.key_block_claim_count)
         self.assertEqual(
             validator_state.poet_public_key,
-            validator_state_2.poet_public_key)
+            doppleganger_validator_state.poet_public_key)
         self.assertEqual(
             validator_state.total_block_claim_count,
-            validator_state_2.total_block_claim_count)
+            doppleganger_validator_state.total_block_claim_count)
