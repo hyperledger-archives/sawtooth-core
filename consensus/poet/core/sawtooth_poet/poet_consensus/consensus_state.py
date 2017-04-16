@@ -15,15 +15,17 @@
 
 import math
 import logging
-
-from collections import namedtuple
+import collections
+import itertools
 
 import cbor
+
+from sawtooth_poet.poet_consensus import utils
 
 LOGGER = logging.getLogger(__name__)
 
 ValidatorState = \
-    namedtuple(
+    collections.namedtuple(
         'ValidatorState',
         ['key_block_claim_count',
          'poet_public_key',
@@ -52,6 +54,29 @@ class ConsensusState(object):
         total_block_claim_count (int): The number of blocks that have been
             claimed by all validators
     """
+
+    _EstimateInfo = collections.namedtuple('_EstimateInfo',
+                                           ['population_estimate',
+                                            'previous_block_id',
+                                            'validator_id'])
+
+    """ Instead of creating a full-fledged class, let's use a named tuple for
+    the population estimates.  The population estimate represents what we need
+    to help in computing zTest results.  A population estimate object contains:
+
+    population_estimate (float): The population estimate for the corresponding
+        block
+    previous_block_id (str): The ID of the block previous to the one that this
+        population estimate corresponds to
+    validator_id (str): The ID of the validator that won the corresponding
+        block
+    """
+
+    # The population estimate cache is a mapping of block ID to its
+    # corresponding _EstimateInfo object.  This is used so that when building
+    # the population list, we don't have to always walk back the entire list
+    _population_estimate_cache = {}
+
     def __init__(self):
         """Initialize a ConsensusState object
 
@@ -96,6 +121,63 @@ class ConsensusState(object):
                     'key_block_claim_count ({})'.format(
                         validator_state.total_block_claim_count,
                         validator_state.key_block_claim_count))
+
+    def _build_population_estimate_list(self,
+                                        block_id,
+                                        poet_config_view,
+                                        block_cache,
+                                        poet_enclave_module):
+        """Starting at the block provided, walk back the blocks and collect the
+        population estimates.
+
+        Args:
+            block_id (str): The ID of the block to start with
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+            block_cache (BlockCache): The block store cache
+            poet_enclave_module (module): The PoET enclave module
+
+        Returns:
+            deque: The list, in order of most-recent block to least-recent
+                block, of _PopulationEstimate objects.
+        """
+        population_estimate_list = collections.deque()
+
+        # Until we get to the first fixed-duration block (i.e., a block for
+        # which the local mean is simply a ratio of the target and initial wait
+        # times), first look in our population estimate cache for the
+        # population estimate information and if not there fetch the block.
+        # Then add the value to the population estimate list.
+        #
+        # Note that since we know the total block claim count from the
+        # consensus state object, we don't have to worry about non-PoET blocks.
+        # Using that value and the fixed duration block count from the PoET
+        # configuration view, we know now many blocks to get.
+        number_of_blocks = \
+            self.total_block_claim_count - \
+            poet_config_view.fixed_duration_block_count
+        for _ in range(number_of_blocks):
+            population_cache_entry = \
+                ConsensusState._population_estimate_cache.get(block_id)
+            if population_cache_entry is None:
+                block = block_cache[block_id]
+                wait_certificate = \
+                    utils.deserialize_wait_certificate(
+                        block=block,
+                        poet_enclave_module=poet_enclave_module)
+                population_cache_entry = \
+                    ConsensusState._EstimateInfo(
+                        population_estimate=wait_certificate.
+                        population_estimate,
+                        previous_block_id=block.previous_block_id,
+                        validator_id=block.header.signer_pubkey)
+                ConsensusState._population_estimate_cache[block_id] = \
+                    population_cache_entry
+
+            population_estimate_list.append(population_cache_entry)
+            block_id = population_cache_entry.previous_block_id
+
+        return population_estimate_list
 
     def get_validator_state(self, validator_info):
         """Return the validator state for a particular validator
@@ -313,6 +395,124 @@ class ConsensusState(object):
             validator_info.id[-8:],
             commit_block.block_num,
             block_number)
+
+        return False
+
+    def validator_is_claiming_too_frequently(self,
+                                             validator_info,
+                                             previous_block_id,
+                                             poet_config_view,
+                                             population_estimate,
+                                             block_cache,
+                                             poet_enclave_module):
+        """Determine if allowing the validator to claim a block would allow it
+        to claim blocks more frequently that statistically expected (i.e,
+        zTest).
+
+        Args:
+            validator_info (ValidatorInfo): The current validator information
+            previous_block_id (str): The ID of the block that is the immediate
+                predecessor of the block that the validator is attempting to
+                claim
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+            population_estimate (float): The population estimate for the
+                candidate block
+            block_cache (BlockCache): The block store cache
+            poet_enclave_module (module): The PoET enclave module
+
+        Returns:
+            True if allowing the validator to claim the block would result in
+            the validator being allowed to claim more frequently than
+            statistically expected, False otherwise
+        """
+        # If there are note enough blocks in the block chain to apply the zTest
+        # (i.e., we have not progressed past the blocks for which the local
+        # mean is calculated as a fixed ratio of the target to initial wait),
+        # simply short-circuit the test an allow the block to be claimed.
+        if self.total_block_claim_count < \
+                poet_config_view.fixed_duration_block_count:
+            return False
+
+        # Build up the population estimate list for the block chain and then
+        # add the new information (i.e., the validator trying to claim as well
+        # as the population estimate) to the front to maintain the order of
+        # most-recent to least-recent.
+        population_estimate_list = \
+            self._build_population_estimate_list(
+                block_id=previous_block_id,
+                poet_config_view=poet_config_view,
+                block_cache=block_cache,
+                poet_enclave_module=poet_enclave_module)
+        population_estimate_list.appendleft(
+            ConsensusState._EstimateInfo(
+                population_estimate=population_estimate,
+                previous_block_id=previous_block_id,
+                validator_id=validator_info.id))
+
+        observed_wins = 0
+        expected_wins = 0
+        block_count = 0
+        minimum_win_count = poet_config_view.ztest_minimum_win_count
+        maximum_win_deviation = poet_config_view.ztest_maximum_win_deviation
+
+        # We are now going to compute a "1 sample Z test" for each
+        # progressive range of results in the history.  Test the
+        # hypothesis that validator won elections (i.e., was able to
+        # claim blocks) with higher mean that expected.
+        #
+        # See: http://www.cogsci.ucsd.edu/classes/SP07/COGS14/NOTES/
+        #             binomial_ztest.pdf
+
+        for estimate_info in population_estimate_list:
+            # Keep track of the number of blocks and the expected number of
+            # wins up to this point.
+            block_count += 1
+            expected_wins += 1.0 / estimate_info.population_estimate
+
+            # If the validator trying to claim the block also claimed this
+            # block, update the number of blocks won and if we have seen more
+            # than the number of wins necessary to trigger the zTest, then we
+            # are going to figure out if the validator is winning too
+            # frequently.
+            if estimate_info.validator_id == validator_info.id:
+                observed_wins += 1
+                if observed_wins > minimum_win_count and \
+                        observed_wins > expected_wins:
+                    probability = expected_wins / block_count
+                    standard_deviation = \
+                        math.sqrt(block_count * probability *
+                                  (1.0 - probability))
+                    z_score = \
+                        (observed_wins - expected_wins) / \
+                        standard_deviation
+                    if z_score > maximum_win_deviation:
+                        LOGGER.error(
+                            'Validator %s (ID=%s...%s): zTest failed at depth '
+                            '%d, z_score=%f, expected=%f, observed=%d',
+                            validator_info.name,
+                            validator_info.id[:8],
+                            validator_info.id[-8:],
+                            block_count,
+                            z_score,
+                            expected_wins,
+                            observed_wins)
+                        return True
+
+        LOGGER.debug(
+            'Validator %s (ID=%s...%s): zTest succeeded with depth %d, '
+            'expected=%f, observed=%d',
+            validator_info.name,
+            validator_info.id[:8],
+            validator_info.id[-8:],
+            block_count,
+            expected_wins,
+            observed_wins)
+
+        LOGGER.debug(
+            'zTest history: %s',
+            ['{:.4f}'.format(x.population_estimate) for x in
+             itertools.islice(population_estimate_list, 0, 3)])
 
         return False
 

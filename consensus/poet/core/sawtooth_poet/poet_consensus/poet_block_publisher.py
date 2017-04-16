@@ -389,10 +389,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # if it would result in us winning more frequently than statistically
         # expected.  If so, then refuse to initialize the block because other
         # validators will not accept anyway.
-        if utils.validator_has_claimed_too_frequently(
+        if consensus_state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id=block_header.previous_block_id,
-                consensus_state=consensus_state,
                 poet_config_view=poet_config_view,
                 population_estimate=wait_timer.population_estimate,
                 block_cache=self._block_cache,
