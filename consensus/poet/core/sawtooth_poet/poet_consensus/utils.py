@@ -298,55 +298,6 @@ def get_consensus_state_for_block_id(
     return consensus_state
 
 
-def validator_has_claimed_maximum_number_of_blocks(validator_info,
-                                                   validator_state,
-                                                   key_block_claim_limit):
-    """Determines if a validator has already claimed the maximum number of
-    blocks allowed with its PoET key pair.
-
-    Args:
-        validator_info (ValidatorInfo): The current validator information
-        validator_state (ValidatorState): The current state for the validator
-            for which the maximum block claim count is being tested
-        key_block_claim_limit (int): The limit of number of blocks that can be
-            claimed with a PoET key pair
-
-    Returns:
-        True if the validator has already claimed the maximum number of blocks
-        with its current PoET key pair, False otherwise
-    """
-
-    if validator_state.poet_public_key == \
-            validator_info.signup_info.poet_public_key:
-        if validator_state.key_block_claim_count >= key_block_claim_limit:
-            LOGGER.error(
-                'Validator %s (ID=%s...%s) has reached block claim limit for '
-                'current PoET keys %d >= %d',
-                validator_info.name,
-                validator_info.id[:8],
-                validator_info.id[-8:],
-                validator_state.key_block_claim_count,
-                key_block_claim_limit)
-            return True
-        else:
-            LOGGER.debug(
-                'Validator %s (ID=%s...%s): Claimed %d block(s) out of %d',
-                validator_info.name,
-                validator_info.id[:8],
-                validator_info.id[-8:],
-                validator_state.key_block_claim_count,
-                key_block_claim_limit)
-    else:
-        LOGGER.debug(
-            'Validator %s (ID=%s...%s): Claimed 0 block(s) out of %d',
-            validator_info.name,
-            validator_info.id[:8],
-            validator_info.id[-8:],
-            key_block_claim_limit)
-
-    return False
-
-
 def validator_has_claimed_too_early(validator_info,
                                     consensus_state,
                                     block_number,

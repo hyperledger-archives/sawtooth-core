@@ -155,8 +155,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
             certificates=certificates,
             poet_public_key=validator_info.signup_info.poet_public_key)
 
-        # Get the consensus state for the block that is being built upon and
-        # then fetch the validator state for this validator
+        # Get the consensus state and PoET configuration view for the block
+        # that is being built upon
         consensus_state = \
             utils.get_consensus_state_for_block_id(
                 block_id=block_wrapper.previous_block_id,
@@ -164,18 +164,13 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 state_view_factory=self._state_view_factory,
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
-        validator_state = \
-            consensus_state.get_validator_state(
-                validator_info=validator_info)
         poet_config_view = PoetConfigView(state_view=state_view)
 
         # Reject the block if the validator has already claimed the key bock
         # limit for its current PoET key pair.
-        key_block_claim_limit = poet_config_view.key_block_claim_limit
-        if utils.validator_has_claimed_maximum_number_of_blocks(
+        if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                validator_state=validator_state,
-                key_block_claim_limit=key_block_claim_limit):
+                poet_config_view=poet_config_view):
             LOGGER.error(
                 'Block %s rejected: Validator has reached maximum number of '
                 'blocks with key pair.',

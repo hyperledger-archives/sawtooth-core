@@ -179,6 +179,54 @@ class ConsensusState(object):
                 poet_public_key=validator_info.signup_info.poet_public_key,
                 total_block_claim_count=total_block_claim_count)
 
+    def validator_has_claimed_block_limit(self,
+                                          validator_info,
+                                          poet_config_view):
+        """Determines if a validator has already claimed the maximum number of
+        blocks allowed with its PoET key pair.
+        Args:
+            validator_info (ValidatorInfo): The current validator information
+            poet_config_view (PoetConfigView): The limit of number of blocks
+             that can be claimed with a PoET key pair
+        Returns:
+            Boolean: True if the validator has already claimed the maximum
+                number of blocks with its current PoET key pair, False
+                otherwise
+        """
+        key_block_claim_limit = poet_config_view.key_block_claim_limit
+        validator_state = \
+            self.get_validator_state(validator_info=validator_info)
+
+        if validator_state.poet_public_key == \
+                validator_info.signup_info.poet_public_key:
+            if validator_state.key_block_claim_count >= key_block_claim_limit:
+                LOGGER.error(
+                    'Validator %s (ID=%s...%s): Reached block claim limit '
+                    'for PoET keys %d >= %d',
+                    validator_info.name,
+                    validator_info.id[:8],
+                    validator_info.id[-8:],
+                    validator_state.key_block_claim_count,
+                    key_block_claim_limit)
+                return True
+            else:
+                LOGGER.debug(
+                    'Validator %s (ID=%s...%s): Claimed %d block(s) out of %d',
+                    validator_info.name,
+                    validator_info.id[:8],
+                    validator_info.id[-8:],
+                    validator_state.key_block_claim_count,
+                    key_block_claim_limit)
+        else:
+            LOGGER.debug(
+                'Validator %s (ID=%s...%s): Claimed 0 block(s) out of %d',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                key_block_claim_limit)
+
+        return False
+
     def serialize_to_bytes(self):
         """Serialized the consensus state object to a byte string suitable
         for storage

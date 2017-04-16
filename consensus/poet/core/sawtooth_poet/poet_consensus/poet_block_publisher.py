@@ -304,20 +304,15 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 state_view_factory=self._state_view_factory,
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
-        validator_state = \
-            consensus_state.get_validator_state(
-                validator_info=validator_info)
         poet_config_view = PoetConfigView(state_view)
 
         # Using the consensus state for the block upon which we want to
         # build, check to see how many blocks we have claimed on this chain
         # with this PoET key.  If we have hit the key block claim limit, then
         # we need to check if the key has been refreshed.
-        key_block_claim_limit = poet_config_view.key_block_claim_limit
-        if utils.validator_has_claimed_maximum_number_of_blocks(
+        if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                validator_state=validator_state,
-                key_block_claim_limit=key_block_claim_limit):
+                poet_config_view=poet_config_view):
             # Because we have hit the limit, check to see if we have already
             # submitted a validator registry transaction with new signup
             # information, and therefore a new PoET public key.  If not, then
@@ -331,8 +326,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     PoetBlockPublisher._poet_public_key]
             if not poet_key_state.has_been_refreshed:
                 LOGGER.info(
-                    'Reached block claim limit (%d) for key: %s...%s',
-                    key_block_claim_limit,
+                    'Reached block claim limit for key: %s...%s',
                     PoetBlockPublisher._poet_public_key[:8],
                     PoetBlockPublisher._poet_public_key[-8:])
 
