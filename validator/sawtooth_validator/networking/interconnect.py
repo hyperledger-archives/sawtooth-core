@@ -19,7 +19,8 @@ import hashlib
 import logging
 import queue
 import sys
-from threading import Condition
+from threading import Event
+from threading import Lock
 from threading import Thread
 import time
 import uuid
@@ -77,9 +78,9 @@ class _SendReceive(object):
                 in the dispatcher for transmitting responses.
             futures (future.FutureCollection): A Map of correlation ids to
                 futures
-            connections (dict): A dictionary that uses a sha512 hash as
-                the keys and either an OutboundConnection or string
-                identity as values.
+            connections (ThreadsafeDict): A dictionary that uses a
+                sha512 hash as the keys and either an OutboundConnection
+                or string identity as values.
             zmq_identity (bytes): Used to identify the dealer socket
             address (str): The endpoint to bind or connect to.
             dispatcher (dispatcher.Dispather): Used to handle messages in a
@@ -111,10 +112,10 @@ class _SendReceive(object):
 
         self._event_loop = None
         self._context = None
-        self._recv_queue = None
         self._socket = None
         self._auth = None
-        self._condition = Condition()
+        self._ready = Event()
+        self._lock = Lock()
 
         # The last time a message was received over an outbound
         # socket we established.
@@ -122,10 +123,10 @@ class _SendReceive(object):
 
         # A map of zmq identities to last message received times
         # for inbound connections to our zmq.ROUTER socket.
-        self._last_message_times = {}
+        self._last_message_times = ThreadsafeDict()
 
         self._connections = connections
-        self._identities_to_connection_ids = {}
+        self._identities_to_connection_ids = ThreadsafeDict()
 
     @property
     def connection(self):
@@ -144,8 +145,6 @@ class _SendReceive(object):
 
     @asyncio.coroutine
     def _do_heartbeat(self):
-        with self._condition:
-            self._condition.wait_for(lambda: self._socket is not None)
 
         ping = PingRequest()
 
@@ -179,6 +178,7 @@ class _SendReceive(object):
                                      " - removing connection.",
                                      self._connection,
                                      self._connection_timeout)
+                        self._ready.clear()
                         yield from self._stop()
             yield from asyncio.sleep(self._heartbeat_interval)
 
@@ -206,8 +206,6 @@ class _SendReceive(object):
         Internal coroutine for receiving messages
         """
         zmq_identity = None
-        with self._condition:
-            self._condition.wait_for(lambda: self._socket is not None)
         while True:
             if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
                 zmq_identity, msg_bytes = \
@@ -279,8 +277,8 @@ class _SendReceive(object):
                 LOGGER.debug("Can't send to %s, not in self._connections",
                              connection_id)
 
-        with self._condition:
-            self._condition.wait_for(lambda: self._event_loop is not None)
+        self._ready.wait()
+
         asyncio.run_coroutine_threadsafe(
             self._send_message(zmq_identity, msg),
             self._event_loop)
@@ -324,8 +322,6 @@ class _SendReceive(object):
                     self._socket.curve_secretkey = secretkey
                     self._socket.curve_serverkey = self._server_public_key
 
-                self._dispatcher.add_send_message(self._connection,
-                                                  self.send_message)
                 self._socket.connect(self._address)
             elif socket_type == zmq.ROUTER:
                 if self._secured:
@@ -339,11 +335,10 @@ class _SendReceive(object):
                     self._socket.curve_publickey = self._server_public_key
                     self._socket.curve_server = True
 
-                self._dispatcher.add_send_message(self._connection,
-                                                  self.send_message)
                 self._socket.bind(self._address)
 
-            self._recv_queue = asyncio.Queue()
+            self._dispatcher.add_send_message(self._connection,
+                                              self.send_message)
             asyncio.ensure_future(self._receive_message(),
                                   loop=self._event_loop)
 
@@ -356,11 +351,10 @@ class _SendReceive(object):
         if self._heartbeat:
             asyncio.ensure_future(self._do_heartbeat(), loop=self._event_loop)
 
-        with self._condition:
-            self._condition.notify_all()
-
         # Put a 'complete with the setup tasks' sentinel on the queue.
         complete_or_error_queue.put_nowait(_STARTUP_COMPLETE_SENTINEL)
+
+        asyncio.ensure_future(self._notify_started(), loop=self._event_loop)
 
         self._event_loop.run_forever()
         # event_loop.stop called elsewhere will cause the loop to break out
@@ -381,6 +375,10 @@ class _SendReceive(object):
         for task in asyncio.Task.all_tasks(self._event_loop):
             task.cancel()
         self._event_loop.stop()
+
+    @asyncio.coroutine
+    def _notify_started(self):
+        self._ready.set()
 
     def shutdown(self):
         self._dispatcher.remove_send_message(self._connection)
@@ -445,8 +443,8 @@ class Interconnect(object):
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
         self._connection_timeout = connection_timeout
-        self._connections = {}
-        self.outbound_connections = {}
+        self._connections = ThreadsafeDict()
+        self.outbound_connections = ThreadsafeDict()
         self._max_incoming_connections = max_incoming_connections
 
         self._send_receive_thread = _SendReceive(
@@ -594,9 +592,6 @@ class Interconnect(object):
         for conn in self.outbound_connections.values():
             conn.stop()
 
-    def join_with(self):
-        self._thread.join()
-
     def get_connection_id_by_endpoint(self, endpoint):
         """Returns the connection id associated with a publically
         reachable endpoint or raises KeyError if the endpoint is not
@@ -738,3 +733,42 @@ class OutboundConnection(object):
     def stop(self):
         self._send_receive_thread.shutdown()
         self._futures.stop()
+
+
+class ThreadsafeDict(object):
+
+    def __init__(self):
+        self._connections = {}
+        self._lock = Lock()
+
+    def __len__(self):
+        with self._lock:
+            return len(self._connections)
+
+    def __contains__(self, item):
+        with self._lock:
+            return item in self._connections
+
+    def __getitem__(self, item):
+        with self._lock:
+            return self._connections[item]
+
+    def __delitem__(self, key):
+        with self._lock:
+            del self._connections[key]
+
+    def get(self, item, default=None):
+        with self._lock:
+            return self._connections.get(item, default)
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            self._connections[key] = value
+
+    def values(self):
+        with self._lock:
+            return list(self._connections.values())
+
+    def __iter__(self):
+        with self._lock:
+            return iter(list(self._connections))

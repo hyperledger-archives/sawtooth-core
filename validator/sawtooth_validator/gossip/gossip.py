@@ -243,7 +243,7 @@ class Gossip(object):
         with self._condition:
             if exclude is None:
                 exclude = []
-            for connection_id in self._peers:
+            for connection_id in self._peers.copy():
                 if connection_id not in exclude:
                     try:
                         self._network.send(message_type,
