@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,14 +17,40 @@ import argparse
 import logging
 import time
 
-from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
-from sawtooth_sdk.messaging.stream import Stream
-
+import json
+import urllib.request as urllib
+from urllib.error import URLError, HTTPError
+from http.client import RemoteDisconnected
+import concurrent.futures
+from concurrent.futures import wait
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
-from sawtooth_sdk.protobuf.validator_pb2 import Message
-
 
 LOGGER = logging.getLogger(__file__)
+
+
+def post_batches(url, batches):
+    data = batches.SerializeToString()
+    headers = {'Content-Type': 'application/octet-stream'}
+    headers['Content-Length'] = str(len(data))
+
+    request = urllib.Request(
+        url + "/batches",
+        data,
+        headers=headers,
+        method='POST')
+    try:
+        result = urllib.urlopen(request)
+        code, json_result = (result.status, json.loads(result.read().decode()))
+        if not (code == 200 or code == 201 or code == 202):
+            LOGGER.warning("(%s): %s", code, json_result)
+        return(code, json_result)
+    except HTTPError as e:
+        LOGGER.warning("(%s): %s", e.code, e.msg)
+        return(e.code, e.msg)
+    except RemoteDisconnected as e:
+        LOGGER.warning(e)
+    except URLError as e:
+        LOGGER.warning(e)
 
 
 def _split_batch_list(batch_list):
@@ -43,29 +69,21 @@ def do_load(args):
         batches = batch_pb2.BatchList()
         batches.ParseFromString(fd.read())
 
-    stream = Stream(args.url)
-    futures = []
     start = time.time()
-
+    futures = []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     for batch_list in _split_batch_list(batches):
-        future = stream.send(
-            message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            content=batch_list.SerializeToString())
-        futures.append(future)
+        fut = executor.submit(post_batches, args.url, batch_list)
+        futures.append(fut)
 
-    for future in futures:
-        result = future.result()
-        try:
-            assert result.message_type == Message.CLIENT_BATCH_SUBMIT_RESPONSE
-        except ValidatorConnectionError as vce:
-            LOGGER.warning("the future resolved to %s", vce)
+    # Wait until all futures are complete
+    wait(futures)
 
     stop = time.time()
+
     print("batches: {} batch/sec: {}".format(
         str(len(batches.batches)),
         len(batches.batches) / (stop - start)))
-
-    stream.close()
 
 
 def add_load_parser(subparsers, parent_parser):
@@ -83,5 +101,5 @@ def add_load_parser(subparsers, parent_parser):
     parser.add_argument(
         '-U', '--url',
         type=str,
-        help='connection URL for validator',
-        default='tcp://localhost:40000')
+        help='url for the REST API',
+        default='http://localhost:8080')
