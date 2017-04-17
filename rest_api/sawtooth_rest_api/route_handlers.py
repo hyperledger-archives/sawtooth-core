@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -440,7 +440,7 @@ class RouteHandler(object):
             return response.content
         # Caused by resolving a FutureError on validator disconnect
         except ValidatorConnectionError:
-            raise errors.ValidatorUnavailable()
+            raise errors.ValidatorDisconnect()
 
     @classmethod
     def _try_response_parse(cls, proto, response, traps=None):

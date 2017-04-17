@@ -56,3 +56,9 @@ class ValidatorUnavailable(web.HTTPServiceUnavailable):
     def __init__(self):
         message = 'Could not reach validator, validator timed out'
         super().__init__(reason=message)
+
+
+class ValidatorDisconnect(web.HTTPServiceUnavailable):
+    def __init__(self):
+        message = 'The connection to the validator was lost'
+        super().__init__(reason=message)
