@@ -33,8 +33,8 @@ services:
     expose: 
       - 40000
     command: nose2-3 -v -s
-      /project/sawtooth-core/integration/sawtooth_integration/test_suites
-      ts_tp_xo.TestSuiteXo
+      /project/sawtooth-core/integration/sawtooth_integration/tests
+      test_tp_xo
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python/:\

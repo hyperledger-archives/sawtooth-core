@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,28 +13,31 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
+import cbor
 
+from sawtooth_processor_test.transaction_processor_test_case \
+    import TransactionProcessorTestCase
 from sawtooth_integration.message_factories.intkey_message_factory \
     import IntkeyMessageFactory
+from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 
-class TestIntkey(unittest.TestCase):
-    """
-    Set of tests to run in a test suite with an existing TPTester and
-    transaction processor.
-    """
+class TestIntkey(TransactionProcessorTestCase):
 
-    def __init__(self, test_name, tester):
-        super().__init__(test_name)
-        self.tester = tester
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.tester.register_comparator(
+            Message.TP_STATE_SET_REQUEST,
+            compare_set_request)
+        cls.imf = IntkeyMessageFactory()
 
     def test_set_a(self):
         """
         Test if the intkey processor can set a value.
         """
         tst = self.tester
-        imf = IntkeyMessageFactory()
+        imf = self.imf
 
         # 1. -> Send a set transaction
         #    <- Expect a state get request
@@ -56,7 +59,7 @@ class TestIntkey(unittest.TestCase):
         Test if the processor can increase a value.
         """
         tst = self.tester
-        imf = IntkeyMessageFactory()
+        imf = self.imf
 
         # 1. -> Send an inc transaction
         #    <- Expect a state get request
@@ -78,7 +81,7 @@ class TestIntkey(unittest.TestCase):
         Test if the processor can decrease a value.
         """
         tst = self.tester
-        imf = IntkeyMessageFactory()
+        imf = self.imf
 
         tst.send(imf.create_tp_process_request("dec", "sawtooth", 1900000000))
         received = tst.expect(imf.create_get_request("sawtooth"))
@@ -88,3 +91,13 @@ class TestIntkey(unittest.TestCase):
 
         tst.respond(imf.create_set_response("sawtooth"), received)
         tst.expect(imf.create_tp_response("OK"))
+
+
+def compare_set_request(req1, req2):
+    if len(req1.entries) != len(req2.entries):
+        return False
+
+    entries1 = [(e.address, cbor.loads(e.data)) for e in req1.entries]
+    entries2 = [(e.address, cbor.loads(e.data)) for e in req2.entries]
+
+    return entries1 == entries2

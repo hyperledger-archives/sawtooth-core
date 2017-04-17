@@ -13,25 +13,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
-
+from sawtooth_processor_test.transaction_processor_test_case \
+    import TransactionProcessorTestCase
 from sawtooth_integration.message_factories.xo_message_factory \
     import XoMessageFactory
 
 
-class TestXo(unittest.TestCase):
-    """
-    Set of tests to run in a test suite with an existing TPTester and
-    transaction processor.
-    """
+class TestXo(TransactionProcessorTestCase):
 
-    def __init__(self, test_name, tester):
-        super().__init__(test_name)
-        self.tester = tester
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.xomf = XoMessageFactory()
 
     def test_create_game(self):
         tst = self.tester
-        xomf = XoMessageFactory()
+        xomf = self.xomf
 
         tst.send(xomf.create_tp_process_request("game000", "create"))
         received = tst.expect(xomf.create_get_request("game000"))
@@ -44,7 +41,7 @@ class TestXo(unittest.TestCase):
 
     def test_take_space(self):
         tst = self.tester
-        xomf = XoMessageFactory()
+        xomf = self.xomf
 
         tst.send(xomf.create_tp_process_request("game000", "take", 3))
         received = tst.expect(xomf.create_get_request("game000"))
