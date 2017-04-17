@@ -30,6 +30,7 @@ class PoetConfigView(object):
     _BLOCK_CLAIM_DELAY_ = 1
     _FIXED_DURATION_BLOCK_COUNT_ = 50
     _KEY_BLOCK_CLAIM_LIMIT_ = 25
+    _TARGET_WAIT_TIME_ = 20.0
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _ZTEST_MINIMUM_WIN_COUNT_ = 3
 
@@ -136,6 +137,23 @@ class PoetConfigView(object):
                 value_type=int,
                 default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
                 validate_function=lambda value: value > 0)
+
+    @property
+    def target_wait_time(self):
+        """Return the target wait time if config setting exists and is valid,
+        otherwise return the default.
+
+        The target wait time is the desired average amount of time, across all
+        validators in the network, a validator must wait before attempting to
+        claim a block.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.target_wait_time',
+                value_type=float,
+                default_value=PoetConfigView._TARGET_WAIT_TIME_,
+                validate_function=lambda value:
+                    math.isfinite(value) and value > 0)
 
     @property
     def ztest_maximum_win_deviation(self):
