@@ -17,6 +17,7 @@ import logging
 
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
+from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus import utils
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
@@ -153,7 +154,8 @@ class PoetForkResolver(ForkResolverInterface):
                         new_fork_head.header.signer_pubkey)
 
                 # Get the consensus state for the new fork head's previous
-                # block, update the validator state for the new fork head
+                # block and update the consensus-wide statistics for the new
+                # fork head.
                 consensus_state = \
                     utils.get_consensus_state_for_block_id(
                         block_id=new_fork_head.previous_block_id,
@@ -162,6 +164,26 @@ class PoetForkResolver(ForkResolverInterface):
                         consensus_state_store=self._consensus_state_store,
                         poet_enclave_module=poet_enclave_module)
 
+                consensus_state.total_block_claim_count += 1
+
+                # In order to perform the zTest we need to calculate for this
+                # block the expected number of blocks a validator should have
+                # won based upon the population estimate and keep track of the
+                # number of blocks covered by the zTest
+                poet_config_view = PoetConfigView(state_view)
+
+                if consensus_state.total_block_claim_count > \
+                        poet_config_view.fixed_duration_block_count:
+                    wait_certificate = \
+                        utils.deserialize_wait_certificate(
+                            new_fork_head,
+                            poet_enclave_module)
+                    consensus_state.expected_block_claim_count += \
+                        1.0 / wait_certificate.population_estimate
+                    consensus_state.ztest_block_claim_count += 1
+
+                # Get and update the validator state/statistics for the
+                # validator that claimed the new fork head.
                 validator_state = \
                     utils.get_current_validator_state(
                         validator_info=validator_info,
@@ -172,18 +194,22 @@ class PoetForkResolver(ForkResolverInterface):
                     validator_state=utils.create_next_validator_state(
                         validator_info=validator_info,
                         current_validator_state=validator_state,
+                        current_block_count=consensus_state.
+                        total_block_claim_count,
+                        poet_config_view=poet_config_view,
                         block_cache=self._block_cache))
 
-                # Update the consensus-wide statistics and store the updated
-                # consensus state for this block.
-                consensus_state.total_block_claim_count += 1
+                # Store the updated consensus state for this block.
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
 
                 LOGGER.debug(
-                    'Update consensus state: EBC=%f, TBCC=%d',
+                    'Create consensus state: BID=%s, EBC=%f, TBCC=%d, '
+                    'ZBCC=%d',
+                    new_fork_head.identifier[:8],
                     consensus_state.expected_block_claim_count,
-                    consensus_state.total_block_claim_count)
+                    consensus_state.total_block_claim_count,
+                    consensus_state.ztest_block_claim_count)
             except KeyError:
                 # This _should_ never happen.  The new potential fork head
                 # has to have been a PoET block and for it to be verified
