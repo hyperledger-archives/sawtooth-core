@@ -25,6 +25,7 @@ class TestPoetConfigView(unittest.TestCase):
     # pylint: disable=invalid-name
     _EXPECTED_DEFAULT_BLOCK_CLAIM_DELAY_ = 1
     _EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_ = 50
+    _EXPECTED_DEFAULT_INITIAL_WAIT_TIME_ = 3000.0
     _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 25
     _EXPECTED_DEFAULT_TARGET_WAIT_TIME_ = 20.0
     _EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
@@ -106,6 +107,43 @@ class TestPoetConfigView(unittest.TestCase):
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 1
         self.assertEqual(poet_config_view.fixed_duration_block_count, 1)
+
+    def test_initial_wait_time(self, mock_config_view):
+        """Verify that retrieving initial wait time works for invalid cases
+        (missing, invalid format, invalid value) as well as valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        self.assertEqual(
+            poet_config_view.initial_wait_time,
+            TestPoetConfigView._EXPECTED_DEFAULT_INITIAL_WAIT_TIME_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(kwargs['key'], 'sawtooth.poet.initial_wait_time')
+        self.assertEqual(
+            kwargs['default_value'],
+            TestPoetConfigView._EXPECTED_DEFAULT_INITIAL_WAIT_TIME_)
+        self.assertEqual(kwargs['value_type'], float)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        for bad_value in \
+                [-100.0, -1.0, float('nan'), float('inf'), float('-inf')]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.initial_wait_time,
+                TestPoetConfigView._EXPECTED_DEFAULT_INITIAL_WAIT_TIME_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 3.1415
+        self.assertEqual(poet_config_view.initial_wait_time, 3.1415)
 
     def test_key_block_claim_limit(self, mock_config_view):
         """Verify that retrieving key block claim limit works for invalid

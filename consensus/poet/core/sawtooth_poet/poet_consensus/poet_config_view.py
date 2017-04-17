@@ -29,6 +29,7 @@ class PoetConfigView(object):
 
     _BLOCK_CLAIM_DELAY_ = 1
     _FIXED_DURATION_BLOCK_COUNT_ = 50
+    _INITIAL_WAIT_TIME_ = 3000.0
     _KEY_BLOCK_CLAIM_LIMIT_ = 25
     _TARGET_WAIT_TIME_ = 20.0
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
@@ -121,6 +122,23 @@ class PoetConfigView(object):
                 value_type=int,
                 default_value=PoetConfigView._FIXED_DURATION_BLOCK_COUNT_,
                 validate_function=lambda value: value > 0)
+
+    @property
+    def initial_wait_time(self):
+        """Return the initial wait time if config setting exists and is valid,
+        otherwise return the default.
+
+        The initial wait time is used during the bootstrapping of the block-
+        chain to compute the local mean for wait timers during the fixed
+        duration block count.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.initial_wait_time',
+                value_type=float,
+                default_value=PoetConfigView._INITIAL_WAIT_TIME_,
+                validate_function=lambda value:
+                    math.isfinite(value) and value >= 0)
 
     @property
     def key_block_claim_limit(self):
