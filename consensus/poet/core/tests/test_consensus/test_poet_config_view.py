@@ -23,53 +23,11 @@ from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 class TestPoetConfigView(unittest.TestCase):
 
     # pylint: disable=invalid-name
-    _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 25
     _EXPECTED_DEFAULT_BLOCK_CLAIM_DELAY_ = 1
     _EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_ = 50
+    _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 25
     _EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _EXPECTED_DEFAULT_ZTEST_MINIMUM_WIN_COUNT_ = 3
-
-    def test_key_block_claim_limit(self, mock_config_view):
-        """Verify that retrieving key block claim limit works for invalid
-        cases (missing, invalid format, invalid value) as well as valid case.
-        """
-
-        poet_config_view = PoetConfigView(state_view=None)
-
-        # Underlying config setting does not parse to an integer
-        mock_config_view.return_value.get_setting.side_effect = \
-            ValueError('bad value')
-
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
-
-        _, kwargs = \
-            mock_config_view.return_value.get_setting.call_args
-
-        self.assertEqual(kwargs['key'], 'sawtooth.poet.key_block_claim_limit')
-        self.assertEqual(
-            kwargs['default_value'],
-            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
-        self.assertEqual(kwargs['value_type'], int)
-
-        # Underlying config setting is not a valid value
-        mock_config_view.return_value.get_setting.side_effect = None
-        mock_config_view.return_value.get_setting.return_value = -1
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
-
-        mock_config_view.return_value.get_setting.return_value = 0
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
-
-        # Underlying config setting is a valid value
-        mock_config_view.return_value.get_setting.return_value = 1
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            1)
 
     def test_block_claim_delay(self, mock_config_view):
         """Verify that retrieving block claim delay works for invalid
@@ -154,6 +112,48 @@ class TestPoetConfigView(unittest.TestCase):
         mock_config_view.return_value.get_setting.return_value = 1
         self.assertEqual(
             poet_config_view.fixed_duration_block_count,
+            1)
+
+    def test_key_block_claim_limit(self, mock_config_view):
+        """Verify that retrieving key block claim limit works for invalid
+        cases (missing, invalid format, invalid value) as well as valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        self.assertEqual(
+            poet_config_view.key_block_claim_limit,
+            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(kwargs['key'], 'sawtooth.poet.key_block_claim_limit')
+        self.assertEqual(
+            kwargs['default_value'],
+            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
+        self.assertEqual(kwargs['value_type'], int)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        mock_config_view.return_value.get_setting.return_value = -1
+        self.assertEqual(
+            poet_config_view.key_block_claim_limit,
+            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
+
+        mock_config_view.return_value.get_setting.return_value = 0
+        self.assertEqual(
+            poet_config_view.key_block_claim_limit,
+            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 1
+        self.assertEqual(
+            poet_config_view.key_block_claim_limit,
             1)
 
     def test_ztest_maximum_win_deviation(self, mock_config_view):

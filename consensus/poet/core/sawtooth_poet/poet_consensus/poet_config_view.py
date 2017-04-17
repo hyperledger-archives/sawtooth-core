@@ -27,9 +27,9 @@ class PoetConfigView(object):
     or that are invalid, default values are returned.
     """
 
-    _KEY_BLOCK_CLAIM_LIMIT_ = 25
     _BLOCK_CLAIM_DELAY_ = 1
     _FIXED_DURATION_BLOCK_COUNT_ = 50
+    _KEY_BLOCK_CLAIM_LIMIT_ = 25
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _ZTEST_MINIMUM_WIN_COUNT_ = 3
 
@@ -89,22 +89,6 @@ class PoetConfigView(object):
         return value
 
     @property
-    def key_block_claim_limit(self):
-        """Return the key block claim limit if config setting exists and
-        is valid, otherwise return the default.
-
-        The key block claim limit is the maximum number of blocks that a
-        validator may claim with a PoET key pair before it needs to refresh
-        its signup information.
-        """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.key_block_claim_limit',
-                value_type=int,
-                default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
-                validate_function=lambda value: value > 0)
-
-    @property
     def block_claim_delay(self):
         """Return the block claim delay if config setting exists and
         is valid, otherwise return the default.
@@ -135,6 +119,22 @@ class PoetConfigView(object):
                 name='sawtooth.poet.fixed_duration_block_count',
                 value_type=int,
                 default_value=PoetConfigView._FIXED_DURATION_BLOCK_COUNT_,
+                validate_function=lambda value: value > 0)
+
+    @property
+    def key_block_claim_limit(self):
+        """Return the key block claim limit if config setting exists and
+        is valid, otherwise return the default.
+
+        The key block claim limit is the maximum number of blocks that a
+        validator may claim with a PoET key pair before it needs to refresh
+        its signup information.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.key_block_claim_limit',
+                value_type=int,
+                default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
                 validate_function=lambda value: value > 0)
 
     @property
