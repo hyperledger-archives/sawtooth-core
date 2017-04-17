@@ -59,7 +59,7 @@ class XoClient:
         result = self._send_request("state?address={}".format(xo_prefix))
 
         try:
-            encoded_entries = yaml.load(result)["data"]
+            encoded_entries = yaml.safe_load(result)["data"]
 
             return [
                 base64.b64decode(entry["data"]) for entry in encoded_entries
@@ -74,7 +74,7 @@ class XoClient:
         result = self._send_request("state/{}".format(address))
 
         try:
-            return base64.b64decode(yaml.load(result)["data"])
+            return base64.b64decode(yaml.safe_load(result)["data"])
 
         except urllib.error.HTTPError:
             return None

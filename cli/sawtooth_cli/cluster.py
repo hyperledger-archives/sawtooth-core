@@ -163,7 +163,7 @@ def load_state(start=False):
     file_name = get_state_file_name()
     if os.path.isfile(file_name):
         with open(file_name, 'r') as state_file:
-            state = yaml.load(state_file)
+            state = yaml.safe_load(state_file)
             return state
     elif start is True:
         dir_name = get_state_dir_name()

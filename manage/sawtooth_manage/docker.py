@@ -80,7 +80,7 @@ class DockerNodeController(NodeController):
     def _load_state(self):
         state_file_path = os.path.join(self._state_dir, 'state.yaml')
         with open(state_file_path) as fd:
-            state = yaml.load(fd)
+            state = yaml.safe_load(fd)
         return state
 
     def _construct_start_args(self, node_name, path):
