@@ -17,10 +17,12 @@ import enum
 from functools import partial
 import logging
 from threading import Condition
+from threading import Lock
 from threading import Thread
 import queue
 import uuid
 
+from sawtooth_validator.networking.interconnect import ThreadsafeDict
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -34,12 +36,11 @@ def _gen_message_id():
 class Dispatcher(Thread):
     def __init__(self):
         super().__init__()
-        self._msg_type_handlers = {}
+        self._msg_type_handlers = ThreadsafeDict()
         self._in_queue = queue.Queue()
-        self._send_message = {}
-        self._message_information = {}
+        self._send_message = ThreadsafeDict()
+        self._message_information = ThreadsafeDict()
         self._condition = Condition()
-        self.daemon = True
 
     def add_send_message(self, connection, send_message):
         """Adds a send_message function to the Dispatcher's
@@ -52,8 +53,7 @@ class Dispatcher(Thread):
                 by the dispatcher to respond to messages which
                 arrive via connection.
         """
-        with self._condition:
-            self._send_message[connection] = send_message
+        self._send_message[connection] = send_message
         LOGGER.debug("Added send_message function "
                      "for connection %s", connection)
 
@@ -66,8 +66,7 @@ class Dispatcher(Thread):
                 by the receiver of messages.
         """
         if connection in self._send_message:
-            with self._condition:
-                del self._send_message[connection]
+            del self._send_message[connection]
             LOGGER.debug("Removed send_message function "
                          "for connection %s", connection)
         else:
@@ -95,7 +94,7 @@ class Dispatcher(Thread):
 
     def add_handler(self, message_type, handler, executor):
         if not isinstance(handler, Handler):
-            raise ValueError("%s is not a Handler subclass" % handler)
+            raise TypeError("%s is not a Handler subclass" % handler)
         if message_type not in self._msg_type_handlers:
             self._msg_type_handlers[message_type] = [
                 _HandlerManager(executor, handler)]
@@ -104,53 +103,59 @@ class Dispatcher(Thread):
                 _HandlerManager(executor, handler))
 
     def _process(self, message_id):
-        with self._condition:
-            _, connection_id, \
-                message, collection = self._message_information[message_id]
+        _, connection_id, \
+            message, collection = self._message_information[message_id]
         try:
             handler_manager = next(collection)
             future = handler_manager.execute(connection_id, message.content)
             future.add_done_callback(partial(self._determine_next, message_id))
         except IndexError:
             # IndexError is raised if done with handlers
-            with self._condition:
-                del self._message_information[message_id]
+            del self._message_information[message_id]
 
     def _determine_next(self, message_id, future):
         if future.result().status == HandlerStatus.DROP:
-            with self._condition:
-                del self._message_information[message_id]
+            del self._message_information[message_id]
 
         elif future.result().status == HandlerStatus.PASS:
             self._process(message_id)
 
         elif future.result().status == HandlerStatus.RETURN_AND_PASS:
-            with self._condition:
-                connection, connection_id, \
-                    original_message, _ = self._message_information[message_id]
+            connection, connection_id, \
+                original_message, _ = self._message_information[message_id]
 
             message = validator_pb2.Message(
                 content=future.result().message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
                 message_type=future.result().message_type)
-
-            self._send_message[connection](msg=message,
-                                           connection_id=connection_id)
+            try:
+                self._send_message[connection](msg=message,
+                                               connection_id=connection_id)
+            except KeyError:
+                LOGGER.info("Can't send message %s back to "
+                            "%s because connection %s not in dispatcher",
+                            get_enum_name(message.message_type), connection_id,
+                            connection)
             self._process(message_id)
 
         elif future.result().status == HandlerStatus.RETURN:
-            with self._condition:
-                connection, connection_id,  \
-                    original_message, _ = self._message_information[message_id]
+            connection, connection_id,  \
+                original_message, _ = self._message_information[message_id]
 
-                del self._message_information[message_id]
+            del self._message_information[message_id]
 
             message = validator_pb2.Message(
                 content=future.result().message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
                 message_type=future.result().message_type)
-            self._send_message[connection](msg=message,
-                                           connection_id=connection_id)
+            try:
+                self._send_message[connection](msg=message,
+                                               connection_id=connection_id)
+            except KeyError:
+                LOGGER.info("Can't send message %s back to "
+                            "%s because connection %s not in dispatcher",
+                            get_enum_name(message.message_type), connection_id,
+                            connection)
         with self._condition:
             if len(self._message_information) == 0:
                 self._condition.notify()
@@ -182,10 +187,12 @@ class _HandlerManager(object):
         """
         self._executor = executor
         self._handler = handler
+        self._lock = Lock()
 
     def execute(self, connection_id, message):
-        return self._executor.submit(
-            self._handler.handle, connection_id, message)
+        with self._lock:
+            return self._executor.submit(
+                self._handler.handle, connection_id, message)
 
 
 class _ManagerCollection(object):
@@ -195,11 +202,13 @@ class _ManagerCollection(object):
     def __init__(self, handler_managers):
         self._chain = handler_managers
         self._index = 0
+        self._lock = Lock()
 
     def __next__(self):
-        result = self._chain[self._index]
-        self._index += 1
-        return result
+        with self._lock:
+            result = self._chain[self._index]
+            self._index += 1
+            return result
 
 
 class HandlerResult(object):
