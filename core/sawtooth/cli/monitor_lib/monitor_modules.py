@@ -120,7 +120,7 @@ class LogManager(StatsModule):
             elif log_config_file.split(".")[-1] == "yaml":
                 try:
                     with open(log_config_file) as log_config_fd:
-                        log_dic = yaml.load(log_config_fd)
+                        log_dic = yaml.safe_load(log_config_fd)
                         logging.config.dictConfig(log_dic)
                 except IOError, ex:
                     print("Could not read log config: {}"

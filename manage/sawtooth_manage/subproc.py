@@ -64,7 +64,7 @@ class SubprocessNodeController(NodeController):
         self._state_file_path = os.path.join(self._state_dir, 'state.yaml')
 
     def _load_state(self):
-        return yaml.load(open(self._state_file_path))
+        return yaml.safe_load(open(self._state_file_path))
 
     def _save_state(self, state):
         with open(self._state_file_path, 'w') as state_file:
