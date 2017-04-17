@@ -104,6 +104,10 @@ class Scheduler(object, metaclass=ABCMeta):
     def complete(self, block):
         """Returns True if all transactions have been marked as applied.
 
+        Args:
+            block (bool): If True, block until complete, or if False return
+                the completion status.
+
         Returns:
             True if all transactions have been marked as applied and that the
             finalize() has been called.
@@ -207,9 +211,11 @@ class BatchExecutionResult(object):
 
     Attributes:
         is_valid (bool): True if the batch is valid, False otherwise.
-        state_hash (str): the resulting state hash after all transactions in
-            the batch were successfully executed.  If is_valid is False, then
-            this field is set to None as final state was obtained.
+        state_hash (str): The state hash from applying the state changes from
+            the transactions in this batch and all prior transactions in valid
+            batches since the last state hash was returned. Will always be
+            in the BatchExecutionResult for batches that were added to
+            add_batch with a state hash.
     """
     def __init__(self, is_valid, state_hash):
         self.is_valid = is_valid
