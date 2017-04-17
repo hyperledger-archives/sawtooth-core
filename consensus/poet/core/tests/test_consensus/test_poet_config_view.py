@@ -55,20 +55,17 @@ class TestPoetConfigView(unittest.TestCase):
 
         # Underlying config setting is not a valid value
         mock_config_view.return_value.get_setting.side_effect = None
-        mock_config_view.return_value.get_setting.return_value = -1
-        self.assertEqual(
-            poet_config_view.block_claim_delay,
-            TestPoetConfigView._EXPECTED_DEFAULT_BLOCK_CLAIM_DELAY_)
+        for bad_value in [-100, -1]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.block_claim_delay,
+                TestPoetConfigView._EXPECTED_DEFAULT_BLOCK_CLAIM_DELAY_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 0
-        self.assertEqual(
-            poet_config_view.block_claim_delay,
-            0)
+        self.assertEqual(poet_config_view.block_claim_delay, 0)
         mock_config_view.return_value.get_setting.return_value = 1
-        self.assertEqual(
-            poet_config_view.block_claim_delay,
-            1)
+        self.assertEqual(poet_config_view.block_claim_delay, 1)
 
     def test_fixed_duration_block_count(self, mock_config_view):
         """Verify that retrieving fixed duration block count works for invalid
@@ -98,21 +95,16 @@ class TestPoetConfigView(unittest.TestCase):
 
         # Underlying config setting is not a valid value
         mock_config_view.return_value.get_setting.side_effect = None
-        mock_config_view.return_value.get_setting.return_value = -1
-        self.assertEqual(
-            poet_config_view.fixed_duration_block_count,
-            TestPoetConfigView._EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_)
-
-        mock_config_view.return_value.get_setting.return_value = 0
-        self.assertEqual(
-            poet_config_view.fixed_duration_block_count,
-            TestPoetConfigView._EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_)
+        for bad_value in [-100, -1, 0]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.fixed_duration_block_count,
+                TestPoetConfigView.
+                _EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 1
-        self.assertEqual(
-            poet_config_view.fixed_duration_block_count,
-            1)
+        self.assertEqual(poet_config_view.fixed_duration_block_count, 1)
 
     def test_key_block_claim_limit(self, mock_config_view):
         """Verify that retrieving key block claim limit works for invalid
@@ -140,21 +132,15 @@ class TestPoetConfigView(unittest.TestCase):
 
         # Underlying config setting is not a valid value
         mock_config_view.return_value.get_setting.side_effect = None
-        mock_config_view.return_value.get_setting.return_value = -1
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
-
-        mock_config_view.return_value.get_setting.return_value = 0
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
+        for bad_value in [-100, -1, 0]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.key_block_claim_limit,
+                TestPoetConfigView._EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 1
-        self.assertEqual(
-            poet_config_view.key_block_claim_limit,
-            1)
+        self.assertEqual(poet_config_view.key_block_claim_limit, 1)
 
     def test_ztest_maximum_win_deviation(self, mock_config_view):
         """Verify that retrieving zTest maximum win deviation works for
@@ -185,36 +171,17 @@ class TestPoetConfigView(unittest.TestCase):
 
         # Underlying config setting is not a valid value
         mock_config_view.return_value.get_setting.side_effect = None
-        mock_config_view.return_value.get_setting.return_value = -1.0
-        self.assertEqual(
-            poet_config_view.ztest_maximum_win_deviation,
-            TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_)
-
-        mock_config_view.return_value.get_setting.return_value = 0.0
-        self.assertEqual(
-            poet_config_view.ztest_maximum_win_deviation,
-            TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_)
-
-        mock_config_view.return_value.get_setting.return_value = float('nan')
-        self.assertEqual(
-            poet_config_view.ztest_maximum_win_deviation,
-            TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_)
-
-        mock_config_view.return_value.get_setting.return_value = float('inf')
-        self.assertEqual(
-            poet_config_view.ztest_maximum_win_deviation,
-            TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_)
-
-        mock_config_view.return_value.get_setting.return_value = float('-inf')
-        self.assertEqual(
-            poet_config_view.ztest_maximum_win_deviation,
-            TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_)
+        for bad_value in \
+                [-100.0, -1.0, 0.0, float('nan'), float('inf'), float('-inf')]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.ztest_maximum_win_deviation,
+                TestPoetConfigView.
+                _EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 2.575
-        self.assertEqual(
-            poet_config_view.ztest_maximum_win_deviation,
-            2.575)
+        self.assertEqual(poet_config_view.ztest_maximum_win_deviation, 2.575)
 
     def test_ztest_minimum_win_count(self, mock_config_view):
         """Verify that retrieving zTest minimum win observations works for
@@ -245,13 +212,12 @@ class TestPoetConfigView(unittest.TestCase):
 
         # Underlying config setting is not a valid value
         mock_config_view.return_value.get_setting.side_effect = None
-        mock_config_view.return_value.get_setting.return_value = -1
-        self.assertEqual(
-            poet_config_view.ztest_minimum_win_count,
-            TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MINIMUM_WIN_COUNT_)
+        for bad_value in [-100, -1]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.ztest_minimum_win_count,
+                TestPoetConfigView._EXPECTED_DEFAULT_ZTEST_MINIMUM_WIN_COUNT_)
 
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 0
-        self.assertEqual(
-            poet_config_view.ztest_minimum_win_count,
-            0)
+        self.assertEqual(poet_config_view.ztest_minimum_win_count, 0)
