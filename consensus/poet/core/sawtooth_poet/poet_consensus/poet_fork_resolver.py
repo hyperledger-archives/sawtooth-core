@@ -151,8 +151,9 @@ class PoetForkResolver(ForkResolverInterface):
             # block immediately before the new fork head (as we haven't
             # committed to the block yet).  So that the new fork doesn't
             # have to fight with one hand tied behind its back, add the
-            # new fork head's wait certificate local mean to the aggregate
-            # local mean of its immediate predecessor.
+            # new fork head's wait certificate's local mean to the
+            # aggregate local mean for the predecessor block's consensus
+            # state for the comparison.
             current_fork_consensus_state = \
                 ConsensusState.consensus_state_for_block_id(
                     block_id=cur_fork_head.identifier,
@@ -167,27 +168,28 @@ class PoetForkResolver(ForkResolverInterface):
                     state_view_factory=self._state_view_factory,
                     consensus_state_store=self._consensus_state_store,
                     poet_enclave_module=poet_enclave_module)
-            new_fork_consensus_state.aggregate_local_mean += \
+            new_fork_aggregate_local_mean = \
+                new_fork_consensus_state.aggregate_local_mean + \
                 new_fork_wait_certificate.local_mean
 
             if current_fork_consensus_state.aggregate_local_mean > \
-                    new_fork_consensus_state.aggregate_local_mean:
+                    new_fork_aggregate_local_mean:
                 LOGGER.info(
                     'Choose current fork %s: Current fork aggregate '
                     'local mean (%f) greater than new fork aggregate '
                     'local mean (%f)',
                     cur_fork_head.header_signature[:8],
                     current_fork_consensus_state.aggregate_local_mean,
-                    new_fork_consensus_state.aggregate_local_mean)
+                    new_fork_aggregate_local_mean)
                 chosen_fork_head = cur_fork_head
-            elif new_fork_consensus_state.aggregate_local_mean > \
+            elif new_fork_aggregate_local_mean > \
                     current_fork_consensus_state.aggregate_local_mean:
                 LOGGER.info(
                     'Choose new fork %s: New fork aggregate local mean '
                     '(%f) greater than current fork aggregate local mean '
                     '(%f)',
                     new_fork_head.header_signature[:8],
-                    new_fork_consensus_state.aggregate_local_mean,
+                    new_fork_aggregate_local_mean,
                     current_fork_consensus_state.aggregate_local_mean)
                 chosen_fork_head = new_fork_head
 

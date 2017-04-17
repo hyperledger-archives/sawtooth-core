@@ -239,9 +239,17 @@ class ConsensusState(object):
         Returns:
             None
         """
-        self.aggregate_local_mean = 0.0
-        self.total_block_claim_count = 0
+        self._aggregate_local_mean = 0.0
+        self._total_block_claim_count = 0
         self._validators = {}
+
+    @property
+    def aggregate_local_mean(self):
+        return self._aggregate_local_mean
+
+    @property
+    def total_block_claim_count(self):
+        return self._total_block_claim_count
 
     @staticmethod
     def _check_validator_state(validator_state):
@@ -400,8 +408,8 @@ class ConsensusState(object):
             None
         """
         # Update the consensus state statistics.
-        self.aggregate_local_mean += wait_certificate.local_mean
-        self.total_block_claim_count += 1
+        self._aggregate_local_mean += wait_certificate.local_mean
+        self._total_block_claim_count += 1
 
         # We need to fetch the current state for the validator
         validator_state = \
@@ -734,10 +742,10 @@ class ConsensusState(object):
                         'buffer is not a valid serialization of a '
                         'ConsensusState object')
 
-            self.aggregate_local_mean = \
-                float(self_dict['aggregate_local_mean'])
-            self.total_block_claim_count = \
-                int(self_dict['total_block_claim_count'])
+            self._aggregate_local_mean = \
+                float(self_dict['_aggregate_local_mean'])
+            self._total_block_claim_count = \
+                int(self_dict['_total_block_claim_count'])
             validators = self_dict['_validators']
 
             if not math.isfinite(self.aggregate_local_mean) or \

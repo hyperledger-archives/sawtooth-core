@@ -137,7 +137,7 @@ class TestConsensusState(unittest.TestCase):
                 'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
                 as mock_loads:
             mock_loads.return_value = {
-                'total_block_claim_count': 0,
+                '_total_block_claim_count': 0,
                 '_validators': {}
             }
             with self.assertRaises(ValueError):
@@ -147,16 +147,24 @@ class TestConsensusState(unittest.TestCase):
         for invalid_alm in [None, 'not a float', (), [], {}, -1,
                             float('nan'), float('inf'), float('-inf')]:
             state = consensus_state.ConsensusState()
-            state.aggregate_local_mean = invalid_alm
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(state.serialize_to_bytes())
+            with mock.patch(
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') \
+                    as mock_loads:
+                mock_loads.return_value = {
+                    '_aggregate_local_mean': invalid_alm,
+                    '_total_block_claim_count': 0,
+                    '_validators': {}
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
 
         # Missing total block claim count
         with mock.patch(
                 'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
                 as mock_loads:
             mock_loads.return_value = {
-                'aggregate_local_mean': 0.0,
+                '_aggregate_local_mean': 0.0,
                 '_validators': {}
             }
             with self.assertRaises(ValueError):
@@ -165,17 +173,32 @@ class TestConsensusState(unittest.TestCase):
         # Invalid total block claim count
         for invalid_tbcc in [None, 'not an int', (), [], {}, -1]:
             state = consensus_state.ConsensusState()
-            state.total_block_claim_count = invalid_tbcc
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(state.serialize_to_bytes())
+            with mock.patch(
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') \
+                    as mock_loads:
+                mock_loads.return_value = {
+                    '_aggregate_local_mean': 0.0,
+                    '_total_block_claim_count': invalid_tbcc,
+                    '_validators': {}
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
 
         # Invalid validators
         for invalid_validators in [None, '', 1, 1.1, (), []]:
             state = consensus_state.ConsensusState()
-            # pylint: disable=protected-access
-            state._validators = invalid_validators
-            with self.assertRaises(ValueError):
-                state.parse_from_bytes(state.serialize_to_bytes())
+            with mock.patch(
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') \
+                    as mock_loads:
+                mock_loads.return_value = {
+                    '_aggregate_local_mean': 0.0,
+                    '_total_block_claim_count': 0,
+                    '_validators': invalid_validators
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
 
         state = consensus_state.ConsensusState()
         wait_certificate = mock.Mock()
@@ -207,8 +230,8 @@ class TestConsensusState(unittest.TestCase):
                     'sawtooth_poet.poet_consensus.consensus_state.cbor.'
                     'loads') as mock_loads:
                 mock_loads.return_value = {
-                    'aggregate_local_mean': 0.0,
-                    'total_block_claim_count': 0,
+                    '_aggregate_local_mean': 0.0,
+                    '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [invalid_kbcc, 'ppk_001', 0]
                     }
@@ -223,8 +246,8 @@ class TestConsensusState(unittest.TestCase):
                     'sawtooth_poet.poet_consensus.consensus_state.cbor.'
                     'loads') as mock_loads:
                 mock_loads.return_value = {
-                    'aggregate_local_mean': 0.0,
-                    'total_block_claim_count': 0,
+                    '_aggregate_local_mean': 0.0,
+                    '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [0, invalid_ppk, 0]
                     }
@@ -239,8 +262,8 @@ class TestConsensusState(unittest.TestCase):
                     'sawtooth_poet.poet_consensus.consensus_state.cbor.'
                     'loads') as mock_loads:
                 mock_loads.return_value = {
-                    'aggregate_local_mean': 0.0,
-                    'total_block_claim_count': 0,
+                    '_aggregate_local_mean': 0.0,
+                    '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [0, 'ppk_001', invalid_tbcc]
                     }
@@ -254,8 +277,8 @@ class TestConsensusState(unittest.TestCase):
                 'sawtooth_poet.poet_consensus.consensus_state.cbor.'
                 'loads') as mock_loads:
             mock_loads.return_value = {
-                'aggregate_local_mean': 0.0,
-                'total_block_claim_count': 0,
+                '_aggregate_local_mean': 0.0,
+                '_total_block_claim_count': 0,
                 '_validators': {
                     'validator_001': [2, 'ppk_001', 1]
                 }
