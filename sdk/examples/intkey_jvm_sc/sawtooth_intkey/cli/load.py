@@ -20,12 +20,41 @@ import time
 import argparse
 import cbor
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
-from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_sdk.messaging.stream import Stream
+import json
+import concurrent.futures
+from concurrent.futures import wait
+import urllib.request as urllib
+from urllib.error import URLError, HTTPError
+from http.client import RemoteDisconnected
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.realpath(__file__)))), 'python'))
+
+
+def post_batches(url, batches):
+    data = batches.SerializeToString()
+    headers = {'Content-Type': 'application/octet-stream'}
+    headers['Content-Length'] = str(len(data))
+
+    request = urllib.Request(
+        url + "/batches",
+        data,
+        headers=headers,
+        method='POST')
+    try:
+        result = urllib.urlopen(request)
+        code, json_result = (result.status, json.loads(result.read().decode()))
+        if not (code == 200 or code == 201 or code == 202):
+            LOGGER.warning("(%s): %s", code, json_result)
+        return(code, json_result)
+    except HTTPError as e:
+        LOGGER.warning("(%s): %s", e.code, e.msg)
+        return(e.code, e.msg)
+    except RemoteDisconnected as e:
+        LOGGER.warning(e)
+    except URLError as e:
+        LOGGER.warning(e)
 
 
 def _split_batch_list(batch_list):
@@ -41,30 +70,25 @@ def _split_batch_list(batch_list):
 
 def do_load(args):
     print("Do load")
-    with open(args.filename, 'rb') as fd:
+    with open(args.filename, mode='rb') as fd:
         batches = batch_pb2.BatchList()
         batches.ParseFromString(fd.read())
 
-    stream = Stream(args.url)
-    futures = []
     start = time.time()
-
+    futures = []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     for batch_list in _split_batch_list(batches):
-        future = stream.send(
-            message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            content=batch_list.SerializeToString())
-        futures.append(future)
+        fut = executor.submit(post_batches, args.url, batch_list)
+        futures.append(fut)
 
-    for future in futures:
-        result = future.result()
-        assert(result.message_type == Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+    # Wait until all futures are complete
+    wait(futures)
 
     stop = time.time()
+
     print("batches: {} batch/sec: {}".format(
         str(len(batches.batches)),
         len(batches.batches) / (stop - start)))
-
-    stream.close()
 
 
 def add_load_parser(subparsers, parent_parser):
@@ -82,5 +106,5 @@ def add_load_parser(subparsers, parent_parser):
     parser.add_argument(
         '-U', '--url',
         type=str,
-        help='connection URL for validator',
-        default='tcp://localhost:40000')
+        help='url for the Rest API',
+        default='http://localhost:8080')
