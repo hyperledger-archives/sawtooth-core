@@ -19,12 +19,13 @@ import os
 import tempfile
 from glob import glob
 import re
+import sys
 
 
 try:
     from grpc.tools.protoc import main as _protoc
 except ImportError:
-    print("Error: protoc not found.")
+    print("Error: grpc.tools.protoc not found")
     exit(1)
 
 
@@ -32,7 +33,7 @@ JOIN = os.path.join
 TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
-def main():
+def main(args=sys.argv[1:]):
     # 1. Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
 
@@ -41,6 +42,9 @@ def main():
     protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
     protoc(proto_dir, "core_transactions/config", "sawtooth_config/protobuf")
+
+    if "go" in args:
+        protoc(proto_dir, "sdk/go/src", "sawtooth_sdk/protobuf", "go")
 
     # 2. Generate config protos
     proto_dir = JOIN(TOP_DIR, "core_transactions/config/protos")
@@ -55,7 +59,14 @@ def main():
     protoc(proto_dir, "consensus/poet/common", "sawtooth_poet_common/protobuf")
 
 
-def protoc(src_dir, base_dir, pkg):
+def protoc(src_dir, base_dir, pkg, language="python"):
+    if language == "python":
+        protoc_python(src_dir, base_dir, pkg)
+    elif language == "go":
+        protoc_go(src_dir, base_dir, pkg)
+
+
+def protoc_python(src_dir, base_dir, pkg):
     # 1. Create output package directory
     pkg_dir = JOIN(TOP_DIR, base_dir, pkg)
     os.makedirs(pkg_dir, exist_ok=True)
@@ -95,9 +106,53 @@ def protoc(src_dir, base_dir, pkg):
         ] + glob("%s/*.proto" % tmp_pkg_dir))
 
 
-def fix_import(contents, pkg):
+def protoc_go(src_dir, base_dir, pkg):
+    # 1. Get a list of all .proto files to build
+    cwd = os.getcwd()
+    os.chdir(src_dir)
+    proto_files = glob("*.proto")
+    os.chdir(cwd)
+
+    # 2. Create a temp directory for building
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        defer = []
+
+        # 3. In order to have each protobuf file in its own namespace,
+        # directories need to be created for all of them and the .proto file
+        # copied in
+        for proto_file in proto_files:
+            proto = proto_file[:-6]
+
+            sub_pkg = JOIN(pkg, proto)
+            tmp_pkg_dir = JOIN(tmp_dir, sub_pkg)
+            os.makedirs(tmp_pkg_dir)
+
+            src = JOIN(src_dir, proto_file)
+            dst = JOIN(tmp_pkg_dir, proto_file)
+            with open(src, encoding='utf-8') as fin:
+                with open(dst, "w", encoding='utf-8') as fout:
+                    src_contents = fin.read()
+                    fixed_contents = fix_import(src_contents, pkg, sub_dir=True)
+                    fout.write(fixed_contents)
+
+            # Need to defer until the whole directory is setup
+            defer.append([
+                __file__,
+                "-I=%s" % tmp_dir,
+                "--go_out=%s" % JOIN(TOP_DIR, base_dir),
+                "%s" % dst
+            ])
+
+        for args in defer:
+            _protoc(args)
+
+
+def fix_import(contents, pkg, sub_dir=False):
     pattern = r'^import "(.*)\.proto\"'
-    template = r'import "%s/\1.proto"'
+    if sub_dir:
+        template = r'import "%s/\1/\1.proto"'
+    else:
+        template = r'import "%s/\1.proto"'
 
     return re.sub(
         pattern,
