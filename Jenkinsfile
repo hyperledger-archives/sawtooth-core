@@ -77,7 +77,7 @@ node ('master') {
 
         // Run the tests
         stage("Run Tests") {
-            sh './bin/run_tests'
+            sh './bin/run_tests -i deployment'
         }
 
         stage("Create git archive") {

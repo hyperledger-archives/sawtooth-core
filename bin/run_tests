@@ -39,6 +39,7 @@ usage() {
     echo "  -h          print usage and exit"
     echo "  -m Module   only run tests of specified module"
     echo "  -x Module   exclude the tests of specified module"
+    echo "  -i Module   include the tests of specified module"
     echo ""
     echo "Current modules: $MODULE_LIST"
 }
@@ -54,8 +55,9 @@ PATH=$PROJECT_DIR/bin:$PATH
 # Default args
 MODULES=""
 EXCLUDE=""
+INCLUDE=""
 
-while getopts x:m:h opt
+while getopts i:x:m:h opt
 do
     case $opt in
         h)
@@ -67,6 +69,9 @@ do
             ;;
         x)
             EXCLUDE="$EXCLUDE $OPTARG"
+            ;;
+        i)
+            INCLUDE="$INCLUDE $OPTARG"
             ;;
 
         \?)
@@ -81,6 +86,8 @@ if [[ $MODULES = "" ]]
 then
     MODULES=$MODULE_LIST
 fi
+
+MODULES="$INCLUDE $MODULES"
 
 main() {
 
@@ -156,7 +163,9 @@ main() {
                 integration)
                     test_integration
                     ;;
-
+                deployment)
+                    test_deployment
+                    ;;
                 *)
                     echo "Module '$MODULE' not found."
                     ;;
@@ -229,6 +238,10 @@ test_python_sdk() {
 
 test_integration() {
     run_docker_test poet-smoke -s integration_test
+}
+
+test_deployment() {
+    run_docker_test systemd_services -s integration_test
 }
 
 main
