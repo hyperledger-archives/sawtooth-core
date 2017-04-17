@@ -28,10 +28,11 @@ class PoetConfigView(object):
     """
 
     _BLOCK_CLAIM_DELAY_ = 1
-    _FIXED_DURATION_BLOCK_COUNT_ = 50
     _INITIAL_WAIT_TIME_ = 3000.0
     _KEY_BLOCK_CLAIM_LIMIT_ = 25
     _MINIMUM_WAIT_TIME_ = 1.0
+    # pylint: disable=invalid-name
+    _POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
     _TARGET_WAIT_TIME_ = 20.0
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _ZTEST_MINIMUM_WIN_COUNT_ = 3
@@ -108,30 +109,13 @@ class PoetConfigView(object):
                 validate_function=lambda value: value >= 0)
 
     @property
-    def fixed_duration_block_count(self):
-        """Return the fixed duration block count if config setting exists and
-        is valid, otherwise return the default.
-
-        The fixed duration block count is the number of initial blocks in
-        the chain that, as a validator network starts up, will have their
-        local mean based on a ratio of the target and initial wait times
-        instead of the history of wait timer local means.
-        """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.fixed_duration_block_count',
-                value_type=int,
-                default_value=PoetConfigView._FIXED_DURATION_BLOCK_COUNT_,
-                validate_function=lambda value: value > 0)
-
-    @property
     def initial_wait_time(self):
         """Return the initial wait time if config setting exists and is valid,
         otherwise return the default.
 
         The initial wait time is used during the bootstrapping of the block-
-        chain to compute the local mean for wait timers during the fixed
-        duration block count.
+        chain to compute the local mean for wait timers until there are at
+        least population_estimate_sample_size PoET blocks in the blockchain.
         """
         return \
             self._get_config_setting(
@@ -172,6 +156,29 @@ class PoetConfigView(object):
                 default_value=PoetConfigView._MINIMUM_WAIT_TIME_,
                 validate_function=lambda value:
                     math.isfinite(value) and value > 0)
+
+    @property
+    def population_estimate_sample_size(self):
+        """Return the population estimate sample size if config setting exists
+        and is valid, otherwise return the default.
+
+        The population estimate sample size is the number of most-recent blocks
+        that will be used when estimating the population size after the block-
+        chain has been bootstrapped (i.e., at least
+        population_estimate_sample_size blocks have been added to the
+        blockchain) and subsequently used to compute the local mean for a new
+        wait timer.
+
+        Until population_estimate_sample_size blocks are in the
+        blockchain, the local mean computed for a wait timer is based upon the
+        ratio of the target and initial wait times.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.population_estimate_sample_size',
+                value_type=int,
+                default_value=PoetConfigView._POPULATION_ESTIMATE_SAMPLE_SIZE_,
+                validate_function=lambda value: value > 0)
 
     @property
     def target_wait_time(self):
@@ -221,9 +228,10 @@ class PoetConfigView(object):
         valid, otherwise return the default.
 
         The zTest minimum win count is the number of blocks a validator
-        must have successfully claimed (after the fixed duration block count
-        has been exceeded) before the zTest will be applied to the validator's
-        attempt to claim further blocks.
+        must have successfully claimed (once there are at least
+        population_estimate_sample_size PoET blocks in the blockchain) before
+        the zTest will be applied to the validator's attempt to claim further
+        blocks.
         """
         return \
             self._get_config_setting(

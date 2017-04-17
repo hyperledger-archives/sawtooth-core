@@ -342,7 +342,7 @@ class ConsensusState(object):
         # configuration view, we know now many blocks to get.
         number_of_blocks = \
             self.total_block_claim_count - \
-            poet_config_view.fixed_duration_block_count
+            poet_config_view.population_estimate_sample_size
         with ConsensusState._population_estimate_cache_lock:
             for _ in range(number_of_blocks):
                 population_cache_entry = \
@@ -619,7 +619,7 @@ class ConsensusState(object):
         # mean is calculated as a fixed ratio of the target to initial wait),
         # simply short-circuit the test an allow the block to be claimed.
         if self.total_block_claim_count < \
-                poet_config_view.fixed_duration_block_count:
+                poet_config_view.population_estimate_sample_size:
             return False
 
         # Build up the population estimate list for the block chain and then

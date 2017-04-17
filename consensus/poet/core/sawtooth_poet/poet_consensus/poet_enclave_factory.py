@@ -83,13 +83,8 @@ class PoetEnclaveFactory(object):
                         key='sawtooth.poet.initial_wait_time',
                         default_value=wait_timer.WaitTimer.initial_wait_time,
                         value_type=float)
-                fixed_duration_blocks = \
-                    poet_config_view.fixed_duration_block_count
-                certificate_sample_length = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.certificate_sample_length',
-                        default_value=fixed_duration_blocks,
-                        value_type=int)
+                population_estimate_sample_size = \
+                    poet_config_view.population_estimate_sample_size
                 minimum_wait_time = \
                     config_view.get_setting(
                         key='sawtooth.poet.minimum_wait_time',
@@ -103,11 +98,8 @@ class PoetEnclaveFactory(object):
                     'sawtooth.poet.initial_wait_time: %f',
                     initial_wait_time)
                 LOGGER.info(
-                    'sawtooth.poet.certificate_sample_length: %d',
-                    certificate_sample_length)
-                LOGGER.info(
-                    'sawtooth.poet.fixed_duration_block_count: %d',
-                    poet_config_view.fixed_duration_block_count)
+                    'sawtooth.poet.population_estimate_sample_size: %d',
+                    poet_config_view.population_estimate_sample_size)
                 LOGGER.info(
                     'sawtooth.poet.minimum_wait_time: %f',
                     minimum_wait_time)
@@ -115,8 +107,8 @@ class PoetEnclaveFactory(object):
                 wait_timer.set_wait_timer_globals(
                     target_wait_time=target_wait_time,
                     initial_wait_time=initial_wait_time,
-                    certificate_sample_length=certificate_sample_length,
-                    fixed_duration_blocks=fixed_duration_blocks,
+                    certificate_sample_length=population_estimate_sample_size,
+                    fixed_duration_blocks=population_estimate_sample_size,
                     minimum_wait_time=minimum_wait_time)
 
                 # Load and initialize the module

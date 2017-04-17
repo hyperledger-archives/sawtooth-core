@@ -24,10 +24,10 @@ class TestPoetConfigView(unittest.TestCase):
 
     # pylint: disable=invalid-name
     _EXPECTED_DEFAULT_BLOCK_CLAIM_DELAY_ = 1
-    _EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_ = 50
     _EXPECTED_DEFAULT_INITIAL_WAIT_TIME_ = 3000.0
     _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 25
     _EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_ = 1.0
+    _EXPECTED_DEFAULT_POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
     _EXPECTED_DEFAULT_TARGET_WAIT_TIME_ = 20.0
     _EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _EXPECTED_DEFAULT_ZTEST_MINIMUM_WIN_COUNT_ = 3
@@ -69,45 +69,6 @@ class TestPoetConfigView(unittest.TestCase):
         self.assertEqual(poet_config_view.block_claim_delay, 0)
         mock_config_view.return_value.get_setting.return_value = 1
         self.assertEqual(poet_config_view.block_claim_delay, 1)
-
-    def test_fixed_duration_block_count(self, mock_config_view):
-        """Verify that retrieving fixed duration block count works for invalid
-        cases (missing, invalid format, invalid value) as well as valid case.
-        """
-
-        poet_config_view = PoetConfigView(state_view=None)
-
-        # Underlying config setting does not parse to an integer
-        mock_config_view.return_value.get_setting.side_effect = \
-            ValueError('bad value')
-
-        self.assertEqual(
-            poet_config_view.fixed_duration_block_count,
-            TestPoetConfigView._EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_)
-
-        _, kwargs = \
-            mock_config_view.return_value.get_setting.call_args
-
-        self.assertEqual(
-            kwargs['key'],
-            'sawtooth.poet.fixed_duration_block_count')
-        self.assertEqual(
-            kwargs['default_value'],
-            TestPoetConfigView._EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_)
-        self.assertEqual(kwargs['value_type'], int)
-
-        # Underlying config setting is not a valid value
-        mock_config_view.return_value.get_setting.side_effect = None
-        for bad_value in [-100, -1, 0]:
-            mock_config_view.return_value.get_setting.return_value = bad_value
-            self.assertEqual(
-                poet_config_view.fixed_duration_block_count,
-                TestPoetConfigView.
-                _EXPECTED_DEFAULT_FIXED_DURATION_BLOCK_COUNT_)
-
-        # Underlying config setting is a valid value
-        mock_config_view.return_value.get_setting.return_value = 1
-        self.assertEqual(poet_config_view.fixed_duration_block_count, 1)
 
     def test_initial_wait_time(self, mock_config_view):
         """Verify that retrieving initial wait time works for invalid cases
@@ -218,6 +179,48 @@ class TestPoetConfigView(unittest.TestCase):
         # Underlying config setting is a valid value
         mock_config_view.return_value.get_setting.return_value = 3.1415
         self.assertEqual(poet_config_view.minimum_wait_time, 3.1415)
+
+    def test_population_estimate_sample_size(self, mock_config_view):
+        """Verify that retrieving population estimate sample size works for
+        invalid cases (missing, invalid format, invalid value) as well as valid
+        case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Underlying config setting does not parse to an integer
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        self.assertEqual(
+            poet_config_view.population_estimate_sample_size,
+            TestPoetConfigView.
+            _EXPECTED_DEFAULT_POPULATION_ESTIMATE_SAMPLE_SIZE_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(
+            kwargs['key'],
+            'sawtooth.poet.population_estimate_sample_size')
+        self.assertEqual(
+            kwargs['default_value'],
+            TestPoetConfigView.
+            _EXPECTED_DEFAULT_POPULATION_ESTIMATE_SAMPLE_SIZE_)
+        self.assertEqual(kwargs['value_type'], int)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        for bad_value in [-100, -1, 0]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            self.assertEqual(
+                poet_config_view.population_estimate_sample_size,
+                TestPoetConfigView.
+                _EXPECTED_DEFAULT_POPULATION_ESTIMATE_SAMPLE_SIZE_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 1
+        self.assertEqual(poet_config_view.population_estimate_sample_size, 1)
 
     def test_target_wait_time(self, mock_config_view):
         """Verify that retrieving target wait time works for invalid cases
