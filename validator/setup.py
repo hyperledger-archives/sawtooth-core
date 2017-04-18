@@ -107,7 +107,7 @@ if os.path.exists("/lib/systemd/system"):
 
 setup(
     name='sawtooth-validator',
-    version=version('0.8.1'),
+    version=version('0.8.2'),
     description='Sawtooth Lake Validator',
     author='Intel Corporation',
     url='https://github.com/hyperledger/sawtooth-core',

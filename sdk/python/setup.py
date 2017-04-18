@@ -84,7 +84,7 @@ data_files = [
 
 
 setup(name='sawtooth-sdk',
-      version=version('0.8.1'),
+      version=version('0.8.2'),
       description='Sawtooth Lake Python SDK',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',

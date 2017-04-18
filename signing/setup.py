@@ -66,7 +66,7 @@ def version(default):
 
 setup(
     name='sawtooth-signing',
-    version=version('0.8.1'),
+    version=version('0.8.2'),
     description='Sawtooth Lake Signing Library',
     author='Intel Corporation',
     url='https://github.com/hyperledger/sawtooth-core',
