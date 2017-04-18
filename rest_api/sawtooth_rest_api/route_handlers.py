@@ -617,14 +617,18 @@ class RouteHandler(object):
         return cls._parse_header(TransactionHeader, transaction)
 
     @classmethod
-    def _parse_header(cls, header_proto, obj):
-        """Deserializes a base64 encoded Protobuf header.
+    def _parse_header(cls, header_proto, resource):
+        """Deserializes a resource's base64 encoded Protobuf header.
         """
         header = header_proto()
-        header_bytes = base64.b64decode(obj['header'])
-        header.ParseFromString(header_bytes)
-        obj['header'] = cls.message_to_dict(header)
-        return obj
+        try:
+            header_bytes = base64.b64decode(resource['header'])
+            header.ParseFromString(header_bytes)
+        except (KeyError, TypeError, ValueError, DecodeError):
+            raise errors.ResourceHeaderInvalid()
+
+        resource['header'] = cls.message_to_dict(header)
+        return resource
 
     @staticmethod
     def _get_paging_controls(request):

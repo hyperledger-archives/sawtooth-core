@@ -92,6 +92,14 @@ class ValidatorDisconnected(_ApiError):
                'Try your request again later.')
 
 
+class ResourceHeaderInvalid(_ApiError):
+    api_code = 21
+    status_code = 500
+    title = 'Invalid Resource Header'
+    message = ('The resource fetched from the validator had an invalid '
+               'header, and may be corrupted.')
+
+
 class StatusResponseMissing(_ApiError):
     api_code = 27
     status_code = 500
