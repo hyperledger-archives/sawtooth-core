@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
-
+import random
+from unittest import TestCase
 from unittest import mock
 
 import cbor
@@ -27,7 +27,7 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import SignUpInfo
 
 
-class TestConsensusState(unittest.TestCase):
+class TestConsensusState(TestCase):
     def test_get_missing_validator_state(self):
         """Verify that retrieving missing validator state returns appropriate
         default values.
@@ -372,6 +372,12 @@ class TestConsensusState(unittest.TestCase):
         wait_certificate_2.duration = 1.618
         wait_certificate_2.local_mean = 2.718
 
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.target_wait_time = 30.0
+        mock_poet_config_view.initial_wait_time = 3000.0
+        mock_poet_config_view.minimum_wait_time = 1.0
+        mock_poet_config_view.population_estimate_sample_size = 50
+
         validator_info_1 = \
             ValidatorInfo(
                 id='validator_001',
@@ -397,6 +403,12 @@ class TestConsensusState(unittest.TestCase):
         self.assertEqual(
             state.aggregate_local_mean,
             doppelganger_state.aggregate_local_mean)
+        self.assertAlmostEqual(
+            first=state.compute_local_mean(
+                poet_config_view=mock_poet_config_view),
+            second=doppelganger_state.compute_local_mean(
+                poet_config_view=mock_poet_config_view),
+            places=4)
         self.assertEqual(
             state.total_block_claim_count,
             doppelganger_state.total_block_claim_count)
@@ -434,3 +446,112 @@ class TestConsensusState(unittest.TestCase):
         self.assertEqual(
             validator_state.total_block_claim_count,
             doppleganger_validator_state.total_block_claim_count)
+
+    def test_local_mean(self):
+        """Verify that the consensus state properly computes the local mean
+        during both the bootstrapping phase (i.e., before there are enough
+        blocks in the chain to satisfy the population estimate sample size)
+        and once there are enough blocks in the chain.
+        """
+
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.target_wait_time = 30.0
+        mock_poet_config_view.initial_wait_time = 3000.0
+        mock_poet_config_view.minimum_wait_time = 1.0
+        mock_poet_config_view.population_estimate_sample_size = 50
+
+        # Test that during bootstrapping, the local means adhere to the
+        # following:
+        #
+        # ratio = 1.0 * blockCount / sampleSize
+        # localMean = targetWaitTime*(1-ratio**2) + initialWaitTime*ratio**2
+
+        def _compute_fixed_local_mean(count):
+            ratio = \
+                1.0 * count / \
+                mock_poet_config_view.population_estimate_sample_size
+            return \
+                (mock_poet_config_view.target_wait_time * (1 - ratio**2)) + \
+                (mock_poet_config_view.initial_wait_time * ratio**2)
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+
+        # We are first going to bootstrap the blockchain by claiming exactly
+        # population estimate sample size blocks.  Each one should match the
+        # corresponding expected fixed local mean.
+        wait_certificates = []
+        state = consensus_state.ConsensusState()
+        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+            # Compute a wait certificate with a fixed local mean, add it to
+            # our samples, verify that its local mean equals the one computed
+            # by the consensus state, and then update the consensus state as if
+            # the block with this wait certificate was claimed.
+            mock_wait_certificate = mock.Mock()
+            mock_wait_certificate.duration = \
+                random.uniform(
+                    mock_poet_config_view.minimum_wait_time,
+                    mock_poet_config_view.minimum_wait_time + 10)
+            mock_wait_certificate.local_mean = \
+                _compute_fixed_local_mean(len(wait_certificates))
+            wait_certificates.append(mock_wait_certificate)
+
+            self.assertAlmostEqual(
+                first=mock_wait_certificate.local_mean,
+                second=state.compute_local_mean(mock_poet_config_view),
+                places=4)
+
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)
+
+        # Test that after bootstrapping, the local means adhere to the
+        # following:
+        #
+        # sw, sm = 0.0
+        # for most recent population estimate sample size blocks:
+        #   sw += waitCertificate.duration - minimumWaitTime
+        #   sm += waitCertificate.localMean
+        # localMean = targetWaitTme * (sm / sw)
+
+        def _compute_historical_local_mean(wcs):
+            sw = 0.0
+            sm = 0.0
+
+            for wc in wcs:
+                sw += wc.duration - mock_poet_config_view.minimum_wait_time
+                sm += wc.local_mean
+
+            return mock_poet_config_view.target_wait_time * (sm / sw)
+
+        # Let's run through another population estimate sample size blocks
+        # and verify that we get the local means expected
+        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+            # Compute a wait certificate with a historical local mean, add it
+            # to our samples, evict the oldest sample, verify that its local
+            # mean equals the one computed by the consensus state, and then
+            # update the consensus state as if the block with this wait
+            # certificate was claimed.
+            mock_wait_certificate = mock.Mock()
+            mock_wait_certificate.duration = \
+                random.uniform(
+                    mock_poet_config_view.minimum_wait_time,
+                    mock_poet_config_view.minimum_wait_time + 10)
+            mock_wait_certificate.local_mean = \
+                _compute_historical_local_mean(wait_certificates)
+            wait_certificates.append(mock_wait_certificate)
+            wait_certificates = wait_certificates[1:]
+
+            self.assertAlmostEqual(
+                first=mock_wait_certificate.local_mean,
+                second=state.compute_local_mean(mock_poet_config_view),
+                places=4)
+
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)

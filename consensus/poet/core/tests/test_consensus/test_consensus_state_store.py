@@ -102,6 +102,12 @@ class TestConsensusStateStore(unittest.TestCase):
         my_dict = {}
         mock_lmdb.return_value = my_dict
 
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.target_wait_time = 30.0
+        mock_poet_config_view.initial_wait_time = 3000.0
+        mock_poet_config_view.minimum_wait_time = 1.0
+        mock_poet_config_view.population_estimate_sample_size = 50
+
         store = \
             consensus_state_store.ConsensusStateStore(
                 data_dir=tempfile.gettempdir(),
@@ -133,6 +139,7 @@ class TestConsensusStateStore(unittest.TestCase):
 
         # Have a validator claim a block and update the store
         wait_certificate = mock.Mock()
+        wait_certificate.duration = 3.1415
         wait_certificate.local_mean = 5.0
         validator_info = \
             ValidatorInfo(
@@ -141,7 +148,8 @@ class TestConsensusStateStore(unittest.TestCase):
                     poet_public_key='key_001'))
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=mock_poet_config_view)
         store['key'] = state
 
         # Verify the length and contains key

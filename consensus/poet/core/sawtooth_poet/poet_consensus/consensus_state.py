@@ -254,6 +254,7 @@ class ConsensusState(object):
             None
         """
         self._aggregate_local_mean = 0.0
+        self._local_mean = None
         self._population_samples = collections.deque()
         self._total_block_claim_count = 0
         self._validators = {}
@@ -382,6 +383,87 @@ class ConsensusState(object):
 
         return population_estimate_list
 
+    def _compute_population_estimate(self, poet_config_view):
+        """Estimates the size of the validator population by computing the
+        average wait time and the average local mean used by the winning
+        validator.
+
+        Since the entire population should be computing from the same local
+        mean based on history of certificates and we know that the minimum
+        value drawn from a population of size N of exponentially distributed
+        variables will be exponential with mean being 1 / N, we can estimate
+        the population size from the ratio of local mean to global mean. A
+        longer list of certificates will provide a better estimator only if the
+        population of validators is relatively stable.
+
+        Note:
+
+        See the section entitled "Distribution of the minimum of exponential
+        random variables" in the page:
+
+        http://en.wikipedia.org/wiki/Exponential_distribution
+
+        Args:
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+
+        Returns:
+            float: The population estimate
+        """
+        assert \
+            len(self._population_samples) == \
+            poet_config_view.population_estimate_sample_size
+
+        minimum_wait_time = poet_config_view.minimum_wait_time
+        sum_waits = 0
+        sum_means = 0
+        for population_sample in self._population_samples:
+            sum_waits += population_sample.duration - minimum_wait_time
+            sum_means += population_sample.local_mean
+
+        return sum_means / sum_waits
+
+    def compute_local_mean(self, poet_config_view):
+        """Computes the local mean wait time based on either the ratio of
+        target to initial wait times (if during the bootstrapping period) or
+        the certificate history (once bootstrapping period has passed).
+
+        Args:
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+
+        Returns:
+            float: The computed local mean
+        """
+        # If we do not have a current local mean value cached, then compute
+        # one and save it for later.
+        if self._local_mean is None:
+            population_estimate_sample_size = \
+                poet_config_view.population_estimate_sample_size
+
+            # If there have not been enough blocks claimed to satisfy the
+            # population estimate sample size, we are still in the
+            # bootstrapping phase for the blockchain and so we are going to use
+            # a simple ratio based upon the target and initial wait times to
+            # compute the local mean.
+            count = len(self._population_samples)
+            if count < population_estimate_sample_size:
+                ratio = 1.0 * count / population_estimate_sample_size
+                self._local_mean = \
+                    (poet_config_view.target_wait_time * (1 - ratio ** 2)) + \
+                    (poet_config_view.initial_wait_time * ratio ** 2)
+
+            # Otherwise, if we are out of the bootstrapping phase, then we are
+            # going to compute the local mean using the target wait time and an
+            # estimate of the validator network population size.
+            else:
+                self._local_mean = \
+                    poet_config_view.target_wait_time * \
+                    self._compute_population_estimate(
+                        poet_config_view=poet_config_view)
+
+        return self._local_mean
+
     def get_validator_state(self, validator_info):
         """Return the validator state for a particular validator
         Args:
@@ -425,6 +507,10 @@ class ConsensusState(object):
         Returns:
             None
         """
+        # Clear out our cached local mean value.  We'll recreate it later if it
+        # is requested
+        self._local_mean = None
+
         # Update the consensus state statistics.
         self._aggregate_local_mean += wait_certificate.local_mean
         self._total_block_claim_count += 1
@@ -781,6 +867,7 @@ class ConsensusState(object):
 
             self._aggregate_local_mean = \
                 float(self_dict['_aggregate_local_mean'])
+            self._local_mean = None
             self._population_samples = collections.deque()
             for sample in self_dict['_population_samples']:
                 (duration, local_mean) = [float(value) for value in sample]
