@@ -46,6 +46,9 @@
 /sdk/examples/intkey_java/target/
 /sdk/java/target/
 /sdk/go/src/sawtooth_sdk/protobuf/
+/sdk/go/src/github.com/
+/sdk/go/bin/
+/sdk/go/pkg/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/
