@@ -144,6 +144,40 @@ The following tools are required:
 * `VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_ (5.1.16 r113841
   or later)
 
+
+Proxy Settings
+--------------
+
+If you are behind a network proxy, follow these steps before continuing:
+
+1. Set the following environment variables:
+
+  * http_proxy
+  * https_proxy
+
+If you are using the Bash shell, run the following commands:
+
+.. code-block:: console
+
+  % export http_proxy=http://example-proxy-server.com:911
+  % export https_proxy=https://example-proxy-server.com:912
+
+If you are using Windows, run the following commands:
+
+.. code-block:: console
+
+  % set http_proxy=http://example-proxy-server.com:911
+  % set https_proxy=https://example-proxy-server.com:912
+
+
+2. Install the vagrant-proxyconf plugin:
+
+.. code-block:: console
+
+  % cd sawtooth-core/tools
+  % vagrant plugin install vagrant-proxyconf
+
+
 Environment Startup
 -------------------
 
