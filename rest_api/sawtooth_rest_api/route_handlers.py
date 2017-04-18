@@ -82,20 +82,20 @@ class RouteHandler(object):
         """
         # Parse request
         if request.headers['Content-Type'] != 'application/octet-stream':
-            return errors.WrongBodyType()
+            raise errors.SubmissionWrongContentType()
 
-        payload = await request.read()
-        if not payload:
-            return errors.EmptyProtobuf()
+        body = await request.read()
+        if not body:
+            raise errors.NoBatchesSubmitted()
 
         try:
             batch_list = BatchList()
-            batch_list.ParseFromString(payload)
+            batch_list.ParseFromString(body)
         except DecodeError:
-            return errors.BadProtobuf()
+            raise errors.BadProtobufSubmitted()
 
         # Query validator
-        error_traps = [error_handlers.InvalidBatch()]
+        error_traps = [error_handlers.BatchInvalidTrap]
         validator_query = client_pb2.ClientBatchSubmitRequest(
             batches=batch_list.batches)
         self._set_wait(request, validator_query)
@@ -140,27 +140,24 @@ class RouteHandler(object):
             data: A JSON object, with batch ids as keys, and statuses as values
             link: The /batch_status link queried (if GET)
         """
-        error_traps = [error_handlers.StatusesNotReturned()]
+        error_traps = [error_handlers.StatusResponseMissing]
 
         # Parse batch ids from POST body, or query paramaters
         if request.method == 'POST':
             if request.headers['Content-Type'] != 'application/json':
-                return errors.BadStatusBody()
+                raise errors.StatusWrongContentType()
 
             ids = await request.json()
 
-            if not isinstance(ids, list):
-                return errors.BadStatusBody()
-            if len(ids) == 0:
-                return errors.MissingStatusId()
-            if not isinstance(ids[0], str):
-                return errors.BadStatusBody()
+            if (not ids
+                    or not isinstance(ids, list)
+                    or not all(isinstance(i, str) for i in ids)):
+                raise errors.StatusBodyInvalid()
 
         else:
-            try:
-                ids = request.url.query['id'].split(',')
-            except KeyError:
-                return errors.MissingStatusId()
+            ids = self._get_filter_ids(request)
+            if not ids:
+                raise errors.StatusIdQueryInvalid()
 
         # Query validator
         validator_query = client_pb2.ClientBatchStatusRequest(batch_ids=ids)
@@ -227,8 +224,8 @@ class RouteHandler(object):
             link: The link to this exact query, including head block
         """
         error_traps = [
-            error_handlers.MissingLeaf(),
-            error_handlers.BadAddress()]
+            error_handlers.InvalidAddressTrap,
+            error_handlers.StateNotFoundTrap]
 
         address = request.match_info.get('address', '')
         head = request.url.query.get('head', None)
@@ -284,7 +281,7 @@ class RouteHandler(object):
             data: A JSON object with the data from the fully expanded Block
             link: The link to this exact query
         """
-        error_traps = [error_handlers.MissingBlock()]
+        error_traps = [error_handlers.BlockNotFoundTrap]
 
         block_id = request.match_info.get('block_id', '')
 
@@ -340,7 +337,7 @@ class RouteHandler(object):
             data: A JSON object with the data from the fully expanded Batch
             link: The link to this exact query
         """
-        error_traps = [error_handlers.MissingBatch()]
+        error_traps = [error_handlers.BatchNotFoundTrap]
 
         batch_id = request.match_info.get('batch_id', '')
 
@@ -398,7 +395,7 @@ class RouteHandler(object):
             data: A JSON object with the data from the expanded Transaction
             link: The link to this exact query
         """
-        error_traps = [error_handlers.MissingTransaction()]
+        error_traps = [error_handlers.TransactionNotFoundTrap]
 
         txn_id = request.match_info.get('transaction_id', '')
 
@@ -434,47 +431,52 @@ class RouteHandler(object):
                 future.result,
                 self._timeout)
         except FutureTimeoutError:
-            raise errors.ValidatorUnavailable()
+            raise errors.ValidatorTimedOut()
 
         try:
             return response.content
-        # Caused by resolving a FutureError on validator disconnect
         except ValidatorConnectionError:
-            raise errors.ValidatorDisconnect()
+            raise errors.ValidatorDisconnected()
 
     @classmethod
     def _try_response_parse(cls, proto, response, traps=None):
         """Parses the Protobuf response from the validator.
-        Uses "error traps" to send back any HTTP error triggered by a Protobuf
-        status, both those common to many handlers, and specified individually.
+        Checks for common error-raising response statuses, as well as route
+        specific status errors using the error trap interface.
         """
         parsed = proto()
         parsed.ParseFromString(response)
-        traps = traps or []
 
+        # Check for common response statuses that should raise errors
         try:
-            traps.append(error_handlers.Unknown(proto.INTERNAL_ERROR))
+            if parsed.status == proto.INTERNAL_ERROR:
+                raise errors.UnknownValidatorError()
         except AttributeError:
             # Not every protobuf has every status enum, so pass AttributeErrors
             pass
 
         try:
-            traps.append(error_handlers.NotReady(proto.NOT_READY))
+            if parsed.status == proto.NOT_READY:
+                raise errors.ValidatorNotReady()
         except AttributeError:
             pass
 
         try:
-            traps.append(error_handlers.MissingHead(proto.NO_ROOT))
+            if parsed.status == proto.NO_ROOT:
+                raise errors.HeadNotFound()
         except AttributeError:
             pass
 
         try:
-            traps.append(error_handlers.InvalidPaging(proto.INVALID_PAGING))
+            if parsed.status == proto.INVALID_PAGING:
+                raise errors.PagingInvalid()
         except AttributeError:
             pass
 
-        for trap in traps:
-            trap.check(parsed.status)
+        # Check custom error traps from the particular route message
+        if traps is not None:
+            for trap in traps:
+                trap.check(parsed.status)
 
         return cls.message_to_dict(parsed)
 
@@ -633,13 +635,14 @@ class RouteHandler(object):
         count = request.url.query.get('count', None)
         controls = {}
 
-        if count == '0':
-            raise errors.BadCount()
-        elif count is not None:
+        if count is not None:
             try:
                 controls['count'] = int(count)
             except ValueError:
-                raise errors.BadCount()
+                raise errors.CountInvalid()
+
+            if controls['count'] <= 0:
+                raise errors.CountInvalid()
 
         if min_pos is not None:
             try:

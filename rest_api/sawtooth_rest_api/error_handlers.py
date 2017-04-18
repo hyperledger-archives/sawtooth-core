@@ -13,112 +13,76 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from aiohttp import web
 from sawtooth_rest_api.protobuf import client_pb2
+import sawtooth_rest_api.exceptions as errors
 
 
 class _ErrorTrap(object):
+    """Provides an interface for route handlers to communicate specific
+    response statuses they are interested in throwing an error on. Child
+    classes should not define any methods, instead defining two class
+    variables which the parent `check` method will reference. As `check` is
+    a class method, there is no need to instantiate ErrorTraps.
+
+    Attributes:
+        trigger (int, enum): A protobuf enum status to check for.
+        error (class): The type of error to raise.
     """
-    ErrorTraps are particular handlers for a common pattern the REST API
-    encounters: translating Protobuf statuses sent over ZMQ, into HTTP errors
-    to be raised and sent to the client. Traps take a status as a "trigger"
-    (either hard-coded or at instantiation), and provide a "check" method
-    which will check the trigger against a status, raising a preset
-    HTTP Error if there is a match.
+    trigger = None
+    error = None
 
-    Args:
-        trigger: a Protobuf enum status to match against
-        error: the type of error to raise
-        message: a message raise the error with
-    """
-    def __init__(self, trigger, error, message=None):
-        self._trigger = trigger
-        self._error = error(reason=message)
+    @classmethod
+    def check(cls, status):
+        """Checks if a status enum matches the trigger originally set, and
+        if so, raises the appropriate error.
 
-    def check(self, status):
-        if status == self._trigger:
-            raise self._error
+        Args:
+            status (int, enum): A protobuf enum response status to check.
 
+        Raises:
+            AssertionError: If trigger or error were not set.
+            _ApiError: If the statuses don't match. Do not catch. Will be
+                caught automatically and sent back to the client.
+        """
+        assert cls.trigger is not None, 'Invalid ErrorTrap, trigger not set'
+        assert cls.error is not None, 'Invalid ErrorTrap, error not set'
 
-class Unknown(_ErrorTrap):
-    def __init__(self, trigger):
-        error = web.HTTPInternalServerError
-        message = 'An unknown error occured with your request'
-        super().__init__(trigger, error, message)
+        if status == cls.trigger:
+            # pylint: disable=not-callable
+            # cls.error will be callable at runtime
+            raise cls.error()
 
 
-class NotReady(_ErrorTrap):
-    def __init__(self, trigger):
-        error = web.HTTPServiceUnavailable
-        message = 'The validator is not yet ready to be queried'
-        super().__init__(trigger, error, message)
+class StatusResponseMissing(_ErrorTrap):
+    trigger = client_pb2.ClientBatchStatusResponse.NO_RESOURCE
+    error = errors.StatusResponseMissing
 
 
-class MissingHead(_ErrorTrap):
-    def __init__(self, trigger):
-        error = web.HTTPNotFound
-        message = 'There is no block with that head id'
-        super().__init__(trigger, error, message)
+class BatchInvalidTrap(_ErrorTrap):
+    trigger = client_pb2.ClientBatchSubmitResponse.INVALID_BATCH
+    error = errors.SubmittedBatchesInvalid
 
 
-class InvalidPaging(_ErrorTrap):
-    def __init__(self, trigger):
-        error = web.HTTPBadRequest
-        message = '"min", "max", or "count" were invalid or out of range'
-        super().__init__(trigger, error, message)
+class InvalidAddressTrap(_ErrorTrap):
+    trigger = client_pb2.ClientStateGetResponse.INVALID_ADDRESS
+    error = errors.InvalidStateAddress
 
 
-class InvalidBatch(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientBatchSubmitResponse.INVALID_BATCH,
-            error=web.HTTPBadRequest,
-            message='A submitted batch had an invalid signature')
+class BlockNotFoundTrap(_ErrorTrap):
+    trigger = client_pb2.ClientBlockGetResponse.NO_RESOURCE
+    error = errors.BlockNotFound
 
 
-class StatusesNotReturned(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientBatchStatusResponse.NO_RESOURCE,
-            error=web.HTTPInternalServerError,
-            message='Something went wrong when looking for these statuses')
+class BatchNotFoundTrap(_ErrorTrap):
+    trigger = client_pb2.ClientBatchGetResponse.NO_RESOURCE
+    error = errors.BatchNotFound
 
 
-class MissingLeaf(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientStateGetResponse.NO_RESOURCE,
-            error=web.HTTPNotFound,
-            message='There is no leaf at that address')
+class TransactionNotFoundTrap(_ErrorTrap):
+    trigger = client_pb2.ClientTransactionGetResponse.NO_RESOURCE
+    error = errors.TransactionNotFound
 
 
-class MissingBlock(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientBlockGetResponse.NO_RESOURCE,
-            error=web.HTTPNotFound,
-            message='There is no block with that id')
-
-
-class MissingBatch(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientBatchGetResponse.NO_RESOURCE,
-            error=web.HTTPNotFound,
-            message='There is no batch with that id')
-
-
-class MissingTransaction(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientTransactionGetResponse.NO_RESOURCE,
-            error=web.HTTPNotFound,
-            message='There is no batch with that id')
-
-
-class BadAddress(_ErrorTrap):
-    def __init__(self):
-        super().__init__(
-            trigger=client_pb2.ClientStateGetResponse.INVALID_ADDRESS,
-            error=web.HTTPBadRequest,
-            message='Expected a leaf address, but received a subtree instead')
+class StateNotFoundTrap(_ErrorTrap):
+    trigger = client_pb2.ClientStateGetResponse.NO_RESOURCE
+    error = errors.StateNotFound
