@@ -249,11 +249,13 @@ class BlockTreeManager(object):
         else:  # WTF try something crazy
             return self.block_cache[str(block)]
 
-    def generate_batch(self, txn_count=2, missing_deps=False):
-        txns = [
-            self.generate_transaction('txn_' + str(i))
-            for i in range(txn_count)
-        ]
+    def generate_batch(self, txn_count=2, missing_deps=False,
+                       txns=None):
+        if txns is None:
+            txns = [
+                self.generate_transaction('txn_' + str(i))
+                for i in range(txn_count)
+            ]
 
         if missing_deps:
             target_txn = txns[-1]

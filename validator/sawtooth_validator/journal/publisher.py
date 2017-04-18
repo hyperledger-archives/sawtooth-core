@@ -94,7 +94,12 @@ class _CandidateBlock(object):
         :return: Boolean, True if dependencies checkout, False otherwise.
         """
         for txn in batch.transactions:
-            if not self._check_transaction_dependencies(
+            if self._is_txn_already_committed(txn, committed_txn_cache):
+                LOGGER.debug("Transaction rejected as it " +
+                             "is already in the chain " +
+                             "%s", txn.header_signature[:8])
+                return False
+            elif not self._check_transaction_dependencies(
                     txn,
                     committed_txn_cache):
                 # if any transaction in this batch fails the whole batch
@@ -130,6 +135,13 @@ class _CandidateBlock(object):
         """
         return (self._block_store.has_batch(batch.header_signature) or
                 batch.header_signature in self._pending_batch_ids)
+
+    def _is_txn_already_committed(self, txn, committed_txn_cache):
+        """ Test if a transaction is already committed to the chain or
+        is already in the pending queue.
+        """
+        return (self._block_store.has_batch(txn.header_signature) or
+                txn.header_signature in committed_txn_cache)
 
     def add_batch(self, batch):
         """Add a batch to the _CandidateBlock

@@ -298,6 +298,25 @@ class TestBlockPublisher(unittest.TestCase):
             self.update_chain_head(BlockWrapper(self.result_block))
             self.verify_block([self.batches[i]])
 
+    def test_duplicate_transactions(self):
+        '''
+        Test discards batches that have duplicate transactions in them.
+        '''
+        # receive batches, then try again (succeeding)
+        self.batches = self.batches[1:2]
+        self.receive_batches()
+        self.publish_block()
+        self.assert_block_published()
+        self.update_chain_head(BlockWrapper(self.result_block))
+        self.verify_block()
+
+        # build a new set of batches with the same transactions in them
+        self.batches = self.make_batches_with_duplicate_txn()
+        self.receive_batches()
+        self.publish_block()
+        self.assert_no_block_published() # block should be empty after batch
+        # with duplicate transaction is dropped.
+
     # assertions
     def assert_block_published(self):
         self.assertIsNotNone(
@@ -361,13 +380,14 @@ class TestBlockPublisher(unittest.TestCase):
         self.block_sender.new_block = None
 
     def update_chain_head(self, head, committed=None, uncommitted=None):
+        if head:
+            self.block_tree_manager.block_store.update_chain([head])
         self.publisher.on_chain_updated(
             chain_head=head,
             committed_batches=committed,
             uncommitted_batches=uncommitted)
 
     # batches
-
     def make_batch(self, missing_deps=False):
         return self.block_tree_manager.generate_batch(
             missing_deps=missing_deps)
@@ -378,6 +398,11 @@ class TestBlockPublisher(unittest.TestCase):
 
         return [self.make_batch(missing_deps=missing_deps)
                 for _ in range(batch_count)]
+
+    def make_batches_with_duplicate_txn(self):
+        txns = [self.batches[0].transactions[0],
+                self.block_tree_manager.generate_transaction("nonce")]
+        return [self.block_tree_manager.generate_batch(txns=txns)]
 
 
 class TestBlockValidator(unittest.TestCase):
