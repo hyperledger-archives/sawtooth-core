@@ -49,6 +49,9 @@ class SerialScheduler(Scheduler):
         self._last_in_batch = []
         self._last_state_hash = first_state_hash
 
+    def __del__(self):
+        self.cancel()
+
     def __iter__(self):
         return SchedulerIterator(self, self._condition)
 
