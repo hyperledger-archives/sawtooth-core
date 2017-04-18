@@ -76,16 +76,17 @@ class MockNetwork(object):
 
 
 class MockScheduler(Scheduler):
-    def __init__(self):
+    def __init__(self, batch_execution_result=True):
         self.batches = {}
+        self.batch_execution_result = batch_execution_result
 
     def add_batch(self, batch, state_hash=None):
         self.batches[batch.header_signature] = batch
 
     def get_batch_execution_result(self, batch_signature):
-
-
-        return BatchExecutionResult(is_valid=True, state_hash="0000000000")
+        return BatchExecutionResult(
+            is_valid=self.batch_execution_result,
+            state_hash="0000000000")
 
     def set_transaction_execution_result(
             self, txn_signature, is_valid, context_id):
@@ -117,11 +118,12 @@ class MockScheduler(Scheduler):
 
 
 class MockTransactionExecutor(object):
-    def __init__(self):
+    def __init__(self, batch_execution_result=True):
         self.messages = []
+        self.batch_execution_result = batch_execution_result
 
     def create_scheduler(self, squash_handler, first_state_root):
-        return MockScheduler()
+        return MockScheduler(self.batch_execution_result)
 
     def execute(self, scheduler, state_hash=None):
         pass
