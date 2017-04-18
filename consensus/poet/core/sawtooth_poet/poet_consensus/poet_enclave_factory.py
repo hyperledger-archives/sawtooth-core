@@ -19,6 +19,7 @@ import logging
 
 from sawtooth_validator.state.config_view import ConfigView
 
+from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus import wait_timer
 
 LOGGER = logging.getLogger(__name__)
@@ -68,6 +69,8 @@ class PoetEnclaveFactory(object):
 
                 LOGGER.info('Load PoET enclave module: %s', module_name)
 
+                poet_config_view = PoetConfigView(state_view)
+
                 # For now, configure the wait timer settings based upon the
                 # values in the configuration if present.
                 target_wait_time = \
@@ -80,16 +83,12 @@ class PoetEnclaveFactory(object):
                         key='sawtooth.poet.initial_wait_time',
                         default_value=wait_timer.WaitTimer.initial_wait_time,
                         value_type=float)
+                fixed_duration_blocks = \
+                    poet_config_view.fixed_duration_block_count
                 certificate_sample_length = \
                     config_view.get_setting(
                         key='sawtooth.poet.certificate_sample_length',
-                        default_value=wait_timer.WaitTimer.
-                            certificate_sample_length,
-                        value_type=int)
-                fixed_duration_blocks = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.fixed_duration_blocks',
-                        default_value=certificate_sample_length,
+                        default_value=fixed_duration_blocks,
                         value_type=int)
                 minimum_wait_time = \
                     config_view.get_setting(
@@ -107,8 +106,8 @@ class PoetEnclaveFactory(object):
                     'sawtooth.poet.certificate_sample_length: %d',
                     certificate_sample_length)
                 LOGGER.info(
-                    'sawtooth.poet.fixed_duration_blocks: %d',
-                    fixed_duration_blocks)
+                    'sawtooth.poet.fixed_duration_block_count: %d',
+                    poet_config_view.fixed_duration_block_count)
                 LOGGER.info(
                     'sawtooth.poet.minimum_wait_time: %f',
                     minimum_wait_time)
