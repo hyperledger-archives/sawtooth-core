@@ -45,6 +45,7 @@
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
 /sdk/java/target/
+/sdk/go/src/sawtooth_sdk/protobuf/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/
