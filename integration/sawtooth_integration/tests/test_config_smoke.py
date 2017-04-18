@@ -30,6 +30,7 @@ LOGGER.setLevel(logging.DEBUG)
 
 TEST_WIF = '5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv'
 
+
 class TestConfigSmoke(unittest.TestCase):
 
     def setUp(self):
@@ -45,8 +46,10 @@ class TestConfigSmoke(unittest.TestCase):
     def _run(self, args):
         try:
             LOGGER.debug("Running %s", " ".join(args))
-            proc = subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            proc = subprocess.run(args,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  check=True)
             LOGGER.debug(proc.stdout.decode())
         except subprocess.CalledProcessError as err:
             LOGGER.debug(err)
@@ -56,16 +59,15 @@ class TestConfigSmoke(unittest.TestCase):
 
     def _read_from_stdout(self, cmd, args):
         # Retrieve string of setting contents for comparison to input settings
-        backup = sys.stdout # backup the environment
-        sys.stdout = StringIO() # Capture the output of next statement
+        backup = sys.stdout  # backup the environment
+        sys.stdout = StringIO()  # Capture the output of next statement
 
         main(cmd, args)
-        settings = sys.stdout.getvalue() # release the output and store
+        settings = sys.stdout.getvalue()  # release the output and store
         sys.stdout.close()
         # Restore the environment
         sys.stdout = backup
         return settings
-
 
     def test_submit_then_list_settings(self):
         ''' Test ability to list settings after submission of a setting.
@@ -77,7 +79,7 @@ class TestConfigSmoke(unittest.TestCase):
 
         # Submit transaction, then list it using subprocess
         cmds = [
-            ['sawtooth','config', 'proposal', 'create', '-k', self._wif_file,
+            ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
              '--url', 'http://rest_api:8080', 'x=1', 'y=1'],
             ['sawtooth', 'config', 'settings', 'list', '--url',
              'http://rest_api:8080']
@@ -91,4 +93,5 @@ class TestConfigSmoke(unittest.TestCase):
         settings = self._read_from_stdout(command, args)
 
         _expected_setting_results = 'x: 1\ny: 1\n'
-        self.assertEqual(settings, _expected_setting_results, 'Setting results did not match.' )
+        self.assertEqual(settings, _expected_setting_results,
+                         'Setting results did not match.')
