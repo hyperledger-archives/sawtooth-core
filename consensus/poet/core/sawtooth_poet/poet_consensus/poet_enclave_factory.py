@@ -17,8 +17,6 @@ import threading
 import importlib
 import logging
 
-from sawtooth_validator.state.config_view import ConfigView
-
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus import wait_timer
 
@@ -57,52 +55,26 @@ class PoetEnclaveFactory(object):
             # done so.  Otherwise, we are just going to return the previously-
             # loaded enclave module.
             if cls._poet_enclave_module is None:
-                # Get the configured PoET enclave module name, defaulting to
-                # the PoET enclave simulator module if not present.
-                config_view = ConfigView(state_view)
-                module_name = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.enclave_module',
-                        default_value='sawtooth_poet_simulator.'
-                                      'poet_enclave_simulator.'
-                                      'poet_enclave_simulator')
+                # Get the configured PoET enclave module name.
+                poet_config_view = PoetConfigView(state_view)
+                module_name = poet_config_view.enclave_module_name
 
                 LOGGER.info('Load PoET enclave module: %s', module_name)
 
-                poet_config_view = PoetConfigView(state_view)
-
                 # For now, configure the wait timer settings based upon the
-                # values in the configuration if present.
-                target_wait_time = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.target_wait_time',
-                        default_value=wait_timer.WaitTimer.target_wait_time,
-                        value_type=float)
-                initial_wait_time = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.initial_wait_time',
-                        default_value=wait_timer.WaitTimer.initial_wait_time,
-                        value_type=float)
+                # values in the PoET config view.
+                target_wait_time = poet_config_view.target_wait_time
+                initial_wait_time = poet_config_view.initial_wait_time
                 population_estimate_sample_size = \
                     poet_config_view.population_estimate_sample_size
-                minimum_wait_time = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.minimum_wait_time',
-                        default_value=wait_timer.WaitTimer.minimum_wait_time,
-                        value_type=float)
+                minimum_wait_time = poet_config_view.minimum_wait_time
 
+                LOGGER.info('Target wait time: %f', target_wait_time)
+                LOGGER.info('Initial wait time: %f', initial_wait_time)
                 LOGGER.info(
-                    'sawtooth.poet.target_wait_time: %f',
-                    target_wait_time)
-                LOGGER.info(
-                    'sawtooth.poet.initial_wait_time: %f',
-                    initial_wait_time)
-                LOGGER.info(
-                    'sawtooth.poet.population_estimate_sample_size: %d',
-                    poet_config_view.population_estimate_sample_size)
-                LOGGER.info(
-                    'sawtooth.poet.minimum_wait_time: %f',
-                    minimum_wait_time)
+                    'Population estimate sample size: %d',
+                    population_estimate_sample_size)
+                LOGGER.info('Minimum wait time: %f', minimum_wait_time)
 
                 wait_timer.set_wait_timer_globals(
                     target_wait_time=target_wait_time,
