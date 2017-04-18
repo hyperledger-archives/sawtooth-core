@@ -28,6 +28,7 @@ MODULE_LIST="
     javascript_sdk
     python_sdk
     integration
+    config
 "
 
 usage() {
@@ -149,6 +150,9 @@ main() {
                 integration)
                     test_integration
                     ;;
+                config)
+                    test_config
+                    ;;
 
                 *)
                     echo "Module '$MODULE' not found."
@@ -217,5 +221,9 @@ test_integration() {
     run_docker_test poet-smoke -s integration_test
 }
 
+test_config() {
+    run_docker_test tp-config -s validator
+    run_docker_test config-smoke -s integration_test
+}
 
 main
