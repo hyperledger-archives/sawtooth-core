@@ -33,9 +33,9 @@ const {
   ValidatorConnectionError
 } = require('./exceptions')
 
-const {Stream} = require('../client/stream')
+const State = require('./state')
 
-const State = require('../client/state')
+const {Stream} = require('../messaging/stream')
 
 class TransactionProcessor {
   constructor (url) {

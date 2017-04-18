@@ -17,8 +17,8 @@ import argparse
 import logging
 import time
 
-from sawtooth_sdk.client.exceptions import ValidatorConnectionError
-from sawtooth_sdk.client.stream import Stream
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.stream import Stream
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 from sawtooth_sdk.protobuf.validator_pb2 import Message

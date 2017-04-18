@@ -12,7 +12,7 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 
-package sawtooth.sdk.client;
+package sawtooth.sdk.messaging;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 

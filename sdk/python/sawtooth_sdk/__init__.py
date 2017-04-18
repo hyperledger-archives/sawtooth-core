@@ -16,5 +16,6 @@
 
 __all__ = [
     'client',
+    'messaging',
     'processor'
 ]

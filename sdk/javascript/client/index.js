@@ -1,5 +1,5 @@
 /**
- * Copyright 2016, 2017 Intel Corporation
+ * Copyright 2017 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,10 @@
 
 'use strict'
 
-const {signer, BatchEncoder, TransactionEncoder} = require('./client')
+const {BatchEncoder, TransactionEncoder} = require('./encoders')
 
 module.exports = {
-
-  processor: require('./processor'),
-  exceptions: require('./processor/exceptions'),
-
-  signer,
+  signer: require('./signer'),
   BatchEncoder,
   TransactionEncoder
-
 }

@@ -19,9 +19,9 @@ import com.google.protobuf.ByteString;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 
-import sawtooth.sdk.client.State;
-import sawtooth.sdk.client.Utils;
+import sawtooth.sdk.processor.State;
 import sawtooth.sdk.processor.TransactionHandler;
+import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;

@@ -16,7 +16,7 @@
 from threading import Condition
 from threading import RLock
 
-from sawtooth_sdk.client.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
 
 
 class FutureResult(object):

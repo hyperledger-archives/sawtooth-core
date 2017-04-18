@@ -24,7 +24,7 @@ from datetime import datetime
 import sawtooth_signing as signing
 from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
 from sawtooth_sdk.workload.sawtooth_workload import Workload
-from sawtooth_sdk.client.stream import Stream
+from sawtooth_sdk.messaging.stream import Stream
 from sawtooth_sdk.protobuf import batch_pb2
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_intkey.client_cli.create_batch import create_intkey_transaction

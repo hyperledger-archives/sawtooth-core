@@ -70,3 +70,9 @@ message Transaction {
     // transaction. Example cbor({'Verb': verb, 'Name': name,'Value': value})
     bytes payload = 3;
 }
+
+// A simple list of transactions that needs to be serialized before
+// it can be transmitted to a batcher.
+message TransactionList {
+    repeated Transaction transactions = 1;
+}

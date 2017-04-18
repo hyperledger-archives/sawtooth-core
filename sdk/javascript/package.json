@@ -4,7 +4,7 @@
   "description": "An SDK for interacting with the Sawtooth Lake distributed ledger",
   "main": "index.js",
   "scripts": {
-    "test": "standard && mocha --recursive spec",
+    "test": "standard && node_modules/mocha/bin/mocha --recursive spec",
     "compile_protobuf": "node compile_protobuf.js > protobuf/protobuf_bundle.json",
     "prepublish": "npm run compile_protobuf"
   },
@@ -12,12 +12,14 @@
   "license": "Apache-2.0",
   "dependencies": {
     "protobufjs": "^6.2.1",
+    "secp256k1": "^3.2.5",
     "uuid": "^3.0.1",
     "zmq": "2.15.3"
   },
   "devDependencies": {
     "mocha": "^3.2.0",
-    "standard": "^8.6.0"
+    "standard": "^8.6.0",
+    "underscore": "^1.8.3"
   },
   "standard": {
     "globals": [

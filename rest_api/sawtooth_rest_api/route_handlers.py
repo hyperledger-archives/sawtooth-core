@@ -24,9 +24,9 @@ from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import DecodeError
 from google.protobuf.message import Message as BaseMessage
 
-from sawtooth_sdk.client.exceptions import ValidatorConnectionError
-from sawtooth_sdk.client.future import FutureTimeoutError
-from sawtooth_sdk.client.stream import Stream
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.future import FutureTimeoutError
+from sawtooth_sdk.messaging.stream import Stream
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 import sawtooth_rest_api.exceptions as errors

@@ -19,10 +19,10 @@ import itertools
 import logging
 
 
-from sawtooth_sdk.client.exceptions import ValidatorConnectionError
-from sawtooth_sdk.client.future import FutureTimeoutError
-from sawtooth_sdk.client.stream import RECONNECT_EVENT
-from sawtooth_sdk.client.stream import Stream
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.future import FutureTimeoutError
+from sawtooth_sdk.messaging.stream import RECONNECT_EVENT
+from sawtooth_sdk.messaging.stream import Stream
 
 from sawtooth_sdk.processor.state import State
 from sawtooth_sdk.processor.exceptions import InvalidTransaction

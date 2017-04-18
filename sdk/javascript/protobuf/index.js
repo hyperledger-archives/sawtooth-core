@@ -74,6 +74,14 @@ module.exports = {
   TpStateSetResponse,
 
   //
-  // Transaction
-  TransactionHeader: root.lookup('TransactionHeader')
+  // Transactions
+  TransactionHeader: root.lookup('TransactionHeader'),
+  Transaction: root.lookup('Transaction'),
+  TransactionList: root.lookup('TransactionList'),
+
+  //
+  // Batches
+  BatchHeader: root.lookup('BatchHeader'),
+  Batch: root.lookup('Batch'),
+  BatchList: root.lookup('BatchList')
 }
