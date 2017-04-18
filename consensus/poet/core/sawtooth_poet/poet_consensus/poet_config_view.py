@@ -28,6 +28,8 @@ class PoetConfigView(object):
     """
 
     _BLOCK_CLAIM_DELAY_ = 1
+    _ENCLAVE_MODULE_NAME_ = \
+        'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
     _INITIAL_WAIT_TIME_ = 3000.0
     _KEY_BLOCK_CLAIM_LIMIT_ = 25
     _MINIMUM_WAIT_TIME_ = 1.0
@@ -107,6 +109,21 @@ class PoetConfigView(object):
                 value_type=int,
                 default_value=PoetConfigView._BLOCK_CLAIM_DELAY_,
                 validate_function=lambda value: value >= 0)
+
+    @property
+    def enclave_module_name(self):
+        """Return the enclave module name if config setting exists and is
+        valid, otherwise return the default.
+
+        The enclave module name is the name of the Python module containing the
+        implementation of the underlying PoET enclave.
+        """
+        return \
+            self._get_config_setting(
+                name='sawtooth.poet.enclave_module_name',
+                value_type=str,
+                default_value=PoetConfigView._ENCLAVE_MODULE_NAME_,
+                validate_function=lambda value: len(value) > 0)
 
     @property
     def initial_wait_time(self):

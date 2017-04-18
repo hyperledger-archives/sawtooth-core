@@ -24,6 +24,8 @@ class TestPoetConfigView(unittest.TestCase):
 
     # pylint: disable=invalid-name
     _EXPECTED_DEFAULT_BLOCK_CLAIM_DELAY_ = 1
+    _EXPECTED_DEFAULT_ENCLAVE_MODULE_NAME_ = \
+        'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
     _EXPECTED_DEFAULT_INITIAL_WAIT_TIME_ = 3000.0
     _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 25
     _EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_ = 1.0
@@ -39,7 +41,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -70,6 +72,41 @@ class TestPoetConfigView(unittest.TestCase):
         mock_config_view.return_value.get_setting.return_value = 1
         self.assertEqual(poet_config_view.block_claim_delay, 1)
 
+    def test_enclave_module_name(self, mock_config_view):
+        """Verify that retrieving enclave module name works for invalid
+        cases (missing, invalid format, invalid value) as well as valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Simulate an underlying error parsing value
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        self.assertEqual(
+            poet_config_view.enclave_module_name,
+            TestPoetConfigView._EXPECTED_DEFAULT_ENCLAVE_MODULE_NAME_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(kwargs['key'], 'sawtooth.poet.enclave_module_name')
+        self.assertEqual(
+            kwargs['default_value'],
+            TestPoetConfigView._EXPECTED_DEFAULT_ENCLAVE_MODULE_NAME_)
+        self.assertEqual(kwargs['value_type'], str)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        mock_config_view.return_value.get_setting.return_value = ''
+        self.assertEqual(
+            poet_config_view.enclave_module_name,
+            TestPoetConfigView._EXPECTED_DEFAULT_ENCLAVE_MODULE_NAME_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 'valid value'
+        self.assertEqual(poet_config_view.enclave_module_name, 'valid value')
+
     def test_initial_wait_time(self, mock_config_view):
         """Verify that retrieving initial wait time works for invalid cases
         (missing, invalid format, invalid value) as well as valid case.
@@ -77,7 +114,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -114,7 +151,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -150,7 +187,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -188,7 +225,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -229,7 +266,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -267,7 +304,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
@@ -308,7 +345,7 @@ class TestPoetConfigView(unittest.TestCase):
 
         poet_config_view = PoetConfigView(state_view=None)
 
-        # Underlying config setting does not parse to an integer
+        # Simulate an underlying error parsing value
         mock_config_view.return_value.get_setting.side_effect = \
             ValueError('bad value')
 
