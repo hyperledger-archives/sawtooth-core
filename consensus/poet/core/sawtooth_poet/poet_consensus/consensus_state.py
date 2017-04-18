@@ -73,14 +73,13 @@ class ConsensusState(object):
         the block
     validator_info (ValidatorInfo): The validator registry information for the
         validator that claimed the block
-    poet_config_view (PoetConfigView): The PoET cofiguration view associated
+    poet_config_view (PoetConfigView): The PoET configuration view associated
         with the block
     """
 
     _PopulationSample = \
         collections.namedtuple(
-            '_PopulationSample',
-            ['duration', 'local_mean'])
+            '_PopulationSample', ['duration', 'local_mean'])
 
     """ Instead of creating a full-fledged class, let's use a named tuple for
     the population sample.  The population sample represents the information
@@ -236,7 +235,8 @@ class ConsensusState(object):
             else:
                 consensus_state.validator_did_claim_block(
                     validator_info=block_info.validator_info,
-                    wait_certificate=block_info.wait_certificate)
+                    wait_certificate=block_info.wait_certificate,
+                    poet_config_view=block_info.poet_config_view)
                 consensus_state_store[block_id] = consensus_state
 
                 LOGGER.debug(
@@ -410,7 +410,8 @@ class ConsensusState(object):
 
     def validator_did_claim_block(self,
                                   validator_info,
-                                  wait_certificate):
+                                  wait_certificate,
+                                  poet_config_view):
         """For the validator that is referenced by the validator information
         object, update its state based upon it claiming a block.
 
@@ -418,6 +419,8 @@ class ConsensusState(object):
             validator_info (ValidatorInfo): Information about the validator
             wait_certificate (WaitCertificate): The wait certificate
                 associated with the block being claimed
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
 
         Returns:
             None
@@ -425,6 +428,17 @@ class ConsensusState(object):
         # Update the consensus state statistics.
         self._aggregate_local_mean += wait_certificate.local_mean
         self._total_block_claim_count += 1
+
+        # Add the wait certificate information to our population sample,
+        # evicting the oldest entry if already have at least
+        # population_estimate_sample_size entries.
+        self._population_samples.append(
+            ConsensusState._PopulationSample(
+                duration=wait_certificate.duration,
+                local_mean=wait_certificate.local_mean))
+        while len(self._population_samples) > \
+                poet_config_view.population_estimate_sample_size:
+            self._population_samples.popleft()
 
         # We need to fetch the current state for the validator
         validator_state = \

@@ -56,7 +56,11 @@ class TestConsensusState(unittest.TestCase):
         state = consensus_state.ConsensusState()
 
         wait_certificate = mock.Mock()
+        wait_certificate.duration = 3.1415
         wait_certificate.local_mean = 5.0
+
+        poet_config_view = mock.Mock()
+        poet_config_view.population_estimate_sample_size = 50
 
         validator_info = \
             ValidatorInfo(
@@ -68,7 +72,8 @@ class TestConsensusState(unittest.TestCase):
         # consensus state to add and set statistics appropriately.
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -86,7 +91,8 @@ class TestConsensusState(unittest.TestCase):
         # the consensus and validator statistics are updated properly
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -107,7 +113,8 @@ class TestConsensusState(unittest.TestCase):
 
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -126,6 +133,9 @@ class TestConsensusState(unittest.TestCase):
         error.  Verify that serializing state and then deserializing results
         in the same state values.
         """
+        poet_config_view = mock.Mock()
+        poet_config_view.population_estimate_sample_size = 50
+
         # Simple deserialization check of buffer
         for invalid_state in [None, '', 1, 1.1, (), [], {}]:
             state = consensus_state.ConsensusState()
@@ -249,6 +259,7 @@ class TestConsensusState(unittest.TestCase):
 
         state = consensus_state.ConsensusState()
         wait_certificate = mock.Mock()
+        wait_certificate.duration = 3.14
         wait_certificate.local_mean = 5.0
 
         validator_info = \
@@ -259,7 +270,8 @@ class TestConsensusState(unittest.TestCase):
 
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
         doppelganger_state = consensus_state.ConsensusState()
 
         # Truncate the serialized value on purpose
@@ -354,9 +366,11 @@ class TestConsensusState(unittest.TestCase):
         # Now put a couple of validators in, serialize, deserialize, and
         # verify they are in deserialized
         wait_certificate_1 = mock.Mock()
+        wait_certificate_1.duration = 3.14
         wait_certificate_1.local_mean = 5.0
         wait_certificate_2 = mock.Mock()
-        wait_certificate_2.local_mean = 5.0
+        wait_certificate_2.duration = 1.618
+        wait_certificate_2.local_mean = 2.718
 
         validator_info_1 = \
             ValidatorInfo(
@@ -371,10 +385,12 @@ class TestConsensusState(unittest.TestCase):
 
         state.validator_did_claim_block(
             validator_info=validator_info_1,
-            wait_certificate=wait_certificate_1)
+            wait_certificate=wait_certificate_1,
+            poet_config_view=poet_config_view)
         state.validator_did_claim_block(
             validator_info=validator_info_2,
-            wait_certificate=wait_certificate_2)
+            wait_certificate=wait_certificate_2,
+            poet_config_view=poet_config_view)
 
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
