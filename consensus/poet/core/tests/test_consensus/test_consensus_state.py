@@ -137,6 +137,7 @@ class TestConsensusState(unittest.TestCase):
                 'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
                 as mock_loads:
             mock_loads.return_value = {
+                '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                 '_total_block_claim_count': 0,
                 '_validators': {}
             }
@@ -153,6 +154,49 @@ class TestConsensusState(unittest.TestCase):
                     as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': invalid_alm,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
+                    '_total_block_claim_count': 0,
+                    '_validators': {}
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
+
+        # Missing population samples
+        with mock.patch(
+                'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
+                as mock_loads:
+            mock_loads.return_value = {
+                '_aggregate_local_mean': 0.0,
+                '_total_block_claim_count': 0,
+                '_validators': {}
+            }
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(b'')
+
+        # Invalid population samples
+        for invalid_ps in [None, 1, 1.0, 'str', (1,), [1],
+                           (1.0, None), (1.0, 'str'), (1.0, ()), (1.0, []),
+                           (1.0, {}),
+                           (1.0, float('nan')), (1.0, float('inf')),
+                           (1.0, float('-inf')), (float('nan'), 1.0),
+                           (float('inf'), 1.0), (float('-inf'), 1.0),
+                           (None, 1.0), ('str', 1.0), ((), 1.0), ([], 1.0),
+                           ({}, 1.0),
+                           [1.0, None], [1.0, 'str'], [1.0, ()], [1.0, []],
+                           [1.0, {}],
+                           [1.0, float('nan')], [1.0, float('inf')],
+                           [1.0, float('-inf')], [float('nan'), 1.0],
+                           [float('inf'), 1.0], [float('-inf'), 1.0],
+                           [None, 1.0], ['str', 1.0], [(), 1.0], [[], 1.0],
+                           [{}, 1.0]]:
+            state = consensus_state.ConsensusState()
+            with mock.patch(
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') \
+                    as mock_loads:
+                mock_loads.return_value = {
+                    '_aggregate_local_mean': 0.0,
+                    '_population_samples': invalid_ps,
                     '_total_block_claim_count': 0,
                     '_validators': {}
                 }
@@ -165,6 +209,7 @@ class TestConsensusState(unittest.TestCase):
                 as mock_loads:
             mock_loads.return_value = {
                 '_aggregate_local_mean': 0.0,
+                '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                 '_validators': {}
             }
             with self.assertRaises(ValueError):
@@ -179,6 +224,7 @@ class TestConsensusState(unittest.TestCase):
                     as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': invalid_tbcc,
                     '_validators': {}
                 }
@@ -194,6 +240,7 @@ class TestConsensusState(unittest.TestCase):
                     as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': invalid_validators
                 }
@@ -231,6 +278,7 @@ class TestConsensusState(unittest.TestCase):
                     'loads') as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [invalid_kbcc, 'ppk_001', 0]
@@ -247,6 +295,7 @@ class TestConsensusState(unittest.TestCase):
                     'loads') as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [0, invalid_ppk, 0]
@@ -263,6 +312,7 @@ class TestConsensusState(unittest.TestCase):
                     'loads') as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [0, 'ppk_001', invalid_tbcc]
@@ -278,6 +328,7 @@ class TestConsensusState(unittest.TestCase):
                 'loads') as mock_loads:
             mock_loads.return_value = {
                 '_aggregate_local_mean': 0.0,
+                '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                 '_total_block_claim_count': 0,
                 '_validators': {
                     'validator_001': [2, 'ppk_001', 1]

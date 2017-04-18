@@ -77,6 +77,20 @@ class ConsensusState(object):
         with the block
     """
 
+    _PopulationSample = \
+        collections.namedtuple(
+            '_PopulationSample',
+            ['duration', 'local_mean'])
+
+    """ Instead of creating a full-fledged class, let's use a named tuple for
+    the population sample.  The population sample represents the information
+    we need to create the population estimate, which in turn is used to compute
+    the local mean.  A population sample object contains:
+
+    duration (float): The duration from a wait certificate/timer
+    local_mean (float): The local mean from a wait certificate/timer
+    """
+
     _EstimateInfo = collections.namedtuple('_EstimateInfo',
                                            ['population_estimate',
                                             'previous_block_id',
@@ -240,6 +254,7 @@ class ConsensusState(object):
             None
         """
         self._aggregate_local_mean = 0.0
+        self._population_samples = collections.deque()
         self._total_block_claim_count = 0
         self._validators = {}
 
@@ -712,8 +727,16 @@ class ConsensusState(object):
             bytes: serialized version of the consensus state object
         """
         # For serialization, the easiest thing to do is to convert ourself to
-        # a dictionary and convert to CBOR.
-        return cbor.dumps(self.__dict__)
+        # a dictionary and convert to CBOR.  The deque object cannot be
+        # automatically serialized, so convert it to a list first.  We will
+        # reconstitute it to a deque upon parsing.
+        self_dict = {
+            '_aggregate_local_mean': self._aggregate_local_mean,
+            '_population_samples': list(self._population_samples),
+            '_total_block_claim_count': self._total_block_claim_count,
+            '_validators': self._validators
+        }
+        return cbor.dumps(self_dict)
 
     def parse_from_bytes(self, buffer):
         """Returns a consensus state object re-created from the serialized
@@ -733,7 +756,7 @@ class ConsensusState(object):
         """
         try:
             # Deserialize the CBOR back into a dictionary and set the simple
-            # fields, doing our best to check validity
+            # fields, doing our best to check validity.
             self_dict = cbor.loads(buffer)
 
             if not isinstance(self_dict, dict):
@@ -744,6 +767,21 @@ class ConsensusState(object):
 
             self._aggregate_local_mean = \
                 float(self_dict['_aggregate_local_mean'])
+            self._population_samples = collections.deque()
+            for sample in self_dict['_population_samples']:
+                (duration, local_mean) = [float(value) for value in sample]
+                if not math.isfinite(duration) or duration < 0:
+                    raise \
+                        ValueError(
+                            'duration ({}) is invalid'.format(duration))
+                if not math.isfinite(local_mean) or local_mean < 0:
+                    raise \
+                        ValueError(
+                            'local_mean ({}) is invalid'.format(local_mean))
+                self._population_samples.append(
+                    ConsensusState._PopulationSample(
+                        duration=duration,
+                        local_mean=local_mean))
             self._total_block_claim_count = \
                 int(self_dict['_total_block_claim_count'])
             validators = self_dict['_validators']
@@ -767,7 +805,7 @@ class ConsensusState(object):
             # validators dictionary and reconstitute the validator state from
             # them, again trying to validate the data the best we can.  The
             # only catch is that because the validator state objects are named
-            # tuples, cbor.dumps() treated them as such and so we lost the
+            # tuples, cbor.dumps() treated them as tuples and so we lost the
             # named part.  When re-creating the validator state, are going to
             # leverage the namedtuple's _make method.
 
@@ -785,7 +823,7 @@ class ConsensusState(object):
 
     def __str__(self):
         validators = \
-            ['{}: {{KBCC={}, PPK={}, TBCC={}, }}'.format(
+            ['{}: {{KBCC={}, PPK={}, TBCC={} }}'.format(
                 key[:8],
                 value.key_block_claim_count,
                 value.poet_public_key[:8],
@@ -793,7 +831,8 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'ALM={:.4f}, TBCC={}, V={}'.format(
+            'ALM={:.4f}, TBCC={}, PS={}, V={}'.format(
                 self.aggregate_local_mean,
                 self.total_block_claim_count,
+                self._population_samples,
                 validators)
