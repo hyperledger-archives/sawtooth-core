@@ -15,6 +15,7 @@
 
 import logging
 import unittest
+from unittest.mock import patch
 
 from sawtooth_validator.database.dict_database import DictDatabase
 
@@ -34,6 +35,7 @@ from sawtooth_validator.state.state_view import StateViewFactory
 
 from test_journal.block_tree_manager import BlockTreeManager
 
+from test_journal.mock import MockChainIdManager
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockNetwork
@@ -580,6 +582,7 @@ class TestChainController(unittest.TestCase):
         self.executor = SynchronousExecutor()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
+        self.chain_id_manager = MockChainIdManager()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -594,7 +597,7 @@ class TestChainController(unittest.TestCase):
             transaction_executor=MockTransactionExecutor(),
             on_chain_updated=chain_updated,
             squash_handler=None,
-            chain_id_manager=None,
+            chain_id_manager=self.chain_id_manager,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None)
 
@@ -845,7 +848,6 @@ class TestChainController(unittest.TestCase):
         self.receive_and_process_blocks(wow)
         self.assert_is_chain_head(wow)
 
-
     # next multi threaded
     # next add block publisher
     # next batch lists
@@ -884,6 +886,86 @@ class TestChainController(unittest.TestCase):
         for block in blocks:
             self.chain_ctrl.on_block_received(block)
         self.executor.process_all()
+
+
+class TestChainControllerGenesisPeer(unittest.TestCase):
+    def setUp(self):
+        self.block_tree_manager = BlockTreeManager(with_genesis=False)
+        self.gossip = MockNetwork()
+        self.executor = SynchronousExecutor()
+        self.txn_executor = MockTransactionExecutor()
+        self.block_sender = MockBlockSender()
+        self.chain_id_manager = MockChainIdManager()
+
+        def chain_updated(head, committed_batches=None,
+                          uncommitted_batches=None):
+            pass
+
+        self.chain_ctrl = ChainController(
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=MockStateViewFactory(
+                self.block_tree_manager.state_db),
+            block_sender=self.block_sender,
+            executor=self.executor,
+            transaction_executor=MockTransactionExecutor(),
+            on_chain_updated=chain_updated,
+            squash_handler=None,
+            chain_id_manager=self.chain_id_manager,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            data_dir=None)
+
+        self.assertIsNone(self.chain_ctrl.chain_head)
+
+    def test_genesis_block_mismatch(self):
+        '''Test mismatch block chain id will drop genesis block.
+        Given a ChainController with an empty chain
+        mismatches the block-chain-id stored on disk.
+        '''
+        self.chain_id_manager.save_block_chain_id('my_chain_id')
+        some_other_genesis_block = \
+            self.block_tree_manager.generate_genesis_block()
+        self.chain_ctrl.on_block_received(some_other_genesis_block)
+
+        self.assertIsNone(self.chain_ctrl.chain_head)
+
+    def test_genesis_block_matches_block_chain_id(self):
+        '''Test that a validator with no chain will accept a valid genesis
+        block that matches the block-chain-id stored on disk.
+        '''
+        my_genesis_block = self.block_tree_manager.generate_genesis_block()
+        chain_id = my_genesis_block.header_signature
+        self.chain_id_manager.save_block_chain_id(chain_id)
+
+        with patch.object(BlockValidator,
+                          'validate_block',
+                          return_value=True):
+            self.chain_ctrl.on_block_received(my_genesis_block)
+
+        self.assertIsNotNone(self.chain_ctrl.chain_head)
+        chain_head_sig = self.chain_ctrl.chain_head.header_signature
+
+        self.assertEqual(
+            chain_head_sig[:8],
+            chain_id[:8],
+            'Chain id does not match')
+
+        self.assertEqual(chain_id,
+                         self.chain_id_manager.get_block_chain_id())
+
+    def test_invalid_genesis_block_matches_block_chain_id(self):
+        '''Test that a validator with no chain will drop an invalid genesis
+        block that matches the block-chain-id stored on disk.
+        '''
+        my_genesis_block = self.block_tree_manager.generate_genesis_block()
+        chain_id = my_genesis_block.header_signature
+        self.chain_id_manager.save_block_chain_id(chain_id)
+
+        with patch.object(BlockValidator,
+                          'validate_block',
+                          return_value=False):
+            self.chain_ctrl.on_block_received(my_genesis_block)
+
+        self.assertIsNone(self.chain_ctrl.chain_head)
 
 
 class TestJournal(unittest.TestCase):

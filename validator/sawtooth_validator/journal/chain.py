@@ -660,41 +660,42 @@ class ChainController(object):
         # genesis block from the genesis validator
         if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
             chain_id = self._chain_id_manager.get_block_chain_id()
-            if chain_id is None:
-                self._chain_id_manager.save_block_chain_id(block.identifier)
-            elif chain_id != block.identifier:
-                LOGGER.warning("Block id does not match block chain id. "
+            if chain_id is not None and chain_id != block.identifier:
+                LOGGER.warning("Block id does not match block chain id %s. "
                                "Cannot set initial chain head.: %s",
-                               block.identifier)
-
-            state_view = self._state_view_factory.create_view()
-            consensus_module = \
-                ConsensusFactory.get_configured_consensus_module(
-                    NULL_BLOCK_IDENTIFIER,
-                    state_view)
-
-            committed_txn = TransactionCache(self._block_cache.block_store)
-
-            validator = BlockValidator(
-                consensus_module=consensus_module,
-                new_block=block,
-                chain_head=self._chain_head,
-                block_cache=self._block_cache,
-                state_view_factory=self._state_view_factory,
-                done_cb=self.on_block_validated,
-                executor=self._transaction_executor,
-                squash_handler=self._squash_handler,
-                identity_signing_key=self._identity_signing_key,
-                data_dir=self._data_dir)
-
-            valid = validator.validate_block(block, committed_txn)
-            if valid:
-                self._block_store.update_chain([block])
-                self._chain_head = block
-                self._notify_on_chain_updated(self._chain_head)
+                               chain_id[:8], block.identifier[:8])
             else:
-                LOGGER.warning("The genesis block is not valid. Cannot "
-                               "set chain head: %s", block)
+                state_view = self._state_view_factory.create_view()
+                consensus_module = \
+                    ConsensusFactory.get_configured_consensus_module(
+                        NULL_BLOCK_IDENTIFIER,
+                        state_view)
+
+                committed_txn = TransactionCache(self._block_cache.block_store)
+
+                validator = BlockValidator(
+                    consensus_module=consensus_module,
+                    new_block=block,
+                    chain_head=self._chain_head,
+                    block_cache=self._block_cache,
+                    state_view_factory=self._state_view_factory,
+                    done_cb=self.on_block_validated,
+                    executor=self._transaction_executor,
+                    squash_handler=self._squash_handler,
+                    identity_signing_key=self._identity_signing_key,
+                    data_dir=self._data_dir)
+
+                valid = validator.validate_block(block, committed_txn)
+                if valid:
+                    if chain_id is None:
+                        self._chain_id_manager.save_block_chain_id(
+                            block.identifier)
+                    self._block_store.update_chain([block])
+                    self._chain_head = block
+                    self._notify_on_chain_updated(self._chain_head)
+                else:
+                    LOGGER.warning("The genesis block is not valid. Cannot "
+                                   "set chain head: %s", block)
 
         else:
             LOGGER.warning("Cannot set initial chain head, this is not a "

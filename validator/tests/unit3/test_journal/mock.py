@@ -161,7 +161,7 @@ class MockStateViewFactory(object):
             self._database = {}
 
 
-    def create_view(self, state_root_hash):
+    def create_view(self, state_root_hash=None):
         """Creates a StateView for the given state root hash.
 
         Returns:
@@ -210,3 +210,17 @@ class MockStateView(object):
             dict of str,bytes: the state entries at the leaves
         """
         return []
+
+
+class MockChainIdManager(object):
+    """Mock for the ChainIdManager, which provides the value of the
+    block-chain-id stored in the data_dir.
+    """
+    def __init__(self):
+        self._block_chain_id = None
+
+    def save_block_chain_id(self, block_chain_id):
+        self._block_chain_id = block_chain_id
+
+    def get_block_chain_id(self):
+        return self._block_chain_id

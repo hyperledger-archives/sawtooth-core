@@ -69,7 +69,7 @@ class BlockTreeManager(object):
     def __repr__(self):
         return repr(self.block_cache)
 
-    def __init__(self):
+    def __init__(self, with_genesis=True):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.block_store = BlockStore(DictDatabase())
@@ -86,8 +86,11 @@ class BlockTreeManager(object):
         self.public_key = signing.generate_pubkey(self.signing_key)
 
         self.identity_signing_key = signing.generate_privkey()
-        self.genesis_block = self._generate_genesis_block()
-        self.set_chain_head(self.genesis_block)
+        chain_head = None
+        if with_genesis:
+            self.genesis_block = self.generate_genesis_block()
+            self.set_chain_head(self.genesis_block)
+            chain_head = self.genesis_block
 
         self.block_publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
@@ -96,7 +99,7 @@ class BlockTreeManager(object):
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
             squash_handler=None,
-            chain_head=self.genesis_block,
+            chain_head=chain_head,
             identity_signing_key=self.identity_signing_key,
             data_dir=None)
 
@@ -162,7 +165,7 @@ class BlockTreeManager(object):
             params = {}
 
         if root_block is None:
-            previous = self._generate_genesis_block()
+            previous = self.generate_genesis_block()
             self.block_store[previous.identifier] = previous
         else:
             previous = self._get_block(root_block)
@@ -195,7 +198,7 @@ class BlockTreeManager(object):
 
         return BlockWrapper(block_builder.build_block())
 
-    def _generate_genesis_block(self):
+    def generate_genesis_block(self):
         return self._generate_block(
             payload='Genesis',
             previous_block_id=NULL_BLOCK_IDENTIFIER,
