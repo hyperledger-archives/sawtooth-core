@@ -27,6 +27,7 @@ from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.database import dict_database
 from sawtooth_validator.execution.scheduler_parallel import PredecessorTree
+from sawtooth_validator.state.merkle import MerkleDatabase
 
 
 LOGGER = logging.getLogger(__name__)
@@ -83,10 +84,19 @@ class TestSerialScheduler(unittest.TestCase):
         self.context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
-        self.scheduler = SerialScheduler(squash_handler, self.first_state_root)
+        self.scheduler = SerialScheduler(squash_handler,
+                                         self.first_state_root,
+                                         always_persist=False)
 
     def tearDown(self):
         self.context_manager.stop()
+
+    def _get_address_from_txn(self, txn_info):
+        txn_header = transaction_pb2.TransactionHeader()
+        txn_header.ParseFromString(txn_info.txn.header)
+        inputs_or_outputs = list(txn_header.inputs)
+        address_b = inputs_or_outputs[0]
+        return address_b
 
     def test_transaction_order(self):
         """Tests the that transactions are returned in order added.
@@ -424,8 +434,8 @@ class TestSerialScheduler(unittest.TestCase):
                and one where one of the txns is invalid.
             2. Run through the scheduler executor interaction
                as txns are processed.
-            3. Verify that the valid state root is obtained
-               through the squash function.
+            3. Verify that the state root obtained through the squash function
+               is the same as directly updating the merkle tree.
             4. Verify that correct batch statuses are set
         """
         private_key = signing.generate_privkey()
@@ -433,7 +443,7 @@ class TestSerialScheduler(unittest.TestCase):
 
         # 1)
         batch_signatures = []
-        for names in [['a', 'b'], ['invalid', 'c']]:
+        for names in [['a', 'b'], ['invalid', 'c'], ['d', 'e']]:
             batch_txns = []
             for name in names:
                 txn = create_transaction(
@@ -475,50 +485,42 @@ class TestSerialScheduler(unittest.TestCase):
         sched2 = iter(self.scheduler)
         # 3)
         txn_info_a = next(sched2)
-        self.assertEquals(self.first_state_root, txn_info_a.state_hash)
-
         txn_a_header = transaction_pb2.TransactionHeader()
         txn_a_header.ParseFromString(txn_info_a.txn.header)
         inputs_or_outputs = list(txn_a_header.inputs)
         address_a = inputs_or_outputs[0]
-        c_id_a = self.context_manager.create_context(
-            state_hash=self.first_state_root,
-            inputs=inputs_or_outputs,
-            outputs=inputs_or_outputs,
-            base_contexts=txn_info_a.base_context_ids)
-        self.context_manager.set(c_id_a, [{address_a: 1}])
-        state_root2 = self.context_manager.commit_context([c_id_a], virtual=False)
+
         txn_info_b = next(sched2)
+        address_b = self._get_address_from_txn(txn_info_b)
 
-        self.assertEquals(txn_info_b.state_hash, state_root2)
-
-        txn_b_header = transaction_pb2.TransactionHeader()
-        txn_b_header.ParseFromString(txn_info_b.txn.header)
-        inputs_or_outputs = list(txn_b_header.inputs)
-        address_b = inputs_or_outputs[0]
-        c_id_b = self.context_manager.create_context(
-            state_hash=state_root2,
-            inputs=inputs_or_outputs,
-            outputs=inputs_or_outputs,
-            base_contexts=txn_info_b.base_context_ids)
-        self.context_manager.set(c_id_b, [{address_b: 1}])
-        state_root3 = self.context_manager.commit_context([c_id_b], virtual=False)
         txn_infoInvalid = next(sched2)
-
-        self.assertEquals(txn_infoInvalid.state_hash, state_root3)
-
         txn_info_c = next(sched2)
-        self.assertEquals(txn_info_c.state_hash, state_root3)
+
+        txn_info_d = next(sched2)
+        address_d = self._get_address_from_txn(txn_info_d)
+
+        txn_info_e = next(sched2)
+        address_e = self._get_address_from_txn(txn_info_e)
+
+        merkle_database = MerkleDatabase(dict_database.DictDatabase())
+        state_root_end = merkle_database.update(
+            {address_a: 1, address_b: 1,
+             address_d: 1, address_e: 1},
+            virtual=False)
+
         # 4)
         batch1_result = self.scheduler.get_batch_execution_result(
             batch_signatures[0])
         self.assertTrue(batch1_result.is_valid)
-        self.assertEquals(batch1_result.state_hash, state_root3)
 
         batch2_result = self.scheduler.get_batch_execution_result(
             batch_signatures[1])
         self.assertFalse(batch2_result.is_valid)
-        self.assertIsNone(batch2_result.state_hash)
+
+        batch3_result = self.scheduler.get_batch_execution_result(
+            batch_signatures[2])
+        self.assertTrue(batch3_result.is_valid)
+        self.assertEqual(batch3_result.state_hash, state_root_end)
 
 
 class TestPredecessorTree(unittest.TestCase):

@@ -231,8 +231,13 @@ class TransactionExecutor(object):
         self._alive_threads = []
         self._lock = threading.Lock()
 
-    def create_scheduler(self, squash_handler, first_state_root):
-        return SerialScheduler(squash_handler, first_state_root)
+    def create_scheduler(self,
+                         squash_handler,
+                         first_state_root,
+                         always_persist=False):
+        return SerialScheduler(squash_handler=squash_handler,
+                               first_state_hash=first_state_root,
+                               always_persist=always_persist)
 
     def _remove_done_threads(self):
         for t in self._alive_threads.copy():

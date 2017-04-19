@@ -69,7 +69,8 @@ class TestContextManager(unittest.TestCase):
 
         # 2)
         squash = self.context_manager.get_squash_handler()
-        resulting_state_hash = squash(self.first_state_hash, [context_id])
+        resulting_state_hash = squash(self.first_state_hash, [context_id],
+                                      persist=True)
 
         # 3)
         final_state_to_update = {

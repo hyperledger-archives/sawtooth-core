@@ -148,7 +148,8 @@ class GenesisController(object):
         if len(genesis_batches) > 0:
             scheduler = SerialScheduler(
                 self._context_manager.get_squash_handler(),
-                initial_state_root)
+                initial_state_root,
+                always_persist=True)
 
             LOGGER.debug('Adding %s batches', len(genesis_data.batches))
             for batch in genesis_data.batches:
@@ -167,8 +168,8 @@ class GenesisController(object):
                 raise InvalidGenesisStateError(
                     'Unable to create genesis block, due to batch {}'
                     .format(batch.header_signature))
-
-            state_hash = result.state_hash
+            if result.state_hash is not None:
+                state_hash = result.state_hash
         LOGGER.debug('Produced state hash %s for genesis block.',
                      state_hash)
 
