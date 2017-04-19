@@ -19,8 +19,6 @@ from requests import Timeout
 
 from sawtooth_validator.exceptions import NotAvailableException
 
-from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -122,10 +120,6 @@ class WaitCertificate(object):
 
         return cls(enclave_certificate)
 
-    @property
-    def population_estimate(self):
-        return self.local_mean / WaitTimer.target_wait_time
-
     def _enclave_wait_certificate(self, poet_enclave_module):
         return \
             poet_enclave_module.deserialize_wait_certificate(
@@ -160,6 +154,18 @@ class WaitCertificate(object):
                 self.duration,
                 self.identifier,
                 self.previous_certificate_id)
+
+    def population_estimate(self, poet_config_view):
+        """Return the population estimate for the block associated with this
+        wait certificate.
+
+        Args:
+            poet_config_view (PoetConfigView): The current PoEt config view
+
+        Returns:
+            float: The population estimate
+        """
+        return self.local_mean / poet_config_view.target_wait_time
 
     def check_valid(self,
                     poet_enclave_module,

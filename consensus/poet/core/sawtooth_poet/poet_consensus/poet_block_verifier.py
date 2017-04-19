@@ -202,7 +202,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 validator_info=validator_info,
                 previous_block_id=block_wrapper.previous_block_id,
                 poet_config_view=poet_config_view,
-                population_estimate=wait_certificate.population_estimate,
+                population_estimate=wait_certificate.population_estimate(
+                    poet_config_view=poet_config_view),
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module):
             LOGGER.error(

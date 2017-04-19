@@ -369,10 +369,12 @@ class ConsensusState(object):
                         utils.deserialize_wait_certificate(
                             block=block,
                             poet_enclave_module=poet_enclave_module)
+                    population_estimate = \
+                        wait_certificate.population_estimate(
+                            poet_config_view=poet_config_view)
                     population_cache_entry = \
                         ConsensusState._EstimateInfo(
-                            population_estimate=wait_certificate.
-                            population_estimate,
+                            population_estimate=population_estimate,
                             previous_block_id=block.previous_block_id,
                             validator_id=block.header.signer_pubkey)
                     ConsensusState._population_estimate_cache[block_id] = \

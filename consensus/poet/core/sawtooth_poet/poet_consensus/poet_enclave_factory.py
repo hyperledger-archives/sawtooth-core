@@ -18,7 +18,6 @@ import importlib
 import logging
 
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
-from sawtooth_poet.poet_consensus import wait_timer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,28 +59,18 @@ class PoetEnclaveFactory(object):
                 module_name = poet_config_view.enclave_module_name
 
                 LOGGER.info('Load PoET enclave module: %s', module_name)
-
-                # For now, configure the wait timer settings based upon the
-                # values in the PoET config view.
-                target_wait_time = poet_config_view.target_wait_time
-                initial_wait_time = poet_config_view.initial_wait_time
-                population_estimate_sample_size = \
-                    poet_config_view.population_estimate_sample_size
-                minimum_wait_time = poet_config_view.minimum_wait_time
-
-                LOGGER.info('Target wait time: %f', target_wait_time)
-                LOGGER.info('Initial wait time: %f', initial_wait_time)
+                LOGGER.info(
+                    'Target wait time: %f',
+                    poet_config_view.target_wait_time)
+                LOGGER.info(
+                    'Initial wait time: %f',
+                    poet_config_view.initial_wait_time)
                 LOGGER.info(
                     'Population estimate sample size: %d',
-                    population_estimate_sample_size)
-                LOGGER.info('Minimum wait time: %f', minimum_wait_time)
-
-                wait_timer.set_wait_timer_globals(
-                    target_wait_time=target_wait_time,
-                    initial_wait_time=initial_wait_time,
-                    certificate_sample_length=population_estimate_sample_size,
-                    fixed_duration_blocks=population_estimate_sample_size,
-                    minimum_wait_time=minimum_wait_time)
+                    poet_config_view.population_estimate_sample_size)
+                LOGGER.info(
+                    'Minimum wait time: %f',
+                    poet_config_view.minimum_wait_time)
 
                 # Load and initialize the module
                 module = importlib.import_module(module_name)

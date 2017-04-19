@@ -23,14 +23,6 @@ class WaitTimer(object):
     certificate.
 
     Attributes:
-        WaitTimer.minimum_wait_time (float): The minimum wait time in seconds.
-        WaitTimer.target_wait_time (float): The target wait time in seconds.
-        WaitTimer.initial_wait_time (float): The initial wait time in seconds.
-        WaitTimer.certificate_sample_length (int): The number of certificates
-            to sample for the population estimate.
-        WaitTimer.fixed_duration_blocks (int): If fewer than
-            WaitTimer.fixed_duration_blocks exist, then base the local mean
-            on a ratio based on InitialWaitTime, rather than the history.
         previous_certificate_id (str): The id of the previous certificate.
         local_mean (float): The local mean wait time based on the history of
             certs.
@@ -39,11 +31,6 @@ class WaitTimer(object):
         validator_address (str): The address of the validator that created the
             wait timer
     """
-    minimum_wait_time = 1.0
-    target_wait_time = 20.0
-    initial_wait_time = 3000.0
-    certificate_sample_length = 50
-    fixed_duration_blocks = certificate_sample_length
 
     @classmethod
     def create_wait_timer(cls,
@@ -82,10 +69,6 @@ class WaitTimer(object):
         return cls(enclave_timer)
 
     @property
-    def population_estimate(self):
-        return self.local_mean / WaitTimer.target_wait_time
-
-    @property
     def enclave_wait_timer(self):
         """Converts the serialized timer into an eclave timer object.
 
@@ -114,6 +97,18 @@ class WaitTimer(object):
                 self.duration,
                 self.previous_certificate_id)
 
+    def population_estimate(self, poet_config_view):
+        """Return the population estimate for the block associated with this
+        wait timer
+
+        Args:
+            poet_config_view (PoetConfigView): The current PoET config view
+
+        Returns:
+            float: The population estimate for this wait timer
+        """
+        return self.local_mean / poet_config_view.target_wait_time
+
     def serialize(self):
         """Serializes the underlying enclave wait timer
         """
@@ -135,21 +130,3 @@ class WaitTimer(object):
             return False
 
         return self._enclave_wait_timer.has_expired()
-
-
-def set_wait_timer_globals(target_wait_time=None,
-                           initial_wait_time=None,
-                           certificate_sample_length=None,
-                           fixed_duration_blocks=None,
-                           minimum_wait_time=None):
-    if target_wait_time is not None:
-        WaitTimer.target_wait_time = float(target_wait_time)
-    if initial_wait_time is not None:
-        WaitTimer.initial_wait_time = float(initial_wait_time)
-    if certificate_sample_length is not None:
-        WaitTimer.certificate_sample_length = int(certificate_sample_length)
-        WaitTimer.fixed_duration_blocks = int(certificate_sample_length)
-    if fixed_duration_blocks is not None:
-        WaitTimer.fixed_duration_blocks = int(fixed_duration_blocks)
-    if minimum_wait_time is not None:
-        WaitTimer.minimum_wait_time = float(minimum_wait_time)
