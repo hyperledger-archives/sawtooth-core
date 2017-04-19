@@ -22,6 +22,11 @@ import subprocess
 from sawtooth_cli.main import main
 import sys
 from io import StringIO
+import time
+
+from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.error import URLError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -79,6 +84,8 @@ class TestConfigSmoke(unittest.TestCase):
             setting equals the input setting.
             '''
 
+        _wait_for('http://rest_api:8080/blocks')
+
         # Submit transaction, then list it using subprocess
         cmds = [
             ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
@@ -99,3 +106,25 @@ class TestConfigSmoke(unittest.TestCase):
                 TEST_PUBKEY[:15])
         self.assertEqual(settings, _expected_setting_results,
                          'Setting results did not match.')
+
+
+def _wait_for(url, status_code=200, tries=5):
+    attempts = tries
+    while attempts > 0:
+        try:
+            response = urlopen(url)
+            if response.getcode() == status_code:
+                return
+
+        except HTTPError as e:
+            LOGGER.debug('failed to read url: %s', str(e))
+        except URLError as e:
+            LOGGER.debug('failed to read url: %s', str(e))
+
+        sleep_time = (tries - attempts + 1) * 2
+        LOGGER.debug('Retrying in %s secs', sleep_time)
+        time.sleep(sleep_time)
+
+        attempts -= 1
+
+    assert(False, "{} is not available within {} attempts".format(url, tries))
