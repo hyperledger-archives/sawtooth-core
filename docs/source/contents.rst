@@ -5,9 +5,8 @@ Table of Contents
 .. toctree::
 
    introduction.rst
-   tutorial.rst
+   app_developers_guide.rst
    transaction_family_specifications.rst
-   txn_family_tutorial.rst
    architecture.rst
    core_developers_guide.rst
    rest_api.rst
