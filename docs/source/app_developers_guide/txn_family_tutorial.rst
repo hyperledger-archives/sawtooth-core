@@ -22,12 +22,12 @@ A full implementation of the tic-tac-toe transaction family can be found in
 Prerequisites
 =============
 
-This tutorial assumes that you have gone through the primary Sawtooth Lake
-:doc:`tutorial` and are familiar with the concepts introduced there.
+This tutorial assumes that you have gone through :doc:`getting_started` and are
+familiar with the concepts introduced there.
 
 Prior to going through this tutorial, you should have a working vagrant
 environment running to which you can login.  Specific setup instructions are
-available in the :doc:`tutorial`.
+available in :doc:`getting_started`.
 
 The Transaction Processor
 =========================

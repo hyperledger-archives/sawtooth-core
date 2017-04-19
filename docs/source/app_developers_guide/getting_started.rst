@@ -1,9 +1,9 @@
 
-.. _tutorial:
+.. _getting_started:
 
-********
-Tutorial
-********
+***************
+Getting Started
+***************
 
 Overview
 ========
@@ -434,7 +434,7 @@ Config Transaction Family Usage
 ===============================
 
 Sawtooth Lake provides a :doc:`config transaction family
-<transaction_family_specifications/config_transaction_family>` that stores on-
+<../transaction_family_specifications/config_transaction_family>` that stores on-
 chain configuration settings, along with a config family transaction
 processor written in Python.
 
