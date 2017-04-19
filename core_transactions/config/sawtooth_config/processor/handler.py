@@ -219,10 +219,16 @@ def _validate_setting(auth_keys, setting, value):
             raise InvalidTransaction('authorized_keys must not be empty.')
 
     if setting == 'sawtooth.config.vote.approval_threshold':
+        threshold = None
         try:
-            int(value)
+            threshold = int(value)
         except ValueError:
             raise InvalidTransaction('approval_threshold must be an integer')
+
+        if threshold > len(auth_keys):
+            raise InvalidTransaction(
+                'approval_threshold must be less than or equal to number of '
+                'authorized_keys')
 
     if setting == 'sawtooth.config.vote.proposals':
         raise InvalidTransaction(

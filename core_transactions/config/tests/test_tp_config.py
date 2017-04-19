@@ -89,6 +89,19 @@ class TestConfig(TransactionProcessorTestCase):
 
         self._expect_invalid_transaction()
 
+    def test_set_value_too_large_approval_threshold(self):
+        """
+        Tests setting an approval_threshold that is larger than the set of
+        authorized keys.  This should return an invalid transaction.
+        """
+        self._propose("sawtooth.config.vote.approval_threshold", "2")
+
+        self._expect_get('sawtooth.config.vote.authorized_keys',
+                         self._public_key)
+        self._expect_get('sawtooth.config.vote.approval_threshold')
+
+        self._expect_invalid_transaction()
+
     def test_set_value_empty_authorized_keys(self):
         """
         Tests setting an empty set of authorized keys.
