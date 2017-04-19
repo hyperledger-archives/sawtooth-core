@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import math
 import random
 from unittest import TestCase
 from unittest import mock
@@ -555,3 +556,225 @@ class TestConsensusState(TestCase):
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
                 poet_config_view=mock_poet_config_view)
+
+    def test_block_claim_limit(self):
+        """Verify that consensus state properly indicates whether or not a
+        validator has reached the block claim limit
+        """
+        mock_wait_certificate = mock.Mock()
+        mock_wait_certificate.duration = 3.14
+        mock_wait_certificate.local_mean = 5.0
+
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.key_block_claim_limit = 10
+        mock_poet_config_view.population_estimate_sample_size = 50
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+        state = consensus_state.ConsensusState()
+
+        # Verify that validator does not trigger key block claim limit and also
+        # "claim" blocks
+        for _ in range(mock_poet_config_view.key_block_claim_limit):
+            self.assertFalse(
+                state.validator_has_claimed_block_limit(
+                    validator_info=validator_info,
+                    poet_config_view=mock_poet_config_view))
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)
+
+        # Now that validator has claimed limit for key, verify that it triggers
+        # the test
+        self.assertTrue(
+            state.validator_has_claimed_block_limit(
+                validator_info=validator_info,
+                poet_config_view=mock_poet_config_view))
+
+        # Switch keys and verify that validator again doesn't trigger test
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_002'))
+        self.assertFalse(
+            state.validator_has_claimed_block_limit(
+                validator_info=validator_info,
+                poet_config_view=mock_poet_config_view))
+
+    def test_block_claim_delay(self):
+        """Verify that consensus state properly indicates whether or not a
+        validator is trying to claim a block before the block claim delay
+        """
+        mock_validator_registry_view = mock.Mock()
+        mock_validator_registry_view.get_validators.return_value = [
+            'validator_001',
+            'validator_002',
+            'validator_003',
+            'validator_004',
+            'validator_005',
+            'validator_006',
+            'validator_008',
+            'validator_009',
+            'validator_010'
+        ]
+
+        mock_wait_certificate = mock.Mock()
+        mock_wait_certificate.duration = 3.14
+        mock_wait_certificate.local_mean = 5.0
+
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.key_block_claim_limit = 10000
+        mock_poet_config_view.block_claim_delay = 2
+        mock_poet_config_view.population_estimate_sample_size = 50
+
+        mock_block = mock.Mock()
+        mock_block.block_num = 100
+
+        mock_block_store = mock.Mock()
+        mock_block_store.get_block_by_transaction_id.return_value = mock_block
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_002'),
+                transaction_id='transaction_001')
+
+        # Claim a bunch of blocks to get past the bootstrapping necessary to
+        # get to the point where we will actually test the block claim delay
+        state = consensus_state.ConsensusState()
+        for _ in range(100):
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)
+
+        # Test with blocks satisfying the claim delay
+        for block_number in [103, 105, 110, 200, 1000]:
+            self.assertFalse(
+                state.validator_is_claiming_too_early(
+                    validator_info=validator_info,
+                    block_number=block_number,
+                    validator_registry_view=mock_validator_registry_view,
+                    poet_config_view=mock_poet_config_view,
+                    block_store=mock_block_store))
+
+        # Test with blocks not satisfying the claim delay
+        for block_number in [100, 101, 102]:
+            self.assertTrue(
+                state.validator_is_claiming_too_early(
+                    validator_info=validator_info,
+                    block_number=block_number,
+                    validator_registry_view=mock_validator_registry_view,
+                    poet_config_view=mock_poet_config_view,
+                    block_store=mock_block_store))
+
+    @mock.patch('sawtooth_poet.poet_consensus.consensus_state.utils.'
+                'deserialize_wait_certificate')
+    def test_block_claim_frequency(self, mock_deserialize):
+        """Verify that consensus state properly indicates whether or not a
+        validator is trying to claim blocks too frequently
+        """
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.target_wait_time = 5.0
+        mock_poet_config_view.key_block_claim_limit = 10
+        mock_poet_config_view.population_estimate_sample_size = 50
+        mock_poet_config_view.ztest_minimum_win_count = 3
+        mock_poet_config_view.ztest_maximum_win_deviation = 3.075
+
+        mock_wait_certificate = mock.Mock()
+        mock_wait_certificate.duration = 3.14
+        mock_wait_certificate.local_mean = \
+            mock_poet_config_view.target_wait_time * 2
+        mock_wait_certificate.population_estimate.return_value = 2
+
+        mock_deserialize.return_value = mock_wait_certificate
+
+        mock_block = mock.Mock()
+        mock_block.previous_block_id = 'block_000'
+        mock_block.header.signer_pubkey = 'validator_001_key'
+
+        mock_block_cache = mock.MagicMock()
+        mock_block_cache.__getitem__.return_value = mock_block
+
+        validator_info = \
+            ValidatorInfo(
+                id=mock_block.header.signer_pubkey,
+                signup_info=SignUpInfo(
+                    poet_public_key='key_002'))
+
+        # Verify that zTest does not apply while there are fewer than
+        # population estimate sample size blocks committed
+        state = consensus_state.ConsensusState()
+        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+            self.assertFalse(state.validator_is_claiming_too_frequently(
+                validator_info=validator_info,
+                previous_block_id='previous_id',
+                poet_config_view=mock_poet_config_view,
+                population_estimate=2,
+                block_cache=mock_block_cache,
+                poet_enclave_module=None))
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)
+
+        # Per the spec, a z-score is calculated for each block, beyond the
+        # minimum, that the validator has claimed.  The z-score is computed as:
+        #
+        # zScore = (observed - expected) / stddev
+        #
+        # Where:
+        # observed = the number of blocks won by validator
+        # expected = the number statistically expected to be won by validator,
+        #     which in the case is 1/2 of the blocks (as population estimate is
+        #     fixed at 2)
+        # probability = expected / number blocks
+        # stddev = square root(number blocks * probability * (1 - probability)
+
+        # Compute how many more blocks beyond the minimum that the validator
+        # can claim without triggering the frequency test
+        observed = mock_poet_config_view.ztest_minimum_win_count
+        while True:
+            expected = \
+                float(observed) / \
+                mock_wait_certificate.population_estimate.return_value
+            probability = expected / observed
+            stddev = math.sqrt(observed * probability * (1 - probability))
+            z_score = (observed - expected) / stddev
+
+            if z_score > mock_poet_config_view.ztest_maximum_win_deviation:
+                break
+
+            observed += 1
+
+        # Verify that the validator can claim up to just before the number of
+        # blocks calculated above (this would be the blocks before the minimum
+        # win count as well as up to just before it triggered the frequency
+        # test).
+        for _ in range(observed - 1):
+            self.assertFalse(state.validator_is_claiming_too_frequently(
+                validator_info=validator_info,
+                previous_block_id='previous_id',
+                poet_config_view=mock_poet_config_view,
+                population_estimate=2,
+                block_cache=mock_block_cache,
+                poet_enclave_module=None))
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)
+
+        # Verify that now the validator triggers the frequency test
+        self.assertTrue(state.validator_is_claiming_too_frequently(
+            validator_info=validator_info,
+            previous_block_id='previous_id',
+            poet_config_view=mock_poet_config_view,
+            population_estimate=2,
+            block_cache=mock_block_cache,
+            poet_enclave_module=None))
