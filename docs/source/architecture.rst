@@ -1,7 +1,7 @@
 
-**************************
-Sawtooth Lake Architecture
-**************************
+************
+Architecture
+************
 
 .. toctree::
    :maxdepth: 2
