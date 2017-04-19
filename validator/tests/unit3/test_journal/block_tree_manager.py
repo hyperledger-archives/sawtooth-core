@@ -127,7 +127,8 @@ class BlockTreeManager(object):
         self.block_publisher.on_chain_updated(previous)
 
         while self.block_sender.new_block is None:
-            self.block_publisher.on_batch_received(self._generate_batch(''))
+            self.block_publisher.on_batch_received(
+                self._generate_batch_from_payload(''))
             self.block_publisher.on_check_publish_block(True)
 
         block_from_sender = self.block_sender.new_block
@@ -143,7 +144,7 @@ class BlockTreeManager(object):
 
         if invalid_batch:
             block_wrapper.block.batches.extend(
-                [self._generate_batch('BAD')])
+                [self._generate_batch_from_payload('BAD')])
 
         block_wrapper.weight = weight
         block_wrapper.status = status
@@ -190,7 +191,8 @@ class BlockTreeManager(object):
             block_num=block_num)
 
         block_builder = BlockBuilder(header)
-        block_builder.add_batches([self._generate_batch(payload)])
+        block_builder.add_batches(
+            [self._generate_batch_from_payload(payload)])
 
         header_bytes = block_builder.block_header.SerializeToString()
         signature = signing.sign(header_bytes, self.identity_signing_key)
@@ -247,34 +249,71 @@ class BlockTreeManager(object):
         else:  # WTF try something crazy
             return self.block_cache[str(block)]
 
-    def _generate_batch(self, payload):
+    def generate_batch(self, txn_count=2, missing_deps=False):
+        txns = [
+            self.generate_transaction('txn_' + str(i))
+            for i in range(txn_count)
+        ]
+
+        if missing_deps:
+            target_txn = txns[-1]
+            txn_missing_deps = self.generate_transaction(
+                payload='this one has a missing dependency',
+                deps=[target_txn.header_signature])
+            # replace the targeted txn with the missing deps txn
+            txns[-1] = txn_missing_deps
+
+        batch_header = BatchHeader(
+            signer_pubkey=self.public_key,
+            transaction_ids=[txn.header_signature for txn in txns]
+        ).SerializeToString()
+
+        batch = Batch(
+            header=batch_header,
+            header_signature=self._signed_header(batch_header),
+            transactions=txns)
+
+        return batch
+
+    def generate_transaction(self, payload='txn', deps=None):
         payload_encoded = payload.encode('utf-8')
         hasher = hashlib.sha512()
         hasher.update(payload_encoded)
 
-        header = TransactionHeader()
-        header.batcher_pubkey = self.public_key
-        # txn.dependencies not yet
-        header.family_name = 'test'
-        header.family_version = '1'
-        header.nonce = _generate_id(16)
-        header.payload_encoding = "text"
-        header.payload_sha512 = hasher.hexdigest().encode()
-        header.signer_pubkey = self.public_key
+        txn_header = TransactionHeader(
+            dependencies=([] if deps is None else deps),
+            batcher_pubkey=self.public_key,
+            family_name='test',
+            family_version='1',
+            nonce=_generate_id(16),
+            payload_encoding="text",
+            payload_sha512=hasher.hexdigest().encode(),
+            signer_pubkey=self.public_key
+        ).SerializeToString()
 
-        txn = Transaction()
-        header_bytes = header.SerializeToString()
-        txn.header = header_bytes
-        txn.header_signature = signing.sign(header_bytes, self.signing_key)
-        txn.payload = payload_encoded
+        txn = Transaction(
+            header=txn_header,
+            header_signature=self._signed_header(txn_header),
+            payload=payload_encoded)
 
-        batch_header = BatchHeader()
-        batch_header.signer_pubkey = self.public_key
-        batch_header.transaction_ids.extend([txn.header_signature])
+        return txn
 
-        batch = Batch()
-        header_bytes = batch_header.SerializeToString()
-        batch.header = header_bytes
-        batch.header_signature = signing.sign(header_bytes, self.signing_key)
-        batch.transactions.extend([txn])
+    def _generate_batch_from_payload(self, payload):
+        txn = self.generate_transaction(payload)
+
+        batch_header = BatchHeader(
+            signer_pubkey=self.public_key,
+            transaction_ids=[txn.header_signature]
+        ).SerializeToString()
+
+        batch = Batch(
+            header=batch_header,
+            header_signature=self._signed_header(batch_header),
+            transactions=[txn])
+
         return batch
+
+    def _signed_header(self, header):
+        return signing.sign(
+            header,
+            self.signing_key)

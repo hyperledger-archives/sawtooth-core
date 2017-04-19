@@ -128,7 +128,7 @@ class TestBlockPublisher(unittest.TestCase):
         '''
         Test that duplicate batches from on_batch_received are rejected
         '''
-        for i in range(5):
+        for _ in range(5):
             self.receive_batches()
 
         self.publish_block()
@@ -167,7 +167,7 @@ class TestBlockPublisher(unittest.TestCase):
 
         # reset chain head several times,
         # making sure batches remain queued
-        for i in range(3):
+        for _ in range(3):
             self.update_chain_head(None)
             self.update_chain_head(self.init_chain_head)
 
@@ -225,6 +225,42 @@ class TestBlockPublisher(unittest.TestCase):
         self.publish_block()
 
         self.verify_block()
+
+    def test_missing_dependencies(self):
+        '''
+        Test that no block is published with missing dependencies
+        '''
+        self.batches = self.make_batches(
+            missing_deps=True)
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_no_block_published()
+
+    def test_batches_rejected_by_scheduler(self):
+        '''
+        Test that no block is published with
+        batches rejected by the scheduler
+        '''
+        self.publisher = BlockPublisher(
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=False),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            data_dir=None)
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_no_block_published()
 
     # assertions
 
@@ -296,17 +332,16 @@ class TestBlockPublisher(unittest.TestCase):
 
     # batches
 
-    def make_batch(self, payload='batch'):
-        return self.block_tree_manager._generate_batch(payload)
+    def make_batch(self, missing_deps=False):
+        return self.block_tree_manager.generate_batch(
+            missing_deps=missing_deps)
 
-    def make_batches(self, batch_count=None):
+    def make_batches(self, batch_count=None, missing_deps=False):
         if batch_count is None:
             batch_count = self.batch_count
 
-        return [
-            self.make_batch('batch_' + str(i))
-            for i in range(batch_count)
-        ]
+        return [self.make_batch(missing_deps=missing_deps) 
+                for _ in range(batch_count)]
 
 
 class TestBlockValidator(unittest.TestCase):
