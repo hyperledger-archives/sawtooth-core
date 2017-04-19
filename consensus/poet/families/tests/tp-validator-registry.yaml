@@ -26,7 +26,7 @@ services:
     command: tp_validator_registry -vv tcp://validator:40000
     stop_signal: SIGKILL
     environment:
-        PYTHONPATH: "/project/sawtooth-core/consensus/poet/families:\
+        PYTHONPATH: "/project/sawtooth-core/consensus/poet/families/:\
             /project/sawtooth-core/consensus/poet/common:\
             /project/sawtooth-core/sdk/python"
 
@@ -43,6 +43,7 @@ services:
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families:\
             /project/sawtooth-core/consensus/poet/families/tests:\
+            /project/sawtooth-core/consensus/poet/families/sawtooth_validator_registry:\
             /project/sawtooth-core/consensus/poet/common:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/signing:\

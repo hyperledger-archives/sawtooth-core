@@ -21,11 +21,10 @@ from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
 from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
 from sawtooth_config.protobuf.config_pb2 import ConfigProposal
+from sawtooth_config.config_message_factory import ConfigMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
-from sawtooth_integration.message_factories.config_message_factory \
-    import ConfigMessageFactory
 
 
 def _to_hash(value):

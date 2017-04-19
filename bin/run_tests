@@ -15,20 +15,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# MODULE_LIST determines the order in which modules are run.
+# Quicker tests should run before slower ones.
 MODULE_LIST="
     signing
     cli
     rest_api
-    poet_cli
-    poet_common
-    poet_core
-    poet_simulator
+    poet
+    config
     validator
     java_sdk
     javascript_sdk
     python_sdk
     integration
-    config
 "
 
 usage() {
@@ -122,6 +121,7 @@ main() {
                     test_poet_common
                     test_poet_core
                     test_poet_simulator
+                    test_poet_families
                     ;;
                 poet_cli)
                     test_poet_cli
@@ -134,6 +134,12 @@ main() {
                     ;;
                 poet_simulator)
                     test_poet_simulator
+                    ;;
+                poet_families)
+                    test_poet_families
+                    ;;
+                config)
+                    test_config
                     ;;
                 validator)
                     test_validator
@@ -149,9 +155,6 @@ main() {
                     ;;
                 integration)
                     test_integration
-                    ;;
-                config)
-                    test_config
                     ;;
 
                 *)
@@ -174,21 +177,30 @@ test_rest_api() {
     run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests
 }
 
-test_poet_cli(){
+test_poet_cli() {
     run_docker_test ./consensus/poet/cli/tests/unit_cli.yaml \
     -s poet
 }
 
-test_poet_common(){
+test_poet_common() {
     run_docker_test ./consensus/poet/common/tests/unit_common.yaml -s poet
 }
 
-test_poet_core(){
+test_poet_core() {
     run_docker_test ./consensus/poet/core/tests/unit_core.yaml -s poet
 }
 
-test_poet_simulator(){
+test_poet_simulator() {
     run_docker_test ./consensus/poet/simulator/tests/unit_simulator.yaml -s poet
+}
+
+test_poet_families() {
+    run_docker_test ./consensus/poet/families/tests/tp-validator-registry.yaml -s validator
+}
+
+test_config() {
+    run_docker_test ./core_transactions/config/tests/tp-config.yaml -s validator
+    run_docker_test config-smoke -s integration_test
 }
 
 test_validator() {
@@ -197,20 +209,18 @@ test_validator() {
 }
 
 test_java_sdk() {
-    run_docker_test tp-intkey-java -s validator
+    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-java.yaml -s validator
     run_docker_test intkey-java-smoke -s integration_test
 }
 
 test_javascript_sdk() {
-    run_docker_test tp-intkey-javascript -s validator
+    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-javascript.yaml -s validator
     run_docker_test intkey-javascript-smoke -s integration_test
 }
 
 test_python_sdk() {
-    run_docker_test tp-config -s validator
-    run_docker_test tp-validator-registry -s validator
-    run_docker_test tp-intkey-python -s validator
-    run_docker_test tp-xo-python -s validator
+    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-python.yaml -s validator
+    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-python.yaml -s validator
 
     run_docker_test intkey-python-smoke -s integration_test
     run_docker_test xo-smoke -s integration_test
@@ -219,11 +229,6 @@ test_python_sdk() {
 
 test_integration() {
     run_docker_test poet-smoke -s integration_test
-}
-
-test_config() {
-    run_docker_test tp-config -s validator
-    run_docker_test config-smoke -s integration_test
 }
 
 main
