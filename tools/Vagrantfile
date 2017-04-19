@@ -72,7 +72,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   conf.each_pair {|key,value| puts "#{key} = #{value}"}
 
   if ARGV.include? "up"
-    if Vagrant.has_plugin?("vagrant-proxyconf")
+    if Vagrant.has_plugin?("vagrant-proxyconf") and (ENV["http_proxy"] or ENV["https_proxy"])
         puts "Configuring proxyconf plugin!"
         if ENV["http_proxy"]
             puts "http_proxy: " + ENV["http_proxy"]
@@ -86,7 +86,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             puts "no_proxy: " + ENV["no_proxy"]
             config.proxy.no_proxy = ENV["no_proxy"]
         end
-    else
+    elsif ENV["http_proxy"] or ENV["https_proxy"]
         puts "Proxyconf plugin not found"
         puts "Install: vagrant plugin install vagrant-proxyconf"
     end
