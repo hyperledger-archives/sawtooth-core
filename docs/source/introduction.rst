@@ -2,27 +2,31 @@
 Introduction
 ************
 
-.. caution::
 
-    This project includes a consensus algorithm, PoET (Proof of Elapsed Time),
-    which is intended to run in a Trusted Execution Environment (TEE), such as
-    `Intel® Software Guard Extensions (SGX)
-    <https://software.intel.com/en-us/isa-extensions/intel-sgx>`_.
-    This release includes software which runs outside of SGX and simulates the
-    behavior of the PoET algorithm. It does **not** provide security in this
-    mode. This project is intended for experimental usage and we recommend
-    against using it for security sensitive applications.
+Sawtooth Lake is an enterprise distributed ledger (aka blockchain) project.
+Our design philosophy targets keeping distributed ledgers *distributed* and
+making smart contracts *safe* - particularly for enterprise use.
 
-This project, called "Sawtooth Lake" is a highly modular platform for
-building, deploying and running distributed ledgers. Distributed ledgers
-provide a digital record (such as asset ownership) that is maintained
-without a central authority or implementation. Instead of a single,
-centralized database, participants in the ledger contribute resources
-to shared computation that ensures universal agreement on the state of
-the ledger. While Bitcoin is the most popular distributed ledger, the
-technology has been proposed for many different applications ranging
-from international remittance, insurance claim processing, supply chain
-management and the Internet of Things (IoT).
+In fitting with this enterprise focus, Sawtooth Lake is also highly modular.
+This enables enterprises and consortia to make policy decisions that they are
+best equipped to make.
+
+We are an open source project under the Hyperledger umbrella. We welcome
+working with individuals and companies interested in the advancement of
+distributed ledger technology. Please see the community section for ways to
+interact with and become a part of the Sawtooth Lake community.
+
+
+Sawtooth's Ledger
+=================
+Distributed ledgers are shared databases with the unique feature that they do
+not rely on a central authority or intermediary. Instead of a single,
+centralized database, each participant operates a copy of the database,
+verifies transactions, and engages in a protocol that ensures universal
+agreement on the state of the ledger. While Bitcoin is the most well-known
+distributed ledger, the technology has been proposed for many different
+applications ranging from international remittance, insurance claim
+processing, supply chain management and the Internet of Things (IoT).
 
 Distributed ledgers generally consist of three basic components:
 
@@ -83,13 +87,16 @@ developed consensus protocols that extend traditional BFT for open
 participation.
 
 Sawtooth Lake abstracts the core concepts of consensus and isolates consensus
-from transaction semantics. Sawtooth Lake currently provides a single
-consensus protocol called PoET, for “Proof of Elapsed Time." PoET is a lottery
-protocol that builds on trusted execution environments (TEEs) provided by
-Intel's SGX to address the needs of large populations of participants. The
-second, Quorum Voting, is an adaptation of the Ripple and Stellar consensus
-protocols and serves to address the needs of applications that require
-immediate transaction finality.
+from transaction semantics. The interface supports plugging in various
+consensus implementations. Sawtooth Lake provides two such implementations:
+dev_mode and PoET.
+
+Dev_mode is a simplified random leader algorithm that is useful
+for developers and test networks that require only crash fault tolerance.
+
+PoET, short for “Proof of Elapsed Time" is a Nakamoto-style consensus algorithm.
+It is designed to be a production-grade protocol capable of supporting large
+network populations.
 
 
 Proof of Elapsed Time (PoET)
@@ -107,21 +114,23 @@ a good lottery function has several characteristics:
     * Verification: It should be relatively simple for all participants
       to verify that the leader was legitimately selected.
 
-Sawtooth Lake provides a Nakamoto consensus algorithm called PoET
-that uses a trusted execution environment (TEE) such as
-`Intel® Software Guard Extensions (SGX)
-<https://software.intel.com/en-us/isa-extensions/intel-sgx>`_
-to ensure the safety and randomness of the leader election process
-without requiring the costly investment of power and specialized
-hardware inherent in most “proof” algorithms. Our approach
-is based on a guaranteed wait time provided through the TEE.
+PoET is designed to achieve these goals using new secure CPU instructions
+which are becoming widely available in consumer and enterprise processors.
+PoET uses these features to ensure the safety and randomness of the leader
+election process without requiring the costly investment of power and specialized
+hardware inherent in most “proof” algorithms.
 
-Basically, every validator requests a wait time from a trusted function.
+We include an implementation which simulates the secure instructions.
+This should make it easier for the community to work with the software but
+also forgoes byzantine fault tolerance.
+
+PoET essentially works as follows...
+Every validator requests a wait time from an enclave(a trusted function).
 The validator with the shortest wait time for a particular transaction
 block is elected the leader. One function, say “CreateTimer” creates
 a timer for a transaction block that is guaranteed to have been created
-by the TEE. Another function, say “CheckTimer” verifies that the timer
-was created by the TEE and, if it has expired, creates an attestation
+by the enclave. Another function, say “CheckTimer” verifies that the timer
+was created by the enclave and, if it has expired, creates an attestation
 that can be used to verify that validator did, in fact, wait the allotted
 time before claiming the leadership role.
 
@@ -132,23 +141,10 @@ provided by other lottery algorithms. The probability of election
 is proportional to the resources contributed (in this case, resources
 are general purpose processors with a trusted execution environment).
 An attestation of execution provides information for verifying that the
-certificate was created within the TEE (and that the validator waited
+certificate was created within the enclave (and that the validator waited
 the allotted time). Further, the low cost of participation increases the
 likelihood that the population of validators will be large, increasing
 the robustness of the consensus algorithm.
-
-Our “proof of processor” algorithm scales to thousands of participants
-and will run efficiently on any Intel processor that supports SGX.
-
-**As noted in the caution above, the current implementation simulates
-the behavior of the PoET algorithm running in a trusted execution environment
-and is not secure.** There are some benefits to using a simulator:
-
-    * It does not require you to have a processor which supports SGX
-      in order to experiment with Sawtooth Lake.
-
-    * It allows running many validators (nodes) on a single system. An SGX
-      implementation of PoET will allow only a single node per CPU socket.
 
 
 Getting Sawtooth Lake
@@ -168,12 +164,9 @@ sawtooth-core
     Contains fundamental classes used throughout the Sawtooth Lake project, as well as:
 
     * The implementation of the validator process which runs on each node
-    * The implementation of a transaction family for buying, selling and
-      trading digital assets, and a client program for interacting with a node
-      to execute market transactions
-    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
+    * SDKs for writing transaction processing or validation logic in a variety
+      of languages
     * Tools including a Vagrant environment for easily launching a network of
       validators
     * Dockerfiles to support development or launching a network of validators
     * Source files for this documentation
-
