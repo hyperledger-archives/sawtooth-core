@@ -36,10 +36,24 @@
       (html
         [:div.footer
          [:div.container
-          [:p.text-muted
-           "© Intel 2016"]
+          [:div.col-xs-2
+           [:p.text-muted
+            "© Intel 2016"]]
+          [:div.col-xs-2
+           [:p.text-muted
+            [:a {:href "http://www.intel.com/content/www/us/en/privacy/intel-privacy-notice.html"
+                 :target "_blank"}
+             "Privacy Notice"]]]
+
+          [:div.col-xs-2
+           [:p.text-muted
+            [:a {:href "https://www-ssl.intel.com/content/www/us/en/legal/terms-of-use.html "
+                 :target "_blank"}
+             "Terms of Use"]]]
           (when-let [block (:block data)]
-            [:a.text-muted.pull-right
-             {:href (routes/transaction-history)
-              :class (if updated! "block-updated")}
-             (str "Block: " (:blockid block) " (" (:blocknum block) ")") ])]]))))
+            [:div.col-xs-offset-4.col-xs-2
+             [:p.text-muted
+              [:a
+               {:href (routes/transaction-history)
+                :class (if updated! "block-updated")}
+               (str "Block: " (:blockid block) " (" (:blocknum block) ")")]]])]]))))
