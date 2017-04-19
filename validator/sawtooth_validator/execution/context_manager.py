@@ -15,7 +15,7 @@
 
 import hashlib
 import logging
-import time
+import uuid
 
 from threading import Condition
 from threading import Lock
@@ -69,10 +69,7 @@ class StateContext(object):
         self._state = {}
         self.base_context_ids = base_context_ids
 
-        self._id = hashlib.sha256((str(state_hash) + ":" +
-                                  str(read_list + write_list) + ":" +
-                                  time.time().hex()).encode()
-                                  ).hexdigest()
+        self._id = hashlib.sha256(uuid.uuid4().hex.encode()).hexdigest()
 
     @property
     def session_id(self):
@@ -251,61 +248,6 @@ class ContextManager(object):
             self._address_queue.put_nowait(
                 (context.session_id, state_hash, list(reads)))
         return context.session_id
-
-    def commit_context(self, context_id_list, virtual):
-        """ Only used in a test ---
-        Commits the state from the contexts referred to in context_id_list
-        to the merkle tree.
-
-        Args:
-            context_id_list (list of str): The context ids with state to
-                commit to the merkle tree.
-            virtual (bool): True if the data in contexts shouldn't be
-                written to the merkle tree, but just return a merkle root.
-
-        Returns:
-            state_hash (str): the new state hash after the context_id_list
-                              has been committed
-
-        """
-        if any([c_id not in self._contexts for c_id in context_id_list]):
-            raise CommitException("Context Id not in contexts")
-        first_id = context_id_list[0]
-
-        if not all([self._contexts[first_id].merkle_root ==
-                    self._contexts[c_id].merkle_root
-                    for c_id in context_id_list]):
-            raise CommitException(
-                "MerkleRoots not all equal, yet asking to merge")
-
-        merkle_root = self._contexts[first_id].merkle_root
-        tree = MerkleDatabase(self._database, merkle_root=merkle_root)
-        updates = dict()
-        for c_id in context_id_list:
-            context = self._contexts[c_id]
-            for add in context.get_state().keys():
-                if add in updates:
-                    raise CommitException(
-                        "Duplicate address {} in context {}".format(
-                            add, c_id))
-
-            effective_updates = {}
-            for k, val_fut in context.get_state().items():
-                value = val_fut.result()
-                if value is not None:
-                    effective_updates[k] = value
-
-            updates.update(effective_updates)
-
-        state_hash = tree.update(updates, virtual=False)
-        # clean up all contexts that are involved in being squashed.
-        base_c_ids = []
-        for c_id in context_id_list:
-            base_c_ids += self._contexts[c_id].base_context_ids
-        all_context_ids = base_c_ids + context_id_list
-        self.delete_context(all_context_ids)
-
-        return state_hash
 
     def delete_context(self, context_id_list):
         """Delete contexts from the ContextManager.
