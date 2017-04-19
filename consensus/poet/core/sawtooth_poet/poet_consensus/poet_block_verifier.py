@@ -19,6 +19,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
 
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
@@ -155,29 +156,22 @@ class PoetBlockVerifier(BlockVerifierInterface):
             certificates=certificates,
             poet_public_key=validator_info.signup_info.poet_public_key)
 
-        # Get the consensus state for the block that is being built upon and
-        # then fetch the validator state for this validator
+        # Get the consensus state and PoET configuration view for the block
+        # that is being built upon
         consensus_state = \
-            utils.get_consensus_state_for_block_id(
+            ConsensusState.consensus_state_for_block_id(
                 block_id=block_wrapper.previous_block_id,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
-        validator_state = \
-            utils.get_current_validator_state(
-                validator_info=validator_info,
-                consensus_state=consensus_state,
-                block_cache=self._block_cache)
         poet_config_view = PoetConfigView(state_view=state_view)
 
         # Reject the block if the validator has already claimed the key bock
         # limit for its current PoET key pair.
-        key_block_claim_limit = poet_config_view.key_block_claim_limit
-        if utils.validator_has_claimed_maximum_number_of_blocks(
+        if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                validator_state=validator_state,
-                key_block_claim_limit=key_block_claim_limit):
+                poet_config_view=poet_config_view):
             LOGGER.error(
                 'Block %s rejected: Validator has reached maximum number of '
                 'blocks with key pair.',
@@ -188,9 +182,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
         # of blocks between when the block containing its validator registry
         # transaction was committed to the chain and trying to claim this
         # block
-        if utils.validator_has_claimed_too_early(
+        if consensus_state.validator_is_claiming_too_early(
                 validator_info=validator_info,
-                consensus_state=consensus_state,
                 block_number=block_wrapper.block_num,
                 validator_registry_view=validator_registry_view,
                 poet_config_view=poet_config_view,
@@ -203,10 +196,9 @@ class PoetBlockVerifier(BlockVerifierInterface):
 
         # Reject the block if the validator is claiming blocks at a rate that
         # is more frequent than is statistically allowed (i.e., zTest)
-        if utils.validator_has_claimed_too_frequently(
+        if consensus_state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id=block_wrapper.previous_block_id,
-                consensus_state=consensus_state,
                 poet_config_view=poet_config_view,
                 population_estimate=wait_certificate.population_estimate,
                 block_cache=self._block_cache,

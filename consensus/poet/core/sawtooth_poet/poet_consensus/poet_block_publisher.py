@@ -27,6 +27,7 @@ from sawtooth_validator.journal.consensus.consensus \
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
@@ -298,28 +299,21 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 poet_key_state.sealed_signup_data[-8:])
 
         consensus_state = \
-            utils.get_consensus_state_for_block_id(
+            ConsensusState.consensus_state_for_block_id(
                 block_id=block_header.previous_block_id,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
-        validator_state = \
-            utils.get_current_validator_state(
-                validator_info=validator_info,
-                consensus_state=consensus_state,
-                block_cache=self._block_cache)
         poet_config_view = PoetConfigView(state_view)
 
         # Using the consensus state for the block upon which we want to
         # build, check to see how many blocks we have claimed on this chain
         # with this PoET key.  If we have hit the key block claim limit, then
         # we need to check if the key has been refreshed.
-        key_block_claim_limit = poet_config_view.key_block_claim_limit
-        if utils.validator_has_claimed_maximum_number_of_blocks(
+        if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                validator_state=validator_state,
-                key_block_claim_limit=key_block_claim_limit):
+                poet_config_view=poet_config_view):
             # Because we have hit the limit, check to see if we have already
             # submitted a validator registry transaction with new signup
             # information, and therefore a new PoET public key.  If not, then
@@ -333,8 +327,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     PoetBlockPublisher._poet_public_key]
             if not poet_key_state.has_been_refreshed:
                 LOGGER.info(
-                    'Reached block claim limit (%d) for key: %s...%s',
-                    key_block_claim_limit,
+                    'Reached block claim limit for key: %s...%s',
                     PoetBlockPublisher._poet_public_key[:8],
                     PoetBlockPublisher._poet_public_key[-8:])
 
@@ -358,9 +351,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # Verify that we are abiding by the block claim delay (i.e., waiting a
         # certain number of blocks since our validator registry was added/
         # updated).
-        if utils.validator_has_claimed_too_early(
+        if consensus_state.validator_is_claiming_too_early(
                 validator_info=validator_info,
-                consensus_state=consensus_state,
                 block_number=block_header.block_num,
                 validator_registry_view=validator_registry_view,
                 poet_config_view=poet_config_view,
@@ -398,10 +390,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # if it would result in us winning more frequently than statistically
         # expected.  If so, then refuse to initialize the block because other
         # validators will not accept anyway.
-        if utils.validator_has_claimed_too_frequently(
+        if consensus_state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id=block_header.previous_block_id,
-                consensus_state=consensus_state,
                 poet_config_view=poet_config_view,
                 population_estimate=wait_timer.population_estimate,
                 block_cache=self._block_cache,
