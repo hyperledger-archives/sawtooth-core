@@ -25,7 +25,6 @@ from sawtooth_poet.poet_consensus.consensus_state_store \
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus import utils
-from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
 
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
@@ -124,17 +123,6 @@ class PoetBlockVerifier(BlockVerifierInterface):
             validator_info.signup_info.poet_public_key[:8],
             validator_info.signup_info.poet_public_key[-8:])
 
-        # Create a list of certificates leading up to this block.
-        # This seems to have a little too much knowledge of the
-        # WaitTimer implementation, but there is no use getting more
-        # than WaitTimer.certificate_sample_length wait certificates.
-        certificates = \
-            utils.build_certificate_list(
-                block_header=block_wrapper.header,
-                block_cache=self._block_cache,
-                poet_enclave_module=poet_enclave_module,
-                maximum_number=WaitTimer.certificate_sample_length)
-
         # For the candidate block, reconstitute the wait certificate
         # and verify that it is valid
         wait_certificate = \
@@ -151,11 +139,6 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 validator_info.id[-8:])
             return False
 
-        wait_certificate.check_valid(
-            poet_enclave_module=poet_enclave_module,
-            certificates=certificates,
-            poet_public_key=validator_info.signup_info.poet_public_key)
-
         # Get the consensus state and PoET configuration view for the block
         # that is being built upon
         consensus_state = \
@@ -166,6 +149,25 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
         poet_config_view = PoetConfigView(state_view=state_view)
+
+        previous_certificate_id = \
+            utils.get_previous_certificate_id(
+                block_header=block_wrapper.header,
+                block_cache=self._block_cache,
+                poet_enclave_module=poet_enclave_module)
+        try:
+            wait_certificate.check_valid(
+                poet_enclave_module=poet_enclave_module,
+                previous_certificate_id=previous_certificate_id,
+                poet_public_key=validator_info.signup_info.poet_public_key,
+                consensus_state=consensus_state,
+                poet_config_view=poet_config_view)
+        except ValueError as error:
+            LOGGER.error(
+                'Block %s rejected: Wait certificate check failed - %s',
+                block_wrapper.identifier[:8],
+                error)
+            return False
 
         # Reject the block if the validator has already claimed the key bock
         # limit for its current PoET key pair.

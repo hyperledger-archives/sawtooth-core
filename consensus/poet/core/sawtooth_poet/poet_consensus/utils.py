@@ -67,6 +67,35 @@ def deserialize_wait_certificate(block, poet_enclave_module):
     return wait_certificate
 
 
+def get_previous_certificate_id(block_header,
+                                block_cache,
+                                poet_enclave_module):
+    """Returns the wait certificate ID for the block immediately preceding the
+    block represented by block_header.
+
+    Args:
+        block_header (BlockHeader): The header for the block
+        block_cache (BlockCache): The cache of blocks that are predecessors
+            to the block represented by block_header
+        poet_enclave_module (module): The PoET enclave module
+
+    Returns:
+        str: The ID of the wait certificate for the block immediately
+        preceding the block represented by block_header
+    """
+    wait_certificate = None
+
+    if not block_id_is_genesis(block_header.previous_block_id):
+        wait_certificate = \
+            deserialize_wait_certificate(
+                block=block_cache[block_header.previous_block_id],
+                poet_enclave_module=poet_enclave_module)
+
+    return \
+        NULL_BLOCK_IDENTIFIER if wait_certificate is None \
+        else wait_certificate.identifier
+
+
 def build_certificate_list(block_header,
                            block_cache,
                            poet_enclave_module,

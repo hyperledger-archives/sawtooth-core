@@ -363,24 +363,20 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 block_header.previous_block_id[:8])
             return False
 
-        # Create a list of certificates for the wait timer.  This seems to
-        # have a little too much knowledge of the WaitTimer implementation,
-        # but there is no use getting more than
-        # WaitTimer.certificate_sample_length wait certificates.
-        certificates = \
-            utils.build_certificate_list(
-                block_header=block_header,
-                block_cache=self._block_cache,
-                poet_enclave_module=poet_enclave_module,
-                maximum_number=WaitTimer.certificate_sample_length)
-
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
+        previous_certificate_id = \
+            utils.get_previous_certificate_id(
+                block_header=block_header,
+                block_cache=self._block_cache,
+                poet_enclave_module=poet_enclave_module)
         wait_timer = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
-                certificates=list(certificates))
+                previous_certificate_id=previous_certificate_id,
+                consensus_state=consensus_state,
+                poet_config_view=poet_config_view)
 
         # NOTE - we do the zTest after we create the wait timer because we
         # need its population estimate to see if this block would be accepted

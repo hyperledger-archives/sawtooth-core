@@ -163,33 +163,39 @@ class WaitCertificate(object):
 
     def check_valid(self,
                     poet_enclave_module,
-                    certificates,
-                    poet_public_key):
+                    previous_certificate_id,
+                    poet_public_key,
+                    consensus_state,
+                    poet_config_view):
         """Determines whether the wait certificate is valid.
 
         Args:
             poet_enclave_module (module): The module that implements the
                 underlying PoET enclave.
-            certificates (list): A list of historical certs.
+            previous_certificate_id (str): The ID of the wait certificate for
+                the block attempting to build upon
             poet_public_key (str): The PoET public key that corresponds to
                 the private key used to sign the certificate.  This is
                 obtained from the signup information for the validator
                 that is the originator of the block for which the wait
                 certificate is associated.
-
+            consensus_state (ConsensusState): The current PoET consensus state
+            poet_config_view (PoetConfigView): The current PoET config view
         Returns:
             True if the wait certificate is valid, False otherwise.
         """
         enclave_certificate = \
             self._enclave_wait_certificate(poet_enclave_module)
-        expected_mean = WaitTimer.compute_local_mean(certificates)
+        expected_mean = \
+            consensus_state.compute_local_mean(
+                poet_config_view=poet_config_view)
 
-        if enclave_certificate.duration < WaitTimer.minimum_wait_time:
+        if enclave_certificate.duration < poet_config_view.minimum_wait_time:
             raise \
                 ValueError(
                     'Wait time less than minimum: {0} < {1}'.format(
                         enclave_certificate.duration,
-                        WaitTimer.minimum_wait_time))
+                        poet_config_view.minimum_wait_time))
 
         if not _is_close(
                 enclave_certificate.local_mean,
@@ -201,15 +207,14 @@ class WaitCertificate(object):
                         enclave_certificate.local_mean,
                         expected_mean))
 
-        if len(certificates) != 0 and \
-            enclave_certificate.previous_certificate_id != \
-                certificates[-1].identifier:
+        if enclave_certificate.previous_certificate_id != \
+                previous_certificate_id:
             raise \
                 ValueError(
                     'Previous certificate ID does not match: {0} != '
                     '{1}'.format(
                         enclave_certificate.previous_certificate_id,
-                        certificates[-1].identifier))
+                        previous_certificate_id))
 
         try:
             poet_enclave_module.verify_wait_certificate(

@@ -15,8 +15,6 @@
 
 import logging
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -90,7 +88,9 @@ class WaitTimer(object):
     def create_wait_timer(cls,
                           poet_enclave_module,
                           validator_address,
-                          certificates):
+                          previous_certificate_id,
+                          consensus_state,
+                          poet_config_view):
         """Creates a wait timer in the enclave and then constructs
         a WaitTimer object.
 
@@ -99,16 +99,14 @@ class WaitTimer(object):
                 underlying PoET enclave.
             validator_address (str): A string representing the address of the
                 validator creating the wait timer.
-            certificates (list or tuple): A historical list of certificates.
+            previous_certificate_id (str): The ID of the wait certificate for
+                the block attempting to build upon
+            consensus_state (ConsensusState): The current PoET consensus state
+            poet_config_view (PoetConfigView): The current PoET config view
 
         Returns:
             journal.consensus.poet.wait_timer.WaitTimer: A new wait timer.
         """
-
-        local_mean = cls.compute_local_mean(certificates)
-        previous_certificate_id = \
-            certificates[-1].identifier if certificates else \
-            NULL_BLOCK_IDENTIFIER
 
         # Create an enclave timer object and then use it to create a
         # WaitTimer object
@@ -116,8 +114,9 @@ class WaitTimer(object):
             poet_enclave_module.create_wait_timer(
                 validator_address,
                 previous_certificate_id,
-                local_mean,
-                cls.minimum_wait_time)
+                consensus_state.compute_local_mean(
+                    poet_config_view=poet_config_view),
+                poet_config_view.minimum_wait_time)
 
         return cls(enclave_timer)
 
