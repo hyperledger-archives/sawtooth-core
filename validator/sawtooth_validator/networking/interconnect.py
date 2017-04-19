@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import asyncio
+from concurrent.futures import CancelledError
 from functools import partial
 import hashlib
 import logging
@@ -207,46 +208,55 @@ class _SendReceive(object):
         """
         zmq_identity = None
         while True:
-            if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                zmq_identity, msg_bytes = \
-                    yield from self._socket.recv_multipart()
-                self._received_from_identity(zmq_identity)
-            else:
-                msg_bytes = yield from self._socket.recv()
-                self._last_message_time = time.time()
-
-            message = validator_pb2.Message()
-            message.ParseFromString(msg_bytes)
-            LOGGER.debug("%s receiving %s message: %s bytes",
-                         self._connection,
-                         get_enum_name(message.message_type),
-                         sys.getsizeof(msg_bytes))
-
             try:
-                self._futures.set_result(
-                    message.correlation_id,
-                    future.FutureResult(message_type=message.message_type,
-                                        content=message.content))
-            except future.FutureCollectionKeyError:
-                if zmq_identity is not None:
-                    connection_id = \
-                        self._identity_to_connection_id(zmq_identity)
+                if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
+                    zmq_identity, msg_bytes = \
+                        yield from self._socket.recv_multipart()
+                    self._received_from_identity(zmq_identity)
                 else:
-                    connection_id = \
-                        self._identity_to_connection_id(
-                            self._connection.encode())
-                self._dispatcher.dispatch(self._connection,
-                                          message,
-                                          connection_id)
-            else:
-                my_future = self._futures.get(message.correlation_id)
+                    msg_bytes = yield from self._socket.recv()
+                    self._last_message_time = time.time()
 
-                LOGGER.debug("message round "
-                             "trip: %s %s",
+                message = validator_pb2.Message()
+                message.ParseFromString(msg_bytes)
+                LOGGER.debug("%s receiving %s message: %s bytes",
+                             self._connection,
                              get_enum_name(message.message_type),
-                             my_future.get_duration())
+                             sys.getsizeof(msg_bytes))
 
-                self._futures.remove(message.correlation_id)
+                try:
+                    self._futures.set_result(
+                        message.correlation_id,
+                        future.FutureResult(message_type=message.message_type,
+                                            content=message.content))
+                except future.FutureCollectionKeyError:
+                    if zmq_identity is not None:
+                        connection_id = \
+                            self._identity_to_connection_id(zmq_identity)
+                    else:
+                        connection_id = \
+                            self._identity_to_connection_id(
+                                self._connection.encode())
+                    self._dispatcher.dispatch(self._connection,
+                                              message,
+                                              connection_id)
+                else:
+                    my_future = self._futures.get(message.correlation_id)
+
+                    LOGGER.debug("message round "
+                                 "trip: %s %s",
+                                 get_enum_name(message.message_type),
+                                 my_future.get_duration())
+
+                    self._futures.remove(message.correlation_id)
+            except CancelledError:
+                # The concurrent.futures.CancelledError is caught by asyncio
+                # when the Task associated with the coroutine is cancelled.
+                # The raise is required to stop this component.
+                raise
+            except Exception as e:  # pylint: disable=broad-except
+                LOGGER.exception("Received a message on address %s that "
+                                 "caused an error: %s", self._address, e)
 
     @asyncio.coroutine
     def _send_message(self, identity, msg):
