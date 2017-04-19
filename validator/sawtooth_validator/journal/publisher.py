@@ -231,7 +231,8 @@ class _CandidateBlock(object):
                 else:
                     builder.add_batch(batch)
                     committed_txn_cache.add_batch(batch)
-                state_hash = result.state_hash
+                if result.state_hash is not None:
+                    state_hash = result.state_hash
             else:
                 LOGGER.debug("Batch %s invalid, not added to block.",
                              batch.header_signature)

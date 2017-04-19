@@ -313,7 +313,7 @@ class ContextManager(object):
         return True
 
     def get_squash_handler(self):
-        def _squash(state_root, context_ids):
+        def _squash(state_root, context_ids, persist):
             tree = MerkleDatabase(self._database, state_root)
             updates = dict()
             for c_id in context_ids:
@@ -331,15 +331,15 @@ class ContextManager(object):
                         effective_updates[k] = value
 
                 updates.update(effective_updates)
-
-            state_hash = tree.update(updates, virtual=False)
-            # clean up all contexts that are involved in being squashed.
-            base_c_ids = []
-            for c_id in context_ids:
-                base_c_ids += self._contexts[c_id].base_context_ids
-            all_context_ids = base_c_ids + context_ids
-            self.delete_context(all_context_ids)
-
+            virtual = not persist
+            state_hash = tree.update(updates, virtual=virtual)
+            if persist:
+                # clean up all contexts that are involved in being squashed.
+                base_c_ids = []
+                for c_id in context_ids:
+                    base_c_ids += self._contexts[c_id].base_context_ids
+                all_context_ids = base_c_ids + context_ids
+                self.delete_context(all_context_ids)
             return state_hash
         return _squash
 
