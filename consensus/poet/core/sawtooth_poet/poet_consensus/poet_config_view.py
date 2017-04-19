@@ -51,6 +51,16 @@ class PoetConfigView(object):
 
         self._config_view = ConfigView(state_view)
 
+        self._block_claim_delay = None
+        self._enclave_module_name = None
+        self._initial_wait_time = None
+        self._key_block_claim_limit = None
+        self._minimum_wait_time = None
+        self._population_estimate_sample_size = None
+        self._target_wait_time = None
+        self._ztest_maximum_win_deviation = None
+        self._ztest_minimum_win_count = None
+
     def _get_config_setting(self,
                             name,
                             value_type,
@@ -103,12 +113,15 @@ class PoetConfigView(object):
         signup information is committed to the validator registry before
         it can claim a block.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.block_claim_delay',
-                value_type=int,
-                default_value=PoetConfigView._BLOCK_CLAIM_DELAY_,
-                validate_function=lambda value: value >= 0)
+        if self._block_claim_delay is None:
+            self._block_claim_delay = \
+                self._get_config_setting(
+                    name='sawtooth.poet.block_claim_delay',
+                    value_type=int,
+                    default_value=PoetConfigView._BLOCK_CLAIM_DELAY_,
+                    validate_function=lambda value: value >= 0)
+
+        return self._block_claim_delay
 
     @property
     def enclave_module_name(self):
@@ -118,12 +131,15 @@ class PoetConfigView(object):
         The enclave module name is the name of the Python module containing the
         implementation of the underlying PoET enclave.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.enclave_module_name',
-                value_type=str,
-                default_value=PoetConfigView._ENCLAVE_MODULE_NAME_,
-                validate_function=lambda value: len(value) > 0)
+        if self._enclave_module_name is None:
+            self._enclave_module_name = \
+                self._get_config_setting(
+                    name='sawtooth.poet.enclave_module_name',
+                    value_type=str,
+                    default_value=PoetConfigView._ENCLAVE_MODULE_NAME_,
+                    validate_function=lambda value: len(value) > 0)
+
+        return self._enclave_module_name
 
     @property
     def initial_wait_time(self):
@@ -134,13 +150,16 @@ class PoetConfigView(object):
         chain to compute the local mean for wait timers until there are at
         least population_estimate_sample_size PoET blocks in the blockchain.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.initial_wait_time',
-                value_type=float,
-                default_value=PoetConfigView._INITIAL_WAIT_TIME_,
-                validate_function=lambda value:
-                    math.isfinite(value) and value >= 0)
+        if self._initial_wait_time is None:
+            self._initial_wait_time = \
+                self._get_config_setting(
+                    name='sawtooth.poet.initial_wait_time',
+                    value_type=float,
+                    default_value=PoetConfigView._INITIAL_WAIT_TIME_,
+                    validate_function=lambda value:
+                        math.isfinite(value) and value >= 0)
+
+        return self._initial_wait_time
 
     @property
     def key_block_claim_limit(self):
@@ -151,12 +170,15 @@ class PoetConfigView(object):
         validator may claim with a PoET key pair before it needs to refresh
         its signup information.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.key_block_claim_limit',
-                value_type=int,
-                default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
-                validate_function=lambda value: value > 0)
+        if self._key_block_claim_limit is None:
+            self._key_block_claim_limit = \
+                self._get_config_setting(
+                    name='sawtooth.poet.key_block_claim_limit',
+                    value_type=int,
+                    default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
+                    validate_function=lambda value: value > 0)
+
+        return self._key_block_claim_limit
 
     @property
     def minimum_wait_time(self):
@@ -166,13 +188,16 @@ class PoetConfigView(object):
         The minimum wait time is used as a lower bound for the minimum amount
         of time a validator must want before attempting to claim a block.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.minimum_wait_time',
-                value_type=float,
-                default_value=PoetConfigView._MINIMUM_WAIT_TIME_,
-                validate_function=lambda value:
-                    math.isfinite(value) and value > 0)
+        if self._minimum_wait_time is None:
+            self._minimum_wait_time = \
+                self._get_config_setting(
+                    name='sawtooth.poet.minimum_wait_time',
+                    value_type=float,
+                    default_value=PoetConfigView._MINIMUM_WAIT_TIME_,
+                    validate_function=lambda value:
+                        math.isfinite(value) and value > 0)
+
+        return self._minimum_wait_time
 
     @property
     def population_estimate_sample_size(self):
@@ -190,12 +215,16 @@ class PoetConfigView(object):
         blockchain, the local mean computed for a wait timer is based upon the
         ratio of the target and initial wait times.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.population_estimate_sample_size',
-                value_type=int,
-                default_value=PoetConfigView._POPULATION_ESTIMATE_SAMPLE_SIZE_,
-                validate_function=lambda value: value > 0)
+        if self._population_estimate_sample_size is None:
+            self._population_estimate_sample_size = \
+                self._get_config_setting(
+                    name='sawtooth.poet.population_estimate_sample_size',
+                    value_type=int,
+                    default_value=PoetConfigView.
+                    _POPULATION_ESTIMATE_SAMPLE_SIZE_,
+                    validate_function=lambda value: value > 0)
+
+        return self._population_estimate_sample_size
 
     @property
     def target_wait_time(self):
@@ -206,13 +235,16 @@ class PoetConfigView(object):
         validators in the network, a validator must wait before attempting to
         claim a block.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.target_wait_time',
-                value_type=float,
-                default_value=PoetConfigView._TARGET_WAIT_TIME_,
-                validate_function=lambda value:
-                    math.isfinite(value) and value > 0)
+        if self._target_wait_time is None:
+            self._target_wait_time = \
+                self._get_config_setting(
+                    name='sawtooth.poet.target_wait_time',
+                    value_type=float,
+                    default_value=PoetConfigView._TARGET_WAIT_TIME_,
+                    validate_function=lambda value:
+                        math.isfinite(value) and value > 0)
+
+        return self._target_wait_time
 
     @property
     def ztest_maximum_win_deviation(self):
@@ -231,13 +263,16 @@ class PoetConfigView(object):
         2.321 ==> 99%
         1.645 ==> 95%
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.ztest_maximum_win_deviation',
-                value_type=float,
-                default_value=PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_,
-                validate_function=lambda value:
-                    math.isfinite(value) and value > 0)
+        if self._ztest_maximum_win_deviation is None:
+            self._ztest_maximum_win_deviation = \
+                self._get_config_setting(
+                    name='sawtooth.poet.ztest_maximum_win_deviation',
+                    value_type=float,
+                    default_value=PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_,
+                    validate_function=lambda value:
+                        math.isfinite(value) and value > 0)
+
+        return self._ztest_maximum_win_deviation
 
     @property
     def ztest_minimum_win_count(self):
@@ -250,9 +285,12 @@ class PoetConfigView(object):
         the zTest will be applied to the validator's attempt to claim further
         blocks.
         """
-        return \
-            self._get_config_setting(
-                name='sawtooth.poet.ztest_minimum_win_count',
-                value_type=int,
-                default_value=PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_,
-                validate_function=lambda value: value >= 0)
+        if self._ztest_minimum_win_count is None:
+            self._ztest_minimum_win_count = \
+                self._get_config_setting(
+                    name='sawtooth.poet.ztest_minimum_win_count',
+                    value_type=int,
+                    default_value=PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_,
+                    validate_function=lambda value: value >= 0)
+
+        return self._ztest_minimum_win_count
