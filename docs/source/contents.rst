@@ -5,12 +5,12 @@ Table of Contents
 .. toctree::
 
    introduction.rst
-   app_developers_guide.rst
-   transaction_family_specifications.rst
    architecture.rst
+   app_developers_guide.rst
    core_developers_guide.rst
-   rest_api.rst
    sysadmin_guide.rst
+   rest_api.rst
    sawtooth_cli.rst
+   transaction_family_specifications.rst
    community.rst
    faq.rst
