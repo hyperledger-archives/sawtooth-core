@@ -157,17 +157,24 @@ If you are behind a network proxy, follow these steps before continuing:
 
 If you are using the Bash shell, run the following commands:
 
+.. warning::
+
+  The example URLs and port numbers used below are examples only.
+  Please substitute the actual URL, with actual port numbers, used
+  in your environment. Contact your network administrator for the
+  information if necessary.
+
 .. code-block:: console
 
-  % export http_proxy=http://example-proxy-server.com:911
-  % export https_proxy=https://example-proxy-server.com:912
+  % export http_proxy=http://example-proxy-server.com:3128
+  % export https_proxy=https://example-proxy-server.com:3129
 
 If you are using Windows, run the following commands:
 
 .. code-block:: console
 
-  % set http_proxy=http://example-proxy-server.com:911
-  % set https_proxy=https://example-proxy-server.com:912
+  % set http_proxy=http://example-proxy-server.com:3128
+  % set https_proxy=https://example-proxy-server.com:3129
 
 
 2. Install the vagrant-proxyconf plugin:
