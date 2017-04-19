@@ -242,14 +242,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'SawtoothLake.tex', u'Sawtooth Lake Documentation',
-   u'Intel Corporation', 'manual'),
-  ('tutorial', 'SawtoothLakeTutorial.tex', u'Sawtooth Lake Tutorial',
-   u'Intel Corporation', 'howto'),
-  ('architecture', 'SawtoothLakeArchitecture.tex', u'Sawtooth Lake Architecture',
-   u'Intel Corporation', 'howto'),
-  ('sawtooth_developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Lake Developer\'s Guide',
-   u'Intel Corporation', 'howto')
+  (master_doc, 'sawtooth.tex', u'Sawtooth Documentation',
+   u'Intel Corporation', 'manual')
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
