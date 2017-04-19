@@ -46,45 +46,6 @@ class WaitTimer(object):
     fixed_duration_blocks = certificate_sample_length
 
     @classmethod
-    def _compute_population_estimate(cls, certificates):
-        """Estimates the size of the validator population by computing
-        the average wait time and the average local mean used by
-        the winning validator.
-
-        Since the entire population should be computing from the same
-        local mean based on history of certificates and we know that
-        the minimum value drawn from a population of size N of
-        exponentially distributed variables will be exponential with
-        mean being 1 / N, we can estimate the population size from the
-        ratio of local mean to global mean. a longer list of
-        certificates will provide a better estimator only if the
-        population of validators is relatively stable.
-
-        Note:
-
-        See the section entitled "Distribution of the minimum of
-        exponential random variables" in the page
-        http://en.wikipedia.org/wiki/Exponential_distribution
-
-        Args:
-            certificates (list): Previously committed certificates,
-                ordered newest to oldest
-        """
-        assert isinstance(certificates, list)
-        assert len(certificates) >= cls.certificate_sample_length
-
-        sum_means = 0
-        sum_waits = 0
-        for certificate in certificates[:cls.certificate_sample_length]:
-            sum_waits += certificate.duration - cls.minimum_wait_time
-            sum_means += certificate.local_mean
-
-        avg_wait = sum_waits / len(certificates)
-        avg_mean = sum_means / len(certificates)
-
-        return avg_mean / avg_wait
-
-    @classmethod
     def create_wait_timer(cls,
                           poet_enclave_module,
                           validator_address,
@@ -119,33 +80,6 @@ class WaitTimer(object):
                 poet_config_view.minimum_wait_time)
 
         return cls(enclave_timer)
-
-    @classmethod
-    def compute_local_mean(cls, certificates):
-        """Computes the local mean wait time based on the certificate
-        history.
-
-        Args:
-            certificates (list or tuple): A historical list of certificates.
-
-        Returns:
-            float: The local mean wait time.
-        """
-        if not isinstance(certificates, (list, tuple)):
-            raise TypeError
-
-        count = len(certificates)
-        if count < cls.fixed_duration_blocks:
-            ratio = 1.0 * count / cls.fixed_duration_blocks
-            local_mean = \
-                (cls.target_wait_time * (1 - ratio**2)) + \
-                (cls.initial_wait_time * ratio**2)
-        else:
-            local_mean = \
-                cls.target_wait_time * \
-                cls._compute_population_estimate(certificates)
-
-        return local_mean
 
     @property
     def population_estimate(self):
