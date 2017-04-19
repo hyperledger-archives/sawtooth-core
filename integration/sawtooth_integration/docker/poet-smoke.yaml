@@ -26,12 +26,16 @@ services:
       - 8800
     command: "bash -c \"\
         sawtooth admin keygen --force && \
+        sawtooth config genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
         sawtooth config proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           -o config.batch && \
         poet genesis -o poet.batch && \
-        sawtooth admin genesis config.batch poet.batch && \
+        sawtooth admin genesis \
+          config-genesis.batch config.batch poet.batch && \
         validator -v \
             --public-uri tcp://validator-0:8800 \
             --component-endpoint tcp://eth0:40000 \

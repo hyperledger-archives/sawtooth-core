@@ -53,6 +53,34 @@ def add_config_parser(subparsers, parent_parser):
                                            dest="subcommand")
     config_parsers.required = True
 
+    # The following parser is for the `genesis` subcommand.
+    # This command creates a batch that contains all of the initial
+    # transactions for on-chain settings
+    genesis_parser = config_parsers.add_parser('genesis')
+    genesis_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the signing key for the resulting batches '
+             'and initial authorized key')
+
+    genesis_parser.add_argument(
+        '-o', '--output',
+        type=str,
+        default='config-genesis.batch',
+        help='the name of the file to output the resulting batches')
+
+    genesis_parser.add_argument(
+        '-T', '--approval-threshold',
+        type=int,
+        help='the required number of votes to enable a setting change')
+
+    genesis_parser.add_argument(
+        '-A', '--authorized-key',
+        type=str,
+        action='append',
+        help='a public key for an user authorized to submit '
+             'config transactions')
+
     # The following parser is for the `proposal` subcommand group. These
     # commands allow the user to create proposals which may be applied
     # immediately or placed in ballot mode, depending on the current on-chain
@@ -189,6 +217,8 @@ def do_config(args):
         _do_config_proposal_vote(args)
     elif args.subcommand == 'settings' and args.settings_cmd == 'list':
         _do_config_list(args)
+    elif args.subcommand == 'genesis':
+        _do_config_genesis(args)
     else:
         raise AssertionError(
             '"{}" is not a valid subcommand of "config"'.format(
@@ -364,6 +394,46 @@ def _do_config_list(args):
             print(yaml.dump(settings_snapshot, default_flow_style=False)[0:-1])
     else:
         raise AssertionError('Unknown format {}'.format(args.format))
+
+
+def _do_config_genesis(args):
+    pubkey, signing_key = _read_signing_keys(args.key)
+
+    authorized_keys = args.authorized_key if args.authorized_key else [pubkey]
+    if pubkey not in authorized_keys:
+        authorized_keys.append(pubkey)
+
+    txns = []
+
+    txns.append(_create_propose_txn(
+        pubkey, signing_key,
+        ('sawtooth.config.vote.authorized_keys',
+         ','.join(authorized_keys))))
+
+    if args.approval_threshold is not None:
+        if args.approval_threshold < 1:
+            raise CliException('approval threshold must not be less than 1')
+
+        if args.approval_threshold > len(authorized_keys):
+            raise CliException(
+                'approval threshold must not be greater than the number of '
+                'authorized keys')
+
+        txns.append(_create_propose_txn(
+            pubkey, signing_key,
+            ('sawtooth.config.vote.approval_threshold',
+             str(args.approval_threshold))))
+
+    batch = _create_batch(pubkey, signing_key, txns)
+    batch_list = BatchList(batches=[batch])
+
+    try:
+        with open(args.output, 'wb') as batch_file:
+            batch_file.write(batch_list.SerializeToString())
+        print('Generated {}'.format(args.output))
+    except IOError as e:
+        raise CliException(
+            'Unable to write to batch file: {}'.format(str(e)))
 
 
 def _get_proposals(rest_client):
