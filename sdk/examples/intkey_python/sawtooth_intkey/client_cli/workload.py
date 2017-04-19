@@ -16,23 +16,48 @@
 import argparse
 import logging
 import random
+import json
 import threading
-import time
 from collections import namedtuple
 from datetime import datetime
+
+import urllib.request as urllib
+from urllib.error import URLError, HTTPError
+from http.client import RemoteDisconnected
 
 import sawtooth_signing as signing
 from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
 from sawtooth_sdk.workload.sawtooth_workload import Workload
-from sawtooth_sdk.messaging.stream import Stream
 from sawtooth_sdk.protobuf import batch_pb2
-from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_intkey.client_cli.create_batch import create_intkey_transaction
 from sawtooth_intkey.client_cli.create_batch import create_batch
 
 LOGGER = logging.getLogger(__name__)
 
-IntKeyState = namedtuple('IntKeyState', ['name', 'stream', 'value'])
+IntKeyState = namedtuple('IntKeyState', ['name', 'url', 'value'])
+
+
+def post_batches(url, batches):
+    data = batches.SerializeToString()
+    headers = {'Content-Type': 'application/octet-stream'}
+    headers['Content-Length'] = str(len(data))
+
+    request = urllib.Request(
+        url + "/batches",
+        data,
+        headers=headers,
+        method='POST')
+    try:
+        result = urllib.urlopen(request)
+        code, json_result = (result.status, json.loads(result.read().decode()))
+        if not (code == 200 or code == 201 or code == 202):
+            LOGGER.warning("(%s): %s", code, json_result)
+    except HTTPError as e:
+        LOGGER.warning("(%s): %s", e.code, e.msg)
+    except RemoteDisconnected as e:
+        LOGGER.warning(e)
+    except URLError as e:
+        LOGGER.warning(e)
 
 
 class IntKeyWorkload(Workload):
@@ -54,7 +79,7 @@ class IntKeyWorkload(Workload):
     """
     def __init__(self, delegate, args):
         super(IntKeyWorkload, self).__init__(delegate, args)
-        self._streams = []
+        self._urls = []
         self._pending_batches = {}
         self._lock = threading.Lock()
         self._delegate = delegate
@@ -66,20 +91,18 @@ class IntKeyWorkload(Workload):
         pass
 
     def on_will_stop(self):
-        for stream in self._streams:
-            time.sleep(5)
-            stream.close()
+        pass
 
     def on_validator_discovered(self, url):
-        stream = Stream(url)
-        self._streams.append(stream)
+        self._urls.append(url)
 
     def on_validator_removed(self, url):
         with self._lock:
-            self._streams = [s for s in self._streams if s.url != url]
-            self._pending_batches = \
-                {t: g for t, g in self._pending_batches.items()
-                 if g.stream.url != url}
+            if url in self._urls:
+                self._urls.remove(url)
+                self._pending_batches = \
+                    {t: g for t, g in self._pending_batches.items()
+                     if g.url != url}
 
     def on_all_batches_committed(self):
         self._create_new_key()
@@ -106,17 +129,16 @@ class IntKeyWorkload(Workload):
                 batch_id = batch.header_signature
 
                 batch_list = batch_pb2.BatchList(batches=[batch])
-                key.stream.send(
-                    message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
-                    content=batch_list.SerializeToString())
+
+                post_batches(key.url, batch_list)
 
                 with self._lock:
                     self._pending_batches[batch.header_signature] = \
                         IntKeyState(
                         name=key.name,
-                        stream=key.stream,
+                        url=key.url,
                         value=key.value + 1)
-                self.delegate.on_new_batch(batch_id, key.stream)
+                self.delegate.on_new_batch(batch_id, key.url)
 
         else:
             LOGGER.debug('Key %s completed', key.name)
@@ -127,11 +149,11 @@ class IntKeyWorkload(Workload):
 
     def _create_new_key(self):
         with self._lock:
-            stream = random.choice(self._streams) if \
-                len(self._streams) > 0 else None
+            url = random.choice(self._urls) if \
+                len(self._urls) > 0 else None
 
         batch_id = None
-        if stream is not None:
+        if url is not None:
             name = datetime.now().isoformat()
             txn = create_intkey_transaction(
                 verb="set",
@@ -150,15 +172,13 @@ class IntKeyWorkload(Workload):
             batch_id = batch.header_signature
 
             batch_list = batch_pb2.BatchList(batches=[batch])
-            stream.send(
-                message_type=Message.CLIENT_BATCH_SUBMIT_REQUEST,
-                content=batch_list.SerializeToString())
+            post_batches(url, batch_list)
 
             with self._lock:
                 self._pending_batches[batch_id] = \
-                    IntKeyState(name=name, stream=stream, value=0)
+                    IntKeyState(name=name, url=url, value=0)
 
-            self.delegate.on_new_batch(batch_id, stream)
+            self.delegate.on_new_batch(batch_id, url)
 
 
 def do_workload(args):
@@ -166,10 +186,13 @@ def do_workload(args):
     Create WorkloadGenerator and IntKeyWorkload. Set IntKey workload in
     generator and run.
     """
-    generator = WorkloadGenerator(args)
-    workload = IntKeyWorkload(generator, args)
-    generator.set_workload(workload)
-    generator.run()
+    try:
+        generator = WorkloadGenerator(args)
+        workload = IntKeyWorkload(generator, args)
+        generator.set_workload(workload)
+        generator.run()
+    except KeyboardInterrupt:
+        generator.stop()
 
 
 def add_workload_parser(subparsers, parent_parser):
@@ -182,13 +205,13 @@ def add_workload_parser(subparsers, parent_parser):
                         type=int,
                         help='Batch rate in batches per second. '
                              'Should be greater then 0.',
-                        default=10)
+                        default=1)
     parser.add_argument('-d', '--display-frequency',
                         type=int,
                         help='time in seconds between display of batches '
                              'rate updates.',
                         default=30)
     parser.add_argument('-u', '--urls',
-                        help='comma separated urls of validators to connect '
+                        help='comma separated urls of the REST API to connect '
                         'to.',
-                        default="tcp://127.0.0.1:40000")
+                        default="http://127.0.0.1:8080")
