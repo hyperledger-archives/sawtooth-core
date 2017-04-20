@@ -208,7 +208,7 @@ def _read_signing_keys(key_filename):
     """
     filename = key_filename
     if key_filename is None:
-        filename = os.path.join(config.get_key_dir(), 'validator.wif')
+        filename = os.path.join(config.get_key_dir(), 'validator.priv')
 
     try:
         with open(filename, 'r') as key_file:

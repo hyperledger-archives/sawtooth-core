@@ -32,7 +32,7 @@ def load_identity_signing_key(key_dir, key_name):
     Returns:
         str: the private signing key, in hex.
     """
-    key_path = os.path.join(key_dir, '{}.wif'.format(key_name))
+    key_path = os.path.join(key_dir, '{}.priv'.format(key_name))
 
     if not os.path.exists(key_path):
         raise LocalConfigurationError(

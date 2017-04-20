@@ -228,8 +228,8 @@ def do_init(args, config):
     save_config(config)
 
     wif_filename = config.get('DEFAULT', 'key_file')
-    if wif_filename.endswith(".wif"):
-        addr_filename = wif_filename[0:-len(".wif")] + ".addr"
+    if wif_filename.endswith(".priv"):
+        addr_filename = wif_filename[0:-len(".priv")] + ".addr"
     else:
         addr_filename = wif_filename + ".addr"
 
@@ -404,8 +404,8 @@ def do_show(args, config):
 
     # figure out the proper user's target board, given the addr
     wif_filename = config.get('DEFAULT', 'key_file')
-    if wif_filename.endswith(".wif"):
-        addr_filename = wif_filename[0:-len(".wif")] + ".addr"
+    if wif_filename.endswith(".priv"):
+        addr_filename = wif_filename[0:-len(".priv")] + ".addr"
     else:
         addr_filename = wif_filename + ".addr"
     addr_file = file(addr_filename, mode='r')
@@ -546,7 +546,7 @@ def load_config():
     config = ConfigParser.SafeConfigParser()
     config.set('DEFAULT', 'url', 'http://localhost:8800')
     config.set('DEFAULT', 'key_dir', key_dir)
-    config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.wif')
+    config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
     config.set('DEFAULT', 'username', real_user)
     if os.path.exists(config_file):
         config.read(config_file)

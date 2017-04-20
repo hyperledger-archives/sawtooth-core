@@ -36,8 +36,8 @@ class TestBattleshipCommands(unittest.TestCase):
         data_dir = os.path.join(home_dir, ".sawtooth")
         user1_data = os.path.join(data_dir, "battleship-{}.data".format(user1))
         user2_data = os.path.join(data_dir, "battleship-{}.data".format(user2))
-        user1_key = os.path.join(key_dir, "{}.wif".format(user1))
-        user2_key = os.path.join(key_dir, "{}.wif".format(user2))
+        user1_key = os.path.join(key_dir, "{}.priv".format(user1))
+        user2_key = os.path.join(key_dir, "{}.priv".format(user2))
         user1_public_key = os.path.join(key_dir, "{}.addr".format(user1))
         user2_public_key = os.path.join(key_dir, "{}.addr".format(user2))
         files = [user1_data, user2_data, user1_key, user2_key,

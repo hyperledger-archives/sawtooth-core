@@ -38,7 +38,7 @@ class TestConfigBatchlist(unittest.TestCase):
         self._temp_dir = tempfile.mkdtemp()
 
         # create a wif key for signing
-        self._wif_file = os.path.join(self._temp_dir, 'test.wif')
+        self._wif_file = os.path.join(self._temp_dir, 'test.priv')
         with open(self._wif_file, 'wb') as wif:
             wif.write(TEST_WIF.encode())
 

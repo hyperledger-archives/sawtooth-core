@@ -27,7 +27,7 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen --force && \
         sawtooth config proposal create \
-          -k /etc/sawtooth/keys/validator.wif \
+          -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           -o config.batch && \
         poet genesis -o poet.batch && \

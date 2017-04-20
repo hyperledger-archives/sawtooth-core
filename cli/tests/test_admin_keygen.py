@@ -32,9 +32,9 @@ class TestKeygen(unittest.TestCase):
         cls._key_dir = get_key_dir()
         cls._key_name = 'test_key'
         cls._wif_filename = os.path.join(cls._key_dir,
-                                         cls._key_name + '.wif')
-        cls._addr_filename = os.path.join(cls._key_dir,
-                                          cls._key_name + '.addr')
+                                         cls._key_name + '.priv')
+        cls._pub_filename = os.path.join(cls._key_dir,
+                                         cls._key_name + '.pub')
         if not os.path.exists(cls._key_dir):
             try:
                 os.makedirs(cls._key_dir, exist_ok=True)
@@ -95,7 +95,7 @@ class TestKeygen(unittest.TestCase):
         '''
         try:
             os.remove(self._wif_filename)
-            os.remove(self._addr_filename)
+            os.remove(self._pub_filename)
         except FileNotFoundError:
             pass
 

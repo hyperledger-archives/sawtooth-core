@@ -108,13 +108,13 @@ def do_submit(args):
     family_name = args.family
 
     # If we have a '/' in the key name, treat it as the full path to
-    # a wif file, without modification.  If it does not, then assume
+    # a priv file, without modification.  If it does not, then assume
     # it is in ~/.sawtooth/keys/.
     if '/' in key_name:
         key_file = key_name
     else:
         key_dir = os.path.join(os.path.expanduser('~'), '.sawtooth', 'keys')
-        key_file = os.path.join(key_dir, key_name + '.wif')
+        key_file = os.path.join(key_dir, key_name + '.priv')
 
     if not os.path.exists(key_file):
         raise ClientException('no such file: {}'.format(key_file))

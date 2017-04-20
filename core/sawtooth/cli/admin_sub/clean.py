@@ -138,8 +138,8 @@ def do_clean_state(cfg, args):
 def do_delete_keys(cfg, args):
     # Use regex to specify which signing key files to remove
     key_directory = cfg.get("KeyDirectory")
-    files = get_purge_files(key_directory, r'\.addr')
-    files.extend(get_purge_files(key_directory, r'\.wif'))
+    files = get_purge_files(key_directory, r'\.pub')
+    files.extend(get_purge_files(key_directory, r'\.priv'))
 
     if args.dry_run is True:
         try:

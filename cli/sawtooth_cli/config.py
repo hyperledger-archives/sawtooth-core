@@ -407,7 +407,7 @@ def _read_signing_keys(key_filename):
         filename = os.path.join(os.path.expanduser('~'),
                                 '.sawtooth',
                                 'keys',
-                                getpass.getuser() + '.wif')
+                                getpass.getuser() + '.priv')
 
     try:
         with open(filename, 'r') as key_file:

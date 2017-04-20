@@ -88,8 +88,8 @@ registering and creating intial blocks you can move on to the next step.
 .. code-block:: console
 
   Attaching to compose_validator_1, compose_tp_xo_python_1, compose_client_1, compose_tp_intkey_python_1, compose_tp_config_1, compose_rest_api_1
-  validator_1         | writing file: /etc/sawtooth/keys/validator.wif
-  validator_1         | writing file: /etc/sawtooth/keys/validator.addr
+  validator_1         | writing file: /etc/sawtooth/keys/validator.priv
+  validator_1         | writing file: /etc/sawtooth/keys/validator.pub
   validator_1         | Generating /var/lib/sawtooth/genesis.batch
   tp_xo_python_1      | [19:03:47 DEBUG   selector_events] Using selector: ZMQSelector
   validator_1         | [19:03:47.537 INFO     path] Skipping path loading from non-existent config file: /etc/sawtooth/path.toml
@@ -537,14 +537,14 @@ following commands from the Vagrant CLI:
 .. code-block:: console
 
   $ sawtooth keygen my_key
-  $ sawtooth config proposal create --key /home/ubuntu/.sawtooth/keys/my_key.wif sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
+  $ sawtooth config proposal create --key /home/ubuntu/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
   
 Or from the Docker CLI:
 
 .. code-block:: console
 
   $ sawtooth keygen my_key
-  $ sawtooth config proposal create --key /root/.sawtooth/keys/my_key.wif sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]' --url http://rest_api:8080
+  $ sawtooth config proposal create --key /root/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]' --url http://rest_api:8080
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator.
 
