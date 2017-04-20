@@ -74,7 +74,7 @@ class TestWaitCertificate(TestCase):
             poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
-            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+            nonce=NULL_BLOCK_IDENTIFIER)
 
         # Make sure that trying to create a wait certificate before creating
         # a wait timer causes an error
@@ -90,7 +90,7 @@ class TestWaitCertificate(TestCase):
             poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
-            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+            nonce=NULL_BLOCK_IDENTIFIER)
 
         # Create a wait certificate for the genesis block so that we can
         # create another wait certificate that has to play by the rules.
@@ -128,7 +128,7 @@ class TestWaitCertificate(TestCase):
             poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
-            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+            nonce=NULL_BLOCK_IDENTIFIER)
 
         # Create a wait certificate for the genesis block so that we can
         # create another wait certificate that has to play by the rules.
@@ -168,7 +168,7 @@ class TestWaitCertificate(TestCase):
             poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
-            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+            nonce=NULL_BLOCK_IDENTIFIER)
 
         # Create two timers and try to create the wait certificate with the
         # first one, which should fail as it is not the current wait timer
@@ -206,7 +206,7 @@ class TestWaitCertificate(TestCase):
             poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
-            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+            nonce=NULL_BLOCK_IDENTIFIER)
 
         # Create a wait certificate for the genesis block so that we can
         # create another wait certificate that has to play by the rules.
@@ -263,7 +263,7 @@ class TestWaitCertificate(TestCase):
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+                nonce=NULL_BLOCK_IDENTIFIER)
 
         wt = \
             WaitTimer.create_wait_timer(
@@ -348,7 +348,7 @@ class TestWaitCertificate(TestCase):
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+                nonce=NULL_BLOCK_IDENTIFIER)
 
         wt = \
             WaitTimer.create_wait_timer(

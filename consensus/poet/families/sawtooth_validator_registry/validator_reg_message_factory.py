@@ -134,8 +134,7 @@ class ValidatorRegistryMessageFactory(object):
         return json.dumps(proof_data_dict)
 
     # Currently this is done in the enclave
-    def create_signup_info(self, originator_public_key_hash,
-                           most_recent_wait_certificate_id):
+    def create_signup_info(self, originator_public_key_hash, nonce):
         # currently not used
         # _active_wait_timer = None
 
@@ -194,7 +193,7 @@ class ValidatorRegistryMessageFactory(object):
                 base64.b64encode(
                     hashlib.sha256(
                         pse_manifest).hexdigest().encode()).decode()),
-            ('nonce', most_recent_wait_certificate_id),
+            ('nonce', nonce),
             ('timestamp', timestamp)
         ])
 

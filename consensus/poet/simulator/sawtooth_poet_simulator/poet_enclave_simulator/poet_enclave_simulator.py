@@ -146,7 +146,7 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def create_signup_info(cls,
                            originator_public_key_hash,
-                           most_recent_wait_certificate_id):
+                           nonce):
         with cls._lock:
             # First we need to create a public/private key pair for the PoET
             # enclave to use.
@@ -211,7 +211,7 @@ class _PoetEnclaveSimulator(object):
                     base64.b64encode(
                         hashlib.sha256(
                             pse_manifest).hexdigest().encode()).decode(),
-                'nonce': most_recent_wait_certificate_id,
+                'nonce': nonce,
                 'timestamp': timestamp
             }
 
@@ -277,8 +277,7 @@ class _PoetEnclaveSimulator(object):
     @classmethod
     def verify_signup_info(cls,
                            signup_info,
-                           originator_public_key_hash,
-                           most_recent_wait_certificate_id):
+                           originator_public_key_hash):
         # Verify the attestation verification report signature
         proof_data_dict = json2dict(signup_info.proof_data)
         verification_report = proof_data_dict.get('verification_report')
@@ -448,27 +447,6 @@ class _PoetEnclaveSimulator(object):
                     'AVR enclave basename [{0}] not equal to [{1}]'.format(
                         sgx_quote.basename.name.hex(),
                         cls.__VALID_BASENAME__.hex()))
-
-        # Verify that the wait certificate ID in the verification report
-        # matches the provided wait certificate ID.  The wait certificate ID
-        # is stored in the nonce field.
-        nonce = verification_report_dict.get('nonce')
-        if nonce is None:
-            raise \
-                ValueError(
-                    'Verification report does not have a nonce')
-
-        # NOTE - this check is currently not performed as a transaction
-        #        does not have a good way to obtaining the most recent
-        #        wait certificate ID.
-        #
-        # if nonce != most_recent_wait_certificate_id:
-        #     raise \
-        #         ValueError(
-        #             'Attestation evidence payload nonce {0} does not match '
-        #             'most-recently-committed wait certificate ID {1}'.format(
-        #                 nonce,
-        #                 most_recent_wait_certificate_id))
 
     @classmethod
     def create_wait_timer(cls,
@@ -657,11 +635,11 @@ def initialize(**kwargs):
 
 def create_signup_info(validator_address,
                        originator_public_key_hash,
-                       most_recent_wait_certificate_id):
+                       nonce):
     return \
         _PoetEnclaveSimulator.create_signup_info(
             originator_public_key_hash=originator_public_key_hash,
-            most_recent_wait_certificate_id=most_recent_wait_certificate_id)
+            nonce=nonce)
 
 
 def deserialize_signup_info(serialized_signup_info):
@@ -674,13 +652,11 @@ def unseal_signup_data(validator_address, sealed_signup_data):
 
 
 def verify_signup_info(signup_info,
-                       originator_public_key_hash,
-                       most_recent_wait_certificate_id):
+                       originator_public_key_hash):
     return \
         _PoetEnclaveSimulator.verify_signup_info(
             signup_info=signup_info,
-            originator_public_key_hash=originator_public_key_hash,
-            most_recent_wait_certificate_id=most_recent_wait_certificate_id)
+            originator_public_key_hash=originator_public_key_hash)
 
 
 def create_wait_timer(validator_address,

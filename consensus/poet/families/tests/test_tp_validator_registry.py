@@ -276,20 +276,6 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         self._test_bad_signup_info(signup_info)
 
-        # ------------------------------------------------------
-        # No Nonce
-        proof_data_dict = json.loads(proof_data)
-        verification_report = \
-            json.loads(proof_data_dict["verification_report"])
-        del verification_report["nonce"]
-
-        signup_info.proof_data = \
-            self.factory.create_proof_data(
-                verification_report=verification_report,
-                evidence_payload=proof_data_dict.get('evidence_payload'))
-
-        self._test_bad_signup_info(signup_info)
-
     def test_invalid_pse_manifest(self):
         """
         Test that a transaction whose pse_manifast is invalid returns an

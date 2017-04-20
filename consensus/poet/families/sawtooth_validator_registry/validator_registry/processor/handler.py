@@ -170,8 +170,7 @@ class ValidatorRegistryTransactionHandler(object):
 
     def verify_signup_info(self,
                            signup_info,
-                           originator_public_key_hash,
-                           most_recent_wait_certificate_id):
+                           originator_public_key_hash):
 
         # Verify the attestation verification report signature
         proof_data_dict = json.loads(signup_info.proof_data)
@@ -343,27 +342,6 @@ class ValidatorRegistryTransactionHandler(object):
                         sgx_quote.basename.name.hex(),
                         self.__VALID_BASENAME__.hex()))
 
-        # Verify that the wait certificate ID in the verification report
-        # matches the provided wait certificate ID.  The wait certificate ID
-        # is stored in the nonce field.
-        nonce = verification_report_dict.get('nonce')
-        if nonce is None:
-            raise \
-                ValueError(
-                    'Verification report does not have a nonce')
-
-        # NOTE - this check is currently not performed as a transaction
-        #        does not have a good way to obtaining the most recent
-        #        wait certificate ID.
-        #
-        # if nonce != most_recent_wait_certificate_id:
-        #     raise \
-        #         ValueError(
-        #             'Attestation evidence payload nonce {0} does not match '
-        #             'most-recently-committed wait certificate ID {1}'.format(
-        #                 nonce,
-        #                 most_recent_wait_certificate_id))
-
     def apply(self, transaction, state):
         txn_header = TransactionHeader()
         txn_header.ParseFromString(transaction.header)
@@ -391,8 +369,7 @@ class ValidatorRegistryTransactionHandler(object):
         try:
             self.verify_signup_info(
                 signup_info=signup_info,
-                originator_public_key_hash=public_key_hash,
-                most_recent_wait_certificate_id='0' * 16)
+                originator_public_key_hash=public_key_hash)
 
         except ValueError as error:
             raise InvalidTransaction(

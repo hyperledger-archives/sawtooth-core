@@ -134,7 +134,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 originator_public_key_hash=public_key_hash,
-                most_recent_wait_certificate_id=wait_certificate_id)
+                nonce=wait_certificate_id)
 
         # Create the validator registry payload
         payload = \
