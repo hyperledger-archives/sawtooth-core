@@ -177,8 +177,8 @@ def do_init(args, config):
     save_config(config)
 
     wif_filename = config.get('DEFAULT', 'key_file')
-    if wif_filename.endswith(".wif"):
-        addr_filename = wif_filename[0:-len(".wif")] + ".addr"
+    if wif_filename.endswith(".priv"):
+        addr_filename = wif_filename[0:-len(".priv")] + ".addr"
     else:
         addr_filename = wif_filename + ".addr"
 
@@ -299,7 +299,7 @@ def load_config():
     config = configparser.ConfigParser()
     config.set('DEFAULT', 'url', '127.0.0.1:8080')
     config.set('DEFAULT', 'key_dir', key_dir)
-    config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.wif')
+    config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
     config.set('DEFAULT', 'username', real_user)
     if os.path.exists(config_file):
         config.read(config_file)
