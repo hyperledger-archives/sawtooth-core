@@ -32,6 +32,7 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 
 from sawtooth_validator.state.state_view import StateViewFactory
+from sawtooth_validator.state.config_view import ConfigView
 
 from test_journal.block_tree_manager import BlockTreeManager
 
@@ -39,7 +40,7 @@ from test_journal.mock import MockChainIdManager
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockNetwork
-from test_journal.mock import MockStateViewFactory
+from test_journal.mock import MockStateViewFactory, CreateSetting
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import SynchronousExecutor
 from test_journal.utils import wait_until
@@ -83,7 +84,7 @@ class TestBlockPublisher(unittest.TestCase):
         2) publish a block;
         3) verify the block (checking that it contains the correct batches,
            or checking that it doesn't exist, or whatever).
-    
+
     The publisher chain head might be updated several times in a test.
     '''
 
@@ -262,8 +263,61 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.assert_no_block_published()
 
-    # assertions
+    def test_max_block_size(self):
+        '''
+        Test block publisher obeys the block size limits
+        '''
+        # Create a publisher that has a state view
+        # with a batch limit
+        addr, value = CreateSetting(
+            'sawtooth.publisher.max_batches_per_block', 1)
+        print('test', addr)
+        self.state_view_factory = MockStateViewFactory(
+            {addr: value})
 
+        self.publisher = BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            data_dir=None)
+
+        self.assert_no_block_published()
+
+        # receive batches, then try again (succeeding)
+        self.receive_batches()
+
+        # try to publish with no pending queue (failing)
+        for i in range(self.batch_count):
+            self.publish_block()
+            self.assert_block_published()
+            self.update_chain_head(BlockWrapper(self.result_block))
+            self.verify_block([self.batches[i]])
+
+    def test_duplicate_transactions(self):
+        '''
+        Test discards batches that have duplicate transactions in them.
+        '''
+        # receive batches, then try again (succeeding)
+        self.batches = self.batches[1:2]
+        self.receive_batches()
+        self.publish_block()
+        self.assert_block_published()
+        self.update_chain_head(BlockWrapper(self.result_block))
+        self.verify_block()
+
+        # build a new set of batches with the same transactions in them
+        self.batches = self.make_batches_with_duplicate_txn()
+        self.receive_batches()
+        self.publish_block()
+        self.assert_no_block_published() # block should be empty after batch
+        # with duplicate transaction is dropped.
+
+    # assertions
     def assert_block_published(self):
         self.assertIsNotNone(
             self.result_block,
@@ -323,15 +377,17 @@ class TestBlockPublisher(unittest.TestCase):
     def publish_block(self):
         self.publisher.on_check_publish_block()
         self.result_block = self.block_sender.new_block
+        self.block_sender.new_block = None
 
     def update_chain_head(self, head, committed=None, uncommitted=None):
+        if head:
+            self.block_tree_manager.block_store.update_chain([head])
         self.publisher.on_chain_updated(
             chain_head=head,
             committed_batches=committed,
             uncommitted_batches=uncommitted)
 
     # batches
-
     def make_batch(self, missing_deps=False):
         return self.block_tree_manager.generate_batch(
             missing_deps=missing_deps)
@@ -340,8 +396,13 @@ class TestBlockPublisher(unittest.TestCase):
         if batch_count is None:
             batch_count = self.batch_count
 
-        return [self.make_batch(missing_deps=missing_deps) 
+        return [self.make_batch(missing_deps=missing_deps)
                 for _ in range(batch_count)]
+
+    def make_batches_with_duplicate_txn(self):
+        txns = [self.batches[0].transactions[0],
+                self.block_tree_manager.generate_transaction("nonce")]
+        return [self.block_tree_manager.generate_batch(txns=txns)]
 
 
 class TestBlockValidator(unittest.TestCase):
