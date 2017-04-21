@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+cd $top_dir/sdk/examples/intkey_go
+go run main.go
