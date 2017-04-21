@@ -54,7 +54,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('2', '1', '0')
         self.stream.preset_response(head_id='2', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches')
+        response = await self.get_assert_200('/batches')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -73,9 +73,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/batches')
+        response = await self.get_assert_status('/batches', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_batch_list_with_no_genesis(self):
@@ -86,9 +89,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 503
+            - an error property with a code of 15
         """
         self.stream.preset_response(self.status.NOT_READY)
-        await self.assert_503('/batches')
+        response = await self.get_assert_status('/batches', 503)
+
+        self.assert_has_valid_error(response, 15)
 
     @unittest_run_loop
     async def test_batch_list_with_head(self):
@@ -115,7 +121,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('1', '0')
         self.stream.preset_response(head_id='1', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?head=1')
+        response = await self.get_assert_200('/batches?head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
@@ -134,9 +140,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 50
         """
         self.stream.preset_response(self.status.NO_ROOT)
-        await self.assert_404('/batches?head=bad')
+        response = await self.get_assert_status('/batches?head=bad', 404)
+
+        self.assert_has_valid_error(response, 50)
 
     @unittest_run_loop
     async def test_batch_list_with_ids(self):
@@ -163,7 +172,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('0', '2')
         self.stream.preset_response(head_id='2', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?id=0,2')
+        response = await self.get_assert_200('/batches?id=0,2')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(batch_ids=['0', '2'], paging=controls)
 
@@ -193,7 +202,7 @@ class BatchListTests(BaseApiTest):
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
-        response = await self.get_json_assert_200('/batches?id=bad,notgood')
+        response = await self.get_assert_200('/batches?id=bad,notgood')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/batches?head=2&id=bad,notgood')
@@ -226,7 +235,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('0')
         self.stream.preset_response(head_id='1', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?id=0&head=1')
+        response = await self.get_assert_200('/batches?id=0&head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(
             head_id='1',
@@ -263,7 +272,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('c')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?min=1&count=1')
+        response = await self.get_assert_200('/batches?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -281,8 +290,11 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 53
         """
-        await self.assert_400('/batches?min=2&count=0')
+        response = await self.get_assert_status('/batches?min=2&count=0', 400)
+
+        self.assert_has_valid_error(response, 53)
 
     @unittest_run_loop
     async def test_batch_list_with_bad_paging(self):
@@ -293,9 +305,12 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 54
         """
         self.stream.preset_response(self.status.INVALID_PAGING)
-        await self.assert_400('/batches?min=-1')
+        response = await self.get_assert_status('/batches?min=-1', 400)
+
+        self.assert_has_valid_error(response, 54)
 
     @unittest_run_loop
     async def test_batch_list_paginated_with_just_count(self):
@@ -321,7 +336,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('d', 'c')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?count=2')
+        response = await self.get_assert_200('/batches?count=2')
         controls = Mocks.make_paging_controls(2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -356,7 +371,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('b', 'a')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?min=2')
+        response = await self.get_assert_200('/batches?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -394,7 +409,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('c', 'b', 'a')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?min=c&count=5')
+        response = await self.get_assert_200('/batches?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -433,7 +448,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('c', 'b')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?max=b&count=2')
+        response = await self.get_assert_200('/batches?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -469,7 +484,7 @@ class BatchListTests(BaseApiTest):
         batches = Mocks.make_batches('d', 'c', 'b')
         self.stream.preset_response(head_id='d', paging=paging, batches=batches)
 
-        response = await self.get_json_assert_200('/batches?max=2&count=7')
+        response = await self.get_assert_200('/batches?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -510,7 +525,7 @@ class BatchGetTests(BaseApiTest):
         """
         self.stream.preset_response(batch=Mocks.make_batches('1')[0])
 
-        response = await self.get_json_assert_200('/batches/1')
+        response = await self.get_assert_200('/batches/1')
         self.stream.assert_valid_request_sent(batch_id='1')
 
         self.assertNotIn('head', response)
@@ -527,9 +542,12 @@ class BatchGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/batches/1')
+        response = await self.get_assert_status('/batches/1', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_batch_get_with_bad_id(self):
@@ -540,6 +558,9 @@ class BatchGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 71
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/batches/bad')
+        response = await self.get_assert_status('/batches/bad', 404)
+
+        self.assert_has_valid_error(response, 71)

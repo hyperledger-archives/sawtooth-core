@@ -57,7 +57,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('2', '1', '0'))
 
-        response = await self.get_json_assert_200('/transactions')
+        response = await self.get_assert_200('/transactions')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -76,9 +76,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/transactions')
+        response = await self.get_assert_status('/transactions', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_txn_list_with_no_genesis(self):
@@ -89,9 +92,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 503
+            - an error property with a code of 15
         """
         self.stream.preset_response(self.status.NOT_READY)
-        await self.assert_503('/transactions')
+        response = await self.get_assert_status('/transactions', 503)
+
+        self.assert_has_valid_error(response, 15)
 
     @unittest_run_loop
     async def test_txn_list_with_head(self):
@@ -120,7 +126,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('1', '0'))
 
-        response = await self.get_json_assert_200('/transactions?head=1')
+        response = await self.get_assert_200('/transactions?head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(head_id='1', paging=controls)
 
@@ -139,9 +145,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 50
         """
         self.stream.preset_response(self.status.NO_ROOT)
-        await self.assert_404('/transactions?head=bad')
+        response = await self.get_assert_status('/transactions?head=bad', 404)
+
+        self.assert_has_valid_error(response, 50)
 
     @unittest_run_loop
     async def test_txn_list_with_ids(self):
@@ -168,7 +177,7 @@ class TransactionListTests(BaseApiTest):
         transactions = Mocks.make_txns('0', '2')
         self.stream.preset_response(head_id='2', paging=paging, transactions=transactions)
 
-        response = await self.get_json_assert_200('/transactions?id=0,2')
+        response = await self.get_assert_200('/transactions?id=0,2')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(transaction_ids=['0', '2'], paging=controls)
 
@@ -198,7 +207,7 @@ class TransactionListTests(BaseApiTest):
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
-        response = await self.get_json_assert_200('/transactions?id=bad,notgood')
+        response = await self.get_assert_200('/transactions?id=bad,notgood')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/transactions?head=2&id=bad,notgood')
@@ -233,7 +242,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('0'))
 
-        response = await self.get_json_assert_200('/transactions?id=0&head=1')
+        response = await self.get_assert_200('/transactions?id=0&head=1')
         controls = Mocks.make_paging_controls()
         self.stream.assert_valid_request_sent(
             head_id='1',
@@ -272,7 +281,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('c'))
 
-        response = await self.get_json_assert_200('/transactions?min=1&count=1')
+        response = await self.get_assert_200('/transactions?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -290,8 +299,11 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 53
         """
-        await self.assert_400('/transactions?min=2&count=0')
+        response = await self.get_assert_status('/transactions?count=0', 400)
+
+        self.assert_has_valid_error(response, 53)
 
     @unittest_run_loop
     async def test_txn_list_with_bad_paging(self):
@@ -302,9 +314,12 @@ class TransactionListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 400
+            - an error property with a code of 54
         """
         self.stream.preset_response(self.status.INVALID_PAGING)
-        await self.assert_400('/transactions?min=-1')
+        response = await self.get_assert_status('/transactions?min=-1', 400)
+
+        self.assert_has_valid_error(response, 54)
 
     @unittest_run_loop
     async def test_txn_list_paginated_with_just_count(self):
@@ -332,7 +347,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('d', 'c'))
 
-        response = await self.get_json_assert_200('/transactions?count=2')
+        response = await self.get_assert_200('/transactions?count=2')
         controls = Mocks.make_paging_controls(2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -369,7 +384,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('b', 'a'))
 
-        response = await self.get_json_assert_200('/transactions?min=2')
+        response = await self.get_assert_200('/transactions?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -409,7 +424,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('c', 'b', 'a'))
 
-        response = await self.get_json_assert_200('/transactions?min=c&count=5')
+        response = await self.get_assert_200('/transactions?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -450,7 +465,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('c', 'b'))
 
-        response = await self.get_json_assert_200('/transactions?max=b&count=2')
+        response = await self.get_assert_200('/transactions?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -488,7 +503,7 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns('d', 'c', 'b'))
 
-        response = await self.get_json_assert_200('/transactions?max=2&count=7')
+        response = await self.get_assert_200('/transactions?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.stream.assert_valid_request_sent(paging=controls)
 
@@ -532,7 +547,7 @@ class TransactionGetTests(BaseApiTest):
         """
         self.stream.preset_response(transaction=Mocks.make_txns('1')[0])
 
-        response = await self.get_json_assert_200('/transactions/1')
+        response = await self.get_assert_200('/transactions/1')
         self.stream.assert_valid_request_sent(transaction_id='1')
 
         self.assertNotIn('head', response)
@@ -549,9 +564,12 @@ class TransactionGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 500
+            - an error property with a code of 10
         """
         self.stream.preset_response(self.status.INTERNAL_ERROR)
-        await self.assert_500('/transactions/1')
+        response = await self.get_assert_status('/transactions/1', 500)
+
+        self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
     async def test_txn_get_with_bad_id(self):
@@ -562,6 +580,9 @@ class TransactionGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
+            - an error property with a code of 72
         """
         self.stream.preset_response(self.status.NO_RESOURCE)
-        await self.assert_404('/transactions/bad')
+        response = await self.get_assert_status('/transactions/bad', 404)
+
+        self.assert_has_valid_error(response, 72)

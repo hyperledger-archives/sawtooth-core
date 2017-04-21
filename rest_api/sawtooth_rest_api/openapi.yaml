@@ -510,19 +510,19 @@ responses:
   400BadRequest:
     description: Request was malformed
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   404NotFound:
-    description: Address, prefix, or root did not match any resource
+    description: Address or id did not match any resource
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   500ServerError:
-    description: Something went wrong with the server
+    description: Something went wrong within the validator
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
   503ServiceUnavailable:
     description: API is unable to reach the validator
     schema:
-      $ref: "#/definitions/ErrorList"
+      $ref: "#/definitions/Error"
 
 parameters:
   address:
@@ -616,20 +616,17 @@ definitions:
 
   Error:
     properties:
-      message:
-        type: string
-        example: Batch failed signature validation
       code:
         type: integer
         example: 34
-      data:
-        type: object
-  ErrorList:
-    properties:
-      errors:
-        type: array
-        items:
-          $ref: "#/definitions/Error"
+      title:
+          type: string
+          example: No Batches Submitted
+      message:
+        type: string
+        example: >
+          The protobuf BatchList you submitted was empty and contained no
+          Batches. You must submit at least one Batch.
 
   BatchStatuses:
     properties:

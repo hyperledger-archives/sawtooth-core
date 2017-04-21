@@ -496,7 +496,7 @@ class StateGetRequest(_ClientRequestHandler):
             return self._status.NO_RESOURCE
         except ValueError:
             LOGGER.debug('Address %s is a nonleaf', request.address)
-            return self._status.MISSING_ADDRESS
+            return self._status.INVALID_ADDRESS
 
         return self._wrap_response(head_id=head_id, value=value)
 

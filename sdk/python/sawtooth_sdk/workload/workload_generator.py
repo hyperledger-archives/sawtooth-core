@@ -216,10 +216,16 @@ class WorkloadGenerator(object):
                 status = list(json_result["data"].values())[0]
                 return status
             else:
-                LOGGER.debug("(%s): %s", code, json_result)
+                if 'error' in json_result:
+                    message = json_result['error']['message']
+                else:
+                    message = json_result
+
+                LOGGER.debug("(%s): %s", code, message)
                 return "UNKNOWN"
         except HTTPError as e:
-            if "The connection to the validator was lost" in str(e.msg):
+            error_code = json.loads(e.file.read().decode())['error']['code']
+            if error_code == 18:
                 self._remove_unresponsive_validator(url)
                 LOGGER.warning("The validator at %s is no longer connected. "
                                "Removing Validator.", url)
