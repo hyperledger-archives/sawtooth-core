@@ -778,3 +778,83 @@ class TestConsensusState(TestCase):
             population_estimate=2,
             block_cache=mock_block_cache,
             poet_enclave_module=None))
+
+    def test_signup_commit_maximum_delay(self):
+        """Verify that consensus state properly indicates whether or not a
+        validator signup was committed before the maximum delay occurred
+        """
+        block_dictionary = {
+            '001': mock.Mock(previous_block_id='000', identifier='001'),
+            '002': mock.Mock(previous_block_id='001', identifier='002'),
+            '003': mock.Mock(previous_block_id='002', identifier='003'),
+            '004': mock.Mock(previous_block_id='003', identifier='004')
+        }
+
+        mock_block_cache = mock.MagicMock()
+        mock_block_cache.__getitem__.side_effect = block_dictionary.__getitem__
+        mock_block_cache.block_store.get_block_by_transaction_id.\
+            return_value = block_dictionary['004']
+
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.signup_commit_maximum_delay = 1
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_002',
+                    nonce='999'),
+                transaction_id='transaction_001')
+
+        # Simulate reaching beginning of chain before finding block ID
+        with mock.patch('sawtooth_poet.poet_consensus.consensus_state.utils.'
+                        'block_id_is_genesis') as mock_block_id_is_genesis:
+            mock_block_id_is_genesis.return_value = True
+            state = consensus_state.ConsensusState()
+            self.assertTrue(
+                state.validator_signup_was_committed_too_late(
+                    validator_info=validator_info,
+                    poet_config_view=mock_poet_config_view,
+                    block_cache=mock_block_cache))
+
+        # Simulate reaching the maximum commit delay before finding the block
+        # we want with different delays
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_002',
+                    nonce='999'),
+                transaction_id='transaction_001')
+
+        with mock.patch('sawtooth_poet.poet_consensus.consensus_state.utils.'
+                        'block_id_is_genesis') as mock_block_id_is_genesis:
+            mock_block_id_is_genesis.return_value = False
+            state = consensus_state.ConsensusState()
+            for delay in range(len(block_dictionary) - 1):
+                mock_poet_config_view.signup_commit_maximum_delay = delay
+                self.assertTrue(
+                    state.validator_signup_was_committed_too_late(
+                        validator_info=validator_info,
+                        poet_config_view=mock_poet_config_view,
+                        block_cache=mock_block_cache))
+
+        # Simulate finding block before maximum delay
+        with mock.patch('sawtooth_poet.poet_consensus.consensus_state.utils.'
+                        'block_id_is_genesis') as mock_block_id_is_genesis:
+            mock_block_id_is_genesis.return_value = False
+            state = consensus_state.ConsensusState()
+            for (nonce, delay) in zip(['001', '002', '003'], [2, 1, 0]):
+                mock_poet_config_view.signup_commit_maximum_delay = delay
+                validator_info = \
+                    ValidatorInfo(
+                        id='validator_001',
+                        signup_info=SignUpInfo(
+                            poet_public_key='key_002',
+                            nonce=nonce),
+                        transaction_id='transaction_001')
+                self.assertFalse(
+                    state.validator_signup_was_committed_too_late(
+                        validator_info=validator_info,
+                        poet_config_view=mock_poet_config_view,
+                        block_cache=mock_block_cache))
