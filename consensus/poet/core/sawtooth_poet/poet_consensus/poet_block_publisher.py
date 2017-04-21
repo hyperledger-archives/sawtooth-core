@@ -300,6 +300,22 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 poet_enclave_module=poet_enclave_module)
         poet_config_view = PoetConfigView(state_view)
 
+        # If our signup information does not pass the freshness test, then we
+        # know that other validators will reject any blocks we try to claim so
+        # we need to try to sign up again.
+        if consensus_state.validator_signup_was_committed_too_late(
+                validator_info=validator_info,
+                poet_config_view=poet_config_view,
+                block_cache=self._block_cache):
+            LOGGER.error(
+                'Reject building on block %s: Validator signup information '
+                'not committed in a timely manner.',
+                block_header.previous_block_id[:8])
+            self._register_signup_information(
+                block_header=block_header,
+                poet_enclave_module=poet_enclave_module)
+            return False
+
         # Using the consensus state for the block upon which we want to
         # build, check to see how many blocks we have claimed on this chain
         # with this PoET key.  If we have hit the key block claim limit, then
