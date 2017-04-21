@@ -24,7 +24,7 @@
 #   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-javascript
 
-FROM yarnpkg/node-yarn:0.20-node7
+FROM node:6
 
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     libzmq3-dev \

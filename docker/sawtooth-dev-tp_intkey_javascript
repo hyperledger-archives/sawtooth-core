@@ -25,7 +25,7 @@
 #   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_intkey_javascript
 
-FROM yarnpkg/node-yarn:0.20-node7
+FROM node:6
 
 LABEL "install-type"="mounted"
 
