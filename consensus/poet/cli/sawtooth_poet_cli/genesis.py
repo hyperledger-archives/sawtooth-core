@@ -123,8 +123,8 @@ def do_genesis(args):
             signup_info=vr_pb.SignUpInfo(
                 poet_public_key=signup_info.poet_public_key,
                 proof_data=signup_info.proof_data,
-                anti_sybil_id=signup_info.anti_sybil_id),
-        )
+                anti_sybil_id=signup_info.anti_sybil_id,
+                nonce=NULL_BLOCK_IDENTIFIER))
     serialized = payload.SerializeToString()
 
     # Create the address that will be used to look up this validator

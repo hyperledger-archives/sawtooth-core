@@ -20,7 +20,6 @@ import json
 
 import sawtooth_signing as signing
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
@@ -113,19 +112,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
         self._wait_timer = None
 
     def _register_signup_information(self, block_header, poet_enclave_module):
-        # Find the most-recent block in the block cache, if such a block
-        # exists, and get its wait certificate ID
-        wait_certificate_id = NULL_BLOCK_IDENTIFIER
-        most_recent_block = self._block_cache.block_store.chain_head
-        if most_recent_block is not None:
-            wait_certificate = \
-                utils.deserialize_wait_certificate(
-                    block=most_recent_block,
-                    poet_enclave_module=poet_enclave_module)
-            if wait_certificate is not None:
-                wait_certificate_id = wait_certificate.identifier
-
-        # Create signup information for this validator
+        # Create signup information for this validator, putting the block ID
+        # of the block previous to the block referenced by block_header in the
+        # nonce.  Block ID is better than wait certificate ID for testing
+        # freshness as we need to account for non-PoET blocks.
         public_key_hash = \
             hashlib.sha256(
                 block_header.signer_pubkey.encode()).hexdigest()
@@ -134,7 +124,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 poet_enclave_module=poet_enclave_module,
                 validator_address=block_header.signer_pubkey,
                 originator_public_key_hash=public_key_hash,
-                nonce=wait_certificate_id)
+                nonce=block_header.previous_block_id)
 
         # Create the validator registry payload
         payload = \
@@ -145,7 +135,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 signup_info=vr_pb.SignUpInfo(
                     poet_public_key=signup_info.poet_public_key,
                     proof_data=signup_info.proof_data,
-                    anti_sybil_id=signup_info.anti_sybil_id),
+                    anti_sybil_id=signup_info.anti_sybil_id,
+                    nonce=block_header.previous_block_id),
             )
         serialized = payload.SerializeToString()
 
@@ -184,12 +175,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 header_signature=signature)
 
         LOGGER.info(
-            'Register Validator Name=%s, ID=%s...%s, PoET public key=%s...%s',
+            'Register Validator Name=%s, ID=%s...%s, PoET public key=%s...%s, '
+            'Nonce=%s',
             payload.name,
             payload.id[:8],
             payload.id[-8:],
             payload.signup_info.poet_public_key[:8],
-            payload.signup_info.poet_public_key[-8:])
+            payload.signup_info.poet_public_key[-8:],
+            block_header.previous_block_id[:8])
 
         self._batch_publisher.send([transaction])
 
