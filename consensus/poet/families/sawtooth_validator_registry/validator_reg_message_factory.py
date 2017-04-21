@@ -208,7 +208,8 @@ class ValidatorRegistryMessageFactory(object):
             SignUpInfo(
                 poet_public_key=signup_data['poet_public_key'],
                 proof_data=proof_data,
-                anti_sybil_id=originator_public_key_hash)
+                anti_sybil_id=originator_public_key_hash,
+                nonce=nonce)
 
     def create_tp_process_request(self, validator_id, payload):
         inputs = [
@@ -234,9 +235,9 @@ class ValidatorRegistryMessageFactory(object):
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            transaction_id="7a79305e9734fd511386ae877da8770d66c22e4c7b18db8eb2"
-                           "ff6ec16f5a3452749ee49a04ea8a805ec5ec8b5d1fdfbcc6f3"
-                           "bf6374c99c9a906bc2837d0ad25a"
+            transaction_id="a48b383fe5c577471640f49e1e5341a9ed40a992125207e7c5"
+                           "dbecb21d6f5cc1002726c7ab6ab6e5bb1d13c4b2b65004156f"
+                           "6afaa573ab7aa3a0c41ed5c74b8f"
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)
@@ -249,9 +250,9 @@ class ValidatorRegistryMessageFactory(object):
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            transaction_id="7a79305e9734fd511386ae877da8770d66c22e4c7b18db8eb2"
-                           "ff6ec16f5a3452749ee49a04ea8a805ec5ec8b5d1fdfbcc6f3"
-                           "bf6374c99c9a906bc2837d0ad25a"
+            transaction_id="a48b383fe5c577471640f49e1e5341a9ed40a992125207e7c5"
+                           "dbecb21d6f5cc1002726c7ab6ab6e5bb1d13c4b2b65004156f"
+                           "6afaa573ab7aa3a0c41ed5c74b8f"
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)

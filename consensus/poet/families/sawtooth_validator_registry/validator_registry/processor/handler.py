@@ -170,7 +170,8 @@ class ValidatorRegistryTransactionHandler(object):
 
     def verify_signup_info(self,
                            signup_info,
-                           originator_public_key_hash):
+                           originator_public_key_hash,
+                           val_reg_payload):
 
         # Verify the attestation verification report signature
         proof_data_dict = json.loads(signup_info.proof_data)
@@ -332,7 +333,7 @@ class ValidatorRegistryTransactionHandler(object):
         # expected enclave basename.
         #
         # NOTE - this is only a temporary check.  Instead of checking against
-        # a predefined enclave basenme value, we should be configured with a
+        # a predefined enclave basename value, we should be configured with a
         # set of one or more enclave basenames that we will consider as valid.
 
         if sgx_quote.basename.name != self.__VALID_BASENAME__:
@@ -341,6 +342,17 @@ class ValidatorRegistryTransactionHandler(object):
                     'AVR enclave basename [{0}] not equal to [{1}]'.format(
                         sgx_quote.basename.name.hex(),
                         self.__VALID_BASENAME__.hex()))
+
+        # Verify that the nonce in the verification report matches the nonce
+        # in the transaction payload submitted
+        nonce = verification_report_dict.get('nonce', '')
+        if nonce != val_reg_payload.signup_info.nonce:
+            raise \
+                ValueError(
+                    'AVR nonce [{0}] does not match signup info nonce '
+                    '[{1}]'.format(
+                        nonce,
+                        val_reg_payload.signup_info.nonce))
 
     def apply(self, transaction, state):
         txn_header = TransactionHeader()
@@ -369,7 +381,8 @@ class ValidatorRegistryTransactionHandler(object):
         try:
             self.verify_signup_info(
                 signup_info=signup_info,
-                originator_public_key_hash=public_key_hash)
+                originator_public_key_hash=public_key_hash,
+                val_reg_payload=val_reg_payload)
 
         except ValueError as error:
             raise InvalidTransaction(
