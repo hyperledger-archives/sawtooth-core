@@ -15,30 +15,32 @@
 
 from importlib import reload
 import time
-import unittest
+from unittest import TestCase
+from unittest import mock
+from unittest import skip
 
 import sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator \
     as poet_enclave
 
+from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
 from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
+
+from sawtooth_poet_common.protobuf.validator_registry_pb2 \
+    import ValidatorInfo
+from sawtooth_poet_common.protobuf.validator_registry_pb2 \
+    import SignUpInfo
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from test_consensus.utils import create_random_public_key_hash
 
 
-class TestWaitCertificate(unittest.TestCase):
+class TestWaitCertificate(TestCase):
     @classmethod
     def setUpClass(cls):
         cls._originator_public_key_hash = create_random_public_key_hash()
-        cls._original_target_wait_time = WaitTimer.target_wait_time
-        WaitTimer.target_wait_time = 5.0
-
-    @classmethod
-    def tearDownClass(cls):
-        WaitTimer.target_wait_time = cls._original_target_wait_time
 
     def setUp(self):
         # This is a little ham-handed, but we need to ensure that the
@@ -48,6 +50,14 @@ class TestWaitCertificate(unittest.TestCase):
 
         args = {"NodeName": "DasValidator"}
         self.poet_enclave_module.initialize(**args)
+
+        self.mock_poet_config_view = mock.Mock()
+        self.mock_poet_config_view.target_wait_time = 5.0
+        self.mock_poet_config_view.initial_wait_time = 0.0
+        self.mock_poet_config_view.minimum_wait_time = 1.0
+        self.mock_poet_config_view.population_estimate_sample_size = 50
+
+        self.consensus_state = ConsensusState()
 
     def test_create_before_create_signup_info(self):
         # Make sure that trying to create a wait certificate before signup
@@ -88,7 +98,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
@@ -99,13 +111,17 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[wc])
+                previous_certificate_id=wc.identifier,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
+
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
+    @skip("Disabled until poet integration -- too slow!!!!!")
     def test_create_after_wait_timer_timed_out(self):
         # Need to create signup information
         SignupInfo.create_signup_info(
@@ -120,7 +136,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
@@ -131,7 +149,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[wc])
+                previous_certificate_id=wc.identifier,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         while not wt.has_expired(time.time()):
             time.sleep(1)
         time.sleep(self.poet_enclave_module.TIMER_TIMEOUT_PERIOD + 1)
@@ -156,12 +176,16 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         valid_wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
 
         # Verify that we cannot create a wait certificate with the old wait
         # timer, but we can with the new one
@@ -190,7 +214,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
@@ -210,7 +236,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[wc])
+                previous_certificate_id=wc.identifier,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
@@ -227,6 +255,7 @@ class TestWaitCertificate(unittest.TestCase):
             wait_timer=wt,
             block_hash="Reader's Digest")
 
+    @skip("Disabled until poet integration -- too slow!!!!!")
     def test_create(self):
         # Need to create signup information and wait timer first
         signup_info = \
@@ -240,7 +269,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         while not wt.has_expired(time.time()):
             time.sleep(1)
 
@@ -268,15 +299,29 @@ class TestWaitCertificate(unittest.TestCase):
         # A newly-created wait certificate should be valid
         wc.check_valid(
             poet_enclave_module=self.poet_enclave_module,
-            certificates=[],
-            poet_public_key=signup_info.poet_public_key)
+            previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+            poet_public_key=signup_info.poet_public_key,
+            consensus_state=self.consensus_state,
+            poet_config_view=self.mock_poet_config_view)
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+        self.consensus_state.validator_did_claim_block(
+            validator_info=validator_info,
+            wait_certificate=wc,
+            poet_config_view=self.mock_poet_config_view)
 
         # Create another wait certificate and verify it is valid also
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[wc])
+                previous_certificate_id=wc.identifier,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         while not wt.has_expired(time.time()):
             time.sleep(1)
 
@@ -290,9 +335,12 @@ class TestWaitCertificate(unittest.TestCase):
 
         another_wc.check_valid(
             poet_enclave_module=self.poet_enclave_module,
-            certificates=[wc],
-            poet_public_key=signup_info.poet_public_key)
+            previous_certificate_id=wc.identifier,
+            poet_public_key=signup_info.poet_public_key,
+            consensus_state=self.consensus_state,
+            poet_config_view=self.mock_poet_config_view)
 
+    @skip("Disabled until poet integration -- too slow!!!!!")
     def test_serialization(self):
         # Need to create signup information and wait timer first
         signup_info = \
@@ -306,7 +354,9 @@ class TestWaitCertificate(unittest.TestCase):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1660 Pennsylvania Avenue NW',
-                certificates=[])
+                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                consensus_state=self.consensus_state,
+                poet_config_view=self.mock_poet_config_view)
         while not wt.has_expired(time.time()):
             time.sleep(1)
 
@@ -354,5 +404,7 @@ class TestWaitCertificate(unittest.TestCase):
 
         wc_copy.check_valid(
             poet_enclave_module=self.poet_enclave_module,
-            certificates=[],
-            poet_public_key=signup_info.poet_public_key)
+            previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+            poet_public_key=signup_info.poet_public_key,
+            consensus_state=self.consensus_state,
+            poet_config_view=self.mock_poet_config_view)

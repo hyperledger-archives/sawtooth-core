@@ -73,8 +73,21 @@ class ConsensusState(object):
         the block
     validator_info (ValidatorInfo): The validator registry information for the
         validator that claimed the block
-    poet_config_view (PoetConfigView): The PoET cofiguration view associated
+    poet_config_view (PoetConfigView): The PoET configuration view associated
         with the block
+    """
+
+    _PopulationSample = \
+        collections.namedtuple(
+            '_PopulationSample', ['duration', 'local_mean'])
+
+    """ Instead of creating a full-fledged class, let's use a named tuple for
+    the population sample.  The population sample represents the information
+    we need to create the population estimate, which in turn is used to compute
+    the local mean.  A population sample object contains:
+
+    duration (float): The duration from a wait certificate/timer
+    local_mean (float): The local mean from a wait certificate/timer
     """
 
     _EstimateInfo = collections.namedtuple('_EstimateInfo',
@@ -222,7 +235,8 @@ class ConsensusState(object):
             else:
                 consensus_state.validator_did_claim_block(
                     validator_info=block_info.validator_info,
-                    wait_certificate=block_info.wait_certificate)
+                    wait_certificate=block_info.wait_certificate,
+                    poet_config_view=block_info.poet_config_view)
                 consensus_state_store[block_id] = consensus_state
 
                 LOGGER.debug(
@@ -240,6 +254,8 @@ class ConsensusState(object):
             None
         """
         self._aggregate_local_mean = 0.0
+        self._local_mean = None
+        self._population_samples = collections.deque()
         self._total_block_claim_count = 0
         self._validators = {}
 
@@ -342,7 +358,7 @@ class ConsensusState(object):
         # configuration view, we know now many blocks to get.
         number_of_blocks = \
             self.total_block_claim_count - \
-            poet_config_view.fixed_duration_block_count
+            poet_config_view.population_estimate_sample_size
         with ConsensusState._population_estimate_cache_lock:
             for _ in range(number_of_blocks):
                 population_cache_entry = \
@@ -353,10 +369,12 @@ class ConsensusState(object):
                         utils.deserialize_wait_certificate(
                             block=block,
                             poet_enclave_module=poet_enclave_module)
+                    population_estimate = \
+                        wait_certificate.population_estimate(
+                            poet_config_view=poet_config_view)
                     population_cache_entry = \
                         ConsensusState._EstimateInfo(
-                            population_estimate=wait_certificate.
-                            population_estimate,
+                            population_estimate=population_estimate,
                             previous_block_id=block.previous_block_id,
                             validator_id=block.header.signer_pubkey)
                     ConsensusState._population_estimate_cache[block_id] = \
@@ -366,6 +384,87 @@ class ConsensusState(object):
                 block_id = population_cache_entry.previous_block_id
 
         return population_estimate_list
+
+    def _compute_population_estimate(self, poet_config_view):
+        """Estimates the size of the validator population by computing the
+        average wait time and the average local mean used by the winning
+        validator.
+
+        Since the entire population should be computing from the same local
+        mean based on history of certificates and we know that the minimum
+        value drawn from a population of size N of exponentially distributed
+        variables will be exponential with mean being 1 / N, we can estimate
+        the population size from the ratio of local mean to global mean. A
+        longer list of certificates will provide a better estimator only if the
+        population of validators is relatively stable.
+
+        Note:
+
+        See the section entitled "Distribution of the minimum of exponential
+        random variables" in the page:
+
+        http://en.wikipedia.org/wiki/Exponential_distribution
+
+        Args:
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+
+        Returns:
+            float: The population estimate
+        """
+        assert \
+            len(self._population_samples) == \
+            poet_config_view.population_estimate_sample_size
+
+        minimum_wait_time = poet_config_view.minimum_wait_time
+        sum_waits = 0
+        sum_means = 0
+        for population_sample in self._population_samples:
+            sum_waits += population_sample.duration - minimum_wait_time
+            sum_means += population_sample.local_mean
+
+        return sum_means / sum_waits
+
+    def compute_local_mean(self, poet_config_view):
+        """Computes the local mean wait time based on either the ratio of
+        target to initial wait times (if during the bootstrapping period) or
+        the certificate history (once bootstrapping period has passed).
+
+        Args:
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
+
+        Returns:
+            float: The computed local mean
+        """
+        # If we do not have a current local mean value cached, then compute
+        # one and save it for later.
+        if self._local_mean is None:
+            population_estimate_sample_size = \
+                poet_config_view.population_estimate_sample_size
+
+            # If there have not been enough blocks claimed to satisfy the
+            # population estimate sample size, we are still in the
+            # bootstrapping phase for the blockchain and so we are going to use
+            # a simple ratio based upon the target and initial wait times to
+            # compute the local mean.
+            count = len(self._population_samples)
+            if count < population_estimate_sample_size:
+                ratio = 1.0 * count / population_estimate_sample_size
+                self._local_mean = \
+                    (poet_config_view.target_wait_time * (1 - ratio ** 2)) + \
+                    (poet_config_view.initial_wait_time * ratio ** 2)
+
+            # Otherwise, if we are out of the bootstrapping phase, then we are
+            # going to compute the local mean using the target wait time and an
+            # estimate of the validator network population size.
+            else:
+                self._local_mean = \
+                    poet_config_view.target_wait_time * \
+                    self._compute_population_estimate(
+                        poet_config_view=poet_config_view)
+
+        return self._local_mean
 
     def get_validator_state(self, validator_info):
         """Return the validator state for a particular validator
@@ -395,7 +494,8 @@ class ConsensusState(object):
 
     def validator_did_claim_block(self,
                                   validator_info,
-                                  wait_certificate):
+                                  wait_certificate,
+                                  poet_config_view):
         """For the validator that is referenced by the validator information
         object, update its state based upon it claiming a block.
 
@@ -403,13 +503,30 @@ class ConsensusState(object):
             validator_info (ValidatorInfo): Information about the validator
             wait_certificate (WaitCertificate): The wait certificate
                 associated with the block being claimed
+            poet_config_view (PoetConfigView): The current PoET configuration
+                view
 
         Returns:
             None
         """
+        # Clear out our cached local mean value.  We'll recreate it later if it
+        # is requested
+        self._local_mean = None
+
         # Update the consensus state statistics.
         self._aggregate_local_mean += wait_certificate.local_mean
         self._total_block_claim_count += 1
+
+        # Add the wait certificate information to our population sample,
+        # evicting the oldest entry if already have at least
+        # population_estimate_sample_size entries.
+        self._population_samples.append(
+            ConsensusState._PopulationSample(
+                duration=wait_certificate.duration,
+                local_mean=wait_certificate.local_mean))
+        while len(self._population_samples) > \
+                poet_config_view.population_estimate_sample_size:
+            self._population_samples.popleft()
 
         # We need to fetch the current state for the validator
         validator_state = \
@@ -619,7 +736,7 @@ class ConsensusState(object):
         # mean is calculated as a fixed ratio of the target to initial wait),
         # simply short-circuit the test an allow the block to be claimed.
         if self.total_block_claim_count < \
-                poet_config_view.fixed_duration_block_count:
+                poet_config_view.population_estimate_sample_size:
             return False
 
         # Build up the population estimate list for the block chain and then
@@ -712,8 +829,16 @@ class ConsensusState(object):
             bytes: serialized version of the consensus state object
         """
         # For serialization, the easiest thing to do is to convert ourself to
-        # a dictionary and convert to CBOR.
-        return cbor.dumps(self.__dict__)
+        # a dictionary and convert to CBOR.  The deque object cannot be
+        # automatically serialized, so convert it to a list first.  We will
+        # reconstitute it to a deque upon parsing.
+        self_dict = {
+            '_aggregate_local_mean': self._aggregate_local_mean,
+            '_population_samples': list(self._population_samples),
+            '_total_block_claim_count': self._total_block_claim_count,
+            '_validators': self._validators
+        }
+        return cbor.dumps(self_dict)
 
     def parse_from_bytes(self, buffer):
         """Returns a consensus state object re-created from the serialized
@@ -733,7 +858,7 @@ class ConsensusState(object):
         """
         try:
             # Deserialize the CBOR back into a dictionary and set the simple
-            # fields, doing our best to check validity
+            # fields, doing our best to check validity.
             self_dict = cbor.loads(buffer)
 
             if not isinstance(self_dict, dict):
@@ -744,6 +869,22 @@ class ConsensusState(object):
 
             self._aggregate_local_mean = \
                 float(self_dict['_aggregate_local_mean'])
+            self._local_mean = None
+            self._population_samples = collections.deque()
+            for sample in self_dict['_population_samples']:
+                (duration, local_mean) = [float(value) for value in sample]
+                if not math.isfinite(duration) or duration < 0:
+                    raise \
+                        ValueError(
+                            'duration ({}) is invalid'.format(duration))
+                if not math.isfinite(local_mean) or local_mean < 0:
+                    raise \
+                        ValueError(
+                            'local_mean ({}) is invalid'.format(local_mean))
+                self._population_samples.append(
+                    ConsensusState._PopulationSample(
+                        duration=duration,
+                        local_mean=local_mean))
             self._total_block_claim_count = \
                 int(self_dict['_total_block_claim_count'])
             validators = self_dict['_validators']
@@ -767,7 +908,7 @@ class ConsensusState(object):
             # validators dictionary and reconstitute the validator state from
             # them, again trying to validate the data the best we can.  The
             # only catch is that because the validator state objects are named
-            # tuples, cbor.dumps() treated them as such and so we lost the
+            # tuples, cbor.dumps() treated them as tuples and so we lost the
             # named part.  When re-creating the validator state, are going to
             # leverage the namedtuple's _make method.
 
@@ -785,7 +926,7 @@ class ConsensusState(object):
 
     def __str__(self):
         validators = \
-            ['{}: {{KBCC={}, PPK={}, TBCC={}, }}'.format(
+            ['{}: {{KBCC={}, PPK={}, TBCC={} }}'.format(
                 key[:8],
                 value.key_block_claim_count,
                 value.poet_public_key[:8],
@@ -793,7 +934,8 @@ class ConsensusState(object):
              key, value in self._validators.items()]
 
         return \
-            'ALM={:.4f}, TBCC={}, V={}'.format(
+            'ALM={:.4f}, TBCC={}, PS={}, V={}'.format(
                 self.aggregate_local_mean,
                 self.total_block_claim_count,
+                self._population_samples,
                 validators)

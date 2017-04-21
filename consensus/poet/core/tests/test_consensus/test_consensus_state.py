@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
-
+import random
+from unittest import TestCase
 from unittest import mock
 
 import cbor
@@ -27,7 +27,7 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import SignUpInfo
 
 
-class TestConsensusState(unittest.TestCase):
+class TestConsensusState(TestCase):
     def test_get_missing_validator_state(self):
         """Verify that retrieving missing validator state returns appropriate
         default values.
@@ -56,7 +56,11 @@ class TestConsensusState(unittest.TestCase):
         state = consensus_state.ConsensusState()
 
         wait_certificate = mock.Mock()
+        wait_certificate.duration = 3.1415
         wait_certificate.local_mean = 5.0
+
+        poet_config_view = mock.Mock()
+        poet_config_view.population_estimate_sample_size = 50
 
         validator_info = \
             ValidatorInfo(
@@ -68,7 +72,8 @@ class TestConsensusState(unittest.TestCase):
         # consensus state to add and set statistics appropriately.
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -86,7 +91,8 @@ class TestConsensusState(unittest.TestCase):
         # the consensus and validator statistics are updated properly
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -107,7 +113,8 @@ class TestConsensusState(unittest.TestCase):
 
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -126,6 +133,9 @@ class TestConsensusState(unittest.TestCase):
         error.  Verify that serializing state and then deserializing results
         in the same state values.
         """
+        poet_config_view = mock.Mock()
+        poet_config_view.population_estimate_sample_size = 50
+
         # Simple deserialization check of buffer
         for invalid_state in [None, '', 1, 1.1, (), [], {}]:
             state = consensus_state.ConsensusState()
@@ -137,6 +147,7 @@ class TestConsensusState(unittest.TestCase):
                 'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
                 as mock_loads:
             mock_loads.return_value = {
+                '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                 '_total_block_claim_count': 0,
                 '_validators': {}
             }
@@ -153,6 +164,49 @@ class TestConsensusState(unittest.TestCase):
                     as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': invalid_alm,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
+                    '_total_block_claim_count': 0,
+                    '_validators': {}
+                }
+                with self.assertRaises(ValueError):
+                    state.parse_from_bytes(b'')
+
+        # Missing population samples
+        with mock.patch(
+                'sawtooth_poet.poet_consensus.consensus_state.cbor.loads') \
+                as mock_loads:
+            mock_loads.return_value = {
+                '_aggregate_local_mean': 0.0,
+                '_total_block_claim_count': 0,
+                '_validators': {}
+            }
+            with self.assertRaises(ValueError):
+                state.parse_from_bytes(b'')
+
+        # Invalid population samples
+        for invalid_ps in [None, 1, 1.0, 'str', (1,), [1],
+                           (1.0, None), (1.0, 'str'), (1.0, ()), (1.0, []),
+                           (1.0, {}),
+                           (1.0, float('nan')), (1.0, float('inf')),
+                           (1.0, float('-inf')), (float('nan'), 1.0),
+                           (float('inf'), 1.0), (float('-inf'), 1.0),
+                           (None, 1.0), ('str', 1.0), ((), 1.0), ([], 1.0),
+                           ({}, 1.0),
+                           [1.0, None], [1.0, 'str'], [1.0, ()], [1.0, []],
+                           [1.0, {}],
+                           [1.0, float('nan')], [1.0, float('inf')],
+                           [1.0, float('-inf')], [float('nan'), 1.0],
+                           [float('inf'), 1.0], [float('-inf'), 1.0],
+                           [None, 1.0], ['str', 1.0], [(), 1.0], [[], 1.0],
+                           [{}, 1.0]]:
+            state = consensus_state.ConsensusState()
+            with mock.patch(
+                    'sawtooth_poet.poet_consensus.consensus_state.cbor.'
+                    'loads') \
+                    as mock_loads:
+                mock_loads.return_value = {
+                    '_aggregate_local_mean': 0.0,
+                    '_population_samples': invalid_ps,
                     '_total_block_claim_count': 0,
                     '_validators': {}
                 }
@@ -165,6 +219,7 @@ class TestConsensusState(unittest.TestCase):
                 as mock_loads:
             mock_loads.return_value = {
                 '_aggregate_local_mean': 0.0,
+                '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                 '_validators': {}
             }
             with self.assertRaises(ValueError):
@@ -179,6 +234,7 @@ class TestConsensusState(unittest.TestCase):
                     as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': invalid_tbcc,
                     '_validators': {}
                 }
@@ -194,6 +250,7 @@ class TestConsensusState(unittest.TestCase):
                     as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': invalid_validators
                 }
@@ -202,6 +259,7 @@ class TestConsensusState(unittest.TestCase):
 
         state = consensus_state.ConsensusState()
         wait_certificate = mock.Mock()
+        wait_certificate.duration = 3.14
         wait_certificate.local_mean = 5.0
 
         validator_info = \
@@ -212,7 +270,8 @@ class TestConsensusState(unittest.TestCase):
 
         state.validator_did_claim_block(
             validator_info=validator_info,
-            wait_certificate=wait_certificate)
+            wait_certificate=wait_certificate,
+            poet_config_view=poet_config_view)
         doppelganger_state = consensus_state.ConsensusState()
 
         # Truncate the serialized value on purpose
@@ -231,6 +290,7 @@ class TestConsensusState(unittest.TestCase):
                     'loads') as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [invalid_kbcc, 'ppk_001', 0]
@@ -247,6 +307,7 @@ class TestConsensusState(unittest.TestCase):
                     'loads') as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [0, invalid_ppk, 0]
@@ -263,6 +324,7 @@ class TestConsensusState(unittest.TestCase):
                     'loads') as mock_loads:
                 mock_loads.return_value = {
                     '_aggregate_local_mean': 0.0,
+                    '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                     '_total_block_claim_count': 0,
                     '_validators': {
                         'validator_001': [0, 'ppk_001', invalid_tbcc]
@@ -278,6 +340,7 @@ class TestConsensusState(unittest.TestCase):
                 'loads') as mock_loads:
             mock_loads.return_value = {
                 '_aggregate_local_mean': 0.0,
+                '_population_samples': [(2.718, 3.1415), (1.618, 0.618)],
                 '_total_block_claim_count': 0,
                 '_validators': {
                     'validator_001': [2, 'ppk_001', 1]
@@ -303,9 +366,17 @@ class TestConsensusState(unittest.TestCase):
         # Now put a couple of validators in, serialize, deserialize, and
         # verify they are in deserialized
         wait_certificate_1 = mock.Mock()
+        wait_certificate_1.duration = 3.14
         wait_certificate_1.local_mean = 5.0
         wait_certificate_2 = mock.Mock()
-        wait_certificate_2.local_mean = 5.0
+        wait_certificate_2.duration = 1.618
+        wait_certificate_2.local_mean = 2.718
+
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.target_wait_time = 30.0
+        mock_poet_config_view.initial_wait_time = 3000.0
+        mock_poet_config_view.minimum_wait_time = 1.0
+        mock_poet_config_view.population_estimate_sample_size = 50
 
         validator_info_1 = \
             ValidatorInfo(
@@ -320,16 +391,24 @@ class TestConsensusState(unittest.TestCase):
 
         state.validator_did_claim_block(
             validator_info=validator_info_1,
-            wait_certificate=wait_certificate_1)
+            wait_certificate=wait_certificate_1,
+            poet_config_view=poet_config_view)
         state.validator_did_claim_block(
             validator_info=validator_info_2,
-            wait_certificate=wait_certificate_2)
+            wait_certificate=wait_certificate_2,
+            poet_config_view=poet_config_view)
 
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
         self.assertEqual(
             state.aggregate_local_mean,
             doppelganger_state.aggregate_local_mean)
+        self.assertAlmostEqual(
+            first=state.compute_local_mean(
+                poet_config_view=mock_poet_config_view),
+            second=doppelganger_state.compute_local_mean(
+                poet_config_view=mock_poet_config_view),
+            places=4)
         self.assertEqual(
             state.total_block_claim_count,
             doppelganger_state.total_block_claim_count)
@@ -367,3 +446,112 @@ class TestConsensusState(unittest.TestCase):
         self.assertEqual(
             validator_state.total_block_claim_count,
             doppleganger_validator_state.total_block_claim_count)
+
+    def test_local_mean(self):
+        """Verify that the consensus state properly computes the local mean
+        during both the bootstrapping phase (i.e., before there are enough
+        blocks in the chain to satisfy the population estimate sample size)
+        and once there are enough blocks in the chain.
+        """
+
+        mock_poet_config_view = mock.Mock()
+        mock_poet_config_view.target_wait_time = 30.0
+        mock_poet_config_view.initial_wait_time = 3000.0
+        mock_poet_config_view.minimum_wait_time = 1.0
+        mock_poet_config_view.population_estimate_sample_size = 50
+
+        # Test that during bootstrapping, the local means adhere to the
+        # following:
+        #
+        # ratio = 1.0 * blockCount / sampleSize
+        # localMean = targetWaitTime*(1-ratio**2) + initialWaitTime*ratio**2
+
+        def _compute_fixed_local_mean(count):
+            ratio = \
+                1.0 * count / \
+                mock_poet_config_view.population_estimate_sample_size
+            return \
+                (mock_poet_config_view.target_wait_time * (1 - ratio**2)) + \
+                (mock_poet_config_view.initial_wait_time * ratio**2)
+
+        validator_info = \
+            ValidatorInfo(
+                id='validator_001',
+                signup_info=SignUpInfo(
+                    poet_public_key='key_001'))
+
+        # We are first going to bootstrap the blockchain by claiming exactly
+        # population estimate sample size blocks.  Each one should match the
+        # corresponding expected fixed local mean.
+        wait_certificates = []
+        state = consensus_state.ConsensusState()
+        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+            # Compute a wait certificate with a fixed local mean, add it to
+            # our samples, verify that its local mean equals the one computed
+            # by the consensus state, and then update the consensus state as if
+            # the block with this wait certificate was claimed.
+            mock_wait_certificate = mock.Mock()
+            mock_wait_certificate.duration = \
+                random.uniform(
+                    mock_poet_config_view.minimum_wait_time,
+                    mock_poet_config_view.minimum_wait_time + 10)
+            mock_wait_certificate.local_mean = \
+                _compute_fixed_local_mean(len(wait_certificates))
+            wait_certificates.append(mock_wait_certificate)
+
+            self.assertAlmostEqual(
+                first=mock_wait_certificate.local_mean,
+                second=state.compute_local_mean(mock_poet_config_view),
+                places=4)
+
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)
+
+        # Test that after bootstrapping, the local means adhere to the
+        # following:
+        #
+        # sw, sm = 0.0
+        # for most recent population estimate sample size blocks:
+        #   sw += waitCertificate.duration - minimumWaitTime
+        #   sm += waitCertificate.localMean
+        # localMean = targetWaitTme * (sm / sw)
+
+        def _compute_historical_local_mean(wcs):
+            sw = 0.0
+            sm = 0.0
+
+            for wc in wcs:
+                sw += wc.duration - mock_poet_config_view.minimum_wait_time
+                sm += wc.local_mean
+
+            return mock_poet_config_view.target_wait_time * (sm / sw)
+
+        # Let's run through another population estimate sample size blocks
+        # and verify that we get the local means expected
+        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+            # Compute a wait certificate with a historical local mean, add it
+            # to our samples, evict the oldest sample, verify that its local
+            # mean equals the one computed by the consensus state, and then
+            # update the consensus state as if the block with this wait
+            # certificate was claimed.
+            mock_wait_certificate = mock.Mock()
+            mock_wait_certificate.duration = \
+                random.uniform(
+                    mock_poet_config_view.minimum_wait_time,
+                    mock_poet_config_view.minimum_wait_time + 10)
+            mock_wait_certificate.local_mean = \
+                _compute_historical_local_mean(wait_certificates)
+            wait_certificates.append(mock_wait_certificate)
+            wait_certificates = wait_certificates[1:]
+
+            self.assertAlmostEqual(
+                first=mock_wait_certificate.local_mean,
+                second=state.compute_local_mean(mock_poet_config_view),
+                places=4)
+
+            state.validator_did_claim_block(
+                validator_info=validator_info,
+                wait_certificate=mock_wait_certificate,
+                poet_config_view=mock_poet_config_view)

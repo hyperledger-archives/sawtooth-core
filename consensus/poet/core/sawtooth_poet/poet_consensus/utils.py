@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import collections
 import json
 import logging
 
@@ -67,51 +66,30 @@ def deserialize_wait_certificate(block, poet_enclave_module):
     return wait_certificate
 
 
-def build_certificate_list(block_header,
-                           block_cache,
-                           poet_enclave_module,
-                           maximum_number):
-    """Builds a list of up to maximum_length wait certificates for the blocks
-    immediately preceding the block represented by block_header.
+def get_previous_certificate_id(block_header,
+                                block_cache,
+                                poet_enclave_module):
+    """Returns the wait certificate ID for the block immediately preceding the
+    block represented by block_header.
 
     Args:
         block_header (BlockHeader): The header for the block
         block_cache (BlockCache): The cache of blocks that are predecessors
             to the block represented by block_header
         poet_enclave_module (module): The PoET enclave module
-        maximum_number (int): The maximum number of certificates to return
 
     Returns:
-        A list of wait certificates
+        str: The ID of the wait certificate for the block immediately
+        preceding the block represented by block_header
     """
+    wait_certificate = None
 
-    # Create a list of certificates starting with the immediate predecessor
-    # to the block represented by block_header.  We will use a deque because
-    # we are walking the blocks in reverse order.
-    certificates = collections.deque()
-    block_id = block_header.previous_block_id
+    if not block_id_is_genesis(block_header.previous_block_id):
+        wait_certificate = \
+            deserialize_wait_certificate(
+                block=block_cache[block_header.previous_block_id],
+                poet_enclave_module=poet_enclave_module)
 
-    try:
-        while not block_id_is_genesis(block_id) and \
-                len(certificates) < maximum_number:
-            # Grab the block from the block store, use the consensus
-            # property to reconstitute the wait certificate, and add
-            # the wait certificate to the list.  If we get to a block
-            # that does not have a wait certificate, we stop.
-            block = block_cache[block_id]
-            wait_certificate = \
-                deserialize_wait_certificate(
-                    block=block,
-                    poet_enclave_module=poet_enclave_module)
-
-            if wait_certificate is None:
-                break
-
-            certificates.appendleft(wait_certificate)
-
-            # Move to the previous block
-            block_id = block.header.previous_block_id
-    except KeyError as ke:
-        LOGGER.error('Error getting block: %s', ke)
-
-    return list(certificates)
+    return \
+        NULL_BLOCK_IDENTIFIER if wait_certificate is None \
+        else wait_certificate.identifier

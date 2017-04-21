@@ -17,10 +17,7 @@ import threading
 import importlib
 import logging
 
-from sawtooth_validator.state.config_view import ConfigView
-
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
-from sawtooth_poet.poet_consensus import wait_timer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,67 +54,23 @@ class PoetEnclaveFactory(object):
             # done so.  Otherwise, we are just going to return the previously-
             # loaded enclave module.
             if cls._poet_enclave_module is None:
-                # Get the configured PoET enclave module name, defaulting to
-                # the PoET enclave simulator module if not present.
-                config_view = ConfigView(state_view)
-                module_name = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.enclave_module',
-                        default_value='sawtooth_poet_simulator.'
-                                      'poet_enclave_simulator.'
-                                      'poet_enclave_simulator')
+                # Get the configured PoET enclave module name.
+                poet_config_view = PoetConfigView(state_view)
+                module_name = poet_config_view.enclave_module_name
 
                 LOGGER.info('Load PoET enclave module: %s', module_name)
-
-                poet_config_view = PoetConfigView(state_view)
-
-                # For now, configure the wait timer settings based upon the
-                # values in the configuration if present.
-                target_wait_time = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.target_wait_time',
-                        default_value=wait_timer.WaitTimer.target_wait_time,
-                        value_type=float)
-                initial_wait_time = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.initial_wait_time',
-                        default_value=wait_timer.WaitTimer.initial_wait_time,
-                        value_type=float)
-                fixed_duration_blocks = \
-                    poet_config_view.fixed_duration_block_count
-                certificate_sample_length = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.certificate_sample_length',
-                        default_value=fixed_duration_blocks,
-                        value_type=int)
-                minimum_wait_time = \
-                    config_view.get_setting(
-                        key='sawtooth.poet.minimum_wait_time',
-                        default_value=wait_timer.WaitTimer.minimum_wait_time,
-                        value_type=float)
-
                 LOGGER.info(
-                    'sawtooth.poet.target_wait_time: %f',
-                    target_wait_time)
+                    'Target wait time: %f',
+                    poet_config_view.target_wait_time)
                 LOGGER.info(
-                    'sawtooth.poet.initial_wait_time: %f',
-                    initial_wait_time)
+                    'Initial wait time: %f',
+                    poet_config_view.initial_wait_time)
                 LOGGER.info(
-                    'sawtooth.poet.certificate_sample_length: %d',
-                    certificate_sample_length)
+                    'Population estimate sample size: %d',
+                    poet_config_view.population_estimate_sample_size)
                 LOGGER.info(
-                    'sawtooth.poet.fixed_duration_block_count: %d',
-                    poet_config_view.fixed_duration_block_count)
-                LOGGER.info(
-                    'sawtooth.poet.minimum_wait_time: %f',
-                    minimum_wait_time)
-
-                wait_timer.set_wait_timer_globals(
-                    target_wait_time=target_wait_time,
-                    initial_wait_time=initial_wait_time,
-                    certificate_sample_length=certificate_sample_length,
-                    fixed_duration_blocks=fixed_duration_blocks,
-                    minimum_wait_time=minimum_wait_time)
+                    'Minimum wait time: %f',
+                    poet_config_view.minimum_wait_time)
 
                 # Load and initialize the module
                 module = importlib.import_module(module_name)
