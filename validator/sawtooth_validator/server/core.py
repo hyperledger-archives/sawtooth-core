@@ -41,7 +41,9 @@ from sawtooth_validator.journal.completer import \
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
 from sawtooth_validator.journal.responder import BlockResponderHandler
+from sawtooth_validator.journal.responder import ResponderBlockResponseHandler
 from sawtooth_validator.journal.responder import BatchByBatchIdResponderHandler
+from sawtooth_validator.journal.responder import ResponderBatchResponseHandler
 from sawtooth_validator.journal.responder import \
     BatchByTransactionIdResponderHandler
 from sawtooth_validator.networking.dispatch import Dispatcher
@@ -328,6 +330,11 @@ class Validator(object):
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            ResponderBlockResponseHandler(responder, self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
             BatchByBatchIdResponderHandler(responder, self._gossip),
             network_thread_pool)
@@ -354,6 +361,11 @@ class Validator(object):
             validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
             CompleterGossipBatchResponseHandler(
                 completer),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            ResponderBatchResponseHandler(responder, self._gossip),
             network_thread_pool)
 
         self._dispatcher.add_handler(
