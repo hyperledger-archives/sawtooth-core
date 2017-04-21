@@ -87,6 +87,31 @@ class TestContextManager(unittest.TestCase):
         # 4)
         self.assertEqual(resulting_state_hash, test_resulting_state_hash)
 
+    def test_squash_no_updates(self):
+        """Tests that squashing a context that has no state updates will return
+           the starting state root hash.
+
+        Notes:
+            Set up the context
+
+            Test:
+                1) Squash the context.
+                2) Assert that the state hashe is the same as the starting
+                hash.
+        """
+        context_id = self.context_manager.create_context(
+            state_hash=self.first_state_hash,
+            base_contexts=[],
+            inputs=[],
+            outputs=[])
+        # 1)
+        squash = self.context_manager.get_squash_handler()
+        resulting_state_hash = squash(self.first_state_hash, [context_id],
+                                      persist=True)
+        # 2
+        self.assertIsNotNone(resulting_state_hash)
+        self.assertEquals(resulting_state_hash, self.first_state_hash)
+
     def _setup_context(self):
         # 1) Create transaction data
         first_transaction = {'inputs': ['aaaa', 'bbbb', 'cccc'],

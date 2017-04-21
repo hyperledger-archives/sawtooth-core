@@ -331,6 +331,10 @@ class ContextManager(object):
                         effective_updates[k] = value
 
                 updates.update(effective_updates)
+
+            if len(updates) == 0:
+                return state_root
+
             virtual = not persist
             state_hash = tree.update(updates, virtual=virtual)
             if persist:
