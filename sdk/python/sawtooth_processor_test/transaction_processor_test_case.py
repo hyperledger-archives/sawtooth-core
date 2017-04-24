@@ -15,7 +15,7 @@
 
 import unittest
 
-from sawtooth_processor_test.tester import TransactionProcessorTester
+from sawtooth_processor_test.mock_validator import MockValidator
 
 
 class TransactionProcessorTestCase(unittest.TestCase):
@@ -23,16 +23,18 @@ class TransactionProcessorTestCase(unittest.TestCase):
     def setUpClass(cls):
         url = 'eth0:40000'
 
-        cls.tester = TransactionProcessorTester()
+        cls.validator = MockValidator()
 
-        cls.tester.listen(url)
+        cls.validator.listen(url)
 
-        if not cls.tester.register_processor():
+        if not cls.validator.register_processor():
             raise Exception('Failed to register processor')
+
+        cls.factory = None
 
     @classmethod
     def tearDownClass(cls):
         try:
-            cls.tester.close()
+            cls.validator.close()
         except AttributeError:
             pass

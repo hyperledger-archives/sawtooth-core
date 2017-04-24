@@ -17,7 +17,7 @@ Wikipedia at:
     https://en.wikipedia.org/wiki/Tic-tac-toe
 
 A full implementation of the tic-tac-toe transaction family can be found in
-``/project/sawtooth-core/sdk/examples/sawtooth_xo/``.
+``/project/sawtooth-core/sdk/examples/xo_python/``.
 
 Prerequisites
 =============

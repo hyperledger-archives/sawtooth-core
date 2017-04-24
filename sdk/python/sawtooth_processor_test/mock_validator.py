@@ -42,7 +42,7 @@ class UnexpectedMessageException(Exception):
         self.received = received
 
 
-class TransactionProcessorTester(object):
+class MockValidator(object):
 
     def __init__(self):
         self._comparators = {}

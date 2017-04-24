@@ -42,36 +42,36 @@ class TestConfig(TransactionProcessorTestCase):
         cls.factory = ConfigMessageFactory()
 
     def _expect_get(self, key, value=None):
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_get_request(key))
-        self.tester.respond(
+        self.validator.respond(
             self.factory.create_get_response(key, value),
             received)
 
     def _expect_set(self, key, expected_value):
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_set_request(key, expected_value))
         print('sending set response...')
-        self.tester.respond(
+        self.validator.respond(
             self.factory.create_set_response(key), received)
 
     def _expect_ok(self):
-        self.tester.expect(self.factory.create_tp_response("OK"))
+        self.validator.expect(self.factory.create_tp_response("OK"))
 
     def _expect_invalid_transaction(self):
-        self.tester.expect(
+        self.validator.expect(
             self.factory.create_tp_response("INVALID_TRANSACTION"))
 
     def _expect_internal_error(self):
-        self.tester.expect(
+        self.validator.expect(
             self.factory.create_tp_response("INTERNAL_ERROR"))
 
     def _propose(self, key, value):
-        self.tester.send(self.factory.create_proposal_transaction(
+        self.validator.send(self.factory.create_proposal_transaction(
             key, value, "somenonce"))
 
     def _vote(self, proposal_id, setting, vote):
-        self.tester.send(self.factory.create_vote_proposal(
+        self.validator.send(self.factory.create_vote_proposal(
             proposal_id, setting, vote))
 
     @property
