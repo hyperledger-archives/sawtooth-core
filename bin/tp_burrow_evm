@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export GOPATH=/project/sawtooth-core/sdk/go:/project/sawtooth-core/families/burrow_evm
+
+cd /project/sawtooth-core/families/burrow_evm/src/sawtooth_burrow_evm
+go run main.go
