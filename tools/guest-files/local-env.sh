@@ -18,10 +18,9 @@ PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/simulator
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/simulator/tests
 export PYTHONPATH
 
-GOPATH=/home/ubuntu/go:/project/sawtooth-core/sdk/go
+GOPATH=/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go
+GOBIN=/project/sawtooth-core/sdk/go/bin
 export GOPATH
-
-GOBIN=$GOPATH/bin
 
 PATH=$PATH:$GOBIN:/project/sawtooth-core/bin:/
 export PATH

@@ -24,6 +24,7 @@ MODULE_LIST="
     poet
     config
     validator
+    go_sdk
     java_sdk
     javascript_sdk
     python_sdk
@@ -144,6 +145,9 @@ main() {
                 validator)
                     test_validator
                     ;;
+                go_sdk)
+                    test_go_sdk
+                    ;;
                 java_sdk)
                     test_java_sdk
                     ;;
@@ -206,6 +210,10 @@ test_config() {
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
     run_docker_test shutdown-smoke.yaml -s integration_test
+}
+
+test_go_sdk() {
+    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-go.yaml -s validator
 }
 
 test_java_sdk() {

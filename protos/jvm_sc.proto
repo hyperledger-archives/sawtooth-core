@@ -16,7 +16,7 @@
 syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "sawtooth.examples.jvmsc";
-option go_package = "jvmsc";
+option go_package = "jvmsc_pb2";
 
 message JVMEntry {
     bytes bytecode = 1;

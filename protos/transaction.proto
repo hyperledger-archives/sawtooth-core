@@ -17,7 +17,7 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
-option go_package = "transaction";
+option go_package = "transaction_pb2";
 
 message TransactionHeader {
     // Public key for the client who added this transaction to a batch

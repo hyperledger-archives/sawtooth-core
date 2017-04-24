@@ -124,7 +124,7 @@ def protoc_go(src_dir, base_dir, pkg):
             proto = proto_file[:-6]
 
             sub_pkg = JOIN(pkg, proto)
-            tmp_pkg_dir = JOIN(tmp_dir, sub_pkg)
+            tmp_pkg_dir = JOIN(tmp_dir, sub_pkg + "_pb2")
             os.makedirs(tmp_pkg_dir)
 
             src = JOIN(src_dir, proto_file)
@@ -150,7 +150,7 @@ def protoc_go(src_dir, base_dir, pkg):
 def fix_import(contents, pkg, sub_dir=False):
     pattern = r'^import "(.*)\.proto\"'
     if sub_dir:
-        template = r'import "%s/\1/\1.proto"'
+        template = r'import "%s/\1_pb2/\1.proto"'
     else:
         template = r'import "%s/\1.proto"'
 

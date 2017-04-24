@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+cd $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
+export GOPATH=/go:$top_dir/sdk/examples/intkey_go:$top_dir/sdk/go/
+go run main.go $1
