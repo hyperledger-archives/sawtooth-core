@@ -171,6 +171,14 @@ func (self *Stream) start() {
 
 // Handle a single message sendRequest
 func (self *Stream) sender(i interface{}) error {
+	// Handle a panic while sending without crashing. For example, if the
+	// channel passed in with the sendRequest is closed.
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Panic while sending:", r)
+		}
+	}()
+
 	// Validate this is a sendRequest.
 	req, ok := i.(*sendRequest)
 	if !ok {
@@ -182,7 +190,6 @@ func (self *Stream) sender(i interface{}) error {
 	msgData, err := proto.Marshal(req.Msg)
 
 	if err != nil {
-		// TODO: Handle a panic in the event the channel is already closed
 		req.Response <- &Response{
 			Msg: nil,
 			Err: &SendMsgError{fmt.Sprint("Failed to marshal:", err)},
@@ -194,7 +201,6 @@ func (self *Stream) sender(i interface{}) error {
 	// Send the message
 	err = sendBytes(self.socket, msgData)
 	if err != nil {
-		// TODO: Handle a panic in the event the channel is already closed
 		req.Response <- &Response{
 			Msg: nil,
 			Err: &SendMsgError{fmt.Sprint("Failed to send message:", err)},
@@ -218,6 +224,14 @@ func (self *Stream) sender(i interface{}) error {
 
 // Receive a single message and route
 func (self *Stream) receiver(socketState zmq.State) error {
+	// Handle a panic while receiving without crashing. For example, if the
+	// response channel mapped to by the correlation id is already closed.
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Panic while receiving:", r)
+		}
+	}()
+
 	// Receive message
 	bytes, err := recvBytes(self.socket)
 	if err != nil {
@@ -240,7 +254,6 @@ func (self *Stream) receiver(socketState zmq.State) error {
 	//If this is a response, push it onto the response channel
 	if exists && msg.CorrelationId != "" {
 		fmt.Println("Got new response, sending on rc: ", msg.CorrelationId)
-		// TODO: Handle a panic in the event the channel is already closed
 		rc <- &Response{
 			Msg: msg,
 			Err: nil,
@@ -251,7 +264,6 @@ func (self *Stream) receiver(socketState zmq.State) error {
 
 	} else {
 		fmt.Println("Got new message!")
-		// TODO: Handle a panic in the event the channel is already closed
 		self.incoming <- msg
 	}
 	return nil
