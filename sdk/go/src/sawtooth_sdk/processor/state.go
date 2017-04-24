@@ -8,11 +8,15 @@ import (
 	"sawtooth_sdk/protobuf/validator_pb2"
 )
 
+// State provides an abstract interface for getting and setting validator
+// state. All validator interactions by a handler should be through a State
+// instance.
 type State struct {
 	stream    *messaging.Stream
 	contextId string
 }
 
+// Construct a new state cobject given an initialized Stream and Context ID.
 func NewState(stream *messaging.Stream, contextId string) *State {
 	return &State{
 		stream:    stream,
@@ -20,8 +24,21 @@ func NewState(stream *messaging.Stream, contextId string) *State {
 	}
 }
 
+// Get queries the validator state for data at each of the addresses in the
+// given slice. A string->[]byte map is returned. If an address is not set, the
+// slice in the map will have 0 length. For example:
+//
+//     results, err := state.Get(addresses)
+//     if err != nil {
+//         fmt.Println("Error getting data!")
+//     }
+//     data, ok := results[address]
+//     if !ok || len(data) == 0 {
+//         fmt.Prinln("No data stored at address!")
+//     }
+//
 func (self *State) Get(addresses []string) (map[string][]byte, error) {
-	// 1. Construct the message
+	// Construct the message
 	request := &state_context_pb2.TpStateGetRequest{
 		ContextId: self.contextId,
 		Addresses: addresses,
@@ -31,7 +48,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 		return nil, &GetError{fmt.Sprint("Failed to marshal:", err)}
 	}
 
-	// 2. Send the message and get the response
+	// Send the message and get the response
 	rc := <-self.stream.Send(
 		validator_pb2.Message_TP_STATE_GET_REQUEST, bytes,
 	)
@@ -48,7 +65,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 		}
 	}
 
-	// 4. Parse the result
+	// Parse the result
 	response := &state_context_pb2.TpStateGetResponse{}
 	err = proto.Unmarshal(msg.GetContent(), response)
 	if err != nil {
@@ -63,7 +80,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 		}
 	}
 
-	// 5. Construct and return a map
+	// Construct and return a map
 	results := make(map[string][]byte)
 	for _, entry := range response.GetEntries() {
 		results[entry.GetAddress()] = entry.GetData()
@@ -72,8 +89,21 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 	return results, nil
 }
 
+// Set requests that each address in the validator state be set to the given
+// value. A slice of addresses set is returned or an error if there was a
+// problem setting the addresses. For example:
+//
+//     responses, err := state.Set(dataMap)
+//     if err != nil {
+//         fmt.Println("Error setting addresses!")
+//     }
+//     set, ok := results[address]
+//     if !ok {
+//         fmt.Prinln("Address was not set!")
+//     }
+//
 func (self *State) Set(pairs map[string][]byte) ([]string, error) {
-	// 1. Construct the message
+	// Construct the message
 	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
 	for address, data := range pairs {
 		entries = append(entries, &state_context_pb2.Entry{
@@ -91,7 +121,7 @@ func (self *State) Set(pairs map[string][]byte) ([]string, error) {
 		return nil, &SetError{fmt.Sprint("Failed to marshal:", err)}
 	}
 
-	// 2. Send the message and get the response
+	// Send the message and get the response
 	rc := <-self.stream.Send(
 		validator_pb2.Message_TP_STATE_SET_REQUEST, bytes,
 	)
@@ -107,7 +137,7 @@ func (self *State) Set(pairs map[string][]byte) ([]string, error) {
 		}
 	}
 
-	// 4. Parse the result
+	// Parse the result
 	response := &state_context_pb2.TpStateSetResponse{}
 	err = proto.Unmarshal(msg.Content, response)
 	if err != nil {

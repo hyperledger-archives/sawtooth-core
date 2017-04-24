@@ -1,3 +1,5 @@
+// Package messaging handles low level communication between a transaction
+// processor and validator.
 package messaging
 
 import (
@@ -20,11 +22,23 @@ type sendRequest struct {
 	IsResponse bool
 }
 
+// Response is used to wrap a validator message before it is sent on the
+// channel returned by the Send() method of Stream. Before accessing
+// Response.Msg, Response.Err should be checked.
 type Response struct {
 	Msg *validator_pb2.Message
 	Err error
 }
 
+// Stream handles all communication between a transaction processor and
+// validator. To use Stream, create a new instance and connect it to the
+// validator's public URI:
+//
+//     stream := NewStream()
+//     stream.Connect("tcp://localhost:40000")
+//
+// This creates incoming/outgoing queues and starts a background thread to
+// handle incoming and outgoing messages over ZMQ.
 type Stream struct {
 	incoming  chan *validator_pb2.Message
 	outgoing  chan interface{}
@@ -35,6 +49,7 @@ type Stream struct {
 	responses map[string]chan *Response
 }
 
+// NewStream creates a new instance of the Stream type.
 func NewStream() *Stream {
 	return &Stream{
 		incoming:  make(chan *validator_pb2.Message),
@@ -47,7 +62,8 @@ func NewStream() *Stream {
 	}
 }
 
-/* Connect the Stream using ZMQ and start a background thread. */
+// Connect establishes a connection with the validator and sets up queues and
+// background threads to handle communication efficiently.
 func (self *Stream) Connect(url string) error {
 	self.url = url
 	context, err := zmq.NewContext()
@@ -62,11 +78,20 @@ func (self *Stream) Connect(url string) error {
 	return nil
 }
 
+// Close shuts down the Stream and closes the connection to the validator. This
+// should be called with defer after calling Stream.Connect():
+//
+//     stream.Connect("tcp://localhost:40000")
+//     defer stream.Close()
+//
 func (self *Stream) Close() {
 	self.socket.Close()
 	self.context.Term()
 }
 
+// Send a message of the given type to the validator. Returns a channel that a
+// single Response will be pushed onto. The channel will be closed after the
+// response is pushed onto it.
 func (self *Stream) Send(t validator_pb2.Message_MessageType, c []byte) chan *Response {
 	correlationId := generateId()
 	msg := &validator_pb2.Message{
@@ -86,11 +111,18 @@ func (self *Stream) Send(t validator_pb2.Message_MessageType, c []byte) chan *Re
 	return request.Response
 }
 
+// Receive a single message from the validator that is NOT a response to a
+// previously sent message. To receive a response to a sent message, uses the
+// channel returned by Send()
 func (self *Stream) Receive() (*validator_pb2.Message, error) {
 	// TODO: Timeout?
 	return <-self.incoming, nil
 }
 
+// Respond to message received from the validator. `corrId` should be the
+// correlation ID contained in the message being responded to. Like Send() a
+// Response channel, but it should only be used for error checking;
+// Response.Msg will always be nil.
 func (self *Stream) Respond(t validator_pb2.Message_MessageType, c []byte, corrId string) chan *Response {
 	msg := &validator_pb2.Message{
 		MessageType:   t,
@@ -109,6 +141,7 @@ func (self *Stream) Respond(t validator_pb2.Message_MessageType, c []byte, corrI
 	return request.Response
 }
 
+// Set up the sockets and channels needed for communicating.
 func (self *Stream) start() {
 	socket, err := self.context.NewSocket(zmq.DEALER)
 	if err != nil {
@@ -136,14 +169,16 @@ func (self *Stream) start() {
 	fmt.Println("Reactor exited:", err)
 }
 
-// Send messages from the outgoing channel in a loop
+// Handle a single message sendRequest
 func (self *Stream) sender(i interface{}) error {
+	// Validate this is a sendRequest.
 	req, ok := i.(*sendRequest)
 	if !ok {
 		fmt.Println("Received unexpected type from channel!")
 		return nil
 	}
 
+	// Deserialize
 	msgData, err := proto.Marshal(req.Msg)
 
 	if err != nil {
@@ -156,6 +191,7 @@ func (self *Stream) sender(i interface{}) error {
 		return nil
 	}
 
+	// Send the message
 	err = sendBytes(self.socket, msgData)
 	if err != nil {
 		// TODO: Handle a panic in the event the channel is already closed
@@ -167,7 +203,7 @@ func (self *Stream) sender(i interface{}) error {
 		return nil
 	}
 
-	// 4. Store the channel so the response can be sent on it
+	// Store the channel so the response can be sent on it
 	if req.IsResponse {
 		req.Response <- &Response{
 			Msg: nil,
@@ -180,16 +216,16 @@ func (self *Stream) sender(i interface{}) error {
 	return nil
 }
 
-// Receive messages in a loop and route
+// Receive a single message and route
 func (self *Stream) receiver(socketState zmq.State) error {
-	// 1. Receive message
+	// Receive message
 	bytes, err := recvBytes(self.socket)
 	if err != nil {
 		fmt.Println("Failed to received:", err)
 		return nil
 	}
 
-	// 2. Deserialize
+	// Deserialize
 	msg := &validator_pb2.Message{}
 	err = proto.Unmarshal(bytes, msg)
 	if err != nil {
@@ -197,7 +233,7 @@ func (self *Stream) receiver(socketState zmq.State) error {
 		return nil
 	}
 
-	// 3. Route the message
+	// Route the message
 	rc, exists := self.responses[msg.CorrelationId]
 	fmt.Printf("rc: %v, exists: %v\n", rc, exists)
 

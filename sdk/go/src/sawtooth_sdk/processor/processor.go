@@ -9,6 +9,8 @@ import (
 	"sawtooth_sdk/protobuf/validator_pb2"
 )
 
+// TransactionProcessor is a generic class for communicating with a validator
+// and routing transaction processing requests to a registered handler.
 type TransactionProcessor struct {
 	url      string
 	stream   *messaging.Stream
@@ -23,8 +25,10 @@ func NewTransactionProcessor(url string) *TransactionProcessor {
 	}
 }
 
+// Start connects the TransactionProcessor to a validator and starts listening
+// for requests and routing them to an appropriate handler.
 func (self *TransactionProcessor) Start() {
-	// 1. Connect and register with the validator
+	// Connect and register with the validator
 	err := self.stream.Connect(self.url)
 	if err != nil {
 		fmt.Println("Failed to start:", err)
@@ -38,7 +42,7 @@ func (self *TransactionProcessor) Start() {
 		return
 	}
 
-	// 2. Wait for messages
+	// Wait for messages
 	for {
 		msg, err := self.stream.Receive()
 		if err != nil {
@@ -66,17 +70,20 @@ func (self *TransactionProcessor) Start() {
 			break
 		}
 
+		// Try to find a handler
 		handler, err := self.findHandler(header)
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
 
+		// Construct new State instance for the handler
 		contextId := request.GetContextId()
 		state := NewState(self.stream, contextId)
 
 		err = handler.Apply(request, state)
 
+		// Process the handler response
 		response := &processor_pb2.TpProcessResponse{}
 		if err != nil {
 			switch e := err.(type) {
@@ -114,10 +121,15 @@ func (self *TransactionProcessor) Start() {
 	}
 }
 
+// AddHandler adds the given handler to the TransactionProcessor so it can
+// receive transaction processing requests. All handlers should be added prior
+// to starting the processor.
 func (self *TransactionProcessor) AddHandler(handler TransactionHandler) {
 	self.handlers = append(self.handlers, handler)
 }
 
+// Searches for and returns a handler that matches the header. If a suitable
+// handler is not found, returns an error.
 func (self *TransactionProcessor) findHandler(header *transaction_pb2.TransactionHeader) (TransactionHandler, error) {
 	for _, handler := range self.handlers {
 		if header.GetFamilyName() != handler.FamilyName() {
@@ -140,6 +152,7 @@ func (self *TransactionProcessor) findHandler(header *transaction_pb2.Transactio
 	)}
 }
 
+// Register all handlers with the validator
 func (self *TransactionProcessor) register() error {
 	for _, h := range self.handlers {
 		err := self.regOne(
@@ -152,6 +165,7 @@ func (self *TransactionProcessor) register() error {
 	return nil
 }
 
+// Register a handler with the validator
 func (self *TransactionProcessor) regOne(name, ver, enc string, names []string) error {
 	regRequest := &processor_pb2.TpRegisterRequest{
 		Family:     name,
