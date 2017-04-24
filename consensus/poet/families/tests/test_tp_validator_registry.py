@@ -41,11 +41,11 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             public=PUBLIC)
 
     def _expect_invalid_transaction(self):
-        self.tester.expect(
+        self.validator.expect(
             self.factory.create_tp_response("INVALID_TRANSACTION"))
 
     def _expect_ok(self):
-        self.tester.expect(self.factory.create_tp_response("OK"))
+        self.validator.expect(self.factory.create_tp_response("OK"))
 
     def test_valid_signup_info(self):
         """
@@ -59,35 +59,37 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             verb="reg", name="val_1", id=self.factory.public_key,
             signup_info=signup_info)
         # Send validator registry payload
-        self.tester.send(
+        self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
         # Expect Request for the ValidatorMap
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_get_request_validator_map())
 
         # Respond with a empty validator Map
-        self.tester.respond(
+        self.validator.respond(
             self.factory.create_get_empty_response_validator_map(), received)
 
         # Expect a set the new validator to the ValidatorMap
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_set_request_validator_map())
 
         # Respond with the ValidatorMap address
-        self.tester.respond(self.factory.create_set_response_validator_map(),
-                            received)
+        self.validator.respond(
+            self.factory.create_set_response_validator_map(),
+            received)
 
         # Expect a request to set ValidatorInfo for val_1
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_set_request_validator_info("val_1",
                                                            "registered"))
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id
         # val id is the same as the pubkey for the factory
-        self.tester.respond(self.factory.create_set_response_validator_info(),
-                            received)
+        self.validator.respond(
+            self.factory.create_set_response_validator_info(),
+            received)
 
         self._expect_ok()
         # --------------------------
@@ -99,44 +101,48 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             signup_info=signup_info)
 
         # Send validator registry payload
-        self.tester.send(
+        self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
         # Expect Request for the ValidatorMap
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_get_request_validator_map())
 
         # Respond with a validator Map
-        self.tester.respond(self.factory.create_get_response_validator_map(),
-                            received)
+        self.validator.respond(
+            self.factory.create_get_response_validator_map(),
+            received)
         # Expect to receive a validator_info request
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_get_request_validator_info())
 
         # Respond with the ValidatorInfo
-        self.tester.respond(
-            self.factory.create_get_response_validator_info("val_1"), received)
+        self.validator.respond(
+            self.factory.create_get_response_validator_info(
+                "val_1"), received)
 
         # Expect a request to set ValidatorInfo for val_1
-        received = self.tester.expect(
-            self.factory.create_set_request_validator_info("val_1", "revoked"))
+        received = self.validator.expect(
+            self.factory.create_set_request_validator_info(
+                "val_1", "revoked"))
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id
         # val id is the same as the pubkey for the factory
-        self.tester.respond(
+        self.validator.respond(
             self.factory.create_set_response_validator_info(), received)
 
         # Expect a request to set ValidatorInfo for val_1
-        received = self.tester.expect(
+        received = self.validator.expect(
             self.factory.create_set_request_validator_info("val_1",
                                                            "registered"))
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id
         # val id is the same as the pubkey for the factory
-        self.tester.respond(self.factory.create_set_response_validator_info(),
-                            received)
+        self.validator.respond(
+            self.factory.create_set_response_validator_info(),
+            received)
 
         self._expect_ok()
 
@@ -157,7 +163,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             signup_info=signup_info)
 
         # Send validator registry payload
-        self.tester.send(
+        self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
         self._expect_invalid_transaction()
@@ -179,7 +185,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         )
 
         # Send validator registry payload
-        self.tester.send(
+        self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
         self._expect_invalid_transaction()
@@ -201,7 +207,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             signup_info=signup_info)
 
         # Send validator registry payload
-        self.tester.send(
+        self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
         self._expect_invalid_transaction()
@@ -214,7 +220,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             signup_info=signup_info)
 
         # Send validator registry payload
-        self.tester.send(
+        self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
         self._expect_invalid_transaction()
 

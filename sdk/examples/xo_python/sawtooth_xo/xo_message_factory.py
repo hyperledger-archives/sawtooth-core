@@ -48,7 +48,7 @@ class XoMessageFactory:
 
         return txn_function(payload, addresses, addresses, [])
 
-    def create_tp_process_request(self, game, action, space=None):
+    def create_tp_process_request(self, action, game, space=None):
         txn_function = self._factory.create_tp_process_request
         return self._create_txn(txn_function, game, action, space)
 
