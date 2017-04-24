@@ -66,7 +66,7 @@ func (self *TransactionProcessor) Start() {
 			break
 		}
 
-		handler, err := self.FindHandler(header)
+		handler, err := self.findHandler(header)
 		if err != nil {
 			fmt.Println(err)
 			break
@@ -112,6 +112,32 @@ func (self *TransactionProcessor) Start() {
 			break
 		}
 	}
+}
+
+func (self *TransactionProcessor) AddHandler(handler TransactionHandler) {
+	self.handlers = append(self.handlers, handler)
+}
+
+func (self *TransactionProcessor) findHandler(header *transaction_pb2.TransactionHeader) (TransactionHandler, error) {
+	for _, handler := range self.handlers {
+		if header.GetFamilyName() != handler.FamilyName() {
+			break
+		}
+
+		if header.GetFamilyVersion() != handler.FamilyVersion() {
+			break
+		}
+
+		if header.GetPayloadEncoding() != handler.Encoding() {
+			break
+		}
+
+		return handler, nil
+	}
+	return nil, &UnknownHandlerError{fmt.Sprint(
+		"Unknown handler: (%v, %v, %v)", header.GetFamilyName(),
+		header.GetFamilyVersion(), header.GetPayloadEncoding(),
+	)}
 }
 
 func (self *TransactionProcessor) register() error {
@@ -171,10 +197,6 @@ func (self *TransactionProcessor) regOne(name, ver, enc string, names []string) 
 	return nil
 }
 
-func (self *TransactionProcessor) AddHandler(handler TransactionHandler) {
-	self.handlers = append(self.handlers, handler)
-}
-
 func in(val string, slice []string) bool {
 	for _, i := range slice {
 		if i == val {
@@ -182,26 +204,4 @@ func in(val string, slice []string) bool {
 		}
 	}
 	return false
-}
-
-func (self *TransactionProcessor) FindHandler(header *transaction_pb2.TransactionHeader) (TransactionHandler, error) {
-	for _, handler := range self.handlers {
-		if header.GetFamilyName() != handler.FamilyName() {
-			break
-		}
-
-		if header.GetFamilyVersion() != handler.FamilyVersion() {
-			break
-		}
-
-		if header.GetPayloadEncoding() != handler.Encoding() {
-			break
-		}
-
-		return handler, nil
-	}
-	return nil, &UnknownHandlerError{fmt.Sprint(
-		"Unknown handler: (%v, %v, %v)", header.GetFamilyName(),
-		header.GetFamilyVersion(), header.GetPayloadEncoding(),
-	)}
 }
