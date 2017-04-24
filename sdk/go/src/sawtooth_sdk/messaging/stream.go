@@ -91,7 +91,7 @@ func (self *Stream) Receive() (*validator_pb2.Message, error) {
 	return <-self.incoming, nil
 }
 
-func (self *Stream) Respond(t validator_pb2.Message_MessageType, c []byte, corrId string) {
+func (self *Stream) Respond(t validator_pb2.Message_MessageType, c []byte, corrId string) chan *Response {
 	msg := &validator_pb2.Message{
 		MessageType:   t,
 		CorrelationId: corrId,
@@ -105,6 +105,8 @@ func (self *Stream) Respond(t validator_pb2.Message_MessageType, c []byte, corrI
 	}
 
 	self.outgoing <- request
+
+	return request.Response
 }
 
 func (self *Stream) start() {
@@ -151,6 +153,7 @@ func (self *Stream) sender(i interface{}) error {
 			Err: &SendMsgError{fmt.Sprint("Failed to marshal:", err)},
 		}
 		close(req.Response)
+		return nil
 	}
 
 	err = sendBytes(self.socket, msgData)
@@ -161,10 +164,17 @@ func (self *Stream) sender(i interface{}) error {
 			Err: &SendMsgError{fmt.Sprint("Failed to send message:", err)},
 		}
 		close(req.Response)
+		return nil
 	}
 
-	// Store the channel so the response can be sent on it
-	if !req.IsResponse {
+	// 4. Store the channel so the response can be sent on it
+	if req.IsResponse {
+		req.Response <- &Response{
+			Msg: nil,
+			Err: nil,
+		}
+		close(req.Response)
+	} else {
 		self.responses[req.Msg.CorrelationId] = req.Response
 	}
 	return nil

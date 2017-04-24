@@ -101,10 +101,16 @@ func (self *TransactionProcessor) Start() {
 			break
 		}
 
-		self.stream.Respond(
+		// 6. Send back a response to the validator
+		rc := <-self.stream.Respond(
 			validator_pb2.Message_TP_PROCESS_RESPONSE,
 			responseData, msg.CorrelationId,
 		)
+
+		if rc.Err != nil {
+			fmt.Println("Error sending back response: ", err)
+			break
+		}
 	}
 }
 
