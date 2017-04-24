@@ -1,0 +1,18 @@
+#!/bin/bash
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+cd $top_dir
+
+dirs="
+$top_dir/sdk/go/src/sawtooth_sdk/messaging
+$top_dir/sdk/go/src/sawtooth_sdk/processor
+$top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
+$top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
+"
+
+for dir in $dirs
+do
+    echo "Running 'go fmt' in $dir"
+    go fmt $(ls -1 $dir/*.go)
+done
