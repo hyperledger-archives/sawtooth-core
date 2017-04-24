@@ -24,6 +24,8 @@
 /core_transactions/config/sawtooth_config/protobuf/
 /core_transactions/**/__pycache__/
 
+/docs/build/
+
 /extensions/arcade/sawtooth_arcade.egg-info/
 
 /integration/**/__pycache__/
