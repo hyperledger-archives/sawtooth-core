@@ -14,6 +14,7 @@ import (
 const (
 	SENDS_PER_LOOP  int           = 1
 	POLLING_TIMEOUT time.Duration = 50 * time.Millisecond
+	RECEIVE_TIMEOUT time.Duration = 5 * time.Minute
 )
 
 type sendRequest struct {
@@ -115,8 +116,14 @@ func (self *Stream) Send(t validator_pb2.Message_MessageType, c []byte) chan *Re
 // previously sent message. To receive a response to a sent message, uses the
 // channel returned by Send()
 func (self *Stream) Receive() (*validator_pb2.Message, error) {
-	// TODO: Timeout?
-	return <-self.incoming, nil
+	select {
+	case <-time.After(RECEIVE_TIMEOUT):
+		return nil, &RecvMsgError{
+			fmt.Sprint("Receiving timed out after ", RECEIVE_TIMEOUT),
+		}
+	case r := <-self.incoming:
+		return r, nil
+	}
 }
 
 // Respond to message received from the validator. `corrId` should be the
