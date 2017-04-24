@@ -65,6 +65,14 @@ def version(default):
         version = default + ".dev1"
     return version
 
+data_files = []
+
+if os.path.exists("/etc/default"):
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-tp_config']))
+
+if os.path.exists("/lib/systemd/system"):
+    data_files.append(('/lib/systemd/system',
+                       ['packaging/systemd/sawtooth-tp_config.service']))
 
 setup(name='sawtooth-config',
       version=version('0.8.2'),
@@ -77,6 +85,7 @@ setup(name='sawtooth-config',
           'protobuf',
           'sawtooth-sdk',
           ],
+      data_files=data_files,
       entry_points={
           'console_scripts': [
               'tp_config = sawtooth_config.processor.main:main'

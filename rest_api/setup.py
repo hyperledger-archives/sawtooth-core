@@ -66,6 +66,15 @@ def version(default):
     return version
 
 
+data_files = []
+
+if os.path.exists("/etc/default"):
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-rest_api']))
+
+if os.path.exists("/lib/systemd/system"):
+    data_files.append(('/lib/systemd/system',
+                       ['packaging/systemd/sawtooth-rest_api.service']))
+
 setup(name='sawtooth-rest-api',
       version=version('0.8.2'),
       description='Sawtooth Lake REST API',
@@ -79,6 +88,7 @@ setup(name='sawtooth-rest-api',
           'protobuf',
           'sawtooth-sdk',
           ],
+      data_files=data_files,
       entry_points={
           'console_scripts': [
               'rest_api = sawtooth_rest_api.rest_api:main'

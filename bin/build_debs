@@ -131,8 +131,22 @@ build_pkg() {
 
     cd $build_dir/$pkg
 
+    # 2. Cleanup previous builds
+    if [ -d "debian" ]
+    then
+        rm -rf debian
+    fi
+    python3 setup.py clean --all
+
+
     # 2. Build the package
     python3 setup.py --command-packages=stdeb.command debianize
+
+    if [ -d "packaging/ubuntu" ]
+    then
+        cp -R packaging/ubuntu/* debian/
+    fi
+
     dpkg-buildpackage -b -rfakeroot -us -uc
 
     # 3. Install the package

@@ -64,24 +64,6 @@ def version(default):
         version = default + ".dev1"
     return version
 
-
-if os.name == 'nt':
-    extra_compile_args = ['/EHsc']
-    libraries = ['json-c', 'cryptopp-static']
-    include_dirs = ['deps/include', 'deps/include/cryptopp']
-    library_dirs = ['deps/lib']
-elif sys.platform == 'darwin':
-    os.environ["CC"] = "clang++"
-    extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'cryptopp']
-    include_dirs = ['/usr/local/include']
-    library_dirs = ['/usr/local/lib']
-else:
-    extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'cryptopp']
-    include_dirs = []
-    library_dirs = []
-
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
     data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\data"
@@ -92,18 +74,18 @@ else:
     log_dir = "/var/log/sawtooth"
 
 data_files = [
-    (conf_dir, ['etc/path.toml.example', 'etc/log_config.toml.example']),
+    (conf_dir, ['packaging/path.toml.example', 'packaging/log_config.toml.example']),
     (os.path.join(conf_dir, "keys"), []),
     (data_dir, []),
     (log_dir, []),
 ]
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['etc/default/sawtooth-validator']))
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-validator']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['etc/systemd/sawtooth-validator.service']))
+                       ['packaging/systemd/sawtooth-validator.service']))
 
 setup(
     name='sawtooth-validator',

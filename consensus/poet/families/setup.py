@@ -66,6 +66,16 @@ def version(default):
     return version
 
 
+data_files = []
+
+if os.path.exists("/etc/default"):
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-tp_validator_registry']))
+
+if os.path.exists("/lib/systemd/system"):
+    data_files.append(('/lib/systemd/system',
+                       ['packaging/systemd/sawtooth-tp_validator_registry.service']))
+
+
 setup(name='sawtooth-poet-families',
       version=version('0.8.2'),
       description='Sawtooth Lake Transaction Processor Families',
@@ -79,6 +89,7 @@ setup(name='sawtooth-poet-families',
           'sawtooth-sdk',
           'sawtooth-signing',
           ],
+      data_files=data_files,
       entry_points={
           'console_scripts': [
               'tp_validator_registry = sawtooth_validator_registry.validator_registry.processor.main:main'
