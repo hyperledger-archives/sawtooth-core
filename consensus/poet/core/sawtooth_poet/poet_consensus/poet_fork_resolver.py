@@ -101,29 +101,35 @@ class PoetForkResolver(ForkResolverInterface):
                 block=new_fork_head,
                 poet_enclave_module=poet_enclave_module)
 
-        # This should never, ever, ever happen (at least we hope), but
-        # defensively protect against having to choose between two non-PoET
-        # fork heads.
-        if current_fork_wait_certificate is None and \
-                new_fork_wait_certificate is None:
-            raise TypeError('Neither block is a PoET block')
-
-        # Criterion#1: We will always choose a PoET block over a non-PoET
-        # block
+        # If we ever get a new fork head that is not a PoET block, then bail
+        # out.  This should never happen, but defensively protect against it.
         if new_fork_wait_certificate is None:
-            LOGGER.info(
-                'Choose current fork %s: New fork head is not a PoET '
-                'block',
-                cur_fork_head.header_signature[:8])
-            chosen_fork_head = cur_fork_head
-        elif current_fork_wait_certificate is None:
-            LOGGER.info(
-                'Choose new fork %s: Current fork head is not a PoET '
-                'block',
-                new_fork_head.header_signature[:8])
-            chosen_fork_head = new_fork_head
+            raise \
+                TypeError(
+                    'New fork head {} is not a PoET block'.format(
+                        new_fork_head.identifier[:8]))
 
-        # Criterion#2: If they share the same immediate previous block,
+        # Criterion #1: If the current fork head is not PoET, then check to see
+        # if the new fork head is building on top of it.  That would be okay.
+        # However if not, then we don't have a good deterministic way of
+        # choosing a winner.  Again, the latter should never happen, but
+        # defensively protect against it.
+        if current_fork_wait_certificate is None:
+            if new_fork_head.previous_block_id == cur_fork_head.identifier:
+                LOGGER.info(
+                    'Choose new fork %s: New fork head switches consensus to '
+                    'PoET',
+                    new_fork_head.identifier[:8])
+                chosen_fork_head = new_fork_head
+            else:
+                raise \
+                    TypeError(
+                        'Trying to compare a PoET block {} to a non-PoET '
+                        'block {} that is not the direct predecessor'.format(
+                            new_fork_head.identifier[:8],
+                            cur_fork_head.identifier[:8]))
+
+        # Criterion #2: If they share the same immediate previous block,
         # then the one with the smaller wait duration is chosen
         elif cur_fork_head.previous_block_id == \
                 new_fork_head.previous_block_id:
@@ -146,7 +152,7 @@ class PoetForkResolver(ForkResolverInterface):
                     current_fork_wait_certificate.duration)
                 chosen_fork_head = new_fork_head
 
-        # Criterion#3: If they don't share the same immediate previous
+        # Criterion #3: If they don't share the same immediate previous
         # block, then the one with the higher aggregate local mean wins
         else:
             # Get the consensus state for the current fork head and the
@@ -195,7 +201,7 @@ class PoetForkResolver(ForkResolverInterface):
                     current_fork_consensus_state.aggregate_local_mean)
                 chosen_fork_head = new_fork_head
 
-        # Criterion#4: If we have gotten to this point and we have not chosen
+        # Criterion #4: If we have gotten to this point and we have not chosen
         # yet, we are going to fall back on using the block identifiers
         # (header signatures) . The lexicographically larger one will be the
         # chosen one.  The chance that they are equal are infinitesimally
