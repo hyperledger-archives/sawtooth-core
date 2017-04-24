@@ -38,7 +38,7 @@ class SignupInfo(object):
                            poet_enclave_module,
                            validator_address,
                            originator_public_key_hash,
-                           most_recent_wait_certificate_id):
+                           nonce):
         """
         Creates signup information a PoET 1 validator uses to join the
         validator network.
@@ -51,8 +51,8 @@ class SignupInfo(object):
             originator_public_key_hash (str): A string representing SHA256
                 hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
                 originator's public key
-            most_recent_wait_certificate_id (str): The ID of the
-                most-recently-created wait certificate.
+            nonce (str): A value that is to be stored in the nonce field of
+                the attestation verification report.
 
         Returns:
             SignupInfo: A signup info object.
@@ -62,7 +62,7 @@ class SignupInfo(object):
             poet_enclave_module.create_signup_info(
                 validator_address,
                 originator_public_key_hash,
-                most_recent_wait_certificate_id)
+                nonce)
         signup_info = cls(enclave_signup_info)
 
         return signup_info
@@ -136,8 +136,7 @@ class SignupInfo(object):
 
     def check_valid(self,
                     poet_enclave_module,
-                    originator_public_key_hash,
-                    most_recent_wait_certificate_id):
+                    originator_public_key_hash):
         """
         Checks the validity of the signup information.
 
@@ -147,16 +146,13 @@ class SignupInfo(object):
             originator_public_key_hash (str): A string representing SHA256
                 hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
                 originator's public key
-            most_recent_wait_certificate_id (str): The ID of the
-                most-recently-created wait certificate.
 
         Returns:
             SignupInfo object
         """
         poet_enclave_module.verify_signup_info(
             self._enclave_signup_info(poet_enclave_module),
-            originator_public_key_hash,
-            most_recent_wait_certificate_id)
+            originator_public_key_hash)
 
     def serialize(self):
         # Simply return the serialized version of the enclave signup info

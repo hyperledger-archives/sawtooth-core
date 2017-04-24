@@ -96,7 +96,7 @@ def do_genesis(args):
         poet_enclave_module=poet_enclave_module,
         validator_address=pubkey,
         originator_public_key_hash=public_key_hash,
-        most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+        nonce=NULL_BLOCK_IDENTIFIER)
 
     print(
         'Writing key state for PoET public key: {}...{}'.format(
@@ -123,8 +123,8 @@ def do_genesis(args):
             signup_info=vr_pb.SignUpInfo(
                 poet_public_key=signup_info.poet_public_key,
                 proof_data=signup_info.proof_data,
-                anti_sybil_id=signup_info.anti_sybil_id),
-        )
+                anti_sybil_id=signup_info.anti_sybil_id,
+                nonce=NULL_BLOCK_IDENTIFIER))
     serialized = payload.SerializeToString()
 
     # Create the address that will be used to look up this validator

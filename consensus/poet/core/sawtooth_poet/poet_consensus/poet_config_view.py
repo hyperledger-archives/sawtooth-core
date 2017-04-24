@@ -35,6 +35,7 @@ class PoetConfigView(object):
     _MINIMUM_WAIT_TIME_ = 1.0
     # pylint: disable=invalid-name
     _POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
+    _SIGNUP_COMMIT_MAXIMUM_DELAY_ = 0
     _TARGET_WAIT_TIME_ = 20.0
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _ZTEST_MINIMUM_WIN_COUNT_ = 3
@@ -58,6 +59,7 @@ class PoetConfigView(object):
         self._minimum_wait_time = None
         self._population_estimate_sample_size = None
         self._target_wait_time = None
+        self._signup_commit_maximum_delay = None
         self._ztest_maximum_win_deviation = None
         self._ztest_minimum_win_count = None
 
@@ -225,6 +227,32 @@ class PoetConfigView(object):
                     validate_function=lambda value: value > 0)
 
         return self._population_estimate_sample_size
+
+    @property
+    def signup_commit_maximum_delay(self):
+        """Return the signup commit maximum delay if config setting exists and
+        is valid, otherwise return the default.
+
+        The signup commit maximum delay is the maximum allowed number of blocks
+        between the head of the block chain when the signup information was
+        created and subsequent validator registry transaction was submitted and
+        when said transaction was committed to the blockchain.  For example, if
+        the signup commit maximum delay is one and the signup information's
+        containing validator registry transaction was created/submitted when
+        the blockchain head was block number 100, then the validator registry
+        transaction must have been committed either in block 101 (i.e., zero
+        blocks between 100 and 101) or block 102 (i.e., one block between 100
+        and 102).
+        """
+        if self._signup_commit_maximum_delay is None:
+            self._signup_commit_maximum_delay = \
+                self._get_config_setting(
+                    name='sawtooth.poet.signup_commit_maximum_delay',
+                    value_type=int,
+                    default_value=PoetConfigView._SIGNUP_COMMIT_MAXIMUM_DELAY_,
+                    validate_function=lambda value: value >= 0)
+
+        return self._signup_commit_maximum_delay
 
     @property
     def target_wait_time(self):

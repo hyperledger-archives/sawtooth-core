@@ -37,7 +37,6 @@ message ValidatorInfo {
     string transaction_id = 5;
 }
 
-
 message SignUpInfo {
     // Encoded public key corresponding to private key used by PoET to sign
     // wait certificates.
@@ -50,6 +49,10 @@ message SignUpInfo {
     // A string corresponding to the anti-Sybil ID for the enclave that
     // generated the signup information.
     string anti_sybil_id = 3;
+
+    // The nonce associated with the signup info.  Note that this must match
+    // the nonce provided when the signup info was created.
+    string nonce = 4;
 }
 
 message ValidatorMap {

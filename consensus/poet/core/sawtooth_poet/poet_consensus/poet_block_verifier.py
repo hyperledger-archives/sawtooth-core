@@ -169,6 +169,18 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 error)
             return False
 
+        # Reject the block if the validator signup information fails the
+        # freshness check.
+        if consensus_state.validator_signup_was_committed_too_late(
+                validator_info=validator_info,
+                poet_config_view=poet_config_view,
+                block_cache=self._block_cache):
+            LOGGER.error(
+                'Block %s rejected: Validator signup information not '
+                'committed in a timely manner.',
+                block_wrapper.identifier[:8])
+            return False
+
         # Reject the block if the validator has already claimed the key bock
         # limit for its current PoET key pair.
         if consensus_state.validator_has_claimed_block_limit(

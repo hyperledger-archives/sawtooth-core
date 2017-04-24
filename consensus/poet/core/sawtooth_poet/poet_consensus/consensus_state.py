@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines
+
 import math
 import logging
 import collections
@@ -566,6 +568,73 @@ class ConsensusState(object):
                 poet_public_key=validator_info.signup_info.poet_public_key,
                 total_block_claim_count=total_block_claim_count)
 
+    def validator_signup_was_committed_too_late(self,
+                                                validator_info,
+                                                poet_config_view,
+                                                block_cache):
+        """Determines if a validator's registry transaction committing it
+        current PoET keys, etc., was committed too late - i.e., the number of
+        blocks between when the transaction was submitted and when it was
+        committed is greater than signup commit maximum delay.
+
+        Args:
+            validator_info (ValidatorInfo): The current validator information
+            poet_config_view (PoetConfigView): The current Poet config view
+            block_cache (BlockCache): The block store cache
+
+        Returns:
+            bool: True if the validator's registry transaction was committed
+                beyond the signup commit maximum delay, False otherwise
+        """
+        # Figure out the block in which the current validator information
+        # was committed.
+        block = \
+            block_cache.block_store.get_block_by_transaction_id(
+                validator_info.transaction_id)
+        commit_block_id = block.identifier
+
+        # Starting with that block's immediate predecessor, walk back until
+        # either we match the block ID with the nonce field in the signup
+        # info, we have checked the maximum number of blocks, or we somehow
+        # reached the beginning of the blockchain.  The first case is
+        # success (i.e., the validator signup info passed the freshness
+        # test) while the other two cases are failure.
+        for _ in range(poet_config_view.signup_commit_maximum_delay + 1):
+            if block.previous_block_id == validator_info.signup_info.nonce:
+                LOGGER.debug(
+                    'Validator %s (ID=%s...%s): Signup committed block %s, '
+                    'chain head was block %s',
+                    validator_info.name,
+                    validator_info.id[:8],
+                    validator_info.id[-8:],
+                    commit_block_id[:8],
+                    block.previous_block_id[:8])
+                return False
+
+            if utils.block_id_is_genesis(block.previous_block_id):
+                LOGGER.error(
+                    'Validator %s (ID=%s...%s): Signup committed block %s, '
+                    'hit start of blockchain looking for block %s',
+                    validator_info.name,
+                    validator_info.id[:8],
+                    validator_info.id[-8:],
+                    commit_block_id[:8],
+                    validator_info.signup_info.nonce[:8])
+                return True
+
+            block = block_cache[block.previous_block_id]
+
+        LOGGER.error(
+            'Validator %s (ID=%s...%s): Signup committed block %s, failed to '
+            'find block %s in %d previous block(s)',
+            validator_info.name,
+            validator_info.id[:8],
+            validator_info.id[-8:],
+            commit_block_id[:8],
+            validator_info.signup_info.nonce[:8],
+            poet_config_view.signup_commit_maximum_delay + 1)
+        return True
+
     def validator_has_claimed_block_limit(self,
                                           validator_info,
                                           poet_config_view):
@@ -573,10 +642,9 @@ class ConsensusState(object):
         blocks allowed with its PoET key pair.
         Args:
             validator_info (ValidatorInfo): The current validator information
-            poet_config_view (PoetConfigView): The limit of number of blocks
-             that can be claimed with a PoET key pair
+            poet_config_view (PoetConfigView): The current Poet config view
         Returns:
-            Boolean: True if the validator has already claimed the maximum
+            bool: True if the validator has already claimed the maximum
                 number of blocks with its current PoET key pair, False
                 otherwise
         """
@@ -634,7 +702,7 @@ class ConsensusState(object):
                 view
             block_store (BlockStore): The block store
         Returns:
-            Boolean: True if the validator has not waited the required number
+            bool: True if the validator has not waited the required number
                 of blocks before attempting to claim a block, False otherwise
         """
 

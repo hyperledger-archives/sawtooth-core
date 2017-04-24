@@ -171,7 +171,7 @@ class ValidatorRegistryTransactionHandler(object):
     def verify_signup_info(self,
                            signup_info,
                            originator_public_key_hash,
-                           most_recent_wait_certificate_id):
+                           val_reg_payload):
 
         # Verify the attestation verification report signature
         proof_data_dict = json.loads(signup_info.proof_data)
@@ -333,7 +333,7 @@ class ValidatorRegistryTransactionHandler(object):
         # expected enclave basename.
         #
         # NOTE - this is only a temporary check.  Instead of checking against
-        # a predefined enclave basenme value, we should be configured with a
+        # a predefined enclave basename value, we should be configured with a
         # set of one or more enclave basenames that we will consider as valid.
 
         if sgx_quote.basename.name != self.__VALID_BASENAME__:
@@ -343,26 +343,16 @@ class ValidatorRegistryTransactionHandler(object):
                         sgx_quote.basename.name.hex(),
                         self.__VALID_BASENAME__.hex()))
 
-        # Verify that the wait certificate ID in the verification report
-        # matches the provided wait certificate ID.  The wait certificate ID
-        # is stored in the nonce field.
-        nonce = verification_report_dict.get('nonce')
-        if nonce is None:
+        # Verify that the nonce in the verification report matches the nonce
+        # in the transaction payload submitted
+        nonce = verification_report_dict.get('nonce', '')
+        if nonce != val_reg_payload.signup_info.nonce:
             raise \
                 ValueError(
-                    'Verification report does not have a nonce')
-
-        # NOTE - this check is currently not performed as a transaction
-        #        does not have a good way to obtaining the most recent
-        #        wait certificate ID.
-        #
-        # if nonce != most_recent_wait_certificate_id:
-        #     raise \
-        #         ValueError(
-        #             'Attestation evidence payload nonce {0} does not match '
-        #             'most-recently-committed wait certificate ID {1}'.format(
-        #                 nonce,
-        #                 most_recent_wait_certificate_id))
+                    'AVR nonce [{0}] does not match signup info nonce '
+                    '[{1}]'.format(
+                        nonce,
+                        val_reg_payload.signup_info.nonce))
 
     def apply(self, transaction, state):
         txn_header = TransactionHeader()
@@ -392,7 +382,7 @@ class ValidatorRegistryTransactionHandler(object):
             self.verify_signup_info(
                 signup_info=signup_info,
                 originator_public_key_hash=public_key_hash,
-                most_recent_wait_certificate_id='0' * 16)
+                val_reg_payload=val_reg_payload)
 
         except ValueError as error:
             raise InvalidTransaction(

@@ -75,7 +75,7 @@ class TestWaitTimer(TestCase):
                 poet_enclave_module=self.poet_enclave_module,
                 validator_address='1060 W Addison Street',
                 originator_public_key_hash=self._originator_public_key_hash,
-                most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+                nonce=NULL_BLOCK_IDENTIFIER)
 
         stake_in_the_sand = time.time()
 
@@ -149,7 +149,7 @@ class TestWaitTimer(TestCase):
             poet_enclave_module=self.poet_enclave_module,
             validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
-            most_recent_wait_certificate_id=NULL_BLOCK_IDENTIFIER)
+            nonce=NULL_BLOCK_IDENTIFIER)
 
         # Verify that a timer doesn't expire before its creation time
         wt = wait_timer.WaitTimer.create_wait_timer(

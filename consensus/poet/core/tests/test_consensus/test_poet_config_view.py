@@ -30,6 +30,7 @@ class TestPoetConfigView(unittest.TestCase):
     _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 25
     _EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_ = 1.0
     _EXPECTED_DEFAULT_POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
+    _EXPECTED_DEFAULT_SIGNUP_COMMIT_MAXIMUM_DELAY_ = 0
     _EXPECTED_DEFAULT_TARGET_WAIT_TIME_ = 20.0
     _EXPECTED_DEFAULT_ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _EXPECTED_DEFAULT_ZTEST_MINIMUM_WIN_COUNT_ = 3
@@ -310,6 +311,47 @@ class TestPoetConfigView(unittest.TestCase):
         mock_config_view.return_value.get_setting.return_value = 3.1415
         poet_config_view = PoetConfigView(state_view=None)
         self.assertEqual(poet_config_view.target_wait_time, 3.1415)
+
+    def test_signup_commit_maximum_delay(self, mock_config_view):
+        """Verify that retrieving signup commit maximum delay works for invalid
+        cases (missing, invalid format, invalid value) as well as valid case.
+        """
+
+        poet_config_view = PoetConfigView(state_view=None)
+
+        # Simulate an underlying error parsing value
+        mock_config_view.return_value.get_setting.side_effect = \
+            ValueError('bad value')
+
+        self.assertEqual(
+            poet_config_view.signup_commit_maximum_delay,
+            TestPoetConfigView._EXPECTED_DEFAULT_SIGNUP_COMMIT_MAXIMUM_DELAY_)
+
+        _, kwargs = \
+            mock_config_view.return_value.get_setting.call_args
+
+        self.assertEqual(
+            kwargs['key'],
+            'sawtooth.poet.signup_commit_maximum_delay')
+        self.assertEqual(
+            kwargs['default_value'],
+            TestPoetConfigView._EXPECTED_DEFAULT_SIGNUP_COMMIT_MAXIMUM_DELAY_)
+        self.assertEqual(kwargs['value_type'], int)
+
+        # Underlying config setting is not a valid value
+        mock_config_view.return_value.get_setting.side_effect = None
+        for bad_value in [-100, -1]:
+            mock_config_view.return_value.get_setting.return_value = bad_value
+            poet_config_view = PoetConfigView(state_view=None)
+            self.assertEqual(
+                poet_config_view.signup_commit_maximum_delay,
+                TestPoetConfigView.
+                _EXPECTED_DEFAULT_SIGNUP_COMMIT_MAXIMUM_DELAY_)
+
+        # Underlying config setting is a valid value
+        mock_config_view.return_value.get_setting.return_value = 123
+        poet_config_view = PoetConfigView(state_view=None)
+        self.assertEqual(poet_config_view.signup_commit_maximum_delay, 123)
 
     def test_ztest_maximum_win_deviation(self, mock_config_view):
         """Verify that retrieving zTest maximum win deviation works for
