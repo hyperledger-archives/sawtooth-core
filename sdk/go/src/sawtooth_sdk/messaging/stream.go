@@ -221,7 +221,7 @@ func (self *Stream) receiver(socketState zmq.State) error {
 	// Receive message
 	bytes, err := recvBytes(self.socket)
 	if err != nil {
-		fmt.Println("Failed to received:", err)
+		fmt.Println("Failed to receive:", err)
 		return nil
 	}
 

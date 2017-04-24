@@ -47,7 +47,7 @@ func (self *TransactionProcessor) Start() {
 		msg, err := self.stream.Receive()
 		if err != nil {
 			// TODO: Handle timeout
-			fmt.Println("Failed to received a message")
+			fmt.Println("Failed to receive a message")
 			break
 		}
 
