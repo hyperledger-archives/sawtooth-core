@@ -7,9 +7,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	zmq "github.com/pebbe/zmq4"
 	uuid "github.com/satori/go.uuid"
+	"sawtooth_sdk/logging"
 	"sawtooth_sdk/protobuf/validator_pb2"
 	"time"
 )
+
+var logger *logging.Logger = logging.Get()
 
 const (
 	SENDS_PER_LOOP  int           = 1
@@ -152,28 +155,27 @@ func (self *Stream) Respond(t validator_pb2.Message_MessageType, c []byte, corrI
 func (self *Stream) start() {
 	socket, err := self.context.NewSocket(zmq.DEALER)
 	if err != nil {
-		fmt.Sprint("Failed to create ZMQ socket: ", err)
+		logger.Error("Failed to create ZMQ socket: ", err)
 		return
 	}
 
 	socket.SetIdentity(self.identity)
-	fmt.Println("Socket Identity set to", self.identity)
+	logger.Debug("Socket Identity set to ", self.identity)
 
-	fmt.Printf("Connecting to %v...", self.url)
+	logger.Info("Connecting to ", self.url)
 	err = socket.Connect(self.url)
 	if err != nil {
 		socket.Close()
-		fmt.Sprint("Failed to connect to ", self.url, ": ", err)
+		logger.Error("Failed to connect to ", self.url, ": ", err)
 		return
 	}
-	fmt.Println("done")
 	self.socket = socket
 
 	reactor := zmq.NewReactor()
 	reactor.AddSocket(self.socket, zmq.POLLIN, self.receiver)
 	reactor.AddChannel(self.outgoing, SENDS_PER_LOOP, self.sender)
 	err = reactor.Run(POLLING_TIMEOUT)
-	fmt.Println("Reactor exited:", err)
+	logger.Error("Reactor exited: ", err)
 }
 
 // Handle a single message sendRequest
@@ -182,14 +184,14 @@ func (self *Stream) sender(i interface{}) error {
 	// channel passed in with the sendRequest is closed.
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Panic while sending:", r)
+			logger.Warn("Panic while sending: ", r)
 		}
 	}()
 
 	// Validate this is a sendRequest.
 	req, ok := i.(*sendRequest)
 	if !ok {
-		fmt.Println("Received unexpected type from channel!")
+		logger.Warn("Received unexpected type from channel!")
 		return nil
 	}
 
@@ -235,14 +237,14 @@ func (self *Stream) receiver(socketState zmq.State) error {
 	// response channel mapped to by the correlation id is already closed.
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Panic while receiving:", r)
+			logger.Warn("Panic while receiving:", r)
 		}
 	}()
 
 	// Receive message
 	bytes, err := recvBytes(self.socket)
 	if err != nil {
-		fmt.Println("Failed to receive:", err)
+		logger.Warn("Failed to receive:", err)
 		return nil
 	}
 
@@ -250,27 +252,27 @@ func (self *Stream) receiver(socketState zmq.State) error {
 	msg := &validator_pb2.Message{}
 	err = proto.Unmarshal(bytes, msg)
 	if err != nil {
-		fmt.Printf("Failed to unmarshal: %v\n", bytes)
+		logger.Warn("Failed to unmarshal:", err)
 		return nil
 	}
 
 	// Route the message
 	rc, exists := self.responses[msg.CorrelationId]
-	fmt.Printf("rc: %v, exists: %v\n", rc, exists)
+	logger.Debugf("rc: %v, exists: %v\n", rc, exists)
 
 	//If this is a response, push it onto the response channel
 	if exists && msg.CorrelationId != "" {
-		fmt.Println("Got new response, sending on rc: ", msg.CorrelationId)
+		logger.Debug("Got new response, sending on rc: ", msg.CorrelationId)
 		rc <- &Response{
 			Msg: msg,
 			Err: nil,
 		}
-		fmt.Println("Closing rc: ", msg.CorrelationId)
+		logger.Debug("Closing rc: ", msg.CorrelationId)
 		close(rc)
 		delete(self.responses, msg.CorrelationId)
 
 	} else {
-		fmt.Println("Got new message!")
+		logger.Debug("Got new message!")
 		self.incoming <- msg
 	}
 	return nil
@@ -288,7 +290,7 @@ func sendBytes(socket *zmq.Socket, bytes []byte) error {
 			break
 		}
 	}
-	fmt.Printf("Sent %v bytes\n", sent)
+	logger.Debugf("Sent %v bytes\n", sent)
 	return nil
 }
 
@@ -308,7 +310,7 @@ func recvBytes(socket *zmq.Socket) ([]byte, error) {
 			break
 		}
 	}
-	fmt.Printf("Received %v bytes\n", len(recv))
+	logger.Debugf("Received %v bytes\n", len(recv))
 	return recv, nil
 }
 

@@ -5,10 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	cbor "github.com/brianolson/cbor_go"
+	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
 	"strings"
 )
+
+var logger *logging.Logger = logging.Get()
 
 type IntkeyPayload struct {
 	Verb  string
@@ -54,7 +57,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	}
 
 	if err != nil {
-		fmt.Println(payloadData)
+		logger.Error("Bad payload: ", payloadData)
 		return &processor.InternalError{fmt.Sprint("Failed to decode payload: ", err)}
 	}
 
@@ -78,12 +81,12 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	if err != nil {
 		return &processor.InternalError{fmt.Sprint("Error getting state:", err)}
 	}
-	fmt.Println("Got: ", results)
+	logger.Debug("Got: ", results)
 
 	var collisionMap map[string]int
 	data, exists := results[address]
 	if exists && len(data) > 0 {
-		fmt.Println("Decoding: ", data)
+		logger.Debug("Decoding: ", data)
 		err = DecodeCBOR(data, &collisionMap)
 		if err != nil {
 			return &processor.InternalError{
