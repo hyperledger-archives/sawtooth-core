@@ -1,0 +1,1 @@
+In addition to a private key, you will need a distributed public key generated from the private key. It should be encoded as a hexadecimal string, to distribute with the Transaction and confirm that its signature is valid.
