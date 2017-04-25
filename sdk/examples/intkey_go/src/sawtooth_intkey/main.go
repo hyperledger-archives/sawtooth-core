@@ -8,7 +8,8 @@ import (
 
 func main() {
 	endpoint := "tcp://localhost:40000"
-	if len(os.Args) > 0 {
+	if len(os.Args) > 1 {
+		// Overwrite the default endpoint if specified
 		endpoint = os.Args[1]
 	}
 
