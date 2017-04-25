@@ -7,3 +7,4 @@ Architecture
    :maxdepth: 2
   
    architecture/transactions_and_batches
+   architecture/global_state
