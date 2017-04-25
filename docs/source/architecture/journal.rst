@@ -366,13 +366,110 @@ batch processing to occur.
 Genesis Operation
 =================
 
-The journal supports Genesis operation. This is the action of creating a root of
-the chain (the Genesis block) when the block store is empty. 
+The Journal supports Genesis operation. This is the action of creating a root of
+the chain (the Genesis block) when the block store is empty. This operation is
+necessary for bootstrapping a validator network with the desired consensus
+model, any deployment-specific configuration settings, as well as any
+genesis-time transactions for an application's Transaction Family.
 
-Requirements
-------------
+Genesis Batch Creation
+----------------------
 
-* Creates a single block, the genesis block
-* All batches in the pending queue are included into the genesis block in the
-  order they were added to the pending queue
-* All batches must succeed
+The CLI tool produces batches in a file, which will be consumed by the
+validator on startup (when starting with an empty chain).
+
+The file contains a protobuf-encoded list of batches:
+
+.. code-block:: protobuf
+        :caption: File: sawtooth-core/protos/genesis.proto
+
+        message GenesisData {
+            repeated Batch batches = 1;
+        }
+
+The tool should take multiple input batch collections, and combine them
+together into the single list of batches contained in GenesisData. This allows
+independent tools or transaction families to include their own batches, without
+needing to know anything about the genesis process.
+
+The first implementation assumes that the order of the input batches have
+implied dependencies, with each batch being implicitly dependent on the
+previous.  Any dependencies should be verified when the final set of batches is
+produced.  This would be enforced by the use of strict ordering of the batches
+during execution time.  Future implementations may provide a way to verify
+dependencies across input batches.
+
+Transaction family authors who need to provide batches that will be included,
+need to provide their own tool to produce GenesisData, with the batches they
+require for the process. Each individual tool may manage their batch and
+transaction dependencies explicitly within the context of their specific
+genesis batches.
+
+Example
+~~~~~~~
+
+The following example configures the validator to use PoET consensus, the
+Marketplace transaction family and configures the appropriate settings:
+
+.. code-block:: bash
+
+        mktplace genesis \
+          -k <signing-key-file>
+          -o mktplace.batch \
+          --root-participant-name=x \
+          --base-validation-reward=x
+        sawtooth config proposal create \
+          -k <signing-key-file>
+          -o sawtooth-config.batch \
+          sawtooth.transaction.families=mktplace \
+          sawtooth.consensus.algorithm=poet \
+          poet.initial_wait_timer=x \
+          poet.target_wait_time=x \
+          poet.minimum_wait_time=x \
+          poet.certificate_sample_length=x \
+        sawtooth admin genesis \
+          sawtooth-config.batch \
+          mktplace.batch
+
+A genesis.batch file will written to the validator's data directory.
+
+Block Creation
+--------------
+
+On startup, the validator would use the resulting genesis.batch file to produce
+a genesis block under the following conditions:
+
+* The genesis.batch file exists
+* There is no block specified as the chain head
+* There is no ledgerURL specified
+
+If any of these conditions are not met, the validator halts operation.
+
+The validator will load the batches from the file into the pending queue.  It
+will then produce the genesis block through the standard process with the
+following modifications.
+
+First, the execution of the batches will be strictly in the order they have
+been provided.  The Executor will not attempt to reorder them, or drop failed
+transactions.  Any failure of a transaction in genesis.batch will fail to
+produce the genesis block, and the validator will treat this as a fatal error.
+
+Second, it will use a genesis consensus, to determine block validity. At the
+start of the genesis block creation process, the merkel state will be empty.
+Given that the consensus mechanism is specified by a configuration setting in
+the state, this will return None.  As a result, the genesis consensus mechanism
+will be used. This will produce a block with an empty consensus field.
+
+In addition to the genesis block, the block chain id (i.e. the signature of the
+genesis block) is written to a file, block-chain-id, in the validator’s data
+directory.
+
+Part of the production of the genesis block will require the configuration of
+the consensus mechanism. The second block will then use the configured
+consensus model, which will need to know how to initialize the consensus field
+from an empty one.  In future cases, transitions between consensus models may be
+possible, as long as they know how to read the consensus field of the previous
+block.
+
+To complete the process, all necessary transaction processors must be running.
+Minimally this includes the Sawtooth Config transaction processor.
