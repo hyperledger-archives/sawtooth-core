@@ -69,6 +69,7 @@ node ('master') {
 
         stage("Run Lint") {
             sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_lint'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-go:$ISOLATION_ID /project/sawtooth-core/bin/run_go_fmt'
         }
 
         stage("Run Bandit") {
