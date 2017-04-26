@@ -157,7 +157,7 @@ paths:
       parameters:
         - name: id
           in: query
-          description: A comma seperated list of batch ids
+          description: A comma-separated list of batch ids
           type: string
           required: true
         - $ref: "#/parameters/wait"
@@ -414,98 +414,6 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
-  /stats/validator:
-    get:
-      summary: Fetches metrics for the validator processing blocks
-      description: >
-        Fetches a snapshot of metrics relating to this validator's
-        processing of blocks. These metrics are raw totals of
-        various validator processes, and any processing of the data
-        will depend on the clients consuming it. These totals are
-        further broken down by types of Transaction Processor.
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
-      responses:
-        200:
-          description: Successfully fetched validator stats
-          schema:
-            properties:
-              data:
-                $ref: "#/definitions/ValidatorStats"
-        400:
-          $ref: "#/responses/400BadRequest"
-        500:
-          $ref: "#/responses/500ServerError"
-        503:
-          $ref: "#/responses/503ServiceUnavailable"
-
-  /stats/gossip:
-    get:
-      summary: Fetches metrics for inter-validator communication
-      description: >
-        Fetches a snapshot of metrics relating to this validator's
-        communication with peer validators. These metrics represent
-        raw totals, and any processing of the data will depend on
-        the clients consuming it. These totals are further broken
-        down by the ids of peers.
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
-      responses:
-        200:
-          description: Successfully fetched gossip stats
-          schema:
-            properties:
-              data:
-                $ref: "#/definitions/GossipStats"
-        400:
-          $ref: "#/responses/400BadRequest"
-        500:
-          $ref: "#/responses/500ServerError"
-        503:
-          $ref: "#/responses/503ServiceUnavailable"
-
-  /status/config:
-    get:
-      summary: Fetches the current configuration of the validator
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
-      responses:
-        200:
-          description: Successfully fetched validator config
-          schema:
-            properties:
-              data:
-                $ref: "#/definitions/ConfigStatus"
-        400:
-          $ref: "#/responses/400BadRequest"
-        500:
-          $ref: "#/responses/500ServerError"
-        503:
-          $ref: "#/responses/503ServiceUnavailable"
-
-  /status/system:
-    get:
-      summary: Fetches the current status of the system the validator is on
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
-      responses:
-        200:
-          description: Successfully fetched system status
-          schema:
-            properties:
-              data:
-                $ref: "#/definitions/SystemStatus"
-        400:
-          $ref: "#/responses/400BadRequest"
-        500:
-          $ref: "#/responses/500ServerError"
-        503:
-          $ref: "#/responses/503ServiceUnavailable"
-
 responses:
   400BadRequest:
     description: Request was malformed
@@ -564,12 +472,12 @@ parameters:
     name: fields
     in: query
     type: string
-    description: Comma separated list of fields to include in response, defaults to all
+    description: Comma-separated list of fields to include in response, defaults to all
   omit:
     name: omit
     in: query
     type: string
-    description: Comma separated list of fields to omit from response, defaults to none
+    description: Comma-separated list of fields to omit from response, defaults to none
   count:
     name: count
     in: query
@@ -759,124 +667,3 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/Batch"
-
-  Timestamp:
-    properties:
-      timestamp:
-        type: string
-        format: date-time
-        example: 2017-01-29T18:50:07Z
-  BaseValidatorStats:
-    properties:
-      blocks:
-        properties:
-          committed:
-            type: integer
-            example: 42
-          rolledback:
-            type: integer
-            example: 17
-          claimed:
-            type: integer
-            example: 3
-      batches:
-        properties:
-          committed:
-            type: integer
-            example: 84
-          rolledback:
-            type: integer
-            example: 34
-          invalid:
-            type: integer
-            example: 12
-      transactions:
-        properties:
-          committed:
-            type: integer
-            example: 168
-          rolledback:
-            type: integer
-            example: 68
-          invalid:
-            type: integer
-            example: 24
-      rollbacks:
-        type: integer
-        example: 13
-  ValidatorStats:
-    allOf:
-      - $ref: "#/definitions/Timestamp"
-      - $ref: "#/definitions/BaseValidatorStats"
-      - properties:
-          "{transaction_processor}":
-            $ref: "#/definitions/BaseValidatorStats"
-  BaseGossipStats:
-    properties:
-      packets:
-        properties:
-          received:
-            type: integer
-            example: 54321
-          sent:
-            type: integer
-            example: 76543
-          dropped:
-            type: integer
-            example: 123
-          duplicate:
-            type: integer
-            example: 89
-      bytes:
-        properties:
-          received:
-            type: integer
-            example: 108642
-          sent:
-            type: integer
-            example: 153086
-          dropped:
-            type: integer
-            example: 246
-      messages_handled:
-        type: integer
-        example: 432
-  GossipStats:
-    allOf:
-      - $ref: "#/definitions/Timestamp"
-      - $ref: "#/definitions/BaseGossipStats"
-      - properties:
-          peer_count:
-            type: integer
-            example: 7
-          "{peer_id}":
-            $ref: "#/definitions/BaseGossipStats"
-
-  ConfigStatus:
-    properties:
-      max_transactions_per_block:
-        type: integer
-        example: 1000
-      min_transactions_per_block:
-        type: integer
-        example: 1
-  SystemStatus:
-    properties:
-      local_time:
-        type: string
-        format: date-time
-        example: 2017-01-29T18:50:07Z
-      percent_cpu:
-        type: number
-        format: float
-        example: 0.2345
-      percent_memory:
-        type: number
-        format: float
-        example: 0.4657
-      network_rx:
-        type: integer
-        example: 46578
-      network_tx:
-        type: integer
-        example: 54238
