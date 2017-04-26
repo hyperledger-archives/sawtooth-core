@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import unittest
+from unittest.mock import Mock
 import logging
 import hashlib
 import threading
@@ -81,7 +82,8 @@ def create_batch(transactions, private_key, public_key):
 
 class TestSerialScheduler(unittest.TestCase):
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase())
+        self.context_manager = ContextManager(dict_database.DictDatabase(),
+                                              state_delta_store=Mock())
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = SerialScheduler(squash_handler,
