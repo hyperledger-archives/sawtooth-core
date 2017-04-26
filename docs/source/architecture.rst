@@ -8,3 +8,4 @@ Architecture
   
    architecture/transactions_and_batches
    architecture/global_state
+   architecture/journal
