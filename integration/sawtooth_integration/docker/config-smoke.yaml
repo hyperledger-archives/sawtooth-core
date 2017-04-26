@@ -37,8 +37,10 @@ services:
       - 8800
     # start the validator with an empty genesis batch
     command: "bash -c \"\
+        echo 5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv > test.priv && \
         sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawtooth config genesis -k test.priv -o config-genesis.batch && \
+        sawtooth admin genesis config-genesis.batch  && \
         validator -v --public-uri tcp://validator:8800 \
             --component-endpoint tcp://eth0:40000 \
             --network-endpoint tcp://eth0:8800 \
