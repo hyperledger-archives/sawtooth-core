@@ -19,6 +19,7 @@ apt-get install -y -q \
     automake \
     build-essential \
     connect-proxy \
+    equivs \
     g++ \
     git \
     libffi-dev \
