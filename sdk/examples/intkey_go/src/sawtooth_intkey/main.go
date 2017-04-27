@@ -32,11 +32,14 @@ func main() {
 	}
 
 	logger := logging.Get()
-	logger.SetLevel(logging.INFO)
+	logger.SetLevel(logging.DEBUG)
 
 	prefix := intkey.Hexdigest("intkey")[:6]
 	handler := intkey.NewIntkeyHandler(prefix)
 	processor := processor.NewTransactionProcessor(endpoint)
 	processor.AddHandler(handler)
-	processor.Start()
+	err := processor.Start()
+    if err != nil {
+        logger.Error("Processor stopped: ", err)
+    }
 }

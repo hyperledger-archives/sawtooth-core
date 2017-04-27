@@ -27,17 +27,18 @@ import (
 
 // State provides an abstract interface for getting and setting validator
 // state. All validator interactions by a handler should be through a State
-// instance.
+// instance. Currently, the State class is NOT thread-safe and State classes
+// may not share the same messaging.Connection object.
 type State struct {
-	stream    *messaging.Stream
-	contextId string
+	connection *messaging.Connection
+	contextId  string
 }
 
 // Construct a new state cobject given an initialized Stream and Context ID.
-func NewState(stream *messaging.Stream, contextId string) *State {
+func NewState(connection *messaging.Connection, contextId string) *State {
 	return &State{
-		stream:    stream,
-		contextId: contextId,
+		connection: connection,
+		contextId:  contextId,
 	}
 }
 
@@ -55,6 +56,8 @@ func NewState(stream *messaging.Stream, contextId string) *State {
 //     }
 //
 func (self *State) Get(addresses []string) (map[string][]byte, error) {
+	logger.Debugf("Getting %v", addresses)
+
 	// Construct the message
 	request := &state_context_pb2.TpStateGetRequest{
 		ContextId: self.contextId,
@@ -62,39 +65,48 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 	}
 	bytes, err := proto.Marshal(request)
 	if err != nil {
-		return nil, &GetError{fmt.Sprint("Failed to marshal:", err)}
+		return nil, fmt.Errorf("Failed to marshal TpStateGetRequest: %v", err)
 	}
 
 	// Send the message and get the response
-	rc := <-self.stream.Send(
+	corrId, err := self.connection.SendNewMsg(
 		validator_pb2.Message_TP_STATE_GET_REQUEST, bytes,
 	)
-
-	if rc.Err != nil {
-		return nil, &GetError{fmt.Sprint("Failed to send get:", err)}
+	if err != nil {
+		return nil, fmt.Errorf("Failed to send TpStateGetRequest: %v", err)
 	}
 
-	msg := rc.Msg
+	_, msg, err := self.connection.RecvMsg()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to received TpStateGetResponse: %v", err)
+	}
+
+	if msg.GetCorrelationId() != corrId {
+		return nil, fmt.Errorf(
+			"Expected message with correlation id %v but got %v",
+			corrId, msg.GetCorrelationId(),
+		)
+	}
 
 	if msg.GetMessageType() != validator_pb2.Message_TP_STATE_GET_RESPONSE {
-		return nil, &GetError{
-			fmt.Sprint("Expected TP_STATE_GET_RESPONSE but got", msg.GetMessageType()),
-		}
+		return nil, fmt.Errorf(
+			"Expected TpStateGetResponse but got %v", msg.GetMessageType(),
+		)
 	}
 
 	// Parse the result
 	response := &state_context_pb2.TpStateGetResponse{}
 	err = proto.Unmarshal(msg.GetContent(), response)
 	if err != nil {
-		return nil, &GetError{fmt.Sprint("Failed to unmarshal:", err)}
+		return nil, fmt.Errorf("Failed to unmarshal TpStateGetResponse: %v", err)
 	}
 
 	// Use a switch in case new Status values are added
 	switch response.Status {
 	case state_context_pb2.TpStateGetResponse_AUTHORIZATION_ERROR:
-		return nil, &GetError{
-			fmt.Sprint("Tried to get unauthorized address:", addresses),
-		}
+		return nil, fmt.Errorf(
+			"Tried to get unauthorized address: %v", addresses,
+		)
 	}
 
 	// Construct and return a map
@@ -102,6 +114,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 	for _, entry := range response.GetEntries() {
 		results[entry.GetAddress()] = entry.GetData()
 	}
+	logger.Debugf("Got %v", results)
 
 	return results, nil
 }
@@ -120,6 +133,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 //     }
 //
 func (self *State) Set(pairs map[string][]byte) ([]string, error) {
+	logger.Debugf("Setting %v", pairs)
 	// Construct the message
 	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
 	for address, data := range pairs {
@@ -135,30 +149,39 @@ func (self *State) Set(pairs map[string][]byte) ([]string, error) {
 	}
 	bytes, err := proto.Marshal(request)
 	if err != nil {
-		return nil, &SetError{fmt.Sprint("Failed to marshal:", err)}
+		return nil, fmt.Errorf("Failed to marshal: %v", err)
 	}
 
 	// Send the message and get the response
-	rc := <-self.stream.Send(
+	corrId, err := self.connection.SendNewMsg(
 		validator_pb2.Message_TP_STATE_SET_REQUEST, bytes,
 	)
-
-	if rc.Err != nil {
-		return nil, &GetError{fmt.Sprint("Failed to send set:", err)}
+	if err != nil {
+		return nil, fmt.Errorf("Failed to send set: %v", err)
 	}
 
-	msg := rc.Msg
+	_, msg, err := self.connection.RecvMsg()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to receive TpStateSetResponse: %v", err)
+	}
+	if msg.GetCorrelationId() != corrId {
+		return nil, fmt.Errorf(
+			"Expected message with correlation id %v but got %v",
+			corrId, msg.GetCorrelationId(),
+		)
+	}
+
 	if msg.GetMessageType() != validator_pb2.Message_TP_STATE_SET_RESPONSE {
-		return nil, &SetError{
-			fmt.Sprint("Expected TP_STATE_SET_RESPONSE but got", msg.MessageType),
-		}
+		return nil, fmt.Errorf(
+			"Expected TP_STATE_SET_RESPONSE but got %v", msg.GetMessageType(),
+		)
 	}
 
 	// Parse the result
 	response := &state_context_pb2.TpStateSetResponse{}
 	err = proto.Unmarshal(msg.Content, response)
 	if err != nil {
-		return nil, &SetError{fmt.Sprint("Failed to unmarshal:", err)}
+		return nil, fmt.Errorf("Failed to unmarshal TpStateSetResponse: %v", err)
 	}
 
 	// Use a switch in case new Status values are added
@@ -168,10 +191,10 @@ func (self *State) Set(pairs map[string][]byte) ([]string, error) {
 		for a, _ := range pairs {
 			addresses = append(addresses, a)
 		}
-		return nil, &SetError{
-			fmt.Sprint("Tried to set unauthorized address:", addresses),
-		}
+		return nil, fmt.Errorf("Tried to set unauthorized address: %v", addresses)
 	}
+
+	logger.Debugf("Set %v", response.Addresses)
 
 	return response.Addresses, nil
 }
