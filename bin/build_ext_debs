@@ -136,7 +136,7 @@ build_deb() {
         sed -e 's/setuptools_/setuptools-/' \
             -e 's/cryptography_/cryptography-/')
 
-    if [ -z $(find $pkg_dir -name "*$deb_pkg_name\_*.deb") ]
+    if [ -z $(find $pkg_dir -name "python3-$deb_pkg_name\_*.deb") ]
     then
         info "Downloading source code for $pip_pkg_name"
         pip3 download --no-binary :all: \
