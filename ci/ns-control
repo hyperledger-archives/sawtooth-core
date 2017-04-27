@@ -1,0 +1,26 @@
+### Commented entries have reasonable defaults.
+### Uncomment to edit them.
+# Source: <source package name; defaults to package name>
+Section: misc
+Priority: optional
+Homepage: https://01.org/sawtooth
+Standards-Version: 3.9.2
+
+Package: sawtooth
+Version: @VERSION@
+Maintainer: Hyperledger Sawtooth <distributedledger@intel.com>
+# Pre-Depends: <comma-separated list of packages>
+Depends: python3-sawtooth-cli, python3-sawtooth-config, python3-sawtooth-intkey, python3-sawtooth-manage, python3-sawtooth-poet-common, python3-sawtooth-poet-core, python3-sawtooth-poet-families, python3-sawtooth-poet-simulator, python3-sawtooth-rest-api, python3-sawtooth-sdk, python3-sawtooth-signing, python3-sawtooth-validator, python3-sawtooth-xo
+# Recommends: <comma-separated list of packages>
+# Suggests: <comma-separated list of packages>
+# Provides: <comma-separated list of packages>
+# Replaces: <comma-separated list of packages>
+# Architecture: all
+# Multi-Arch: <one of: foreign|same|allowed>
+# Copyright: <copyright file; defaults to GPL2>
+# Changelog: <changelog file; defaults to a generic changelog>
+# Readme: <README.Debian file; defaults to a generic one>
+# Extra-Files: <comma-separated list of additional files for the doc directory>
+# Files: <pair of space-separated paths; First is file to include, second is destination>
+#  <more pairs, if there's more than one file to include. Notice the starting space>
+Description: Hyperledger Sawtooth Distributed Ledger
