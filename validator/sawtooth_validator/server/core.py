@@ -52,6 +52,7 @@ from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.config_view import ConfigViewFactory
+from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -108,7 +109,15 @@ class Validator(object):
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'c')
 
-        context_manager = ContextManager(merkle_db)
+        delta_db_filename = os.path.join(data_dir,
+                                         'state-deltas-{}.lmdb'.format(
+                                             network_endpoint[-2:]))
+        LOGGER.debug('state delta store file is %s', delta_db_filename)
+        state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
+
+        state_delta_store = StateDeltaStore(state_delta_db)
+
+        context_manager = ContextManager(merkle_db, state_delta_store)
         self._context_manager = context_manager
 
         state_view_factory = StateViewFactory(merkle_db)

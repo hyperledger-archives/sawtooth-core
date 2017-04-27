@@ -23,6 +23,7 @@ from threading import Thread
 from queue import Queue
 
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 
 
 LOGGER = logging.getLogger(__name__)
@@ -166,14 +167,16 @@ class StateContext(object):
 
 class ContextManager(object):
 
-    def __init__(self, database):
+    def __init__(self, database, state_delta_store):
         """
 
         Args:
-            database database.Database subclass: the subclass/implementation of
-                                                the Database
+            database (database.Database subclass): the subclass/implementation
+                of the Database
+            state_delta_store (StateDeltaStore): the store for state deltas
         """
         self._database = database
+        self._state_delta_store = state_delta_store
         self._first_merkle_root = None
         self._contexts = _ThreadsafeContexts()
 
@@ -338,6 +341,13 @@ class ContextManager(object):
             virtual = not persist
             state_hash = tree.update(updates, virtual=virtual)
             if persist:
+                # save the state changes to the state_delta_store
+                changes = [StateChange(address=addr,
+                                       value=value,
+                                       type=StateChange.SET)
+                           for addr, value in updates.items()]
+                self._state_delta_store.save_state_deltas(state_hash, changes)
+
                 # clean up all contexts that are involved in being squashed.
                 base_c_ids = []
                 for c_id in context_ids:
