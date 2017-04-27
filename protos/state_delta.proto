@@ -36,3 +36,53 @@ message StateChange {
 message StateDeltaSet {
     repeated StateChange state_changes = 1;
 }
+
+// Registers a subscriber for StateDeltaEvent objects.  The
+// identity of the subscriber will be based on the ZMQ connection
+// id. This is an idempotent request.
+message RegisterStateDeltaSubscriberRequest {
+    // The block id (or ids, if trying to walk back a fork) the
+    // subscriber last received deltas on.  It can be set to empty
+    // if it has not yet received the genesis block.
+    repeated string last_known_block_ids = 1;
+    // The list of address prefixes of interest.  Only state changes
+    // that occur on values in the given prefixes will be sent to the
+    // subscriber.
+    repeated string address_prefixes = 2;
+}
+
+// The response to a RegisterStateDeltaSubscriberRequest
+message RegisterStateDeltaSubscriberResponse {
+    enum Status {
+        // returned on successful registration
+        OK = 0;
+        // returned on a failed registration, due to
+        // an internal validator error
+        INTERNAL_ERROR = 1;
+        // returned on a failed registration, due to all
+        // last_known_block_ids being unknown.  This could imply
+        // that a fork had occurred and been resolved since last
+        // unregistration.
+        UNKNOWN_BLOCK = 2;
+    }
+
+    Status status = 1;
+}
+
+// Unregisters a subscriber for StateDeltaEvent objects.  The
+// identity of the subscriber will be based on the ZMQ connection
+// id.  This is an idempotent request.
+message UnregisterStateDeltaSubscriberRequest {
+    // No data
+}
+
+message UnregisterStateDeltaSubscriberResponse {
+    enum Status {
+        // returned on successful registration
+        OK = 0;
+        // returned on a failed registration, due to
+        // an internal validator error
+        INTERNAL_ERROR = 1;
+    }
+    Status status = 1;
+}
