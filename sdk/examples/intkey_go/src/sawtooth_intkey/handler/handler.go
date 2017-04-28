@@ -1,3 +1,20 @@
+/**
+ * Copyright 2017 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
+
 package handler
 
 import (
@@ -5,10 +22,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	cbor "github.com/brianolson/cbor_go"
+	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
 	"strings"
 )
+
+var logger *logging.Logger = logging.Get()
 
 type IntkeyPayload struct {
 	Verb  string
@@ -54,7 +74,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	}
 
 	if err != nil {
-		fmt.Println(payloadData)
+		logger.Error("Bad payload: ", payloadData)
 		return &processor.InternalError{fmt.Sprint("Failed to decode payload: ", err)}
 	}
 
@@ -78,12 +98,12 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	if err != nil {
 		return &processor.InternalError{fmt.Sprint("Error getting state:", err)}
 	}
-	fmt.Println("Got: ", results)
+	logger.Debug("Got: ", results)
 
 	var collisionMap map[string]int
 	data, exists := results[address]
 	if exists && len(data) > 0 {
-		fmt.Println("Decoding: ", data)
+		logger.Debug("Decoding: ", data)
 		err = DecodeCBOR(data, &collisionMap)
 		if err != nil {
 			return &processor.InternalError{
