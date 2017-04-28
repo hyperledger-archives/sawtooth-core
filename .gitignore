@@ -26,6 +26,7 @@
 
 /docs/build/
 /docs/source/_autogen/
+/docs/source/cli/output/
 
 /extensions/arcade/sawtooth_arcade.egg-info/
 
