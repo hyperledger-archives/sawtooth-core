@@ -17,3 +17,8 @@ targets:
     template: txn_submit_tutorial.rst
     args:
       language: JavaScript
+
+  sdk_submit_tutorial_js:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: JavaScript

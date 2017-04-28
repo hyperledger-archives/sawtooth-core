@@ -10,3 +10,4 @@ Application Developer's Guide
    app_developers_guide/writing_clients
    app_developers_guide/txn_family_tutorial
    app_developers_guide/testing
+   app_developers_guide/javascript_sdk
