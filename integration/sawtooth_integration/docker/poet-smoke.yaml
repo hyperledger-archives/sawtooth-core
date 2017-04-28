@@ -221,9 +221,10 @@ services:
       - rest-api-0
       - rest-api-1
       - rest-api-2
-    command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/tests
-        test_poet_smoke.TestPoetSmoke
+    command: nose2-3
+        -s /project/sawtooth-core/integration
+        -v
+        sawtooth_integration.tests.test_poet_smoke.TestPoetSmoke
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
