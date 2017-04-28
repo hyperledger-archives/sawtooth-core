@@ -18,28 +18,41 @@
 package main
 
 import (
-	"os"
+	"flag"
 	intkey "sawtooth_intkey/handler"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 )
 
 func main() {
+	v := flag.Bool("v", false, "Info level logging")
+	vv := flag.Bool("vv", false, "Debug level logging")
 	endpoint := "tcp://localhost:40000"
-	if len(os.Args) > 1 {
+
+	flag.Parse()
+	args := flag.Args()
+	if len(args) > 0 {
 		// Overwrite the default endpoint if specified
-		endpoint = os.Args[1]
+		endpoint = args[0]
+	}
+
+	level := logging.WARN
+	if *v {
+		level = logging.INFO
+	}
+	if *vv {
+		level = logging.DEBUG
 	}
 
 	logger := logging.Get()
-	logger.SetLevel(logging.DEBUG)
+	logger.SetLevel(level)
 
 	prefix := intkey.Hexdigest("intkey")[:6]
 	handler := intkey.NewIntkeyHandler(prefix)
 	processor := processor.NewTransactionProcessor(endpoint)
 	processor.AddHandler(handler)
 	err := processor.Start()
-    if err != nil {
-        logger.Error("Processor stopped: ", err)
-    }
+	if err != nil {
+		logger.Error("Processor stopped: ", err)
+	}
 }
