@@ -9,3 +9,4 @@ Application Developer's Guide
    app_developers_guide/getting_started
    app_developers_guide/txn_family_tutorial
    app_developers_guide/testing
+   app_developers_guide/txn_submit_tutorial/python
