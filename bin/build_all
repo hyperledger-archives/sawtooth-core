@@ -24,10 +24,11 @@ EXCLUDE=""
 
 MOUNTED="mounted"
 INSTALLED="installed"
+DEBS="debs"
 
 usage() {
     echo "Usage:"
-    echo "  $0 [-l Language] [-x Language] {$MOUNTED,$INSTALLED}"
+    echo "  $0 [-l Language] [-x Language] {$MOUNTED,$INSTALLED,$DEBS}"
     echo
     echo "Options:"
     echo "  -h            print usage and exit"
@@ -70,7 +71,7 @@ if [[ -z $1 ]]
 then
     BUILD_MODE=$MOUNTED
 else
-    if [[ $1 == $MOUNTED || $1 == $INSTALLED ]]
+    if [[ $1 == $MOUNTED || $1 == $INSTALLED || $1 == $DEBS ]]
     then
         BUILD_MODE=$1
     else
@@ -93,13 +94,18 @@ fi
 
 main() {
 
-    info "Building images with sawtooth $BUILD_MODE"
+    info "Build mode: $BUILD_MODE"
 
     # Set sawtooth-core project directory relative to this file
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
     # Start in project directory
     cd $top_dir
+
+    if [[ $BUILD_MODE == $DEBS ]]
+    then
+        build_debs
+    fi
 
     for language in $LANGUAGES
     do
@@ -188,6 +194,18 @@ docker_build() {
         --build-arg http_proxy=$http_proxy \
         --build-arg HTTPS_PROXY=$HTTPS_PROXY \
         --build-arg HTTP_PROXY=$HTTP_PROXY
+}
+
+build_debs() {
+    build_dir=/tmp/build-docker$ISOLATION_ID
+    rm -rf $build_dir
+    mkdir -p $build_dir
+
+    cp $top_dir/bin/install_packaging_deps $build_dir
+    cp $top_dir/ci/sawtooth-build-debs $build_dir
+    docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+    docker_run sawtooth-build-debs
+    exit 0
 }
 
 if [[ $BUILD_MODE == $MOUNTED ]]
