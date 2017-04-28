@@ -34,9 +34,9 @@ def bump_version(version):
 
 def auto_version(default, strict):
     output = subprocess.check_output(['git', 'describe', '--dirty'])
-    parts = output.decode('utf-8').strip().split('-', 1)
+    parts = output.decode('utf-8').strip().split('-', 3)
     parts[0] = parts[0][1:]  # strip the leading 'v'
-    if len(parts) == 2:
+    if len(parts) > 1:
         parts[0] = bump_version(parts[0])
     if default != parts[0]:
         msg = "VERSION file and (bumped?) git describe versions differ: " \
@@ -50,8 +50,11 @@ def auto_version(default, strict):
                 default)
             parts[0] = default
 
-    if len(parts) == 2:
-        return ".git".join([parts[0], parts[1].replace("-", ".")])
+    if len(parts) > 1:
+        parts[0] = ".dev".join([parts[0], parts[1].replace("-", ".")])
+        if len(parts) == 4:
+            parts[0] = parts[0] + "-" + parts[3]
+        return parts[0]
     else:
         return parts[0]
 
