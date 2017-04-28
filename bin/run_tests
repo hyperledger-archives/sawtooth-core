@@ -223,6 +223,7 @@ test_validator() {
 
 test_go_sdk() {
     run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-go.yaml -s validator
+    run_docker_test intkey-go-smoke -s integration_test
 }
 
 test_java_sdk() {
