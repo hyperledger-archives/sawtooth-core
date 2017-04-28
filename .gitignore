@@ -25,6 +25,7 @@
 /core_transactions/**/__pycache__/
 
 /docs/build/
+/docs/source/_autogen/
 
 /extensions/arcade/sawtooth_arcade.egg-info/
 
