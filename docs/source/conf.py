@@ -141,6 +141,13 @@ html_theme = 'sphinx_rtd_theme'
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
 
+# A dictionary of values to pass into the template's context for all pages.
+# Single values can also be put in this dictionary using the -A command-line
+# option of sphinx-build.
+html_context = {
+  'css_files': ['_static/theme_overrides.css']
+}
+
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 #html_logo = None
