@@ -55,7 +55,8 @@ def wait_until_status(url, status_code=200, tries=5):
 
         attempts -= 1
 
-    assert(False, "{} is not available within {} attempts".format(url, tries))
+    raise AssertionError(
+        "{} is not available within {} attempts".format(url, tries))
 
 
 def wait_for_rest_apis(endpoints, tries=5):
@@ -67,4 +68,7 @@ def wait_for_rest_apis(endpoints, tries=5):
             availability.
     """
     for endpoint in endpoints:
-        wait_until_status('http://{}/blocks', status_code=200, tries=tries)
+        wait_until_status(
+            'http://{}/blocks'.format(endpoint),
+            status_code=200,
+            tries=tries)
