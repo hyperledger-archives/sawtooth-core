@@ -551,7 +551,7 @@ definitions:
     properties:
       address:
         type: string
-        example: 1cf12632a292f6ddf757a0a59e9c2284c08cab235aa068b19f85c460f71485540368eec98c3f95af23b0c8cda4790c118238a3b97f2fba2bbff72f15987f00b41e7caf
+        example: 1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c
       data:
         type: string
         format: byte
@@ -561,7 +561,7 @@ definitions:
     properties:
       batcher_pubkey:
         type: string
-        example: 16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM
+        example: 02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758
       dependencies:
         type: array
         items:
@@ -577,7 +577,7 @@ definitions:
         type: array
         items:
           type: string
-          example: 1cf12632a292f6ddf757a0a59e9c2284c08cab235aa068b19f85c460f71485540368eec98c3f95af23b0c8cda4790c118238a3b97f2fba2bbff72f15987f00b41e7caf
+          example: 1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c
       nonce:
         type: string
         example: QAApS4L
@@ -585,7 +585,7 @@ definitions:
         type: array
         items:
           type: string
-          example: 1cf12632a292f6ddf757a0a59e9c2284c08cab235aa068b19f85c460f71485540368eec98c3f95af23b0c8cda4790c118238a3b97f2fba2bbff72f15987f00b41e7caf
+          example: 1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c
       payload_encoding:
         type: string
         example: application/cbor
@@ -644,7 +644,7 @@ definitions:
         example: 65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
       signer_pubkey:
         type: string
-        example: 16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM
+        example: 02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758
       batch_ids:
         type: array
         items:
