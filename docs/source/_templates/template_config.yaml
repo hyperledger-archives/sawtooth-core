@@ -7,3 +7,13 @@
 # -----------------------------------------------------------------------------
 
 targets:
+
+  txn_submit_tutorial_python:
+    template: txn_submit_tutorial.rst
+    args:
+      language: Python
+
+  txn_submit_tutorial_js:
+    template: txn_submit_tutorial.rst
+    args:
+      language: JavaScript
