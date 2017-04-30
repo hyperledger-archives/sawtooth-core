@@ -52,6 +52,11 @@ from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.config_view import ConfigViewFactory
+from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaSubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaUnsubscriberHandler
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
@@ -149,6 +154,10 @@ class Validator(object):
                                        config_view_factory=ConfigViewFactory(
                                            StateViewFactory(merkle_db)))
         self._executor = executor
+
+        state_delta_processor = StateDeltaProcessor(self._service,
+                                                    state_delta_store,
+                                                    block_store)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -452,6 +461,16 @@ class Validator(object):
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
+            StateDeltaSubscriberHandler(state_delta_processor),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
+            StateDeltaUnsubscriberHandler(state_delta_processor),
+            thread_pool)
 
     def start(self):
         self._dispatcher.start()
