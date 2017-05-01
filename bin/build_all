@@ -229,6 +229,7 @@ then
         docker_run sawtooth-build-javascript
 
         docker_build docker/sawtooth-dev-tp_intkey_javascript docker/ sawtooth-tp_intkey_javascript
+        docker_build docker/sawtooth-dev-tp_xo_javascript docker/ sawtooth-tp_xo_javascript
     }
 
     build_python() {
@@ -270,6 +271,7 @@ then
         docker_run sawtooth-build-javascript
 
         docker_build docker/sawtooth-dev-tp_intkey_javascript docker/ sawtooth-tp_intkey_javascript
+        docker_build docker/sawtooth-dev-tp_xo_javascript docker/ sawtooth-tp_xo_javascript
     }
 
     build_python() {

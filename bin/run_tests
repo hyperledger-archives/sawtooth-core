@@ -234,6 +234,8 @@ test_java_sdk() {
 test_javascript_sdk() {
     run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-javascript.yaml -s validator
     run_docker_test intkey-javascript-smoke -s integration_test
+    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-javascript.yaml -s validator
+    run_docker_test xo-javascript-smoke -s integration_test
 }
 
 test_python_sdk() {
