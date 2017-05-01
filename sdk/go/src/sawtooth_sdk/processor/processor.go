@@ -31,6 +31,8 @@ import (
 
 var logger *logging.Logger = logging.Get()
 
+const MAX_WORK_QUEUE_SIZE = 100
+
 // TransactionProcessor is a generic class for communicating with a validator
 // and routing transaction processing requests to a registered handler. It uses
 // ZMQ and channels to handle requests concurrently.
@@ -81,25 +83,15 @@ func (self *TransactionProcessor) Start() error {
 	}
 	defer validator.Close()
 
-	// Register all handlers with the validator
-	for _, h := range self.handlers {
-		err := register(validator, h)
-		if err != nil {
-			return fmt.Errorf(
-				"Error registering handler (%v, %v, %v, %v): %v",
-				h.FamilyName(), h.FamilyVersion, h.Encoding(),
-				h.Namespaces(), err,
-			)
-		}
-	}
-
 	// Setup connection to internal worker thread pool
 	workers, err := messaging.NewConnection(self.context, zmq.ROUTER, "inproc://workers")
 	if err != nil {
 		return fmt.Errorf("Could not create thread pool router: %v", err)
 	}
 
-	queue := make(chan *validator_pb2.Message)
+	// Make work queue. Buffer so the router doesn't block
+	queue := make(chan *validator_pb2.Message, MAX_WORK_QUEUE_SIZE)
+
 	// Keep track of which correlation ids go to which worker threads, i.e. map
 	// corrId->workerThreadId
 	ids := make(map[string]string)
@@ -113,6 +105,18 @@ func (self *TransactionProcessor) Start() error {
 	poller := zmq.NewPoller()
 	poller.Add(validator.Socket(), zmq.POLLIN)
 	poller.Add(workers.Socket(), zmq.POLLIN)
+
+	// Register all handlers with the validator
+	for _, h := range self.handlers {
+		err := register(validator, h, queue)
+		if err != nil {
+			return fmt.Errorf(
+				"Error registering handler (%v, %v, %v, %v): %v",
+				h.FamilyName(), h.FamilyVersion, h.Encoding(),
+				h.Namespaces(), err,
+			)
+		}
+	}
 
 	// Poll for messages from worker threads or validator
 	for {
@@ -178,10 +182,30 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 		)
 		delete(ids, corrId)
 		logger.Debugf("Removed (%v)->(%v) from map", corrId, workerId)
-	} else {
-		// If this is new, add it to the request queue
-		queue <- msg
-		logger.Debugf("Put %v (%v) on queue", msg.GetMessageType(), corrId)
+
+	} else { // If this is new, add it to the request queue
+		select {
+		case queue <- msg:
+			logger.Debugf("Put %v (%v) on queue", msg.GetMessageType(), corrId)
+		default:
+			logger.Warnf("Work queue is full, denying request %v", corrId)
+			data, err := proto.Marshal(&processor_pb2.TpProcessResponse{
+				Status: processor_pb2.TpProcessResponse_INTERNAL_ERROR,
+			})
+			if err != nil {
+				logger.Errorf(
+					"Failed to notify validator the request is denied: %v", err,
+				)
+			}
+			err = validator.SendMsg(
+				validator_pb2.Message_TP_PROCESS_RESPONSE, data, corrId,
+			)
+			if err != nil {
+				logger.Errorf(
+					"Failed to notify validator the request is denied: %v", err,
+				)
+			}
+		}
 	}
 }
 
@@ -216,7 +240,7 @@ func receiveWorkers(ids map[string]string, validator, workers *messaging.Connect
 		logger.Errorf("Failed to send message (%v) to validator: %v", corrId, err)
 		return
 	}
-	logger.Debugf("Sent message (%v) to validator", corrId)
+	logger.Debugf("Routed message (%v) from worker (%v) to validator", corrId, workerId)
 }
 
 // The main worker thread finds an appropriate handler and processes the request
@@ -272,7 +296,7 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 		// Run the handler
 		logger.Debugf(
 			"(%v) Passing request with context id %v to handler (%v, %v, %v, %v)",
-			contextId, handler.FamilyName(), handler.FamilyVersion,
+			id, contextId, handler.FamilyName(), handler.FamilyVersion,
 			handler.Encoding(), handler.Namespaces(),
 		)
 		err = handler.Apply(request, state)
@@ -339,7 +363,7 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 }
 
 // Register a handler with the validator
-func register(validator *messaging.Connection, handler TransactionHandler) error {
+func register(validator *messaging.Connection, handler TransactionHandler, queue chan *validator_pb2.Message) error {
 	regRequest := &processor_pb2.TpRegisterRequest{
 		Family:     handler.FamilyName(),
 		Version:    handler.FamilyVersion(),
@@ -360,14 +384,22 @@ func register(validator *messaging.Connection, handler TransactionHandler) error
 		return err
 	}
 
-	_, msg, err := validator.RecvMsgWithId(corrId)
-	if err != nil {
-		return err
-	}
+	// The validator is impatient and will send requests before confirming
+	// registration.
+	var msg *validator_pb2.Message
+	for {
+		_, msg, err = validator.RecvMsg()
+		if err != nil {
+			return err
+		}
 
-	logger.Infof("Received %v", msg.MessageType)
-	if msg.GetCorrelationId() != corrId {
-		return fmt.Errorf("Mismatched Correlation Ids: %v != %v", msg.GetCorrelationId(), corrId)
+		logger.Infof("Received %v", msg.MessageType)
+		if msg.GetCorrelationId() != corrId {
+			logger.Infof("Got TP_PROCESS_REQUEST before TP_REGISTRATION_RESPONSE")
+			queue <- msg
+		} else {
+			break
+		}
 	}
 
 	if msg.GetMessageType() != validator_pb2.Message_TP_REGISTER_RESPONSE {
