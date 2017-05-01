@@ -360,7 +360,7 @@ func register(validator *messaging.Connection, handler TransactionHandler) error
 		return err
 	}
 
-	_, msg, err := validator.RecvMsg()
+	_, msg, err := validator.RecvMsgWithId(corrId)
 	if err != nil {
 		return err
 	}

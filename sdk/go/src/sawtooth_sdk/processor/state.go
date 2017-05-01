@@ -76,7 +76,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 		return nil, fmt.Errorf("Failed to send TpStateGetRequest: %v", err)
 	}
 
-	_, msg, err := self.connection.RecvMsg()
+	_, msg, err := self.connection.RecvMsgWithId(corrId)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to received TpStateGetResponse: %v", err)
 	}
@@ -160,7 +160,7 @@ func (self *State) Set(pairs map[string][]byte) ([]string, error) {
 		return nil, fmt.Errorf("Failed to send set: %v", err)
 	}
 
-	_, msg, err := self.connection.RecvMsg()
+	_, msg, err := self.connection.RecvMsgWithId(corrId)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to receive TpStateSetResponse: %v", err)
 	}

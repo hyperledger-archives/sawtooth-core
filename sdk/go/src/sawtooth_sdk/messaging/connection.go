@@ -58,6 +58,12 @@ type Connection struct {
 	identity string
 	uri      string
 	socket   *zmq.Socket
+	incoming map[string]*storedMsg
+}
+
+type storedMsg struct {
+	Id  string
+	Msg *validator_pb2.Message
 }
 
 // NewConnection establishes a new connection using the given ZMQ context and
@@ -87,6 +93,7 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*Connection, e
 		identity: identity,
 		uri:      uri,
 		socket:   socket,
+		incoming: make(map[string]*storedMsg),
 	}, nil
 }
 
@@ -141,20 +148,6 @@ func (self *Connection) SendMsgTo(id string, t validator_pb2.Message_MessageType
 	return self.SendData(id, data)
 }
 
-// RecvMsg receives a new validator message and returns it deserialized. If
-// Connection wraps a ROUTER socket, id will be the identity of the sender.
-// Otherwise, id will be "".
-func (self *Connection) RecvMsg() (string, *validator_pb2.Message, error) {
-	// Receive a message from the socket
-	id, bytes, err := self.RecvData()
-	if err != nil {
-		return "", nil, err
-	}
-
-	msg, err := LoadMsg(bytes)
-	return id, msg, err
-}
-
 // RecvData receives a ZMQ message from the wrapped socket and returns the
 // identity of the sender and the data sent. If Connection does not wrap a
 // ROUTER socket, the identity returned will be "".
@@ -178,6 +171,53 @@ func (self *Connection) RecvData() (string, []byte, error) {
 		return "", nil, fmt.Errorf(
 			"Receive message with unexpected length: %v", len(msg),
 		)
+	}
+}
+
+// RecvMsg receives a new validator message and returns it deserialized. If
+// Connection wraps a ROUTER socket, id will be the identity of the sender.
+// Otherwise, id will be "".
+func (self *Connection) RecvMsg() (string, *validator_pb2.Message, error) {
+	for corrId, stored := range self.incoming {
+		delete(self.incoming, corrId)
+		return stored.Id, stored.Msg, nil
+	}
+
+	// Receive a message from the socket
+	id, bytes, err := self.RecvData()
+	if err != nil {
+		return "", nil, err
+	}
+
+	msg, err := LoadMsg(bytes)
+	return id, msg, err
+}
+
+// RecvMsgWithId receives validator messages until a message with the given
+// correlation id is found and returns this message. Any messages received that
+// do not match the id are saved for subsequent receives.
+func (self *Connection) RecvMsgWithId(corrId string) (string, *validator_pb2.Message, error) {
+	// If the message is already stored, just return it
+	stored, exists := self.incoming[corrId]
+	if exists {
+		return stored.Id, stored.Msg, nil
+	}
+
+	for {
+		// If the message isn't stored, keep getting messages until it shows up
+		id, bytes, err := self.RecvData()
+		if err != nil {
+			return "", nil, err
+		}
+		msg, err := LoadMsg(bytes)
+
+		// If the ids match, return it
+		if msg.GetCorrelationId() == corrId {
+			return id, msg, err
+		}
+
+		// Otherwise, keep the message for later
+		self.incoming[msg.GetCorrelationId()] = &storedMsg{Id: id, Msg: msg}
 	}
 }
 
