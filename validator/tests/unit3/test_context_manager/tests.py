@@ -24,6 +24,93 @@ from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 
 class TestContextManager(unittest.TestCase):
 
+    def setUp(self):
+        self.database_of_record = dict_database.DictDatabase()
+        self.state_delta_store = StateDeltaStore(dict_database.DictDatabase())
+        self.context_manager = context_manager.ContextManager(
+            self.database_of_record, self.state_delta_store)
+        self.first_state_hash = self.context_manager.get_first_root()
+
+        # used for replicating state hash through direct merkle tree updates
+        self.database_results = dict_database.DictDatabase()
+
+    def tearDown(self):
+        self.context_manager.stop()
+
+    def _create_address(self, value=None):
+        """
+        Args:
+            value: (str)
+
+        Returns: (str) sha512 of value or random
+
+        """
+        if value is None:
+            value = time.time().hex()
+        return hashlib.sha512(value.encode()).hexdigest()[:70]
+
+    def _setup_context(self):
+        # 1) Create transaction data
+        first_transaction = {'inputs': [self._create_address(a) for a in
+                                        ['aaaa', 'bbbb', 'cccc']],
+                             'outputs': [self._create_address(a) for a in
+                                         ['llaa', 'aall', 'nnnn']]}
+        second_transaction = {
+            'inputs': [self._create_address(a) for a in
+                       ['aaaa', 'dddd']],
+            'outputs': [self._create_address(a) for a in
+                        ['zzzz', 'yyyy', 'tttt', 'qqqq']]
+        }
+        third_transaction = {
+            'inputs': [self._create_address(a) for a in
+                       ['eeee', 'dddd', 'ffff']],
+            'outputs': [self._create_address(a) for a in
+                        ['oooo', 'oozz', 'zzoo', 'ppoo', 'aeio']]
+        }
+        # 2) Create contexts based on that data
+        context_id_1 = self.context_manager.create_context(
+            state_hash=self.first_state_hash,
+            base_contexts=[],
+            inputs=first_transaction['inputs'],
+            outputs=first_transaction['outputs'])
+        context_id_2 = self.context_manager.create_context(
+            state_hash=self.first_state_hash,
+            base_contexts=[],
+            inputs=second_transaction['inputs'],
+            outputs=second_transaction['outputs'])
+        context_id_3 = self.context_manager.create_context(
+            state_hash=self.first_state_hash,
+            base_contexts=[],
+            inputs=third_transaction['inputs'],
+            outputs=third_transaction['outputs'])
+
+        # 3) Set addresses with values
+        self.context_manager.set(context_id_1, [{self._create_address(a): v}
+                                                for a, v in [('llaa', b'1'),
+                                                             ('aall', b'2'),
+                                                             ('nnnn', b'3')]])
+        self.context_manager.set(context_id_2, [{self._create_address(a): v}
+                                                for a, v in [('zzzz', b'9'),
+                                                             ('yyyy', b'11'),
+                                                             ('tttt', b'12'),
+                                                             ('qqqq', b'13')]])
+        self.context_manager.set(context_id_3, [{self._create_address(a): v}
+                                                for a, v in [('oooo', b'25'),
+                                                             ('oozz', b'26'),
+                                                             ('zzoo', b'27'),
+                                                             ('ppoo', b'28'),
+                                                             ('aeio', b'29')]])
+
+        # 4)
+        context_id = self.context_manager.create_context(
+            state_hash=self.first_state_hash,
+            base_contexts=[context_id_1, context_id_2, context_id_3],
+            inputs=[self._create_address(a)
+                    for a in ['llaa', 'yyyy', 'tttt', 'zzoo']],
+            outputs=[self._create_address(a)
+                     for a in ['llaa', 'yyyy', 'tttt', 'zzoo', 'aeio']])
+        return context_id
+
     def test_create_context_with_prior_state(self):
         """Tests context creation with prior state from base contexts.
 
@@ -41,11 +128,13 @@ class TestContextManager(unittest.TestCase):
 
         self.assertEqual(self.context_manager.get(
             context_id,
-            ['aaaa', 'bbbb', 'cccc', 'dddd']),
-            [('aaaa', b'25'),
-             ('bbbb', b'26'),
-             ('cccc', b'27'),
-             ('dddd', b'28')])
+            [self._create_address(a) for a in
+             ['llaa', 'yyyy', 'tttt', 'zzoo']]),
+            [(self._create_address(a), v) for a, v in
+             [('llaa', b'1'),
+             ('yyyy', b'11'),
+             ('tttt', b'12'),
+             ('zzoo', b'27')]])
 
     def test_squash(self):
         """Tests that squashing a context based on state from other
@@ -67,8 +156,9 @@ class TestContextManager(unittest.TestCase):
         context_id = self._setup_context()
         self.context_manager.set(
             context_id,
-            [{'bbbb': b'2'},
-             {'eeee': b'4'}])
+            [{self._create_address(a): v} for a, v in
+             [('yyyy', b'2'),
+              ('tttt', b'4')]])
 
         # 2)
         squash = self.context_manager.get_squash_handler()
@@ -76,13 +166,19 @@ class TestContextManager(unittest.TestCase):
                                       persist=True)
 
         # 3)
-        final_state_to_update = {
-            'aaaa': b'25',
-            'bbbb': b'2',
-            'cccc': b'27',
-            'dddd': b'28',
-            'eeee': b'4'
-        }
+        final_state_to_update = {self._create_address(a): v for a, v in
+                                 [('llaa', b'1'),
+                                  ('aall', b'2'),
+                                  ('nnnn', b'3'),
+                                  ('zzzz', b'9'),
+                                  ('yyyy', b'2'),
+                                  ('tttt', b'4'),
+                                  ('qqqq', b'13'),
+                                  ('oooo', b'25'),
+                                  ('oozz', b'26'),
+                                  ('zzoo', b'27'),
+                                  ('ppoo', b'28'),
+                                  ('aeio', b'29')]}
 
         test_merkle_tree = MerkleDatabase(self.database_results)
         test_resulting_state_hash = test_merkle_tree.update(
@@ -137,67 +233,3 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(
             [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)],
             [c for c in changes])
-
-    def _setup_context(self):
-        # 1) Create transaction data
-        first_transaction = {'inputs': ['aaaa', 'bbbb', 'cccc'],
-                             'outputs': ['aaaa', 'cccc', 'dddd']}
-        second_transaction = {
-            'inputs': ['aaaa', 'dddd'],
-            'outputs': ['aaaa', 'bbbb', 'cccc', 'dddd']
-        }
-        third_transaction = {
-            'inputs': ['eeee', 'dddd', 'ffff'],
-            'outputs': ['aaaa', 'bbbb', 'cccc', 'dddd', 'eeee']
-        }
-        # 2) Create contexts based on that data
-        context_id_1 = self.context_manager.create_context(
-            state_hash=self.first_state_hash,
-            base_contexts=[],
-            inputs=first_transaction['inputs'],
-            outputs=first_transaction['outputs'])
-        context_id_2 = self.context_manager.create_context(
-            state_hash=self.first_state_hash,
-            base_contexts=[],
-            inputs=second_transaction['inputs'],
-            outputs=second_transaction['outputs'])
-        context_id_3 = self.context_manager.create_context(
-            state_hash=self.first_state_hash,
-            base_contexts=[],
-            inputs=third_transaction['inputs'],
-            outputs=third_transaction['outputs'])
-
-        # 3) Set addresses with values
-        self.context_manager.set(context_id_1, [{'aaaa': b'1'},
-                                                {'cccc': b'2'},
-                                                {'dddd': b'3'}])
-        self.context_manager.set(context_id_2, [{'aaaa': b'9',
-                                                 'bbbb': b'11',
-                                                 'cccc': b'12',
-                                                 'dddd': b'13'}])
-        self.context_manager.set(context_id_3, [{'aaaa': b'25'},
-                                                {'bbbb': b'26'},
-                                                {'cccc': b'27'},
-                                                {'dddd': b'28'},
-                                                {'eeee': b'29'}])
-
-        # 4)
-        context_id = self.context_manager.create_context(
-            state_hash=self.first_state_hash,
-            base_contexts=[context_id_1, context_id_2, context_id_3],
-            inputs=['aaaa', 'bbbb', 'cccc', 'dddd'],
-            outputs=['aaaa', 'bbbb', 'cccc', 'dddd', 'eeee'])
-        return context_id
-
-    def setUp(self):
-        self.database_of_record = dict_database.DictDatabase()
-        self.state_delta_store = StateDeltaStore(dict_database.DictDatabase())
-        self.context_manager = context_manager.ContextManager(
-            self.database_of_record, self.state_delta_store)
-        self.first_state_hash = self.context_manager.get_first_root()
-
-        # used for replicating state hash through direct merkle tree updates
-        self.database_results = dict_database.DictDatabase()
-
-    def tearDown(self):
-        self.context_manager.stop()
