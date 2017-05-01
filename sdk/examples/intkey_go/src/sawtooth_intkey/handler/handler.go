@@ -98,10 +98,12 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	if err != nil {
 		return &processor.InternalError{fmt.Sprint("Error getting state:", err)}
 	}
+	logger.Debug("Got: ", results)
 
 	var collisionMap map[string]int
 	data, exists := results[address]
 	if exists && len(data) > 0 {
+		logger.Debug("Decoding: ", data)
 		err = DecodeCBOR(data, &collisionMap)
 		if err != nil {
 			return &processor.InternalError{

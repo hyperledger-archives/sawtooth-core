@@ -15,28 +15,28 @@
  * ------------------------------------------------------------------------------
  */
 
-package main
+package messaging
 
-import (
-	"os"
-	intkey "sawtooth_intkey/handler"
-	"sawtooth_sdk/logging"
-	"sawtooth_sdk/processor"
-)
+type CreateStreamError struct {
+	msg string
+}
 
-func main() {
-	endpoint := "tcp://localhost:40000"
-	if len(os.Args) > 1 {
-		// Overwrite the default endpoint if specified
-		endpoint = os.Args[1]
-	}
+func (err *CreateStreamError) Error() string {
+	return err.msg
+}
 
-	logger := logging.Get()
-	logger.SetLevel(logging.INFO)
+type SendMsgError struct {
+	msg string
+}
 
-	prefix := intkey.Hexdigest("intkey")[:6]
-	handler := intkey.NewIntkeyHandler(prefix)
-	processor := processor.NewTransactionProcessor(endpoint)
-	processor.AddHandler(handler)
-	processor.Start()
+func (err *SendMsgError) Error() string {
+	return err.msg
+}
+
+type RecvMsgError struct {
+	msg string
+}
+
+func (err *RecvMsgError) Error() string {
+	return err.msg
 }
