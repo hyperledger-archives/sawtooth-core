@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import logging
 import uuid
 
@@ -70,7 +69,7 @@ class StateContext(object):
         self._state = {}
         self.base_context_ids = base_context_ids
 
-        self._id = hashlib.sha256(uuid.uuid4().hex.encode()).hexdigest()
+        self._id = uuid.uuid4().hex
 
     @property
     def session_id(self):
