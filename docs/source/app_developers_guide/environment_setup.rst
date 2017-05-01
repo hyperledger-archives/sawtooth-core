@@ -171,7 +171,7 @@ containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
   Stopping compose_tp_intkey_python_1 ... done
   Stopping compose_validator_1 ... done
 
-  % docker-compose -f sawtooth-demo.yaml down
+  % docker-compose -f docker/compose/sawtooth-demo.yaml down
 
 Next Steps
 ----------

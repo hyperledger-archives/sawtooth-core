@@ -12,3 +12,4 @@ Application Developer's Guide
    app_developers_guide/txn_family_tutorial
    app_developers_guide/testing
    app_developers_guide/javascript_sdk
+   app_developers_guide/python_sdk
