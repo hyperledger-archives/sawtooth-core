@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 cd $top_dir/sdk/javascript
+
 yarn cache clean && yarn install --force --no-bin-links
+
+npm run compile_protobuf
