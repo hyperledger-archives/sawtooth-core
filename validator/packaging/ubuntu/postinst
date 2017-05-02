@@ -11,12 +11,12 @@ directories="
 user="sawtooth"
 group="sawtooth"
 
-if ! getent group $group > /dev/null; then
-    addgroup --quiet --system $group
+if ! getent passwd $user > /dev/null; then
+    adduser --quiet --system $user
 fi
 
-if ! getent passwd $user > /dev/null; then
-    adduser --quiet --system --ingroup $group $user
+if ! getent group $group > /dev/null; then
+    addgroup --quiet --system $group
 fi
 
 for dir in $directories

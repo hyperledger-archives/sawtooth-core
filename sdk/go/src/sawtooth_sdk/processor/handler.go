@@ -15,15 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-// Package processor defines:
-// 1. A TransactionHandler interface to be used to create new transaction
-// families.
-//
-// 2. A high-level, general purpose, multi-threaded TransactionProcessor that
+// Package processor provides a high-level generic transaction processor that
 // any number of handlers can be added to.
-//
-// 3. A State class used to abstract getting and setting addresses in global
-// validator state.
 package processor
 
 import (
