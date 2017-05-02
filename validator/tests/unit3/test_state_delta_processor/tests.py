@@ -16,10 +16,12 @@
 import unittest
 from unittest.mock import Mock
 
+from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
+from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
@@ -29,6 +31,8 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
 
+from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
 from sawtooth_validator.protobuf.state_delta_pb2 import \
     RegisterStateDeltaSubscriberRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
@@ -37,6 +41,7 @@ from sawtooth_validator.protobuf.state_delta_pb2 import \
     UnregisterStateDeltaSubscriberRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
     UnregisterStateDeltaSubscriberResponse
+from sawtooth_validator.protobuf import validator_pb2
 
 from test_journal.block_tree_manager import BlockTreeManager
 
@@ -197,3 +202,129 @@ class StateDeltaProcessorTest(unittest.TestCase):
         delta_processor.remove_subscriber('test_conn_id')
 
         self.assertEqual([], delta_processor.subscriber_ids)
+
+    def test_publish_deltas(self):
+        """Tests that a subscriber filtering on an address prefix receives only
+        the changes in an event that match.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        database = DictDatabase()
+        delta_store = StateDeltaStore(database)
+
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        delta_processor.add_subscriber(
+            'test_conn_id',
+            [block_tree_manager.chain_head.identifier],
+            ['deadbeef'])
+
+        next_block = block_tree_manager.generate_block()
+        # State added during context squash for our block
+        delta_store.save_state_deltas(
+            next_block.header.state_root_hash,
+            [StateChange(address='deadbeef01',
+                         value='my_state_Value'.encode(),
+                         type=StateChange.SET),
+             StateChange(address='a14ea01',
+                         value='some other state value'.encode(),
+                         type=StateChange.SET)])
+
+        # call to publish deltas for that block to the subscribers
+        delta_processor.publish_deltas(next_block)
+
+        mock_service.send.assert_called_with(
+            validator_pb2.Message.STATE_DELTA_EVENT,
+            StateDeltaEvent(
+                block_id=next_block.identifier,
+                block_num=next_block.header.block_num,
+                state_root_hash=next_block.header.state_root_hash,
+                state_changes=[StateChange(address='deadbeef01',
+                               value='my_state_Value'.encode(),
+                               type=StateChange.SET)]
+            ).SerializeToString(),
+            connection_id='test_conn_id')
+
+    def test_publish_deltas_subscriber_matches_no_addresses(self):
+        """Given a subscriber whose prefix filters don't match any addresses
+        in the current state delta, it should still receive an event with the
+        block change information.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        database = DictDatabase()
+        delta_store = StateDeltaStore(database)
+
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        delta_processor.add_subscriber(
+            'settings_conn_id',
+            [block_tree_manager.chain_head.identifier],
+            ['000000'])
+
+        next_block = block_tree_manager.generate_block()
+        # State added during context squash for our block
+        delta_store.save_state_deltas(
+            next_block.header.state_root_hash,
+            [StateChange(address='deadbeef01',
+                         value='my_state_Value'.encode(),
+                         type=StateChange.SET),
+             StateChange(address='a14ea01',
+                         value='some other state value'.encode(),
+                         type=StateChange.SET)])
+
+        # call to publish deltas for that block to the subscribers
+        delta_processor.publish_deltas(next_block)
+
+        mock_service.send.assert_called_with(
+            validator_pb2.Message.STATE_DELTA_EVENT,
+            StateDeltaEvent(
+                block_id=next_block.identifier,
+                block_num=next_block.header.block_num,
+                state_root_hash=next_block.header.state_root_hash,
+                state_changes=[]
+            ).SerializeToString(),
+            connection_id='settings_conn_id')
+
+    def test_publish_deltas_no_state_changes(self):
+        """Given a block transition, where no state changes happened (e.g. it
+        only had transactions which did not change state), the
+        StateDeltaProcessor should still publish an event with the block change
+        information.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        database = DictDatabase()
+        delta_store = StateDeltaStore(database)
+
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        delta_processor.add_subscriber(
+            'subscriber_conn_id',
+            [block_tree_manager.chain_head.identifier],
+            ['000000'])
+
+        next_block = block_tree_manager.generate_block()
+        delta_processor.publish_deltas(next_block)
+
+        mock_service.send.assert_called_with(
+            validator_pb2.Message.STATE_DELTA_EVENT,
+            StateDeltaEvent(
+                block_id=next_block.identifier,
+                block_num=next_block.header.block_num,
+                state_root_hash=next_block.header.state_root_hash,
+                state_changes=[]
+            ).SerializeToString(),
+            connection_id='subscriber_conn_id')
