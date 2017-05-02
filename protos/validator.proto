@@ -109,6 +109,12 @@ message Message {
         NETWORK_ACK = 301;
         NETWORK_CONNECT = 302;
         NETWORK_DISCONNECT = 303;
+
+        // Message types for State Delta Exports
+        STATE_DELTA_SUBSCRIBE_REQUEST = 400;
+        STATE_DELTA_SUBSCRIBE_RESPONSE = 401;
+        STATE_DELTA_UNSUBSCRIBE_REQUEST = 402;
+        STATE_DELTA_UNSUBSCRIBE_RESPONSE = 403;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
