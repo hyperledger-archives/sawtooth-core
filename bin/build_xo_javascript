@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-# Description:
-#   Builds the javascript code in the sawtooth-core repo.
-#
-# Build:
-#   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-build-javascript -t sawtooth-build-javascript
-#
-# Run:
-#   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-javascript
-
-FROM yarnpkg/node-yarn:0.20-node7
-
-RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    libzmq3-dev \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
-
-CMD /project/sawtooth-core/bin/build_javascript_sdk \
- && /project/sawtooth-core/bin/build_intkey_javascript \
- && /project/sawtooth-core/bin/build_xo_javascript
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+cd $top_dir/sdk/examples/xo_javascript
+yarn cache clean && yarn install --force --no-bin-links
