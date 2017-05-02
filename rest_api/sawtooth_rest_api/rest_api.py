@@ -19,6 +19,8 @@ import sys
 from aiohttp import web
 from sawtooth_rest_api.route_handlers import RouteHandler
 
+from sawtooth_sdk.messaging.stream import Stream
+
 
 def parse_args(args):
     """Parse command line flags added to `rest_api` command.
@@ -52,14 +54,14 @@ async def logging_middleware(app, handler):
     return logging_handler
 
 
-def start_rest_api(host, port, stream_url, timeout):
+def start_rest_api(host, port, stream, timeout):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
     app = web.Application(loop=loop, middlewares=[logging_middleware])
 
     # Add routes to the web app
-    handler = RouteHandler(loop, stream_url, timeout)
+    handler = RouteHandler(loop, stream, timeout)
 
     app.router.add_post('/batches', handler.submit_batches)
     app.router.add_get('/batch_status', handler.list_statuses)
@@ -84,14 +86,19 @@ def start_rest_api(host, port, stream_url, timeout):
 
 
 def main():
+    stream = None
     try:
         opts = parse_args(sys.argv[1:])
+        stream = Stream(opts.stream_url)
         start_rest_api(
             opts.host,
             int(opts.port),
-            opts.stream_url,
+            stream,
             int(opts.timeout))
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
+    finally:
+        if stream is not None:
+            stream.close()

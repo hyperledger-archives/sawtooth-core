@@ -157,8 +157,7 @@ class BaseApiTest(AioHTTPTestCase):
         Returns:
             RouteHandler: The route handlers to handle test queries
         """
-        handlers = RouteHandler(loop, 'tcp://0.0.0.0:40404', TEST_TIMEOUT)
-        handlers._stream = stream
+        handlers = RouteHandler(loop, stream, TEST_TIMEOUT)
         return handlers
 
     @staticmethod
