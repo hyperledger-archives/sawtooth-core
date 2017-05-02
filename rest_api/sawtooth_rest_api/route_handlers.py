@@ -26,7 +26,6 @@ from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
 from sawtooth_sdk.messaging.future import FutureTimeoutError
-from sawtooth_sdk.messaging.stream import Stream
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 import sawtooth_rest_api.exceptions as errors
@@ -53,14 +52,15 @@ class RouteHandler(object):
     instead.
 
     Args:
-        stream_url (str): The TCP url to communitcate with the validator
+        stream (:obj: messaging.stream.Stream): The object that communicates
+            with the validator.
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, loop, stream_url, timeout=DEFAULT_TIMEOUT):
+    def __init__(self, loop, stream, timeout=DEFAULT_TIMEOUT):
         loop.set_default_executor(ThreadPoolExecutor())
         self._loop = loop
-        self._stream = Stream(stream_url)
+        self._stream = stream
         self._timeout = timeout
 
     async def submit_batches(self, request):
