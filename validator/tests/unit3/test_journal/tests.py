@@ -41,6 +41,7 @@ from test_journal.mock import MockBlockSender
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockNetwork
 from test_journal.mock import MockStateViewFactory, CreateSetting
+from test_journal.mock import MockStateDeltaProcessor
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import SynchronousExecutor
 from test_journal.utils import wait_until
@@ -679,6 +680,7 @@ class TestChainController(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
+        self.state_delta_processor = MockStateDeltaProcessor()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -694,6 +696,7 @@ class TestChainController(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
+            state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None)
 
@@ -711,6 +714,8 @@ class TestChainController(unittest.TestCase):
         new_block = self.generate_block(self.init_head)
         self.receive_and_process_blocks(new_block)
         self.assert_is_chain_head(new_block)
+        # validate that the deltas for the new block are published
+        self.assertEqual(new_block, self.state_delta_processor.block)
 
     def test_alternate_genesis(self):
         '''Tests a fork extending an alternate genesis block
@@ -992,6 +997,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
+        self.state_delta_processor = MockStateDeltaProcessor()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -1007,6 +1013,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
+            state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None)
 
@@ -1070,6 +1077,7 @@ class TestJournal(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
+        self.state_delta_processor = MockStateDeltaProcessor()
 
     def test_publish_block(self):
         """
@@ -1093,6 +1101,7 @@ class TestJournal(unittest.TestCase):
                 squash_handler=None,
                 identity_signing_key=btm.identity_signing_key,
                 chain_id_manager=None,
+                state_delta_processor=self.state_delta_processor,
                 data_dir=None
             )
 

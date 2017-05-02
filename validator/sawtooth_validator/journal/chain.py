@@ -425,6 +425,7 @@ class ChainController(object):
                  on_chain_updated,
                  squash_handler,
                  chain_id_manager,
+                 state_delta_processor,
                  identity_signing_key,
                  data_dir):
         """Initialize the ChainController
@@ -441,6 +442,9 @@ class ChainController(object):
              system the head block in the chain has been changed.
              squash_handler: a parameter passed when creating transaction
              schedulers.
+            chain_id_manager: The ChainIdManager instance.
+            state_delta_processor (:obj:`StateDeltaProcessor`): The state
+                delta processor.
              identity_signing_key: Private key for signing blocks.
              data_dir: path to location where persistent data for the
              consensus module can be stored.
@@ -467,6 +471,8 @@ class ChainController(object):
         # is being processed. Once that completes this block will be
         # scheduled for validation.
         self._chain_id_manager = chain_id_manager
+
+        self._state_delta_processor = state_delta_processor
 
         try:
             self._chain_head = self._block_store.chain_head
@@ -579,6 +585,9 @@ class ChainController(object):
                         new_block,
                         [block.identifier[:8] for block in descendant_blocks])
                     self._submit_blocks_for_verification(descendant_blocks)
+
+                    # Publish the state deltas
+                    self._state_delta_processor.publish_deltas(new_block)
 
                 # If the block was determine to be invalid.
                 elif new_block.status == BlockStatus.Invalid:

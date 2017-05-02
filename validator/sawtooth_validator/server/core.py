@@ -211,6 +211,7 @@ class Validator(object):
             squash_handler=context_manager.get_squash_handler(),
             identity_signing_key=identity_signing_key,
             chain_id_manager=chain_id_manager,
+            state_delta_processor=state_delta_processor,
             data_dir=data_dir,
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
