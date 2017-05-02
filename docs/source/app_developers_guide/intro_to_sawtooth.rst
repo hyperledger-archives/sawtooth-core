@@ -1,285 +1,31 @@
 
-.. _getting_started:
+.. _intro_to_sawtooth:
 
-***************
-Getting Started
-***************
+*****************************************
+Getting Started with Hyperledger Sawtooth
+*****************************************
+
 
 Overview
 ========
 
-This tutorial walks through the process of setting up a virtual development
-environment for the Distributed Ledger using Docker or Virtualbox/Vagrant.
-At the end, you will have a running validator and a running transaction
-processor. You will have submitted transactions to the validator.
+This tutorial shows you how to start a validator and transaction processor,
+then perform some basic operations, such as:
 
-Additional sections guide you in the following tasks:
+* Submitting transactions
+* Setting configuration settings using the config transaction family
+* Viewing blocks, transactions and state
 
-* `Config Transaction Family Usage`_
-* `Viewing Blocks and State`_
-
-Commands in this tutorial can be run via Terminal.app on MacOS, Git Bash on
-Windows, etc.
-
-Clone Repository
-----------------
-
-You'll need to have git installed in order to clone the Sawtooth Lake source
-code repository. You can find up-to-date installation instructions here:
-
-* `Git install instructions <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_
-
-.. note:: 
-
-  When checking out Sawtooth Lake on Windows for use with vagrant, you should
-  take steps to ensure that Windows-style CRLF line endings are not added to
-  the code. The bash scripts used by your vagrant VM will not run correctly 
-  with CRLF line endings. Git uses a configuration setting, *core.autocrlf*,
-  to control whether or not LF-style line endings are automatically converted
-  to CRLF-style line endings. `This setting should be set in such a way that 
-  CRLFs are not introduced into your repository 
-  <https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration>`_.
-
-Open up a terminal and run the following:
-
-.. code-block:: console
-
-   % cd $HOME
-   % mkdir project
-   % cd project
-   % git clone https://github.com/hyperledger/sawtooth-core.git
-
-.. note::
-
-  On a Windows environment, the suggested version of the last command
-  above is:
-
-  .. code-block:: console
-
-      C:\> git clone https://github.com/hyperledger/sawtooth-core.git
-      --config core.autocrlf=false
-
-Docker Instructions
-===================
+If you have not yet set your environment up, see :doc:`environment_setup` in
+the App Developer's Guide.
 
 Prerequisites
 -------------
 
-The following tools are required:
+A supported app development environment is required. 
 
-* `Docker Engine <https://docs.docker.com/engine/installation/>`_ (17.03.0-ce
-  or later)
-* `Docker Compose <https://docs.docker.com/compose/install/>`_ (Linux only)
-
-Environment Startup
--------------------
-
-To start up the environment, run:
-
-.. code-block:: console
-
-  % cd sawtooth-core
-  % docker-compose -f docker/compose/sawtooth-demo.yaml up
-
-Downloading the docker images that comprise the Sawtooth Lake demo
-environment can take serveral minutes. Once you see the containers
-registering and creating intial blocks you can move on to the next step.
-
-.. code-block:: console
-
-  Attaching to compose_validator_1, compose_tp_xo_python_1, compose_client_1, compose_tp_intkey_python_1, compose_tp_config_1, compose_rest_api_1
-  validator_1         | writing file: /etc/sawtooth/keys/validator.priv
-  validator_1         | writing file: /etc/sawtooth/keys/validator.pub
-  validator_1         | Generating /var/lib/sawtooth/genesis.batch
-  tp_xo_python_1      | [19:03:47 DEBUG   selector_events] Using selector: ZMQSelector
-  validator_1         | [19:03:47.537 INFO     path] Skipping path loading from non-existent config file: /etc/sawtooth/path.toml
-  tp_xo_python_1      | [19:03:47 INFO    core] register attempt: OK
-  validator_1         | [19:03:47.538 INFO     cli] config [path]: config_dir = "/etc/sawtooth"
-  tp_intkey_python_1  | [19:03:47 DEBUG   selector_events] Using selector: ZMQSelector
-  validator_1         | [19:03:47.538 INFO     cli] config [path]: key_dir = "/etc/sawtooth/keys"
-  tp_intkey_python_1  | [19:03:47 INFO    core] register attempt: OK
-
-Open a new terminal so we can connect to the client container:
-
-.. code-block:: console
-
-  % docker exec -it compose_client_1 bash
-
-Your environment is ready! Continue on to `Multi-language support for transaction processors`_.
-
-Resetting The Environment
--------------------------
-
-If the environment needs to be reset for any reason, it can be returned to
-the default state by logging out of the client container, then pressing
-CTRL-c from the window where you originally ran docker-compose. Once the
-containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
-
-.. code-block:: console
-
-  validator_1         | [00:27:56.753 DEBUG    interconnect] message round trip: TP_PROCESS_RESPONSE 0.03986167907714844
-  validator_1         | [00:27:56.756 INFO     chain] on_block_validated: 44ccc3e6(1, S:910b9c23, P:05b2a651)
-  validator_1         | [00:27:56.761 INFO     chain] Chain head updated to: 44ccc3e6(1, S:910b9c23, P:05b2a651)
-  validator_1         | [00:27:56.762 INFO     publisher] Now building on top of block: 44ccc3e6(1, S:910b9c23, P:05b2a651)
-  validator_1         | [00:27:56.763 INFO     chain] Finished block validation of: 44ccc3e6(1, S:910b9c23, P:05b2a651)
-  Gracefully stopping... (press Ctrl+C again to force)
-  Stopping compose_tp_xo_python_1 ... done
-  Stopping compose_tp_config_1 ... done
-  Stopping compose_client_1 ... done
-  Stopping compose_rest_api_1 ... done
-  Stopping compose_tp_intkey_python_1 ... done
-  Stopping compose_validator_1 ... done
-
-  % docker-compose -f sawtooth-demo.yaml down
-
-Vagrant and Virtualbox Instructions
-===================================
-
-Prerequisites
--------------
-
-The following tools are required:
-
-* `Vagrant <https://www.vagrantup.com/downloads.html>`_ (1.9.0 or later)
-* `VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_ (5.1.16 r113841
-  or later)
-
-
-Proxy Settings
---------------
-
-If you are behind a network proxy, follow these steps before continuing:
-
-1. Set the following environment variables:
-
-  * http_proxy
-  * https_proxy
-
-If you are using the Bash shell, run the following commands:
-
-.. warning::
-
-  The example URLs and port numbers used below are examples only.
-  Please substitute the actual URL, with actual port numbers, used
-  in your environment. Contact your network administrator for the
-  information if necessary.
-
-.. code-block:: console
-
-  % export http_proxy=http://example-proxy-server.com:3128
-  % export https_proxy=https://example-proxy-server.com:3129
-
-If you are using Windows, run the following commands:
-
-.. code-block:: console
-
-  % set http_proxy=http://example-proxy-server.com:3128
-  % set https_proxy=https://example-proxy-server.com:3129
-
-
-2. Install the vagrant-proxyconf plugin:
-
-.. code-block:: console
-
-  % cd sawtooth-core/tools
-  % vagrant plugin install vagrant-proxyconf
-
-
-Environment Startup
--------------------
-
-In order to start the vagrant VM, run:
-
-.. code-block:: console
-
-  % cd sawtooth-core/tools
-  % vagrant up
-
-.. note::
-
-   We have encountered an intermittent problem on Windows hosts which
-   presents as an 'Operation not permitted' error in the vagrant startup
-   output. If you encounter this error, perform a 'vagrant destroy' and
-   then run 'vagrant up' again.
-
-Downloading the Vagrant box file, booting the VM, and running through
-the bootstrap scripts will take several minutes.
-
-Once the 'vagrant up' command has finished executing, run:
-
-.. code-block:: console
-
-  % vagrant ssh
-
-By default, Vagrant sets up ssh keys so that users can log into the VM
-without setting up additional accounts or credentials. The logged in user,
-vagrant (uid 1000), also has permissions to execute sudo with no password
-required. Any number of `vagrant ssh` sessions can be established from the
-host.
-
-.. note::
-
-   Occasionally, the configuration files used to create the vagrant
-   environment change and this can result in vagrant asking for a password when
-   doing `vagrant up` or `vagrant ssh`. This is usually a sign that your
-   environment is out of date. If this happens, please follow the instructions
-   below to reset your environment. This is especially common when switching
-   between versions of Sawtooth Lake, eg. 0.7 -> 0.8.
-
-Resetting The Environment
--------------------------
-
-If the VM needs to be reset for any reason, it can be returned to the default
-state by running the following commands from the sawtooth-core/tools directory
-on the host:
-
-.. code-block:: console
-
-  % vagrant destroy
-  % vagrant up
-
-.. warning::
-
-   vagrant destroy will delete all contents within the VM. However,
-   /vagrant and /project are shared with the host and will be preserved.
-
-Building sawtooth-core
-----------------------
-
-Most of the components of Sawtooth Lake depend partially on code that must
-first be built. This includes C++/swig code and generating protobuf classes for
-each language. Sawtooth Lake also includes SDKs for other languages, including
-Java and JavaScript, which require building. To build the python portion of
-Sawtooth Lake within vagrant, do:
-
-.. code-block:: console
-
-  $ /project/sawtooth-core/bin/build_python
-
-This will allow you to run and test Sawtooth Lake components manually. The
-automated tests for python and all other languages rely on docker to ensure
-reproducibility. To run the automated tests for python, first run the
-following:
-
-.. code-block:: console
-
-  $ /project/sawtooth-core/bin/build_all -l python
-
-This will create docker images for all the python components and run
-`build_python` inside a build container. You can then run the automated tests
-with:
-
-.. code-block:: console
-
-  $ /project/sawtooth-core/bin/run_tests -x java_sdk -x javascript_sdk
-
-If you are not behind a proxy, you can build and test everything Sawtooth Lake
-has to offer with:
-
-.. code-block:: console
-
-  $ /project/sawtooth-core/bin/build_all
-  $ /project/sawtooth-core/bin/run_tests
+See :doc:`environment_setup` for a guide to installing the app development
+environment.
 
 
 Validator Start-up Process
@@ -303,8 +49,8 @@ instantiating a new network.
 The genesis block contains some initial values that are necessary when a
 Sawtooth Lake distributed ledger is created and used for the first time.
 
-To create the genesis block, log in to the development environment with the
-command `vagrant ssh` and run the following command:
+To create the genesis block, log in to the development environment CLI and run
+the following command:
 
 .. code-block:: console
 
@@ -312,22 +58,21 @@ command `vagrant ssh` and run the following command:
   Generating /home/ubuntu/sawtooth/data/genesis.batch
 
 
-.. note:: 
+.. note::
 
   If you need to delete previously existing block-chain data before running a
-  validator in the vagrant environment, simply run the following command: 
+  validator in the vagrant environment, simply run the following command:
   `rm /home/ubuntu/sawtooth/data/*`
 
 
 Start Validator
 ---------------
 
-To start a validator, log in to the development environment with `vagrant ssh`
-and run the following commands:
+To start a validator, log in to the development environment and run the
+following commands:
 
 .. code-block:: console
 
-   $ cd sawtooth-core/
    $ sawtooth keygen --key-dir /home/ubuntu/sawtooth/keys/ validator
    $ validator -vv --public-uri tcp://localhost:8800
 
@@ -361,17 +106,16 @@ Transaction processors can be started either before or after the validator is
 started.
 
 To start an intkey transaction processor, log in to the development
-environment with  `vagrant ssh` and run the following commands:
+environment and run the following commands:
 
 .. code-block:: console
 
-  $ cd sawtooth-core/
   $ tp_intkey_python -v tcp://127.0.0.1:40000
 
-This will start a transaction processor that includes an **intkey** handler, 
+This will start a transaction processor that includes an **intkey** handler,
 which can understand and process transactions that use the built-in intkey
-transaction family. The processor communicates with the validator on 
-TCP port 40000. 
+transaction family. The processor communicates with the validator on
+TCP port 40000.
 
 The endpoint (`tcp://127.0.0.1:40000` in this example) to connect to must be
 specified when starting the transaction processor. This tells the transaction
@@ -384,7 +128,7 @@ The transaction processor produces the following output:
 
   [23:07:57 INFO    core] register attempt: OK
 
-.. note:: 
+.. note::
 
   In a production environment, you should always run a transaction processor
   that supports the config transaction family. See `Config Transaction
@@ -409,7 +153,7 @@ Sawtooth Lake includes additional transaction processors:
 * tp_intkey_javascript
 
   - An intkey transaction processor written in JavaScript
-  - Requires node.js 
+  - Requires node.js
 
 * tp_intkey_jvm_sc
 
@@ -419,7 +163,7 @@ Sawtooth Lake includes additional transaction processors:
 
 * tp_validator_registry
 
-  - A transaction family used by the PoET consensus algorithm implementation 
+  - A transaction family used by the PoET consensus algorithm implementation
     to keep track of other validators.
 
 * tp_xo_python
@@ -442,7 +186,7 @@ This section guide you through the following tasks:
 
 3. Submit these transactions to the validator.
 
-Run the following commands from the Vagrant CLI:
+Run the following commands from the Linux CLI:
 
 .. code-block:: console
 
@@ -486,24 +230,24 @@ processor written in Python.
   `Step Three: Create And Submit Batch`_ or read on to learn how to start
   the config transaction processor and rest api.
 
-One of the on-chain settings is the list of supported transaction families. 
+One of the on-chain settings is the list of supported transaction families.
 To configure this setting, follow these steps:
 
 Step One: Start Config Family Processor
 ---------------------------------------
 
-To start the config family transaction processor, run the following commands from the 
-Vagrant CLI:
+To start the config family transaction processor, run the following commands from the
+development environment CLI:
 
 .. code-block:: console
 
   $ tp_config tcp://localhost:40000
 
-Confirm that the transaction processor registers with the validator by viewing the Vagrant shell 
+Confirm that the transaction processor registers with the validator by viewing the Vagrant shell
 in which the validator is running. A successful registration event produces the following output:
 
 .. code-block:: console
-  
+
   [21:03:55.955 INFO    processor_handlers] registered transaction processor: identity=b'6d2d80275ae280ea', family=sawtooth_config, version=1.0, encoding=application/protobuf, namespaces=<google.protobuf.pyext._message.RepeatedScalarContainer object at 0x7e1ff042f6c0>
   [21:03:55.956 DEBUG   interconnect] ServerThread sending TP_REGISTER_RESPONSE to b'6d2d80275ae280ea'
 
@@ -515,7 +259,7 @@ In order to configure a running validator, you must start the REST API
 application. Run the following command to start the rest api:
 
 .. code-block:: console
-  
+
   rest_api --stream-url tcp://127.0.0.1:40000
 
 
@@ -532,13 +276,13 @@ The JSON array used tells the validator or validator network to accept transacti
 * sawtooth_config
 
 To create and submit the batch containing the new configuration, enter the
-following commands from the Vagrant CLI:
+following commands from the Linux CLI:
 
 .. code-block:: console
 
   $ sawtooth keygen my_key
   $ sawtooth config proposal create --key /home/ubuntu/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
-  
+
 Or from the Docker CLI:
 
 .. code-block:: console
@@ -556,11 +300,11 @@ You can view the blocks stored in the block-chain, and the nodes of the Markle
 tree, using the sawtooth CLI.
 
 .. note::
-  
+
   The sawtooth CLI provides help for all subcommands. For example, to get help
   for the `block` subcommand, enter the command `sawtooth block -h`.
 
-Log in to the Vagrant environment with the command `vagrant ssh` to run the commands below.
+Log in to the development environment to run the commands below.
 
 
 Starting the Rest API
@@ -576,7 +320,7 @@ In order to submit queries to the validator, you must start the REST API
 application. Run the following command to start the rest api:
 
 .. code-block:: console
-  
+
   rest_api --stream-url tcp://127.0.0.1:40000
 
 
@@ -585,7 +329,7 @@ Viewing List Of Blocks
 
 Enter the command `sawtooth block list` to view the blocks stored by the state:
 
-In Vagrant:
+On Linux:
 
 .. code-block:: console
 
@@ -599,7 +343,7 @@ In Docker:
 
 .. code-block:: console
 
-  NUM  BLOCK_ID  
+  NUM  BLOCK_ID
   8    22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7  2     8     02a0e049...
   7    c84346f5e18c6ce29f1b3e6e31534da7cd538533457768f86a267053ddf73c4f1139c9055be283dfe085c94557de24726191eee9996d4192d21fa6acb0b29152  2     20    02a0e049...
   6    efc0d6175b6329ac5d0814546190976bc6c4e18bd0630824c91e9826f93c7735371f4565a8e84c706737d360873fac383ab1cf289f9bf640b92c570cb1ba1875  2     27    02a0e049...
@@ -614,10 +358,10 @@ In Docker:
 Viewing A Particular Block
 --------------------------
 
-Using the `sawtooth block list` command as shown above, copy the block id you want to 
+Using the `sawtooth block list` command as shown above, copy the block id you want to
 view, then use the `sawtooth block show` command (truncated output shown):
 
-In Vagrant:
+On Linux:
 
 .. code-block:: console
 
@@ -664,7 +408,7 @@ Viewing The State
 
 Use the command `sawtooth state list` to list the nodes in the Merkle tree (truncated list):
 
-In Vagrant:
+On Linux:
 
 .. code-block:: console
 
@@ -694,7 +438,7 @@ Viewing Data In A Node
 
 Using the `sawtooth state list` command show above, copy the node id you want to view, then use the `sawtooth state show` command to view the node:
 
-In Vagrant:
+On Linux:
 
 .. code-block:: console
 
@@ -721,7 +465,7 @@ Using Sawtooth Cluster To Start A Network
   environment.
 
 The `sawtooth cluster` command can be used to start a network of validators
-and transaction processors. 
+and transaction processors.
 
 The following command will start a network of two validators and two transaction processors:
 
@@ -747,3 +491,9 @@ To submit sample transactions, follow the steps above under
 
 To stop a running network that was started using the subprocess management
 method, simply press CTRL-c.
+
+
+Next Steps
+==========
+
+Explore the :doc:`/cli` to learn about the commands that are available from the CLI.

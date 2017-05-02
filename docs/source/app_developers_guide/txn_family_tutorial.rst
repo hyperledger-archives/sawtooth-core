@@ -22,12 +22,12 @@ A full implementation of the tic-tac-toe transaction family can be found in
 Prerequisites
 =============
 
-This tutorial assumes that you have gone through :doc:`getting_started` and are
+This tutorial assumes that you have gone through :doc:`intro_to_sawtooth` and are
 familiar with the concepts introduced there.
 
 Prior to going through this tutorial, you should have a working vagrant
 environment running to which you can login.  Specific setup instructions are
-available in :doc:`getting_started`.
+available in :doc:`environment_setup`.
 
 The Transaction Processor
 =========================
