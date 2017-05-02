@@ -16,15 +16,12 @@
 import argparse
 import logging
 import random
-import json
 import threading
 from collections import namedtuple
 from datetime import datetime
-
-import urllib.request as urllib
-from urllib.error import URLError, HTTPError
 from http.client import RemoteDisconnected
 
+import requests
 import sawtooth_signing as signing
 from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
 from sawtooth_sdk.workload.sawtooth_workload import Workload
@@ -42,22 +39,22 @@ def post_batches(url, batches):
     headers = {'Content-Type': 'application/octet-stream'}
     headers['Content-Length'] = str(len(data))
 
-    request = urllib.Request(
-        url + "/batches",
-        data,
-        headers=headers,
-        method='POST')
     try:
-        result = urllib.urlopen(request)
-        code, json_result = (result.status, json.loads(result.read().decode()))
+        result = requests.post(url + "/batches", data, headers=headers)
+        result.raise_for_status()
+        code, json_result = (result.status_code, result.json())
         if not (code == 200 or code == 201 or code == 202):
             LOGGER.warning("(%s): %s", code, json_result)
-    except HTTPError as e:
-        LOGGER.warning("(%s): %s", e.code, e.msg)
+        return(code, json_result)
+    except requests.exceptions.HTTPError as e:
+        LOGGER.warning("(%s): %s", e.response.status_code, e.response.reason)
+        return (e.response.status_code, e.response.reason)
     except RemoteDisconnected as e:
         LOGGER.warning(e)
-    except URLError as e:
-        LOGGER.warning(e)
+    except requests.exceptions.ConnectionError as e:
+        LOGGER.warning(
+            'Unable to connect to "%s": make sure URL is correct', url
+        )
 
 
 class IntKeyWorkload(Workload):

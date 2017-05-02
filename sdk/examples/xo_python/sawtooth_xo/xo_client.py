@@ -15,7 +15,7 @@
 
 import hashlib
 import base64
-import urllib.request
+import requests
 import yaml
 
 import sawtooth_signing.secp256k1_signer as signing
@@ -76,7 +76,7 @@ class XoClient:
         try:
             return base64.b64decode(yaml.safe_load(result)["data"])
 
-        except urllib.error.HTTPError:
+        except BaseException:
             return None
 
     def _get_prefix(self):
@@ -87,20 +87,27 @@ class XoClient:
         game_address = _sha512(name.encode('utf-8'))
         return xo_prefix + game_address
 
-    def _send_request(self, suffix, content=None, content_type=None):
+    def _send_request(self, suffix, data=None, content_type=None):
         url = "http://{}/{}".format(self._base_url, suffix)
-        if content_type is not None:
-            content_type = {'Content-Type': content_type}
 
-        if content is None or content_type is None:
-            request = urllib.request.Request(url)
-        else:
-            request = urllib.request.Request(url, content, content_type)
+        headers = None
+        if content_type is not None:
+            headers = {'Content-Type': content_type}
+
         try:
-            result = urllib.request.urlopen(request).read().decode()
+            if data is not None:
+                result = requests.post(url, headers=headers, data=data)
+            else:
+                result = requests.get(url)
+
+            if not result.ok:
+                raise XoException("Error {}: {}".format(
+                    result.status_code, result.reason))
+
         except BaseException as err:
             raise XoException(err)
-        return result
+
+        return result.text
 
     def _send_xo_txn(self, name, action, space=""):
 
