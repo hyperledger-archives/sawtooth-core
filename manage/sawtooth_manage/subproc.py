@@ -175,10 +175,11 @@ class SubprocessNodeController(NodeController):
     def _get_state(self):
         sep = re.compile(r"[\s]+")
         # Retrieves list of all running validators
-        cmd = 'ps -ef | grep validator'
+        cmd = ['ps', '-ef']
 
         try:
-            output = subprocess.check_output(cmd, shell=True)
+            output = subprocess.check_output(cmd)
+
         except subprocess.CalledProcessError as e:
             raise ManagementError(str(e))
         except OSError as e:
@@ -187,12 +188,11 @@ class SubprocessNodeController(NodeController):
 
         entries = []
         for line in output.decode().split('\n'):
-            if (len(line) < 1) or 'grep' in line:
-                continue
-            parts = sep.split(line)
-            entries.append(_StateEntry(
-                name="validator-0{}".format(parts[12][-2:]),
-                pid=parts[1],
-                status='Up'))  # If the process exists, it is up
+            if "validator" in line and not len(line) < 1:
+                parts = sep.split(line)
+                entries.append(_StateEntry(
+                    name="validator-0{}".format(parts[12][-2:]),
+                    pid=parts[1],
+                    status='Up'))  # If the process exists, it is up
 
         return entries
