@@ -115,6 +115,7 @@ message Message {
         STATE_DELTA_SUBSCRIBE_RESPONSE = 401;
         STATE_DELTA_UNSUBSCRIBE_REQUEST = 402;
         STATE_DELTA_UNSUBSCRIBE_RESPONSE = 403;
+        STATE_DELTA_EVENT = 404;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the

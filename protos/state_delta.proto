@@ -37,6 +37,22 @@ message StateDeltaSet {
     repeated StateChange state_changes = 1;
 }
 
+// A StateDeltaEvent contains the information about the start and
+// end of the delta (from a block perspective) and the list of
+// changes that have occurred in that time. The list of state
+// changes are limited to those in the namespaces specified at
+// subscriber registration time.
+message StateDeltaEvent {
+    // The block id associated with the changes.
+    string block_id = 1;
+    // The block number associated with the changes
+    int32 block_num = 2;
+    // The state root hash which resulted from the changes.
+    string state_root_hash = 3;
+    // The collection of StateChange objects
+    repeated StateChange state_changes = 4;
+}
+
 // Registers a subscriber for StateDeltaEvent objects.  The
 // identity of the subscriber will be based on the ZMQ connection
 // id. This is an idempotent request.
