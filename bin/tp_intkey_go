@@ -16,6 +16,11 @@
 # ------------------------------------------------------------------------------
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-cd $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
-export GOPATH=/go:$top_dir/sdk/examples/intkey_go:$top_dir/sdk/go/
-go run main.go $*
+bin=$top_dir/sdk/examples/intkey_go/bin/tp_intkey_go
+
+if [ -e $bin ]
+then
+    $bin $*
+else
+    echo "Please build IntKey Go first with 'build_all -l go' or 'build_go'"
+fi

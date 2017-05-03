@@ -52,6 +52,7 @@
 /sdk/go/src/sawtooth_sdk/protobuf/
 /sdk/go/src/github.com/
 /sdk/go/bin/
+/sdk/examples/intkey_go/bin/
 /sdk/go/pkg/
 
 /signing/build/
