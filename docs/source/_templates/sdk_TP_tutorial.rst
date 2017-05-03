@@ -1,7 +1,12 @@
 {% set short_lang = 'python' %}
 {% if language == 'JavaScript' %}
     {% set short_lang = 'js' %}
-{% endif -%}
+{% endif %}
+
+{% set lowercase_lang = 'python' %}
+{% if language == 'JavaScript' %}
+    {% set lowercase_lang = 'javascript' %}
+{% endif %}
 
 ***********************************************
 Transaction Processor Tutorial  {{ language }}
@@ -31,9 +36,7 @@ Wikipedia at:
 
 A full implementation of the tic-tac-toe transaction family can be found in
 
-.. TEMPLATE Replace path below with language specific path
-
-``/project/sawtooth-core/sdk/examples/xo_python/``.
+``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
 
 Prerequisites
 =============
@@ -62,10 +65,18 @@ is made up of ``apply`` and its helper functions, so that's where we'll start.
 The ``apply`` Method
 ====================
 
+{% if language == 'JavaScript' %}
+``apply`` gets called with two arguments, ``transactionProcessRequest`` and ``state``.
+``transactionProcessRequest`` holds the command that is to be executed (e.g. taking a space or
+creating a game), while ``state`` stores information about the current
+state of the game (e.g. the board layout and whose turn it is).
+
+{% else %}
 ``apply`` gets called with two arguments, ``transaction`` and ``state_store``.
 ``transaction`` holds the command that is to be executed (e.g. taking a space or
 creating a game), while ``state_store`` stores information about the current
 state of the game (e.g. the board layout and whose turn it is).
+{% endif %}
 
 Without yet getting into the details of how this information is encoded, we can
 start to think about what ``apply`` needs to do. ``apply`` needs to
@@ -78,6 +89,48 @@ start to think about what ``apply`` needs to do. ``apply`` needs to
 Accordingly, a top-down approach to ``apply`` might look like this:
 
 {% if language == 'JavaScript' %}
+
+.. TODO::
+
+    This example code should be rewritten by a JavaScript expert
+    to parallel Python example.
+
+.. code-block:: javascript
+
+    apply (transactionProcessRequest, state) {
+    return _decodeRequest(transactionProcessRequest.payload)
+      .catch(_toInternalError)
+      .then((update) => {
+        let header = TransactionHeader.decode(transactionProcessRequest.header)
+        let player = header.signerPubkey
+        if (!update.name) {
+          throw new InvalidTransaction('Name is required')
+        }
+
+        if (!update.action) {
+          throw new InvalidTransaction('Action is required')
+        }
+
+        // Perform the action
+        let handlerFn
+        if (update.action === 'create') {
+          handlerFn = _handleCreate
+        } else if (update.action === 'take') {
+          handlerFn = _handleTake
+        } else {
+          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
+        }
+
+        let address = XO_NAMESPACE + _hash(update.name)
+
+        return state.get([address]).then(handlerFn(state, address, update, player))
+          .then((addresses) => {
+            if (addresses.length === 0) {
+              throw new InternalError('State Error!')
+            }
+          })
+      })
+    }
 
 {% else %}
 {# Python code is the default #}
@@ -115,6 +168,12 @@ be an empty string if the action isn't 'take'). So our ``_unpack_transaction``
 function will look like this:
 
 {% if language == 'JavaScript' %}
+
+.. TODO::
+    
+        Example code to be provided by JavaScript expert
+
+
 {% else %}
 
 .. code-block:: python
@@ -133,7 +192,6 @@ function will look like this:
 
 {% endif %}
 
-.. TEMPLATE Replace _get_state_data with language specific name if necessary
 
 Before we say how exactly the transaction payload will be decoded, let's look
 at ``_get_state_data``. Now, as far as the handler is concerned, it doesn't
@@ -143,7 +201,13 @@ full XO implementation, the game data is stored in a Merkle-radix tree.)
 
 
 {% if language == 'JavaScript' %}
-(% else %}
+
+.. TODO:: 
+
+    Example code to be provided by JavaScript expert, along with 
+    rewrite suggestion for surrounding text.
+
+{% else %}
 
 .. code-block:: python
 
@@ -167,6 +231,12 @@ game data at an address obtained from hashing the game name prepended with some
 constant:
 
 {% if language == 'JavaScript' %}
+
+.. TODO::
+
+    Example code to be provided by JavaScript expert, along with 
+    rewrite suggestion for surrounding text.
+    
 {% else %}
 
 .. code-block:: python
@@ -183,6 +253,12 @@ Finally, we'll store the game data. To do this, we simply need to encode the
 updated state of the game and store it back at the address from which it came.
 
 {% if language == 'JavaScript' %}
+
+.. TODO::
+
+    Example code to be provided by JavaScript expert, along with 
+    rewrite suggestion for surrounding text.
+
 {% else %}
 
 .. code-block:: python
@@ -211,6 +287,12 @@ encode the data as a simple UTF-8 comma-separated value string, but we could
 use something more sophisticated, like CBOR or JSON.
 
 {% if language == 'JavaScript' %}
+
+.. TODO::
+
+    Example code to be provided by JavaScript expert, along with 
+    rewrite suggestion for surrounding text.
+
 {% else %}
 
 .. code-block:: python
@@ -231,7 +313,7 @@ Playing the Game
 All that's left to do is describe how to play tic-tac-toe. The details here
 are fairly straighforward, and the ``_play_xo`` function could certainly be
 implemented in different ways. To see our implementation, go to
-``/project/sawtooth-core/sdk/examples/xo_{{short_lang}}``. We choose to
+``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to
 represent the board as a string of length 9, with each character in the string
 representing a space taken by X, a space taken by O, or a free space. Updating
 the board configuration and the current state of the game proceeds
@@ -240,13 +322,32 @@ straightforwardly.
 The ``XoTransactionHandler`` Class
 ==================================
 
+{% if language == 'JavaScript' %}
+
+And that's all there is to ``apply``! All that's left to do is set up the
+``XOHandler`` class and its metadata. The metadata is used to
+*register* the transaction processor with a validator by sending it information
+about what kinds of transactions it can handle.
+
+.. code-block:: javascript
+
+    class XOHandler extends TransactionHandler {
+    constructor () {
+        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
+    }
+
+    apply (transactionProcessRequest, state) {
+        // 
+
+Note that the XOHandler class extends the TransactionHandler class defined in the 
+JavaScript SDK. 
+
+{% else %}
+
 And that's all there is to ``apply``! All that's left to do is set up the
 ``XoTransactionHandler`` class and its metadata. The metadata is used to
 *register* the transaction processor with a validator by sending it information
 about what kinds of transactions it can handle.
-
-{% if language == 'JavaScript' %}
-{% else %}
 
 .. code-block:: python
 
