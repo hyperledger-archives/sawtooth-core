@@ -249,12 +249,19 @@ fi
 if [[ $BUILD_MODE == $INSTALLED ]]
 then
     build_go() {
-        warn "Installed go images not implemented, building mounted instead"
-
         docker_build docker/sawtooth-build-go docker/ sawtooth-build-go
         docker_run sawtooth-build-go
 
-        docker_build docker/sawtooth-dev-tp_intkey_go docker/ sawtooth-tp_intkey_go
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+        cp $top_dir/docker/sawtooth-int-tp_intkey_go $build_dir
+        cp $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go \
+            $build_dir
+        ls $build_dir
+
+        docker_build $build_dir/sawtooth-int-tp_intkey_go $build_dir/ \
+            sawtooth-tp_intkey_go
     }
 
     build_java() {
