@@ -542,3 +542,66 @@ class TestPoetBlockVerifier(TestCase):
             (message, *_), _ = mock_logger.error.call_args
             self.assertTrue('Validator is claiming blocks too '
                             'frequently' in message)
+
+    @mock.patch(
+        'sawtooth_poet.poet_consensus.poet_block_verifier.ConsensusState')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.'
+                'ValidatorRegistryView')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.utils')
+    def test_block_verifier_valid_block_claim(
+            self,
+            mock_utils,
+            mock_validator_registry_view,
+            mock_consensus_state,
+            mock_poet_enclave_factory,
+            mock_poet_config_view,
+            mock_block_wrapper,
+            mock_consensus_state_store):
+
+        """ Test verifies that PoET Block Verifier succeeds if
+        a validator successfully passes all criteria necessary
+        to claim a block
+        """
+
+        # create a mock_validator_registry_view with
+        # get_validator_info that does nothing
+        mock_validator_registry_view.return_value.get_validator_info. \
+            return_value = \
+            ValidatorInfo(
+                name='validator_001',
+                id='validator_deadbeef',
+                signup_info=SignUpInfo(
+                    poet_public_key='00112233445566778899aabbccddeeff'))
+
+        # create a mock_wait_certificate that does nothing in check_valid
+        mock_wait_certificate = mock.Mock()
+        mock_wait_certificate.check_valid.return_value = None
+
+        mock_utils.deserialize_wait_certificate.return_value = \
+            mock_wait_certificate
+
+        # create a mock_consensus_state that returns a mock with
+        # the following settings:
+        mock_state = mock.Mock()
+        mock_state.validator_signup_was_committed_too_late.return_value = False
+        mock_state.validator_has_claimed_block_limit.return_value = False
+        mock_state.validator_is_claiming_too_early.return_value = False
+        mock_state.validator_is_claiming_too_frequently.return_value = False
+
+        mock_consensus_state.consensus_state_for_block_id.return_value = \
+            mock_state
+
+        # check test
+        mock_block_cache = mock.MagicMock()
+        mock_state_view_factory = mock.Mock()
+        mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
+
+        block_verifier = \
+            PoetBlockVerifier(
+                block_cache=mock_block_cache,
+                state_view_factory=mock_state_view_factory,
+                data_dir=self._temp_dir,
+                validator_id='validator_deadbeef')
+        self.assertTrue(
+            block_verifier.verify_block(
+                block_wrapper=mock_block))
