@@ -28,3 +28,9 @@ targets:
     template: sdk_TP_tutorial.rst
     args:
         language: Python
+
+  sdk_TP_tutorial_js:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: JavaScript
+
