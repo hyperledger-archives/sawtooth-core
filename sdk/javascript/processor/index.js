@@ -93,6 +93,7 @@ class TransactionProcessor {
                     this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
                                           message.correlationId,
                                           response))
+              .catch((e) => console.log('Unhandled exception on sendBack', e))
           }
         }
       })
