@@ -71,11 +71,23 @@ The ``apply`` Method
 creating a game), while ``state`` stores information about the current
 state of the game (e.g. the board layout and whose turn it is).
 
-{% else %}
-``apply`` gets called with two arguments, ``transaction`` and ``state_store``.
+The transaction contains payload bytes that are opaque to the validator core,
+and transaction family specific. When implementing a transaction handler the
+binary serialization protocol is up to the implementer.
+
+{% else %} 
+``apply`` gets called with two arguments, ``transaction`` and
+``state_store``. The argument ``transaction`` is an instance of the class
+Transaction that is created from the  protobuf definition. Also,
+``state_store`` is an instance of the class State from the  python SDK.
+
 ``transaction`` holds the command that is to be executed (e.g. taking a space or
 creating a game), while ``state_store`` stores information about the current
 state of the game (e.g. the board layout and whose turn it is).
+
+The transaction contains payload bytes that are opaque to the validator core,
+and transaction family specific. When implementing a transaction handler the
+binary serialization protocol is up to the implementer.
 {% endif %}
 
 Without yet getting into the details of how this information is encoded, we can
@@ -160,6 +172,12 @@ the other three steps all concern the coordination of data.
 Data
 ====
 
+.. note::
+
+    :doc:`/architecture/transactions_and_batches` contains a detailed
+    description of how transactions are structured and used. Please read
+    this document before proceeding, if you have not reviewed it.
+
 So how do we get data out of the transaction? The transaction consists of a
 header and a payload. The header contains the "signer", which is used to
 identify the current player. The payload will contain an encoding of the game
@@ -226,9 +244,8 @@ full XO implementation, the game data is stored in a Merkle-radix tree.)
 
 {% endif %}
 
-It doesn't matter what exactly the game address is. By convention, we'll store
-game data at an address obtained from hashing the game name prepended with some
-constant:
+By convention, we'll store game data at an address obtained from hashing the
+game name prepended with some constant:
 
 {% if language == 'JavaScript' %}
 
@@ -280,11 +297,12 @@ updated state of the game and store it back at the address from which it came.
 
 {% endif %}
 
-So, how should we encode and decode the data? In fact, we can choose whatever
-encoding scheme we want; the data is only going to get read and written by the
-handler, so as long as we're consistent, it doesn't matter. In this case, we'll
-encode the data as a simple UTF-8 comma-separated value string, but we could
-use something more sophisticated, like CBOR or JSON.
+So, how should we encode and decode the data? We have many options in binary
+encoding schemes; the binary data stored in the validator state is up to the
+implementer of the handler. In this case, we'll encode the data as a simple
+UTF-8 comma-separated value string, but we could use something more
+sophisticated, `BSON <http://bsonspec.org/>`_.
+
 
 {% if language == 'JavaScript' %}
 
