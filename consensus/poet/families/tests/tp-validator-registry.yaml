@@ -31,7 +31,7 @@ services:
             /project/sawtooth-core/sdk/python"
 
   validator:
-    image: sawtooth-dev-test:$ISOLATION_ID
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

@@ -14,24 +14,35 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds the python code in the sawtooth-core repo.
+#   Builds an image to be used when developing in Python. The default CMD is to
+#   run build_python.
+#
+#   The image is also used by unit and integration tests. Docker is used to
+#   interact with and orchestrate the creation of other docker containers.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-build-python -t sawtooth-build-python
+#   $ docker build . -f sawtooth-dev-python -t sawtooth-dev-python
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-python
+#   $ docker run -v $(pwd):/project/sawtooth-core \
+#     -v /var/run/docker.sock:/var/run/docker.sock sawtooth-dev-python
 
 FROM ubuntu:xenial
+
+LABEL "install-type"="mounted"
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6B58B1AC10FB5F63 \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
+    apt-transport-https \
     build-essential \
+    ca-certificates \
+    curl \
     git \
+    inetutils-ping \
     libffi-dev \
     libssl-dev \
     pep8 \
@@ -50,6 +61,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
     python3-grpcio=1.1.3-1 \
     python3-lmdb=0.92-1 \
     python3-multidict=2.1.4-1 \
+    python3-nose2 \
     python3-pip \
     python3-protobuf=3.2.0-1 \
     python3-pycares=2.1.1-1 \
@@ -64,11 +76,34 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
     python3-yaml \
     python3-yarl=0.10.0-1 \
     python3-zmq \
+    software-properties-common \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
     pylint==1.6.5 \
     bandit
 
-WORKDIR /project/sawtooth-core/
-CMD ./bin/build_python
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+ && add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) \
+         stable"
+
+RUN apt-get update && apt-get install -y -q \
+    docker-ce \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 40000/tcp
+EXPOSE 8080
+
+RUN mkdir -p /project/sawtooth-core/ \
+ && mkdir -p /var/log/sawtooth \
+ && mkdir -p /var/lib/sawtooth \
+ && mkdir -p /etc/sawtooth \
+ && mkdir -p /etc/sawtooth/keys
+
+ENV PATH=$PATH:/project/sawtooth-core/bin
+
+WORKDIR /
+CMD build_python

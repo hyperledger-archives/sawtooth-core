@@ -14,37 +14,26 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   TP Intkey Go installed.
+#   Builds an image to be used when developing in JavaScript. The default CMD is to run
+#   build_javascript.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-tp_intkey_go -t sawtooth-dev-tp_intkey_go
+#   $ docker build . -f sawtooth-dev-javascript -t sawtooth-dev-javascript
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_intkey_go
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-javascript
 
-FROM ubuntu:xenial
+FROM yarnpkg/node-yarn:0.20-node7
 
 LABEL "install-type"="mounted"
 
 RUN apt-get update \
  && apt-get install -y -q \
-    golang \
-    git \
     libzmq3-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-
-ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go
-
-RUN go get -u \
-    github.com/golang/protobuf/proto \
-    github.com/golang/protobuf/protoc-gen-go \
-    github.com/pebbe/zmq4 \
-    github.com/brianolson/cbor_go \
-    github.com/satori/go.uuid
 
 EXPOSE 40000/tcp
 
@@ -58,4 +47,6 @@ ENV PATH=$PATH:/project/sawtooth-core/bin
 
 WORKDIR /
 
-CMD ["tp_intkey_go", "tcp://validator:40000"]
+CMD /project/sawtooth-core/bin/build_javascript_sdk \
+ && /project/sawtooth-core/bin/build_intkey_javascript \
+ && /project/sawtooth-core/bin/build_xo_javascript

@@ -17,13 +17,10 @@
 #   Builds an image with Sawtooth TP Intkey Go installed.
 #
 # Build:
-#   $ cd sawtooth-core
-#   $ cp sdk/examples/intkey_go/src/sawtooth_intkey/sawtooth_intkey docker/
-#   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-int-tp_intkey_go -t sawtooth-tp_intkey_go
+#   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ docker run -t sawtooth-tp_intkey_go
+#   $ docker run sawtooth-tp_intkey_go
 
 FROM ubuntu:xenial
 
