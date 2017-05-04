@@ -50,10 +50,12 @@ class TransactionProcessor {
   start () {
     this._stream.connect(() => {
       this._stream.onReceive(message => {
-        console.log('Received ', message.messageType)
+        if (message.messageType !== Message.MessageType.TP_PROCESS_REQUEST) {
+          console.log(`Ignoring ${Message.MessageType.stringValue(message.messageType)}`)
+          return
+        }
 
-        const request = TpProcessRequest.decode(message.content)
-
+        const request = TpProcessRequest.toObject(TpProcessRequest.decode(message.content), {defaults: false})
         const state = new State(this._stream, request.contextId)
 
         if (this._handlers.length > 0) {
@@ -72,28 +74,31 @@ class TransactionProcessor {
               .catch((e) => {
                 if (e instanceof InvalidTransaction) {
                   console.log(e)
-                  return TpProcessResponse.encode({
+                  return TpProcessResponse.create({
                     status: TpProcessResponse.Status.INVALID_TRANSACTION
-                  }).finish()
+                  })
                 } else if (e instanceof InternalError) {
                   console.log('Internal Error Occurred', e)
-                  return TpProcessResponse.encode({
+                  return TpProcessResponse.create({
                     status: TpProcessResponse.Status.INTERNAL_ERROR
-                  }).finish()
+                  })
                 } else if (e instanceof ValidatorConnectionError) {
                   console.log('Validator disconnected.  Ignoring.')
                 } else {
                   console.log('Unhandled exception, returning INTERNAL_ERROR', e)
-                  return TpProcessResponse.encode({
+                  return TpProcessResponse.create({
                     status: TpProcessResponse.Status.INTERNAL_ERROR
-                  }).finish()
+                  })
                 }
               })
-              .then((response) =>
-                    this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                                          message.correlationId,
-                                          response))
-              .catch((e) => console.log('Unhandled exception on sendBack', e))
+              .then((response) => {
+                if (response) {
+                  this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
+                                        message.correlationId,
+                                        TpProcessResponse.encode(response).finish())
+                }
+              })
+              .catch((e) => console.log('Unhandled error on sendBack', e))
           }
         }
       })

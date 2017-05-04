@@ -38,6 +38,8 @@ TpStateGetResponse.Status = TpStateGetResponse.nested.Status.values
 
 const Message = root.lookup('Message')
 Message.MessageType = Message.nested.MessageType.values
+Message.MessageType.stringValue = (id) =>
+  `${Message.nested.MessageType.valuesById[id]}(${id})`
 
 module.exports = {
   //
