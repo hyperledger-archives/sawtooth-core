@@ -14,18 +14,20 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   TP Intkey Go installed.
+#   Builds an image to be used when developing in Go. The default CMD is to run
+#   build_go.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-tp_intkey_go -t sawtooth-dev-tp_intkey_go
+#   $ docker build . -f sawtooth-dev-go -t sawtooth-dev-go
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_intkey_go
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-go
 
 FROM ubuntu:xenial
+
+LABEL "install-type"="mounted"
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6B58B1AC10FB5F63 \
@@ -40,15 +42,24 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
 
 ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go
 
-RUN go get -u \
+RUN mkdir /go \
+ && go get -u \
     github.com/golang/protobuf/proto \
     github.com/golang/protobuf/protoc-gen-go \
     github.com/pebbe/zmq4 \
     github.com/brianolson/cbor_go \
     github.com/satori/go.uuid
 
-ENV PATH=$PATH:/go/bin
+EXPOSE 40000/tcp
+
+RUN mkdir -p /project/sawtooth-core/ \
+ && mkdir -p /var/log/sawtooth \
+ && mkdir -p /var/lib/sawtooth \
+ && mkdir -p /etc/sawtooth \
+ && mkdir -p /etc/sawtooth/keys
+
+ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin
 
 WORKDIR /
 
-CMD /project/sawtooth-core/bin/build_go
+CMD build_go

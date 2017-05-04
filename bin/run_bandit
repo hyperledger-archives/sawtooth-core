@@ -56,4 +56,4 @@ done
 bandit -ll -r --ignore-nosec $top_dir \
     --exclude $ignore \
     -f html \
-    -o build/bandit.html
+    -o /project/sawtooth-core/build/bandit.html

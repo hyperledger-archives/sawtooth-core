@@ -14,20 +14,17 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   TP Intkey JavaScript installed.
+#   Builds an image with Sawtooth TP Intkey Go installed.
 #
 # Build:
-#   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-tp_intkey_javascript -t sawtooth-dev-tp_intkey_javascript
+#   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-tp_intkey_javascript
+#   $ docker run sawtooth-tp_intkey_go
 
-FROM yarnpkg/node-yarn:0.20-node7
+FROM ubuntu:xenial
 
-LABEL "install-type"="mounted"
+LABEL "install-type"="copied-bin"
 
 RUN apt-get update \
  && apt-get install -y -q \
@@ -35,16 +32,8 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+COPY tp_intkey_go /usr/bin/tp_intkey_go
+
 EXPOSE 40000/tcp
 
-RUN mkdir -p /project/sawtooth-core/ \
- && mkdir -p /var/log/sawtooth \
- && mkdir -p /var/lib/sawtooth \
- && mkdir -p /etc/sawtooth \
- && mkdir -p /etc/sawtooth/keys
-
-ENV PATH=$PATH:/project/sawtooth-core/bin
-
-WORKDIR /
-
-CMD ["tp_intkey_javascript", "tcp://validator:40000"]
+CMD ["tp_intkey_go", "tcp://validator:40000"]

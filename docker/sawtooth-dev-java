@@ -14,17 +14,32 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds the java code in the sawtooth-core repo.
+#   Builds an image to be used when developing in Java. The default CMD is to run
+#   build_java.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-build-java -t sawtooth-build-java
+#   $ docker build . -f sawtooth-dev-java -t sawtooth-dev-java
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-build-java
+#   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-java
 
 FROM maven:3-jdk-8
+
+LABEL "install-type"="mounted"
+
+EXPOSE 40000/tcp
+
+RUN mkdir -p /project/sawtooth-core/ \
+ && mkdir -p /var/log/sawtooth \
+ && mkdir -p /var/lib/sawtooth \
+ && mkdir -p /etc/sawtooth \
+ && mkdir -p /etc/sawtooth/keys
+
+ENV PATH=$PATH:/project/sawtooth-core/bin
+
+WORKDIR /
 
 CMD /project/sawtooth-core/bin/build_java_sdk \
  && /project/sawtooth-core/bin/build_java_intkey

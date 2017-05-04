@@ -70,7 +70,7 @@ services:
     stop_signal: SIGKILL
 
   integration_test:
-    image: sawtooth-dev-test:$ISOLATION_ID
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
