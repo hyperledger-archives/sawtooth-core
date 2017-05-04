@@ -55,15 +55,22 @@ class Stream {
   }
 
   connect (onConnectCb) {
+    if (this._onConnectCb) {
+      console.log(`Attempting to reconnect to ${this._url}`)
+    }
+
     this._onConnectCb = onConnectCb
 
     this._futures = {}
     this._socket = zmq.socket('dealer')
     this._socket.setsockopt('identity', Buffer.from(uuid(), 'utf8'))
-    this._socket.connect(this._url)
+    this._socket.on('connect', () => {
+      console.log(`Connected to ${this._url}`)
+      onConnectCb()
+    })
     this._socket.on('disconnect', (fd, endpoint) => this._handleDisconnect())
-    this._socket.monitor(500, zmq.ZMQ_EVENT_DISCONNECTED)
-    this._onConnectCb()
+    this._socket.monitor(250, 0)
+    this._socket.connect(this._url)
 
     this._initial_connection = false
   }
