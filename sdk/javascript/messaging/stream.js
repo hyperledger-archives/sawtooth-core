@@ -19,7 +19,7 @@
 
 const crypto = require('crypto')
 const uuid = require('uuid/v4')
-const zmq = require('zmq')
+const zmq = require('zeromq')
 
 const util = require('util')
 const assert = require('assert')

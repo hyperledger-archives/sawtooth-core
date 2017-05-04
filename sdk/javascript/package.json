@@ -13,7 +13,7 @@
     "protobufjs": "^6.7.3",
     "secp256k1": "^3.2.5",
     "uuid": "^3.0.1",
-    "zmq": "2.15.3"
+    "zeromq": "^4.2.1"
   },
   "devDependencies": {
     "mocha": "^3.2.0",
