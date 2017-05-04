@@ -67,10 +67,12 @@ class DisconnectHandler(Handler):
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
+        self._network.remove_connection(connection_id)
 
-        return HandlerResult(HandlerStatus.RETURN,
-                             message_out=ack,
-                             message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class PingHandler(Handler):

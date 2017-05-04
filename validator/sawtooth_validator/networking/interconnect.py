@@ -161,7 +161,7 @@ class _SendReceive(object):
                                      " - removing connection.",
                                      zmq_identity,
                                      self._connection_timeout)
-                        self._remove_connected_identity(zmq_identity)
+                        self.remove_connected_identity(zmq_identity)
                     else:
                         message = validator_pb2.Message(
                             correlation_id=_generate_id(),
@@ -183,7 +183,7 @@ class _SendReceive(object):
                         yield from self._stop()
             yield from asyncio.sleep(self._heartbeat_interval)
 
-    def _remove_connected_identity(self, zmq_identity):
+    def remove_connected_identity(self, zmq_identity):
         if zmq_identity in self._last_message_times:
             del self._last_message_times[zmq_identity]
         if zmq_identity in self._identities_to_connection_ids:
@@ -538,7 +538,7 @@ class Interconnect(object):
             LOGGER.debug("Received an error response to the NETWORK_CONNECT "
                          "we sent. Removing connection: %s",
                          connection.connection_id)
-            self._remove_connection(connection)
+            self.remove_connection(connection.connection_id)
             if failure_callback:
                 failure_callback(connection_id=connection.connection_id)
         elif ack.status == ack.OK:
@@ -649,10 +649,25 @@ class Interconnect(object):
                                connection,
                                uri)
 
-    def _remove_connection(self, connection):
-        connection_id = connection.connection_id
+    def remove_connection(self, connection_id):
+        LOGGER.debug("Removing connection: %s", connection_id)
         if connection_id in self._connections:
-            del self._connections[connection_id]
+            connection_info = self._connections[connection_id]
+
+            if connection_info.connection_type == \
+                    ConnectionType.OUTBOUND_CONNECTION:
+                connection_info.connection.stop()
+                del self._connections[connection_id]
+
+            elif connection_info.connection_type == \
+                    ConnectionType.ZMQ_IDENTITY:
+                self._send_receive_thread.remove_connected_identity(
+                    connection_info.connection)
+
+    def has_connection(self, connection_id):
+        if connection_id in self._connections:
+            return True
+        return False
 
 
 class OutboundConnection(object):
