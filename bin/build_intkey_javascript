@@ -4,4 +4,4 @@ cd $top_dir/sdk/examples/intkey_javascript
 
 rm -r node_modules
 npm set progress=false
-npm install --force --no-bin-links
+npm install --no-bin-links

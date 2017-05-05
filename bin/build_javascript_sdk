@@ -4,5 +4,5 @@ cd $top_dir/sdk/javascript
 
 rm -r node_modules
 npm set progress=false
-npm install --force --no-bin-links
+npm install --no-bin-links
 npm run compile_protobuf
