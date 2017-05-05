@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import sys
 import argparse
 
@@ -60,8 +59,7 @@ def main(args=sys.argv[1:]):
 
         # The prefix should eventually be looked up from the
         # validator's namespace registry.
-        intkey_prefix = hashlib.sha512('intkey'.encode()).hexdigest()[0:6]
-        handler = IntkeyTransactionHandler(namespace_prefix=intkey_prefix)
+        handler = IntkeyTransactionHandler()
 
         processor.add_handler(handler)
 
