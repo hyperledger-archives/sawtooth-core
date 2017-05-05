@@ -21,11 +21,12 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	zmq "github.com/pebbe/zmq4"
+	"os"
+	"os/signal"
 	"runtime"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/messaging"
 	"sawtooth_sdk/protobuf/processor_pb2"
-	"sawtooth_sdk/protobuf/transaction_pb2"
 	"sawtooth_sdk/protobuf/validator_pb2"
 )
 
@@ -42,6 +43,7 @@ type TransactionProcessor struct {
 	ids      map[string]string
 	handlers []TransactionHandler
 	nThreads int
+	shutdown chan int
 }
 
 // NewTransactionProcessor initializes a new Transaction Process and points it
@@ -57,6 +59,7 @@ func NewTransactionProcessor(uri string) *TransactionProcessor {
 		ids:      make(map[string]string),
 		handlers: make([]TransactionHandler, 0),
 		nThreads: runtime.GOMAXPROCS(0),
+		shutdown: make(chan int),
 	}
 }
 
@@ -100,6 +103,11 @@ func (self *TransactionProcessor) Start() error {
 	for i := 0; i < self.nThreads; i++ {
 		go worker(self.context, "inproc://workers", queue, self.handlers)
 	}
+	// Setup shutdown thread
+	go shutdown(self.context, "inproc://workers", queue, self.shutdown)
+
+	logger.Debugf("Started %v worker threads and 1 shutdown worker thread", self.nThreads)
+	workersLeft := uint(self.nThreads) + 1
 
 	// Setup ZMQ poller for routing messages between worker threads and validator
 	poller := zmq.NewPoller()
@@ -133,10 +141,40 @@ func (self *TransactionProcessor) Start() error {
 
 			case workers.Socket():
 				logger.Debugf("Workers have messages waiting")
-				receiveWorkers(ids, validator, workers)
+				receiveWorkers(ids, validator, workers, &workersLeft)
+				if workersLeft == 0 {
+					return nil
+				}
 			}
 		}
 	}
+}
+
+// Shutdown sends a message to the processor telling it to deregister.
+func (self *TransactionProcessor) Shutdown() {
+	logger.Debugf("Shutdown() called!")
+	// Initiate a clean shutdown
+	self.shutdown <- 0
+}
+
+// ShutdownOnSignal sets up signal handling to shutdown the processor when one
+// of the signals passed is received.
+func (self *TransactionProcessor) ShutdownOnSignal(siglist ...os.Signal) {
+	// Setup signal handlers
+	ch := make(chan os.Signal)
+	signal.Notify(ch, siglist...)
+
+	go func() {
+		// Wait for a signal
+		_ = <-ch
+
+		// Reset signal handlers
+		signal.Reset(siglist...)
+		logger.Warnf("Shutting down gracefully (Press Ctrl+C again to force)")
+
+		self.Shutdown()
+	}()
+	logger.Debugf("Shutdown() will be called for signals: %v", siglist)
 }
 
 // Handle incoming messages from the validator
@@ -164,29 +202,15 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 
 	// Check if this is a new request or a response to a message sent by a
 	// worker thread.
+	t := msg.GetMessageType()
 	corrId := msg.GetCorrelationId()
-	workerId, exists := ids[corrId]
-	if exists && corrId != "" {
-		// If this is a response, send it to the worker.
-		err = workers.SendData(workerId, data)
-		if err != nil {
-			logger.Errorf(
-				"Failed to send response with correlationd id %v to worker %v: %v",
-				corrId, workerId, err,
-			)
-			return
-		}
-		logger.Debugf(
-			"Routed message (%v) from validator to worker (%v)",
-			corrId, workerId,
-		)
-		delete(ids, corrId)
-		logger.Debugf("Removed (%v)->(%v) from map", corrId, workerId)
 
-	} else { // If this is new, add it to the request queue
+	// If this is a new request, put in on the work queue
+	if t == validator_pb2.Message_TP_PROCESS_REQUEST {
 		select {
 		case queue <- msg:
-			logger.Debugf("Put %v (%v) on queue", msg.GetMessageType(), corrId)
+			logger.Debugf("Put %v (%v) on queue", t, corrId)
+
 		default:
 			logger.Warnf("Work queue is full, denying request %v", corrId)
 			data, err := proto.Marshal(&processor_pb2.TpProcessResponse{
@@ -206,11 +230,37 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 				)
 			}
 		}
+		return
 	}
+
+	// If this is a response, send it to the worker.
+	workerId, exists := ids[corrId]
+	if exists && corrId != "" {
+		err = workers.SendData(workerId, data)
+		if err != nil {
+			logger.Errorf(
+				"Failed to send response with correlationd id %v to worker %v: %v",
+				corrId, workerId, err,
+			)
+			return
+		}
+		logger.Debugf(
+			"Routed message (%v) from validator to worker (%v)",
+			corrId, workerId,
+		)
+		delete(ids, corrId)
+		logger.Debugf("Removed (%v)->(%v) from map", corrId, workerId)
+		return
+	}
+
+	// Shouldn't get here
+	logger.Infof(
+		"Received unexpected message from validator: (%v, %v)", t, corrId,
+	)
 }
 
 // Handle incoming messages from the workers
-func receiveWorkers(ids map[string]string, validator, workers *messaging.Connection) {
+func receiveWorkers(ids map[string]string, validator, workers *messaging.Connection, workersLeft *uint) {
 	// Receive a mesasge from the workers
 	workerId, data, err := workers.RecvData()
 	if err != nil {
@@ -226,6 +276,12 @@ func receiveWorkers(ids map[string]string, validator, workers *messaging.Connect
 
 	t := msg.GetMessageType()
 	corrId := msg.GetCorrelationId()
+
+	if t == validator_pb2.Message_DEFAULT && corrId == "shutdown" {
+		*workersLeft = *workersLeft - 1
+		logger.Infof("(%v) Worker shutdown. Remaining: %v", workerId, *workersLeft)
+		return
+	}
 	logger.Debugf("Got %v from worker (%v)", t, workerId)
 
 	// Store which thread the response should be routed to
@@ -241,125 +297,6 @@ func receiveWorkers(ids map[string]string, validator, workers *messaging.Connect
 		return
 	}
 	logger.Debugf("Routed message (%v) from worker (%v) to validator", corrId, workerId)
-}
-
-// The main worker thread finds an appropriate handler and processes the request
-func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message, handlers []TransactionHandler) {
-	// Connect to the main send/receive thread
-	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
-	id := connection.Identity()
-	if err != nil {
-		logger.Errorf("(%v) Failed to connect to main thread: %v", id, err)
-		return
-	}
-	defer connection.Close()
-
-	for {
-		// Receive some work off of the queue
-		msg := <-queue
-		logger.Infof("(%v) Received %v", id, msg.MessageType)
-
-		// Validate the message
-		if msg.MessageType != validator_pb2.Message_TP_PROCESS_REQUEST {
-			logger.Errorf("(%v) received unexpected message: %v", id, msg)
-			break
-		}
-
-		request := &processor_pb2.TpProcessRequest{}
-		err = proto.Unmarshal(msg.Content, request)
-		if err != nil {
-			logger.Errorf(
-				"(%v) Failed to unmarshal TpProcessRequest: %v", id, err,
-			)
-			break
-		}
-
-		header := &transaction_pb2.TransactionHeader{}
-		err = proto.Unmarshal(request.Header, header)
-		if err != nil {
-			logger.Errorf(
-				"(%v) Failed to unmarshal TransactionHeader: %v", id, err)
-			break
-		}
-
-		// Try to find a handler
-		handler, err := findHandler(handlers, header)
-		if err != nil {
-			logger.Errorf("(%v) Failed to find handler: %v", id, err)
-			break
-		}
-
-		// Construct a new State instance for the handler
-		contextId := request.GetContextId()
-		state := NewState(connection, contextId)
-
-		// Run the handler
-		logger.Debugf(
-			"(%v) Passing request with context id %v to handler (%v, %v, %v, %v)",
-			id, contextId, handler.FamilyName(), handler.FamilyVersion,
-			handler.Encoding(), handler.Namespaces(),
-		)
-		err = handler.Apply(request, state)
-
-		// Process the handler response
-		response := &processor_pb2.TpProcessResponse{}
-		if err != nil {
-			switch e := err.(type) {
-			case *InvalidTransactionError:
-				logger.Warnf("(%v) Invalid Transaction: %v", id, e)
-				response.Status = processor_pb2.TpProcessResponse_INVALID_TRANSACTION
-			case *InternalError:
-				logger.Warnf("(%v) Internal Error %v", id, e)
-				response.Status = processor_pb2.TpProcessResponse_INTERNAL_ERROR
-			default:
-				logger.Errorf("(%v) Unknown error: %v", id, err)
-				response.Status = processor_pb2.TpProcessResponse_INTERNAL_ERROR
-			}
-		} else {
-			response.Status = processor_pb2.TpProcessResponse_OK
-		}
-
-		responseData, err := proto.Marshal(response)
-		if err != nil {
-			logger.Errorf("(%v) Failed to marshal TpProcessResponse: %v", id, err)
-			break
-		}
-
-		// Send back a response to the validator
-		err = connection.SendMsg(
-			validator_pb2.Message_TP_PROCESS_RESPONSE,
-			responseData, msg.CorrelationId,
-		)
-		if err != nil {
-			logger.Errorf("(%v) Error sending TpProcessResponse: %v", id, err)
-			break
-		}
-		logger.Infof("(%v) Responded with %v", id, response.Status)
-	}
-}
-
-// Searches for and returns a handler that matches the header. If a suitable
-// handler is not found, returns an error.
-func findHandler(handlers []TransactionHandler, header *transaction_pb2.TransactionHeader) (TransactionHandler, error) {
-	for _, handler := range handlers {
-		if header.GetFamilyName() != handler.FamilyName() {
-			break
-		}
-
-		if header.GetFamilyVersion() != handler.FamilyVersion() {
-			break
-		}
-
-		if header.GetPayloadEncoding() != handler.Encoding() {
-			break
-		}
-
-		return handler, nil
-	}
-	return nil, fmt.Errorf(
-		"Unknown handler: (%v, %v, %v)", header.GetFamilyName(),
-		header.GetFamilyVersion(), header.GetPayloadEncoding(),
-	)
 }
 
 // Register a handler with the validator
