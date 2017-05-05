@@ -22,6 +22,7 @@ import (
 	intkey "sawtooth_intkey/handler"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
+	"syscall"
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 	handler := intkey.NewIntkeyHandler(prefix)
 	processor := processor.NewTransactionProcessor(endpoint)
 	processor.AddHandler(handler)
+	processor.ShutdownOnSignal(syscall.SIGINT, syscall.SIGTERM)
 	err := processor.Start()
 	if err != nil {
 		logger.Error("Processor stopped: ", err)
