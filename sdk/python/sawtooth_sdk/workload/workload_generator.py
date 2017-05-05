@@ -16,8 +16,6 @@ import asyncio
 import logging
 import time
 import json
-import urllib.request as urllib
-from urllib.error import URLError, HTTPError
 from http.client import RemoteDisconnected
 
 from threading import Lock
@@ -25,7 +23,7 @@ from collections import deque
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures._base import CancelledError
-
+import requests
 from sawtooth_sdk.messaging.exceptions import WorkloadConfigurationError
 
 PendingBatch = namedtuple('PendingBatch', ['id', 'url'])
@@ -201,16 +199,13 @@ class WorkloadGenerator(object):
         headers = {'Content-Type': 'application/json'}
         headers['Content-Length'] = '%d' % len(data)
 
-        request = urllib.Request(
-            url + '/batch_status',
-            data,
-            headers=headers,
-            method='POST')
-
         try:
-            result = urllib.urlopen(request)
+            result = requests.post(
+                url + '/batch_status', data=data, headers=headers)
+
             code, json_result = \
-                result.status, json.loads(result.read().decode())
+                result.status_code, result.json()
+            result.raise_for_status()
 
             if code == 200 or code == 201 or code == 202:
                 status = list(json_result["data"].values())[0]
@@ -223,8 +218,9 @@ class WorkloadGenerator(object):
 
                 LOGGER.debug("(%s): %s", code, message)
                 return "UNKNOWN"
-        except HTTPError as e:
-            error_code = json.loads(e.file.read().decode())['error']['code']
+
+        except requests.exceptions.HTTPError as e:
+            error_code = e.response.json()['error']['code']
             if error_code == 18:
                 self._remove_unresponsive_validator(url)
                 LOGGER.warning("The validator at %s is no longer connected. "
@@ -235,7 +231,7 @@ class WorkloadGenerator(object):
             LOGGER.warning("The validator at %s is no longer connected. "
                            "Removing Validator.", url)
             return "UNKNOWN"
-        except URLError as e:
+        except requests.exceptions.ConnectionError as e:
             LOGGER.warning(
                 'Unable to connect to "%s": make sure URL is correct', url)
             self._remove_unresponsive_validator(url)
