@@ -16,6 +16,7 @@
 import hashlib
 import base64
 import requests
+import time
 import yaml
 
 import sawtooth_signing.secp256k1_signer as signing
@@ -126,7 +127,8 @@ class XoClient:
             dependencies=[],
             payload_encoding="csv-utf8",
             payload_sha512=_sha512(payload),
-            batcher_pubkey=self._public_key
+            batcher_pubkey=self._public_key,
+            nonce=time.time().hex().encode()
         ).SerializeToString()
 
         signature = signing.sign(header, self._private_key)
