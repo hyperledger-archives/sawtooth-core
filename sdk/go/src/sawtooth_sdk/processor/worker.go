@@ -31,26 +31,18 @@ import (
 func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message, handlers []TransactionHandler) {
 	// Connect to the main send/receive thread
 	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
-	id := connection.Identity()
 	if err != nil {
-		logger.Errorf("(%v) Failed to connect to main thread: %v", id, err)
+		logger.Errorf("Failed to connect to main thread: %v", err)
 		return
 	}
 	defer connection.Close()
+	id := connection.Identity()
 
-	for {
-		// Receive some work off of the queue
-		msg := <-queue
-		logger.Infof("(%v) Received %v", id, msg.MessageType)
-
-		// Validate the message
-		if msg.MessageType != validator_pb2.Message_TP_PROCESS_REQUEST {
-			logger.Errorf("(%v) received unexpected message: %v", id, msg)
-			break
-		}
-
+	// Receive work off of the queue until the queue is closed
+	for msg := range queue {
+		logger.Infof("(%v) Received new process request", id)
 		request := &processor_pb2.TpProcessRequest{}
-		err = proto.Unmarshal(msg.Content, request)
+		err = proto.Unmarshal(msg.GetContent(), request)
 		if err != nil {
 			logger.Errorf(
 				"(%v) Failed to unmarshal TpProcessRequest: %v", id, err,
@@ -112,13 +104,25 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 		// Send back a response to the validator
 		err = connection.SendMsg(
 			validator_pb2.Message_TP_PROCESS_RESPONSE,
-			responseData, msg.CorrelationId,
+			responseData, msg.GetCorrelationId(),
 		)
 		if err != nil {
 			logger.Errorf("(%v) Error sending TpProcessResponse: %v", id, err)
 			break
 		}
 		logger.Infof("(%v) Responded with %v", id, response.Status)
+	}
+
+	// Queue has closed, so send shutdown signal
+	logger.Infof("(%v) No more work in queue, shutting down", id)
+	err = connection.SendMsg(
+		validator_pb2.Message_DEFAULT,
+		[]byte{byte(0)}, "shutdown",
+	)
+	if err != nil {
+		logger.Errorf("(%v) Error sending shutdown: %v", id, err)
+	} else {
+		logger.Debugf("(%v) Sent shutdown message to router", id)
 	}
 }
 
@@ -144,4 +148,68 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 		"Unknown handler: (%v, %v, %v)", header.GetFamilyName(),
 		header.GetFamilyVersion(), header.GetPayloadEncoding(),
 	)
+}
+
+// Waits for something to come along a channel and then initiates processor shutdown
+func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Message, wait chan int) {
+	// Wait for a request to shutdown
+	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
+	if err != nil {
+		logger.Errorf("Failed to connect to main thread: %v", err)
+		return
+	}
+	defer connection.Close()
+	id := "shutdown"
+
+	logger.Debugf("Shutdown handler waiting")
+	<-wait
+	logger.Debugf("Shutdown handler got shutdown message; Unregistering")
+
+	// Send a request to be unregistered
+	data, err := proto.Marshal(&processor_pb2.TpUnregisterRequest{})
+	if err != nil {
+		logger.Errorf(
+			"Failed to unregister: %v", err,
+		)
+	}
+	corrId, err := connection.SendNewMsg(
+		validator_pb2.Message_TP_UNREGISTER_REQUEST, data,
+	)
+	if err != nil {
+		logger.Errorf(
+			"Failed to unregister: %v", err,
+		)
+	}
+
+	// Wait for a response
+	_, msg, err := connection.RecvMsgWithId(corrId)
+	if err != nil {
+		logger.Errorf("Failed to receive TpUnregisterResponse: %v", err)
+	}
+	if msg.GetCorrelationId() != corrId {
+		logger.Errorf(
+			"Expected message with correlation id %v but got %v",
+			corrId, msg.GetCorrelationId(),
+		)
+	}
+	if msg.GetMessageType() != validator_pb2.Message_TP_UNREGISTER_RESPONSE {
+		logger.Errorf(
+			"Expected TP_UNREGISTER_RESPONSE but got %v", msg.GetMessageType(),
+		)
+	}
+	logger.Debugf("(%v) Unregister response received.", id)
+
+	// Close the work queue, telling the worker threads there's no more work
+	close(queue)
+	logger.Debugf("(%v) Queue closed", id)
+
+	err = connection.SendMsg(
+		validator_pb2.Message_DEFAULT,
+		[]byte{byte(0)}, "shutdown",
+	)
+	if err != nil {
+		logger.Errorf("(%v) Error sending shutdown message to router: %v", id, err)
+	} else {
+		logger.Infof("(%v) Sent shutdown message to router", id)
+	}
 }
