@@ -22,6 +22,9 @@
 - name: Andrea Gunderson
   user: agunde406
 
+- name: S. A. Haridhakshini
+  user: Haridhakshini
+
 - name: Jamie Jason
   user: jjason
 
@@ -43,11 +46,8 @@
 - name: Todd Ojala
   user: ojalatodd
 
-- name: Peter Schwarz
-  user: peterschwarz
-
-- name: S. A. Haridhakshini
-  user: Haridhakshini
-
 - name: Darian Plumb
   user: dplumb94
+
+- name: Peter Schwarz
+  user: peterschwarz
