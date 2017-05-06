@@ -92,7 +92,7 @@ accessed recently are purged from the block cache. The time horizon for purging
 and the frequency of purging are either configured or determined automatically
 based on the average block time of the system.
 
-The Completer 
+The Completer
 =============
 
 The Completer is responsible for making sure Blocks and Batches are complete
@@ -126,7 +126,7 @@ If B arrives this time, then the new chain will be delivered to the
 ChainController, where they will be check for validity and considered for
 becoming the block head by the ChainController.
 
-The Consensus Interface 
+The Consensus Interface
 =======================
 
 In the spirit of configurability, the Journal supports pluggable consensus
@@ -156,7 +156,7 @@ BlockPublisher to create new candidate blocks to extend the chain. The
 Consensus.BlockPublisher is provided access to a read-only view of global
 state, a read-only view of the BlockStore, and an interface to publish batches.
 
-Three events are called on the Consensus.BlockPublisher, 
+Three events are called on the Consensus.BlockPublisher,
 
 1. initialize_block - The BlockHeader is provided for the candidate block. This
    is called immediately after the block_header is initialized and allows for
@@ -198,8 +198,9 @@ become the chain head will differ. In a Bitcoin Proof of Work consensus, this
 will be the longest chain, whereas PoET uses the measure of aggregate local
 mean (a measure of the total amount of time spent waiting) to determine the
 valid fork. Consensus algorithms with finality, such as PBFT, will only ever
-produce blocks that extend the current head, always selectiing blocks that
-extend the chain, never the current head.
+produce blocks that extend the current head. These algorithms will never have
+forks to resolve. The ForkResolver for these algorithms with finality will
+always select the new block that extends the current head.
 
 The ChainController
 ===================
@@ -218,7 +219,7 @@ while a deep fork is being evaluated. This was implemented for cases that could
 happen if a group of validators lost connectivity with the network and later
 rejoined.
 
-Here is the basic flow of the ChainController as a single block is processed. 
+Here is the basic flow of the ChainController as a single block is processed.
 
 .. image:: ../images/journal_chain_controller.*
    :width: 80%
@@ -276,7 +277,7 @@ During processing, if a Block is marked as invalid it is discarded, never to be
 considered again. The only way to have the Block reconsidered is by flushing the
 BlockCache, which can be done by restarting the validator.
 
-The BlockValidator has three stages of evaluation. 
+The BlockValidator has three stages of evaluation.
 
 1. Determine the common root of the fork (ForkRoot). This is done by walking the
    chain back from the candidate and the chain head until a common block is
@@ -345,7 +346,7 @@ current chain. The BlockPublisher does all of the housekeeping work around
 creating a block but takes direction from the consensus algorithm for when to
 create a block and when to publish a block.
 
-The BlockPublisher follows this logic flow: 
+The BlockPublisher follows this logic flow:
 
 .. image:: ../images/journal_block_publisher_flow.*
    :width: 80%
