@@ -20,6 +20,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
 from sawtooth_validator.protobuf.state_delta_pb2 import \
     RegisterStateDeltaSubscriberRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
@@ -42,6 +43,16 @@ class _DeltaSubscriber(object):
     def __init__(self, connection_id, address_prefix_filters):
         self.connection_id = connection_id
         self.address_prefixes = address_prefix_filters
+
+    def deltas_of_interest(self, deltas):
+        return [delta for delta in deltas if self._match(delta.address)]
+
+    def _match(self, address):
+        for prefix in self.address_prefixes:
+            if address.startswith(prefix):
+                return True
+
+        return False
 
 
 class StateDeltaProcessor(object):
@@ -117,6 +128,50 @@ class StateDeltaProcessor(object):
                 del self._subscribers[connection_id]
                 LOGGER.debug('Removed Subscriber %s for %s',
                              connection_id, subscriber.address_prefixes)
+
+    def publish_deltas(self, block):
+        """Publish the state changes for a block.
+
+        Args:
+            block (:obj:`BlockWrapper`): The block whose state delta will
+                be published.
+        """
+        LOGGER.debug('Publishing state delta fro %s', block)
+        state_root_hash = block.header.state_root_hash
+
+        deltas = self._get_delta(state_root_hash)
+
+        if len(self._subscribers) > 0:
+            self._broadcast_changes(block, deltas)
+
+    def _get_delta(self, state_root_hash):
+        try:
+            return self._state_delta_store.get_state_deltas(state_root_hash)
+        except KeyError:
+            return []
+
+    def _broadcast_changes(self, block, deltas):
+        state_change_evt = StateDeltaEvent(
+            block_id=block.header_signature,
+            block_num=block.header.block_num,
+            state_root_hash=block.header.state_root_hash)
+
+        for subscriber in self._subscribers.values():
+            acceptable_changes = subscriber.deltas_of_interest(deltas)
+            state_change_evt.ClearField('state_changes')
+
+            if len(acceptable_changes) > 0:
+                state_change_evt.state_changes.extend(acceptable_changes)
+
+            LOGGER.debug('sending change event to %s',
+                         subscriber.connection_id)
+            self._send(subscriber.connection_id,
+                       state_change_evt.SerializeToString())
+
+    def _send(self, connection_id, message_bytes):
+        self._service.send(validator_pb2.Message.STATE_DELTA_EVENT,
+                           message_bytes,
+                           connection_id=connection_id)
 
 
 class StateDeltaSubscriberHandler(Handler):
