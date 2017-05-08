@@ -30,8 +30,8 @@ node ('master') {
         if (!(env.BRANCH_NAME == 'master' && env.JOB_BASE_NAME == 'master')) {
             stage("Check Whitelist") {
                 readTrusted 'bin/whitelist'
-                readTrusted 'MAINTAINERS'
-                sh './bin/whitelist "$CHANGE_AUTHOR" MAINTAINERS'
+                readTrusted 'COMMITTERS'
+                sh './bin/whitelist "$CHANGE_AUTHOR" COMMITTERS'
             }
         }
 
