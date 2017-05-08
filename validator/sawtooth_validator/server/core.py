@@ -499,6 +499,8 @@ class Validator(object):
 
     def stop(self):
         self._gossip.stop()
+        self._dispatcher.stop()
+        self._network_dispatcher.stop()
         self._network.stop()
 
         self._service.stop()
@@ -517,12 +519,6 @@ class Validator(object):
         # This will remove the MainThread, which will exit when we exit with
         # a sys.exit() or exit of main().
         threads.remove(threading.current_thread())
-
-        # Several Thread subclasses have a stop method not defined
-        # in superclass.
-        for t in threads:
-            if hasattr(t, 'stop'):
-                t.stop()
 
         while len(threads) > 0:
             if len(threads) < 4:
