@@ -32,9 +32,11 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    command: nose2-3 -v -s
-      /project/sawtooth-core/sdk/examples/xo_python/tests
-      test_tp_xo
+    command: nose2-3
+        -c /project/sawtooth-core/sdk/examples/xo_python/nose2.cfg
+        -v
+        -s /project/sawtooth-core/sdk/examples/xo_python/tests
+        test_tp_xo
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "\

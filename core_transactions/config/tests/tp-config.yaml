@@ -32,8 +32,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose: 
       - 40000
-    command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/tests
+    command: nose2-3
+        -c /project/sawtooth-core/core_transactions/config/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
         test_tp_config
     stop_signal: SIGKILL
     environment:
