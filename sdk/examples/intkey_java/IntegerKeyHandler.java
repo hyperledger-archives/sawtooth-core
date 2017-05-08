@@ -16,8 +16,11 @@ package sawtooth.examples.intkey;
 
 import com.google.protobuf.ByteString;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import co.nstant.in.cbor.CborBuilder;
+import co.nstant.in.cbor.CborDecoder;
+import co.nstant.in.cbor.CborEncoder;
+import co.nstant.in.cbor.CborException;
+import co.nstant.in.cbor.model.DataItem;
 
 import sawtooth.sdk.processor.State;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -26,6 +29,8 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.AbstractMap;
@@ -39,7 +44,6 @@ import java.util.logging.Logger;
 
 public class IntegerKeyHandler implements TransactionHandler {
 
-  private ObjectMapper mapper;
   private final Logger logger = Logger.getLogger(IntegerKeyHandler.class.getName());
   private String intkeyNameSpace;
 
@@ -47,8 +51,6 @@ public class IntegerKeyHandler implements TransactionHandler {
    * constructor.
    */
   public IntegerKeyHandler() {
-    CBORFactory factory = new CBORFactory();
-    this.mapper = new ObjectMapper(factory);
     try {
       this.intkeyNameSpace = Utils.hash512(
               this.transactionFamilyName().getBytes("UTF-8")).substring(0, 6);
@@ -80,6 +82,60 @@ public class IntegerKeyHandler implements TransactionHandler {
     return namespaces;
   }
 
+  /**
+   * Helper function to decode the Payload of a transaction.
+   * Convert the co.nstant.in.cbor.model.Map to a HashMap.
+   */
+  public Map<String, String> decodePayload(byte[] bytes) throws CborException {
+    ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+    co.nstant.in.cbor.model.Map data =
+        (co.nstant.in.cbor.model.Map) new CborDecoder(bais).decodeNext();
+    DataItem[] keys = data.getKeys().toArray(new DataItem[0]);
+    Map<String, String> result = new HashMap();
+    for (int i = 0; i < keys.length; i++) {
+      result.put(
+          keys[i].toString(),
+          data.get(keys[i]).toString());
+    }
+    return result;
+  }
+
+  /**
+   * Helper function to decode State retrieved from the address of the name.
+   * Convert the co.nstant.in.cbor.model.Map to a HashMap.
+   */
+  public Map<String, Integer> decodeState(byte[] bytes) throws CborException {
+    ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+    co.nstant.in.cbor.model.Map data =
+        (co.nstant.in.cbor.model.Map) new CborDecoder(bais).decodeNext();
+    DataItem[] keys = data.getKeys().toArray(new DataItem[0]);
+    Map<String, Integer> result = new HashMap();
+    for (int i = 0; i < keys.length; i++) {
+      result.put(
+          keys[i].toString(),
+          Integer.decode(data.get(keys[i]).toString()));
+    }
+    return result;
+  }
+
+  /**
+   * Helper function to encode the State that will be stored at the address of
+   * the name.
+   */
+  public Map.Entry<String, ByteString> encodeState(String address, String name, Integer value)
+      throws CborException {
+    ByteArrayOutputStream boas = new ByteArrayOutputStream();
+    new CborEncoder(boas).encode(new CborBuilder()
+        .addMap()
+        .put(name, value)
+        .end()
+        .build());
+
+    return new AbstractMap.SimpleEntry<String, ByteString>(
+        address,
+        ByteString.copyFrom(boas.toByteArray()));
+  }
+
   @Override
   public void apply(TpProcessRequest transactionRequest,
                     State state) throws InvalidTransactionException, InternalError {
@@ -93,8 +149,7 @@ public class IntegerKeyHandler implements TransactionHandler {
       if (transactionRequest.getPayload().size() == 0) {
         throw new InvalidTransactionException("Payload is required.");
       }
-      HashMap updateMap = this.mapper.readValue(
-              transactionRequest.getPayload().toByteArray(), HashMap.class);
+      Map updateMap = this.decodePayload(transactionRequest.getPayload().toByteArray());
       String name = updateMap.get("Name").toString();
       String address = null;
       try {
@@ -125,7 +180,7 @@ public class IntegerKeyHandler implements TransactionHandler {
         byte[] stateValueRep = possibleAddressValues.get(address).toByteArray();
         Map<String, Integer> stateValue = null;
         if (stateValueRep.length > 0) {
-          stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
+          stateValue = this.decodeState(stateValueRep);
           if (stateValue.containsKey(name)) {
             throw new InvalidTransactionException("Verb is set but Name already in state, "
                     + "Name: " + name + " Value: " + stateValue.get(name).toString());
@@ -136,14 +191,7 @@ public class IntegerKeyHandler implements TransactionHandler {
           throw new InvalidTransactionException("Verb is set but Value is less than 0");
         }
         // 'set' passes checks so store it in the state
-        if (stateValue == null) {
-          stateValue = new HashMap<String, Integer>();
-        }
-        Map<String,Integer> setValue = stateValue;
-        setValue.put(name, value);
-        Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
-                address,
-                ByteString.copyFrom(this.mapper.writeValueAsBytes(setValue)));
+        Map.Entry<String, ByteString> entry = this.encodeState(address, name, value);
 
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
         addresses = state.set(addressValues);
@@ -154,18 +202,14 @@ public class IntegerKeyHandler implements TransactionHandler {
         if (stateValueRep.length == 0) {
           throw new InvalidTransactionException("Verb is inc but Name is not in state");
         }
-        Map<String, Integer> stateValue = this.mapper.readValue(
-                stateValueRep, HashMap.class);
+        Map<String, Integer> stateValue = this.decodeState(stateValueRep);
         if (!stateValue.containsKey(name)) {
           throw new InvalidTransactionException("Verb is inc but Name is not in state");
         }
 
         // Increment the value in state by value
-        Map<String, Integer> incValue = stateValue;
-        incValue.put(name, stateValue.get(name) + value);
-        Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
-                address,
-                ByteString.copyFrom(this.mapper.writeValueAsBytes(incValue)));
+        Map.Entry<String, ByteString> entry =
+            this.encodeState(address, name, stateValue.get(name) + value);
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
         addresses = state.set(addressValues);
       }
@@ -176,19 +220,17 @@ public class IntegerKeyHandler implements TransactionHandler {
         if (stateValueRep.length == 0) {
           throw new InvalidTransactionException("Verb is dec but Name is not in state");
         }
-        Map<String, Integer> stateValue = this.mapper.readValue(stateValueRep, HashMap.class);
+        Map<String, Integer> stateValue = this.decodeState(stateValueRep);
         if (!stateValue.containsKey(name)) {
           throw new InvalidTransactionException("Verb is dec but Name is not in state");
         }
         if (stateValue.get(name) - value < 0) {
           throw new InvalidTransactionException("Dec would set Value to less than 0");
         }
-        Map<String, Integer> decValue = stateValue;
+
         // Decrement the value in state by value
-        decValue.put(name, stateValue.get(name) - value);
-        Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<String, ByteString>(
-                address,
-                ByteString.copyFrom(this.mapper.writeValueAsBytes(decValue)));
+        Map.Entry<String, ByteString> entry =
+            this.encodeState(address, name, stateValue.get(name) - value);
 
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
         addresses = state.set(addressValues);
@@ -199,9 +241,8 @@ public class IntegerKeyHandler implements TransactionHandler {
       }
       logger.info("Verb: " + verb + " Name: " + name + " value: " + value);
 
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
-      throw new InternalError("State error" + ioe.toString());
+    } catch (CborException ce) {
+      throw new InternalError("Cbor Error" + ce.toString());
     }
   }
 }
