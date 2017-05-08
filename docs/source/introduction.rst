@@ -3,7 +3,7 @@ Introduction
 ************
 
 
-Sawtooth Lake is an enterprise distributed ledger (aka blockchain) project.
+``Sawtooth Lake is an enterprise distributed ledger (aka blockchain) project.
 Our design philosophy targets keeping distributed ledgers *distributed* and
 making smart contracts *safe* - particularly for enterprise use.
 
@@ -14,7 +14,7 @@ best equipped to make.
 We are an open source project under the Hyperledger umbrella. We welcome
 working with individuals and companies interested in the advancement of
 distributed ledger technology. Please see the community section for ways to
-interact with and become a part of the Sawtooth Lake community.
+interact with and become a part of the Sawtooth Lake community.``
 
 
 Sawtooth's Ledger
