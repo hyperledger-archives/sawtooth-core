@@ -18,7 +18,7 @@ Overview
 This tutorial covers the creation of a new Sawtooth Lake transaction family in
 {{ language }}, based on the Sawtooth Lake SDK. We will construct a transaction
 handler which implements a distributed version of the multi-player game tic-
-tac-toe
+tac-toe.
 
 .. note::
 
@@ -27,7 +27,7 @@ tac-toe
     complete implementation. See the SDK_ for full implemenations in
     multiple languages.
 
-.. _SDK: https://github.com/hyperledger/sawtooth-core/tree/master/sdk
+.. _SDK: https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples
 
 A general description of tic-tac-toe, including the rules, can be found on
 Wikipedia at:
@@ -44,7 +44,7 @@ Prerequisites
 This tutorial assumes that you have gone through :doc:`/app_developers_guide/getting_started` and are
 familiar with the concepts introduced there.
 
-Prior to going through this tutorial, you should have a working vagrant
+Prior to going through this tutorial, you should have a working Vagrant
 environment running to which you can login.  Specific setup instructions are
 available in :doc:`/app_developers_guide/getting_started`.
 
@@ -54,11 +54,15 @@ The Transaction Processor
 There are two top-level components of a transaction processor: a processor
 class and a handler class. The SDK provides a general-purpose processor class.
 The handler class is application-dependent and contains the business logic for
-a particular family of transactions. Multiple handlers can be connected to a
-processor class.
+a particular family of transactions. Multiple handlers can be connected to an
+instance of the processor class.
 
-Handlers get called in two ways: an ``apply`` method and various metadata
-methods. The metadata is used to connect the handler to the processor, and
+Handlers get called in two ways:
+
+# An ``apply`` method
+# Various "metadata" methods
+
+The metadata is used to connect the handler to the processor, and
 we'll discuss it at the end of this tutorial. The bulk of the handler, however,
 is made up of ``apply`` and its helper functions, so that's where we'll start.
 
