@@ -44,6 +44,7 @@
 /sdk/javascript/node_modules
 /sdk/javascript/protobuf/protobuf_bundle.json
 /sdk/examples/xo_python/**/__pycache__/
+/sdk/examples/xo_javascript/node_modules/
 /sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_java/dependency-reduced-pom.xml

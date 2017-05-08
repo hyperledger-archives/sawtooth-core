@@ -25,15 +25,24 @@
 #   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-javascript
 
-FROM yarnpkg/node-yarn:0.20-node7
+FROM ubuntu:xenial
 
 LABEL "install-type"="mounted"
 
-RUN apt-get update \
- && apt-get install -y -q \
+RUN apt-get update && apt-get install -y -q --no-install-recommends \
+    curl \
+    ca-certificates \
+    pkg-config \
+    build-essential \
     libzmq3-dev \
+ && curl -s -S -o /tmp/setup-node.sh https://deb.nodesource.com/setup_6.x \
+ && chmod 755 /tmp/setup-node.sh \
+ && /tmp/setup-node.sh \
+ && apt-get install nodejs \
+ && rm /tmp/setup-node.sh \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g prebuild-install
 
 EXPOSE 40000/tcp
 

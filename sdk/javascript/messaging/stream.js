@@ -19,7 +19,7 @@
 
 const crypto = require('crypto')
 const uuid = require('uuid/v4')
-const zmq = require('zmq')
+const zmq = require('zeromq')
 
 const util = require('util')
 const assert = require('assert')
@@ -29,9 +29,11 @@ const Deferred = require('./deferred')
 const {ValidatorConnectionError} = require('../processor/exceptions')
 
 const _encodeMessage = (messageType, correlationId, content) => {
-  assert(util.isNumber(messageType))
-  assert(util.isString(correlationId))
-  assert(Buffer.isBuffer(content))
+  assert(util.isNumber(messageType), `messageType must be a number; was ${messageType}`)
+  assert(util.isString(correlationId), `correlationId must be a string; was ${correlationId}`)
+  assert(content !== undefined || content !== null, 'content must not be null or undefined')
+  assert(Buffer.isBuffer(content),
+         `content must be a buffer; was ${content.constructor ? content.constructor.name : typeof content}`)
 
   return Message.encode({
     messageType,
@@ -53,15 +55,22 @@ class Stream {
   }
 
   connect (onConnectCb) {
+    if (this._onConnectCb) {
+      console.log(`Attempting to reconnect to ${this._url}`)
+    }
+
     this._onConnectCb = onConnectCb
 
     this._futures = {}
     this._socket = zmq.socket('dealer')
     this._socket.setsockopt('identity', Buffer.from(uuid(), 'utf8'))
-    this._socket.connect(this._url)
+    this._socket.on('connect', () => {
+      console.log(`Connected to ${this._url}`)
+      onConnectCb()
+    })
     this._socket.on('disconnect', (fd, endpoint) => this._handleDisconnect())
-    this._socket.monitor(500, zmq.ZMQ_EVENT_DISCONNECTED)
-    this._onConnectCb()
+    this._socket.monitor(250, 0)
+    this._socket.connect(this._url)
 
     this._initial_connection = false
   }
@@ -85,12 +94,18 @@ class Stream {
   }
 
   send (type, content) {
+    console.log('Sending', Message.MessageType.stringValue(type))
     if (this._socket) {
       const correlationId = _generateId()
       let deferred = new Deferred()
       this._futures[correlationId] = deferred
 
-      this._socket.send(_encodeMessage(type, correlationId, content))
+      try {
+        this._socket.send(_encodeMessage(type, correlationId, content))
+      } catch (e) {
+        delete this._futures[correlationId]
+        return Promise.reject(e)
+      }
 
       return deferred.promise
         .then(result => {
@@ -122,10 +137,11 @@ class Stream {
   onReceive (cb) {
     this._socket.on('message', buffer => {
       let message = Message.decode(buffer)
+      console.log(`Received ${Message.MessageType.stringValue(message.messageType)}`)
       if (this._futures[message.correlationId]) {
         this._futures[message.correlationId].resolve(message.content)
       } else {
-        cb(message)
+        process.nextTick(() => cb(message))
       }
     })
   }
