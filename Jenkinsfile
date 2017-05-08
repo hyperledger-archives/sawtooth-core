@@ -81,6 +81,10 @@ node ('master') {
             sh './bin/run_tests -i deployment'
         }
 
+        stage("Compile coverage report") {
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID /bin/bash -c "cd coverage && coverage combine && coverage html -d html"'
+        }
+
         stage("Create git archive") {
             sh '''
                 REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
@@ -99,6 +103,7 @@ node ('master') {
             archiveArtifacts artifacts: '*.tgz, *.zip'
             archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'build/bandit.html'
+            archiveArtifacts artifacts: 'coverage/html/*'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
     }
