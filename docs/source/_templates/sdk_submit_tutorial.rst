@@ -34,7 +34,7 @@ key, and it is fairly simple to generate this using the SDK's *signer* module.
     const privateKey = signer.makePrivateKey()
 
 {% else %}
-{# Python is the default #}
+{# Python 3 code should be the default #}
 
 {% endif %}
 

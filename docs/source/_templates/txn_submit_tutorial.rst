@@ -51,7 +51,7 @@ secp256k1 library to ensure they are valid.
     } while (!secp256k1.privateKeyVerify(privateKeyBytes))
 
 {% else %}
-{# Python code is the default #}
+{# Python 3 code should be the default #}
 
 The Python *secp256k1* module provides a *PrivateKey* handler class from which
 we can generate the actual bytes to use for a key.
