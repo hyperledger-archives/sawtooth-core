@@ -24,6 +24,9 @@
 /core_transactions/config/sawtooth_config/protobuf/
 /core_transactions/**/__pycache__/
 
+/coverage
+/coverage/html
+
 /docs/build/
 /docs/source/_autogen/
 /docs/source/cli/output/
