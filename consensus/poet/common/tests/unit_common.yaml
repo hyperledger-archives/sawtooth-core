@@ -21,8 +21,10 @@ services:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: nose2-3 -v -s
-        /project/sawtooth-core/consensus/poet/common/tests
+    command: nose2-3
+        -c /project/sawtooth-core/consensus/poet/common/nose2.cfg
+        -v
+        -s /project/sawtooth-core/consensus/poet/common/tests
     environment:
         PYTHONPATH: "\
           /project/sawtooth-core/consensus/poet/common:\

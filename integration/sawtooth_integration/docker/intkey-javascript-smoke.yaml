@@ -77,8 +77,10 @@ services:
     depends_on:
       - validator
       - rest_api
-    command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/tests
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
         test_intkey_smoke.TestIntkeySmoke
     stop_signal: SIGKILL
     environment:

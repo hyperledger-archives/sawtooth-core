@@ -21,8 +21,10 @@ services:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: nose2-3 -v -s
-        /project/sawtooth-core/signing
+    command: nose2-3
+        -c /project/sawtooth-core/signing/nose2.cfg
+        -v
+        -s /project/sawtooth-core/signing
     environment:
         PYTHONPATH: "\
           /project/sawtooth-core/signing:\
