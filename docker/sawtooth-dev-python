@@ -54,6 +54,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
     python3-cchardet=2.0a3-1 \
     python3-chardet=2.3.0-1 \
     python3-colorlog \
+    python3-cov-core \
     python3-cryptography-vectors=1.7.2-1 \
     python3-cryptography=1.7.2-1 \
     python3-dev \
@@ -81,7 +82,8 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
     pylint==1.6.5 \
-    bandit
+    bandit \
+    coverage --upgrade
 
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && add-apt-repository \
@@ -105,5 +107,5 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
-WORKDIR /
+WORKDIR /project/sawtooth-core
 CMD build_python
