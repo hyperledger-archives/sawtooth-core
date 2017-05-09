@@ -23,6 +23,11 @@ const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exce
 const crypto = require('crypto')
 const cbor = require('cbor')
 
+// Constants defined in intkey specification
+const MIN_VALUE = 0
+const MAX_VALUE = 4294967295
+const MAX_NAME_LENGTH = 20
+
 const _hash = (x) =>
   crypto.createHash('sha512').update(x).digest('hex').toLowerCase()
 
@@ -53,13 +58,10 @@ const _handleSet = (state, address, name, value) => (possibleAddressValues) => {
     stateValue = cbor.decodeFirstSync(stateValueRep)
     if (stateValue[name]) {
       throw new InvalidTransaction(
-        `Verb is set but Name already in state, Name: ${name} Value: ${stateValue[name]}`)
+        `Verb is "set" but Name already in state, Name: ${name} Value: ${stateValue[name]}`)
     }
   }
 
-  if (value < 0) {
-    throw new InvalidTransaction('Verb is set but Value is less than 0')
-  }
   // 'set' passes checks so store it in the state
   if (!stateValue) {
     stateValue = {}
@@ -81,8 +83,21 @@ const _handleOperator = (verb, op) => (state, address, name, value) => (possible
     throw new InvalidTransaction(`Verb is ${verb} but Name is not in state`)
   }
 
+  const result = op(stateValue[name], value)
+
+  if (result < MIN_VALUE) {
+    throw new InvalidTransaction(
+      `Verb is ${verb}, but result would be less than ${MIN_VALUE}`)
+  }
+
+  if (result > MAX_VALUE) {
+    throw new InvalidTransaction(
+      `Verb is ${verb}, but result would be greater than ${MAX_VALUE}`)
+  }
+
   // Increment the value in state by value
-  stateValue[name] = op(stateValue[name], value)
+  // stateValue[name] = op(stateValue[name], value)
+  stateValue[name] = result
   return _setEntry(state, address, stateValue)
 }
 
@@ -105,6 +120,11 @@ class IntegerKeyHandler extends TransactionHandler {
           throw new InvalidTransaction('Name is required')
         }
 
+        if (name.length > MAX_NAME_LENGTH) {
+          throw new InvalidTransaction(
+            `Name must be a string of no more than ${MAX_NAME_LENGTH} characters`)
+        }
+
         let verb = update.Verb
         if (!verb) {
           throw new InvalidTransaction('Verb is required')
@@ -114,10 +134,16 @@ class IntegerKeyHandler extends TransactionHandler {
         if (!value) {
           throw new InvalidTransaction('Value is required')
         }
-        value = parseInt(value)
-        if (isNaN(value)) {
-          throw new InvalidTransaction('Value must be an integer')
+
+        let parsed = parseInt(value)
+        if (parsed !== value || parsed < MIN_VALUE || parsed > MAX_VALUE) {
+          throw new InvalidTransaction(
+            `Value must be an integer `
+            + `no less than ${MIN_VALUE} and `
+            + `no greater than ${MAX_VALUE}`)
         }
+
+        value = parsed
 
         //
         // Perform the action
@@ -133,14 +159,13 @@ class IntegerKeyHandler extends TransactionHandler {
           throw new InvalidTransaction(`Verb must be set, inc, dec not ${verb}`)
         }
 
-        let address = INT_KEY_NAMESPACE + _hash(name)
+        let address = INT_KEY_NAMESPACE + _hash(name).slice(-64)
 
         return state.get([address]).then(handlerFn(state, address, name, value))
           .then((addresses) => {
             if (addresses.length === 0) {
               throw new InternalError('State Error!')
             }
-            // TODO: Use some form of logging
             console.log(`Verb: ${verb} Name: ${name} Value: ${value}`)
           })
       })
