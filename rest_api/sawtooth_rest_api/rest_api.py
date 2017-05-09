@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import sys
+import time
 import logging
 import asyncio
 import argparse
@@ -54,15 +55,32 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-async def logging_middleware(app, handler):
-    """Simple logging middleware to report the method/route of all requests.
+async def access_logger(app, handler):
+    """Simple logging middleware to report info about each request/response.
     """
     async def logging_handler(request):
-        LOGGER.info('Handling {} request for {}'.format(
+        start_time = time.time()
+        request_name = hex(int(start_time * 10000))[-6:]
+        client_ip, _ = request.transport.get_extra_info(
+            'peername', ('UNKNOWN', None))
+
+        LOGGER.info(
+            'Request  %s: "%s %s" from %s',
+            request_name,
             request.method,
-            request.rel_url
-        ))
-        return await handler(request)
+            request.rel_url,
+            client_ip)
+
+        response = await handler(request)
+        # pylint: disable=protected-access
+        LOGGER.info(
+            'Response %s: "%s" status, %sB size, in %.3fs',
+            request_name,
+            response._status,
+            response._headers.get('Content-Length', 'UNKNOWN'),
+            time.time() - start_time)
+        return response
+
     return logging_handler
 
 
@@ -70,7 +88,7 @@ def start_rest_api(host, port, stream, timeout):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
-    app = web.Application(loop=loop, middlewares=[logging_middleware])
+    app = web.Application(loop=loop, middlewares=[access_logger])
 
     # Add routes to the web app
     handler = RouteHandler(loop, stream, timeout)
