@@ -30,15 +30,19 @@ prepared the BatchList:
 
 .. code-block:: python
 
-    import urllib
+    import urllib.request
+    from urllib.error import HTTPError
 
-    request = urllib.Request(
-        'http://rest.api.domain/batches',
-        batch_bytes,
-        method='POST',
-        headers={'Content-Type': 'application/octet-stream'})
+    try:
+        request = urllib.request.Request(
+            'http://rest.api.domain/batches',
+            batch_bytes,
+            method='POST',
+            headers={'Content-Type': 'application/octet-stream'})
+        response = urllib.request.urlopen(request)
 
-    response = urllib.urlopen(request)
+    except HTTPError as e:
+        response = e.file
 
 {% endif %}
 
@@ -60,7 +64,7 @@ sent it with *curl*:
 
 .. code-block:: python
 
-    output = open('batches.intkey', 'wb')
+    output = open('intkey.batches', 'wb')
     output.write(batch_bytes)
 
 {% endif %}
@@ -69,5 +73,5 @@ sent it with *curl*:
 
     % curl --request POST \
         --header "Content-Type: application/octet-stream" \
-        --data-binary "intkey.batches" \
+        --data-binary @intkey.batches \
         "http://rest.api.domain/batches"

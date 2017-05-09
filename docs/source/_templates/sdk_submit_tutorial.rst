@@ -92,7 +92,7 @@ Transactions (see below).
         familyVersion: '1.0',
         inputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
         outputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
-        payloadEncoding: 'application/cbor'
+        payloadEncoding: 'application/cbor',
         payloadEncoder: cbor.encode
     })
 
@@ -155,7 +155,7 @@ encoding can done in a single step with *createEncoded*.
 
 .. code-block:: javascript
 
-    const txnBytes = encoder.encode([txn1, txn2])
+    const txnBytes = encoder.encode([txn, txn2])
 
     const txnBytes2 = encoder.createEncoded({
         Verb: 'dec',
