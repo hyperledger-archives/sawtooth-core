@@ -15,6 +15,7 @@
 import logging
 from threading import Condition
 
+from sawtooth_validator.exceptions import PossibleForkDetectedError
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -102,8 +103,8 @@ class StateDeltaProcessor(object):
                 contain a block id contained in the block store.
         """
 
+        known_block_id = None
         if last_known_block_ids:
-            known_block_id = None
             for block_id in last_known_block_ids:
                 if block_id in self._block_store:
                     known_block_id = block_id
@@ -118,6 +119,37 @@ class StateDeltaProcessor(object):
 
         LOGGER.debug('Added Subscriber %s for %s',
                      connection_id, address_prefix_filters)
+
+        if known_block_id != self._block_store.chain_head.identifier:
+            LOGGER.debug('Catching up Subscriber %s from %s to %s',
+                         connection_id,
+                         known_block_id,
+                         self._block_store.chain_head.identifier[:8])
+            catch_up_blocks = []
+
+            try:
+                for block in self._block_store.get_predecessor_iter():
+                    if block.identifier == known_block_id:
+                        break
+                    catch_up_blocks.append(block)
+            except PossibleForkDetectedError:
+                LOGGER.debug(
+                    'Possible fork while loading blocks for state deltas')
+
+                # This error will cause the client to begin (or continue) the
+                # fork resolution strategy of zeroing in on a known block_id.
+                # When that strategy, on the validator's part, is implemented,
+                # this may need to send a different error, such that it retries
+                # with the set of known_block_ids, which may have contiuned a
+                # valid predecessor.
+                raise NoKnownBlockError()
+
+            subscriber = self._subscribers[connection_id]
+            for block in reversed(catch_up_blocks):
+                self._send_changes(
+                    block,
+                    self._get_delta(block.header.state_root_hash),
+                    subscriber)
 
     def remove_subscriber(self, connection_id):
         """remove a subscriber with a given connection_id
@@ -167,6 +199,17 @@ class StateDeltaProcessor(object):
                          subscriber.connection_id)
             self._send(subscriber.connection_id,
                        state_change_evt.SerializeToString())
+
+    def _send_changes(self, block, deltas, subscriber):
+        state_change_evt = StateDeltaEvent(
+            block_id=block.header_signature,
+            block_num=block.header.block_num,
+            state_root_hash=block.header.state_root_hash,
+            state_changes=subscriber.deltas_of_interest(deltas))
+
+        LOGGER.debug('sending change event to %s', subscriber.connection_id)
+        self._send(subscriber.connection_id,
+                   state_change_evt.SerializeToString())
 
     def _send(self, connection_id, message_bytes):
         self._service.send(validator_pb2.Message.STATE_DELTA_EVENT,
