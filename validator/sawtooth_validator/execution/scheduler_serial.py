@@ -105,7 +105,7 @@ class SerialScheduler(Scheduler):
     def add_batch(self, batch, state_hash=None):
         with self._condition:
             if self._final:
-                raise SchedulerError("Scheduler is finalized. Cannnot take"
+                raise SchedulerError("Scheduler is finalized. Cannot take"
                                      " new batches")
             batch_signature = batch.header_signature
             if state_hash is not None:
