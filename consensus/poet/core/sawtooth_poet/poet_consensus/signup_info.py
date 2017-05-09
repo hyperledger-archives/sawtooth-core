@@ -112,11 +112,6 @@ class SignupInfo(object):
                 validator_address,
                 sealed_signup_data)
 
-    def _enclave_signup_info(self, poet_enclave_module):
-        return \
-            poet_enclave_module.deserialize_signup_info(
-                self._serialized_signup_info)
-
     def __init__(self, enclave_signup_info):
         self.poet_public_key = enclave_signup_info.poet_public_key
         self.proof_data = enclave_signup_info.proof_data
