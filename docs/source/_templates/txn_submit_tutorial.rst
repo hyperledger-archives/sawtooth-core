@@ -175,14 +175,21 @@ keys.
 
 {% else %}
 
-.. code-block:: bash
+.. note::
 
-    % protoc --python-out=compiled_protos/ protos/transactions.proto
+   Follow
+   `these instructions <https://developers.google.com/protocol-buffers/docs/pythontutorial#compiling-your-protocol-buffers>`_
+   to install Google's *protobuf compiler* for Python, and manually compile
+   Protobuf classes from the core definition files.
+
+   The example code here assumes you will instead use classes from the
+   *Sawtooth Python SDK*, which can be compiled by running the executable script
+   ``bin/protogen``.
 
 .. code-block:: python
 
     from random import randint
-    from compiled_protos.transactions_pb2 import TransactionHeader
+    from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
     txn_header = TransactionHeader(
         batcher_pubkey=public_key_hex,
@@ -266,7 +273,7 @@ the Transaction.
 
 .. code-block:: python
 
-    from compiled_protos.transactions_pb2 import Transaction
+    from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
 
     txn = Transaction(
         header=txn_header_bytes,
@@ -301,7 +308,7 @@ Protobuf for this purpose. Simply wrap a set of Transactions in the
 
 .. code-block:: python
 
-    from compiled_protos.transactions_pb2 import TransactionList
+    from sawtooth_sdk.protobuf.transaction_pb2 import TransactionList
 
     txnList = TransactionList(transactions=[txn])
     txnBytes = txnList.SerializeToString()
@@ -373,13 +380,9 @@ same order as the Transactions themselves.
 
 {% else %}
 
-.. code-block:: bash
-
-    % protoc --python-out=compiled_protos/ protos/batches.proto
-
 .. code-block:: python
 
-    from compiled_protos.batches_pb2 import BatchHeader
+    from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 
     batch_header = BatchHeader(
         signer_pubkey=public_key_hex,
@@ -446,7 +449,7 @@ compiled class to instantiate a new Batch with the proper data.
 
 .. code-block:: python
 
-    from compiled_protos.batches_pb2 import Batch
+    from sawtooth_sdk.protobuf.batch_pb2 import Batch
 
     batch = Batch(
         header=batch_header_bytes,
@@ -477,7 +480,7 @@ should be set to one or more Batches.
 
 .. code-block:: python
 
-    from compiled_protos.batches_pb2 import BatchList
+    from sawtooth_sdk.protobuf.batch_pb2 import BatchList
 
     batch_list = BatchList(batches=[batch])
     batch_bytes = batch_list.SerializeToString()
