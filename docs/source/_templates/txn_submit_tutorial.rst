@@ -162,7 +162,8 @@ keys.
 
     const txnHeaderBytes = TransactionHeader.encode({
         batcherPubkey: publicKeyHex,
-        dependencies: [],
+        // This is what setting a dependency might look like:
+        // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         familyName: 'intkey',
         familyVersion: '1.0',
         inputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
@@ -193,7 +194,8 @@ keys.
 
     txn_header = TransactionHeader(
         batcher_pubkey=public_key_hex,
-        dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        # This is what setting a dependency might look like:
+        # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         family_name='intkey',
         family_version='1.0',
         inputs=['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],

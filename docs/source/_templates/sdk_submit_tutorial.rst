@@ -86,8 +86,10 @@ Transactions (see below).
     const {TransactionEncoder} = require('sawtooth-sdk')
 
     const encoder = new TransactionEncoder(privateKey, {
-        batcherPubkey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
-        dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        // We don't want a batcher pubkey or dependencies for our example,
+        // but this is what setting them might look like:
+        // batcherPubkey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
+        // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         familyName: 'intkey',
         familyVersion: '1.0',
         inputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
