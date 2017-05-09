@@ -26,7 +26,9 @@ import sawtooth_signing as signing
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
 from sawtooth_validator.execution.context_manager import ContextManager
+from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
+from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.database import dict_database
 from sawtooth_validator.execution.scheduler_parallel import PredecessorTree
 from sawtooth_validator.state.merkle import MerkleDatabase
@@ -1779,3 +1781,313 @@ def node_to_string(node, indent=2):
         string += node_to_string(child_node, indent + 2)
 
     return string
+
+
+class TestParallelScheduler(unittest.TestCase):
+    @staticmethod
+    def _create_transaction(name, private_key, public_key, inputs=None,
+                            outputs=None):
+        payload = name
+        addr = '000000' + hashlib.sha512(name.encode()).hexdigest()
+
+        if inputs is None:
+            inputs = [addr]
+        else:
+            inputs = inputs.copy().append(addr)
+
+        if outputs is None:
+            outputs = [addr]
+        else:
+            outputs.copy().append(addr)
+
+        header = transaction_pb2.TransactionHeader(
+            signer_pubkey=public_key,
+            family_name='scheduler_test',
+            family_version='1.0',
+            inputs=inputs,
+            outputs=outputs,
+            dependencies=[],
+            nonce=str(time.time()),
+            payload_encoding="application/cbor",
+            payload_sha512=hashlib.sha512(payload.encode()).hexdigest(),
+            batcher_pubkey=public_key)
+
+        header_bytes = header.SerializeToString()
+
+        signature = signing.sign(header_bytes, private_key)
+
+        transaction = transaction_pb2.Transaction(
+            header=header_bytes,
+            payload=payload.encode(),
+            header_signature=signature)
+
+        return transaction, header
+
+    @staticmethod
+    def _create_batch(transactions, private_key, public_key):
+        transaction_ids = [t.header_signature for t in transactions]
+
+        header = batch_pb2.BatchHeader(
+            signer_pubkey=public_key,
+            transaction_ids=transaction_ids)
+
+        header_bytes = header.SerializeToString()
+
+        signature = signing.sign(header_bytes, private_key)
+
+        batch = batch_pb2.Batch(
+            header=header_bytes,
+            transactions=transactions,
+            header_signature=signature)
+
+        return batch
+
+    def test_add_to_finalized_scheduler(self):
+        """Tests that a finalized scheduler raise exception on add_batch().
+
+        This test creates a scheduler, finalizes it, and calls add_batch().
+        The result is expected to be a SchedulerError, since adding a batch
+        to a finalized scheduler is invalid.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+        context_manager = ContextManager(dict_database.DictDatabase(),
+                                         state_delta_store=Mock())
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = ParallelScheduler(squash_handler, first_state_root)
+
+        # Finalize prior to attempting to add a batch.
+        scheduler.finalize()
+
+        txn, _ = TestParallelScheduler._create_transaction(
+            name='a',
+            private_key=private_key,
+            public_key=public_key)
+
+        batch = TestParallelScheduler._create_batch(
+            transactions=[txn],
+            private_key=private_key,
+            public_key=public_key)
+
+        # scheduler.add_batch(batch) should throw a SchedulerError due to
+        # the finalized status of the scheduler.
+        self.assertRaises(SchedulerError, lambda: scheduler.add_batch(batch))
+
+    def test_set_result_on_unscheduled_txn(self):
+        """Tests that a scheduler will reject a result on an unscheduled
+        transaction.
+
+        Creates a batch with a single transaction, adds the batch to the
+        scheduler, then immediately attempts to set the result for the
+        transaction without first causing it to be scheduled (by using an
+        iterator or calling next_transaction()).
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+        context_manager = ContextManager(dict_database.DictDatabase(),
+                                         state_delta_store=Mock())
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = ParallelScheduler(squash_handler, first_state_root)
+
+        txn, _ = TestParallelScheduler._create_transaction(
+            name='a',
+            private_key=private_key,
+            public_key=public_key)
+
+        batch = TestParallelScheduler._create_batch(
+            transactions=[txn],
+            private_key=private_key,
+            public_key=public_key)
+
+        scheduler.add_batch(batch)
+
+        self.assertRaises(
+            SchedulerError,
+            lambda: scheduler.set_transaction_execution_result(
+                txn.header_signature, False, None))
+
+
+    def test_transaction_order(self):
+        """Tests the that transactions are returned in order added.
+
+        Adds three batches with varying number of transactions, then tests
+        that they are returned in the appropriate order when using an iterator.
+
+        This test also creates a second iterator and verifies that both
+        iterators return the same transactions.
+
+        This test also finalizes the scheduler and verifies that StopIteration
+        is thrown by the iterator.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+        context_manager = ContextManager(dict_database.DictDatabase(),
+                                         state_delta_store=Mock())
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = ParallelScheduler(squash_handler, first_state_root)
+
+        txns = []
+
+        for names in [['a', 'b', 'c'], ['d', 'e'], ['f', 'g', 'h', 'i']]:
+            batch_txns = []
+            for name in names:
+                txn, _ = TestParallelScheduler._create_transaction(
+                    name=name,
+                    private_key=private_key,
+                    public_key=public_key)
+
+                batch_txns.append(txn)
+                txns.append(txn)
+
+            batch = TestParallelScheduler._create_batch(
+                transactions=batch_txns,
+                private_key=private_key,
+                public_key=public_key)
+
+            scheduler.add_batch(batch)
+
+        iterable1 = iter(scheduler)
+        iterable2 = iter(scheduler)
+        for txn in txns:
+            scheduled_txn_info = next(iterable1)
+            self.assertEqual(scheduled_txn_info, next(iterable2))
+            self.assertIsNotNone(scheduled_txn_info)
+            self.assertEquals(txn.payload, scheduled_txn_info.txn.payload)
+            scheduler.set_transaction_execution_result(
+                txn.header_signature, False, None)
+
+        scheduler.finalize()
+        self.assertTrue(scheduler.complete(block=False))
+        with self.assertRaises(StopIteration):
+            next(iterable1)
+
+    def test_transaction_order_with_dependencies(self):
+        """Tests the that transactions are returned in the expected order given
+        dependencies implied by state.
+
+        Creates one batch with four transactions.
+        """
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+        context_manager = ContextManager(dict_database.DictDatabase(),
+                                         state_delta_store=Mock())
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = ParallelScheduler(squash_handler, first_state_root)
+
+        txns = []
+        headers = []
+
+        txn, header = TestParallelScheduler._create_transaction(
+            name='a',
+            private_key=private_key,
+            public_key=public_key)
+        txns.append(txn)
+        headers.append(header)
+
+        txn, header = TestParallelScheduler._create_transaction(
+            name='b',
+            private_key=private_key,
+            public_key=public_key)
+        txns.append(txn)
+        headers.append(header)
+
+        txn, header = TestParallelScheduler._create_transaction(
+            name='aa',
+            private_key=private_key,
+            public_key=public_key,
+            inputs=['000000' + hashlib.sha512('a'.encode()).hexdigest()],
+            outputs=['000000' + hashlib.sha512('a'.encode()).hexdigest()])
+        txns.append(txn)
+        headers.append(header)
+
+        txn, header = TestParallelScheduler._create_transaction(
+            name='bb',
+            private_key=private_key,
+            public_key=public_key,
+            inputs=['000000' + hashlib.sha512('b'.encode()).hexdigest()],
+            outputs=['000000' + hashlib.sha512('b'.encode()).hexdigest()])
+        txns.append(txn)
+        headers.append(header)
+
+        batch = TestParallelScheduler._create_batch(
+            transactions=txns,
+            private_key=private_key,
+            public_key=public_key)
+
+        scheduler.add_batch(batch)
+        scheduler.finalize()
+        self.assertFalse(scheduler.complete(block=False))
+
+        iterable = iter(scheduler)
+        scheduled_txn_info = []
+
+        self.assertEquals(2, scheduler.available())
+        scheduled_txn_info.append(next(iterable))
+        self.assertIsNotNone(scheduled_txn_info[0])
+        self.assertEquals(txns[0].payload, scheduled_txn_info[0].txn.payload)
+        self.assertFalse(scheduler.complete(block=False))
+
+        self.assertEquals(1, scheduler.available())
+        scheduled_txn_info.append(next(iterable))
+        self.assertIsNotNone(scheduled_txn_info[1])
+        self.assertEquals(txns[1].payload, scheduled_txn_info[1].txn.payload)
+        self.assertFalse(scheduler.complete(block=False))
+
+        self.assertEquals(0, scheduler.available())
+        context_id = context_manager.create_context(
+            state_hash=first_state_root,
+            inputs=list(headers[1].inputs),
+            outputs=list(headers[1].outputs),
+            base_contexts=[])
+        scheduler.set_transaction_execution_result(
+            txns[1].header_signature, True, context_id)
+
+        self.assertEquals(1, scheduler.available())
+        scheduled_txn_info.append(next(iterable))
+        self.assertIsNotNone(scheduled_txn_info[2])
+        self.assertEquals(txns[3].payload, scheduled_txn_info[2].txn.payload)
+        self.assertFalse(scheduler.complete(block=False))
+
+        self.assertEquals(0, scheduler.available())
+        context_id = context_manager.create_context(
+            state_hash=first_state_root,
+            inputs=list(headers[0].inputs),
+            outputs=list(headers[0].outputs),
+            base_contexts=[])
+        scheduler.set_transaction_execution_result(
+            txns[0].header_signature, True, context_id)
+
+        self.assertEquals(1, scheduler.available())
+        scheduled_txn_info.append(next(iterable))
+        self.assertIsNotNone(scheduled_txn_info[3])
+        self.assertEquals(txns[2].payload, scheduled_txn_info[3].txn.payload)
+        self.assertTrue(scheduler.complete(block=False))
+
+        self.assertEquals(0, scheduler.available())
+        context_id = context_manager.create_context(
+            state_hash=first_state_root,
+            inputs=list(headers[2].inputs),
+            outputs=list(headers[2].outputs),
+            base_contexts=[])
+        scheduler.set_transaction_execution_result(
+            txns[2].header_signature, True, context_id)
+        context_id = context_manager.create_context(
+            state_hash=first_state_root,
+            inputs=list(headers[3].inputs),
+            outputs=list(headers[3].outputs),
+            base_contexts=[])
+        scheduler.set_transaction_execution_result(
+            txns[3].header_signature, True, context_id)
+
+        self.assertEquals(0, scheduler.available())
+        self.assertTrue(scheduler.complete(block=False))
+        with self.assertRaises(StopIteration):
+            next(iterable)
+
+        result = scheduler.get_batch_execution_result(batch.header_signature)
+        self.assertIsNotNone(result)
+        self.assertTrue(result.is_valid)
