@@ -137,8 +137,8 @@ hexadecimal string.
 {% endif %}
 
 
-2. Build the TransactionHeader
-------------------------------
+2. Create the TransactionHeader
+-------------------------------
 
 Transactions and their headers are built using
 `Google Protocol Buffer <https://developers.google.com/protocol-buffers/>`_
@@ -213,20 +213,26 @@ keys.
 
    Remember that *inputs* and *outputs* are state addresses that this
    Transaction is allowed to read from or write to, and *dependencies* are the
-   *header signatures* of Transactions that must be committed before ours (see
-   TransactionHeaders in :doc:`/architecture/transactions_and_batches`). The
-   dependencies property will frequently be left empty, but generally at least
-   one input and output must always be set.
+   *header signatures* of Transactions that must be committed before this one
+   (see TransactionHeaders in :doc:`/architecture/transactions_and_batches`).
+   The dependencies property will frequently be left empty, but generally at
+   least one input and output must always be set.
 
 
 3. Sign the Header
 ------------------
 
 Once the TransactionHeader is created and serialized as a Protobuf binary, you
-can use your private key to create a secp256k1 signature. If not handled
-automatically by your signing library, you may need to generate a SHA-256 hash
-of the header bytes as well, as that is technically what gets signed. The
-signature itself should be formatted as a hexedecimal string for transmission.
+can use your private key to create an *ECDSA signature*. In order to generate a
+signature the Sawtooth validator will accept, you must:
+
+    * use the *secp256k1* elliptic curve
+    * sign a *SHA-256* hash of the TransactionHeader binary
+    * use a compact 64-byte signature
+    * format the signature as a hexadecimal string
+
+This is a fairly typical way to sign data, so depending on the language and
+library you are using, some of these steps may be handled automatically.
 
 {% if language == 'JavaScript' %}
 
@@ -235,6 +241,7 @@ signature itself should be formatted as a hexedecimal string for transmission.
     hasher = crypto.createHash('sha256')
     const txnHeaderHash = hasher.update(txnHeaderBytes).digest()
 
+    // secp256k1.sign generates compact 64-byte signature by default
     const txnSigBytes = secp256k1.sign(txnHeaderHash, privateKeyBytes).signature
     const txnSignatureHex = txnSigBytes.toString('hex')
 
@@ -244,7 +251,7 @@ signature itself should be formatted as a hexedecimal string for transmission.
 
     key_handler = secp256k1.PrivateKey(private_key_bytes)
 
-    # No need to manually generate a SHA-256 hash in Python
+    # ecdsa_sign automatically generates a SHA-256 hash
     txn_signature = key_handler.ecdsa_sign(txn_header_bytes)
     txn_signature_bytes = key_handler.ecdsa_serialize_compact(txn_signature)
     txn_signature_hex = txn_signature_bytes.hex()
@@ -399,8 +406,10 @@ same order as the Transactions themselves.
 ------------------
 
 The process for signing a BatchHeader is identical to signing the
-TransactionHeader. Create a SHA-256 hash of the the header binary if necessary,
-and then use your private key to create a secp256k1 signature.
+TransactionHeader. Create a SHA-256 hash of the the header binary, use your
+private key to create a 64-byte secp256k1 signature, and format that signature
+as a hexadecimal string. As with signing a TransactionHeader, some of these
+steps may be handled automatically by the library you are using.
 
 {% if language == 'JavaScript' %}
 

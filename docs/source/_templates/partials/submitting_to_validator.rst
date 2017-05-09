@@ -23,7 +23,8 @@ prepared the BatchList:
         body: batchBytes,
         headers: {'Content-Type': 'application/octet-stream'}
     }, (err, response) => {
-        console.log(response)
+        if (err) return console.log(err)
+        console.log(response.body)
     })
 
 {% else %}
@@ -48,7 +49,7 @@ prepared the BatchList:
 
 
 And here is what it would look like if you saved the binary to a file, and then
-sent it with *curl*:
+sent it from the command-line with *curl*:
 
 {% if language == 'JavaScript' %}
 

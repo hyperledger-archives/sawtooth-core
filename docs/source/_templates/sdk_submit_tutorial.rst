@@ -75,8 +75,8 @@ instantiated, multiple Transactions can be created using these common elements,
 and without any explicit hashing or signing. You will never need to specify the
 *nonce*, *signer pubkey*, or *payload Sha512* properties of a TransactionHeader,
 as the SDK will generate these automatically. You will only need to set a
-*batcher pubkey* if a different private key will be used to sign Batches than
-Transactions (see below).
+*batcher pubkey* if a different private key will be used to sign Batches containing
+these Transactions (see below).
 
 
 {% if language == 'JavaScript' %}
@@ -104,10 +104,17 @@ Transactions (see below).
 
 .. note::
 
-   Remember that *inputs* and *outputs* are state addresses that this
-   Transaction is allowed to read from or write to, and *dependencies* are the
-   *header signatures* of Transactions that must be committed before ours (see
-   TransactionHeaders in :doc:`/architecture/transactions_and_batches`). It would be unusual to set these properties when creating the *TransactionEncoder*, as they will usually vary on a Transaction by Transaction basis. They are set here simply to demonstrate the capability.
+   Remember that a *batcher pubkey* is the hex public key matching the private
+   key that will later be used to sign a Transaction's Batch, *inputs* and
+   *outputs* are state addresses that this Transaction is allowed to read from
+   or write to, and *dependencies* are the *header signatures* of Transactions
+   that must be committed before this one (see *TransactionHeaders* in
+   :doc:`/architecture/transactions_and_batches`).
+
+   Although possible, it would be unusual to set these properties when
+   creating a *TransactionEncoder*. The default batcher pubkey will be valid
+   as long as the Transactions and Batches are signed by the same key, and the
+   other properties are typically different from Transaction to Transaction.
 
 
 2. Create the Transaction
