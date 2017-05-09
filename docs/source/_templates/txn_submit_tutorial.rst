@@ -236,7 +236,8 @@ signature itself should be formatted as a hexedecimal string for transmission.
     key_handler = secp256k1.PrivateKey(private_key)
 
     # No need to manually generate a SHA-256 hash in Python
-    txn_signature_bytes = key_handler.ecdsa_sign(txn_header_bytes)
+    txn_signature = key_handler.ecdsa_sign(txn_header_bytes)
+    txn_signature_bytes = key_handler.ecdsa_serialize_compact(txn_signature)
     txn_signature_hex = txn_signature_bytes.hex()
 
 {% endif %}
@@ -408,7 +409,9 @@ and then use your private key to create a secp256k1 signature.
 
 .. code-block:: python
 
-    batch_signature_bytes = key_handler.ecdsa_sign(batch_header_bytes)
+    batch_signature = key_handler.ecdsa_sign(batch_header_bytes)
+
+    batch_signature_bytes = key_handler.ecdsa_serialize_compact(batch_signature)
 
     batch_signature_hex = batch_signature_bytes.hex()
 
