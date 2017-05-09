@@ -122,9 +122,9 @@ hexadecimal string.
 
 .. code-block:: javascript
 
-    const sha512 = require('crypto').createHash('sha512')
+    let hasher = crypto.createHash('sha512')
 
-    const payloadSha512 = sha512.update(payloadBytes).digest('hex')
+    const payloadSha512 = hasher.update(payloadBytes).digest('hex')
 
 {% else %}
 
@@ -230,8 +230,8 @@ signature itself should be formatted as a hexedecimal string for transmission.
 
 .. code-block:: javascript
 
-    const sha256 = require('crypto').createHash('sha256')
-    const txnHeaderHash = sha256.update(txnHeaderBytes).digest()
+    hasher = crypto.createHash('sha256')
+    const txnHeaderHash = hasher.update(txnHeaderBytes).digest()
 
     const txnSigBytes = secp256k1.sign(txnHeaderHash, privateKey).signature
     const txnSignatureHex = txnSigBytes.toString('hex')
@@ -404,7 +404,8 @@ and then use your private key to create a secp256k1 signature.
 
 .. code-block:: javascript
 
-    const batchHeaderHash = sha256.update(batchHeaderBytes).digest()
+    hasher = crypto.createHash('sha256')
+    const batchHeaderHash = hasher.update(batchHeaderBytes).digest()
 
     const batchSignature = secp256k1.sign(batchHeaderHash, privateKey)
 
