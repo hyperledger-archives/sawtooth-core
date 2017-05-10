@@ -464,8 +464,9 @@ class ChainController(object):
 
         try:
             self._chain_head = self._block_store.chain_head
-            LOGGER.info("Chain controller initialized with chain head: %s",
-                        self._chain_head)
+            if self._chain_head is not None:
+                LOGGER.info("Chain controller initialized with chain head: %s",
+                            self._chain_head)
         except Exception as exc:
             LOGGER.error("Invalid block store. Head of the block chain cannot "
                          "be determined")
