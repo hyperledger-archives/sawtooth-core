@@ -99,15 +99,18 @@ class GenesisController(object):
         genesis_file = os.path.join(self._data_dir, 'genesis.batch')
         has_genesis_batches = Path(genesis_file).is_file()
         LOGGER.debug('genesis_batch_file: %s',
-                     genesis_file if has_genesis_batches else 'None')
+                     genesis_file if has_genesis_batches else 'not found')
 
         chain_head = self._block_store.chain_head
         has_chain_head = chain_head is not None
-        LOGGER.debug('chain_head: %s %s', chain_head, has_chain_head)
+        if has_chain_head:
+            LOGGER.debug('chain_head: %s', chain_head)
 
         block_chain_id = self._chain_id_manager.get_block_chain_id()
         is_genesis_node = block_chain_id is None
-        LOGGER.debug('block_chain_id: %s', block_chain_id)
+        LOGGER.debug(
+            'block_chain_id: %s',
+            block_chain_id if not is_genesis_node else 'not yet specified')
 
         if has_genesis_batches and has_chain_head:
             raise InvalidGenesisStateError(
@@ -118,9 +121,11 @@ class GenesisController(object):
                 'Cannot have a genesis_batch_file and join an existing network'
             )
 
-        ret = has_genesis_batches and not has_chain_head and is_genesis_node
-        LOGGER.debug('Requires genesis: %s', ret)
-        return ret
+        if not has_genesis_batches and not has_chain_head:
+            LOGGER.info('No chain head and not the genesis node: '
+                        'starting in peering mode')
+
+        return has_genesis_batches and not has_chain_head and is_genesis_node
 
     def start(self, on_done):
         """
