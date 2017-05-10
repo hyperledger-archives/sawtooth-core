@@ -94,7 +94,6 @@ class Stream {
   }
 
   send (type, content) {
-    console.log('Sending', Message.MessageType.stringValue(type))
     if (this._socket) {
       const correlationId = _generateId()
       let deferred = new Deferred()
@@ -137,7 +136,6 @@ class Stream {
   onReceive (cb) {
     this._socket.on('message', buffer => {
       let message = Message.decode(buffer)
-      console.log(`Received ${Message.MessageType.stringValue(message.messageType)}`)
       if (this._futures[message.correlationId]) {
         this._futures[message.correlationId].resolve(message.content)
       } else {
