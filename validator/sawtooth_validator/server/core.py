@@ -105,7 +105,7 @@ class Validator(object):
                 to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
-            key_dir (str): path to the key directory
+            identity_signing_key (str): key validator uses for signing
         """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
