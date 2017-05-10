@@ -34,7 +34,7 @@ key, and it is fairly simple to generate this using the SDK's *signer* module.
     const privateKey = signer.makePrivateKey()
 
 {% else %}
-{# Python is the default #}
+{# Python 3 code should be the default #}
 
 {% endif %}
 
@@ -75,8 +75,8 @@ instantiated, multiple Transactions can be created using these common elements,
 and without any explicit hashing or signing. You will never need to specify the
 *nonce*, *signer pubkey*, or *payload Sha512* properties of a TransactionHeader,
 as the SDK will generate these automatically. You will only need to set a
-*batcher pubkey* if a different private key will be used to sign Batches than
-Transactions (see below).
+*batcher pubkey* if a different private key will be used to sign Batches containing
+these Transactions (see below).
 
 
 {% if language == 'JavaScript' %}
@@ -86,13 +86,15 @@ Transactions (see below).
     const {TransactionEncoder} = require('sawtooth-sdk')
 
     const encoder = new TransactionEncoder(privateKey, {
-        batcherPubkey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
-        dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        // We don't want a batcher pubkey or dependencies for our example,
+        // but this is what setting them might look like:
+        // batcherPubkey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
+        // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         familyName: 'intkey',
         familyVersion: '1.0',
         inputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
         outputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
-        payloadEncoding: 'application/cbor'
+        payloadEncoding: 'application/cbor',
         payloadEncoder: cbor.encode
     })
 
@@ -102,10 +104,17 @@ Transactions (see below).
 
 .. note::
 
-   Remember that *inputs* and *outputs* are state addresses that this
-   Transaction is allowed to read from or write to, and *dependencies* are the
-   *header signatures* of Transactions that must be committed before ours (see
-   TransactionHeaders in :doc:`/architecture/transactions_and_batches`). It would be unusual to set these properties when creating the *TransactionEncoder*, as they will usually vary on a Transaction by Transaction basis. They are set here simply to demonstrate the capability.
+   Remember that a *batcher pubkey* is the hex public key matching the private
+   key that will later be used to sign a Transaction's Batch, *inputs* and
+   *outputs* are state addresses that this Transaction is allowed to read from
+   or write to, and *dependencies* are the *header signatures* of Transactions
+   that must be committed before this one (see *TransactionHeaders* in
+   :doc:`/architecture/transactions_and_batches`).
+
+   Although possible, it would be unusual to set these properties when
+   creating a *TransactionEncoder*. The default batcher pubkey will be valid
+   as long as the Transactions and Batches are signed by the same key, and the
+   other properties are typically different from Transaction to Transaction.
 
 
 2. Create the Transaction
@@ -155,7 +164,7 @@ encoding can done in a single step with *createEncoded*.
 
 .. code-block:: javascript
 
-    const txnBytes = encoder.encode([txn1, txn2])
+    const txnBytes = encoder.encode([txn, txn2])
 
     const txnBytes2 = encoder.createEncoded({
         Verb: 'dec',
