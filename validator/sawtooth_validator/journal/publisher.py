@@ -418,7 +418,11 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                LOGGER.info('Now building on top of block: %s', chain_head)
+                if chain_head is not None:
+                    LOGGER.info('Now building on top of block: %s', chain_head)
+                else:
+                    LOGGER.info('Block publishing is suspended until new '
+                                'chain head arrives.')
 
                 self._chain_head = chain_head
 
