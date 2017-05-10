@@ -148,11 +148,13 @@ lint signing "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
+PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/supplychain_python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/xo_python
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 export PYTHONPATH
 lint sdk/python "$SINCE" || retval=1
 lint sdk/examples/intkey_python "$SINCE" || retval=1
+lint sdk/examples/supplychain_python "$SINCE" || retval=1
 lint sdk/examples/xo_python "$SINCE" || retval=1
 lint rest_api/sawtooth_rest_api "$SINCE" || retval=1
 
