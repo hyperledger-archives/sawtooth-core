@@ -522,24 +522,6 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()
 
-    # block based tests
-    def test_block_bad_signature(self):
-        """
-        Test the case where the new block has a bad signature.
-        """
-        chain, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
-
-        new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
-            add_to_cache=True,
-            invalid_signature=True)
-
-        self.validate_block(new_block)
-
-        self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
-
     def test_block_bad_consensus(self):
         """
         Test the case where the new block has a bad batch
@@ -731,15 +713,6 @@ class TestChainController(unittest.TestCase):
     def test_bad_blocks(self):
         '''Tests bad blocks extending current chain
         '''
-        # Bad due to signature
-        bad_sig = self.generate_block(
-            previous_block=self.init_head,
-            invalid_signature=True)
-
-        # chain head should be the same
-        self.receive_and_process_blocks(bad_sig)
-        self.assert_is_chain_head(self.init_head)
-
         # Bad due to consensus
         bad_consen = self.generate_block(
             previous_block=self.init_head,
