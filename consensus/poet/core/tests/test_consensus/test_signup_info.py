@@ -87,31 +87,3 @@ class TestSignupInfo(unittest.TestCase):
             signup_info.poet_public_key,
             poet_public_key,
             msg="PoET public key in signup info and sealed data don't match")
-
-    def test_check_valid(self):
-        signup_info = \
-            SignupInfo.create_signup_info(
-                poet_enclave_module=poet_enclave,
-                validator_address='1660 Pennsylvania Avenue NW',
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=NULL_BLOCK_IDENTIFIER)
-
-        try:
-            signup_info.check_valid(
-                poet_enclave_module=poet_enclave,
-                originator_public_key_hash=self._originator_public_key_hash)
-        except ValueError as e:
-            self.fail('Error with SignupInfo: {}'.format(e))
-
-    def test_non_matching_originator_public_key(self):
-        signup_info = \
-            SignupInfo.create_signup_info(
-                poet_enclave_module=poet_enclave,
-                validator_address='1660 Pennsylvania Avenue NW',
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=NULL_BLOCK_IDENTIFIER)
-
-        with self.assertRaises(ValueError):
-            signup_info.check_valid(
-                poet_enclave_module=poet_enclave,
-                originator_public_key_hash=self._another_public_key_hash)
