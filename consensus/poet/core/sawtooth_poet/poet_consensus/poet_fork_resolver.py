@@ -39,6 +39,7 @@ class PoetForkResolver(ForkResolverInterface):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
@@ -51,6 +52,8 @@ class PoetForkResolver(ForkResolverInterface):
                     particular block was the chain head.
                 data_dir (str): path to location where persistent data for the
                     consensus module can be stored.
+                config_dir (str): path to location where config data for the
+                    consensus module can be found.
                 validator_id (str): A unique ID for this validator
             Returns:
                 none.
@@ -59,11 +62,13 @@ class PoetForkResolver(ForkResolverInterface):
             block_cache,
             state_view_factory,
             data_dir,
+            config_dir,
             validator_id)
 
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._data_dir = data_dir
+        self._config_dir = config_dir
         self._validator_id = validator_id
         self._consensus_state_store = \
             ConsensusStateStore(

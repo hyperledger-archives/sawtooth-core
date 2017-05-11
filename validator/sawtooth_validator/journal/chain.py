@@ -301,6 +301,7 @@ class BlockValidator(object):
             ForkResolver(block_cache=self._block_cache,
                          state_view_factory=self._state_view_factory,
                          data_dir=self._data_dir,
+                         config_dir=self._config_dir,
                          validator_id=self._identity_public_key)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
