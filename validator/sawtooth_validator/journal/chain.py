@@ -126,25 +126,6 @@ class BlockValidator(object):
 
         return True
 
-    def _verify_block_signature(self, blkw):
-        """ Verify a block is properly signed.
-        :param blkw: the block to verify
-        :return: Boolean - True on success.
-        """
-        try:
-            return signing.verify(
-                blkw.block.header,
-                blkw.block.header_signature,
-                blkw.header.signer_pubkey)
-
-        # To be on the safe side, assume any exception thrown
-        # during signature validation means the signature
-        # is invalid.
-
-        # pylint: disable=broad-except
-        except Exception:
-            return False
-
     def _verify_batches_dependencies(self, batch, committed_txn):
         """Verify that all transactions dependencies in this batch have been
         satisfied, ie already committed by this block or prior block in the
@@ -223,9 +204,6 @@ class BlockValidator(object):
 
                 if valid:
                     valid = self._is_block_complete(blkw)
-
-                if valid:
-                    valid = self._verify_block_signature(blkw)
 
                 if valid:
                     valid = self._verify_block_batches(blkw, committed_txn)
