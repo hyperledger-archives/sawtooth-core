@@ -123,6 +123,7 @@ class Journal(object):
                  chain_id_manager,
                  state_delta_processor,
                  data_dir,
+                 config_dir,
                  check_publish_block_frequency=0.1,
                  block_cache_purge_frequency=30,
                  block_cache_keep_time=300,
@@ -146,6 +147,7 @@ class Journal(object):
             state_delta_processor (:obj:`StateDeltaProcessor`): The state
                 delta processor.
             data_dir (str): directory for data storage.
+            config_dir (str): directory for configuration.
             check_publish_block_frequency(float): delay in seconds between
                 checks if a block should be claimed.
             block_cache_purge_frequency (float): delay in seconds between
@@ -180,6 +182,7 @@ class Journal(object):
         self._chain_id_manager = chain_id_manager
         self._state_delta_processor = state_delta_processor
         self._data_dir = data_dir
+        self._config_dir = config_dir
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
@@ -191,7 +194,8 @@ class Journal(object):
             squash_handler=self._squash_handler,
             chain_head=self._block_store.chain_head,
             identity_signing_key=self._identity_signing_key,
-            data_dir=self._data_dir
+            data_dir=self._data_dir,
+            config_dir=self._config_dir
         )
         self._publisher_thread = self._PublisherThread(
             block_publisher=self._block_publisher,

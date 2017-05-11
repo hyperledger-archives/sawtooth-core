@@ -82,7 +82,7 @@ LOGGER = logging.getLogger(__name__)
 
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, public_uri,
-                 peering, join_list, peer_list, data_dir,
+                 peering, join_list, peer_list, data_dir, config_dir,
                  identity_signing_key):
         """Constructs a validator instance.
 
@@ -105,6 +105,7 @@ class Validator(object):
                 to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
+            config_dir (str): path to the config directory
             identity_signing_key (str): key validator uses for signing
         """
         db_filename = os.path.join(data_dir,
@@ -213,6 +214,7 @@ class Validator(object):
             chain_id_manager=chain_id_manager,
             state_delta_processor=state_delta_processor,
             data_dir=data_dir,
+            config_dir=config_dir,
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
             block_cache_keep_time=300
@@ -226,6 +228,7 @@ class Validator(object):
             state_view_factory=state_view_factory,
             identity_key=identity_signing_key,
             data_dir=data_dir,
+            config_dir=config_dir,
             chain_id_manager=chain_id_manager,
             batch_sender=batch_sender
         )

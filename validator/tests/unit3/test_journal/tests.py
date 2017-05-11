@@ -104,7 +104,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.init_chain_head = self.block_tree_manager.chain_head
 
@@ -256,7 +257,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.receive_batches()
 
@@ -285,7 +287,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.assert_no_block_published()
 
@@ -1075,7 +1078,8 @@ class TestJournal(unittest.TestCase):
                 identity_signing_key=btm.identity_signing_key,
                 chain_id_manager=None,
                 state_delta_processor=self.state_delta_processor,
-                data_dir=None
+                data_dir=None,
+                config_dir=None
             )
 
             self.gossip.on_batch_received = journal.on_batch_received

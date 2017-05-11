@@ -28,12 +28,14 @@ class BlockPublisher(BlockPublisherInterface):
                  state_view_factory,
                  batch_publisher,
                  data_dir,
+                 config_dir,
                  validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             batch_publisher,
             data_dir,
+            config_dir,
             validator_id)
 
     def initialize_block(self, block_header):

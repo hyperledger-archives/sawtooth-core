@@ -206,6 +206,7 @@ def main(args=sys.argv[1:]):
                           opts.join,
                           opts.peers,
                           path_config.data_dir,
+                          path_config.config_dir,
                           identity_signing_key)
 
     # pylint: disable=broad-except
