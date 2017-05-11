@@ -8,17 +8,10 @@ Environment Setup
 Overview
 ========
 
-This tutorial walks through the process of setting up Hyperledger Sawtooth for
-the purposes of app development. If you want to set up your environment for
-core development, please continue with the :doc:`/core_developers_guide`.
-
-At the end, you will be ready to perform app development tasks, such as
-creating new transaction families or handlers as described in the
-:ref:`transaction-family-tutorial`.
-
-Commands in this tutorial can be run via Terminal.app on MacOS, Git Bash on
-Windows, etc.
-
+This section walks through the process of setting up Hyperledger Sawtooth for
+the purposes of application development.  After this setup, you will be ready
+to perform application development tasks, such as implementing business logic
+with transaction families and writing clients which use Sawtooth's REST API.
 
 Installing Sawtooth on Ubuntu Linux
 ===================================
