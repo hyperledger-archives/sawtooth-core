@@ -45,10 +45,6 @@ Continue on to :doc:`intro_to_sawtooth`
 Installing Sawtooth Using Docker Compose 
 ========================================
 
-
-Docker Instructions
-===================
-
 Prerequisites
 -------------
 
