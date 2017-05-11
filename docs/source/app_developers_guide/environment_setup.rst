@@ -13,35 +13,6 @@ the purposes of application development.  After this setup, you will be ready
 to perform application development tasks, such as implementing business logic
 with transaction families and writing clients which use Sawtooth's REST API.
 
-Installing Sawtooth on Ubuntu Linux
-===================================
-
-You can install Sawtooth directly on your Ubuntu Linux machine, using the following steps:
-
-Prerequisites
--------------
-
-Ubuntu 16.04 or later
-
-
-Installation
-------------
-
-Run the following commands from a terminal window, as root or with `sudo`:
-
-.. code-block:: console
-
-  $ echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list
-  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
-  $ apt-get update && apt-get install -y sawtooth
-
-
-Next Steps
-----------
-
-Continue on to :doc:`intro_to_sawtooth`
-
-
 Installing Sawtooth Using Docker Compose 
 ========================================
 
@@ -161,6 +132,33 @@ containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
   Stopping compose_validator_1 ... done
 
   % docker-compose -f docker/compose/sawtooth-demo.yaml down
+
+Next Steps
+----------
+
+Continue on to :doc:`intro_to_sawtooth`
+
+Installing Sawtooth on Ubuntu Linux
+===================================
+
+You can install Sawtooth directly on your Ubuntu Linux machine, using the
+following steps:
+
+Prerequisites
+-------------
+
+Ubuntu 16.04 or later
+
+Installation
+------------
+
+Run the following commands from a terminal window, as root or with `sudo`:
+
+.. code-block:: console
+
+  $ echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list
+  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
+  $ apt-get update && apt-get install -y sawtooth
 
 Next Steps
 ----------
