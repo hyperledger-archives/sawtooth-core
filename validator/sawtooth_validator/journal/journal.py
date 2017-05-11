@@ -213,7 +213,8 @@ class Journal(object):
             chain_id_manager=self._chain_id_manager,
             state_delta_processor=self._state_delta_processor,
             identity_signing_key=self._identity_signing_key,
-            data_dir=self._data_dir
+            data_dir=self._data_dir,
+            config_dir=self._config_dir
         )
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,

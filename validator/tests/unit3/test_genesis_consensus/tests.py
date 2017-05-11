@@ -188,10 +188,12 @@ class TestGenesisBlockVerifier(unittest.TestCase):
         block_cache = Mock()
         state_view_factory = Mock()
         data_dir = 'mock_dir'
+        config_dir = 'mock_dir'
         validator_id = 'validator_001'
         block_verifier = BlockVerifier(block_cache,
                                        state_view_factory,
                                        data_dir,
+                                       config_dir,
                                        validator_id)
 
         block = Block(header=BlockHeader(
@@ -208,10 +210,12 @@ class TestGenesisBlockVerifier(unittest.TestCase):
         block_cache = Mock()
         state_view_factory = Mock()
         data_dir = 'mock_dir'
+        config_dir = 'mock_dir'
         validator_id = 'validator_001'
         block_verifier = BlockVerifier(block_cache,
                                        state_view_factory,
                                        data_dir,
+                                       config_dir,
                                        validator_id)
 
         block = Block(header=BlockHeader(
