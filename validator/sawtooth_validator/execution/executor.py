@@ -85,6 +85,17 @@ class TransactionExecutorThread(object):
         if response.status == processor_pb2.TpProcessResponse.OK:
             self._scheduler.set_transaction_execution_result(
                 req.signature, True, req.context_id)
+        elif response.status == processor_pb2.TpProcessResponse.INTERNAL_ERROR:
+            header = transaction_pb2.TransactionHeader()
+            header.ParseFromString(req.header)
+
+            processor_type = processor_iterator.ProcessorType(
+                header.family_name,
+                header.family_version,
+                header.payload_encoding)
+
+            self._execute_or_wait_for_processor_type(processor_type, request)
+
         else:
             self._context_manager.delete_context(
                 context_id_list=[req.context_id])
