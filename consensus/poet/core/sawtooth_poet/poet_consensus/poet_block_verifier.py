@@ -101,7 +101,9 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 state_view_factory=self._state_view_factory)
 
         poet_enclave_module = \
-            factory.PoetEnclaveFactory.get_poet_enclave_module(state_view)
+            factory.PoetEnclaveFactory.get_poet_enclave_module(
+                state_view=state_view,
+                config_dir=self._config_dir)
 
         validator_registry_view = ValidatorRegistryView(state_view)
         # Grab the validator info based upon the block signer's public

@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import unittest
+import os
 
 from sawtooth_poet_simulator.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
@@ -29,8 +30,7 @@ class TestSignupInfo(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        args = {"NodeName": "DasValidator"}
-        poet_enclave.initialize(**args)
+        poet_enclave.initialize(os.path.dirname(os.path.abspath(__file__)))
 
         cls._originator_public_key_hash = create_random_public_key_hash()
         cls._another_public_key_hash = create_random_public_key_hash()

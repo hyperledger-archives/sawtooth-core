@@ -21,6 +21,9 @@ import datetime
 import hashlib
 import base64
 import time
+import os
+
+import toml
 
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
@@ -119,13 +122,44 @@ class _PoetEnclaveSimulator(object):
     _active_wait_timer = None
 
     @classmethod
-    def initialize(cls, **kwargs):
+    def initialize(cls, config_dir):
+        # See if our configuration file exists.  If so, then we are going to
+        # see if there is a configuration value for the validator ID.  If so,
+        # then we'll use that when constructing the simulated anti-Sybil ID.
+        # Otherwise, we are going to fall back on trying to create one that is
+        # unique.
+        validator_id = datetime.datetime.now().isoformat()
+
+        config_file = os.path.join(config_dir, 'poet_enclave_simulator.toml')
+        if os.path.exists(config_file):
+            LOGGER.info(
+                'Loading PoET enclave simulator config from : %s',
+                config_file)
+
+            try:
+                with open(config_file) as fd:
+                    toml_config = toml.loads(fd.read())
+            except IOError as e:
+                LOGGER.info(
+                    'Error loading PoET enclave simulator configuration: %s',
+                    e)
+                LOGGER.info('Continuing with default configuration')
+
+            invalid_keys = set(toml_config.keys()).difference(['validator_id'])
+            if invalid_keys:
+                LOGGER.warning(
+                    'Ignoring invalid keys in PoET enclave simulator config: '
+                    '%s',
+                    ', '.join(sorted(list(invalid_keys))))
+
+            validator_id = toml_config.get('validator_id', validator_id)
+
+        LOGGER.debug(
+            'PoET enclave simulator creating anti-Sybil ID from: %s',
+            validator_id)
+
         # Create an anti-Sybil ID that is unique for this validator
-        cls._anti_sybil_id = \
-            hashlib.sha256(
-                kwargs.get(
-                    'NodeName',
-                    datetime.datetime.now().isoformat()).encode()).hexdigest()
+        cls._anti_sybil_id = hashlib.sha256(validator_id.encode()).hexdigest()
 
     @classmethod
     def create_signup_info(cls,
@@ -183,7 +217,7 @@ class _PoetEnclaveSimulator(object):
 
             # Fake our "proof" data.
             verification_report = {
-                'epidPseudonym': originator_public_key_hash,
+                'epidPseudonym': cls._anti_sybil_id,
                 'id': base64.b64encode(
                     hashlib.sha256(
                         timestamp.encode()).hexdigest().encode()).decode(),
@@ -221,7 +255,7 @@ class _PoetEnclaveSimulator(object):
                 EnclaveSignupInfo(
                     poet_public_key=signup_data['poet_public_key'],
                     proof_data=proof_data,
-                    anti_sybil_id=originator_public_key_hash,
+                    anti_sybil_id=cls._anti_sybil_id,
                     sealed_signup_data=sealed_signup_data)
 
     @classmethod
@@ -439,8 +473,8 @@ class _PoetEnclaveSimulator(object):
             raise ValueError('Wait certificate signature does not match')
 
 
-def initialize(**kwargs):
-    _PoetEnclaveSimulator.initialize(**kwargs)
+def initialize(config_dir):
+    _PoetEnclaveSimulator.initialize(config_dir=config_dir)
 
 
 def create_signup_info(validator_address,

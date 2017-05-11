@@ -32,7 +32,7 @@ def _select_dir(sawtooth_home_dir, windows_dir, default_dir):
         return default_dir
 
 
-def _get_config_dir():
+def get_config_dir():
     """Returns the sawtooth configuration directory based on the
     SAWTOOTH_HOME environment variable (if set) or OS defaults.
     """
@@ -58,7 +58,7 @@ def _get_dir(toml_config_setting,
     Returns:
         directory (str): The path.
     """
-    conf_file = os.path.join(_get_config_dir(), 'path.toml')
+    conf_file = os.path.join(get_config_dir(), 'path.toml')
     if os.path.exists(conf_file):
         with open(conf_file) as fd:
             raw_config = fd.read()
