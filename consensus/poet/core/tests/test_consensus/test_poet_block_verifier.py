@@ -91,6 +91,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -158,6 +159,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -227,6 +229,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -303,6 +306,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -378,6 +382,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -453,6 +458,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -528,6 +534,7 @@ class TestPoetBlockVerifier(TestCase):
                     block_cache=mock_block_cache,
                     state_view_factory=mock_state_view_factory,
                     data_dir=self._temp_dir,
+                    config_dir=self._temp_dir,
                     validator_id='validator_deadbeef')
             self.assertFalse(
                 block_verifier.verify_block(
@@ -601,6 +608,7 @@ class TestPoetBlockVerifier(TestCase):
                 block_cache=mock_block_cache,
                 state_view_factory=mock_state_view_factory,
                 data_dir=self._temp_dir,
+                config_dir=self._temp_dir,
                 validator_id='validator_deadbeef')
         self.assertTrue(
             block_verifier.verify_block(

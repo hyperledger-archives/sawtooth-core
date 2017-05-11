@@ -15,6 +15,7 @@
 
 from importlib import reload
 import time
+import os
 from unittest import TestCase
 from unittest import mock
 from unittest import skip
@@ -45,9 +46,8 @@ class TestWaitTimer(TestCase):
         # PoET enclave is set back to initial state at the start of every
         # test.
         self.poet_enclave_module = reload(poet_enclave)
-
-        args = {"NodeName": "DasValidator"}
-        self.poet_enclave_module.initialize(**args)
+        self.poet_enclave_module.initialize(
+            os.path.dirname(os.path.abspath(__file__)))
 
         self.mock_poet_config_view = mock.Mock()
         self.mock_poet_config_view.target_wait_time = 5.0

@@ -104,7 +104,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.init_chain_head = self.block_tree_manager.chain_head
 
@@ -256,7 +257,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.receive_batches()
 
@@ -285,7 +287,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.assert_no_block_published()
 
@@ -630,7 +633,8 @@ class TestBlockValidator(unittest.TestCase):
             executor=MockTransactionExecutor(),
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
     class BlockValidationHandler(object):
         def __init__(self):
@@ -680,7 +684,8 @@ class TestChainController(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -988,7 +993,8 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
@@ -1075,7 +1081,8 @@ class TestJournal(unittest.TestCase):
                 identity_signing_key=btm.identity_signing_key,
                 chain_id_manager=None,
                 state_delta_processor=self.state_delta_processor,
-                data_dir=None
+                data_dir=None,
+                config_dir=None
             )
 
             self.gossip.on_batch_received = journal.on_batch_received

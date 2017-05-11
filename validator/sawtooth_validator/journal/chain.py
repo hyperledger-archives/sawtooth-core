@@ -57,7 +57,8 @@ class BlockValidator(object):
                  executor,
                  squash_handler,
                  identity_signing_key,
-                 data_dir):
+                 data_dir,
+                 config_dir):
         """Initialize the BlockValidator
         Args:
              consensus_module: The consensus module that contains
@@ -75,6 +76,8 @@ class BlockValidator(object):
              identity_signing_key: Private key for signing blocks.
              data_dir: Path to location where persistent data for the
              consensus module can be stored.
+             config_dir: Path to location where config data for the
+             consensus module can be found.
         Returns:
             None
         """
@@ -90,6 +93,7 @@ class BlockValidator(object):
         self._identity_public_key = \
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
+        self._config_dir = config_dir
         self._result = {
             'new_block': new_block,
             'chain_head': chain_head,
@@ -200,6 +204,7 @@ class BlockValidator(object):
                     BlockVerifier(block_cache=self._block_cache,
                                   state_view_factory=self._state_view_factory,
                                   data_dir=self._data_dir,
+                                  config_dir=self._config_dir,
                                   validator_id=self._identity_public_key)
 
                 if valid:
@@ -296,6 +301,7 @@ class BlockValidator(object):
             ForkResolver(block_cache=self._block_cache,
                          state_view_factory=self._state_view_factory,
                          data_dir=self._data_dir,
+                         config_dir=self._config_dir,
                          validator_id=self._identity_public_key)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
@@ -405,7 +411,8 @@ class ChainController(object):
                  chain_id_manager,
                  state_delta_processor,
                  identity_signing_key,
-                 data_dir):
+                 data_dir,
+                 config_dir):
         """Initialize the ChainController
         Args:
              block_cache: The cache of all recent blocks and the processing
@@ -426,6 +433,8 @@ class ChainController(object):
              identity_signing_key: Private key for signing blocks.
              data_dir: path to location where persistent data for the
              consensus module can be stored.
+             config_dir: path to location where config data for the
+             consensus module can be found.
         Returns:
             None
         """
@@ -442,6 +451,7 @@ class ChainController(object):
         self._identity_public_key = \
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
+        self._config_dir = config_dir
 
         self._blocks_processing = {}  # a set of blocks that are
         # currently being processed.
@@ -488,7 +498,8 @@ class ChainController(object):
                 executor=self._transaction_executor,
                 squash_handler=self._squash_handler,
                 identity_signing_key=self._identity_signing_key,
-                data_dir=self._data_dir)
+                data_dir=self._data_dir,
+                config_dir=self._config_dir)
             self._blocks_processing[blkw.block.header_signature] = validator
             self._executor.submit(validator.run)
 
@@ -670,7 +681,8 @@ class ChainController(object):
                     executor=self._transaction_executor,
                     squash_handler=self._squash_handler,
                     identity_signing_key=self._identity_signing_key,
-                    data_dir=self._data_dir)
+                    data_dir=self._data_dir,
+                    config_dir=self._config_dir)
 
                 valid = validator.validate_block(block, committed_txn)
                 if valid:

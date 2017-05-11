@@ -265,7 +265,8 @@ class BlockPublisher(object):
                  squash_handler,
                  chain_head,
                  identity_signing_key,
-                 data_dir):
+                 data_dir,
+                 config_dir):
         """
         Initialize the BlockPublisher object
 
@@ -282,7 +283,9 @@ class BlockPublisher(object):
             chain_head (:obj:`BlockWrapper`): The initial chain head.
             identity_signing_key (str): Private key for signing blocks
             data_dir (str): path to location where persistent data for the
-             consensus module can be stored.
+                consensus module can be stored.
+            config_dir (str): path to location where configuration can be
+                found.
         """
         self._lock = RLock()
         self._candidate_block = None  # _CandidateBlock helper,
@@ -302,6 +305,7 @@ class BlockPublisher(object):
         self._identity_public_key = \
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
+        self._config_dir = config_dir
 
     def _build_candidate_block(self, chain_head):
         """ Build a candidate block and construct the consensus object to
@@ -327,6 +331,7 @@ class BlockPublisher(object):
                            state_view_factory=self._state_view_factory,
                            batch_publisher=self._batch_publisher,
                            data_dir=self._data_dir,
+                           config_dir=self._config_dir,
                            validator_id=self._identity_public_key)
 
         block_header = BlockHeader(

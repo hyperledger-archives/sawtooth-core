@@ -30,12 +30,14 @@ class BlockPublisher(BlockPublisherInterface):
                  block_cache,
                  state_view_factory,
                  batch_publisher,
+                 config_dir,
                  data_dir,
                  validator_id):
         super().__init__(block_cache,
                          state_view_factory,
                          batch_publisher,
                          data_dir,
+                         config_dir,
                          validator_id)
 
     def initialize_block(self, block_header):
@@ -71,11 +73,13 @@ class BlockVerifier(BlockVerifierInterface):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             data_dir,
+            config_dir,
             validator_id)
 
     def verify_block(self, block_wrapper):
@@ -91,11 +95,13 @@ class ForkResolver(ForkResolverInterface):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             data_dir,
+            config_dir,
             validator_id)
 
     def compare_forks(self, cur_fork_head, new_fork_head):

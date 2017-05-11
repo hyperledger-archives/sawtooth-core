@@ -31,6 +31,7 @@ class BlockPublisherInterface(metaclass=ABCMeta):
                  state_view_factory,
                  batch_publisher,
                  data_dir,
+                 config_dir,
                  validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
@@ -46,6 +47,8 @@ class BlockPublisherInterface(metaclass=ABCMeta):
                 batch to the network.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
+                config_dir (str): path to location where configuration for the
+                consensus module can be found.
                 validator_id: A unique ID for this validator
             Returns:
                 none.
@@ -109,6 +112,7 @@ class BlockVerifierInterface(metaclass=ABCMeta):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         """Initialize the object, is passed (read-only) state access objects.
             Args:
@@ -121,6 +125,8 @@ class BlockVerifierInterface(metaclass=ABCMeta):
                 was the chain head.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
+                config_dir (str): path to location where configuration for the
+                consensus module can be found.
                 validator_id: A unique ID for this validator
             Returns:
                 none.
@@ -147,6 +153,7 @@ class ForkResolverInterface(metaclass=ABCMeta):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         """Initialize the object, is passed (read-only) state access objects.
         StateView is not passed to this object as it is ambiguous as to which
@@ -163,6 +170,8 @@ class ForkResolverInterface(metaclass=ABCMeta):
                 was the chain head.
                 data_dir: path to location where persistent data for the
                 consensus module can be stored.
+                data_dir: path to location where config data for the
+                consensus module can be found.
                 validator_id: A unique ID for this validator
             Returns:
                 none.

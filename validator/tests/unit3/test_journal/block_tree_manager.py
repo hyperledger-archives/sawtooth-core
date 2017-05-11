@@ -101,7 +101,8 @@ class BlockTreeManager(object):
             squash_handler=None,
             chain_head=chain_head,
             identity_signing_key=self.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
     @property
     def chain_head(self):
