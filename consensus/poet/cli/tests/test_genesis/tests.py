@@ -101,8 +101,8 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
 
     def _create_key(self, key_name='validator.priv'):
         privkey = signing.generate_privkey()
-        wif_file = os.path.join(self._temp_dir, key_name)
-        with open(wif_file, 'w') as wif_fd:
-            wif_fd.write(privkey)
+        priv_file = os.path.join(self._temp_dir, key_name)
+        with open(priv_file, 'w') as priv_fd:
+            priv_fd.write(privkey)
 
         return signing.generate_pubkey(privkey)

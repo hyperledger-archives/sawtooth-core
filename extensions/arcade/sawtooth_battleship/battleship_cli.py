@@ -227,25 +227,25 @@ def do_init(args, config):
 
     save_config(config)
 
-    wif_filename = config.get('DEFAULT', 'key_file')
-    if wif_filename.endswith(".priv"):
-        addr_filename = wif_filename[0:-len(".priv")] + ".addr"
+    priv_filename = config.get('DEFAULT', 'key_file')
+    if priv_filename.endswith(".priv"):
+        addr_filename = priv_filename[0:-len(".priv")] + ".addr"
     else:
-        addr_filename = wif_filename + ".addr"
+        addr_filename = priv_filename + ".addr"
 
-    if not os.path.exists(wif_filename):
+    if not os.path.exists(priv_filename):
         try:
-            if not os.path.exists(os.path.dirname(wif_filename)):
-                os.makedirs(os.path.dirname(wif_filename))
+            if not os.path.exists(os.path.dirname(priv_filename)):
+                os.makedirs(os.path.dirname(priv_filename))
 
             privkey = signing.generate_privkey()
             pubkey = signing.generate_pubkey(privkey)
             addr = signing.generate_identifier(pubkey)
 
-            with open(wif_filename, "w") as wif_fd:
-                print("writing file: {}".format(wif_filename))
-                wif_fd.write(privkey)
-                wif_fd.write("\n")
+            with open(priv_filename, "w") as priv_fd:
+                print("writing file: {}".format(priv_filename))
+                priv_fd.write(privkey)
+                priv_fd.write("\n")
 
             with open(addr_filename, "w") as addr_fd:
                 print("writing file: {}".format(addr_filename))
@@ -403,11 +403,11 @@ def do_show(args, config):
     print("STATE     : {}".format(game_state))
 
     # figure out the proper user's target board, given the addr
-    wif_filename = config.get('DEFAULT', 'key_file')
-    if wif_filename.endswith(".priv"):
-        addr_filename = wif_filename[0:-len(".priv")] + ".addr"
+    priv_filename = config.get('DEFAULT', 'key_file')
+    if priv_filename.endswith(".priv"):
+        addr_filename = priv_filename[0:-len(".priv")] + ".addr"
     else:
-        addr_filename = wif_filename + ".addr"
+        addr_filename = priv_filename + ".addr"
     addr_file = file(addr_filename, mode='r')
     addr = addr_file.readline().rstrip('\n')
 
