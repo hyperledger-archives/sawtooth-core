@@ -47,6 +47,7 @@ setup(name='sawtooth-sdk',
       packages=find_packages(),
       data_files=data_files,
       install_requires=[
+          "colorlog",
           "sawtooth-signing",
           "protobuf",
           "pyzmq",

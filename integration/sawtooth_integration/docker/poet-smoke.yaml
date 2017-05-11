@@ -101,7 +101,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api --stream-url tcp://validator-0:40000 --host rest-api-0
+    command: rest_api -v --stream-url tcp://validator-0:40000 --host rest-api-0
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -111,7 +111,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api --stream-url tcp://validator-1:40000 --host rest-api-1
+    command: rest_api -v --stream-url tcp://validator-1:40000 --host rest-api-1
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -121,7 +121,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api --stream-url tcp://validator-2:40000 --host rest-api-2
+    command: rest_api -v --stream-url tcp://validator-2:40000 --host rest-api-2
     stop_signal: SIGKILL
 
   tp-intkey-0:
