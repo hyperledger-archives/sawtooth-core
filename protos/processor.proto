@@ -75,10 +75,10 @@ message TpUnregisterResponse {
 // The request from the validator/executor of the transaction processor
 // to verify a transaction.
 message TpProcessRequest {
-    bytes header = 1;
-    bytes payload = 2;
-    string signature = 3;
-    string context_id = 4;
+    bytes header = 1;  // The transaction header
+    bytes payload = 2;  // The transaction payload
+    string signature = 3;  // The transaction header_signature
+    string context_id = 4; // The context_id for state requests.
 }
 
 
