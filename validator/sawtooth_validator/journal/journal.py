@@ -204,6 +204,7 @@ class Journal(object):
             state_view_factory=self._state_view_factory,
             executor=ThreadPoolExecutor(1),
             transaction_executor=self._transaction_executor,
+            chain_head_lock=self._block_publisher.chain_head_lock,
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler,
             chain_id_manager=self._chain_id_manager,

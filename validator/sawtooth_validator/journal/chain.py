@@ -422,6 +422,7 @@ class ChainController(object):
                  state_view_factory,
                  executor,
                  transaction_executor,
+                 chain_head_lock,
                  on_chain_updated,
                  squash_handler,
                  chain_id_manager,
@@ -438,6 +439,12 @@ class ChainController(object):
              executor: The thread pool to process block validations.
              transaction_executor: The TransactionExecutor used to produce
              schedulers for batch validation.
+             chain_head_lock: Lock to hold while the chain head is being
+             updated, this prevents other components that depend on the chain
+             head and the BlockStore from having the BlockStore change under
+             them.  This lock is only for core Journal components
+             (BlockPublisher and ChainController), other components should
+             handle block not found errors from the BlockStore explicitly.
              on_chain_updated: The callback to call to notify the rest of the
              system the head block in the chain has been changed.
              squash_handler: a parameter passed when creating transaction
@@ -452,6 +459,7 @@ class ChainController(object):
             None
         """
         self._lock = RLock()
+        self._chain_head_lock = chain_head_lock
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
         self._state_view_factory = state_view_factory
@@ -565,19 +573,22 @@ class ChainController(object):
 
                 # If the head is to be updated to the new block.
                 elif commit_new_block:
-                    self._chain_head = new_block
+                    with self._chain_head_lock:
+                        self._chain_head = new_block
 
-                    # update the the block store to have the new chain
-                    self._block_store.update_chain(result["new_chain"],
-                                                   result["cur_chain"])
+                        # update the the block store to have the new chain
+                        self._block_store.update_chain(result["new_chain"],
+                                                       result["cur_chain"])
 
-                    LOGGER.info("Chain head updated to: %s", self._chain_head)
+                        LOGGER.info(
+                            "Chain head updated to: %s",
+                            self._chain_head)
 
-                    # tell the BlockPublisher else the chain is updated
-                    self._notify_on_chain_updated(self._chain_head,
-                                                  result["committed_batches"],
-                                                  result["uncommitted_batches"]
-                                                  )
+                        # tell the BlockPublisher else the chain is updated
+                        self._notify_on_chain_updated(
+                            self._chain_head,
+                            result["committed_batches"],
+                            result["uncommitted_batches"])
 
                     # Submit any immediate descendant blocks for verification
                     LOGGER.debug(
