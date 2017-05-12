@@ -70,9 +70,9 @@ The ``apply`` Method
 ====================
 
 {% if language == 'JavaScript' %}
-``apply`` gets called with two arguments, ``transactionProcessRequest`` and ``state``.
+``apply`` gets called with two arguments, ``transactionProcessRequest`` and ``stateStore``.
 ``transactionProcessRequest`` holds the command that is to be executed (e.g. taking a space or
-creating a game), while ``state`` stores information about the current
+creating a game), while ``stateStore`` stores information about the current
 state of the game (e.g. the board layout and whose turn it is).
 
 The transaction contains payload bytes that are opaque to the validator core,
@@ -106,49 +106,30 @@ Accordingly, a top-down approach to ``apply`` might look like this:
 
 {% if language == 'JavaScript' %}
 
-.. TODO::
-
-    This example code should be rewritten by a JavaScript expert
-    to parallel Python example.
-
 .. code-block:: javascript
 
-    apply (transactionProcessRequest, state) {
-    return _decodeRequest(transactionProcessRequest.payload)
-      .catch(_toInternalError)
-      .then((update) => {
-        let header = TransactionHeader.decode(transactionProcessRequest.header)
-        let player = header.signerPubkey
-        if (!update.name) {
-          throw new InvalidTransaction('Name is required')
-        }
+      apply (transactionProcessRequest, stateStore) {
+        return _unpackTransaction(transactionProcessRequest)
+        .then((transactionData) => {
 
-        if (!update.action) {
-          throw new InvalidTransaction('Action is required')
-        }
+        let stateData = _getStateData(transactionData.gameName, stateStore)
 
-        // Perform the action
-        let handlerFn
-        if (update.action === 'create') {
-          handlerFn = _handleCreate
-        } else if (update.action === 'take') {
-          handlerFn = _handleTake
-        } else {
-          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
-        }
-
-        let address = XO_NAMESPACE + _hash(update.name)
-
-        return state.get([address]).then(handlerFn(state, address, update, player))
-          .then((addresses) => {
-            if (addresses.length === 0) {
-              throw new InternalError('State Error!')
-            }
-          })
-      })
+        let updatedGameData = _playXO(
+          stateData.board,
+          stateData.state,
+          stateData.player1,
+          stateData.player2,
+          transactionData.signer,
+          transactionData.action,
+          transactionData.space
+        )
+        _storeGameData(transactionData.gameName, updatedGameData, stateStore)
+        })
+      }
     }
 
 {% else %}
+
 {# Python code is the default #}
 
 .. code-block:: python
@@ -185,15 +166,30 @@ Data
 So how do we get data out of the transaction? The transaction consists of a
 header and a payload. The header contains the "signer", which is used to
 identify the current player. The payload will contain an encoding of the game
-name, the action ('create' a game, 'take' a space), and the space (which will
-be an empty string if the action isn't 'take'). So our ``_unpack_transaction``
-function will look like this:
+name, the action ('create' a game, 'take' a space), and the space (which will be
+an empty string if the action isn't 'take'). So our {% if language ==
+'JavaScript' %}``_unpackTransaction``{% else %}``_unpack_transaction``{% endif
+%} function will look like this:
 
 {% if language == 'JavaScript' %}
 
-.. TODO::
-    
-        Example code to be provided by JavaScript expert
+.. code-block:: javascript
+
+    const _unpackTransaction = (transaction) =>
+      new Promise((resolve, reject) => {
+        let header = TransactionHeader.decode(transaction.header)
+        let signer = header.signerPubkey
+        try {
+          let payload = _decodeData(transaction.payload)
+          resolve({gameName: payload[0],
+                  action: payload[1],
+                  space: payload[2],
+                  signer: signer})
+        } catch (err) {
+          let reason =  new InvalidTransaction("Invalid payload serialization")
+          reject(reason)
+        }
+      })
 
 
 {% else %}
@@ -215,19 +211,46 @@ function will look like this:
 {% endif %}
 
 
-Before we say how exactly the transaction payload will be decoded, let's look
-at ``_get_state_data``. Now, as far as the handler is concerned, it doesn't
-matter how the game data is stored. The only thing that matters is that given a
-game name, the state store is able to give back the correct game data. (In our
-full XO implementation, the game data is stored in a Merkle-radix tree.)
+Before we say how exactly the transaction payload will be decoded, let's look at
+{% if language == 'JavaScript' %}``_getStateData``{% else
+%}``_get_state_data``{% endif %}. Now, as far as the handler is concerned, it
+doesn't matter how the game data is stored. The only thing that matters is that
+given a game name, the state store is able to give back the correct game data.
+(In our full XO implementation, the game data is stored in a Merkle-radix tree.)
 
 
 {% if language == 'JavaScript' %}
 
-.. TODO:: 
+.. code-block:: javascript
 
-    Example code to be provided by JavaScript expert, along with 
-    rewrite suggestion for surrounding text.
+    const _getStateData = (gameName, stateStore) => {
+        let address = _makeGameAddress(gameName)
+
+        return stateStore.get([address])
+        .then((stateEntries) => {
+        try {
+          let data =  _decodeData(stateEntries[address])
+          if (data.length < 5){
+            while (data.length < 5){
+              data.push("")
+            }
+          }
+          return {board: data[0],
+                  gameState: data[1],
+                  player1: data[2],
+                  player2: data[3],
+                  storedName: data[4]}
+        } catch(err) {
+          throw new InternalError("Failed to deserialize game data." + err)
+        }
+      })
+      .catch(_toInternalError)
+    }
+
+    const _toInternalError = (err) => {
+      let message = (err.message) ? err.message : err
+      throw new InternalError(message)
+    }
 
 {% else %}
 
@@ -253,11 +276,14 @@ game name prepended with some constant:
 
 {% if language == 'JavaScript' %}
 
-.. TODO::
+.. code-block:: javascript
 
-    Example code to be provided by JavaScript expert, along with 
-    rewrite suggestion for surrounding text.
-    
+    const _makeGameAddress = (gameName) => {
+       let prefix = XO_NAMESPACE
+       let gameHash = crypto.createHash('sha512').update(gameName).digest('hex').toLowerCase()
+       return prefix + gameHash
+    }
+        
 {% else %}
 
 .. code-block:: python
@@ -275,10 +301,22 @@ updated state of the game and store it back at the address from which it came.
 
 {% if language == 'JavaScript' %}
 
-.. TODO::
+.. code-block:: javascript
 
-    Example code to be provided by JavaScript expert, along with 
-    rewrite suggestion for surrounding text.
+    const _storeGameData = (gameName, gameData, stateStore) => {
+      let gameAddress = _makeGameAddress(gameName)
+
+      let encodedGameData = _encodeData(gameData)
+
+      let entries = {[gameAddress]: gameData}
+      stateStore.set(entries)
+      .then((gameAddresses) => {
+        if (gameAddresses.length < 1) {
+          throw new InternalError('State Error!')
+        }
+        console.log(`Set ${gameAddress} to ${gameData}`)
+      })
+    }
 
 {% else %}
 
@@ -310,10 +348,15 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
 
 {% if language == 'JavaScript' %}
 
-.. TODO::
+.. code-block:: javascript
 
-    Example code to be provided by JavaScript expert, along with 
-    rewrite suggestion for surrounding text.
+    const _decodeData = (data) => {
+      return data.toString().split(",")
+    }
+
+    const _encodeData = (data) => {
+      return Buffer.from(data.join())
+    }
 
 {% else %}
 
@@ -330,16 +373,16 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
 Playing the Game
 ================
 
-.. TEMPLATE Replace path below with language specific SDK link.
 
-All that's left to do is describe how to play tic-tac-toe. The details here
-are fairly straighforward, and the ``_play_xo`` function could certainly be
-implemented in different ways. To see our implementation, go to
-``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to
-represent the board as a string of length 9, with each character in the string
-representing a space taken by X, a space taken by O, or a free space. Updating
-the board configuration and the current state of the game proceeds
-straightforwardly.
+All that's left to do is describe how to play tic-tac-toe. The details here are
+fairly straighforward, and the {% if language == 'JavaScript' %}``_playXO``{%
+else %}``_play_xo``{% endif %} function could certainly be implemented in
+different ways. To see our implementation, go to ``/project/sawtooth-
+core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent the board as
+a string of length 9, with each character in the string representing a space
+taken by X, a space taken by O, or a free space. Updating the board
+configuration and the current state of the game proceeds straightforwardly.
+
 
 The ``XoTransactionHandler`` Class
 ==================================
@@ -354,11 +397,11 @@ about what kinds of transactions it can handle.
 .. code-block:: javascript
 
     class XOHandler extends TransactionHandler {
-    constructor () {
+      constructor () {
         super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
-    }
+      }
 
-    apply (transactionProcessRequest, state) {
+      apply (transactionProcessRequest, stateStore) {
         // 
 
 Note that the XOHandler class extends the TransactionHandler class defined in the 
