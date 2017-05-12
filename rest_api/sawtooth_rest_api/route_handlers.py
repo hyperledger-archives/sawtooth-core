@@ -83,16 +83,21 @@ class RouteHandler(object):
         """
         # Parse request
         if request.headers['Content-Type'] != 'application/octet-stream':
+            LOGGER.debug(
+                'Submission headers had wrong Content-Type: %s',
+                request.headers['Content-Type'])
             raise errors.SubmissionWrongContentType()
 
         body = await request.read()
         if not body:
+            LOGGER.debug('Submission contained an empty body')
             raise errors.NoBatchesSubmitted()
 
         try:
             batch_list = BatchList()
             batch_list.ParseFromString(body)
         except DecodeError:
+            LOGGER.debug('Submission body could not be decoded: %s', body)
             raise errors.BadProtobufSubmitted()
 
         # Query validator
@@ -146,6 +151,9 @@ class RouteHandler(object):
         # Parse batch ids from POST body, or query paramaters
         if request.method == 'POST':
             if request.headers['Content-Type'] != 'application/json':
+                LOGGER.debug(
+                    'Request headers had wrong Content-Type: %s',
+                    request.headers['Content-Type'])
                 raise errors.StatusWrongContentType()
 
             ids = await request.json()
@@ -153,11 +161,13 @@ class RouteHandler(object):
             if (not ids
                     or not isinstance(ids, list)
                     or not all(isinstance(i, str) for i in ids)):
+                LOGGER.debug('Request body was invalid: %s', ids)
                 raise errors.StatusBodyInvalid()
 
         else:
             ids = self._get_filter_ids(request)
             if not ids:
+                LOGGER.debug('Request for statuses missing id query')
                 raise errors.StatusIdQueryInvalid()
 
         # Query validator
@@ -664,9 +674,11 @@ class RouteHandler(object):
             try:
                 controls['count'] = int(count)
             except ValueError:
+                LOGGER.debug('Request query had an invalid count: %s', count)
                 raise errors.CountInvalid()
 
             if controls['count'] <= 0:
+                LOGGER.debug('Request query had an invalid count: %s', count)
                 raise errors.CountInvalid()
 
         if min_pos is not None:
