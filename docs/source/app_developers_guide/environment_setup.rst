@@ -144,10 +144,10 @@ Continue on to :doc:`intro_to_sawtooth`
 
 .. _env-ubuntu:
 
-Installing Sawtooth on Ubuntu Linux
+Installing Sawtooth on Ubuntu 16.04
 ===================================
 
-You can install Sawtooth directly on your Ubuntu Linux machine, using the
+You can install Sawtooth directly on your Ubuntu machine, using the
 following steps:
 
 Prerequisites
