@@ -454,6 +454,9 @@ class RouteHandler(object):
         except ValidatorConnectionError:
             LOGGER.warning('Validator disconnected while waiting for response')
             raise errors.ValidatorDisconnected()
+        except (DecodeError, AttributeError):
+            LOGGER.error('Validator response was not parsable: %s', response)
+            raise errors.ValidatorResponseInvalid()
 
     @staticmethod
     def _check_status_errors(proto, content, error_traps=None):
