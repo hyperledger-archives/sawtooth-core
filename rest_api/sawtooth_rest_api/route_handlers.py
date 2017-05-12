@@ -638,6 +638,11 @@ class RouteHandler(object):
             header_bytes = base64.b64decode(resource['header'])
             header.ParseFromString(header_bytes)
         except (KeyError, TypeError, ValueError, DecodeError):
+            header = resource.get('header', None)
+            LOGGER.error(
+                'The validator sent a resource with %s %s',
+                'a missing header' if header is None else 'an invalid header:',
+                header or '')
             raise errors.ResourceHeaderInvalid()
 
         resource['header'] = cls._message_to_dict(header)
