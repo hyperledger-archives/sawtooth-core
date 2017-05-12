@@ -10,6 +10,13 @@ the purposes of application development.  After this setup, you will be ready
 to perform application development tasks, such as implementing business logic
 with transaction families and writing clients which use Sawtooth's REST API.
 
+There are two options presented here for installing and running Sawtooth:
+
+  - :ref:`env-docker-compose`
+  - :ref:`env-ubuntu`
+
+.. _env-docker-compose:
+
 Installing Sawtooth Using Docker Compose 
 ========================================
 
@@ -134,6 +141,8 @@ Next Steps
 ----------
 
 Continue on to :doc:`intro_to_sawtooth`
+
+.. _env-ubuntu:
 
 Installing Sawtooth on Ubuntu Linux
 ===================================
