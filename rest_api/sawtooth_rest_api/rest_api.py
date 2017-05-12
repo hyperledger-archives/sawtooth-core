@@ -64,6 +64,7 @@ async def access_logger(app, handler):
         client_ip, _ = request.transport.get_extra_info(
             'peername', ('UNKNOWN', None))
 
+        # log request
         LOGGER.info(
             'Request  %s: "%s %s" from %s',
             request_name,
@@ -71,15 +72,22 @@ async def access_logger(app, handler):
             request.rel_url,
             client_ip)
 
-        response = await handler(request)
-        # pylint: disable=protected-access
-        LOGGER.info(
-            'Response %s: "%s" status, %sB size, in %.3fs',
-            request_name,
-            response._status,
-            response._headers.get('Content-Length', 'UNKNOWN'),
-            time.time() - start_time)
-        return response
+        def log_response(response):
+            # pylint: disable=protected-access
+            LOGGER.info(
+                'Response %s: %s status, %sB size, in %.3fs',
+                request_name,
+                response._status,
+                response._headers.get('Content-Length', 'UNKNOWN'),
+                time.time() - start_time)
+
+        try:
+            response = await handler(request)
+            log_response(response)
+            return response
+        except web.HTTPError as e:
+            log_response(e)
+            raise e
 
     return logging_handler
 
@@ -91,6 +99,7 @@ def start_rest_api(host, port, stream, timeout):
     app = web.Application(loop=loop, middlewares=[access_logger])
 
     # Add routes to the web app
+    LOGGER.info('Creating handlers for validator at %s', stream.url)
     handler = RouteHandler(loop, stream, timeout)
 
     app.router.add_post('/batches', handler.submit_batches)
@@ -112,6 +121,7 @@ def start_rest_api(host, port, stream, timeout):
         handler.fetch_transaction)
 
     # Start app
+    LOGGER.info('Starting REST API on %s:%s', host, port)
     web.run_app(app, host=host, port=port, access_log=None)
 
 

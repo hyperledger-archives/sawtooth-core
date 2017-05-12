@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 import json
 import base64
 from concurrent.futures import ThreadPoolExecutor
@@ -22,7 +23,6 @@ from aiohttp import web
 # needed for the google.protobuf imports to pass pylint
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import DecodeError
-from google.protobuf.message import Message as BaseMessage
 
 from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
 from sawtooth_sdk.messaging.future import FutureTimeoutError
@@ -38,6 +38,7 @@ from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
 DEFAULT_TIMEOUT = 300
+LOGGER = logging.getLogger(__name__)
 
 
 class RouteHandler(object):
@@ -82,16 +83,21 @@ class RouteHandler(object):
         """
         # Parse request
         if request.headers['Content-Type'] != 'application/octet-stream':
+            LOGGER.debug(
+                'Submission headers had wrong Content-Type: %s',
+                request.headers['Content-Type'])
             raise errors.SubmissionWrongContentType()
 
         body = await request.read()
         if not body:
+            LOGGER.debug('Submission contained an empty body')
             raise errors.NoBatchesSubmitted()
 
         try:
             batch_list = BatchList()
             batch_list.ParseFromString(body)
         except DecodeError:
+            LOGGER.debug('Submission body could not be decoded: %s', body)
             raise errors.BadProtobufSubmitted()
 
         # Query validator
@@ -145,6 +151,9 @@ class RouteHandler(object):
         # Parse batch ids from POST body, or query paramaters
         if request.method == 'POST':
             if request.headers['Content-Type'] != 'application/json':
+                LOGGER.debug(
+                    'Request headers had wrong Content-Type: %s',
+                    request.headers['Content-Type'])
                 raise errors.StatusWrongContentType()
 
             ids = await request.json()
@@ -152,11 +161,13 @@ class RouteHandler(object):
             if (not ids
                     or not isinstance(ids, list)
                     or not all(isinstance(i, str) for i in ids)):
+                LOGGER.debug('Request body was invalid: %s', ids)
                 raise errors.StatusBodyInvalid()
 
         else:
             ids = self._get_filter_ids(request)
             if not ids:
+                LOGGER.debug('Request for statuses missing id query')
                 raise errors.StatusIdQueryInvalid()
 
         # Query validator
@@ -410,75 +421,90 @@ class RouteHandler(object):
             metadata=self._get_metadata(request, response))
 
     async def _query_validator(self, request_type, response_proto,
-                               content, traps=None):
+                               payload, error_traps=None):
         """Sends a request to the validator and parses the response.
         """
-        response = await self._try_validator_request(request_type, content)
-        return self._try_response_parse(response_proto, response, traps)
+        LOGGER.debug(
+            'Sending %s request to validator',
+            self._get_type_name(request_type))
 
-    async def _try_validator_request(self, message_type, content):
-        """Serializes and sends a Protobuf message to the validator.
-        Handles timeout errors as needed.
+        payload_bytes = payload.SerializeToString()
+        response = await self._send_request(request_type, payload_bytes)
+        content = self._parse_response(response_proto, response)
+
+        LOGGER.debug(
+            'Received %s response from validator with status %s',
+            self._get_type_name(response.message_type),
+            self._get_status_name(response_proto, content.status))
+
+        self._check_status_errors(response_proto, content, error_traps)
+        return self._message_to_dict(content)
+
+    async def _send_request(self, request_type, payload):
+        """Uses an executor to send an asynchronous ZMQ request to the validator
+        with the handler's Stream.
         """
-        if isinstance(content, BaseMessage):
-            content = content.SerializeToString()
-
-        future = self._stream.send(message_type=message_type, content=content)
+        future = self._stream.send(message_type=request_type, content=payload)
 
         try:
-            response = await self._loop.run_in_executor(
-                None,
-                future.result,
-                self._timeout)
+            return await self._loop.run_in_executor(
+                None, future.result, self._timeout)
         except FutureTimeoutError:
+            LOGGER.warning('Timed out while waiting for validator response')
             raise errors.ValidatorTimedOut()
 
-        try:
-            return response.content
-        except ValidatorConnectionError:
-            raise errors.ValidatorDisconnected()
-
-    @classmethod
-    def _try_response_parse(cls, proto, response, traps=None):
-        """Parses the Protobuf response from the validator.
-        Checks for common error-raising response statuses, as well as route
-        specific status errors using the error trap interface.
+    @staticmethod
+    def _parse_response(proto, response):
+        """Parses the content from a validator response Message.
         """
-        parsed = proto()
-        parsed.ParseFromString(response)
-
-        # Check for common response statuses that should raise errors
         try:
-            if parsed.status == proto.INTERNAL_ERROR:
+            content = proto()
+            content.ParseFromString(response.content)
+            return content
+        except ValidatorConnectionError:
+            LOGGER.warning('Validator disconnected while waiting for response')
+            raise errors.ValidatorDisconnected()
+        except (DecodeError, AttributeError):
+            LOGGER.error('Validator response was not parsable: %s', response)
+            raise errors.ValidatorResponseInvalid()
+
+    @staticmethod
+    def _check_status_errors(proto, content, error_traps=None):
+        """Raises HTTPErrors based on error statuses sent from validator.
+        Checks for common statuses and runs route specific error traps.
+        """
+        if content.status == proto.OK:
+            return
+
+        try:
+            if content.status == proto.INTERNAL_ERROR:
                 raise errors.UnknownValidatorError()
         except AttributeError:
             # Not every protobuf has every status enum, so pass AttributeErrors
             pass
 
         try:
-            if parsed.status == proto.NOT_READY:
+            if content.status == proto.NOT_READY:
                 raise errors.ValidatorNotReady()
         except AttributeError:
             pass
 
         try:
-            if parsed.status == proto.NO_ROOT:
+            if content.status == proto.NO_ROOT:
                 raise errors.HeadNotFound()
         except AttributeError:
             pass
 
         try:
-            if parsed.status == proto.INVALID_PAGING:
+            if content.status == proto.INVALID_PAGING:
                 raise errors.PagingInvalid()
         except AttributeError:
             pass
 
         # Check custom error traps from the particular route message
-        if traps is not None:
-            for trap in traps:
-                trap.check(parsed.status)
-
-        return cls.message_to_dict(parsed)
+        if error_traps is not None:
+            for trap in error_traps:
+                trap.check(content.status)
 
     @staticmethod
     def _wrap_response(data=None, metadata=None, status=200):
@@ -625,9 +651,14 @@ class RouteHandler(object):
             header_bytes = base64.b64decode(resource['header'])
             header.ParseFromString(header_bytes)
         except (KeyError, TypeError, ValueError, DecodeError):
+            header = resource.get('header', None)
+            LOGGER.error(
+                'The validator sent a resource with %s %s',
+                'a missing header' if header is None else 'an invalid header:',
+                header or '')
             raise errors.ResourceHeaderInvalid()
 
-        resource['header'] = cls.message_to_dict(header)
+        resource['header'] = cls._message_to_dict(header)
         return resource
 
     @staticmethod
@@ -643,9 +674,11 @@ class RouteHandler(object):
             try:
                 controls['count'] = int(count)
             except ValueError:
+                LOGGER.debug('Request query had an invalid count: %s', count)
                 raise errors.CountInvalid()
 
             if controls['count'] <= 0:
+                LOGGER.debug('Request query had an invalid count: %s', count)
                 raise errors.CountInvalid()
 
         if min_pos is not None:
@@ -709,10 +742,18 @@ class RouteHandler(object):
         return filter_ids and filter_ids.split(',')
 
     @staticmethod
-    def message_to_dict(message):
+    def _message_to_dict(message):
         """Converts a Protobuf object to a python dict with desired settings.
         """
         return MessageToDict(
             message,
             including_default_value_fields=True,
             preserving_proto_field_name=True)
+
+    @staticmethod
+    def _get_type_name(type_enum):
+        return Message.MessageType.Name(type_enum)
+
+    @staticmethod
+    def _get_status_name(proto, status_enum):
+        return proto.Status.Name(status_enum)

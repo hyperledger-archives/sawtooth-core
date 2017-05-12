@@ -96,10 +96,14 @@ Error Codes and Descriptions
      - Validator Disconnected
      - The validator sent a disconnect signal while processing the response, and
        is no longer available. Try your request again later.
+   * - 20
+     - Invalid Validator Response
+     - The validator sent back a response which was not serialized properly
+       and could not be decoded. There may be a problem with the validator.
    * - 21
      - Invalid Resource Header
      - The validator sent back a resource with a header that could not be
-       decoded. There may be or a problem with the validator, or the data may
+       decoded. There may be a problem with the validator, or the data may
        have been corrupted.
    * - 27
      - Unable to Fetch Statuses

@@ -92,6 +92,14 @@ class ValidatorDisconnected(_ApiError):
                'Try your request again later.')
 
 
+class ValidatorResponseInvalid(_ApiError):
+    api_code = 20
+    status_code = 500
+    title = 'Invalid Validator Response'
+    message = ('The response from the validator could not be decoded. It may '
+               'have been corrupted or compromised.')
+
+
 class ResourceHeaderInvalid(_ApiError):
     api_code = 21
     status_code = 500
