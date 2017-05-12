@@ -243,22 +243,33 @@ def do_show(args, config):
 
     if game is not None:
 
-        board_str, game_state, player1, player2, name = \
+        board, game_state, player1, player2, name = \
             game.split(",")
 
-        board = list(board_str.replace("-", " "))
+        game_info = '\n'.join([
+            'GAME: {}'.format(name),
+            'PLAYER 1: {}'.format(player1[:6]),
+            'PLAYER 2: {}'.format(player2[:6]),
+            'STATE: {}'.format(game_state),
+        ])
 
-        print("GAME:     : {}".format(name))
-        print("PLAYER 1  : {}".format(player1[:6]))
-        print("PLAYER 2  : {}".format(player2[:6]))
-        print("STATE     : {}".format(game_state))
-        print("")
-        print("  {} | {} | {}".format(board[0], board[1], board[2]))
-        print(" ---|---|---")
-        print("  {} | {} | {}".format(board[3], board[4], board[5]))
-        print(" ---|---|---")
-        print("  {} | {} | {}".format(board[6], board[7], board[8]))
-        print("")
+        side_length = 1
+        while side_length ** 2 < len(board):
+            side_length += 1
+
+        rows = [
+            board.replace('-', ' ')[i:i + side_length]
+            for i in range(0, len(board), side_length)
+        ]
+
+        divider = ' \n' + '|'.join(['---' for _ in range(side_length)]) + '\n'
+
+        format_board = divider.join([' ' + ' | '.join(row) for row in rows])
+
+        print('\n\n'.join([
+            game_info,
+            format_board,
+        ]) + '\n')
 
     else:
         raise XoException("Game not found: {}".format(name))

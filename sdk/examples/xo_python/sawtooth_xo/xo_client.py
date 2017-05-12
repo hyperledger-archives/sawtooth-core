@@ -30,6 +30,13 @@ from sawtooth_sdk.protobuf.batch_pb2 import Batch
 from sawtooth_xo.xo_exceptions import XoException
 
 
+# namespace
+FAMILY_NAME = 'xo'
+XO_NAMESPACE = hashlib.sha512(FAMILY_NAME.encode('utf-8')).hexdigest()[:6]
+
+def make_xo_address(name):
+    return XO_NAMESPACE + hashlib.sha512(name.encode('utf-8')).hexdigest()[-64:]
+
 def _sha512(data):
     return hashlib.sha512(data).hexdigest()
 
@@ -49,15 +56,13 @@ class XoClient:
         self._public_key = signing.generate_pubkey(self._private_key)
 
     def create(self, name):
-        return self._send_xo_txn(name, "create")
+        return self._send_xo_txn("create", name)
 
     def take(self, name, space):
-        return self._send_xo_txn(name, "take", space)
+        return self._send_xo_txn("take", name, space)
 
     def list(self):
-        xo_prefix = self._get_prefix()
-
-        result = self._send_request("state?address={}".format(xo_prefix))
+        result = self._send_request("state?address={}".format(XO_NAMESPACE))
 
         try:
             encoded_entries = yaml.safe_load(result)["data"]
@@ -70,7 +75,7 @@ class XoClient:
             return None
 
     def show(self, name):
-        address = self._get_address(name)
+        address = make_xo_address(name)
 
         result = self._send_request("state/{}".format(address))
 
@@ -79,14 +84,6 @@ class XoClient:
 
         except BaseException:
             return None
-
-    def _get_prefix(self):
-        return _sha512('xo'.encode('utf-8'))[0:6]
-
-    def _get_address(self, name):
-        xo_prefix = self._get_prefix()
-        game_address = _sha512(name.encode('utf-8'))
-        return xo_prefix + game_address
 
     def _send_request(self, suffix, data=None, content_type=None):
         url = "http://{}/{}".format(self._base_url, suffix)
@@ -110,17 +107,17 @@ class XoClient:
 
         return result.text
 
-    def _send_xo_txn(self, name, action, space=""):
+    def _send_xo_txn(self, action, name, space=""):
 
         # Serialization is just a delimited utf-8 encoded string
-        payload = ",".join([name, action, str(space)]).encode()
+        payload = ",".join([action, name, str(space)]).encode()
 
         # Construct the address
-        address = self._get_address(name)
+        address = make_xo_address(name)
 
         header = TransactionHeader(
             signer_pubkey=self._public_key,
-            family_name="xo",
+            family_name=FAMILY_NAME,
             family_version="1.0",
             inputs=[address],
             outputs=[address],
