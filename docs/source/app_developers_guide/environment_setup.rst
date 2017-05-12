@@ -5,9 +5,6 @@
 Environment Setup
 *****************
 
-Overview
-========
-
 This section walks through the process of setting up Hyperledger Sawtooth for
 the purposes of application development.  After this setup, you will be ready
 to perform application development tasks, such as implementing business logic
