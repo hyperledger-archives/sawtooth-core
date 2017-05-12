@@ -322,8 +322,8 @@ class ParallelScheduler(Scheduler):
         with self._condition:
             if self._final:
                 raise SchedulerError('Invalid attempt to add batch to '
-                                     'finalized scheduler; batch: {}'.format(
-                    batch.header_signature))
+                                     'finalized scheduler; batch: {}'
+                                     .format(batch.header_signature))
 
             self._batches.append(batch)
             self._batches_by_id[batch.header_signature] = batch
@@ -363,9 +363,11 @@ class ParallelScheduler(Scheduler):
                 # predecessor tree, with duplicate information being
                 # automatically discarded by the set_writer() call.
                 for address in header.inputs:
-                    self._predecessor_tree.add_reader(address, txn.header_signature)
+                    self._predecessor_tree.add_reader(
+                        address, txn.header_signature)
                 for address in header.outputs:
-                    self._predecessor_tree.set_writer(address, txn.header_signature)
+                    self._predecessor_tree.set_writer(
+                        address, txn.header_signature)
 
             self._condition.notify_all()
 
@@ -384,7 +386,8 @@ class ParallelScheduler(Scheduler):
             for txn in batch.transactions:
                 txn_result = self._txn_results[txn.header_signature]
                 if not txn_result.is_valid:
-                    return BatchExecutionResult(is_valid=False, state_hash=None)
+                    return BatchExecutionResult(
+                        is_valid=False, state_hash=None)
                 if txn_result.context_id is not None:
                     contexts.append(txn_result.context_id)
                 if txn_result.state_hash is not None:
@@ -396,8 +399,9 @@ class ParallelScheduler(Scheduler):
                 if index == 0:
                     last_state_hash = self._first_state_hash
                 else:
-                    prev_batch = self._batches(index - 1)
-                    last_state_hash = self._batch_results[prev_batch].state_hash
+                    prev_batch = self._batches[index - 1]
+                    last_state_hash = \
+                        self._batch_results[prev_batch].state_hash
 
             state_hash = self._squash(last_state_hash, contexts, persist=True)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
@@ -415,16 +419,17 @@ class ParallelScheduler(Scheduler):
 
             self._txn_results[txn_signature] = txn_result
 
-            # TODO - mark all transactions which depend upon this one as
+            # mark all transactions which depend upon this one as
             # invalid as well
-            # TODO - mark all transactions in batches impacted by this failure
+
+            # mark all transactions in batches impacted by this failure
             # as failed -- "failed by association"; this presumably trickles
             # through and invalidates a lot
 
             self._condition.notify_all()
 
     def _unscheduled_transactions(self):
-        # TODO - shouldn't actually return txn if dependencies were
+        # shouldn't actually return txn if dependencies were
         # marked invalid.
         txns = []
         for batch in self._batches:
@@ -442,8 +447,6 @@ class ParallelScheduler(Scheduler):
 
     def _get_initial_state_for_transaction(self, txn):
         # Collect contexts that this transaction depends upon
-
-        # FIXME
         return self._last_state_hash
 
     def next_transaction(self):
