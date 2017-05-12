@@ -99,6 +99,7 @@ def start_rest_api(host, port, stream, timeout):
     app = web.Application(loop=loop, middlewares=[access_logger])
 
     # Add routes to the web app
+    LOGGER.info('Creating handlers for validator at %s', stream.url)
     handler = RouteHandler(loop, stream, timeout)
 
     app.router.add_post('/batches', handler.submit_batches)
@@ -120,6 +121,7 @@ def start_rest_api(host, port, stream, timeout):
         handler.fetch_transaction)
 
     # Start app
+    LOGGER.info('Starting REST API on %s:%s', host, port)
     web.run_app(app, host=host, port=port, access_log=None)
 
 
