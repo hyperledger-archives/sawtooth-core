@@ -64,6 +64,7 @@ async def access_logger(app, handler):
         client_ip, _ = request.transport.get_extra_info(
             'peername', ('UNKNOWN', None))
 
+        # log request
         LOGGER.info(
             'Request  %s: "%s %s" from %s',
             request_name,
@@ -71,15 +72,22 @@ async def access_logger(app, handler):
             request.rel_url,
             client_ip)
 
-        response = await handler(request)
-        # pylint: disable=protected-access
-        LOGGER.info(
-            'Response %s: "%s" status, %sB size, in %.3fs',
-            request_name,
-            response._status,
-            response._headers.get('Content-Length', 'UNKNOWN'),
-            time.time() - start_time)
-        return response
+        def log_response(response):
+            # pylint: disable=protected-access
+            LOGGER.info(
+                'Response %s: %s status, %sB size, in %.3fs',
+                request_name,
+                response._status,
+                response._headers.get('Content-Length', 'UNKNOWN'),
+                time.time() - start_time)
+
+        try:
+            response = await handler(request)
+            log_response(response)
+            return response
+        except web.HTTPError as e:
+            log_response(e)
+            raise e
 
     return logging_handler
 
