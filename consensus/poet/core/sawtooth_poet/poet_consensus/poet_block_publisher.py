@@ -56,7 +56,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
     other consensus algorithms
     """
 
-    _poet_public_key = None
     _previous_block_id = None
 
     _validator_registry_namespace = \
@@ -191,7 +190,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         self._batch_publisher.send([transaction])
 
-        # Store the key state so that we can look it up later if need be
+        # Store the key state so that we can look it up later if need be and
+        # set the new key as our active key
         LOGGER.info(
             'Save key state PPK=%s...%s => SSD=%s...%s',
             signup_info.poet_public_key[:8],
@@ -202,10 +202,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             PoetKeyState(
                 sealed_signup_data=signup_info.sealed_signup_data,
                 has_been_refreshed=False)
-
-        # Cache the PoET public key in a class to indicate that this is the
-        # current public key for the PoET enclave
-        PoetBlockPublisher._poet_public_key = signup_info.poet_public_key
+        self._poet_key_state_store.active_key = signup_info.poet_public_key
 
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
@@ -253,12 +250,13 @@ class PoetBlockPublisher(BlockPublisherInterface):
         except KeyError:
             pass
 
-        # If we don't have a validator registry entry, then check our cached
-        # PoET public key.  If we don't have one, then we need to sign up.
+        # If we don't have a validator registry entry, then check the active
+        # key.  If we don't have one, then we need to sign up.
         # If we do have one, then our validator registry entry has not
         # percolated through the system, so nothing to to but wait.
+        active_poet_public_key = self._poet_key_state_store.active_key
         if validator_info is None:
-            if PoetBlockPublisher._poet_public_key is None:
+            if active_poet_public_key is None:
                 LOGGER.debug(
                     'No public key found, so going to register new signup '
                     'information')
@@ -273,26 +271,28 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # other validators think we are using.  If not, then we need to switch
         # the PoET enclave to using the correct keys.
         elif validator_info.signup_info.poet_public_key != \
-                PoetBlockPublisher._poet_public_key:
+                active_poet_public_key:
             # Retrieve the key state corresponding to the PoET public key and
-            # use it to re-establish the key used by the enclave.
+            # use it to re-establish the key used by the enclave.  Also update
+            # the active PoET public key.
             poet_key_state = \
                 self._poet_key_state_store[
                     validator_info.signup_info.poet_public_key]
 
-            PoetBlockPublisher._poet_public_key = \
+            active_poet_public_key = \
                 SignupInfo.unseal_signup_data(
                     poet_enclave_module=poet_enclave_module,
                     validator_address=block_header.signer_pubkey,
                     sealed_signup_data=poet_key_state.sealed_signup_data)
+            self._poet_key_state_store.active_key = active_poet_public_key
 
-            assert PoetBlockPublisher._poet_public_key == \
+            assert active_poet_public_key == \
                 validator_info.signup_info.poet_public_key
 
             LOGGER.debug(
                 'Switched to public key: %s...%s',
-                PoetBlockPublisher._poet_public_key[:8],
-                PoetBlockPublisher._poet_public_key[-8:])
+                active_poet_public_key[:8],
+                active_poet_public_key[-8:])
             LOGGER.debug(
                 'Unseal signup data: %s...%s',
                 poet_key_state.sealed_signup_data[:8],
@@ -338,18 +338,15 @@ class PoetBlockPublisher(BlockPublisherInterface):
             # hit the key block claim limit, we won't even bother initializing
             # a block on this chain as it will be rejected by other
             # validators.
-            poet_key_state = \
-                self._poet_key_state_store[
-                    PoetBlockPublisher._poet_public_key]
+            poet_key_state = self._poet_key_state_store[active_poet_public_key]
             if not poet_key_state.has_been_refreshed:
                 LOGGER.info(
                     'Reached block claim limit for key: %s...%s',
-                    PoetBlockPublisher._poet_public_key[:8],
-                    PoetBlockPublisher._poet_public_key[-8:])
+                    active_poet_public_key[:8],
+                    active_poet_public_key[-8:])
 
                 sealed_signup_data = poet_key_state.sealed_signup_data
-                self._poet_key_state_store[
-                    PoetBlockPublisher._poet_public_key] = \
+                self._poet_key_state_store[active_poet_public_key] = \
                     PoetKeyState(
                         sealed_signup_data=sealed_signup_data,
                         has_been_refreshed=True)
