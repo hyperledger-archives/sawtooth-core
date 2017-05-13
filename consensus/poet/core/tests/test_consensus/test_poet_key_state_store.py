@@ -54,6 +54,102 @@ class TestPoetKeyStateStore(unittest.TestCase):
 
     @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
            'LMDBNoLockDatabase')
+    def test_active_key_new_store(self, mock_lmdb):
+        """Verify that a brand new key state store does not have an active key
+        """
+        mock_lmdb.return_value = {}
+
+        store = \
+            poet_key_state_store.PoetKeyStateStore(
+                data_dir=tempfile.gettempdir(),
+                validator_id='0123456789abcdef')
+
+        self.assertIsNone(store.active_key)
+
+    @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
+           'LMDBNoLockDatabase')
+    def test_active_key_not_present(self, mock_lmdb):
+        """Verify that trying to set a non-existent key as active fails
+        """
+        mock_lmdb.return_value = {}
+
+        store = \
+            poet_key_state_store.PoetKeyStateStore(
+                data_dir=tempfile.gettempdir(),
+                validator_id='0123456789abcdef')
+
+        with self.assertRaises(ValueError):
+            store.active_key = 'ppk_1'
+
+    @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
+           'LMDBNoLockDatabase')
+    def test_active_key_present(self, mock_lmdb):
+        """Verify that setting a present key active succeeds
+        """
+        mock_lmdb.return_value = {
+            'ppk_1':
+                poet_key_state_store.PoetKeyState(
+                    sealed_signup_data=base64.b64encode(b'sealed_1'),
+                    has_been_refreshed=False)
+        }
+
+        store = \
+            poet_key_state_store.PoetKeyStateStore(
+                data_dir=tempfile.gettempdir(),
+                validator_id='0123456789abcdef')
+
+        store.active_key = 'ppk_1'
+        self.assertEqual(store.active_key, 'ppk_1')
+
+    @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
+           'LMDBNoLockDatabase')
+    def test_active_key_clear(self, mock_lmdb):
+        """Verify that clearing the active succeeds
+        """
+        mock_lmdb.return_value = {
+            'ppk_1':
+                poet_key_state_store.PoetKeyState(
+                    sealed_signup_data=base64.b64encode(b'sealed_1'),
+                    has_been_refreshed=False)
+        }
+
+        store = \
+            poet_key_state_store.PoetKeyStateStore(
+                data_dir=tempfile.gettempdir(),
+                validator_id='0123456789abcdef')
+
+        store.active_key = 'ppk_1'
+        self.assertEqual(store.active_key, 'ppk_1')
+
+        store.active_key = None
+        self.assertIsNone(store.active_key)
+
+    @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
+           'LMDBNoLockDatabase')
+    def test_active_key_delete(self, mock_lmdb):
+        """Verify that deleting the key state for the active key also clears
+        the active key
+        """
+        mock_lmdb.return_value = {
+            'ppk_1':
+                poet_key_state_store.PoetKeyState(
+                    sealed_signup_data=base64.b64encode(b'sealed_1'),
+                    has_been_refreshed=False)
+        }
+
+        store = \
+            poet_key_state_store.PoetKeyStateStore(
+                data_dir=tempfile.gettempdir(),
+                validator_id='0123456789abcdef')
+
+        store.active_key = 'ppk_1'
+        self.assertEqual(store.active_key, 'ppk_1')
+
+        del store['ppk_1']
+        self.assertIsNone(store.active_key)
+
+    @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
+           'LMDBNoLockDatabase')
     def test_store_nonexistent_key(self, mock_lmdb):
         """Verify that retrieval of a non-existent key raises the appropriate
         exception.

@@ -64,6 +64,23 @@ class PoetKeyStateStore(MutableMapping):
         """
         return self._store_db.keys()
 
+    @property
+    def active_key(self):
+        return self._store_db.get('active_key')
+
+    @active_key.setter
+    def active_key(self, value):
+        # If the value is not None, then we are not going to allow an active
+        # key that is not in the key state store.  Setting to None is allowed
+        # as that is basically clearing out the active key.
+        if value is not None and value not in self._store_db:
+            raise \
+                ValueError(
+                    'Cannot make non-existent key [{}...{}] active'.format(
+                        value[:8],
+                        value[-8:]))
+        self._store_db['active_key'] = value
+
     def __init__(self, data_dir, validator_id):
         """Initialize the store
 
@@ -170,6 +187,10 @@ class PoetKeyStateStore(MutableMapping):
         """
         try:
             del self._store_db[poet_public_key]
+
+            # If the key is the active key, then also clear the active key
+            if self.active_key == poet_public_key:
+                self.active_key = None
         except KeyError:
             pass
 
