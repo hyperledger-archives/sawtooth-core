@@ -60,11 +60,12 @@ Transaction Family
 ------------------
 
 In Sawtooth Lake, the set of possible transactions are defined by an extensible
-system called transaction families.  Defining and implementing a new
-transaction family adds to the taxonomy of available transactions which can be
-applied. For example, in the :ref:`transaction-family-tutorial`, we
-define a transaction family called "xo" which defines a set of transactions for
-playing tic-tac-toe.
+system called transaction families.  Defining and implementing a new transaction
+family adds to the taxonomy of available transactions which can be applied. For
+example, in the language-specific tutorials that show you how to write your own
+transaction family (see the :doc:`/app_developers_guide`), we define a
+transaction family called "xo" which defines a set of transactions for playing
+tic-tac-toe.
 
 In addition to the name of the transaction family (family_name), each
 transaction specifies a family version string (family_version).  The version
