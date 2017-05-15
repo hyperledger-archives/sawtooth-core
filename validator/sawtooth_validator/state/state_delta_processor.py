@@ -83,6 +83,13 @@ class StateDeltaProcessor(object):
         with self._subscriber_cond:
             return list(self._subscribers.keys())
 
+    def is_valid_subscription(self, last_known_block_ids):
+        try:
+            self._match_known_block_id(last_known_block_ids)
+            return True
+        except NoKnownBlockError:
+            return False
+
     def add_subscriber(
         self,
         connection_id,
@@ -102,17 +109,6 @@ class StateDeltaProcessor(object):
             NoKnownBlockError: if the list of last_known_block_ids does not
                 contain a block id contained in the block store.
         """
-
-        known_block_id = None
-        if last_known_block_ids:
-            for block_id in last_known_block_ids:
-                if block_id in self._block_store:
-                    known_block_id = block_id
-                    break
-
-            if not known_block_id:
-                raise NoKnownBlockError()
-
         with self._subscriber_cond:
             self._subscribers[connection_id] = _DeltaSubscriber(
                 connection_id, address_prefix_filters)
@@ -120,6 +116,7 @@ class StateDeltaProcessor(object):
         LOGGER.debug('Added Subscriber %s for %s',
                      connection_id, address_prefix_filters)
 
+        known_block_id = self._match_known_block_id(last_known_block_ids)
         if known_block_id != self._block_store.chain_head.identifier:
             LOGGER.debug('Catching up Subscriber %s from %s to %s',
                          connection_id,
@@ -136,13 +133,10 @@ class StateDeltaProcessor(object):
                 LOGGER.debug(
                     'Possible fork while loading blocks for state deltas')
 
-                # This error will cause the client to begin (or continue) the
-                # fork resolution strategy of zeroing in on a known block_id.
-                # When that strategy, on the validator's part, is implemented,
-                # this may need to send a different error, such that it retries
-                # with the set of known_block_ids, which may have contiuned a
-                # valid predecessor.
-                raise NoKnownBlockError()
+                # Given that the subscriber has been added to the collection
+                # it will receive the events based on the current chain, which
+                # will be resolved on client.
+                return
 
             subscriber = self._subscribers[connection_id]
             for block in reversed(catch_up_blocks):
@@ -150,6 +144,17 @@ class StateDeltaProcessor(object):
                     block,
                     self._get_delta(block.header.state_root_hash),
                     subscriber)
+
+    def _match_known_block_id(self, last_known_block_ids):
+        if last_known_block_ids:
+            for block_id in last_known_block_ids:
+                if block_id in self._block_store:
+                    return block_id
+
+            # No matching block id
+            raise NoKnownBlockError()
+
+        return None
 
     def remove_subscriber(self, connection_id):
         """remove a subscriber with a given connection_id
@@ -217,7 +222,7 @@ class StateDeltaProcessor(object):
                            connection_id=connection_id)
 
 
-class StateDeltaSubscriberHandler(Handler):
+class StateDeltaSubscriberValidationHandler(Handler):
     """Handles receiving messages for registering state delta subscribers.
     """
 
@@ -231,19 +236,41 @@ class StateDeltaSubscriberHandler(Handler):
         request.ParseFromString(message_content)
 
         ack = RegisterStateDeltaSubscriberResponse()
+        if self._delta_processor.is_valid_subscription(
+                request.last_known_block_ids):
+            ack.status = ack.OK
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_PASS,
+                message_out=ack,
+                message_type=self._msg_type)
+        else:
+            ack.status = ack.UNKNOWN_BLOCK
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=self._msg_type)
+
+
+class StateDeltaAddSubscriberHandler(Handler):
+
+    def __init__(self, delta_processor):
+        self._delta_processor = delta_processor
+
+    def handle(self, connection_id, message_content):
+        request = RegisterStateDeltaSubscriberRequest()
+        request.ParseFromString(message_content)
+
         try:
             self._delta_processor.add_subscriber(
                 connection_id,
                 request.last_known_block_ids,
                 request.address_prefixes)
-            ack.status = ack.OK
         except NoKnownBlockError:
-            ack.status = ack.UNKNOWN_BLOCK
+            LOGGER.debug('Subscriber %s added, but catch-up failed',
+                         connection_id)
+            return HandlerResult(HandlerStatus.DROP)
 
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=self._msg_type)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class StateDeltaUnsubscriberHandler(Handler):
