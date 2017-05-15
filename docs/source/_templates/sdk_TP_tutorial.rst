@@ -384,8 +384,8 @@ taken by X, a space taken by O, or a free space. Updating the board
 configuration and the current state of the game proceeds straightforwardly.
 
 
-The ``XoTransactionHandler`` Class
-==================================
+The {% if language == 'JavaScript' %}``XOHandler``{% else %}``XoTransactionHandler``{% endif %} Class
+===================================
 
 {% if language == 'JavaScript' %}
 
