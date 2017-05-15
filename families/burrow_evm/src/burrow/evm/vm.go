@@ -854,11 +854,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				ret, err = nativeContract(vm.appState, callee, args, &gasLimit)
 
 				// for now we fire the Call event. maybe later we'll fire more particulars
-				var exception string
+				//var exception string
 				if err != nil {
-					exception = err.Error()
+					panic(err)
+					//exception = err.Error()
 				}
-				
+
 				// NOTE: [ben] revise event structure
 				//
 				// // NOTE: these fire call events and not particular events for eg name reg or permissions
