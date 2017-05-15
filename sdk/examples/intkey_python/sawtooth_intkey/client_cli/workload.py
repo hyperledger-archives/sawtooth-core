@@ -151,7 +151,7 @@ class IntKeyWorkload(Workload):
 
         batch_id = None
         if url is not None:
-            name = datetime.now().isoformat()
+            name = datetime.now().isoformat()[-20:]
             txn = create_intkey_transaction(
                 verb="set",
                 name=name,
