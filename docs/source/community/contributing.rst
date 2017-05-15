@@ -7,15 +7,15 @@ Ways to Contribute
 ==================
 
 Contributions by the community help grow and optimize the capabilities of
-Sawtooth Lake, and are the most effective method of having a positive impact on
-the project.
+Hyperledger Sawtooth, and are the most effective method of having a positive 
+impact on the project.
 
 **Different ways you can contribute**
 
-* Bugs or Issues (issues or defects found when working with Sawtooth Lake)
+* Bugs or Issues (issues or defects found when working with Sawtooth)
 * Core Features & Enhancements (expanded capabilities or optimization)
-* Arcade Features (games that demonstrate Sawtooth Lake such as Go 
-  and Checkers)
+* Arcade Features (games that demonstrate Sawtooth such as Tic-Tac-Toe 
+  and Battleship)
 * New or Enhanced Documentation (improve existing documentation or create new)
 * Testing Events and Results (functional, performance or scalability)
 
@@ -29,7 +29,8 @@ the particular JIRA issue.
 Commit Process
 ==============
 
-Distributed Ledger is Apache 2.0 licensed and accepts contributions via `GitHub <https://github.com/hyperledger/>`_
+Hyperledger Sawtooth is Apache 2.0 licensed and accepts contributions
+via `GitHub <https://github.com/hyperledger/>`_
 pull requests. When contributing code please do the following:
 
 * Fork the repository and make your changes in a feature branch.
@@ -66,3 +67,14 @@ Update Branch button provided by GitHub on the pull request page.
 Commits must include Signed-off-by in the commit message (git commit -s).
 This indicates that you agree the commit satisifies the 
 `Developer Certificate of Origin (DCO) <http://developercertificate.org/>`_.
+
+**Important Github Requirements**
+
+PLEASE NOTE: Pull requests can only be merged after they have passed all
+status checks.
+
+These checks are:
+
+* The build MUST pass on Jenkins
+* The PR must be approved by at least two reviewers and there cannot be 
+  outstanding changes requested
