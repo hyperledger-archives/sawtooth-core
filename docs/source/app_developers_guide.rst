@@ -10,7 +10,7 @@ and associated client programs. Transaction families codify business rules
 used to modify state, while client programs typically submit transactions and
 view state.
 
-SDKs are provided in several languages: Go, Java, Javascript, and Python.
+SDKs are provided in several languages: C++, Go, Java, Javascript, and Python.
 
 .. toctree::
    :maxdepth: 2
