@@ -194,6 +194,9 @@ class _CandidateBlock(object):
         :param pending_batches: list to receive any batches that were
         submitted to add to the block but were not validated before this
         call.
+        :return: The generated Block, or None if Block failed to finalize.
+        In both cases the pending_batches will contain the list of batches
+        that need to be added to the next Block that is built.
         """
         self._scheduler.finalize()
         self._scheduler.complete(block=True)
@@ -204,7 +207,22 @@ class _CandidateBlock(object):
         committed_txn_cache = TransactionCache(self._block_store)
 
         builder = self._block_builder
+        bad_batches = []  # the list of batches that failed processing
         state_hash = None
+
+        # Walk the pending batch list:
+        # - find the state hash for the block, the block state_hash is
+        # is randomly placed on one of the transactions, so must interogate
+        # every batch to find it. If it is on a batch that failed processing
+        # then this block will be abandoned.
+        # - build three lists of batches:
+        # 1) a lists of all valid transactions that will be included in the
+        #   block, these are added to the BlockBuilder to include in the Block
+        # 2) all batches that were not executed, these are to be returned
+        #   in the pending_batches list
+        # 3) all batches that failed processing. These will be discarded.
+        #   This list is needed in some case when the block is abandoned to
+        #   make sure they do not remain in the pending_batches list.
         for batch in self._pending_batches:
             result = self._scheduler.get_batch_execution_result(
                 batch.header_signature)
@@ -227,6 +245,16 @@ class _CandidateBlock(object):
                     LOGGER.debug("Abandoning block %s:" +
                                  "root state hash has invalid txn applied",
                                  builder)
+                    # Update the pending batch list to be all the
+                    # batches that passed validation to this point and
+                    # none of the ones that failed. It is possible that
+                    # this batch caused a future batch to fail so
+                    # we leave all of the batches that failed after this
+                    # one in the list.
+                    bad_batches.append(batch)
+                    pending_batches.clear()
+                    pending_batches.extend([x for x in self._pending_batches
+                                            if x not in bad_batches])
                     return None
                 else:
                     builder.add_batch(batch)
@@ -234,17 +262,22 @@ class _CandidateBlock(object):
                 if result.state_hash is not None:
                     state_hash = result.state_hash
             else:
+                bad_batches.append(batch)
                 LOGGER.debug("Batch %s invalid, not added to block.",
                              batch.header_signature)
 
-        if state_hash is None:
-            LOGGER.debug("Abandoning block %s no batches added", builder)
+        if state_hash is None or not builder.batches:
+            LOGGER.debug("Abandoning block %s: no batches added", builder)
             return None
 
         if not self._consensus.finalize_block(builder.block_header):
             LOGGER.debug("Abandoning block %s, consensus failed to finalize "
                          "it", builder)
-            return False
+            # return all valid batches to the pending_batches list
+            pending_batches.clear()
+            pending_batches.extend([x for x in self._pending_batches
+                                    if x not in bad_batches])
+            return None
 
         builder.set_state_hash(state_hash)
         self._sign_block(builder, identity_signing_key)
@@ -463,20 +496,17 @@ class BlockPublisher(object):
                         self._identity_signing_key,
                         pending_batches)
                     self._candidate_block = None
+                    # Update the _pending_batches to reflect what we learned.
+                    last_batch_index = self._pending_batches.index(last_batch)
+                    unsent_batches =\
+                        self._pending_batches[last_batch_index + 1:]
+                    self._pending_batches =\
+                        pending_batches + unsent_batches
+
                     if block:
                         blkw = BlockWrapper(block)
                         LOGGER.info("Claimed Block: %s", blkw)
                         self._block_sender.send(blkw.block)
-
-                        # check if we have batches that were not
-                        # sent to the CandidateBlock.
-                        last_batch_index =\
-                            self._pending_batches.index(last_batch)
-                        additional_batches =\
-                            self._pending_batches[last_batch_index + 1:]
-
-                        self._pending_batches =\
-                            pending_batches + additional_batches
 
                         # We built our candidate, disable processing until
                         # the chain head is updated. Only set this if
