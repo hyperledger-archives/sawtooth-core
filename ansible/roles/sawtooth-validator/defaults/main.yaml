@@ -25,4 +25,4 @@ sawtooth_validator_transaction_families:
     - "ledger.transaction.integer_key"
 sawtooth_validator_ledger_type: "poet1"
 sawtooth_validator_administration_node: "NOT_SET"
-sawtooth_validator_key_file: "{key_dir}/{node}.wif"
+sawtooth_validator_key_file: "{key_dir}/{node}.priv"

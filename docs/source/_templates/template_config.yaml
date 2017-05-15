@@ -1,0 +1,31 @@
+# This configuration file is used by the `make_templated_docs` script to
+# determine which files to generate.
+#
+# Add target files to generate to the `targets` property, with a `template`
+# property specifying the template to use, and any `args` to pass to the
+# template.
+# -----------------------------------------------------------------------------
+
+targets:
+
+  txn_submit_tutorial_python:
+    template: txn_submit_tutorial.rst
+    args:
+      language: Python 3
+
+  txn_submit_tutorial_js:
+    template: txn_submit_tutorial.rst
+    args:
+      language: JavaScript
+
+  sdk_submit_tutorial_js:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: JavaScript
+
+
+  sdk_TP_tutorial_python:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Python
+

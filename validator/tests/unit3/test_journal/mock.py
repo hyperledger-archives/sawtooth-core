@@ -242,3 +242,15 @@ def CreateSetting(key, value):
     setting = Setting()
     setting.entries.add(key=key, value=repr(value))
     return addr, setting.SerializeToString()
+
+
+class MockStateDeltaProcessor(object):
+    """Mock for the StateDeltaProcessor, which provides publishing of the state
+    changes on block publishing.
+    """
+
+    def __init__(self):
+        self.block = None
+
+    def publish_deltas(self, block):
+        self.block = block

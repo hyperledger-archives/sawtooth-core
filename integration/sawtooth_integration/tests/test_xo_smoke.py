@@ -19,12 +19,18 @@ import traceback
 import time
 import subprocess
 
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
 LOGGER.setLevel(logging.DEBUG)
 
 
 class TestXoSmoke(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        wait_for_rest_apis(['rest_api:8080'])
 
     def test_xo_smoke(self):
 

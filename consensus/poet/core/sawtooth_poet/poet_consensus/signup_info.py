@@ -112,11 +112,6 @@ class SignupInfo(object):
                 validator_address,
                 sealed_signup_data)
 
-    def _enclave_signup_info(self, poet_enclave_module):
-        return \
-            poet_enclave_module.deserialize_signup_info(
-                self._serialized_signup_info)
-
     def __init__(self, enclave_signup_info):
         self.poet_public_key = enclave_signup_info.poet_public_key
         self.proof_data = enclave_signup_info.proof_data
@@ -133,26 +128,6 @@ class SignupInfo(object):
                 self.poet_public_key,
                 self.proof_data,
                 self.anti_sybil_id)
-
-    def check_valid(self,
-                    poet_enclave_module,
-                    originator_public_key_hash):
-        """
-        Checks the validity of the signup information.
-
-        Args:
-            poet_enclave_module (module): The module that implements the
-                underlying PoET enclave.
-            originator_public_key_hash (str): A string representing SHA256
-                hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
-                originator's public key
-
-        Returns:
-            SignupInfo object
-        """
-        poet_enclave_module.verify_signup_info(
-            self._enclave_signup_info(poet_enclave_module),
-            originator_public_key_hash)
 
     def serialize(self):
         # Simply return the serialized version of the enclave signup info

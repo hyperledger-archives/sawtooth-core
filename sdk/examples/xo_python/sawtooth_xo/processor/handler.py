@@ -56,7 +56,7 @@ class XoTransactionHandler:
         try:
             # The payload is csv utf-8 encoded string
             name, action, space = transaction.payload.decode().split(",")
-        except:
+        except ValueError:
             raise InvalidTransaction("Invalid payload serialization")
 
         if name == "":
@@ -68,7 +68,7 @@ class XoTransactionHandler:
         elif action == "take":
             try:
                 space = int(space)
-            except:
+            except ValueError:
                 raise InvalidTransaction(
                     "Space could not be converted as an integer."
                 )
@@ -95,7 +95,7 @@ class XoTransactionHandler:
             try:
                 board, state, player1, player2, stored_name = \
                     state_entries[0].data.decode().split(",")
-            except:
+            except ValueError:
                 raise InternalError("Failed to deserialize game data.")
 
             # NOTE: Since the game data is stored in a Merkle tree, there is a

@@ -3,7 +3,7 @@
 - name: Create keys if none exist
   command: sawtooth keygen validator --key-dir /etc/sawtooth-validator/keys
   args:
-    creates: /etc/sawtooth-validator/keys/*.wif
+    creates: /etc/sawtooth-validator/keys/*.priv
 
 - name: Create Genesis block
   shell: sawtooth admin poet1-genesis

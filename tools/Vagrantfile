@@ -8,18 +8,18 @@ require 'yaml'
 crlf_count=0
 
 Dir.glob('*.sh') do |item|
- if open(item).grep(/\r/).length > 0 
+ if open(item).grep(/\r/).length > 0
   crlf_count+=1
- end 
+ end
 end
 
 Dir.glob('bootstrap.d/*.sh') do |item|
- if open(item).grep(/\r/).length > 0 
+ if open(item).grep(/\r/).length > 0
   crlf_count+=1
- end 
+ end
 end
 
-if crlf_count > 0 
+if crlf_count > 0
   puts "One or more bash scripts contain CRLF line endings. Please check out"
   puts "Sawtooth Lake again with the git setting 'core.autocrlf' set to false"
   puts "in your git configuration."
@@ -69,9 +69,9 @@ end
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   conf = load_conf()
-  conf.each_pair {|key,value| puts "#{key} = #{value}"}
-
   if ARGV.include? "up"
+    conf.each_pair {|key,value| puts "#{key} = #{value}"}
+
     if Vagrant.has_plugin?("vagrant-proxyconf") and (ENV["http_proxy"] or ENV["https_proxy"])
         puts "Configuring proxyconf plugin!"
         if ENV["http_proxy"]

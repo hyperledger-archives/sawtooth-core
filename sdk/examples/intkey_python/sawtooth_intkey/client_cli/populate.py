@@ -29,6 +29,8 @@ import sawtooth_signing as signing
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 
+from sawtooth_intkey.processor.handler import make_intkey_address
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -66,9 +68,7 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
-    intkey_prefix = hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
-
-    addr = intkey_prefix + hashlib.sha512(name.encode('utf-8')).hexdigest()
+    addr = make_intkey_address(name)
 
     header = transaction_pb2.TransactionHeader(
         signer_pubkey=public_key,

@@ -20,6 +20,7 @@ from threading import Thread
 from threading import Condition
 from functools import partial
 
+from sawtooth_validator.protobuf.network_pb2 import DisconnectMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
 from sawtooth_validator.protobuf.network_pb2 import \
@@ -27,6 +28,7 @@ from sawtooth_validator.protobuf.network_pb2 import \
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockRequest
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
+from sawtooth_validator.protobuf.network_pb2 import PeerUnregisterRequest
 from sawtooth_validator.protobuf.network_pb2 import GetPeersRequest
 from sawtooth_validator.protobuf.network_pb2 import GetPeersResponse
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
@@ -145,6 +147,7 @@ class Gossip(object):
         with self._condition:
             if len(self._peers) < self._maximum_peer_connectivity:
                 self._peers[connection_id] = endpoint
+                self._topology.set_connection_status(connection_id, "peer")
                 LOGGER.debug("Added connection_id %s with endpoint %s, "
                              "connected identities are now %s",
                              connection_id, endpoint, self._peers)
@@ -168,6 +171,7 @@ class Gossip(object):
                 LOGGER.debug("Removed connection_id %s, "
                              "connected identities are now %s",
                              connection_id, self._peers)
+                self._topology.set_connection_status(connection_id, "temp")
             else:
                 LOGGER.debug("Attempt to unregister connection_id %s failed: "
                              "connection_id was not registered")
@@ -270,6 +274,11 @@ class Gossip(object):
         self._topology.start()
 
     def stop(self):
+        for peer in self._peers:
+            request = PeerUnregisterRequest()
+            self._network.send(validator_pb2.Message.GOSSIP_UNREGISTER,
+                               request.SerializeToString(),
+                               peer)
         if self._topology:
             self._topology.stop()
 
@@ -318,6 +327,7 @@ class Topology(Thread):
         self._candidate_peer_endpoints = []
         # Seconds to wait for messages to arrive
         self._response_duration = 2
+        self._connection_statuses = {}
 
     def start(self):
         # First, attempt to connect to explicit peers
@@ -342,6 +352,8 @@ class Topology(Thread):
 
                 self._reset_candidate_peer_endpoints()
                 self._refresh_peer_list(peers)
+                # Cleans out any old connections that have disconnected
+                self._refresh_connection_list()
 
                 peers = self._gossip.get_peers()
 
@@ -375,6 +387,20 @@ class Topology(Thread):
 
     def stop(self):
         self._stopped = True
+        for connection_id in self._connection_statuses:
+            try:
+                if self._connection_statuses[connection_id] == "closed":
+                    continue
+
+                msg = DisconnectMessage()
+                self._network.send(
+                    validator_pb2.Message.NETWORK_DISCONNECT,
+                    msg.SerializeToString(),
+                    connection_id)
+                self._connection_statuses[connection_id] = "closed"
+            except ValueError:
+                # Connection has already been disconnected.
+                pass
 
     def add_candidate_peer_endpoints(self, peer_endpoints):
         """Adds candidate endpoints to the list of endpoints to
@@ -389,6 +415,9 @@ class Topology(Thread):
                 if endpoint not in self._candidate_peer_endpoints:
                     self._candidate_peer_endpoints.append(endpoint)
 
+    def set_connection_status(self, connection_id, status):
+        self._connection_statuses[connection_id] = status
+
     def _refresh_peer_list(self, peers):
         for conn_id in peers:
             try:
@@ -400,6 +429,18 @@ class Topology(Thread):
                              peers[conn_id])
 
                 self._gossip.unregister_peer(conn_id)
+                if conn_id in self._connection_statuses:
+                    del self.connections[conn_id]
+
+    def _refresh_connection_list(self):
+        with self._condition:
+            closed_connections = []
+            for connection_id in self._connection_statuses:
+                if not self._network.has_connection(connection_id):
+                    closed_connections.append(connection_id)
+
+            for connection_id in closed_connections:
+                del self._connection_statuses[connection_id]
 
     def _get_peers_of_peers(self, peers):
         get_peers_request = GetPeersRequest()
@@ -475,23 +516,42 @@ class Topology(Thread):
             if ack.status == ack.ERROR:
                 LOGGER.debug("Peering request to %s was NOT successful",
                              connection_id)
+                self._remove_temporary_connection(connection_id)
             elif ack.status == ack.OK:
                 LOGGER.debug("Peering request to %s was successful",
                              connection_id)
                 if endpoint:
                     self._gossip.register_peer(connection_id, endpoint)
+                    self._connection_statuses[connection_id] = "peer"
                 else:
                     LOGGER.debug("Cannot register peer with no endpoint for "
                                  "connection_id: %s",
                                  connection_id)
+                    self._remove_temporary_connection(connection_id)
 
                 self._gossip.send_block_request("HEAD", connection_id)
+
+    def _remove_temporary_connection(self, connection_id):
+        status = self._connection_statuses.get(connection_id)
+        if status == "temp":
+            LOGGER.debug("Closing connection to %s", connection_id)
+            msg = DisconnectMessage()
+            self._network.send(validator_pb2.Message.NETWORK_DISCONNECT,
+                               msg.SerializeToString(),
+                               connection_id)
+            del self._connection[connection_id]
+            self._network.remove_connection(connection_id)
+        elif status == "peer":
+            LOGGER.debug("Connection is a peer, do not close.")
+        elif status is None:
+            LOGGER.debug("Connection is not found")
 
     def _connect_success_peering_callback(self, connection_id, endpoint=None):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
         register_request = PeerRegisterRequest(
             endpoint=self._public_uri)
+        self._connection_statuses[connection_id] = "temp"
 
         self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
                            register_request.SerializeToString(),
@@ -506,12 +566,14 @@ class Topology(Thread):
     def _connect_success_topology_callback(self, connection_id):
         LOGGER.debug("Connection to %s succeeded for topology request",
                      connection_id)
-
+        self._connection_statuses[connection_id] = "temp"
         get_peers_request = GetPeersRequest()
 
         self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
                            get_peers_request.SerializeToString(),
-                           connection_id)
+                           connection_id,
+                           callback=partial(self._remove_temporary_connection,
+                                            connection_id))
 
     def _connect_failure_topology_callback(self, connection_id):
         LOGGER.debug("Connection to %s failed for topology request",

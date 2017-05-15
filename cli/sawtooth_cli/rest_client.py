@@ -14,10 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import json
-import urllib.request as urllib
-from urllib.parse import urlencode
-from urllib.error import URLError, HTTPError
 from http.client import RemoteDisconnected
+import requests
 # pylint: disable=no-name-in-module,import-error
 # needed for the google.protobuf imports to pass pylint
 from google.protobuf.message import Message as BaseMessage
@@ -33,22 +31,19 @@ class RestClient(object):
         return self._get('/blocks')['data']
 
     def get_block(self, block_id):
-        safe_id = urllib.quote(block_id, safe='')
-        return self._get('/blocks/' + safe_id)['data']
+        return self._get('/blocks/' + block_id)['data']
 
     def list_batches(self):
         return self._get('/batches')['data']
 
     def get_batch(self, batch_id):
-        safe_id = urllib.quote(batch_id, safe='')
-        return self._get('/batches/' + safe_id)['data']
+        return self._get('/batches/' + batch_id)['data']
 
     def list_transactions(self):
         return self._get('/transactions')['data']
 
     def get_transaction(self, transaction_id):
-        safe_id = urllib.quote(transaction_id, safe='')
-        return self._get('/transactions/' + safe_id)['data']
+        return self._get('/transactions/' + transaction_id)['data']
 
     def list_state(self, subtree=None, head=None):
         return self._get('/state', address=subtree, head=head)
@@ -86,7 +81,9 @@ class RestClient(object):
 
     def _get(self, path, **queries):
         code, json_result = self._submit_request(
-            self._base_url + path + self._format_queries(queries))
+            self._base_url + path,
+            params=self._format_queries(queries),
+        )
 
         # concat any additional pages of data
         while code == 200 and 'next' in json_result.get('paging', {}):
@@ -110,24 +107,28 @@ class RestClient(object):
             headers = {'Content-Type': 'application/json'}
         headers['Content-Length'] = '%d' % len(data)
 
-        request = urllib.Request(
-            self._base_url + path + self._format_queries(queries),
-            data,
+        code, json_result = self._submit_request(
+            self._base_url + path,
+            params=self._format_queries(queries),
+            data=data,
             headers=headers,
             method='POST')
 
-        code, json_result = self._submit_request(request)
         if code == 200 or code == 201 or code == 202:
             return json_result
         else:
             raise CliException("({}): {}".format(code, json_result))
 
-    def _submit_request(self, url_or_request):
+    def _submit_request(self, url, params=None, data=None, headers=None,
+                        method="GET"):
         """Submits the given request, and handles the errors appropriately.
 
         Args:
-            url_or_request (str or `urlib.request.Request`): the request to
-                send.
+            url (str): the request to send.
+            params (dict): params to be passed along to get/post
+            data (bytes): the data to include in the request.
+            headers (dict): the headers to include in the request.
+            method (str): the method to use for the request, "POST" or "GET".
 
         Returns:
             tuple of (int, str): The response status code and the json parsed
@@ -137,13 +138,19 @@ class RestClient(object):
             `CliException`: If any issues occur with the URL.
         """
         try:
-            result = urllib.urlopen(url_or_request)
-            return (result.status, json.loads(result.read().decode()))
-        except HTTPError as e:
-            return (e.code, e.msg)
+            if method == 'POST':
+                result = requests.post(
+                    url, params=params, data=data, headers=headers)
+            elif method == 'GET':
+                result = requests.get(
+                    url, params=params, data=data, headers=headers)
+            result.raise_for_status()
+            return (result.status_code, result.json())
+        except requests.exceptions.HTTPError as e:
+            return (e.response.status_code, e.response.reason)
         except RemoteDisconnected as e:
             raise CliException(e)
-        except URLError as e:
+        except requests.exceptions.ConnectionError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
                  'make sure URL is correct').format(self._base_url))
@@ -151,4 +158,4 @@ class RestClient(object):
     @staticmethod
     def _format_queries(queries):
         queries = {k: v for k, v in queries.items() if v is not None}
-        return '?' + urlencode(queries) if queries else ''
+        return queries if queries else ''

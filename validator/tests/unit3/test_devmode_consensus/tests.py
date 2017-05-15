@@ -54,6 +54,7 @@ class TestCheckPublishBlock(unittest.TestCase):
                 state_view_factory=factory,
                 batch_publisher=None,
                 data_dir=None,
+                config_dir=None,
                 validator_id='Validator_001')
 
         block_header = self.create_block_header()
@@ -71,6 +72,7 @@ class TestCheckPublishBlock(unittest.TestCase):
                 state_view_factory=factory,
                 batch_publisher=None,
                 data_dir=None,
+                config_dir=None,
                 validator_id='Validator_001')
         block_header = self.create_block_header()
 
@@ -97,6 +99,7 @@ class TestCheckPublishBlock(unittest.TestCase):
                 state_view_factory=factory,
                 batch_publisher=None,
                 data_dir=None,
+                config_dir=None,
                 validator_id='Validator_001')
         block_header = self.create_block_header("name")
         self.assertTrue(dev_mode.check_publish_block(block_header))
@@ -109,6 +112,7 @@ class TestCheckPublishBlock(unittest.TestCase):
                 state_view_factory=factory,
                 batch_publisher=None,
                 data_dir=None,
+                config_dir=None,
                 validator_id='Validator_001')
         block_header = self.create_block_header("name")
         self.assertTrue(dev_mode.check_publish_block(block_header))

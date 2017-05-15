@@ -25,6 +25,7 @@ import concurrent.futures
 from concurrent.futures import wait
 import urllib.request as urllib
 from urllib.error import URLError, HTTPError
+import requests
 from http.client import RemoteDisconnected
 
 sys.path.insert(0, os.path.join(
@@ -37,24 +38,22 @@ def post_batches(url, batches):
     headers = {'Content-Type': 'application/octet-stream'}
     headers['Content-Length'] = str(len(data))
 
-    request = urllib.Request(
-        url + "/batches",
-        data,
-        headers=headers,
-        method='POST')
     try:
-        result = urllib.urlopen(request)
-        code, json_result = (result.status, json.loads(result.read().decode()))
+        result = requests.post(url + "/batches", data, headers=headers)
+        result.raise_for_status()
+        code, json_result = (result.status_code, result.json())
         if not (code == 200 or code == 201 or code == 202):
             LOGGER.warning("(%s): %s", code, json_result)
         return(code, json_result)
-    except HTTPError as e:
-        LOGGER.warning("(%s): %s", e.code, e.msg)
-        return(e.code, e.msg)
+    except requests.exceptions.HTTPError as e:
+        LOGGER.warning("(%s): %s", e.response.status_code, e.response.reason)
+        return (e.response.status_code, e.response.reason)
     except RemoteDisconnected as e:
         LOGGER.warning(e)
-    except URLError as e:
-        LOGGER.warning(e)
+    except requests.exceptions.ConnectionError as e:
+        LOGGER.warning(
+            'Unable to connect to "{}": make sure URL is correct'.format(url)
+        )
 
 
 def _split_batch_list(batch_list):

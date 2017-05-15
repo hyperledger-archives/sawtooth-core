@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   tp_config:
-    image: hyperledger/sawtooth-tp_config:unstable
+    image: hyperledger/sawtooth-tp_config:latest
     expose:
       - 40000
     depends_on:
@@ -26,7 +26,7 @@ services:
     entrypoint: tp_config -vv tcp://validator:40000
 
   tp_intkey_python:
-    image: hyperledger/sawtooth-tp_intkey_python:unstable
+    image: hyperledger/sawtooth-tp_intkey_python:latest
     expose:
       - 40000
     depends_on:
@@ -34,7 +34,7 @@ services:
     entrypoint: tp_intkey_python -vv tcp://validator:40000
 
   tp_xo_python:
-    image: hyperledger/sawtooth-tp_xo_python:unstable
+    image: hyperledger/sawtooth-tp_xo_python:latest
     expose:
       - 40000
     depends_on:
@@ -42,17 +42,23 @@ services:
     entrypoint: tp_xo_python -vv tcp://validator:40000
 
   validator:
-    image: hyperledger/sawtooth-validator:unstable
+    image: hyperledger/sawtooth-validator:latest
     expose:
       - 40000
+    ports:
+      - "40000:40000"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth admin genesis && \
-        validator -vv\""
+        validator -vv \
+          --public-uri tcp://validator:8800 \
+          --component-endpoint tcp://eth0:40000 \
+          --network-endpoint tcp://eth0:8800 \
+        \""
 
   rest_api:
-    image: hyperledger/sawtooth-rest_api:unstable
+    image: hyperledger/sawtooth-rest_api:latest
     expose:
       - 40000
       - 8080
@@ -60,13 +66,13 @@ services:
       - "8080:8080"
     depends_on:
       - validator
-    entrypoint: rest_api --stream-url tcp://validator:40000
+    entrypoint: rest_api --stream-url tcp://validator:40000 --host rest_api
 
   client:
-    image: hyperledger/sawtooth-all:unstable
+    image: hyperledger/sawtooth-all:latest
     expose:
       - 8080
       - 40000
     depends_on:
-      - validator
+      - rest_api
     entrypoint: tail -f /dev/null

@@ -1,3 +1,20 @@
+/**
+ * Copyright 2017 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
+
 package handler
 
 import (
@@ -5,10 +22,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	cbor "github.com/brianolson/cbor_go"
+	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
 	"strings"
 )
+
+var logger *logging.Logger = logging.Get()
 
 type IntkeyPayload struct {
 	Verb  string
@@ -26,8 +46,14 @@ func NewIntkeyHandler(namespace string) *IntkeyHandler {
 	}
 }
 
+var MIN_VALUE = 0
+var MAX_VALUE = 4294967295
+var MAX_NAME_LENGTH = 20
+
+var FAMILY_NAME = "intkey"
+
 func (self *IntkeyHandler) FamilyName() string {
-	return "intkey"
+	return FAMILY_NAME
 }
 func (self *IntkeyHandler) FamilyVersion() string {
 	return "1.0"
@@ -44,17 +70,16 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	if payloadData == nil {
 		return &processor.InvalidTransactionError{"Must contain payload"}
 	}
-
 	var payload IntkeyPayload
 	err := DecodeCBOR(payloadData, &payload)
 	if err != nil {
-		return &processor.InternalError{
+		return &processor.InvalidTransactionError{
 			fmt.Sprint("Failed to decode payload: ", err),
 		}
 	}
 
 	if err != nil {
-		fmt.Println(payloadData)
+		logger.Error("Bad payload: ", payloadData)
 		return &processor.InternalError{fmt.Sprint("Failed to decode payload: ", err)}
 	}
 
@@ -62,28 +87,41 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	name := payload.Name
 	value := payload.Value
 
-	if value < 0 {
+	if len(name) > MAX_NAME_LENGTH {
 		return &processor.InvalidTransactionError{
-			fmt.Sprint("Value must be >= 0, not: ", value),
+			fmt.Sprintf(
+				"Name must be a string of no more than %v characters",
+				MAX_NAME_LENGTH),
+		}
+	}
+
+	if value < MIN_VALUE {
+		return &processor.InvalidTransactionError{
+			fmt.Sprintf("Value must be >= %v, not: %v", MIN_VALUE, value),
+		}
+	}
+
+	if value > MAX_VALUE {
+		return &processor.InvalidTransactionError{
+			fmt.Sprintf("Value must be <= %v, not: %v", MAX_VALUE, value),
 		}
 	}
 
 	if !(verb == "set" || verb == "inc" || verb == "dec") {
-		return &processor.InvalidTransactionError{fmt.Sprint("Invalid verb:", verb)}
+		return &processor.InvalidTransactionError{fmt.Sprintf("Invalid verb: %v", verb)}
 	}
 
-	address := self.namespace + Hexdigest(name)
+	hashed_name := Hexdigest(name)
+	address := self.namespace + hashed_name[len(hashed_name)-64:]
 
 	results, err := state.Get([]string{address})
 	if err != nil {
 		return &processor.InternalError{fmt.Sprint("Error getting state:", err)}
 	}
-	fmt.Println("Got: ", results)
 
 	var collisionMap map[string]int
 	data, exists := results[address]
 	if exists && len(data) > 0 {
-		fmt.Println("Decoding: ", data)
 		err = DecodeCBOR(data, &collisionMap)
 		if err != nil {
 			return &processor.InternalError{
@@ -107,8 +145,17 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 		case "dec":
 			newValue = storedValue - value
 		}
-		if newValue < 0 {
-			return &processor.InvalidTransactionError{"New Value must be >= 0"}
+
+		if newValue < MIN_VALUE {
+			return &processor.InvalidTransactionError{
+				fmt.Sprintf("New Value must be >= ", MIN_VALUE),
+			}
+		}
+
+		if newValue > MAX_VALUE {
+			return &processor.InvalidTransactionError{
+				fmt.Sprintf("New Value must be <= ", MAX_VALUE),
+			}
 		}
 	}
 
@@ -146,6 +193,12 @@ func EncodeCBOR(value interface{}) ([]byte, error) {
 }
 
 func DecodeCBOR(data []byte, pointer interface{}) error {
+	defer func() error {
+		if recover() != nil {
+			return &processor.InvalidTransactionError{"Failed to decode payload"}
+		}
+		return nil
+	}()
 	err := cbor.Loads(data, pointer)
 	if err != nil {
 		return err

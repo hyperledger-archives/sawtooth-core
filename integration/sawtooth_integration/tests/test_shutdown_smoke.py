@@ -35,6 +35,7 @@ class TestShutdownSmoke(unittest.TestCase):
             os.environ.get("VALIDATOR_IMAGE_NAME"),
             cls._id)
 
+    @unittest.skip("Skipping until STL-120 is complete: has periodic failures")
     def test_resting_shutdown_sigint(self):
         """Tests that SIGINT will cause validators with and without
         genesis to gracefully exit.
@@ -76,6 +77,7 @@ class TestShutdownSmoke(unittest.TestCase):
             self._log_and_clean_up(containers)
             self.fail(str(e))
 
+    @unittest.skip("Skipping until STL-120 is complete: has periodic failures")
     def test_resting_shutdown_sigterm(self):
         """Tests that SIGTERM will cause validators with and without
         genesis to gracefully exit.

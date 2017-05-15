@@ -48,7 +48,6 @@ class ConfigMessageFactory(object):
 
     def _create_tp_process_request(self, setting, payload):
         inputs = [
-            self._key_to_address('sawtooth.config.authorization_type'),
             self._key_to_address('sawtooth.config.vote.proposals'),
             self._key_to_address('sawtooth.config.vote.authorized_keys'),
             self._key_to_address('sawtooth.config.vote.approval_threshold'),

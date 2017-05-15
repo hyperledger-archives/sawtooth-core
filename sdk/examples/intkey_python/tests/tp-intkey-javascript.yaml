@@ -27,14 +27,16 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-dev-test:$ISOLATION_ID
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose: 
       - 40000
-    command: nose2-3 -v -s
-      /project/sawtooth-core/sdk/examples/intkey_python/tests
-      test_tp_intkey
+    command: nose2-3
+        -c /project/sawtooth-core/sdk/examples/intkey_python/nose2.cfg
+        -v
+        -s /project/sawtooth-core/sdk/examples/intkey_python/tests
+        test_tp_intkey
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

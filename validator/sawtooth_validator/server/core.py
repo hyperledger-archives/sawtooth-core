@@ -52,6 +52,12 @@ from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.config_view import ConfigViewFactory
+from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaSubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaUnsubscriberHandler
+from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -76,7 +82,7 @@ LOGGER = logging.getLogger(__name__)
 
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, public_uri,
-                 peering, join_list, peer_list, data_dir,
+                 peering, join_list, peer_list, data_dir, config_dir,
                  identity_signing_key):
         """Constructs a validator instance.
 
@@ -99,7 +105,8 @@ class Validator(object):
                 to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
-            key_dir (str): path to the key directory
+            config_dir (str): path to the config directory
+            identity_signing_key (str): key validator uses for signing
         """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
@@ -108,7 +115,15 @@ class Validator(object):
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'c')
 
-        context_manager = ContextManager(merkle_db)
+        delta_db_filename = os.path.join(data_dir,
+                                         'state-deltas-{}.lmdb'.format(
+                                             network_endpoint[-2:]))
+        LOGGER.debug('state delta store file is %s', delta_db_filename)
+        state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
+
+        state_delta_store = StateDeltaStore(state_delta_db)
+
+        context_manager = ContextManager(merkle_db, state_delta_store)
         self._context_manager = context_manager
 
         state_view_factory = StateViewFactory(merkle_db)
@@ -140,6 +155,10 @@ class Validator(object):
                                        config_view_factory=ConfigViewFactory(
                                            StateViewFactory(merkle_db)))
         self._executor = executor
+
+        state_delta_processor = StateDeltaProcessor(self._service,
+                                                    state_delta_store,
+                                                    block_store)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -193,7 +212,9 @@ class Validator(object):
             squash_handler=context_manager.get_squash_handler(),
             identity_signing_key=identity_signing_key,
             chain_id_manager=chain_id_manager,
+            state_delta_processor=state_delta_processor,
             data_dir=data_dir,
+            config_dir=config_dir,
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
             block_cache_keep_time=300
@@ -207,6 +228,7 @@ class Validator(object):
             state_view_factory=state_view_factory,
             identity_key=identity_signing_key,
             data_dir=data_dir,
+            config_dir=config_dir,
             chain_id_manager=chain_id_manager,
             batch_sender=batch_sender
         )
@@ -444,6 +466,16 @@ class Validator(object):
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
 
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
+            StateDeltaSubscriberHandler(state_delta_processor),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
+            StateDeltaUnsubscriberHandler(state_delta_processor),
+            thread_pool)
+
     def start(self):
         self._dispatcher.start()
         self._service.start()
@@ -470,6 +502,8 @@ class Validator(object):
 
     def stop(self):
         self._gossip.stop()
+        self._dispatcher.stop()
+        self._network_dispatcher.stop()
         self._network.stop()
 
         self._service.stop()
@@ -488,12 +522,6 @@ class Validator(object):
         # This will remove the MainThread, which will exit when we exit with
         # a sys.exit() or exit of main().
         threads.remove(threading.current_thread())
-
-        # Several Thread subclasses have a stop method not defined
-        # in superclass.
-        for t in threads:
-            if hasattr(t, 'stop'):
-                t.stop()
 
         while len(threads) > 0:
             if len(threads) < 4:

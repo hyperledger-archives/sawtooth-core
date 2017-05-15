@@ -49,5 +49,3 @@ apt-get install -y -q \
 $GEM install sass
 
 sudo -i -u $VAGRANT_USER npm set progress=false
-
-npm install -g yarn

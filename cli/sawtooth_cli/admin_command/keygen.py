@@ -65,12 +65,12 @@ def do_keygen(args):
         raise CliException(
             "Key directory does not exist: {}".format(key_dir))
 
-    wif_filename = os.path.join(key_dir, key_name + '.wif')
-    addr_filename = os.path.join(key_dir, key_name + '.addr')
+    priv_filename = os.path.join(key_dir, key_name + '.priv')
+    pub_filename = os.path.join(key_dir, key_name + '.pub')
 
     if not args.force:
         file_exists = False
-        for filename in [wif_filename, addr_filename]:
+        for filename in [priv_filename, pub_filename]:
             if os.path.exists(filename):
                 file_exists = True
                 print('file exists: {}'.format(filename), file=sys.stderr)
@@ -80,27 +80,27 @@ def do_keygen(args):
 
     privkey = signing.generate_privkey()
     pubkey = signing.generate_pubkey(privkey)
-    addr = signing.generate_identifier(pubkey)
 
     try:
-        wif_exists = os.path.exists(wif_filename)
-        with open(wif_filename, 'w') as wif_fd:
+        priv_exists = os.path.exists(priv_filename)
+        with open(priv_filename, 'w') as priv_fd:
             if not args.quiet:
-                if wif_exists:
-                    print('overwriting file: {}'.format(wif_filename))
+                if priv_exists:
+                    print('overwriting file: {}'.format(priv_filename))
                 else:
-                    print('writing file: {}'.format(wif_filename))
-            wif_fd.write(privkey)
-            wif_fd.write('\n')
+                    print('writing file: {}'.format(priv_filename))
+            priv_fd.write(privkey)
+            priv_fd.write('\n')
 
-        addr_exists = os.path.exists(addr_filename)
-        with open(addr_filename, 'w') as addr_fd:
+        pub_exists = os.path.exists(pub_filename)
+        with open(pub_filename, 'w') as pub_fd:
             if not args.quiet:
-                if addr_exists:
-                    print('overwriting file: {}'.format(addr_filename))
+                if pub_exists:
+                    print('overwriting file: {}'.format(pub_filename))
                 else:
-                    print('writing file: {}'.format(addr_filename))
-            addr_fd.write(addr)
-            addr_fd.write('\n')
+                    print('writing file: {}'.format(pub_filename))
+            pub_fd.write(pubkey)
+            pub_fd.write('\n')
+
     except IOError as ioe:
         raise CliException('IOError: {}'.format(str(ioe)))

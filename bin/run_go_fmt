@@ -11,8 +11,23 @@ $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
 "
 
+exitcode=0
 for dir in $dirs
 do
-    echo "Running 'go fmt' in $dir"
-    go fmt $(ls -1 $dir/*.go)
+    if [ -z $1 ]
+    then
+        changed=$(gofmt -l $(ls -1 $dir/*.go))
+        if [ ! -z $changed ]
+        then
+            echo "Incorrect formatting: $dir"
+            exitcode=1
+        fi
+    else
+        gofmt -w -l $(ls -1 $dir/*.go)
+    fi
 done
+if [ $exitcode -ne 0 ]
+then
+    echo "Do 'run_go_fmt fix' to fix"
+fi
+exit $exitcode

@@ -14,16 +14,14 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   REST API installed.
+#   Builds an image with the Hyperledger Sawtooth REST API installed from local
+#   debs.
 #
 # Build:
-#   $ cd sawtooth-core
-#   $ docker build . -f sawtooth-dev-rest_api -t sawtooth-dev-rest_api
+#   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ cd sawtooth-core
-#   $ docker run -t sawtooth-dev-rest_api
+#   $ docker run sawtooth-rest_api
 
 FROM ubuntu:xenial
 
@@ -41,7 +39,7 @@ COPY python3-sawtooth-*.deb /debs/
 RUN cd /debs \
  && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
  && echo "deb file:/debs ./" >> /etc/apt/sources.list \
- && echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \
+ && echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6B58B1AC10FB5F63 \
  && apt-get update
 

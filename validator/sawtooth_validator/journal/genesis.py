@@ -48,6 +48,7 @@ class GenesisController(object):
                  state_view_factory,
                  identity_key,
                  data_dir,
+                 config_dir,
                  chain_id_manager,
                  batch_sender):
         """Creates a GenesisController.
@@ -63,6 +64,7 @@ class GenesisController(object):
                 factory for creating state views during processing.
             identity_key (str): A private key used for signing blocks, in hex.
             data_dir (str): The directory for data files.
+            config_dir (str): The directory for config files.
             chain_id_manager (ChainIdManager): utility class to manage the
             chain id file.
             batch_sender: interface to broadcast batches to the network.
@@ -76,6 +78,7 @@ class GenesisController(object):
         self._identity_public_key = \
             signing.generate_pubkey(self._identity_priv_key)
         self._data_dir = data_dir
+        self._config_dir = config_dir
         self._chain_id_manager = chain_id_manager
         self._batch_sender = batch_sender
 
@@ -241,6 +244,7 @@ class GenesisController(object):
                 state_view_factory=self._state_view_factory,
                 batch_publisher=BatchPublisher(),
                 data_dir=self._data_dir,
+                config_dir=self._config_dir,
                 validator_id=self._identity_public_key)
         except UnknownConsensusModuleError as e:
             raise InvalidGenesisStateError(e)

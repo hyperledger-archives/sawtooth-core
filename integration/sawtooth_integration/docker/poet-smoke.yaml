@@ -26,12 +26,16 @@ services:
       - 8800
     command: "bash -c \"\
         sawtooth admin keygen --force && \
+        sawtooth config genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
         sawtooth config proposal create \
-          -k /etc/sawtooth/keys/validator.wif \
+          -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           -o config.batch && \
         poet genesis -o poet.batch && \
-        sawtooth admin genesis config.batch poet.batch && \
+        sawtooth admin genesis \
+          config-genesis.batch config.batch poet.batch && \
         validator -v \
             --public-uri tcp://validator-0:8800 \
             --component-endpoint tcp://eth0:40000 \
@@ -97,7 +101,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api --stream-url tcp://validator-0:40000 --host rest-api-0
+    command: rest_api -v --stream-url tcp://validator-0:40000 --host rest-api-0
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -107,7 +111,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api --stream-url tcp://validator-1:40000 --host rest-api-1
+    command: rest_api -v --stream-url tcp://validator-1:40000 --host rest-api-1
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -117,7 +121,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api --stream-url tcp://validator-2:40000 --host rest-api-2
+    command: rest_api -v --stream-url tcp://validator-2:40000 --host rest-api-2
     stop_signal: SIGKILL
 
   tp-intkey-0:
@@ -208,7 +212,7 @@ services:
     stop_signal: SIGKILL
 
   integration_test:
-    image: sawtooth-dev-test:$ISOLATION_ID
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -217,9 +221,11 @@ services:
       - rest-api-0
       - rest-api-1
       - rest-api-2
-    command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/tests
-        test_poet_smoke.TestPoetSmoke
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration
+        sawtooth_integration.tests.test_poet_smoke.TestPoetSmoke
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

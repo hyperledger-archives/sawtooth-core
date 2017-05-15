@@ -53,7 +53,7 @@ which this transaction is contained.
    re-serialize the header with the intent to produce the same byte sequence as
    the original.  Serialization can be sensitive to programming language or
    library, and any deviation would produce a sequence that would not match the
-   signature; thus, best practice is to alway use the original header bytes for
+   signature; thus, best practice is to always use the original header bytes for
    verification.
 
 Transaction Family

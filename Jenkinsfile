@@ -30,8 +30,8 @@ node ('master') {
         if (!(env.BRANCH_NAME == 'master' && env.JOB_BASE_NAME == 'master')) {
             stage("Check Whitelist") {
                 readTrusted 'bin/whitelist'
-                readTrusted 'MAINTAINERS'
-                sh './bin/whitelist "$CHANGE_AUTHOR" MAINTAINERS'
+                readTrusted 'COMMITTERS'
+                sh './bin/whitelist "$CHANGE_AUTHOR" COMMITTERS'
             }
         }
 
@@ -68,16 +68,21 @@ node ('master') {
         }
 
         stage("Run Lint") {
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_lint'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID run_lint'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-go:$ISOLATION_ID run_go_fmt'
         }
 
         stage("Run Bandit") {
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-python:$ISOLATION_ID ./bin/run_bandit || $TRUE'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID run_bandit'
         }
 
         // Run the tests
         stage("Run Tests") {
             sh './bin/run_tests -i deployment'
+        }
+
+        stage("Compile coverage report") {
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID /bin/bash -c "cd coverage && coverage combine && coverage html -d html"'
         }
 
         stage("Create git archive") {
@@ -98,6 +103,7 @@ node ('master') {
             archiveArtifacts artifacts: '*.tgz, *.zip'
             archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'build/bandit.html'
+            archiveArtifacts artifacts: 'coverage/html/*'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
     }
