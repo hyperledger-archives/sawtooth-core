@@ -19,6 +19,7 @@ from importlib import reload
 
 from unittest import TestCase
 from unittest import mock
+from unittest.mock import patch
 
 import sawtooth_signing as signing
 
@@ -673,4 +674,234 @@ class TestPoetBlockPublisher(TestCase):
 
         self.assertTrue(
             block_publisher.initialize_block(
+                block_header=mock_block.header))
+
+    @patch('sawtooth_poet.poet_consensus.wait_timer.WaitTimer')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'SignupInfo')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'PoetKeyStateStore')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'ConsensusStateStore')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.factory')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'ConsensusState')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'ValidatorRegistryView')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.utils')
+    def test_block_publisher_claim_readiness(
+            self,
+            mock_utils,
+            mock_validator_registry_view,
+            mock_consensus_state,
+            mock_poet_enclave_factory,
+            mock_consensus_state_store,
+            mock_poet_key_state_store,
+            mock_signup_info,
+            mock_poet_config_view,
+            mock_block_wrapper,
+            mock_wait_time):
+
+        """ Test verifies that PoET Block Publisher only claims
+         readiness if the wait timer has expired
+        """
+
+        # create a mock_validator_registry_view with
+        # get_validator_info that does nothing
+        mock_validator_registry_view.return_value.get_validator_info. \
+            return_value = \
+            ValidatorInfo(
+                name='validator_001',
+                id='validator_deadbeef',
+                signup_info=SignUpInfo(
+                    poet_public_key='00112233445566778899aabbccddeeff'))
+
+        # create a mock_consensus_state that returns a mock with
+        # the following settings:
+        mock_state = mock.Mock()
+        mock_state.validator_signup_was_committed_too_late.return_value = False
+        mock_state.validator_has_claimed_block_limit.return_value = False
+        mock_state.validator_is_claiming_too_early.return_value = False
+        mock_state.validator_is_claiming_too_frequently.return_value = False
+
+        mock_consensus_state.consensus_state_for_block_id.return_value = \
+            mock_state
+
+        mock_consensus_state_store.return_value.__getitem__.return_value = \
+            mock_consensus_state
+
+        # create mock_signup_info
+        mock_signup_info.unseal_signup_data.return_value = \
+            '00112233445566778899aabbccddeeff'
+
+        # create mock_batch_publisher
+        mock_batch_publisher = mock.Mock(
+            identity_signing_key=signing.generate_privkey())
+
+        mock_block_cache = mock.MagicMock()
+        mock_state_view_factory = mock.Mock()
+
+        # create mock_block_header with the following fields
+        mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
+        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.previous_block_id = '2'
+        mock_block.header.block_num = 1
+        mock_block.header.state_root_hash = '6'
+        mock_block.header.batch_ids = '4'
+
+        # create a mock_wait_timer that has expired
+        mock_wait_time = mock.Mock()
+        mock_wait_time.has_expired.return_value = True
+
+        mock_wait_time.create_wait_timer.return_value = mock_wait_time
+
+        # create mock_poet_enclave_module
+        mock_poet_enclave_module = mock.Mock()
+        mock_poet_enclave_module.return_value = \
+            mock_poet_enclave_factory.get_poet_enclave_module.return_value
+
+        # create a mock_wait_certificate with a non valid wait timer
+        mock_wait_certificate = mock.Mock()
+        mock_wait_certificate.create_wait_certificate.return_value = \
+            mock.Mock(poet_enclave_module=mock_poet_enclave_module,
+                      wait_timer=mock_wait_time,
+                      block_hash="Reader's Digest")
+
+        mock_utils.deserialize_wait_certificate.return_value = \
+            mock_wait_certificate
+
+        # check test
+        block_publisher = \
+            poet_block_publisher.PoetBlockPublisher(
+                block_cache=mock_block_cache,
+                state_view_factory=mock_state_view_factory,
+                batch_publisher=mock_batch_publisher,
+                data_dir=self._temp_dir,
+                config_dir=self._temp_dir,
+                validator_id='validator_deadbeef')
+
+        # check initialize_block() first to set wait_timer
+        self.assertTrue(
+            block_publisher.initialize_block(
+                block_header=mock_block.header))
+
+        # check that block_publisher only claims readiness
+        # when the wait_timer has expired
+        self.assertTrue(
+            block_publisher.check_publish_block(
+                block_header=mock_block.header))
+
+    @patch('sawtooth_poet.poet_consensus.wait_timer.WaitTimer')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'SignupInfo')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'PoetKeyStateStore')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'ConsensusStateStore')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.factory')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'ConsensusState')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+                'ValidatorRegistryView')
+    @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.utils')
+    def test_block_publisher_doesnt_claim_readiness(
+            self,
+            mock_utils,
+            mock_validator_registry_view,
+            mock_consensus_state,
+            mock_poet_enclave_factory,
+            mock_consensus_state_store,
+            mock_poet_key_state_store,
+            mock_signup_info,
+            mock_poet_config_view,
+            mock_block_wrapper,
+            mock_wait_time):
+
+        """ Test verifies that PoET Block Publisher doesn't
+         claims readiness if the wait timer hasn't expired
+        """
+
+        # create a mock_validator_registry_view with
+        # get_validator_info that does nothing
+        mock_validator_registry_view.return_value.get_validator_info. \
+            return_value = \
+            ValidatorInfo(
+                name='validator_001',
+                id='validator_deadbeef',
+                signup_info=SignUpInfo(
+                    poet_public_key='00112233445566778899aabbccddeeff'))
+
+        # create a mock_consensus_state that returns a mock with
+        # the following settings:
+        mock_state = mock.Mock()
+        mock_state.validator_signup_was_committed_too_late.return_value = False
+        mock_state.validator_has_claimed_block_limit.return_value = False
+        mock_state.validator_is_claiming_too_early.return_value = False
+        mock_state.validator_is_claiming_too_frequently.return_value = False
+
+        mock_consensus_state.consensus_state_for_block_id.return_value = \
+            mock_state
+
+        mock_consensus_state_store.return_value.__getitem__.return_value = \
+            mock_consensus_state
+
+        # create mock_signup_info
+        mock_signup_info.unseal_signup_data.return_value = \
+            '00112233445566778899aabbccddeeff'
+
+        # create mock_batch_publisher
+        mock_batch_publisher = mock.Mock(
+            identity_signing_key=signing.generate_privkey())
+
+        mock_block_cache = mock.MagicMock()
+        mock_state_view_factory = mock.Mock()
+
+        # create mock_block_header with the following fields
+        mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
+        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.previous_block_id = '2'
+        mock_block.header.block_num = 1
+        mock_block.header.state_root_hash = '6'
+        mock_block.header.batch_ids = '4'
+
+        # create a mock_wait_timer that hasn't expired yet
+        mock_wait_time = mock.Mock()
+        mock_wait_time.has_expired.return_value = False
+
+        mock_wait_time.create_wait_timer.return_value = mock_wait_time
+
+        # create mock_poet_enclave_module
+        mock_poet_enclave_module = mock.Mock()
+        mock_poet_enclave_module.return_value = \
+            mock_poet_enclave_factory.get_poet_enclave_module.return_value
+
+        # create a mock_wait_certificate with a non valid wait timer
+        mock_wait_certificate = mock.Mock()
+        mock_wait_certificate.create_wait_certificate.return_value = \
+            mock.Mock(poet_enclave_module=mock_poet_enclave_module,
+                      wait_timer=mock_wait_time,
+                      block_hash="Reader's Digest")
+
+        mock_utils.deserialize_wait_certificate.return_value = \
+            mock_wait_certificate
+
+        # check test
+        block_publisher = \
+            poet_block_publisher.PoetBlockPublisher(
+                block_cache=mock_block_cache,
+                state_view_factory=mock_state_view_factory,
+                batch_publisher=mock_batch_publisher,
+                data_dir=self._temp_dir,
+                config_dir=self._temp_dir,
+                validator_id='validator_deadbeef')
+
+        # check initialize_block() first to set wait_timer
+        self.assertTrue(
+            block_publisher.initialize_block(
+                block_header=mock_block.header))
+
+        # check that block_publisher only claims readiness
+        # when the wait_timer has expired
+        self.assertTrue(
+            block_publisher.check_publish_block(
                 block_header=mock_block.header))
