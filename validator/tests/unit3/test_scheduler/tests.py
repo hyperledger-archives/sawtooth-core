@@ -33,18 +33,32 @@ from sawtooth_validator.state.merkle import MerkleDatabase
 
 LOGGER = logging.getLogger(__name__)
 
-
-def create_transaction(name, private_key, public_key):
+def create_transaction(name, private_key, public_key, inputs=None,
+                        outputs=None, dependencies = None):
     payload = name
     addr = '000000' + hashlib.sha512(name.encode()).hexdigest()
+
+    if inputs is None:
+        inputs = [addr]
+    else:
+        inputs = inputs.copy().append(addr)
+
+    if outputs is None:
+        outputs = [addr]
+    else:
+        outputs.copy().append(addr)
+
+    if dependencies is None:
+        dependencies = []
 
     header = transaction_pb2.TransactionHeader(
         signer_pubkey=public_key,
         family_name='scheduler_test',
         family_version='1.0',
-        inputs=[addr],
-        outputs=[addr],
-        dependencies=[],
+        inputs=inputs,
+        outputs=outputs,
+        dependencies=dependencies,
+        nonce=str(time.time()),
         payload_encoding="application/cbor",
         payload_sha512=hashlib.sha512(payload.encode()).hexdigest(),
         batcher_pubkey=public_key)
@@ -58,7 +72,7 @@ def create_transaction(name, private_key, public_key):
         payload=payload.encode(),
         header_signature=signature)
 
-    return transaction
+    return transaction, header
 
 
 def create_batch(transactions, private_key, public_key):
@@ -80,6 +94,14 @@ def create_batch(transactions, private_key, public_key):
     return batch
 
 
+def _get_address_from_txn(txn_info):
+    txn_header = transaction_pb2.TransactionHeader()
+    txn_header.ParseFromString(txn_info.txn.header)
+    inputs_or_outputs = list(txn_header.inputs)
+    address_b = inputs_or_outputs[0]
+    return address_b
+
+
 class TestSerialScheduler(unittest.TestCase):
     def setUp(self):
         self.context_manager = ContextManager(dict_database.DictDatabase(),
@@ -92,13 +114,6 @@ class TestSerialScheduler(unittest.TestCase):
 
     def tearDown(self):
         self.context_manager.stop()
-
-    def _get_address_from_txn(self, txn_info):
-        txn_header = transaction_pb2.TransactionHeader()
-        txn_header.ParseFromString(txn_info.txn.header)
-        inputs_or_outputs = list(txn_header.inputs)
-        address_b = inputs_or_outputs[0]
-        return address_b
 
     def test_transaction_order(self):
         """Tests the that transactions are returned in order added.
@@ -120,7 +135,7 @@ class TestSerialScheduler(unittest.TestCase):
         for names in [['a', 'b', 'c'], ['d', 'e'], ['f', 'g', 'h', 'i']]:
             batch_txns = []
             for name in names:
-                txn = create_transaction(
+                txn, _ = create_transaction(
                     name=name,
                     private_key=private_key,
                     public_key=public_key)
@@ -128,7 +143,7 @@ class TestSerialScheduler(unittest.TestCase):
                 batch_txns.append(txn)
                 txns.append(txn)
 
-            batch = create_batch(
+            batch =  create_batch(
                 transactions=batch_txns,
                 private_key=private_key,
                 public_key=public_key)
@@ -167,7 +182,7 @@ class TestSerialScheduler(unittest.TestCase):
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
 
-        txn = create_transaction(
+        txn, _ =  create_transaction(
             name='a',
             private_key=private_key,
             public_key=public_key)
@@ -208,7 +223,7 @@ class TestSerialScheduler(unittest.TestCase):
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
 
-        txn = create_transaction(
+        txn, _ = create_transaction(
             name='a',
             private_key=private_key,
             public_key=public_key)
@@ -253,7 +268,7 @@ class TestSerialScheduler(unittest.TestCase):
         for names in [['a', 'b', 'c'], ['d', 'e'], ['f', 'g', 'h', 'i']]:
             batch_txns = []
             for name in names:
-                txn = create_transaction(
+                txn, _ = create_transaction(
                     name=name,
                     private_key=private_key,
                     public_key=public_key)
@@ -300,7 +315,7 @@ class TestSerialScheduler(unittest.TestCase):
         public_key = signing.generate_pubkey(private_key)
 
         # Create a basic transaction and batch.
-        txn = create_transaction(
+        txn, _ = create_transaction(
             name='a',
             private_key=private_key,
             public_key=public_key)
@@ -398,7 +413,7 @@ class TestSerialScheduler(unittest.TestCase):
         txns = []
 
         for name in ['a', 'b']:
-            txn = create_transaction(
+            txn, _ = create_transaction(
                 name=name,
                 private_key=private_key,
                 public_key=public_key)
@@ -448,7 +463,7 @@ class TestSerialScheduler(unittest.TestCase):
         for names in [['a', 'b'], ['invalid', 'c'], ['d', 'e']]:
             batch_txns = []
             for name in names:
-                txn = create_transaction(
+                txn, _ = create_transaction(
                     name=name,
                     private_key=private_key,
                     public_key=public_key)
@@ -493,16 +508,16 @@ class TestSerialScheduler(unittest.TestCase):
         address_a = inputs_or_outputs[0]
 
         txn_info_b = next(sched2)
-        address_b = self._get_address_from_txn(txn_info_b)
+        address_b = _get_address_from_txn(txn_info_b)
 
         txn_infoInvalid = next(sched2)
         txn_info_c = next(sched2)
 
         txn_info_d = next(sched2)
-        address_d = self._get_address_from_txn(txn_info_d)
+        address_d = _get_address_from_txn(txn_info_d)
 
         txn_info_e = next(sched2)
-        address_e = self._get_address_from_txn(txn_info_e)
+        address_e = _get_address_from_txn(txn_info_e)
 
         merkle_database = MerkleDatabase(dict_database.DictDatabase())
         state_root_end = merkle_database.update(
