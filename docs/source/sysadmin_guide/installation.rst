@@ -8,6 +8,10 @@ The easiest way to install Sawtooth is with apt-get.
 
   These instructions have been tested on Ubuntu 16.04 only.
 
+.. note::
+
+  Coming soon: instructions for using Yum and RPMs.
+
 Add the signing key:
 
 .. code-block:: console
