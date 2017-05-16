@@ -30,8 +30,8 @@ The following tools are required:
 * `Docker Compose <https://docs.docker.com/compose/install/>`_ (Linux only)
 
 
-Get the Docker Compose File
----------------------------
+Download the Docker Compose File
+--------------------------------
 
 A docker compose file is provided which defines the process for constructing
 a sawtooth environment, including the container images to download and the
