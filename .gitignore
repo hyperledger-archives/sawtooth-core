@@ -58,6 +58,9 @@
 /sdk/go/bin/
 /sdk/examples/intkey_go/bin/
 /sdk/go/pkg/
+/sdk/go/src/golang.org/
+/sdk/go/src/gopkg.in/
+/families/burrow_evm/bin/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/
