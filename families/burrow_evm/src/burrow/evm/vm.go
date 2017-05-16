@@ -113,15 +113,17 @@ func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
 // this function returns false.
 func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
-	v, err := acc.Permissions.Base.Get(perm)
-	if _, ok := err.(ptypes.ErrValueNotSet); ok {
-		if appState == nil {
-			// In this case the permission is unknown
-			return false
-		}
-		return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
-	}
-	return v
+	return true
+	// TODO: Store and handle permissions
+	//v, err := acc.Permissions.Base.Get(perm)
+	//if _, ok := err.(ptypes.ErrValueNotSet); ok {
+	//if appState == nil {
+	//// In this case the permission is unknown
+	//return false
+	//}
+	//return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
+	//}
+	//return v
 }
 
 // NOTE: [ben] revise event structure
@@ -852,11 +854,12 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 				ret, err = nativeContract(vm.appState, callee, args, &gasLimit)
 
 				// for now we fire the Call event. maybe later we'll fire more particulars
-				var exception string
+				//var exception string
 				if err != nil {
-					exception = err.Error()
+					panic(err)
+					//exception = err.Error()
 				}
-				
+
 				// NOTE: [ben] revise event structure
 				//
 				// // NOTE: these fire call events and not particular events for eg name reg or permissions
