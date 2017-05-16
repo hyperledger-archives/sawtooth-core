@@ -42,10 +42,6 @@ paths:
           schema:
             $ref: "#/definitions/BatchList"
           required: true
-        - name: callback
-          in: query
-          type: string
-          description: Callback url
         - $ref: "#/parameters/wait"
       responses:
         201:
@@ -77,9 +73,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved batches
@@ -107,9 +100,6 @@ paths:
       - $ref: "#/parameters/batch_id"
     get:
       summary: Fetches a particular batch
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved batch
@@ -224,9 +214,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved state data
@@ -256,8 +243,6 @@ paths:
       summary: Fetches a particular leaf from the current state
       parameters:
         - $ref: "#/parameters/head"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully fetched leaves
@@ -290,9 +275,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved blocks
@@ -320,9 +302,6 @@ paths:
       - $ref: "#/parameters/block_id"
     get:
       summary: Fetches a particlar block
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved block
@@ -354,9 +333,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved transactions
@@ -384,9 +360,6 @@ paths:
       - $ref: "#/parameters/transaction_id"
     get:
       summary: Fetches a particular transaction
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved transaction
@@ -462,16 +435,6 @@ parameters:
     in: query
     type: integer
     description: A time in seconds to wait for commit
-  fields:
-    name: fields
-    in: query
-    type: string
-    description: Comma-separated list of fields to include in response, defaults to all
-  omit:
-    name: omit
-    in: query
-    type: string
-    description: Comma-separated list of fields to omit from response, defaults to none
   count:
     name: count
     in: query
@@ -488,11 +451,6 @@ parameters:
     in: query
     type: string
     description: Id or index to end paging (inclusive)
-  sort:
-    name: sort
-    in: query
-    type: string
-    description: Field to sort a list by, `-` reverses order
 
 definitions:
   Head:
