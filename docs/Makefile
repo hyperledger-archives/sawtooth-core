@@ -64,6 +64,7 @@ html: templates cli
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+	@cp ../docker/compose/sawtooth-default.yaml $(BUILDDIR)/html/app_developers_guide/sawtooth-default.yaml
 
 dirhtml: templates cli
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml
