@@ -408,3 +408,81 @@ class StateDeltaProcessorTest(unittest.TestCase):
                 state_changes=[]
             ).SerializeToString(),
             connection_id='subscriber_conn_id')
+
+    def test_is_valid_subscription_no_known_blocks(self):
+        """Test that a check for a valid subscription with no known block ids
+        returns True.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        delta_store = StateDeltaStore(DictDatabase())
+
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        self.assertTrue(delta_processor.is_valid_subscription([]))
+
+    def test_is_valid_subscription_known_chain_head(self):
+        """Test that a check for a valid subscription with the known block id
+        is the chain head returns True.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        delta_store = StateDeltaStore(DictDatabase())
+
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        self.assertTrue(delta_processor.is_valid_subscription([
+            block_tree_manager.chain_head.identifier]))
+
+    def test_is_valid_subscription_known_old_chain(self):
+        """Test that a check for a valid subscription where the known block id
+        is a block in the middle of the chain should return True.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        chain = block_tree_manager.generate_chain(
+            block_tree_manager.chain_head, 5)
+
+        # Grab an id from the middle of the chain
+        known_id = chain[3].identifier
+        block_tree_manager.block_store.update_chain(chain)
+
+        delta_store = StateDeltaStore(DictDatabase())
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        self.assertTrue(delta_processor.is_valid_subscription([known_id]))
+
+    def test_is_valid_subscription_known_shared_predecessor(self):
+        """Test that a check for a valid subscription, where the known block ids
+        contain a shared ancestor, should return True.
+        """
+        mock_service = Mock()
+        block_tree_manager = BlockTreeManager()
+
+        chain = block_tree_manager.generate_chain(
+            block_tree_manager.chain_head, 5)
+
+        # Grab an id from the middle of the chain
+        known_id = chain[3].identifier
+        block_tree_manager.block_store.update_chain(chain)
+
+        delta_store = StateDeltaStore(DictDatabase())
+        delta_processor = StateDeltaProcessor(
+            service=mock_service,
+            state_delta_store=delta_store,
+            block_store=block_tree_manager.block_store)
+
+        self.assertTrue(delta_processor.is_valid_subscription(
+            [known_id, 'someforkedblock01', 'someforkedblock02']))
