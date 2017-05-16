@@ -173,7 +173,7 @@ class StateDeltaProcessor(object):
             block (:obj:`BlockWrapper`): The block whose state delta will
                 be published.
         """
-        LOGGER.debug('Publishing state delta fro %s', block)
+        LOGGER.debug('Publishing state delta from %s', block)
         state_root_hash = block.header.state_root_hash
 
         deltas = self._get_delta(state_root_hash)
