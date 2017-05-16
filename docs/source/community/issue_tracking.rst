@@ -38,7 +38,12 @@ JIRA
 We use JIRA as our issue tracking system.  The JIRA instance is hosted by
 the Hyperledger Project, and Hyperledger Sawtooth uses the key *STL*:
 
-  https://jira.hyperledger.org/projects/STL/issues/
+  https://jira.hyperledger.org/secure/RapidBoard.jspa?rapidView=3&projectKey=STL&view=planning.nodetail
+
+If you want to to contribute to Hyperledger Sawtooth quickly, we have a list of issues which
+will help you get involved right away: 
+
+  https://jira.hyperledger.org/issues/?filter=10612
 
 To report issues, you will need to login to JIRA, which requires a
 Linux Foundation account.  To setup a Linux Foundation account, go to:
