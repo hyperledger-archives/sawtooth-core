@@ -27,7 +27,9 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_processor import \
     NoKnownBlockError
 from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaSubscriberHandler
+    StateDeltaSubscriberValidationHandler
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaAddSubscriberHandler
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
 
@@ -46,27 +48,28 @@ from sawtooth_validator.protobuf import validator_pb2
 from test_journal.block_tree_manager import BlockTreeManager
 
 
-class StateDeltaProcessorHandlerTest(unittest.TestCase):
+class StateDeltaSubscriberValidationHandlerTest(unittest.TestCase):
 
     def test_register_subscriber(self):
-        """Tests that the handler will add a valid subscriber and return an OK
+        """Tests that the handler will validate a correct subscriber and return an OK
         response.
         """
-        mock_block_store = {'a': Mock()}
+        block_tree_manager = BlockTreeManager()
+
         delta_processor = StateDeltaProcessor(
             service=Mock(),
             state_delta_store=Mock(),
-            block_store=mock_block_store)
+            block_store=block_tree_manager.block_store)
 
-        handler = StateDeltaSubscriberHandler(delta_processor)
+        handler = StateDeltaSubscriberValidationHandler(delta_processor)
 
         request = RegisterStateDeltaSubscriberRequest(
-            last_known_block_ids=['a'],
+            last_known_block_ids=[block_tree_manager.chain_head.identifier],
             address_prefixes=['000000']).SerializeToString()
 
         response = handler.handle('test_conn_id', request)
 
-        self.assertEqual(HandlerStatus.RETURN, response.status)
+        self.assertEqual(HandlerStatus.RETURN_AND_PASS, response.status)
 
         self.assertEqual(RegisterStateDeltaSubscriberResponse.OK,
                          response.message_out.status)
@@ -76,14 +79,14 @@ class StateDeltaProcessorHandlerTest(unittest.TestCase):
         when a subscriber does not supply a known block id in
         last_known_block_ids
         """
-        mock_block_store = {}
+        block_tree_manager = BlockTreeManager()
 
         delta_processor = StateDeltaProcessor(
             service=Mock(),
             state_delta_store=Mock(),
-            block_store=mock_block_store)
+            block_store=block_tree_manager.block_store)
 
-        handler = StateDeltaSubscriberHandler(delta_processor)
+        handler = StateDeltaSubscriberValidationHandler(delta_processor)
 
         request = RegisterStateDeltaSubscriberRequest(
             last_known_block_ids=['a'],
@@ -96,6 +99,54 @@ class StateDeltaProcessorHandlerTest(unittest.TestCase):
         self.assertEqual(
             RegisterStateDeltaSubscriberResponse.UNKNOWN_BLOCK,
             response.message_out.status)
+
+
+class StateDeltaAddSubscriberHandlerTest(unittest.TestCase):
+    def test_add_subscriber(self):
+        """Tests that the handler for adding the subscriptions will properly
+        add a subscriber.
+        """
+        block_tree_manager = BlockTreeManager()
+        delta_processor = StateDeltaProcessor(
+            service=Mock(),
+            state_delta_store=Mock(),
+            block_store=block_tree_manager.block_store)
+
+        handler = StateDeltaAddSubscriberHandler(delta_processor)
+
+        request = RegisterStateDeltaSubscriberRequest(
+            last_known_block_ids=[block_tree_manager.chain_head.identifier],
+            address_prefixes=['0123456']).SerializeToString()
+
+        response = handler.handle('test_conn_id', request)
+        self.assertEqual(HandlerStatus.PASS, response.status)
+
+        self.assertEqual(['test_conn_id'], delta_processor.subscriber_ids)
+
+    def test_register_with_unknown_block_ids(self):
+        """Tests that the handler will respond with a DROP
+        when a subscriber does not supply a known block id in
+        last_known_block_ids, but the subscriber is added.  It passed
+        validation, but a fork may have occured between validation and now.
+        """
+        block_tree_manager = BlockTreeManager()
+
+        delta_processor = StateDeltaProcessor(
+            service=Mock(),
+            state_delta_store=Mock(),
+            block_store=block_tree_manager.block_store)
+
+        handler = StateDeltaAddSubscriberHandler(delta_processor)
+
+        request = RegisterStateDeltaSubscriberRequest(
+            last_known_block_ids=['a'],
+            address_prefixes=['000000']).SerializeToString()
+
+        response = handler.handle('test_conn_id', request)
+
+        self.assertEqual(HandlerStatus.DROP, response.status)
+
+        self.assertEqual(['test_conn_id'], delta_processor.subscriber_ids)
 
 
 class StateDeltaUnregisterSubscriberHandlerTest(unittest.TestCase):
@@ -125,14 +176,28 @@ class StateDeltaProcessorTest(unittest.TestCase):
 
         This scenerio is valid for subscribers who have never connected and
         would need to receive all deltas since the genesis block.
+
+        On registration, the subscriber should receive one event, comprised
+        of the state changes for the genesis block.
         """
         mock_service = Mock()
         block_tree_manager = BlockTreeManager()
 
+        delta_store = StateDeltaStore(DictDatabase())
+
         delta_processor = StateDeltaProcessor(
             service=mock_service,
-            state_delta_store=Mock(),
+            state_delta_store=delta_store,
             block_store=block_tree_manager.block_store)
+
+        delta_store.save_state_deltas(
+            block_tree_manager.chain_head.state_root_hash,
+            [StateChange(address='deadbeef0000000',
+                         value='my_genesis_value'.encode(),
+                         type=StateChange.SET),
+             StateChange(address='a14ea01',
+                         value='some other state value'.encode(),
+                         type=StateChange.SET)])
 
         delta_processor.add_subscriber(
             'test_conn_id',
@@ -141,7 +206,22 @@ class StateDeltaProcessorTest(unittest.TestCase):
 
         self.assertEqual(['test_conn_id'], delta_processor.subscriber_ids)
 
-    def test_add_subscrber_known_block_id(self):
+        # test that it catches up, and receives the events from the chain head.
+        # In this case, it should just be once, as the chain head is the
+        # genesis block
+        mock_service.send.assert_called_with(
+            validator_pb2.Message.STATE_DELTA_EVENT,
+            StateDeltaEvent(
+                block_id=block_tree_manager.chain_head.identifier,
+                block_num=block_tree_manager.chain_head.block_num,
+                state_root_hash=block_tree_manager.chain_head.state_root_hash,
+                state_changes=[StateChange(address='deadbeef0000000',
+                               value='my_genesis_value'.encode(),
+                               type=StateChange.SET)]
+            ).SerializeToString(),
+            connection_id='test_conn_id')
+
+    def test_add_subscriber_known_block_id(self):
         """Test adding a subscriber, whose known block id is the current
         chainhead.
         """

@@ -54,7 +54,9 @@ from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.config_view import ConfigViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaSubscriberHandler
+    StateDeltaAddSubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaSubscriberValidationHandler
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
@@ -466,9 +468,15 @@ class Validator(object):
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
 
+        # State Delta Subscription Handlers
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-            StateDeltaSubscriberHandler(state_delta_processor),
+            StateDeltaSubscriberValidationHandler(state_delta_processor),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
+            StateDeltaAddSubscriberHandler(state_delta_processor),
             thread_pool)
 
         self._dispatcher.add_handler(
