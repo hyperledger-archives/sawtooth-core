@@ -34,8 +34,14 @@
 - name: Jamie Jason
   user: jjason
 
+- name: Feihu Jiang
+  user: feihujiang
+
 - name: Boyd Johnson
   user: boydjohnson
+
+- name: Ry Jones
+  user: ryjones
 
 - name: Adam Ludvik
   user: aludvik
@@ -57,3 +63,9 @@
 
 - name: Peter Schwarz
   user: peterschwarz
+
+- name: Dalmo Manoel Veras Neto
+  user: verasnt
+
+- name: Mark Wagner
+  user: n1zyz
