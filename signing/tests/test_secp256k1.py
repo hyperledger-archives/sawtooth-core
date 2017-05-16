@@ -36,7 +36,8 @@ class TestSecp256kSigner(unittest.TestCase):
 
     def test_privkey_deserialization(self):
         # pylint: disable=protected-access
-        priv = '5KZeUdoHCRXxT3srGfkeXRNWCdn1XjzpJqFdNoehZ9gEEkLMKVD'
+        priv = \
+            'a87cb5eafdcca6a81913619f4b42affd749cc505090a5b51db953202b4a1acc8'
         priv2 = signer._encode_privkey(signer._decode_privkey(priv))
         self.assertTrue(priv == priv2)
 
