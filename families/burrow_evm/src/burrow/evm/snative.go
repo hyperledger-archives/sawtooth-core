@@ -352,7 +352,7 @@ func hasBase(appState AppState, caller *Account, args []byte, gas *int64) (outpu
 		return nil, ptypes.ErrInvalidPermission(permN)
 	}
 	permInt := byteFromBool(HasPermission(appState, vmAcc, permN))
-	dbg.Printf("snative.hasBasePerm(0x%X, %b) = %v\n", addr.Postfix(20), permN, permInt)
+	logger.Debugf("snative.hasBasePerm(0x%X, %b) = %v\n", addr.Postfix(20), permN, permInt)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
@@ -371,7 +371,7 @@ func setBase(appState AppState, caller *Account, args []byte, gas *int64) (outpu
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
-	dbg.Printf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
+	logger.Debugf("snative.setBasePerm(0x%X, %b, %v)\n", addr.Postfix(20), permN, permV)
 	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(appState)), nil
 }
 
@@ -389,7 +389,7 @@ func unsetBase(appState AppState, caller *Account, args []byte, gas *int64) (out
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
-	dbg.Printf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
+	logger.Debugf("snative.unsetBasePerm(0x%X, %b)\n", addr.Postfix(20), permN)
 	return effectivePermBytes(vmAcc.Permissions.Base, globalPerms(appState)), nil
 }
 
@@ -408,7 +408,7 @@ func setGlobal(appState AppState, caller *Account, args []byte, gas *int64) (out
 		return nil, err
 	}
 	appState.UpdateAccount(vmAcc)
-	dbg.Printf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
+	logger.Debugf("snative.setGlobalPerm(%b, %v)\n", permN, permV)
 	return permBytes(vmAcc.Permissions.Base.ResultantPerms()), nil
 }
 
@@ -420,7 +420,7 @@ func hasRole(appState AppState, caller *Account, args []byte, gas *int64) (outpu
 	}
 	roleS := string(role.Bytes())
 	permInt := byteFromBool(vmAcc.Permissions.HasRole(roleS))
-	dbg.Printf("snative.hasRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
+	logger.Debugf("snative.hasRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
@@ -433,7 +433,7 @@ func addRole(appState AppState, caller *Account, args []byte, gas *int64) (outpu
 	roleS := string(role.Bytes())
 	permInt := byteFromBool(vmAcc.Permissions.AddRole(roleS))
 	appState.UpdateAccount(vmAcc)
-	dbg.Printf("snative.addRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
+	logger.Debugf("snative.addRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
@@ -446,7 +446,7 @@ func removeRole(appState AppState, caller *Account, args []byte, gas *int64) (ou
 	roleS := string(role.Bytes())
 	permInt := byteFromBool(vmAcc.Permissions.RmRole(roleS))
 	appState.UpdateAccount(vmAcc)
-	dbg.Printf("snative.rmRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
+	logger.Debugf("snative.rmRole(0x%X, %s) = %v\n", addr.Postfix(20), roleS, permInt > 0)
 	return LeftPadWord256([]byte{permInt}).Bytes(), nil
 }
 
