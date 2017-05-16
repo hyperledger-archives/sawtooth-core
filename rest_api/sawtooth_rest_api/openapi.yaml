@@ -25,7 +25,7 @@ paths:
         after that time in seconds has elapsed. If set to any non-integer value
         other than `false` (including simply `?wait`), *the API may still
         timeout*, but will use its own settings (usually 300s). After timing
-        out, a `200` is returned with a `data` object that include the statuses
+        out, a `202` is returned with a `data` object that includes the statuses
         of each batch (`COMMITTED`, `INVALID`, `PENDING`, or `UNKNOWN`), and a
         `link` to a `/batch_status` endpoint for further polling.
 
@@ -48,14 +48,6 @@ paths:
           description: Callback url
         - $ref: "#/parameters/wait"
       responses:
-        200:
-          description: Batches submitted, but not all committed
-          schema:
-            properties:
-              data:
-                $ref: "#/definitions/BatchStatuses"
-              link:
-                $ref: "#/definitions/Link"
         201:
           description: Successfully committed all Batches in BatchList
           schema:
@@ -63,9 +55,11 @@ paths:
               link:
                 $ref: "#/definitions/Link"
         202:
-          description: Successfully submitted BatchList for validation
+          description: Batches submitted for validation, but not yet committed
           schema:
             properties:
+              data:
+                $ref: "#/definitions/BatchStatuses"
               link:
                 $ref: "#/definitions/Link"
         400:
