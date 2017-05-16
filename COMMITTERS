@@ -22,6 +22,9 @@
 - name: Mark Ford
   user: mfford
 
+- name: Richard Gendal Brown
+  user: gendal
+
 - name: Andrea Gunderson
   user: agunde406
 
@@ -31,8 +34,14 @@
 - name: Jamie Jason
   user: jjason
 
+- name: Feihu Jiang
+  user: feihujiang
+
 - name: Boyd Johnson
   user: boydjohnson
+
+- name: Ry Jones
+  user: ryjones
 
 - name: Adam Ludvik
   user: aludvik
@@ -46,6 +55,9 @@
 - name: Cian Montgomery
   user: cintel
 
+- name: Dalmo Manoel Veras Neto
+  user: verasnt
+
 - name: Todd Ojala
   user: ojalatodd
 
@@ -54,3 +66,6 @@
 
 - name: Peter Schwarz
   user: peterschwarz
+
+- name: Mark Wagner
+  user: n1zyz

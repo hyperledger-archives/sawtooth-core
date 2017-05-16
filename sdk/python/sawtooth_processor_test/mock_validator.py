@@ -13,9 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import subprocess
 import asyncio
+import binascii
 import logging
+import subprocess
 
 import zmq
 import zmq.asyncio
@@ -76,7 +77,7 @@ class MockValidator(object):
 
         # User ROUTER socket, the TransactionProcessor uses DEALER
         self._socket = self._context.socket(zmq.ROUTER)
-        LOGGER.info("Binding to " + self._url)
+        LOGGER.debug("Binding to " + self._url)
         self._socket.set(zmq.LINGER, 0)
         try:
             self._socket.bind("tcp://" + self._url)
@@ -85,10 +86,10 @@ class MockValidator(object):
         except zmq.error.ZMQError:
             netstat = "netstat -lp | grep -e tcp"
             result = subprocess.check_output(netstat, shell=True).decode()
-            LOGGER.info("\n`%s`", netstat)
-            LOGGER.info(result)
+            LOGGER.debug("\n`%s`", netstat)
+            LOGGER.debug(result)
 
-            LOGGER.info("`ps pid`")
+            LOGGER.debug("`ps pid`")
             try:
                 lines = result.split('\n')[:-1]
                 for line in lines:
@@ -98,9 +99,9 @@ class MockValidator(object):
                         ps = subprocess.check_output(
                             ["ps", pid]
                         ).decode().split('\n')[1]
-                        LOGGER.info(ps)
+                        LOGGER.debug(ps)
             except BaseException:
-                LOGGER.info("Failed to show process info")
+                LOGGER.warning("Failed to show process info")
 
             # Raise the original error again
             raise
@@ -123,7 +124,7 @@ class MockValidator(object):
 
             request = TpRegisterRequest()
             request.ParseFromString(message.content)
-            LOGGER.info(
+            LOGGER.debug(
                 "Processor registered: %s, %s, %s, %s",
                 str(request.family), str(request.version),
                 str(request.encoding), str(request.namespaces)
@@ -158,7 +159,7 @@ class MockValidator(object):
         :param ident (str) the identity of the zmq.DEALER to send to
         """
 
-        LOGGER.info(
+        LOGGER.debug(
             "Sending %s(%s) to %s",
             str(to_protobuf_class(message.message_type).__name__),
             str(message.message_type),
@@ -178,11 +179,14 @@ class MockValidator(object):
             self._receive()
         )
 
+        LOGGER.debug(result)
+        LOGGER.debug("%s:%s", len(result), binascii.hexlify(result))
+
         # Deconstruct the message
         message = Message()
         message.ParseFromString(result)
 
-        LOGGER.info(
+        LOGGER.debug(
             "Received %s(%s) from %s",
             str(to_protobuf_class(message.message_type).__name__),
             str(message.message_type),

@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+cmake_minimum_required (VERSION 3.5)
+PROJECT(intkey_cxx)
 
-__all__ = []
+SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
+SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
+
+FILE(GLOB src "*.cpp" "*.h" )
+SOURCE_GROUP("Src" FILES ${src})
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${src} )
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} sawtooth )

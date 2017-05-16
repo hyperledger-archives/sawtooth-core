@@ -104,7 +104,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.init_chain_head = self.block_tree_manager.chain_head
 
@@ -256,7 +257,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.receive_batches()
 
@@ -285,7 +287,8 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.assert_no_block_published()
 
@@ -522,24 +525,6 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()
 
-    # block based tests
-    def test_block_bad_signature(self):
-        """
-        Test the case where the new block has a bad signature.
-        """
-        chain, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
-
-        new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
-            add_to_cache=True,
-            invalid_signature=True)
-
-        self.validate_block(new_block)
-
-        self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
-
     def test_block_bad_consensus(self):
         """
         Test the case where the new block has a bad batch
@@ -648,7 +633,8 @@ class TestBlockValidator(unittest.TestCase):
             executor=MockTransactionExecutor(),
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
     class BlockValidationHandler(object):
         def __init__(self):
@@ -698,7 +684,8 @@ class TestChainController(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -731,15 +718,6 @@ class TestChainController(unittest.TestCase):
     def test_bad_blocks(self):
         '''Tests bad blocks extending current chain
         '''
-        # Bad due to signature
-        bad_sig = self.generate_block(
-            previous_block=self.init_head,
-            invalid_signature=True)
-
-        # chain head should be the same
-        self.receive_and_process_blocks(bad_sig)
-        self.assert_is_chain_head(self.init_head)
-
         # Bad due to consensus
         bad_consen = self.generate_block(
             previous_block=self.init_head,
@@ -1015,7 +993,8 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
-            data_dir=None)
+            data_dir=None,
+            config_dir=None)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
@@ -1102,7 +1081,8 @@ class TestJournal(unittest.TestCase):
                 identity_signing_key=btm.identity_signing_key,
                 chain_id_manager=None,
                 state_delta_processor=self.state_delta_processor,
-                data_dir=None
+                data_dir=None,
+                config_dir=None
             )
 
             self.gossip.on_batch_received = journal.on_batch_received

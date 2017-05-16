@@ -51,7 +51,7 @@ secp256k1 library to ensure they are valid.
     } while (!secp256k1.privateKeyVerify(privateKeyBytes))
 
 {% else %}
-{# Python code is the default #}
+{# Python 3 code should be the default #}
 
 The Python *secp256k1* module provides a *PrivateKey* handler class from which
 we can generate the actual bytes to use for a key.
@@ -122,9 +122,9 @@ hexadecimal string.
 
 .. code-block:: javascript
 
-    const sha512 = require('crypto').createHash('sha512')
+    let hasher = crypto.createHash('sha512')
 
-    const payloadSha512 = sha512.update(payloadBytes).digest('hex')
+    const payloadSha512 = hasher.update(payloadBytes).digest('hex')
 
 {% else %}
 
@@ -137,8 +137,8 @@ hexadecimal string.
 {% endif %}
 
 
-2. Build the TransactionHeader
-------------------------------
+2. Create the TransactionHeader
+-------------------------------
 
 Transactions and their headers are built using
 `Google Protocol Buffer <https://developers.google.com/protocol-buffers/>`_
@@ -157,17 +157,18 @@ keys.
 
     const protobuf = require('protobufjs')
 
-    const txnRoot = protobuf.loadSync('protos/transactions.proto')
+    const txnRoot = protobuf.loadSync('sawtooth-core/protos/transaction.proto')
     const TransactionHeader = txnRoot.lookup('TransactionHeader')
 
     const txnHeaderBytes = TransactionHeader.encode({
         batcherPubkey: publicKeyHex,
-        dependencies: [],
+        // This is what setting a dependency might look like:
+        // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         familyName: 'intkey',
         familyVersion: '1.0',
-        inputs: ['1cf126'],
+        inputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
         nonce: Math.random().toString(36),
-        outputs: ['1cf126'],
+        outputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
         payloadEncoding: 'application/cbor',
         payloadSha512: payloadSha512,
         signerPubkey: publicKeyHex
@@ -175,18 +176,26 @@ keys.
 
 {% else %}
 
-.. code-block:: bash
+.. note::
 
-    % protoc --python-out=compiled_protos/ protos/transactions.proto
+   Follow
+   `these instructions <https://developers.google.com/protocol-buffers/docs/pythontutorial#compiling-your-protocol-buffers>`_
+   to install Google's *protobuf compiler* for Python, and manually compile
+   Protobuf classes from the core definition files.
+
+   The example code here assumes you will instead use classes from the
+   *Sawtooth Python SDK*, which can be compiled by running the executable script
+   ``bin/protogen``.
 
 .. code-block:: python
 
     from random import randint
-    from compiled_protos.transactions_pb2 import TransactionHeader
+    from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
     txn_header = TransactionHeader(
         batcher_pubkey=public_key_hex,
-        dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        # This is what setting a dependency might look like:
+        # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         family_name='intkey',
         family_version='1.0',
         inputs=['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
@@ -204,39 +213,47 @@ keys.
 
    Remember that *inputs* and *outputs* are state addresses that this
    Transaction is allowed to read from or write to, and *dependencies* are the
-   *header signatures* of Transactions that must be committed before ours (see
-   TransactionHeaders in :doc:`/architecture/transactions_and_batches`). The
-   dependencies property will frequently be left empty, but generally at least
-   one input and output must always be set.
+   *header signatures* of Transactions that must be committed before this one
+   (see TransactionHeaders in :doc:`/architecture/transactions_and_batches`).
+   The dependencies property will frequently be left empty, but generally at
+   least one input and output must always be set.
 
 
 3. Sign the Header
 ------------------
 
 Once the TransactionHeader is created and serialized as a Protobuf binary, you
-can use your private key to create a secp256k1 signature. If not handled
-automatically by your signing library, you may need to generate a SHA-256 hash
-of the header bytes as well, as that is technically what gets signed. The
-signature itself should be formatted as a hexedecimal string for transmission.
+can use your private key to create an *ECDSA signature*. In order to generate a
+signature the Sawtooth validator will accept, you must:
+
+    * use the *secp256k1* elliptic curve
+    * sign a *SHA-256* hash of the TransactionHeader binary
+    * use a compact 64-byte signature
+    * format the signature as a hexadecimal string
+
+This is a fairly typical way to sign data, so depending on the language and
+library you are using, some of these steps may be handled automatically.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const sha256 = require('crypto').createHash('sha256')
-    const txnHeaderHash = sha256.update(txnHeaderBytes).digest()
+    hasher = crypto.createHash('sha256')
+    const txnHeaderHash = hasher.update(txnHeaderBytes).digest()
 
-    const txnSigBytes = secp256k1.sign(txnHeaderHash, privateKey).signature
+    // secp256k1.sign generates compact 64-byte signature by default
+    const txnSigBytes = secp256k1.sign(txnHeaderHash, privateKeyBytes).signature
     const txnSignatureHex = txnSigBytes.toString('hex')
 
 {% else %}
 
 .. code-block:: python
 
-    key_handler = secp256k1.PrivateKey(private_key)
+    key_handler = secp256k1.PrivateKey(private_key_bytes)
 
-    # No need to manually generate a SHA-256 hash in Python
-    txn_signature_bytes = key_handler.ecdsa_sign(txn_header_bytes)
+    # ecdsa_sign automatically generates a SHA-256 hash
+    txn_signature = key_handler.ecdsa_sign(txn_header_bytes)
+    txn_signature_bytes = key_handler.ecdsa_serialize_compact(txn_signature)
     txn_signature_hex = txn_signature_bytes.hex()
 
 {% endif %}
@@ -265,7 +282,7 @@ the Transaction.
 
 .. code-block:: python
 
-    from compiled_protos.transactions_pb2 import Transaction
+    from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
 
     txn = Transaction(
         header=txn_header_bytes,
@@ -300,7 +317,7 @@ Protobuf for this purpose. Simply wrap a set of Transactions in the
 
 .. code-block:: python
 
-    from compiled_protos.transactions_pb2 import TransactionList
+    from sawtooth_sdk.protobuf.transaction_pb2 import TransactionList
 
     txnList = TransactionList(transactions=[txn])
     txnBytes = txnList.SerializeToString()
@@ -350,7 +367,7 @@ must be decoded before being wrapped in a batch.
 -------------------------
 
 The process for creating a *BatchHeader* is very similar to a TransactionHeader.
-Compile the *batches.proto* file, and then instantiate the appropriate
+Compile the *batch.proto* file, and then instantiate the appropriate
 {{ language }} class with the appropriate values. This time, there are just two
 properties: a *signer pubkey*, and a set of *Transaction ids*. Just like with a
 TransactionHeader, the signer pubkey must have been generated from the private
@@ -362,23 +379,19 @@ same order as the Transactions themselves.
 
 .. code-block:: javascript
 
-    const batchRoot = protobuf.loadSync('protos/batches.proto')
+    const batchRoot = protobuf.loadSync('sawtooth-core/protos/batch.proto')
     const BatchHeader = batchRoot.lookup('BatchHeader')
 
     const batchHeaderBytes = BatchHeader.encode({
-        signerPubkey: publicKey,
+        signerPubkey: publicKeyHex,
         transactionIds: [txn.headerSignature]
     }).finish()
 
 {% else %}
 
-.. code-block:: bash
-
-    % protoc --python-out=compiled_protos/ protos/batches.proto
-
 .. code-block:: python
 
-    from compiled_protos.batches_pb2 import BatchHeader
+    from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 
     batch_header = BatchHeader(
         signer_pubkey=public_key_hex,
@@ -393,22 +406,28 @@ same order as the Transactions themselves.
 ------------------
 
 The process for signing a BatchHeader is identical to signing the
-TransactionHeader. Create a SHA-256 hash of the the header binary if necessary,
-and then use your private key to create a secp256k1 signature.
+TransactionHeader. Create a SHA-256 hash of the the header binary, use your
+private key to create a 64-byte secp256k1 signature, and format that signature
+as a hexadecimal string. As with signing a TransactionHeader, some of these
+steps may be handled automatically by the library you are using.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const batchHeaderHash = sha256.update(batchHeaderBytes).digest()
+    hasher = crypto.createHash('sha256')
+    const batchHeaderHash = hasher.update(batchHeaderBytes).digest()
 
-    const batchSignature = secp256k1.sign(batchHeaderHash, privateKey)
+    const batchSigBytes = secp256k1.sign(batchHeaderHash, privateKeyBytes).signature
+    const batchSignatureHex = batchSigBytes.toString('hex')
 
 {% else %}
 
 .. code-block:: python
 
-    batch_signature_bytes = key_handler.ecdsa_sign(batch_header_bytes)
+    batch_signature = key_handler.ecdsa_sign(batch_header_bytes)
+
+    batch_signature_bytes = key_handler.ecdsa_serialize_compact(batch_signature)
 
     batch_signature_hex = batch_signature_bytes.hex()
 
@@ -435,7 +454,7 @@ compiled class to instantiate a new Batch with the proper data.
 
     const batch = Batch.create({
         header: batchHeaderBytes,
-        headerSignature: batchSignature,
+        headerSignature: batchSignatureHex,
         transactions: [txn]
     })
 
@@ -443,7 +462,7 @@ compiled class to instantiate a new Batch with the proper data.
 
 .. code-block:: python
 
-    from compiled_protos.batches_pb2 import Batch
+    from sawtooth_sdk.protobuf.batch_pb2 import Batch
 
     batch = Batch(
         header=batch_header_bytes,
@@ -474,7 +493,7 @@ should be set to one or more Batches.
 
 .. code-block:: python
 
-    from compiled_protos.batches_pb2 import BatchList
+    from sawtooth_sdk.protobuf.batch_pb2 import BatchList
 
     batch_list = BatchList(batches=[batch])
     batch_bytes = batch_list.SerializeToString()

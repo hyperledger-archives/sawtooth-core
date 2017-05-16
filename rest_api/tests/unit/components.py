@@ -107,6 +107,8 @@ class MockStream(object):
     class _MockFuture(object):
         class Response(object):
             def __init__(self, content):
+                # message_type must be set, but is not important
+                self.message_type = 0
                 self.content = content
 
         def __init__(self, response_content):

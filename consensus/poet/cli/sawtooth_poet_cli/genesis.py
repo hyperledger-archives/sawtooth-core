@@ -87,7 +87,7 @@ def do_genesis(args):
     except ImportError as e:
         raise AssertionError(str(e))
 
-    poet_enclave_module.initialize(**{})
+    poet_enclave_module.initialize(config.get_config_dir())
 
     pubkey, signing_key = _read_signing_keys(args.key)
 

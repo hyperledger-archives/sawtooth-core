@@ -268,6 +268,8 @@ test_python_sdk() {
     copy_coverage .coverage.tp-xo-python
     run_docker_test intkey-python-smoke -s integration_test
     copy_coverage .coverage.intkey-python-smoke
+    run_docker_test workload -s integration_test
+    copy_coverage .coverage.workload
     run_docker_test xo-smoke -s integration_test
     copy_coverage .coverage.xo-smoke
     run_docker_test two_families -s integration_test
@@ -277,6 +279,8 @@ test_python_sdk() {
 test_integration() {
     run_docker_test poet-smoke -s integration_test
     copy_coverage .coverage.poet-smoke
+    run_docker_test dynamic-network -s integration_test
+    copy_coverage .coverage.dynamic-network
 }
 
 test_deployment() {

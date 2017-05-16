@@ -23,28 +23,33 @@ prepared the BatchList:
         body: batchBytes,
         headers: {'Content-Type': 'application/octet-stream'}
     }, (err, response) => {
-        console.log(response)
+        if (err) return console.log(err)
+        console.log(response.body)
     })
 
 {% else %}
 
 .. code-block:: python
 
-    import urllib
+    import urllib.request
+    from urllib.error import HTTPError
 
-    request = urllib.Request(
-        'http://rest.api.domain/batches',
-        batch_bytes,
-        method='POST',
-        headers={'Content-Type': 'application/octet-stream'})
+    try:
+        request = urllib.request.Request(
+            'http://rest.api.domain/batches',
+            batch_bytes,
+            method='POST',
+            headers={'Content-Type': 'application/octet-stream'})
+        response = urllib.request.urlopen(request)
 
-    response = urllib.urlopen(request)
+    except HTTPError as e:
+        response = e.file
 
 {% endif %}
 
 
 And here is what it would look like if you saved the binary to a file, and then
-sent it with *curl*:
+sent it from the command-line with *curl*:
 
 {% if language == 'JavaScript' %}
 
@@ -60,7 +65,7 @@ sent it with *curl*:
 
 .. code-block:: python
 
-    output = open('batches.intkey', 'wb')
+    output = open('intkey.batches', 'wb')
     output.write(batch_bytes)
 
 {% endif %}
@@ -69,5 +74,5 @@ sent it with *curl*:
 
     % curl --request POST \
         --header "Content-Type: application/octet-stream" \
-        --data-binary "intkey.batches" \
+        --data-binary @intkey.batches \
         "http://rest.api.domain/batches"

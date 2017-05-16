@@ -15,8 +15,8 @@
 
 import hashlib
 import base64
-import requests
 import time
+import requests
 import yaml
 
 import sawtooth_signing.secp256k1_signer as signing

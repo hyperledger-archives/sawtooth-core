@@ -146,6 +146,10 @@ Sawtooth Lake includes additional transaction processors:
 
   - A config family transaction processor written in Python
 
+* tp_intkey_go
+
+  - An intkey transaction processor written in Go
+
 * tp_intkey_java
 
   - An intkey transaction processor written in Java
@@ -165,6 +169,11 @@ Sawtooth Lake includes additional transaction processors:
 
   - A transaction family used by the PoET consensus algorithm implementation
     to keep track of other validators.
+
+* tp_xo_javascript
+
+  - An XO transaction processor written in JavaScript
+  - Requires node.js
 
 * tp_xo_python
 
@@ -198,7 +207,7 @@ Or from the Docker CLI:
 .. code-block:: console
 
   $ intkey create_batch
-  $ intkey load -f batches.intkey -U tcp://validator:40000
+  $ intkey load -f batches.intkey -U http://rest_api:8080
 
 You can observe the processing of the intkey transactions by observing the
 logging output of the validator. A truncated example of the validator's output

@@ -134,8 +134,9 @@ class ProcessorIteratorCollection(object):
             None
         """
         with self._condition:
-            self._condition.wait_for(lambda: processor_type in self
-                                     or cancelled_event.is_set())
+            self._condition.wait_for(
+                lambda: processor_type in self or cancelled_event.is_set()
+            )
 
     def notify(self):
         """Must be called after setting the cancelled_event, when
