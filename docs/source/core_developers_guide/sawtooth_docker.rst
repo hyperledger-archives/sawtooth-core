@@ -20,39 +20,41 @@ The docker subdirectory is structured as follows:
 
 .. code-block:: console
 
- docker/
-  compose/
+ ci/
   sawtooth-all
-  sawtooth-build-java
-  sawtooth-build-javascript
-  ...
-  sawtooth-dev-base
-  sawtooth-dev-rest_api
-  ...
   sawtooth-tp_config
   sawtooth-tp_intkey_python
   ...
   sawtooth-validator
+  
+ docker/
+  compose/
+  sawtooth-dev-go
+  sawtooth-dev-java
+  sawtooth-dev-javascript
+  sawtooth-dev-python
+  ...
+  sawtooth-int-rest_api
+  sawtooth-int-tp_config
+  ...
 
 
 compose/
   Contains docker compose files for easily bringing up validator networks and
   connected transaction processors.
 
-sawtooth-build-\*
-  Dockerfiles used to build the Sawtooth Lake source code without polluting the
-  host environment. The containers should be run with the source code mounted
-  inside the container.
-
-  These Dockerfiles are built and run as part of the `build_all` command.
- 
 sawtooth-dev-\*
-  Dockerfiles used for testing and development. 
+  Dockerfiles used for Hyperledger Sawtooth development in a given language. The
+  default command for each image is to run the build commands needed to run the
+  code in that language. These Dockerfiles are also used for local testing.
 
-  These Dockerfiles are built as part of the `build_all` command and run as part
-  of the `run_tests` command.
- 
+sawtooth-int-\*
+  Dockerfiles used for testing Hyperledger Sawtooth in an installed environment.
+  They copy in build artifacts from a local copy of the repository and install
+  them.
+
 sawtooth-\*
-  Dockerfiles that build images with Sawtooth Lake installed from the Sawtooth
-  Lake package repository (http://repo.sawtooth.me). These Dockerfiles
-  do not make any assumptions about the build or runtime environments.
+  Dockerfiles that build images with Hyperledger Sawtooth installed from the
+  Hyperledger Sawtooth package repository. (http://repo.sawtooth.me) These
+  Dockerfiles do not make any assumptions about the build or runtime
+  environments.

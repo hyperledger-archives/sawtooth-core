@@ -17,12 +17,14 @@ version: "2.1"
 
 services:
   integration_test:
-    image: sawtooth-dev-test:$ISOLATION_ID
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
       - /var/run/docker.sock:/var/run/docker.sock
-    command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/tests
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
         test_shutdown_smoke.TestShutdownSmoke
     environment:
       PYTHONPATH: "/project/sawtooth-core/integration"

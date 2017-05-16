@@ -15,7 +15,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+set -e
+
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 echo -e "\033[0;32m--- Running protogen go ---\n\033[0m"
-$top_dir/bin/protogen go || exit 1
+$top_dir/bin/protogen go
+
+echo -e "\033[0;32m--- Building tp_intkey_go ---\n\033[0m"
+cd $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
+mkdir -p $top_dir/sdk/examples/intkey_go/bin
+go build -o $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go

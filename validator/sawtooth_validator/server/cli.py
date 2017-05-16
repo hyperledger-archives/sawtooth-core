@@ -171,7 +171,6 @@ def main(args=sys.argv[1:]):
     except LocalConfigurationError as e:
         log_configuration(log_dir=path_config.log_dir,
                           name="validator")
-        init_console_logging(verbose_level=verbose_level)
         LOGGER.error(str(e))
         init_errors = True
 
@@ -207,6 +206,7 @@ def main(args=sys.argv[1:]):
                           opts.join,
                           opts.peers,
                           path_config.data_dir,
+                          path_config.config_dir,
                           identity_signing_key)
 
     # pylint: disable=broad-except

@@ -24,6 +24,13 @@
 /core_transactions/config/sawtooth_config/protobuf/
 /core_transactions/**/__pycache__/
 
+/coverage
+/coverage/html
+
+/docs/build/
+/docs/source/_autogen/
+/docs/source/cli/output/
+
 /extensions/arcade/sawtooth_arcade.egg-info/
 
 /integration/**/__pycache__/
@@ -40,6 +47,7 @@
 /sdk/javascript/node_modules
 /sdk/javascript/protobuf/protobuf_bundle.json
 /sdk/examples/xo_python/**/__pycache__/
+/sdk/examples/xo_javascript/node_modules/
 /sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
@@ -48,6 +56,7 @@
 /sdk/go/src/sawtooth_sdk/protobuf/
 /sdk/go/src/github.com/
 /sdk/go/bin/
+/sdk/examples/intkey_go/bin/
 /sdk/go/pkg/
 
 /signing/build/
@@ -58,3 +67,5 @@
 /validator/sawtooth_validator.egg-info/
 /validator/sawtooth_validator/protobuf/
 /validator/**/__pycache__/
+
+/sdk/cxx/build/

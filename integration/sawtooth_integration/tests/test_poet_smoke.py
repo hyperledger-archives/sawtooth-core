@@ -20,6 +20,7 @@ import time
 import logging
 
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 from sawtooth_cli.rest_client import RestClient
 
 
@@ -39,10 +40,13 @@ BATCH_COUNT = 20
 
 class TestPoetSmoke(unittest.TestCase):
     def setUp(self):
-        urls = ['http://rest-api-{}:8080'.format(i)
-                for i in range(VALIDATOR_COUNT)]
+        endpoints = ['rest-api-{}:8080'.format(i)
+                     for i in range(VALIDATOR_COUNT)]
 
-        self.clients = [IntkeyClient(url) for url in urls]
+        wait_for_rest_apis(endpoints, tries=10)
+
+        self.clients = [IntkeyClient('http://' + endpoint)
+                        for endpoint in endpoints]
 
     def test_poet_smoke(self):
         '''

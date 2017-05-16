@@ -65,11 +65,11 @@ services:
       - 8080
     depends_on:
       - validator
-    command: rest_api --stream-url tcp://validator:40000 --host rest_api
+    command: rest_api -v --stream-url tcp://validator:40000 --host rest_api
     stop_signal: SIGKILL
 
   integration_test:
-    image: sawtooth-dev-test:$ISOLATION_ID
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -77,8 +77,10 @@ services:
     depends_on:
       - validator
       - rest_api
-    command: nose2-3 -v -s
-        /project/sawtooth-core/integration/sawtooth_integration/tests
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
         test_intkey_smoke.TestIntkeySmoke
     stop_signal: SIGKILL
     environment:

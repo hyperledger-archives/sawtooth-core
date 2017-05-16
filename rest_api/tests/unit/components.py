@@ -107,6 +107,8 @@ class MockStream(object):
     class _MockFuture(object):
         class Response(object):
             def __init__(self, content):
+                # message_type must be set, but is not important
+                self.message_type = 0
                 self.content = content
 
         def __init__(self, response_content):
@@ -157,8 +159,7 @@ class BaseApiTest(AioHTTPTestCase):
         Returns:
             RouteHandler: The route handlers to handle test queries
         """
-        handlers = RouteHandler(loop, 'tcp://0.0.0.0:40404', TEST_TIMEOUT)
-        handlers._stream = stream
+        handlers = RouteHandler(loop, stream, TEST_TIMEOUT)
         return handlers
 
     @staticmethod

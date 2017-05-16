@@ -16,31 +16,26 @@
 import cbor
 
 from sawtooth_processor_test.message_factory import MessageFactory
+from sawtooth_intkey.processor.handler import INTKEY_ADDRESS_PREFIX
+from sawtooth_intkey.processor.handler import make_intkey_address
 
 
 class IntkeyMessageFactory:
-
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
-            encoding="application/cbor",
-            family_name="intkey",
-            family_version="1.0",
-            namespace="",
+            encoding='application/cbor',
+            family_name='intkey',
+            family_version='1.0',
+            namespace=INTKEY_ADDRESS_PREFIX,
             private=private,
             public=public
         )
-        self._factory.namespace = self._factory.sha512(
-            "intkey".encode("utf-8"))[0:6]
 
     def _dumps(self, obj):
         return cbor.dumps(obj, sort_keys=True)
 
     def _loads(self, data):
         return cbor.loads(data)
-
-    def _key_to_address(self, key):
-        return self._factory.namespace + \
-            self._factory.sha512(key.encode("utf-8"))
 
     def create_tp_register(self):
         return self._factory.create_tp_register()
@@ -49,9 +44,9 @@ class IntkeyMessageFactory:
         return self._factory.create_tp_response(status)
 
     def _create_txn(self, txn_function, verb, name, value):
-        payload = self._dumps({"Verb": verb, "Name": name, "Value": value})
+        payload = self._dumps({'Verb': verb, 'Name': name, 'Value': value})
 
-        addresses = [self._key_to_address(name)]
+        addresses = [make_intkey_address(name)]
 
         return txn_function(payload, addresses, addresses, [])
 
@@ -70,11 +65,11 @@ class IntkeyMessageFactory:
         return self._factory.create_batch(txns)
 
     def create_get_request(self, name):
-        addresses = [self._key_to_address(name)]
+        addresses = [make_intkey_address(name)]
         return self._factory.create_get_request(addresses)
 
     def create_get_response(self, name, value):
-        address = self._key_to_address(name)
+        address = make_intkey_address(name)
 
         if value is not None:
             data = self._dumps({name: value})
@@ -84,7 +79,7 @@ class IntkeyMessageFactory:
         return self._factory.create_get_response({address: data})
 
     def create_set_request(self, name, value):
-        address = self._key_to_address(name)
+        address = make_intkey_address(name)
 
         if value is not None:
             data = self._dumps({name: value})
@@ -94,5 +89,5 @@ class IntkeyMessageFactory:
         return self._factory.create_set_request({address: data})
 
     def create_set_response(self, name):
-        addresses = [self._key_to_address(name)]
+        addresses = [make_intkey_address(name)]
         return self._factory.create_set_response(addresses)

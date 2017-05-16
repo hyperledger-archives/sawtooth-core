@@ -26,6 +26,7 @@ from base64 import b64decode
 import cbor
 
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 
 LOGGER = logging.getLogger(__name__)
@@ -33,6 +34,11 @@ LOGGER.setLevel(logging.INFO)
 
 
 class TestIntkeySmoke(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        wait_for_rest_apis(['rest_api:8080'])
+
     def test_intkey_smoke(self):
         '''
         After starting up a validator, intkey processor, and rest api,

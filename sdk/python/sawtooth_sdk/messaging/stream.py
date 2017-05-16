@@ -16,6 +16,7 @@
 import asyncio
 import uuid
 import logging
+from queue import Queue
 from threading import Event
 from threading import Thread
 from threading import Condition
@@ -39,6 +40,7 @@ LOGGER = logging.getLogger(__file__)
 # queue will be validator_pb2.Message objects, so -1 will be an exceptional
 # event.
 RECONNECT_EVENT = -1
+_NO_ERROR = -1
 
 
 def _generate_id():
@@ -50,7 +52,7 @@ class _SendReceiveThread(Thread):
     Internal thread to Stream class that runs the asyncio event loop.
     """
 
-    def __init__(self, url, futures, ready_event):
+    def __init__(self, url, futures, ready_event, error_queue):
         """constructor for background thread
 
         :param url (str): the address to connect to the validator on
@@ -63,7 +65,7 @@ class _SendReceiveThread(Thread):
         super(_SendReceiveThread, self).__init__()
         self._futures = futures
         self._url = url
-
+        self._shutdown = False
         self._event_loop = None
         self._sock = None
         self._monitor_sock = None
@@ -72,6 +74,7 @@ class _SendReceiveThread(Thread):
         self._send_queue = None
         self._context = None
         self._ready_event = ready_event
+        self._error_queue = error_queue
         self._condition = Condition()
         self.identity = _generate_id()[0:16]
 
@@ -170,21 +173,21 @@ class _SendReceiveThread(Thread):
         return asyncio.run_coroutine_threadsafe(self._get_message(),
                                                 self._event_loop)
 
-    def _tasks_yet_to_be_done(self):
-        """Gathers all the tasks (pending coroutines and futures)
-        and provides a future that is done when all tasks are done.
-        :return: concurrent.futures.Future
+    def _cancel_tasks_yet_to_be_done(self):
+        """Cancels all the tasks (pending coroutines and futures)
         """
-        return asyncio.gather(*asyncio.Task.all_tasks(self._event_loop))
+        for task in asyncio.Task.all_tasks(self._event_loop):
+            self._event_loop.call_soon_threadsafe(task.cancel)
+        self._event_loop.call_soon_threadsafe(self._done_callback)
 
     def shutdown(self):
-        """Schedules a callback to be run when all of the tasks
-         have completed.
+        """Shutdown the _SendReceiveThread. Is an irreversible operation.
         """
-        future = self._tasks_yet_to_be_done()
-        future.add_done_callback(self._done_callback)
 
-    def _done_callback(self, future):
+        self._shutdown = True
+        self._cancel_tasks_yet_to_be_done()
+
+    def _done_callback(self):
         """Stops the event loop, closes the socket, and destroys the context
 
         :param future: concurrent.futures.Future not used
@@ -197,35 +200,47 @@ class _SendReceiveThread(Thread):
     def run(self):
         first_time = True
         while True:
-            if self._event_loop is None:
-                self._event_loop = zmq.asyncio.ZMQEventLoop()
-                asyncio.set_event_loop(self._event_loop)
-            if self._context is None:
-                self._context = zmq.asyncio.Context()
-            if self._sock is None:
-                self._sock = self._context.socket(zmq.DEALER)
-            self._sock.identity = self.identity
-            self._sock.connect(self._url)
-            self._monitor_fd = "inproc://monitor.s-{}".format(
-                _generate_id()[0:5])
-            self._monitor_sock = self._sock.get_monitor_socket(
-                zmq.EVENT_DISCONNECTED,
-                addr=self._monitor_fd)
-            self._send_queue = asyncio.Queue(loop=self._event_loop)
-            self._recv_queue = asyncio.Queue(loop=self._event_loop)
-            if first_time is False:
-                self._recv_queue.put_nowait(RECONNECT_EVENT)
-            with self._condition:
-                self._condition.notify_all()
-            asyncio.ensure_future(self._send_message(),
-                                  loop=self._event_loop)
-            asyncio.ensure_future(self._receive_message(),
-                                  loop=self._event_loop)
-            asyncio.ensure_future(self._monitor_disconnects(),
-                                  loop=self._event_loop)
+            try:
+                if self._event_loop is None:
+                    self._event_loop = zmq.asyncio.ZMQEventLoop()
+                    asyncio.set_event_loop(self._event_loop)
+                if self._context is None:
+                    self._context = zmq.asyncio.Context()
+                if self._sock is None:
+                    self._sock = self._context.socket(zmq.DEALER)
+                self._sock.identity = self.identity
 
+                self._sock.connect(self._url)
+
+                self._monitor_fd = "inproc://monitor.s-{}".format(
+                    _generate_id()[0:5])
+                self._monitor_sock = self._sock.get_monitor_socket(
+                    zmq.EVENT_DISCONNECTED,
+                    addr=self._monitor_fd)
+                self._send_queue = asyncio.Queue(loop=self._event_loop)
+                self._recv_queue = asyncio.Queue(loop=self._event_loop)
+                if first_time is False:
+                    self._recv_queue.put_nowait(RECONNECT_EVENT)
+                with self._condition:
+                    self._condition.notify_all()
+                asyncio.ensure_future(self._send_message(),
+                                      loop=self._event_loop)
+                asyncio.ensure_future(self._receive_message(),
+                                      loop=self._event_loop)
+                asyncio.ensure_future(self._monitor_disconnects(),
+                                      loop=self._event_loop)
+                # pylint: disable=broad-except
+            except Exception as e:
+                LOGGER.error("Exception connecting to validator "
+                             "address %s, so shutting down", self._url)
+                self._error_queue.put_nowait(e)
+                break
+
+            self._error_queue.put_nowait(_NO_ERROR)
             self._ready_event.set()
             self._event_loop.run_forever()
+            if self._shutdown:
+                break
             if first_time is True:
                 first_time = False
 
@@ -236,12 +251,16 @@ class Stream(object):
         self._futures = FutureCollection()
         self._event = Event()
         self._event.set()
+        error_queue = Queue()
         self._send_recieve_thread = _SendReceiveThread(
             url,
             futures=self._futures,
-            ready_event=self._event)
-        self._send_recieve_thread.daemon = True
+            ready_event=self._event,
+            error_queue=error_queue)
         self._send_recieve_thread.start()
+        err = error_queue.get()
+        if err is not _NO_ERROR:
+            raise err
 
     @property
     def url(self):

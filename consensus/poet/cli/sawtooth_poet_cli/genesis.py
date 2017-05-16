@@ -87,7 +87,7 @@ def do_genesis(args):
     except ImportError as e:
         raise AssertionError(str(e))
 
-    poet_enclave_module.initialize(**{})
+    poet_enclave_module.initialize(config.get_config_dir())
 
     pubkey, signing_key = _read_signing_keys(args.key)
 
@@ -208,7 +208,7 @@ def _read_signing_keys(key_filename):
     """
     filename = key_filename
     if key_filename is None:
-        filename = os.path.join(config.get_key_dir(), 'validator.wif')
+        filename = os.path.join(config.get_key_dir(), 'validator.priv')
 
     try:
         with open(filename, 'r') as key_file:

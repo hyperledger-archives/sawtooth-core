@@ -81,7 +81,7 @@ class ValidatorTimedOut(_ApiError):
     status_code = 503
     title = 'Validator Timed Out'
     message = ('The request timed out while waiting for a response from the '
-               'validator. Try your request again later.')
+               'validator. Your request may or may not have been processed.')
 
 
 class ValidatorDisconnected(_ApiError):
@@ -90,6 +90,14 @@ class ValidatorDisconnected(_ApiError):
     title = 'Validator Disconnected'
     message = ('The validator disconnected before sending a response. '
                'Try your request again later.')
+
+
+class ValidatorResponseInvalid(_ApiError):
+    api_code = 20
+    status_code = 500
+    title = 'Invalid Validator Response'
+    message = ('The response from the validator could not be decoded. It may '
+               'have been corrupted or compromised.')
 
 
 class ResourceHeaderInvalid(_ApiError):
@@ -112,8 +120,8 @@ class SubmittedBatchesInvalid(_ApiError):
     api_code = 30
     status_code = 400
     title = 'Submitted Batches Invalid'
-    message = ('The submitted BatchList is invalid. It was poorly formed, or '
-               'has an invalid signature.')
+    message = ('The submitted BatchList was rejected by the validator. It was '
+               'poorly formed, or has an invalid signature.')
 
 
 class NoBatchesSubmitted(_ApiError):
@@ -194,7 +202,7 @@ class StatusIdQueryInvalid(_ApiError):
     status_code = 400
     title = 'Id Query Invalid or Missing'
     message = ("Requests for batch statuses sent as a GET request must have "
-               "an 'id' query parameter with a comma seperated list of "
+               "an 'id' query parameter with a comma-separated list of "
                "at least one batch id.")
 
 

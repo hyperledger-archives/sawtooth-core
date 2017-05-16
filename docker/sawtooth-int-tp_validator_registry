@@ -14,17 +14,14 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the dependencies needed by the Sawtooth Lake
-#   TP Validator Registry installed.
+#   Builds an image with the Hyperledger Sawtooth TP Validator Registry
+#   installed from local debs.
 #
 # Build:
-#   $ cd sawtooth-core
-#   $ docker build . -f sawtooth-dev-tp_validator_registry \
-#     -t sawtooth-dev-tp_validator_registry
+#   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ cd sawtooth-core
-#   $ docker run -t sawtooth-dev-tp_validator_registry
+#   $ docker run sawtooth-tp_validator_registry
 
 FROM ubuntu:xenial
 
@@ -42,7 +39,7 @@ COPY python3-sawtooth-*.deb /debs/
 RUN cd /debs \
  && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
  && echo "deb file:/debs ./" >> /etc/apt/sources.list \
- && echo "deb http://repo.sawtooth.me/ xenial universe" >> /etc/apt/sources.list \
+ && echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6B58B1AC10FB5F63 \
  && apt-get update
 

@@ -27,6 +27,7 @@ from base64 import b64decode
 import cbor
 
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 
 LOGGER = logging.getLogger(__name__)
@@ -37,6 +38,11 @@ INTKEY_PREFIX = '1cf126'
 XO_PREFIX = '5b7349'
 
 class TestTwoFamilies(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        wait_for_rest_apis(['rest_api:8080'])
+
     def test_two_families(self):
         '''
         After starting a validator with both intkey and xo

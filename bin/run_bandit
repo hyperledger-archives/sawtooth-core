@@ -31,6 +31,7 @@ directories="
     consensus/poet/families/tests
     consensus/poet/simulator/build
     consensus/poet/simulator/tests
+    core
     core_transactions/config/tests
     integration
     rest_api/build
@@ -56,4 +57,4 @@ done
 bandit -ll -r --ignore-nosec $top_dir \
     --exclude $ignore \
     -f html \
-    -o build/bandit.html
+    -o /project/sawtooth-core/build/bandit.html

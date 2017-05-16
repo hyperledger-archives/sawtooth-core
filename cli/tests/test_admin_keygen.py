@@ -31,10 +31,10 @@ class TestKeygen(unittest.TestCase):
         cls._parser = None
         cls._key_dir = get_key_dir()
         cls._key_name = 'test_key'
-        cls._wif_filename = os.path.join(cls._key_dir,
-                                         cls._key_name + '.wif')
-        cls._addr_filename = os.path.join(cls._key_dir,
-                                          cls._key_name + '.addr')
+        cls._priv_filename = os.path.join(cls._key_dir,
+                                          cls._key_name + '.priv')
+        cls._pub_filename = os.path.join(cls._key_dir,
+                                         cls._key_name + '.pub')
         if not os.path.exists(cls._key_dir):
             try:
                 os.makedirs(cls._key_dir, exist_ok=True)
@@ -70,7 +70,7 @@ class TestKeygen(unittest.TestCase):
         args = self._parse_keygen_command(self._key_name)
         keygen.do_keygen(args)
 
-        pubkey, signing_key = _read_signing_keys(self._wif_filename)
+        pubkey, signing_key = _read_signing_keys(self._priv_filename)
 
         self.assertIsNotNone(pubkey)
         self.assertIsNotNone(signing_key)
@@ -85,7 +85,7 @@ class TestKeygen(unittest.TestCase):
         args = self._parse_keygen_command('--force', self._key_name)
         keygen.do_keygen(args)
 
-        pubkey, signing_key = _read_signing_keys(self._wif_filename)
+        pubkey, signing_key = _read_signing_keys(self._priv_filename)
 
         self.assertIsNotNone(pubkey)
         self.assertIsNotNone(signing_key)
@@ -94,8 +94,8 @@ class TestKeygen(unittest.TestCase):
         '''Removes the key files.
         '''
         try:
-            os.remove(self._wif_filename)
-            os.remove(self._addr_filename)
+            os.remove(self._priv_filename)
+            os.remove(self._pub_filename)
         except FileNotFoundError:
             pass
 

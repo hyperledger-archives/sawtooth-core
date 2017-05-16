@@ -1,0 +1,13 @@
+{{ start_comment }}
+{{ line_comment }}  **********************************************************
+{{ line_comment }}  *                        WARNING!!!                      *
+{{ line_comment }}  * ------------------------------------------------------ *
+{{ line_comment }}  * This is an auto-generated file.  Do NOT modify!        *
+{{ line_comment }}  *                                                        *
+{{ line_comment }}  * Modifications should be made to the original template, *
+{{ line_comment }}  * or to the config file:                                 *
+{{ line_comment }}  *     - {{ template_path }}
+{{ line_comment }}  *     - source/_templates/template_config.yaml           *
+{{ line_comment }}  **********************************************************
+{{ end_comment }}
+

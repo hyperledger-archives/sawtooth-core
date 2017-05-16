@@ -59,6 +59,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )
@@ -78,6 +79,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )
@@ -97,6 +99,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )
@@ -121,6 +124,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )
@@ -150,6 +154,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )
@@ -178,6 +183,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(DictDatabase()),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )
@@ -219,6 +225,7 @@ class TestGenesisController(unittest.TestCase):
             StateViewFactory(state_database),
             self._identity_key,
             data_dir=self._temp_dir,
+            config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
             batch_sender=Mock('batch_sender')
         )

@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import sys
 import argparse
 
@@ -43,30 +42,32 @@ def parse_args(args):
 
 def main(args=sys.argv[1:]):
     opts = parse_args(args)
-
-    processor = TransactionProcessor(url=opts.endpoint)
-    log_config = get_log_config(filename="intkey_log_config.toml")
-    if log_config is not None:
-        log_configuration(log_config=log_config)
-    else:
-        log_dir = get_log_dir()
-        # use the transaction processor zmq identity for filename
-        log_configuration(
-            log_dir=log_dir,
-            name="intkey-" + str(processor.zmq_id)[2:-1])
-
-    init_console_logging(verbose_level=opts.verbose)
-
-    # The prefix should eventually be looked up from the
-    # validator's namespace registry.
-    intkey_prefix = hashlib.sha512('intkey'.encode()).hexdigest()[0:6]
-    handler = IntkeyTransactionHandler(namespace_prefix=intkey_prefix)
-
-    processor.add_handler(handler)
-
+    processor = None
     try:
+        processor = TransactionProcessor(url=opts.endpoint)
+        log_config = get_log_config(filename="intkey_log_config.toml")
+        if log_config is not None:
+            log_configuration(log_config=log_config)
+        else:
+            log_dir = get_log_dir()
+            # use the transaction processor zmq identity for filename
+            log_configuration(
+                log_dir=log_dir,
+                name="intkey-" + str(processor.zmq_id)[2:-1])
+
+        init_console_logging(verbose_level=opts.verbose)
+
+        # The prefix should eventually be looked up from the
+        # validator's namespace registry.
+        handler = IntkeyTransactionHandler()
+
+        processor.add_handler(handler)
+
         processor.start()
     except KeyboardInterrupt:
         pass
+    except Exception as e:  # pylint: disable=broad-except
+        print("Error: {}".format(e), file=sys.stderr)
     finally:
-        processor.stop()
+        if processor is not None:
+            processor.stop()

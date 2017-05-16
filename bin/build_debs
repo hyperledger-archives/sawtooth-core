@@ -103,10 +103,18 @@ main() {
     # Group 5: Depends on 1-4
     build_pkg "consensus/poet/cli" $pypath
 
-    # 5. Copy the packages to the output directory
-    find $build_dir -name \*.deb -exec cp {} $pkg_dir/ \;
+    # 5. Build the meta-package
+    VERSION=$($top_dir/bin/get_version)
+    cd $top_dir/ci
+    sed -i -e"s/@VERSION@/$VERSION/" ns-control
+    equivs-build ns-control
+    sed -i -e"s/$VERSION/@VERSION@/" ns-control
+    mv sawtooth*.deb $pkg_dir/
 
-    # 6. Display info for all packages build
+    # 6. Copy the packages to the output directory
+    find $build_dir -name python3-sawtooth*.deb -exec cp {} $pkg_dir/ \;
+
+    # 7. Display info for all packages built
     cd $top_dir
     for pkg in build/debs/*.deb
     do

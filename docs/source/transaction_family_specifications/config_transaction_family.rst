@@ -19,10 +19,10 @@ families is used by the transaction processing platform.
 In addition, pluggable components such as transaction family implementations
 can use the settings during their execution.
 
-This design supports three authorization options: a) no authorization (only
-appropriate for testing), b) a single authorized key which can make changes,
-and c) multiple authorized keys.  In the case of multiple keys, a percentage
-of the keys are required to make a change.
+This design supports two authorization options: a) a single authorized key
+which can make changes, and b) multiple authorized keys.  In the case of
+multiple keys, a percentage of votes signed by the keys is required to make a
+change.
 
 .. note::
 
@@ -63,8 +63,6 @@ The config transaction family uses the following settings for its own configurat
 +------------------------------------------+-------------------------------------------------------------+
 | Setting (Config)                         | Value Description                                           |
 +==========================================+=============================================================+
-| sawtooth.config.authorization_type       | One of ['None, 'Ballot'].   Default is 'None'.              |
-+------------------------------------------+-------------------------------------------------------------+
 | sawtooth.config.vote.authorized_keys     | List of public keys allowed to vote.                        |
 +------------------------------------------+-------------------------------------------------------------+
 | sawtooth.config.vote.approval_threshold  | Percentage of keys required for a proposal to be accepted.  |
@@ -182,10 +180,10 @@ buffers code:
 	//
 	// This message proposes a change in a setting value.
 	message ConfigProposal {
-	    // The setting key.  E.g. sawtooth.config.authorization_type
+	    // The setting key.  E.g. sawtooth.consensus.module
 	    string setting = 1;
 
-	    // The setting value. E.g. 'ballot'
+	    // The setting value. E.g. 'poet'
 	    string value = 2;
 
 	    // allow duplicate proposals with different hashes
@@ -220,7 +218,6 @@ Inputs and Outputs
 
 The inputs for config family transactions must include:
 
-* the address of *sawtooth.config.authorization_type*
 * the address of *sawtooth.config.vote.proposals*
 * the address of *sawtooth.config.vote.authorized_keys*
 * the address of *sawtooth.config.vote.approval_threshold*
@@ -254,31 +251,10 @@ Execution
 =========
 
 Initially, the transaction processor gets the current values of
-*sawtooth.config.vote.authorized_keys* and *sawtooth.config.authorization_type*
-from the state.
+*sawtooth.config.vote.authorized_keys* from the state.
 
 The public key of the transaction signer is checked against the values in
 the list of authorized keys.  If it is empty, all public keys are allowed.
-
-The authorization type determines how to process the transaction payloads.
-
-In the case of authorization type "None":
-
-A Propose action (indicated by *ConfigPayload.PROPOSE*) is validated (more on
-validation in a moment). If it fails, it is considered an invalid transaction.
-If it passes, will be applied to the state; An *INFO*-level logging message
-similar to
-
-.. code-block:: python3
-
-    "Config setting {} changed from {} to {}".format(setting, old_value, new_value)
-
-will be logged.
-
-A Vote action (indicated by *ConfigPayload.VOTE*) is considered an invalid
-transaction.
-
-In the case of authorization type "Ballot":
 
 A Propose action is validated.  If it fails, it is considered an invalid
 transaction.  A *proposal_id* is calculated by taking the sha256 hash of
@@ -308,7 +284,6 @@ by the public key and vote pair.
 
 Validation of configuration settings is as follows:
 
-- *sawtooth.config.authorization_type* may only be set to either "None" or
-  "Ballot"
-- *sawtooth.config.vote.approval_threshold* must be a postive integer
+- *sawtooth.config.vote.approval_threshold* must be a postive integer and must
+  be between 1 and the number of authorized keys, inclusive
 - *sawtooth.config.vote.proposals* may not be set by a proposal

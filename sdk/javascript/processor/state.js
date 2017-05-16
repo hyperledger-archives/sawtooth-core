@@ -31,8 +31,9 @@ class State {
    * the encoded value at the specified address
    */
   get (addresses) {
-    let getRequest = TpStateGetRequest.encode({addresses, contextId: this._contextId}).finish()
-    let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST, getRequest)
+    let getRequest = TpStateGetRequest.create({addresses, contextId: this._contextId})
+    let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
+                                   TpStateGetRequest.encode(getRequest).finish())
     return future.then((buffer) => {
       let getResponse = TpStateGetResponse.decode(buffer)
 
@@ -56,9 +57,9 @@ class State {
     let entries = Object.keys(addressValuePairs).map((address) =>
       Entry.create({address, data: addressValuePairs[address]}))
 
-    let setRequest = TpStateSetRequest.encode({entries, contextId: this._contextId}).finish()
-
-    let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST, setRequest)
+    let setRequest = TpStateSetRequest.create({entries, contextId: this._contextId})
+    let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
+                                   TpStateSetRequest.encode(setRequest).finish())
 
     return future.then((buffer) => {
       let setResponse = TpStateSetResponse.decode(buffer)

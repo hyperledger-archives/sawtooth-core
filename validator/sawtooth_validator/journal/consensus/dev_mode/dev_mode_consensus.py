@@ -16,6 +16,7 @@
 import time
 import random
 import hashlib
+import logging
 
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus\
@@ -26,6 +27,8 @@ from sawtooth_validator.journal.consensus.consensus\
     import ForkResolverInterface
 
 from sawtooth_validator.state.config_view import ConfigView
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BlockPublisher(BlockPublisherInterface):
@@ -41,12 +44,14 @@ class BlockPublisher(BlockPublisherInterface):
                  state_view_factory,
                  batch_publisher,
                  data_dir,
+                 config_dir,
                  validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             batch_publisher,
             data_dir,
+            config_dir,
             validator_id)
 
         self._block_cache = block_cache
@@ -139,11 +144,13 @@ class BlockVerifier(BlockVerifierInterface):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             data_dir,
+            config_dir,
             validator_id)
 
     def verify_block(self, block_wrapper):
@@ -158,11 +165,13 @@ class ForkResolver(ForkResolverInterface):
                  block_cache,
                  state_view_factory,
                  data_dir,
+                 config_dir,
                  validator_id):
         super().__init__(
             block_cache,
             state_view_factory,
             data_dir,
+            config_dir,
             validator_id)
 
     @staticmethod
@@ -185,6 +194,34 @@ class ForkResolver(ForkResolverInterface):
             bool: True if choosing the new chain head, False if choosing
             the current chain head.
         """
+
+        # If the new fork head is not DevMode consensus, bail out.  This should
+        # never happen, but we need to protect against it.
+        if new_fork_head.consensus != b"Devmode":
+            raise \
+                TypeError(
+                    'New fork head {} is not a DevMode block'.format(
+                        new_fork_head.identifier[:8]))
+
+        # If the current fork head is not DevMode consensus, check the new fork
+        # head to see if its immediate predecessor is the current fork head. If
+        # so that means that consensus mode is changing.  If not, we are again
+        # in a situation that should never happen, but we need to guard
+        # against.
+        if cur_fork_head.consensus != b"Devmode":
+            if new_fork_head.previous_block_id == cur_fork_head.identifier:
+                LOGGER.info(
+                    'Choose new fork %s: New fork head switches consensus to '
+                    'DevMode',
+                    new_fork_head.identifier[:8])
+                return True
+
+            raise \
+                TypeError(
+                    'Trying to compare a DevMode block {} to a non-DevMode '
+                    'block {} that is not the direct predecessor'.format(
+                        new_fork_head.identifier[:8],
+                        cur_fork_head.identifier[:8]))
 
         if new_fork_head.block_num == cur_fork_head.block_num:
             cur_fork_hash = self.hash_signer_pubkey(

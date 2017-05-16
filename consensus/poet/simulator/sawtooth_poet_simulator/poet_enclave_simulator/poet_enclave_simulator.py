@@ -21,12 +21,14 @@ import datetime
 import hashlib
 import base64
 import time
+import os
+
+import toml
 
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.exceptions import InvalidSignature
 
 import sawtooth_signing as signing
 
@@ -103,25 +105,10 @@ class _PoetEnclaveSimulator(object):
         'J13KkHoAZ9qd0rX7s37czb3O\n' \
         '-----END PRIVATE KEY-----'
 
-    __REPORT_PUBLIC_KEY_PEM__ = \
-        '-----BEGIN PUBLIC KEY-----\n' \
-        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn\n' \
-        '4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC\n' \
-        'PW6QlkeLI1eqe4DiYb9+J5ANhq4+XkhwgCUUFwpfqSfXWCHimjaGsZHbavl5nv/6\n' \
-        'IbZJL/2YzE37IzJdES16JCfmIUrk6TUqL0WgrWXyweTIoVSbld0M29kToSkMXLsj\n' \
-        '8vbQbTiKwViWhYlzi0cQIo7PiAss66lAW0X6AM7ZJYyAcfSjSLR4guMz76Og8aRk\n' \
-        'jtsjEEkq7Ndz5H8hllWUoHpxGDqLhM9O1/h+QdvTz7luZgpeJ5KB92vYL6yOlSxM\n' \
-        'fQIDAQAB\n' \
-        '-----END PUBLIC KEY-----'
-
     _report_private_key = \
         serialization.load_pem_private_key(
             __REPORT_PRIVATE_KEY_PEM__.encode(),
             password=None,
-            backend=backends.default_backend())
-    _report_public_key = \
-        serialization.load_pem_public_key(
-            __REPORT_PUBLIC_KEY_PEM__.encode(),
             backend=backends.default_backend())
 
     # The anti-sybil ID for this particular validator.  This will get set when
@@ -135,13 +122,44 @@ class _PoetEnclaveSimulator(object):
     _active_wait_timer = None
 
     @classmethod
-    def initialize(cls, **kwargs):
+    def initialize(cls, config_dir):
+        # See if our configuration file exists.  If so, then we are going to
+        # see if there is a configuration value for the validator ID.  If so,
+        # then we'll use that when constructing the simulated anti-Sybil ID.
+        # Otherwise, we are going to fall back on trying to create one that is
+        # unique.
+        validator_id = datetime.datetime.now().isoformat()
+
+        config_file = os.path.join(config_dir, 'poet_enclave_simulator.toml')
+        if os.path.exists(config_file):
+            LOGGER.info(
+                'Loading PoET enclave simulator config from : %s',
+                config_file)
+
+            try:
+                with open(config_file) as fd:
+                    toml_config = toml.loads(fd.read())
+            except IOError as e:
+                LOGGER.info(
+                    'Error loading PoET enclave simulator configuration: %s',
+                    e)
+                LOGGER.info('Continuing with default configuration')
+
+            invalid_keys = set(toml_config.keys()).difference(['validator_id'])
+            if invalid_keys:
+                LOGGER.warning(
+                    'Ignoring invalid keys in PoET enclave simulator config: '
+                    '%s',
+                    ', '.join(sorted(list(invalid_keys))))
+
+            validator_id = toml_config.get('validator_id', validator_id)
+
+        LOGGER.debug(
+            'PoET enclave simulator creating anti-Sybil ID from: %s',
+            validator_id)
+
         # Create an anti-Sybil ID that is unique for this validator
-        cls._anti_sybil_id = \
-            hashlib.sha256(
-                kwargs.get(
-                    'NodeName',
-                    datetime.datetime.now().isoformat()).encode()).hexdigest()
+        cls._anti_sybil_id = hashlib.sha256(validator_id.encode()).hexdigest()
 
     @classmethod
     def create_signup_info(cls,
@@ -199,7 +217,7 @@ class _PoetEnclaveSimulator(object):
 
             # Fake our "proof" data.
             verification_report = {
-                'epidPseudonym': originator_public_key_hash,
+                'epidPseudonym': cls._anti_sybil_id,
                 'id': base64.b64encode(
                     hashlib.sha256(
                         timestamp.encode()).hexdigest().encode()).decode(),
@@ -237,7 +255,7 @@ class _PoetEnclaveSimulator(object):
                 EnclaveSignupInfo(
                     poet_public_key=signup_data['poet_public_key'],
                     proof_data=proof_data,
-                    anti_sybil_id=originator_public_key_hash,
+                    anti_sybil_id=cls._anti_sybil_id,
                     sealed_signup_data=sealed_signup_data)
 
     @classmethod
@@ -273,180 +291,6 @@ class _PoetEnclaveSimulator(object):
             cls._active_wait_timer = None
 
             return signup_data.get('poet_public_key')
-
-    @classmethod
-    def verify_signup_info(cls,
-                           signup_info,
-                           originator_public_key_hash):
-        # Verify the attestation verification report signature
-        proof_data_dict = json2dict(signup_info.proof_data)
-        verification_report = proof_data_dict.get('verification_report')
-        if verification_report is None:
-            raise ValueError('Verification report is missing from proof data')
-
-        signature = proof_data_dict.get('signature')
-        if signature is None:
-            raise ValueError('Signature is missing from proof data')
-
-        try:
-            cls._report_public_key.verify(
-                base64.b64decode(signature.encode()),
-                verification_report.encode(),
-                padding.PKCS1v15(),
-                hashes.SHA256())
-        except InvalidSignature:
-            raise ValueError('Verification report signature is invalid')
-
-        verification_report_dict = json2dict(verification_report)
-
-        # Verify that the verification report contains an ID field
-        if 'id' not in verification_report_dict:
-            raise ValueError('Verification report does not contain an ID')
-
-        # Verify that the verification report contains an EPID pseudonym and
-        # that it matches the anti-Sybil ID
-        epid_pseudonym = verification_report_dict.get('epidPseudonym')
-        if epid_pseudonym is None:
-            raise \
-                ValueError(
-                    'Verification report does not contain an EPID pseudonym')
-
-        if epid_pseudonym != signup_info.anti_sybil_id:
-            raise \
-                ValueError(
-                    'The anti-Sybil ID in the verification report [{0}] does '
-                    'not match the one contained in the signup information '
-                    '[{1}]'.format(
-                        epid_pseudonym,
-                        signup_info.anti_sybil_id))
-
-        # Verify that the verification report contains a PSE manifest status
-        # and it is OK
-        pse_manifest_status = \
-            verification_report_dict.get('pseManifestStatus')
-        if pse_manifest_status is None:
-            raise \
-                ValueError(
-                    'Verification report does not contain a PSE manifest '
-                    'status')
-        if pse_manifest_status.upper() != 'OK':
-            raise \
-                ValueError(
-                    'PSE manifest status is {} (i.e., not OK)'.format(
-                        pse_manifest_status))
-
-        # Verify that the verification report contains a PSE manifest hash
-        pse_manifest_hash = \
-            verification_report_dict.get('pseManifestHash')
-        if pse_manifest_hash is None:
-            raise \
-                ValueError(
-                    'Verification report does not contain a PSE manifest '
-                    'hash')
-
-        # Verify that the proof data contains evidence payload
-        evidence_payload = proof_data_dict.get('evidence_payload')
-        if evidence_payload is None:
-            raise ValueError('Evidence payload is missing from proof data')
-
-        # Verify that the evidence payload contains a PSE manifest and then
-        # use it to make sure that the PSE manifest hash is what we expect
-        pse_manifest = evidence_payload.get('pse_manifest')
-        if pse_manifest is None:
-            raise ValueError('Evidence payload does not include PSE manifest')
-
-        expected_pse_manifest_hash = \
-            base64.b64encode(
-                hashlib.sha256(
-                    pse_manifest.encode()).hexdigest().encode()).decode()
-
-        if pse_manifest_hash.upper() != expected_pse_manifest_hash.upper():
-            raise \
-                ValueError(
-                    'PSE manifest hash {0} does not match {1}'.format(
-                        pse_manifest_hash,
-                        expected_pse_manifest_hash))
-
-        # Verify that the verification report contains an enclave quote status
-        # and the status is OK
-        enclave_quote_status = \
-            verification_report_dict.get('isvEnclaveQuoteStatus')
-        if enclave_quote_status is None:
-            raise \
-                ValueError(
-                    'Verification report does not contain an enclave quote '
-                    'status')
-        if enclave_quote_status.upper() != 'OK':
-            raise \
-                ValueError(
-                    'Enclave quote status is {} (i.e., not OK)'.format(
-                        enclave_quote_status))
-
-        # Verify that the verification report contains an enclave quote
-        enclave_quote = verification_report_dict.get('isvEnclaveQuoteBody')
-        if enclave_quote is None:
-            raise \
-                ValueError(
-                    'Verification report does not contain an enclave quote')
-
-        # The ISV enclave quote body is base 64 encoded, so decode it and then
-        # create an SGX quote structure from it so we can inspect
-        sgx_quote = sgx_structs.SgxQuote()
-        sgx_quote.parse_from_bytes(base64.b64decode(enclave_quote))
-
-        # The report body should be SHA256(SHA256(OPK)|PPK)
-        #
-        # NOTE - since the code that created the report data is in the enclave
-        # code, this code needs to be kept in sync with it.  Any changes to how
-        # the report data is created, needs to be reflected in how we re-create
-        # the report data for verification.
-
-        hash_input = \
-            '{0}{1}'.format(
-                originator_public_key_hash.upper(),
-                cls._poet_public_key.upper()).encode()
-        hash_value = hashlib.sha256(hash_input).digest()
-        expected_report_data = \
-            hash_value + \
-            (b'\x00' *
-             (sgx_structs.SgxReportData.STRUCT_SIZE - len(hash_value)))
-
-        if sgx_quote.report_body.report_data.d != expected_report_data:
-            raise \
-                ValueError(
-                    'AVR report data [{0}] not equal to [{1}]'.format(
-                        sgx_quote.report_body.report_data.d.hex(),
-                        expected_report_data.hex()))
-
-        # Compare the enclave measurement against the expected valid enclave
-        # measurement.
-        #
-        # NOTE - this is only a temporary check.  Instead of checking against
-        # a predefined enclave measurement value, we should be configured with
-        # a set of one or more enclave measurement values that we will
-        # consider as valid.
-
-        if sgx_quote.report_body.mr_enclave.m != \
-                cls.__VALID_ENCLAVE_MEASUREMENT__:
-            raise \
-                ValueError(
-                    'AVR enclave measurement [{0}] not equal to [{1}]'.format(
-                        sgx_quote.report_body.mr_enclave.m.hex(),
-                        cls.__VALID_ENCLAVE_MEASUREMENT__.hex()))
-
-        # Compare the enclave basename in the verification report against the
-        # expected enclave basename.
-        #
-        # NOTE - this is only a temporary check.  Instead of checking against
-        # a predefined enclave basenme value, we should be configured with a
-        # set of one or more enclave basenames that we will consider as valid.
-
-        if sgx_quote.basename.name != cls.__VALID_BASENAME__:
-            raise \
-                ValueError(
-                    'AVR enclave basename [{0}] not equal to [{1}]'.format(
-                        sgx_quote.basename.name.hex(),
-                        cls.__VALID_BASENAME__.hex()))
 
     @classmethod
     def create_wait_timer(cls,
@@ -629,8 +473,8 @@ class _PoetEnclaveSimulator(object):
             raise ValueError('Wait certificate signature does not match')
 
 
-def initialize(**kwargs):
-    _PoetEnclaveSimulator.initialize(**kwargs)
+def initialize(config_dir):
+    _PoetEnclaveSimulator.initialize(config_dir=config_dir)
 
 
 def create_signup_info(validator_address,
@@ -649,14 +493,6 @@ def deserialize_signup_info(serialized_signup_info):
 
 def unseal_signup_data(validator_address, sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
-
-
-def verify_signup_info(signup_info,
-                       originator_public_key_hash):
-    return \
-        _PoetEnclaveSimulator.verify_signup_info(
-            signup_info=signup_info,
-            originator_public_key_hash=originator_public_key_hash)
 
 
 def create_wait_timer(validator_address,

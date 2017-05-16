@@ -57,7 +57,8 @@ class BlockValidator(object):
                  executor,
                  squash_handler,
                  identity_signing_key,
-                 data_dir):
+                 data_dir,
+                 config_dir):
         """Initialize the BlockValidator
         Args:
              consensus_module: The consensus module that contains
@@ -75,6 +76,8 @@ class BlockValidator(object):
              identity_signing_key: Private key for signing blocks.
              data_dir: Path to location where persistent data for the
              consensus module can be stored.
+             config_dir: Path to location where config data for the
+             consensus module can be found.
         Returns:
             None
         """
@@ -90,6 +93,7 @@ class BlockValidator(object):
         self._identity_public_key = \
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
+        self._config_dir = config_dir
         self._result = {
             'new_block': new_block,
             'chain_head': chain_head,
@@ -125,25 +129,6 @@ class BlockValidator(object):
                 return False
 
         return True
-
-    def _verify_block_signature(self, blkw):
-        """ Verify a block is properly signed.
-        :param blkw: the block to verify
-        :return: Boolean - True on success.
-        """
-        try:
-            return signing.verify(
-                blkw.block.header,
-                blkw.block.header_signature,
-                blkw.header.signer_pubkey)
-
-        # To be on the safe side, assume any exception thrown
-        # during signature validation means the signature
-        # is invalid.
-
-        # pylint: disable=broad-except
-        except Exception:
-            return False
 
     def _verify_batches_dependencies(self, batch, committed_txn):
         """Verify that all transactions dependencies in this batch have been
@@ -219,13 +204,11 @@ class BlockValidator(object):
                     BlockVerifier(block_cache=self._block_cache,
                                   state_view_factory=self._state_view_factory,
                                   data_dir=self._data_dir,
+                                  config_dir=self._config_dir,
                                   validator_id=self._identity_public_key)
 
                 if valid:
                     valid = self._is_block_complete(blkw)
-
-                if valid:
-                    valid = self._verify_block_signature(blkw)
 
                 if valid:
                     valid = self._verify_block_batches(blkw, committed_txn)
@@ -318,6 +301,7 @@ class BlockValidator(object):
             ForkResolver(block_cache=self._block_cache,
                          state_view_factory=self._state_view_factory,
                          data_dir=self._data_dir,
+                         config_dir=self._config_dir,
                          validator_id=self._identity_public_key)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
@@ -425,8 +409,10 @@ class ChainController(object):
                  on_chain_updated,
                  squash_handler,
                  chain_id_manager,
+                 state_delta_processor,
                  identity_signing_key,
-                 data_dir):
+                 data_dir,
+                 config_dir):
         """Initialize the ChainController
         Args:
              block_cache: The cache of all recent blocks and the processing
@@ -441,9 +427,14 @@ class ChainController(object):
              system the head block in the chain has been changed.
              squash_handler: a parameter passed when creating transaction
              schedulers.
+            chain_id_manager: The ChainIdManager instance.
+            state_delta_processor (:obj:`StateDeltaProcessor`): The state
+                delta processor.
              identity_signing_key: Private key for signing blocks.
              data_dir: path to location where persistent data for the
              consensus module can be stored.
+             config_dir: path to location where config data for the
+             consensus module can be found.
         Returns:
             None
         """
@@ -460,6 +451,7 @@ class ChainController(object):
         self._identity_public_key = \
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
+        self._config_dir = config_dir
 
         self._blocks_processing = {}  # a set of blocks that are
         # currently being processed.
@@ -468,10 +460,13 @@ class ChainController(object):
         # scheduled for validation.
         self._chain_id_manager = chain_id_manager
 
+        self._state_delta_processor = state_delta_processor
+
         try:
             self._chain_head = self._block_store.chain_head
-            LOGGER.info("Chain controller initialized with chain head: %s",
-                        self._chain_head)
+            if self._chain_head is not None:
+                LOGGER.info("Chain controller initialized with chain head: %s",
+                            self._chain_head)
         except Exception as exc:
             LOGGER.error("Invalid block store. Head of the block chain cannot "
                          "be determined")
@@ -504,7 +499,8 @@ class ChainController(object):
                 executor=self._transaction_executor,
                 squash_handler=self._squash_handler,
                 identity_signing_key=self._identity_signing_key,
-                data_dir=self._data_dir)
+                data_dir=self._data_dir,
+                config_dir=self._config_dir)
             self._blocks_processing[blkw.block.header_signature] = validator
             self._executor.submit(validator.run)
 
@@ -579,6 +575,9 @@ class ChainController(object):
                         new_block,
                         [block.identifier[:8] for block in descendant_blocks])
                     self._submit_blocks_for_verification(descendant_blocks)
+
+                    # Publish the state deltas
+                    self._state_delta_processor.publish_deltas(new_block)
 
                 # If the block was determine to be invalid.
                 elif new_block.status == BlockStatus.Invalid:
@@ -683,7 +682,8 @@ class ChainController(object):
                     executor=self._transaction_executor,
                     squash_handler=self._squash_handler,
                     identity_signing_key=self._identity_signing_key,
-                    data_dir=self._data_dir)
+                    data_dir=self._data_dir,
+                    config_dir=self._config_dir)
 
                 valid = validator.validate_block(block, committed_txn)
                 if valid:
