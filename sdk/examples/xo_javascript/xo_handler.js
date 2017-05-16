@@ -29,13 +29,21 @@ const _hash = (x) =>
 const XO_FAMILY = 'xo'
 const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
 
+const VALID_ACTIONS = ['create', 'take']
+const VALID_STATES = ['P1-NEXT', 'P2-NEXT', 'P1-WIN', 'P2-WIN', 'TIE']
+
+const MARK_1 = 'X'
+const MARK_2 = 'O'
+
 const _decodeRequest = (payload) =>
   new Promise((resolve, reject) => {
     payload = payload.toString().split(",")
     if (payload.length == 3){
-      resolve({name: payload[0],
-              action: payload[1],
-              space: payload[2]});
+      resolve({
+        action: payload[0],
+        name: payload[1],
+        space: payload[2],
+      });
     }
     else {
       let reason = new InvalidTransaction("Invalid payload serialization")
@@ -155,8 +163,7 @@ const _handleCreate = (state, address, update, player) => (possibleAddressValues
 
 const _handleTake = (state, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
-  let stateValue
-  stateValue = _decodeState(stateValueRep)
+  let stateValue = _decodeState(stateValueRep)
 
   if (stateValue.storedName != update.name) {
     throw new InternalError("Hash collision")
@@ -197,11 +204,11 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
   }
 
   if (stateValue.gameState === "P1-NEXT" && player == stateValue.player1) {
-    boardList[update.space - 1] = "X"
+    boardList[update.space - 1] = MARK_1
     stateValue.gameState = "P2-NEXT"
   }
   else if (stateValue.gameState === "P2-NEXT" && player == stateValue.player2) {
-    boardList[update.space - 1] = "O"
+    boardList[update.space - 1] = MARK_2
     stateValue.gameState = "P1-NEXT"
   }
   else {
@@ -210,14 +217,20 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
 
   stateValue.board = boardList.join("")
 
-  if (_isWin(stateValue.board, "X")) {
-    stateValue.GameState = "P1-WIN"
+  const x_wins = _isWin(stateValue.board, MARK_1)
+  const o_wins = _isWin(stateValue.board, MARK_2)
+
+  if (x_wins && o_wins) {
+    throw new InternalError('Two winners')
   }
-  else if (_isWin(stateValue.board, "O")) {
-    stateValue.GameState = "P2-WIN"
+  else if (x_wins) {
+    stateValue.gameState = "P1-WIN"
+  }
+  else if (o_wins) {
+    stateValue.gameState = "P2-WIN"
   }
   else if (stateValue.board.search('-') == -1) {
-    stateValue.GameState = "TIE"
+    stateValue.gameState = "TIE"
   }
 
   let setValue = Buffer.from([stateValue.board, stateValue.gameState, stateValue.player1,
@@ -249,16 +262,21 @@ class XOHandler extends TransactionHandler {
         }
 
         // Perform the action
-        let handlerFn
-        if (update.action === 'create') {
-          handlerFn = _handleCreate
-        } else if (update.action === 'take') {
-          handlerFn = _handleTake
-        } else {
-          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
+        const handlerFns = {
+          'create': _handleCreate,
+          'take': _handleTake,
         }
 
-        let address = XO_NAMESPACE + _hash(update.name)
+        const action = update.action
+        let handlerFn
+
+        if (VALID_ACTIONS.includes(action)) {
+          handlerFn = handlerFns[action]
+        } else {
+          throw new InvalidTransaction(`Action must be "create" or "take" not ${action}`)
+        }
+
+        let address = XO_NAMESPACE + _hash(update.name).slice(-64)
 
         return state.get([address]).then(handlerFn(state, address, update, player))
           .then((addresses) => {
