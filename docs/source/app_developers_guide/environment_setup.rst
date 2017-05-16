@@ -77,7 +77,7 @@ To start up the environment, run:
 .. code-block:: console
 
   % cd sawtooth-core
-  % docker-compose -f docker/compose/sawtooth-demo.yaml up
+  % docker-compose -f docker/compose/sawtooth-default.yaml up
 
 Downloading the docker images that comprise the Sawtooth Lake demo
 environment can take serveral minutes. Once you see the containers
@@ -118,7 +118,8 @@ Resetting The Environment
 If the environment needs to be reset for any reason, it can be returned to
 the default state by logging out of the client container, then pressing
 CTRL-c from the window where you originally ran docker-compose. Once the
-containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
+containers have all shut down run 'docker-compose -f sawtooth-default.yaml
+down'.
 
 .. code-block:: console
 
@@ -135,7 +136,7 @@ containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
   Stopping compose_tp_intkey_python_1 ... done
   Stopping compose_validator_1 ... done
 
-  % docker-compose -f docker/compose/sawtooth-demo.yaml down
+  % docker-compose -f docker/compose/sawtooth-default.yaml down
 
 Next Steps
 ----------
