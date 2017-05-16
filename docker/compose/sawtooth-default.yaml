@@ -75,4 +75,7 @@ services:
       - 40000
     depends_on:
       - rest_api
-    entrypoint: tail -f /dev/null
+    entrypoint: "bash -c \"\
+        sawtooth keygen && \
+        tail -f /dev/null \
+        \""
