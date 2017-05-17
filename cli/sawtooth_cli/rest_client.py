@@ -14,7 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import json
+from base64 import b64decode
 from http.client import RemoteDisconnected
+
 import requests
 # pylint: disable=no-name-in-module,import-error
 # needed for the google.protobuf imports to pass pylint
@@ -24,8 +26,8 @@ from sawtooth_cli.exceptions import CliException
 
 
 class RestClient(object):
-    def __init__(self, base_url=None):
-        self._base_url = base_url or 'http://localhost:8080'
+    def __init__(self, url=None):
+        self.url = url or 'http://localhost:8080'
 
     def list_blocks(self):
         return self._get('/blocks')['data']
@@ -47,6 +49,12 @@ class RestClient(object):
 
     def list_state(self, subtree=None, head=None):
         return self._get('/state', address=subtree, head=head)
+
+    def get_data(self, subtree=None, head=None):
+        return [
+            b64decode(entry['data'])
+            for entry in self.list_state()['data']
+        ]
 
     def get_leaf(self, address, head=None):
         return self._get('/state/' + address, head=head)
@@ -81,7 +89,7 @@ class RestClient(object):
 
     def _get(self, path, **queries):
         code, json_result = self._submit_request(
-            self._base_url + path,
+            self.url + path,
             params=self._format_queries(queries),
         )
 
@@ -108,7 +116,7 @@ class RestClient(object):
         headers['Content-Length'] = '%d' % len(data)
 
         code, json_result = self._submit_request(
-            self._base_url + path,
+            self.url + path,
             params=self._format_queries(queries),
             data=data,
             headers=headers,
@@ -153,7 +161,7 @@ class RestClient(object):
         except requests.exceptions.ConnectionError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
-                 'make sure URL is correct').format(self._base_url))
+                 'make sure URL is correct').format(self.url))
 
     @staticmethod
     def _format_queries(queries):
