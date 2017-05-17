@@ -133,48 +133,6 @@ sawtooth block show
    :language: console
    :linenos:
 
-sawtooth cluster
-================
-
-.. literalinclude:: output/sawtooth_cluster_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster extend
-=======================
-
-.. literalinclude:: output/sawtooth_cluster_extend_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster logs
-=====================
-
-.. literalinclude:: output/sawtooth_cluster_logs_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster start
-======================
-
-.. literalinclude:: output/sawtooth_cluster_start_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster status
-=======================
-
-.. literalinclude:: output/sawtooth_cluster_status_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster stop
-=====================
-
-.. literalinclude:: output/sawtooth_cluster_stop_usage.out
-   :language: console
-   :linenos:
-
 sawtooth config
 ===============
 

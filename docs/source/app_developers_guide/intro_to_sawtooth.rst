@@ -465,43 +465,6 @@ In Docker:
   HEAD: "0c4364c6d5181282a1c7653038ec9515cb0530c6bfcb46f16e79b77cb524491676638339e8ff8e3cc57155c6d920e6a4d1f53947a31dc02908bcf68a91315ad5"
 
 
-Using Sawtooth Cluster To Start A Network
-=========================================
-
-.. caution::
-
-  The sawtooth cluster command is not intended for use inside the Docker
-  environment.
-
-The `sawtooth cluster` command can be used to start a network of validators
-and transaction processors.
-
-The following command will start a network of two validators and two transaction processors:
-
-.. code-block:: console
-
-  $ sawtooth cluster start --count 2 -m subprocess -P tp_intkey_python
-
-You can view the running processes that are part of the network with the
-following command:
-
-.. code-block:: console
-
-  $ ps -ef | grep python
-  ubuntu   26036 22422 14 22:59 pts/0    00:00:02 python /project/sawtooth-core/bin/sawtooth cluster start --count 2 -m subprocess -P tp_intkey_python
-  ubuntu   26039 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/validator --component-endpoint 0.0.0.0:40000 --network-endpoint tcp://0.0.0.0:8800
-  ubuntu   26040 26036  8 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/tp_intkey_python 0.0.0.0:40000
-  ubuntu   26041 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/validator --component-endpoint 0.0.0.0:40001 --network-endpoint tcp://0.0.0.0:8801
-  ubuntu   26042 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/tp_intkey_python 0.0.0.0:40001
-
-
-To submit sample transactions, follow the steps above under
-`Creating and submitting transactions`_.
-
-To stop a running network that was started using the subprocess management
-method, simply press CTRL-c.
-
-
 Next Steps
 ==========
 
