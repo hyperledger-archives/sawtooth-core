@@ -58,6 +58,8 @@ from sawtooth_validator.state.state_delta_processor import \
     StateDeltaSubscriberValidationHandler
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    GetStateDeltaEventsHandler
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
@@ -481,6 +483,11 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
             StateDeltaUnsubscriberHandler(state_delta_processor),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_GET_EVENTS_REQUEST,
+            GetStateDeltaEventsHandler(block_store, state_delta_store),
             thread_pool)
 
     def start(self):
