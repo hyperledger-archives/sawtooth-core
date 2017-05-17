@@ -24,6 +24,7 @@ from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
+from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution import processor_iterator
 
 
@@ -204,7 +205,8 @@ class TransactionExecutorThread(object):
 
 
 class TransactionExecutor(object):
-    def __init__(self, service, context_manager, config_view_factory):
+    def __init__(self, service, context_manager, config_view_factory,
+                 scheduler_type):
         """
 
         Args:
@@ -230,14 +232,24 @@ class TransactionExecutor(object):
         self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
         self._alive_threads = []
         self._lock = threading.Lock()
+        self._scheduler_type = scheduler_type
 
     def create_scheduler(self,
                          squash_handler,
                          first_state_root,
                          always_persist=False):
-        return SerialScheduler(squash_handler=squash_handler,
-                               first_state_hash=first_state_root,
-                               always_persist=always_persist)
+        if self._scheduler_type == "serial":
+            return SerialScheduler(squash_handler=squash_handler,
+                                   first_state_hash=first_state_root,
+                                   always_persist=always_persist)
+        elif self._scheduler_type == "parallel":
+            return ParallelScheduler(squash_handler=squash_handler,
+                                     first_state_hash=first_state_root)
+
+        else:
+            raise AssertionError(
+                "Scheduler type must be either serial or parallel. Current"
+                " scheduler type is {}.".format(self._scheduler_type))
 
     def _remove_done_threads(self):
         for t in self._alive_threads.copy():

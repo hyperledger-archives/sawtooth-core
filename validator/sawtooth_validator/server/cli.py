@@ -87,6 +87,9 @@ def parse_args(args):
                         action='count',
                         default=0,
                         help='Increase output sent to stderr')
+    parser.add_argument('--scheduler',
+                        choices=['serial', 'parallel'],
+                        help='The type of scheduler to be used.')
 
     return parser.parse_args(args)
 
@@ -207,7 +210,8 @@ def main(args=sys.argv[1:]):
                           opts.peers,
                           path_config.data_dir,
                           path_config.config_dir,
-                          identity_signing_key)
+                          identity_signing_key,
+                          opts.scheduler)
 
     # pylint: disable=broad-except
     try:
