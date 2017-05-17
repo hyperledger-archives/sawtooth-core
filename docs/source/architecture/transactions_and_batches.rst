@@ -59,7 +59,7 @@ which this transaction is contained.
 Transaction Family
 ------------------
 
-In Sawtooth Lake, the set of possible transactions are defined by an extensible
+In Sawtooth, the set of possible transactions are defined by an extensible
 system called transaction families.  Defining and implementing a new transaction
 family adds to the taxonomy of available transactions which can be applied. For
 example, in the language-specific tutorials that show you how to write your own

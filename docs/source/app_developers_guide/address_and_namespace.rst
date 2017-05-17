@@ -6,7 +6,7 @@ Address and Namespace Design
 Overview
 ========
 
-Sawtooth Lake stores data within a Merkle Tree. Data is stored in leaf nodes,
+Sawtooth stores data within a Merkle Tree. Data is stored in leaf nodes,
 and each node is accessed using an addressing scheme that is composed of 35
 bytes, represented as 70 hex characters. The recommended way to construct an
 address is to use the hex-encoded hash values of the string or strings that

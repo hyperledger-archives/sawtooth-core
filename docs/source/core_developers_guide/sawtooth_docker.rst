@@ -9,7 +9,7 @@ Docker is a tool that allows for portable, containerized instances of
 applications. It ensures repeatability and consistency across deployments
 and platforms.
 
-The included Dockerfiles are intended to make working with the Sawtooth Lake
+The included Dockerfiles are intended to make working with the Sawtooth
 platform easy, whether you're a core developer or someone who's just interested
 in trying it out.
 

@@ -144,7 +144,7 @@ interfaces that have specific lifetimes and access to information.
 2. Consensus.BlockVerifier
 3. Consensus.ForkResolver
 
-Consensus algorithm implementations in Sawtooth Lake must implement all of the
+Consensus algorithm implementations in Sawtooth must implement all of the
 consensus interfaces. Each of these objects are provided read-only access to
 the BlockCache and GlobalState.
 
