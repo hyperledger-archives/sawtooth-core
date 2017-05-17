@@ -17,15 +17,12 @@ import unittest
 from unittest.mock import Mock
 import logging
 import hashlib
+import os
 import threading
 import time
 
 import sawtooth_signing as signing
-<<<<<<< HEAD
-=======
 
->>>>>>> 256934e... MOVE_METHODS
-import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
 from sawtooth_validator.execution.context_manager import ContextManager
@@ -61,11 +58,11 @@ class TestSchedulersWithYaml(unittest.TestCase):
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=self._context_manager.get_first_root(),
                 always_persist=False)
-            tester = SchedulerTester(file_name,
-                                     serial_scheduler,
-                                     self._context_manager)
+            tester = SchedulerTester(file_name)
             defined_batch_results_dict = tester.batch_results
-            batch_results = tester.run_scheduler()
+            batch_results = tester.run_scheduler(
+                scheduler=serial_scheduler,
+                context_manager=self._context_manager)
             self.assert_batch_validity(
                 defined_batch_results_dict,
                 batch_results)
@@ -88,6 +85,9 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
     def setUp(self):
         self._context_manager = self._create_context_manager()
+
+    def tearDown(self):
+        self._context_manager.stop()
 
     def _get_state_roots(self, batch_results):
         return [r.state_hash for _, r in batch_results
@@ -144,9 +144,6 @@ class TestSchedulersWithYaml(unittest.TestCase):
         parent_dir = os.path.dirname(__file__)
         file_name = os.path.join(parent_dir, 'data', name)
         return file_name
-
-    def tearDown(self):
-        self._context_manager.stop()
 
 
 def _get_address_from_txn(txn_info):
