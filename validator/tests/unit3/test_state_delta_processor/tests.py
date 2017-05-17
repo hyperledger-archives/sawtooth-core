@@ -32,6 +32,8 @@ from sawtooth_validator.state.state_delta_processor import \
     StateDeltaAddSubscriberHandler
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    GetStateDeltaEventsHandler
 
 from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
@@ -43,6 +45,10 @@ from sawtooth_validator.protobuf.state_delta_pb2 import \
     UnregisterStateDeltaSubscriberRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
     UnregisterStateDeltaSubscriberResponse
+from sawtooth_validator.protobuf.state_delta_pb2 import \
+    GetStateDeltaEventsRequest
+from sawtooth_validator.protobuf.state_delta_pb2 import \
+    GetStateDeltaEventsResponse
 from sawtooth_validator.protobuf import validator_pb2
 
 from test_journal.block_tree_manager import BlockTreeManager
@@ -166,6 +172,109 @@ class StateDeltaUnregisterSubscriberHandlerTest(unittest.TestCase):
 
         self.assertEqual(HandlerStatus.RETURN, response.status)
         self.assertEqual(UnregisterStateDeltaSubscriberResponse.OK,
+                         response.message_out.status)
+
+
+class GetStateDeltaEventsHandlerTest(unittest.TestCase):
+    def test_get_events(self):
+        """Tests that the GetStateDeltaEventsHandler will return a response
+        with the state event for the block requested.
+        """
+        block_tree_manager = BlockTreeManager()
+
+        delta_store = StateDeltaStore(DictDatabase())
+
+        delta_store.save_state_deltas(
+            block_tree_manager.chain_head.state_root_hash,
+            [StateChange(address='deadbeef0000000',
+                         value='my_genesis_value'.encode(),
+                         type=StateChange.SET),
+             StateChange(address='a14ea01',
+                         value='some other state value'.encode(),
+                         type=StateChange.SET)])
+
+        handler = GetStateDeltaEventsHandler(block_tree_manager.block_store,
+                                             delta_store)
+
+        request = GetStateDeltaEventsRequest(
+            block_ids=[block_tree_manager.chain_head.identifier],
+            address_prefixes=['deadbeef']).SerializeToString()
+
+        response = handler.handle('test_conn_id', request)
+        self.assertEqual(HandlerStatus.RETURN, response.status)
+        self.assertEqual(GetStateDeltaEventsResponse.OK,
+                         response.message_out.status)
+
+        self.assertEqual(
+            [StateDeltaEvent(
+                 block_id=block_tree_manager.chain_head.identifier,
+                 block_num=block_tree_manager.chain_head.block_num,
+                 state_root_hash=block_tree_manager.chain_head.state_root_hash,
+                 state_changes=[StateChange(address='deadbeef0000000',
+                                value='my_genesis_value'.encode(),
+                                type=StateChange.SET)])],
+            [event for event in response.message_out.events])
+
+    def test_get_events_ignore_bad_blocks(self):
+        """Tests that the GetStateDeltaEventsHandler will return a response
+        containing only the events for blocks that exists.
+        """
+        block_tree_manager = BlockTreeManager()
+
+        delta_store = StateDeltaStore(DictDatabase())
+
+        delta_store.save_state_deltas(
+            block_tree_manager.chain_head.state_root_hash,
+            [StateChange(address='deadbeef0000000',
+                         value='my_genesis_value'.encode(),
+                         type=StateChange.SET),
+             StateChange(address='a14ea01',
+                         value='some other state value'.encode(),
+                         type=StateChange.SET)])
+
+        handler = GetStateDeltaEventsHandler(block_tree_manager.block_store,
+                                             delta_store)
+
+        request = GetStateDeltaEventsRequest(
+            block_ids=[block_tree_manager.chain_head.identifier,
+                       'somebadblockid'],
+            address_prefixes=['deadbeef']).SerializeToString()
+
+        response = handler.handle('test_conn_id', request)
+        self.assertEqual(HandlerStatus.RETURN, response.status)
+        self.assertEqual(GetStateDeltaEventsResponse.OK,
+                         response.message_out.status)
+
+        self.assertEqual(
+            [StateDeltaEvent(
+                 block_id=block_tree_manager.chain_head.identifier,
+                 block_num=block_tree_manager.chain_head.block_num,
+                 state_root_hash=block_tree_manager.chain_head.state_root_hash,
+                 state_changes=[StateChange(address='deadbeef0000000',
+                                value='my_genesis_value'.encode(),
+                                type=StateChange.SET)])],
+            [event for event in response.message_out.events])
+
+    def test_get_events_no_valid_block_ids(self):
+        """Tests that the GetStateDeltaEventsHandler will return a response
+        with NO_VALID_BLOCKS_SPECIFIED error when no valid blocks are
+        specified in the request.
+        """
+        block_tree_manager = BlockTreeManager()
+
+        delta_store = StateDeltaStore(DictDatabase())
+
+        handler = GetStateDeltaEventsHandler(block_tree_manager.block_store,
+                                             delta_store)
+
+        request = GetStateDeltaEventsRequest(
+            block_ids=['somebadblockid'],
+            address_prefixes=['deadbeef']).SerializeToString()
+
+        response = handler.handle('test_conn_id', request)
+
+        self.assertEqual(HandlerStatus.RETURN, response.status)
+        self.assertEqual(GetStateDeltaEventsResponse.NO_VALID_BLOCKS_SPECIFIED,
                          response.message_out.status)
 
 
