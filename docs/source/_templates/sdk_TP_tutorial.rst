@@ -15,8 +15,8 @@ Transaction Processor Tutorial  {{ language }}
 Overview
 ========
 
-This tutorial covers the creation of a new Sawtooth Lake transaction family in
-{{ language }}, based on the Sawtooth Lake SDK. We will construct a transaction
+This tutorial covers the creation of a new Sawtooth transaction family in
+{{ language }}, based on the Sawtooth SDK. We will construct a transaction
 handler which implements a distributed version of the multi-player game tic-
 tac-toe.
 

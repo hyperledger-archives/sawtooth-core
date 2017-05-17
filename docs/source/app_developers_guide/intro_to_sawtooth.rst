@@ -47,7 +47,7 @@ test networks. In this case, you need to create a genesis block when
 instantiating a new network.
 
 The genesis block contains some initial values that are necessary when a
-Sawtooth Lake distributed ledger is created and used for the first time.
+Sawtooth distributed ledger is created and used for the first time.
 
 To create the genesis block, log in to the development environment CLI and run
 the following command:
@@ -140,7 +140,7 @@ To stop the transaction processor, press CTRL-c.
 Multi-language support for transaction processors
 =================================================
 
-Sawtooth Lake includes additional transaction processors:
+Sawtooth includes additional transaction processors:
 
 * tp_config
 
@@ -227,7 +227,7 @@ is shown below:
 Config Transaction Family Usage
 ===============================
 
-Sawtooth Lake provides a :doc:`config transaction family
+Sawtooth provides a :doc:`config transaction family
 <../transaction_family_specifications/config_transaction_family>` that stores on-
 chain configuration settings, along with a config family transaction
 processor written in Python.

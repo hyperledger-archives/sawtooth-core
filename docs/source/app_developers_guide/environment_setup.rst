@@ -33,14 +33,14 @@ The following tools are required:
 Step One: Clone Repository
 --------------------------
 
-You'll need to have git installed in order to clone the Sawtooth Lake source
+You'll need to have git installed in order to clone the Sawtooth source
 code repository. You can find up-to-date installation instructions here:
 
 * `Git install instructions <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_
 
 .. note:: 
 
-  When checking out Sawtooth Lake on Windows for use with vagrant, you should
+  When checking out Sawtooth on Windows for use with vagrant, you should
   take steps to ensure that Windows-style CRLF line endings are not added to
   the code. The bash scripts used by your vagrant VM will not run correctly 
   with CRLF line endings. Git uses a configuration setting, *core.autocrlf*,
@@ -79,7 +79,7 @@ To start up the environment, run:
   % cd sawtooth-core
   % docker-compose -f docker/compose/sawtooth-default.yaml up
 
-Downloading the docker images that comprise the Sawtooth Lake demo
+Downloading the docker images that comprise the Sawtooth demo
 environment can take serveral minutes. Once you see the containers
 registering and creating intial blocks you can move on to the next step.
 
