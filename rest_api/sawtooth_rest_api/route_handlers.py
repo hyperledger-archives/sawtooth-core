@@ -119,10 +119,8 @@ class RouteHandler(object):
             request.host,
             ','.join(b.header_signature for b in batch_list.batches))
 
-        if data is None:
+        if data is None or any(s != 'COMMITTED' for _, s in data.items()):
             status = 202
-        elif any(s != 'COMMITTED' for _, s in data.items()):
-            status = 200
         else:
             status = 201
             data = None
