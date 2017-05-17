@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Sawtooth Lake documentation build configuration file, created by
+# Sawtooth documentation build configuration file, created by
 # sphinx-quickstart on Wed Dec  2 11:03:19 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -62,7 +62,7 @@ source_suffix = '.rst'
 master_doc = 'contents'
 
 # General information about the project.
-project = u'Sawtooth Lake'
+project = u'Sawtooth'
 copyright = u'2015-2017, Intel Corporation'
 author = u'Intel Corporation'
 
@@ -242,15 +242,15 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'SawtoothLake.tex', u'Sawtooth Lake Documentation',
+  (master_doc, 'SawtoothLake.tex', u'Sawtooth Documentation',
    u'Intel Corporation', 'manual'),
-  ('tutorial', 'SawtoothLakeTutorial.tex', u'Sawtooth Lake Tutorial',
+  ('tutorial', 'SawtoothLakeTutorial.tex', u'Sawtooth Tutorial',
    u'Intel Corporation', 'howto'),
-  ('architecture', 'SawtoothLakeArchitecture.tex', u'Sawtooth Lake Architecture',
+  ('architecture', 'SawtoothLakeArchitecture.tex', u'Sawtooth Architecture',
    u'Intel Corporation', 'howto'),
-  ('sawtooth_developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Lake Developer\'s Guide',
+  ('sawtooth_developers_guide', 'SawtoothLakeDevelopersGuide.tex', u'Sawtooth Developer\'s Guide',
    u'Intel Corporation', 'howto'),
-  ('sysadmin_guide', 'SawtoothLakeSysadminGuide.tex', u'Sawtooth Lake Systems Administrator\'s Guide',
+  ('sysadmin_guide', 'SawtoothLakeSysadminGuide.tex', u'Sawtooth Systems Administrator\'s Guide',
    u'Intel Corporation', 'howto')
 ]
 
@@ -280,7 +280,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'intelmaidenlane', u'Sawtooth Lake Documentation',
+    (master_doc, 'intelmaidenlane', u'Sawtooth Documentation',
      [author], 1)
 ]
 
@@ -294,7 +294,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'SawtoothLake', u'Sawtooth Lake Documentation',
+  (master_doc, 'SawtoothLake', u'Sawtooth Documentation',
    author, 'SawtoothLake', 'One line description of project.',
    'Miscellaneous'),
 ]

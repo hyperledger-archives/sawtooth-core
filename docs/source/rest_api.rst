@@ -2,10 +2,10 @@
 REST API Specification
 **********************
 
-This document is a complete specification of Sawtooth Lake's REST API,
+This document is a complete specification of Sawtooth's REST API,
 built from the official `OpenAPI <http://swagger.io/specification/>`_
 formatted YAML specification, which can be found on the
-`Sawtooth Lake Github <https://github.com/hyperledger/sawtooth-core/blob/master/rest_api/sawtooth_rest_api/openapi.yaml>`_.
+`Sawtooth Github <https://github.com/hyperledger/sawtooth-core/blob/master/rest_api/sawtooth_rest_api/openapi.yaml>`_.
 
 .. note::
   This specification has not yet to be been fully implemented, and

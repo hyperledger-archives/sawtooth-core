@@ -302,7 +302,7 @@ Build
 
 Build artifacts are placed in ``c:\build\json-c-0.11\x64\Release``
 
-Build Sawtooth Lake Package
+Build Sawtooth Package
 ===========================
 
 * Open Windows Powershell and set some environment variables

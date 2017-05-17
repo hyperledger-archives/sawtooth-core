@@ -21,7 +21,7 @@ The chat server is at:
 Mailing Lists
 =============
 
-The Sawtooth Lake mailing list is hosted by the Hyperledger Project:
+The Sawtooth mailing list is hosted by the Hyperledger Project:
 
    `hyperledger-stl Mailing List <http://lists.hyperledger.org/mailman/listinfo/hyperledger-stl>`_
 

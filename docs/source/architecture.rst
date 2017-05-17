@@ -1,6 +1,6 @@
 
 **************************
-Sawtooth Lake Architecture
+Sawtooth Architecture
 **************************
 
 .. toctree::

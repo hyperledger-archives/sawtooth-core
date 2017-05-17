@@ -5,15 +5,15 @@ Network Configuration
 Validators
 ==========
 
-Sawtooth Lake uses two ports, one TCP, one UDP, to communicate with other 
+Sawtooth uses two ports, one TCP, one UDP, to communicate with other 
 members of a validator network. You may need to modify some firewall rules
 to facilitate this traffic. Because the validator software assumes complete
 connectivity to the other nodes in the network, if you intend to participate
-in a Sawtooth Lake network over the internet, each validator will need a
+in a Sawtooth network over the internet, each validator will need a
 publically routable IP address. NAT is not currently supported.
 
 Primarily, traffic between validator nodes takes place over UDP. By default
-Sawtooth Lake selects a random high UDP port for communication. You can choose
+Sawtooth selects a random high UDP port for communication. You can choose
 a static port to use by changing the "Port" value from "0" to any unused UDP
 port. We recommend using 5500. Your firewall rules should be configured to
 allow both ingress and egress from all networks for this port.
@@ -37,9 +37,9 @@ Windows.
 Clients
 =======
 
-The Sawtooth Lake client communicates with validators via TCP port 8800.
+The Sawtooth client communicates with validators via TCP port 8800.
 Firewall rules should be adjusted to allow egress traffic on port 8800
-from each machine running the Sawtooth Lake client software to each validator
+from each machine running the Sawtooth client software to each validator
 you will be working with. If you've altered the "HttpPort" value of your
 validator's configuration file, this port will need to be allowed instead
 of the default 8800.

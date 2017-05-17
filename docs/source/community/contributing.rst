@@ -7,14 +7,14 @@ Ways to Contribute
 ==================
 
 Contributions by the community help grow and optimize the capabilities of
-Sawtooth Lake, and are the most effective method of having a positive impact on
+Sawtooth, and are the most effective method of having a positive impact on
 the project.
 
 **Different ways you can contribute**
 
-* Bugs or Issues (issues or defects found when working with Sawtooth Lake)
+* Bugs or Issues (issues or defects found when working with Sawtooth)
 * Core Features & Enhancements (expanded capabilities or optimization)
-* Arcade Features (games that demonstrate Sawtooth Lake such as Go 
+* Arcade Features (games that demonstrate Sawtooth such as Go 
   and Checkers)
 * New or Enhanced Documentation (improve existing documentation or create new)
 * Testing Events and Results (functional, performance or scalability)

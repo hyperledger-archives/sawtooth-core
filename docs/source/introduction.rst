@@ -13,7 +13,7 @@ Introduction
     mode. This project is intended for experimental usage and we recommend
     against using it for security sensitive applications.
 
-This project, called "Sawtooth Lake" is a highly modular platform for
+This project, called "Sawtooth" is a highly modular platform for
 building, deploying and running distributed ledgers. Distributed ledgers
 provide a digital record (such as asset ownership) that is maintained
 without a central authority or implementation. Instead of a single,
@@ -33,7 +33,7 @@ Distributed ledgers generally consist of three basic components:
     * A protocol used to build consensus among participants around
       which transactions will be accepted by the ledger.
 
-In Sawtooth Lake the data model and transaction language are implemented
+In Sawtooth the data model and transaction language are implemented
 in a “transaction family”. While we expect users to build custom transaction
 families that reflect the unique requirements of their ledgers, we provide
 three transaction families that are sufficient for building, testing and
@@ -82,8 +82,8 @@ algorithms and uses multiple rounds of explicit votes to achieve consensus.
 developed consensus protocols that extend traditional BFT for open
 participation.
 
-Sawtooth Lake abstracts the core concepts of consensus and isolates consensus
-from transaction semantics. Sawtooth Lake currently provides a single
+Sawtooth abstracts the core concepts of consensus and isolates consensus
+from transaction semantics. Sawtooth currently provides a single
 consensus protocol called PoET, for “Proof of Elapsed Time." PoET is a lottery
 protocol that builds on trusted execution environments (TEEs) provided by
 Intel's SGX to address the needs of large populations of participants. The
@@ -107,7 +107,7 @@ a good lottery function has several characteristics:
     * Verification: It should be relatively simple for all participants
       to verify that the leader was legitimately selected.
 
-Sawtooth Lake provides a Nakamoto consensus algorithm called PoET
+Sawtooth provides a Nakamoto consensus algorithm called PoET
 that uses a trusted execution environment (TEE) such as
 `Intel® Software Guard Extensions (SGX)
 <https://software.intel.com/en-us/isa-extensions/intel-sgx>`_
@@ -145,16 +145,16 @@ the behavior of the PoET algorithm running in a trusted execution environment
 and is not secure.** There are some benefits to using a simulator:
 
     * It does not require you to have a processor which supports SGX
-      in order to experiment with Sawtooth Lake.
+      in order to experiment with Sawtooth.
 
     * It allows running many validators (nodes) on a single system. An SGX
       implementation of PoET will allow only a single node per CPU socket.
 
 
-Getting Sawtooth Lake
+Getting Sawtooth
 =====================
 
-The Sawtooth Lake platform is distributed in source code form with
+The Sawtooth platform is distributed in source code form with
 an Apache license. You can get the code `here
 <https://github.com/hyperledger/sawtooth-core>`_ and start building your own
 distributed ledger.
@@ -165,13 +165,13 @@ Repositories
 One repository contains all of the the code needed:
 
 sawtooth-core
-    Contains fundamental classes used throughout the Sawtooth Lake project, as well as:
+    Contains fundamental classes used throughout the Sawtooth project, as well as:
 
     * The implementation of the validator process which runs on each node
     * The implementation of a transaction family for buying, selling and
       trading digital assets, and a client program for interacting with a node
       to execute market transactions
-    * Example code, in the form of games, which demonstrate key concepts of Sawtooth Lake
+    * Example code, in the form of games, which demonstrate key concepts of Sawtooth
     * Tools including a Vagrant environment for easily launching a network of
       validators
     * Source files for this documentation

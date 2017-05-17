@@ -7,7 +7,7 @@ Transaction Family Tutorial
 Overview
 ========
 
-This tutorial covers the creation of a new Sawtooth Lake transaction family
+This tutorial covers the creation of a new Sawtooth transaction family
 using the provided Python SDK. We will construct a transaction handler which
 implements a distributed version of the multi-player game tic-tac-toe.
 
@@ -22,7 +22,7 @@ A full implementation of the tic-tac-toe transaction family can be found in
 Prerequisites
 =============
 
-This tutorial assumes that you have gone through the primary Sawtooth Lake
+This tutorial assumes that you have gone through the primary Sawtooth
 :doc:`tutorial` and are familiar with the concepts introduced there.
 
 Prior to going through this tutorial, you should have a working vagrant

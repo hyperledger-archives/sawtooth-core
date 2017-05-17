@@ -34,7 +34,7 @@ ssh which is required by Vagrant. During installation, accept all defaults.
 
 .. note:: 
 
-  When checking out Sawtooth Lake on Windows for use with vagrant, you should
+  When checking out Sawtooth on Windows for use with vagrant, you should
   take steps to ensure that Windows-style CRLF line endings are not added to
   the code. The bash scripts used by your vagrant VM will not run correctly 
   with CRLF line endings. Git uses a configuration setting, *core.autocrlf*,
@@ -165,7 +165,7 @@ The transaction processor produces the following output:
 Multi-language support for transaction processors
 -------------------------------------------------
 
-Sawtooth Lake includes additional transaction processors:
+Sawtooth includes additional transaction processors:
 
 * tp_intkey_java
 

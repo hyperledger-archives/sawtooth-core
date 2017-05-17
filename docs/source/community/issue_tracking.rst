@@ -23,7 +23,7 @@ JIRA
 ====
 
 We use JIRA as our issue tracking system.  The JIRA instance is hosted by
-the Hyperledger Project, and Sawtooth Lake uses the key *STL*:
+the Hyperledger Project, and Sawtooth uses the key *STL*:
 
   https://jira.hyperledger.org/projects/STL/issues/
 
@@ -35,7 +35,7 @@ Linux Foundation account.  To setup a Linux Foundation account, go to:
 How to Report an Issue
 ======================
 
-Issues should be created in JIRA under the Sawtooth Lake project (which
+Issues should be created in JIRA under the Sawtooth project (which
 uses the *STL* JIRA key).
 
 Before reporting an issue, please review current open issues to see if there

@@ -5,7 +5,7 @@ The Workload Simulator
 Overview
 --------
 
-Sawtooth Lake has a workload simulator that can be used to generate a
+Sawtooth has a workload simulator that can be used to generate a
 synthetic transaction workload.  The workload simulator attempts to generate
 transactions at a relatively steady rate across the network of validators
 it has discovered, adapting to validators joining and leaving the network.

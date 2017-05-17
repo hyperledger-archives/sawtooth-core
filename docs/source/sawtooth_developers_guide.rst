@@ -1,6 +1,6 @@
 
 *******************************
-Sawtooth Lake Developer's Guide
+Sawtooth Developer's Guide
 *******************************
 
 .. toctree::
