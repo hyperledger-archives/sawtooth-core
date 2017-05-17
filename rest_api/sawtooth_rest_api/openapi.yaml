@@ -136,8 +136,8 @@ paths:
         it is set to any non-integer value other than `false`, the wait time
         will be just shy of the api's specified timeout (usually 300).
 
-        Note that as this route does not return a full resource, and the
-        response body will _not_ include the `head` or `paging` properties.
+        Note that as this route does not return a full resource, the response
+        body will _not_ include the `head` or `paging` properties.
       parameters:
         - name: id
           in: query
