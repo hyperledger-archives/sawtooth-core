@@ -21,6 +21,10 @@ import threading
 import time
 
 import sawtooth_signing as signing
+<<<<<<< HEAD
+=======
+
+>>>>>>> 256934e... MOVE_METHODS
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
@@ -30,68 +34,119 @@ from sawtooth_validator.database import dict_database
 from sawtooth_validator.execution.scheduler_parallel import PredecessorTree
 from sawtooth_validator.state.merkle import MerkleDatabase
 
+from test_scheduler.yaml_scheduler_tester import create_batch
+from test_scheduler.yaml_scheduler_tester import create_transaction
+from test_scheduler.yaml_scheduler_tester import SchedulerTester
+
 
 LOGGER = logging.getLogger(__name__)
 
-def create_transaction(name, private_key, public_key, inputs=None,
-                        outputs=None, dependencies = None):
-    payload = name
-    addr = '000000' + hashlib.sha512(name.encode()).hexdigest()
 
-    if inputs is None:
-        inputs = [addr]
-    else:
-        inputs = inputs.copy().append(addr)
+class TestSchedulersWithYaml(unittest.TestCase):
 
-    if outputs is None:
-        outputs = [addr]
-    else:
-        outputs.copy().append(addr)
+    def test_single_block_files_individually(self):
+        """Tests scheduler(s) with yaml files that represent a single
+        block.
 
-    if dependencies is None:
-        dependencies = []
+        Notes:
+            Tests that the serial scheduler has the correct batch validity
+            and state hash, and that 1 state hash is produced.
 
-    header = transaction_pb2.TransactionHeader(
-        signer_pubkey=public_key,
-        family_name='scheduler_test',
-        family_version='1.0',
-        inputs=inputs,
-        outputs=outputs,
-        dependencies=dependencies,
-        nonce=str(time.time()),
-        payload_encoding="application/cbor",
-        payload_sha512=hashlib.sha512(payload.encode()).hexdigest(),
-        batcher_pubkey=public_key)
+        """
 
-    header_bytes = header.SerializeToString()
+        files_with_one_block = ['simple_scheduler_test.yaml']
+        for name in files_with_one_block:
+            file_name = self._path_to_yaml_file(name)
+            serial_scheduler = SerialScheduler(
+                squash_handler=self._context_manager.get_squash_handler(),
+                first_state_hash=self._context_manager.get_first_root(),
+                always_persist=False)
+            tester = SchedulerTester(file_name,
+                                     serial_scheduler,
+                                     self._context_manager)
+            defined_batch_results_dict = tester.batch_results
+            batch_results = tester.run_scheduler()
+            self.assert_batch_validity(
+                defined_batch_results_dict,
+                batch_results)
+            self.assert_one_state_hash(batch_results=batch_results)
+            sched_state_roots = self._get_state_roots(
+                batch_results=batch_results)
+            calc_state_hash = tester.compute_state_hashes_wo_scheduler()
 
-    signature = signing.sign(header_bytes, private_key)
+            self.assertEquals(
+                sched_state_roots,
+                calc_state_hash,
+                "The state hashes calculated by the scheduler must"
+                " be the same as calculated by the tester")
 
-    transaction = transaction_pb2.Transaction(
-        header=header_bytes,
-        payload=payload.encode(),
-        header_signature=signature)
+    def _create_context_manager(self):
+        database = dict_database.DictDatabase()
+        context_manager = ContextManager(database=database,
+                                         state_delta_store=Mock())
+        return context_manager
 
-    return transaction, header
+    def setUp(self):
+        self._context_manager = self._create_context_manager()
 
+    def _get_state_roots(self, batch_results):
+        return [r.state_hash for _, r in batch_results
+                if r.state_hash is not None]
 
-def create_batch(transactions, private_key, public_key):
-    transaction_ids = [t.header_signature for t in transactions]
+    def assert_batch_validity(self, yaml_results_dict, batch_results):
+        """Checks that all of the BatchExecutionResults calculated are the
+        same as defined in the yaml file and returned by
+        SchedulerTester.create_batches().
 
-    header = batch_pb2.BatchHeader(
-        signer_pubkey=public_key,
-        transaction_ids=transaction_ids)
+        Args:
+            yaml_results_dict (dict): batch signature: BatchExecutionResult,
+                                      Calculated from the yaml.
+            batch_results (list): list of tuples
+                                  (batch signature, BatchExecutionResult)
+                                  Calculated by the scheduler.
 
-    header_bytes = header.SerializeToString()
+        Raises:
+            AssertionError
+        """
 
-    signature = signing.sign(header_bytes, private_key)
+        for i, b_e in enumerate(batch_results):
+            signature, result = b_e
+            defined_result = yaml_results_dict[signature]
+            self.assertIsNotNone(result.is_valid, "Batch #{} has None as it's "
+                                                  "validity".format(i))
+            self.assertEquals(
+                result.is_valid,
+                defined_result.is_valid,
+                "Batch #{} was defined in the yaml to be {},"
+                "but the scheduler determined "
+                "it was {}".format(
+                    i + 1,
+                    'valid' if defined_result.is_valid else 'invalid',
+                    'valid' if result.is_valid else 'invalid'))
 
-    batch = batch_pb2.Batch(
-        header=header_bytes,
-        transactions=transactions,
-        header_signature=signature)
+    def assert_one_state_hash(self, batch_results):
+        """Should be used when only one state hash is expected from the
+        scheduler.
 
-    return batch
+        Args:
+            batch_results (list): list of tuples
+                                  (batch signature, BatchExecutionResult)
+        Raises:
+            AssertionError
+        """
+
+        state_roots = self._get_state_roots(batch_results=batch_results)
+        self.assertEquals(len(state_roots), 1,
+                          "The scheduler calculated more than one state "
+                          "root when only one was expected")
+
+    def _path_to_yaml_file(self, name):
+        parent_dir = os.path.dirname(__file__)
+        file_name = os.path.join(parent_dir, 'data', name)
+        return file_name
+
+    def tearDown(self):
+        self._context_manager.stop()
 
 
 def _get_address_from_txn(txn_info):
@@ -136,7 +191,7 @@ class TestSerialScheduler(unittest.TestCase):
             batch_txns = []
             for name in names:
                 txn, _ = create_transaction(
-                    name=name,
+                    payload=name.encode(),
                     private_key=private_key,
                     public_key=public_key)
 
@@ -183,7 +238,7 @@ class TestSerialScheduler(unittest.TestCase):
         public_key = signing.generate_pubkey(private_key)
 
         txn, _ =  create_transaction(
-            name='a',
+            payload='a'.encode(),
             private_key=private_key,
             public_key=public_key)
 
@@ -224,7 +279,7 @@ class TestSerialScheduler(unittest.TestCase):
         public_key = signing.generate_pubkey(private_key)
 
         txn, _ = create_transaction(
-            name='a',
+            payload='a'.encode(),
             private_key=private_key,
             public_key=public_key)
 
@@ -269,7 +324,7 @@ class TestSerialScheduler(unittest.TestCase):
             batch_txns = []
             for name in names:
                 txn, _ = create_transaction(
-                    name=name,
+                    payload=name.encode(),
                     private_key=private_key,
                     public_key=public_key)
 
@@ -316,7 +371,7 @@ class TestSerialScheduler(unittest.TestCase):
 
         # Create a basic transaction and batch.
         txn, _ = create_transaction(
-            name='a',
+            payload='a'.encode(),
             private_key=private_key,
             public_key=public_key)
         batch = create_batch(
@@ -414,7 +469,7 @@ class TestSerialScheduler(unittest.TestCase):
 
         for name in ['a', 'b']:
             txn, _ = create_transaction(
-                name=name,
+                payload=name.encode(),
                 private_key=private_key,
                 public_key=public_key)
 
@@ -464,7 +519,7 @@ class TestSerialScheduler(unittest.TestCase):
             batch_txns = []
             for name in names:
                 txn, _ = create_transaction(
-                    name=name,
+                    payload=name.encode(),
                     private_key=private_key,
                     public_key=public_key)
 
