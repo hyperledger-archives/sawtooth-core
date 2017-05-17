@@ -21,6 +21,7 @@ import os
 import signal
 import time
 import threading
+import toml
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
@@ -85,7 +86,7 @@ LOGGER = logging.getLogger(__name__)
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, public_uri,
                  peering, join_list, peer_list, data_dir, config_dir,
-                 identity_signing_key):
+                 identity_signing_key, scheduler_type):
         """Constructs a validator instance.
 
         Args:
@@ -152,10 +153,22 @@ class Validator(object):
                                      heartbeat=False,
                                      max_incoming_connections=20)
 
+        config_file = os.path.join(config_dir, "validator.toml")
+
+        validator_config = {}
+        if os.path.exists(config_file):
+            with open(config_file) as fd:
+                raw_config = fd.read()
+            validator_config = toml.loads(raw_config)
+
+        if scheduler_type is None:
+            scheduler_type = validator_config.get("scheduler", "serial")
+
         executor = TransactionExecutor(service=self._service,
                                        context_manager=context_manager,
                                        config_view_factory=ConfigViewFactory(
-                                           StateViewFactory(merkle_db)))
+                                           StateViewFactory(merkle_db)),
+                                       scheduler_type=scheduler_type)
         self._executor = executor
 
         state_delta_processor = StateDeltaProcessor(self._service,
