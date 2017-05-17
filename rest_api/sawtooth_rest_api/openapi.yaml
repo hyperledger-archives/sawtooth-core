@@ -25,7 +25,7 @@ paths:
         after that time in seconds has elapsed. If set to any non-integer value
         other than `false` (including simply `?wait`), *the API may still
         timeout*, but will use its own settings (usually 300s). After timing
-        out, a `200` is returned with a `data` object that include the statuses
+        out, a `202` is returned with a `data` object that includes the statuses
         of each batch (`COMMITTED`, `INVALID`, `PENDING`, or `UNKNOWN`), and a
         `link` to a `/batch_status` endpoint for further polling.
 
@@ -42,20 +42,8 @@ paths:
           schema:
             $ref: "#/definitions/BatchList"
           required: true
-        - name: callback
-          in: query
-          type: string
-          description: Callback url
         - $ref: "#/parameters/wait"
       responses:
-        200:
-          description: Batches submitted, but not all committed
-          schema:
-            properties:
-              data:
-                $ref: "#/definitions/BatchStatuses"
-              link:
-                $ref: "#/definitions/Link"
         201:
           description: Successfully committed all Batches in BatchList
           schema:
@@ -63,9 +51,11 @@ paths:
               link:
                 $ref: "#/definitions/Link"
         202:
-          description: Successfully submitted BatchList for validation
+          description: Batches submitted for validation, but not yet committed
           schema:
             properties:
+              data:
+                $ref: "#/definitions/BatchStatuses"
               link:
                 $ref: "#/definitions/Link"
         400:
@@ -83,9 +73,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved batches
@@ -113,9 +100,6 @@ paths:
       - $ref: "#/parameters/batch_id"
     get:
       summary: Fetches a particular batch
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved batch
@@ -152,8 +136,8 @@ paths:
         it is set to any non-integer value other than `false`, the wait time
         will be just shy of the api's specified timeout (usually 300).
 
-        Note that as this route does not return a full resource, and the
-        response body will _not_ include the `head` or `paging` properties.
+        Note that as this route does not return a full resource, the response
+        body will _not_ include the `head` or `paging` properties.
       parameters:
         - name: id
           in: query
@@ -230,9 +214,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved state data
@@ -262,8 +243,6 @@ paths:
       summary: Fetches a particular leaf from the current state
       parameters:
         - $ref: "#/parameters/head"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully fetched leaves
@@ -296,9 +275,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved blocks
@@ -326,9 +302,6 @@ paths:
       - $ref: "#/parameters/block_id"
     get:
       summary: Fetches a particlar block
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved block
@@ -360,9 +333,6 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved transactions
@@ -390,9 +360,6 @@ paths:
       - $ref: "#/parameters/transaction_id"
     get:
       summary: Fetches a particular transaction
-      parameters:
-        - $ref: "#/parameters/fields"
-        - $ref: "#/parameters/omit"
       responses:
         200:
           description: Successfully retrieved transaction
@@ -468,16 +435,6 @@ parameters:
     in: query
     type: integer
     description: A time in seconds to wait for commit
-  fields:
-    name: fields
-    in: query
-    type: string
-    description: Comma-separated list of fields to include in response, defaults to all
-  omit:
-    name: omit
-    in: query
-    type: string
-    description: Comma-separated list of fields to omit from response, defaults to none
   count:
     name: count
     in: query
@@ -494,11 +451,6 @@ parameters:
     in: query
     type: string
     description: Id or index to end paging (inclusive)
-  sort:
-    name: sort
-    in: query
-    type: string
-    description: Field to sort a list by, `-` reverses order
 
 definitions:
   Head:
