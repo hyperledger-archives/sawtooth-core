@@ -11,7 +11,7 @@ This tutorial walks through the process of setting up a virtual environment
 useful for core development of the Hyperledger Sawtooth distributed ledger using
 Vagrant and VirtualBox. At the end, you will have an environment capable of
 running a validator, transaction processor, and other components. You will
-have cloned the Sawtooth repository.
+have cloned the sawtooth-core repository.
 
 
 Prerequisites

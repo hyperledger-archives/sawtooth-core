@@ -1,8 +1,8 @@
-*******************
-Installing Sawtooth
-*******************
+*******************************
+Installing Hyperledger Sawtooth
+*******************************
 
-The easiest way to install Sawtooth is with apt-get.
+The easiest way to install Hyperledger Sawtooth is with apt-get.
 
 .. note::
 

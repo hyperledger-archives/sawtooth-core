@@ -3,7 +3,7 @@ Introduction
 ************
 
 
-Sawtooth is an enterprise distributed ledger (aka blockchain) project.
+Hyperledger Sawtooth is an enterprise distributed ledger (aka blockchain) project.
 Our design philosophy targets keeping distributed ledgers *distributed* and
 making smart contracts *safe* - particularly for enterprise use.
 
