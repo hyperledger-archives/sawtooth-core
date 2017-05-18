@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 import hashlib
 import logging
 
@@ -26,21 +27,31 @@ LOGGER = logging.getLogger(__name__)
 
 
 # namespace
+def hash_name(name):
+    return hashlib.sha512(name.encode('utf-8')).hexdigest()
+
 FAMILY_NAME = 'xo'
-XO_NAMESPACE = hashlib.sha512(FAMILY_NAME.encode('utf-8')).hexdigest()[:6]
+XO_NAMESPACE = hash_name(FAMILY_NAME)[:6]
+
 
 def make_xo_address(name):
-    return XO_NAMESPACE + hashlib.sha512(name.encode('utf-8')).hexdigest()[-64:]
+    return XO_NAMESPACE + hash_name(name)[-64:]
+
 
 # encodings
 def decode_txn_payload(payload):
     return payload.decode().split(',')
 
-def decode_state_data(data):
-    return data.decode().split(',')
 
-def encode_state_data(data):
-    return ','.join(data).encode()
+def decode_state_data(state_data_bytes, name):
+    state_data_dict = json.loads(state_data_bytes.decode())
+    return state_data_dict[name].split(',') + [state_data_dict]
+
+
+def encode_state_data(state_data_dict, name,
+                      board, state, player_1, player_2):
+    state_data_dict[name] = ','.join([board, state, player_1, player_2])
+    return json.dumps(state_data_dict).encode()
 
 # board
 SIDE_LENGTH = 3
@@ -78,7 +89,8 @@ class XoTransactionHandler:
     def apply(self, transaction, state_store):
         signer, name, action, space = _unpack_transaction(transaction)
 
-        board, state, player_1, player_2 = _get_state_data(name, state_store)
+        board, state, player_1, player_2, state_data = _get_state_data(
+            name, state_store)
 
         _validate_data(action, board, state)
 
@@ -92,8 +104,8 @@ class XoTransactionHandler:
             upd_player_1, upd_player_2)
 
         _store_game_data(
-            state_store, name,
-            upd_board, upd_state,
+            state_store, state_data,
+            name, upd_board, upd_state,
             upd_player_1, upd_player_2)
 
 
@@ -143,26 +155,16 @@ def _validate_action_and_space(action, space):
 
 def _get_state_data(name, state_store):
     '''
-    Return: board, state, player_1, player_2
+    Return: board, state, player_1, player_2, state_data_dict
     '''
     state_entries = state_store.get([make_xo_address(name)])
 
     try:
-        board, state, player_1, player_2, stored_name = \
-            decode_state_data(state_entries[0].data)
-
-        # NOTE: Since the game data is stored in a Merkle tree, there is a
-        # small chance of collision. A more correct usage would be to store
-        # a dictionary of games so that multiple games could be store at
-        # the same location. See the python intkey handler for an example
-        # of this.
-        if stored_name != name:
-            raise InternalError('Hash collision')
-
-        return board, state, player_1, player_2
+        state_data = state_entries[0].data
+        return decode_state_data(state_data, name)
 
     except IndexError:
-        return None, None, None, None
+        return None, None, None, None, {}
     except:
         raise InternalError('Failed to deserialize game data.')
 
@@ -191,14 +193,17 @@ def _validate_data(action, board, state):
                     'Game has reached an invalid state: {}'.format(state))
 
 
-def _store_game_data(state_store, name,
-                     board, state,
+def _store_game_data(state_store, state_data,
+                     name, board, state,
                      player_1, player_2):
+
+    upd_state_data = encode_state_data(
+        state_data, name, board, state, player_1, player_2)
 
     addresses = state_store.set([
         StateEntry(
             address=make_xo_address(name),
-            data=encode_state_data([board, state, player_1, player_2, name]))
+            data=upd_state_data)
     ])
 
     if not addresses:

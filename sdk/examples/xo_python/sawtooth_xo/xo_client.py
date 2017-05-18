@@ -34,8 +34,11 @@ from sawtooth_xo.xo_exceptions import XoException
 FAMILY_NAME = 'xo'
 XO_NAMESPACE = hashlib.sha512(FAMILY_NAME.encode('utf-8')).hexdigest()[:6]
 
+
 def make_xo_address(name):
-    return XO_NAMESPACE + hashlib.sha512(name.encode('utf-8')).hexdigest()[-64:]
+    return XO_NAMESPACE + hashlib.sha512(
+        name.encode('utf-8')).hexdigest()[-64:]
+
 
 def _sha512(data):
     return hashlib.sha512(data).hexdigest()
@@ -67,21 +70,23 @@ class XoClient:
         try:
             encoded_entries = yaml.safe_load(result)["data"]
 
-            return [
-                base64.b64decode(entry["data"]) for entry in encoded_entries
+            address_entries = [
+                yaml.safe_load(base64.b64decode(entry["data"]).decode())
+                for entry in encoded_entries
             ]
+
+            return {
+                name: data.split(',')
+                for entry in address_entries
+                for name, data in entry.items()
+            }
 
         except BaseException:
             return None
 
     def show(self, name):
-        address = make_xo_address(name)
-
-        result = self._send_request("state/{}".format(address))
-
         try:
-            return base64.b64decode(yaml.safe_load(result)["data"])
-
+            return self.list()[name]
         except BaseException:
             return None
 

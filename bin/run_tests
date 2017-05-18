@@ -276,8 +276,8 @@ test_python_sdk() {
     copy_coverage .coverage.workload
     run_docker_test xo-python-smoke -s integration_test
     copy_coverage .coverage.xo-smoke
-    run_docker_test two_families -s integration_test
-    copy_coverage .coverage.two_families
+    run_docker_test two-families -s integration_test
+    copy_coverage .coverage.two-families
 }
 
 test_integration() {

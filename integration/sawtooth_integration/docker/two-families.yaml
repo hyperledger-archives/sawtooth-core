@@ -23,8 +23,6 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    depends_on:
-      - validator
     command: tp_config -vv tcp://validator:40000
     stop_signal: SIGKILL
 
@@ -34,9 +32,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    depends_on:
-      - validator
-    command: tp_intkey_python -vv tcp://validator:40000
+    command: tp_intkey_python -v tcp://validator:40000
     stop_signal: SIGKILL
 
   tp_xo_python:
@@ -45,9 +41,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    depends_on:
-      - validator
-    command: tp_xo_python -vv tcp://validator:40000
+    command: tp_xo_python -v tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -57,11 +51,10 @@ services:
     expose:
       - 40000
       - 8800
-    # start the validator with an empty genesis batch
     command: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth admin genesis && \
-        validator --public-uri tcp://validator:8800 -vv \
+        validator --public-uri tcp://validator:8800 -v \
             --component-endpoint tcp://eth0:40000 \
             --network-endpoint tcp://eth0:8800 \
     \""
@@ -74,8 +67,6 @@ services:
     expose:
       - 40000
       - 8080
-    depends_on:
-      - validator
     command: rest_api -v --stream-url tcp://validator:40000 --host rest_api
     stop_signal: SIGKILL
 
@@ -85,10 +76,6 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
-    depends_on:
-      - validator
-      - rest_api
-    # Wait for rest_api and genesis
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -v
@@ -99,4 +86,5 @@ services:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/integration:\
+        /project/sawtooth-core/cli:\
         /project/sawtooth-core/signing"

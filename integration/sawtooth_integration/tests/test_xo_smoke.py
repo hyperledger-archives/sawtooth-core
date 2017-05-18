@@ -67,9 +67,9 @@ class TestXoSmoke(unittest.TestCase):
             "Verifying that XO CLI commands don't blow up (but nothing else)")
 
         cli_cmds = (
+            'xo list',
             'xo show nunzio',
             'xo show tony',
-            'xo list',
             'xo reset',
         )
 
@@ -98,17 +98,22 @@ def _send_xo_cmd(cmd_str):
     LOGGER.info('Sending {}'.format(cmd_str))
 
     subprocess.run(
-        shlex.split(cmd_str))
+        shlex.split(cmd_str),
+        check=True)
 
 
 class XoClient(RestClient):
     def list_games(self):
-        decoded_data = [entry.decode().split(',') for entry in self.get_data()]
+        game_list = [
+            json.loads(entry.decode())
+            for entry in self.get_data()
+        ]
 
         return {
-            name: (board, turn, player_1, player_2)
-            for (board, turn, player_1, player_2, name) in decoded_data
+            name: game_data
+            for game in game_list
+            for name, game_data in game.items()
         }
 
     def get_game(self, game_name):
-        return self.list_games()[game_name]
+        return self.list_games()[game_name].split(',')
