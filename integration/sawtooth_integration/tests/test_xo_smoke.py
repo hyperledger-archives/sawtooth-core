@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 import time
 import shlex
 import logging
@@ -78,7 +79,7 @@ class TestXoSmoke(unittest.TestCase):
     def verify_game(self, game_name, expected_board, expected_turn):
         LOGGER.info('Verifying game: {}'.format(game_name))
 
-        board, turn, _, _, _ = self.client.get_game(game_name)
+        board, turn, _, _ = self.client.get_game(game_name)
 
         self.assertEqual(
             board,
@@ -105,12 +106,21 @@ class XoClient(RestClient):
     def list_games(self):
         xo_prefix = '5b7349'
 
-        return [
-            game.decode().split(',')
-            for game in self.get_data(xo_prefix)
+        address_list = [
+            entry.decode().split('|')
+            for entry in self.get_data(subtree=xo_prefix)
         ]
 
-    def get_game(self, name):
-        for game in self.list_games():
-            if game[4] == name:
-                return game
+        game_list = [
+            game.split(',')
+            for address in address_list
+            for game in address
+        ]
+
+        return {
+            name: data
+            for name, *data in game_list
+        }
+
+    def get_game(self, game_name):
+        return self.list_games()[game_name]

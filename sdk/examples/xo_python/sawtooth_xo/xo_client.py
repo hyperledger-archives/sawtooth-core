@@ -68,26 +68,38 @@ class XoClient:
         return self._send_xo_txn("take", name, space)
 
     def list(self):
-        result = self._send_request("state?address={}".format(XO_NAMESPACE))
+        state = yaml.safe_load(
+            self._send_request(
+                "state?address={}".format(XO_NAMESPACE)))
+
+        state_data = [
+            base64.b64decode(entry['data'])
+            for entry in state['data']
+        ]
 
         try:
-            encoded_entries = yaml.safe_load(result)["data"]
-
-            return [
-                base64.b64decode(entry["data"]) for entry in encoded_entries
+            address_list = [
+                game.decode().split('|')
+                for game in state_data
             ]
+
+            game_list = [
+                game.split(',')
+                for address in address_list
+                for game in address
+            ]
+
+            return {
+                name: data
+                for name, *data in game_list
+            }
 
         except BaseException:
             return None
 
     def show(self, name):
-        address = make_xo_address(name)
-
-        result = self._send_request("state/{}".format(address))
-
         try:
-            return base64.b64decode(yaml.safe_load(result)["data"])
-
+            return self.list()[name]
         except BaseException:
             return None
 

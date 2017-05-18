@@ -222,11 +222,8 @@ def do_list(args, config):
     if game_list is not None:
         fmt = "%-15s %-15.15s %-15.15s %-9s %s"
         print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
-        for game_data in game_list:
-
-            board, game_state, player1, player2, name = \
-                game_data.decode().split(",")
-
+        for name, game_data in game_list.items():
+            board, game_state, player1, player2 = game_data
             print(fmt % (name, player1[:6], player2[:6], board, game_state))
     else:
         raise XoException("Could not retrieve game listing.")
@@ -239,12 +236,10 @@ def do_show(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    game = client.show(name).decode()
+    game = client.show(name)
 
     if game is not None:
-
-        board_str, game_state, player1, player2, name = \
-            game.split(",")
+        board_str, game_state, player1, player2 = game
 
         board = list(board_str.replace("-", " "))
 

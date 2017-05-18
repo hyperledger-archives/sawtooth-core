@@ -41,12 +41,32 @@ def decode_txn_payload(payload):
     return payload.decode().split(',')
 
 
-def decode_state_data(state_data):
-    return state_data.decode().split(',')
+def decode_state_data(state_data, name):
+    game_list = [
+        game_data.split(',')
+        for game_data in state_data.decode().split('|')
+    ]
+
+    state_data_dict = {
+        name: data
+        for (name, *data) in game_list
+    }
+
+    return state_data_dict[name] + [state_data_dict]
 
 
-def encode_state_data(board, state, player_1, player_2, name):
-    return ','.join([board, state, player_1, player_2, name]).encode()
+def encode_state_data(state_data_dict, name, board, state, player_1, player_2):
+    state_data_dict[name] = [board, state, player_1, player_2]
+
+    game_list = [
+        [name] + data
+        for name, data in state_data_dict.items()
+    ]
+
+    return '|'.join(sorted([
+        ','.join(game)
+        for game in game_list
+    ])).encode()
 
 
 class XoTransactionHandler:
@@ -72,16 +92,8 @@ class XoTransactionHandler:
         signer, name, action, space = _unpack_transaction(transaction)
 
         # 2. Retrieve the game data from state storage
-        board, state, player_1, player_2, stored_name = \
-            _get_state_data(state_store, name)
-
-        # NOTE: Since the game data is stored in a Merkle tree, there is a
-        # small chance of collision. A more correct usage would be to store
-        # a dictionary of games so that multiple games could be store at
-        # the same location. See the python intkey handler for an example
-        # of this.
-        if stored_name and stored_name != name:
-            raise InternalError('Hash collision')
+        board, state, player_1, player_2, state_data = _get_state_data(
+            name, state_store)
 
         # 3. Validate the game data
         _validate_state_data(action, board, state)
@@ -99,8 +111,9 @@ class XoTransactionHandler:
 
         # 6. Put the game data back in state storage
         _store_game_data(
-            state_store, name, upd_board,
-            upd_state, upd_player_1, upd_player_2)
+            state_store, state_data,
+            name, upd_board, upd_state,
+            upd_player_1, upd_player_2)
 
 
 # transactions
@@ -148,17 +161,18 @@ def _validate_action_and_space(action, space):
 
 # state
 
-def _get_state_data(state_store, name):
-    address = make_xo_address(name)
-
-    state_entries = state_store.get([address])
+def _get_state_data(name, state_store):
+    '''
+    Return: board, state, player_1, player_2, state_data_dict
+    '''
+    state_entries = state_store.get([make_xo_address(name)])
 
     try:
         state_data = state_entries[0].data
-        return decode_state_data(state_data)
-    except (IndexError, ValueError):
-        entry_len = 5
-        return [None for _ in range(entry_len)]
+        return decode_state_data(state_data, name)
+
+    except IndexError:
+        return None, None, None, None, {}
     except:
         raise InternalError('Failed to deserialize game data')
 
@@ -186,12 +200,17 @@ def _validate_state_data(action, board, state):
                 'Game has reached an invalid state: {}'.format(state))
 
 
-def _store_game_data(state_store, name, board, state, player_1, player_2):
+def _store_game_data(state_store, state_data,
+                     name, board, state,
+                     player_1, player_2):
+
+    upd_state_data = encode_state_data(
+        state_data, name, board, state, player_1, player_2)
+
     addresses = state_store.set([
         StateEntry(
             address=make_xo_address(name),
-            data=encode_state_data(board, state, player_1, player_2, name),
-        )
+            data=upd_state_data)
     ])
 
     if not addresses:

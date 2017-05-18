@@ -99,4 +99,5 @@ services:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/integration:\
+        /project/sawtooth-core/cli:\
         /project/sawtooth-core/signing"
