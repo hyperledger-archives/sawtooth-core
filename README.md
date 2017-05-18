@@ -13,7 +13,7 @@ untrusted parties coordinated by consensus algorithms.
 Incubation Notice
 -----------------
 
-This project is a _active_ Hyperledger project. It was proposed to the 
+This project is an _active_ Hyperledger project. It was proposed to the 
 community and documented [here](http://bit.ly/1T6eVBH). Information on what 
 _Active_ entails can be found in the 
 [Hyperledger Project Lifecycle document](https://goo.gl/4edNRc).
