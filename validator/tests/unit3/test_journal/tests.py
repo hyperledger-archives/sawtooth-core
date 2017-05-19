@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from threading import RLock
 import unittest
 from unittest.mock import patch
 
@@ -666,6 +667,7 @@ class TestChainController(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
+        self._chain_head_lock = RLock()
         self.state_delta_processor = MockStateDeltaProcessor()
 
         def chain_updated(head, committed_batches=None,
@@ -679,6 +681,7 @@ class TestChainController(unittest.TestCase):
             block_sender=self.block_sender,
             executor=self.executor,
             transaction_executor=MockTransactionExecutor(),
+            chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
@@ -976,6 +979,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
         self.state_delta_processor = MockStateDeltaProcessor()
+        self.chain_head_lock = RLock()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -988,6 +992,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             block_sender=self.block_sender,
             executor=self.executor,
             transaction_executor=MockTransactionExecutor(),
+            chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,

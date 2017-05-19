@@ -307,6 +307,10 @@ class BlockPublisher(object):
         self._data_dir = data_dir
         self._config_dir = config_dir
 
+    @property
+    def chain_head_lock(self):
+        return self._lock
+
     def _build_candidate_block(self, chain_head):
         """ Build a candidate block and construct the consensus object to
         validate it.
@@ -409,7 +413,8 @@ class BlockPublisher(object):
         The existing chain has been updated, the current head block has
         changed.
 
-        :param chain_head: the new head of block_chain
+        :param chain_head: the new head of block_chain, can be None if
+        no block publishing is desired.
         :param committed_batches: the set of batches that were committed
          as part of the new chain.
         :param uncommitted_batches: the list of transactions if any that are
