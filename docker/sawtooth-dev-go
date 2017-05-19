@@ -48,7 +48,8 @@ RUN mkdir /go \
     github.com/golang/protobuf/protoc-gen-go \
     github.com/pebbe/zmq4 \
     github.com/brianolson/cbor_go \
-    github.com/satori/go.uuid
+    github.com/satori/go.uuid \
+    github.com/btcsuite/btcd/btcec
 
 EXPOSE 40000/tcp
 
