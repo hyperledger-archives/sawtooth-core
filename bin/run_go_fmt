@@ -7,6 +7,7 @@ cd $top_dir
 dirs="
 $top_dir/sdk/go/src/sawtooth_sdk/messaging
 $top_dir/sdk/go/src/sawtooth_sdk/processor
+$top_dir/sdk/go/src/sawtooth_sdk/client
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
 "
@@ -17,7 +18,7 @@ do
     if [ -z $1 ]
     then
         changed=$(gofmt -l $(ls -1 $dir/*.go))
-        if [ ! -z $changed ]
+        if [[ ! -z $changed ]]
         then
             echo "Incorrect formatting: $dir"
             exitcode=1
