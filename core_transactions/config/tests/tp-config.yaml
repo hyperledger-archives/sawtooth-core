@@ -35,7 +35,7 @@ services:
     command: nose2-3
         -c /project/sawtooth-core/core_transactions/config/nose2.cfg
         -v
-        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        -s /project/sawtooth-core/core_transactions/config/tests
         test_tp_config
     stop_signal: SIGKILL
     environment:
