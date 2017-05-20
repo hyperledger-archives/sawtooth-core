@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2017 Intel Corporation
 #
@@ -15,19 +15,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-set -e
-
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+bin=$top_dir/sdk/examples/noop_go/bin/tp_noop_go
 
-echo -e "\033[0;32m--- Running protogen go ---\n\033[0m"
-$top_dir/bin/protogen go
-
-echo -e "\033[0;32m--- Building tp_intkey_go ---\n\033[0m"
-cd $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
-mkdir -p $top_dir/sdk/examples/intkey_go/bin
-go build -o $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go
-
-echo -e "\033[0;32m--- Building tp_noop_go ---\n\033[0m"
-cd $top_dir/sdk/examples/noop_go/src/sawtooth_noop
-mkdir -p $top_dir/sdk/examples/noop_go/bin
-go build -o $top_dir/sdk/examples/noop_go/bin/tp_noop_go
+if [ -e $bin ]
+then
+    $bin $*
+else
+    echo "Please build Noop Go first with 'build_all -l go' or 'build_go'"
+fi

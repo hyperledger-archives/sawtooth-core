@@ -57,6 +57,7 @@
 /sdk/go/src/github.com/
 /sdk/go/bin/
 /sdk/examples/intkey_go/bin/
+/sdk/examples/noop_go/bin/
 /sdk/go/pkg/
 
 /signing/build/
