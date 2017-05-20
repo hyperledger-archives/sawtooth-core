@@ -148,10 +148,24 @@ class TestConfigView(unittest.TestCase):
 
     @staticmethod
     def _address(key):
-        return '000000' + hashlib.sha256(key.encode()).hexdigest()
+        return '000000' + _key_to_address(key)
 
     @staticmethod
     def _setting_entry(key, value):
         return Setting(
             entries=[Setting.Entry(key=key, value=value)]
         ).SerializeToString()
+
+
+_MAX_KEY_PARTS = 4
+_ADDRESS_PART_SIZE = 16
+
+
+def _short_hash(s):
+    return hashlib.sha256(s.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+
+
+def _key_to_address(k):
+    key_parts = k.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
+    return ''.join(_short_hash(x) for x in key_parts)

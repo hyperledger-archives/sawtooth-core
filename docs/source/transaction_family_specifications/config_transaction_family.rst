@@ -137,16 +137,28 @@ a base64 encoded *ConfigCandidates* message:
 Addressing
 ----------
 
-When a setting is read or changed, it is accessed by addressing it using the following algorithm:
+When a setting is read or changed, it is accessed by addressing it using the
+following algorithm:
 
-Addresses for the config transaction family are set by adding a sha256 hash 
-of the setting name to the config namespace of '000000'. For example, the 
-setting *sawtooth.config.vote.proposals* could be set like this:
+Setting keys are broken into four parts, based on the dots in the string. For
+example, the address for the key `a.b.c` is computed based on `a`, `b`, `c` and
+the empty string.  A longer key, for example `a.b.c.d.e`, is still broken into
+four parts, but the remain pieces are in the last part: `a`, `b`, `c` and `d.e`.
+
+Each of these pieces has a short hash computed (the first 16 characters of its
+SHA256 hash in hex) and is joined into a single address, with the config
+namespace (`000000`) added at the beginning.
+
+For example, the setting *sawtooth.config.vote.proposals* could be set like
+this:
 
 .. code-block:: pycon
 
-	>>> '000000' + hashlib.sha256('sawtooth.config.vote.proposals').hexdigest()
-	'000000041706776ff37b8d2a75450422d8bdbe894f6988b012ae0a5ec751434eadc014'
+	>>> '000000' + hashlib.sha256('sawtooth'.encode()).hexdigest()[:16] + \
+            hashlib.sha256('config'.encode()).hexdigest()[:16] + \
+            hashlib.sha256('vote'.encode()).hexdigest()[:16] + \
+            hashlib.sha256('proposals'.encode()).hexdigest()[:16]
+        '000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c1c0cbf0fbcaf64c0b'
 
 
 Transaction Payload

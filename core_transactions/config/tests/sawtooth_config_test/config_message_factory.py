@@ -19,6 +19,9 @@ from sawtooth_config.protobuf.config_pb2 import ConfigProposal
 from sawtooth_config.protobuf.config_pb2 import ConfigVote
 from sawtooth_config.protobuf.setting_pb2 import Setting
 
+_MAX_KEY_PARTS = 4
+_ADDRESS_PART_SIZE = 16
+
 
 class ConfigMessageFactory(object):
 
@@ -37,8 +40,14 @@ class ConfigMessageFactory(object):
         return self._factory.get_public_key()
 
     def _key_to_address(self, key):
+        key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+        key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
+
+        def _short_hash(in_str):
+            return self._factory.sha256(in_str.encode())[:16]
+
         return self._factory.namespace + \
-            self._factory.sha256(key.encode("utf-8"))
+            ''.join(_short_hash(x) for x in key_parts)
 
     def create_tp_register(self):
         return self._factory.create_tp_register()

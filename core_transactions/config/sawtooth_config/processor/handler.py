@@ -16,6 +16,7 @@
 import logging
 import hashlib
 import base64
+from functools import lru_cache
 
 from sawtooth_sdk.processor.state import StateEntry
 from sawtooth_sdk.messaging.future import FutureTimeoutError
@@ -297,7 +298,7 @@ def _get_setting_entry(state, address):
 
 
 def _to_hash(value):
-    return hashlib.sha256(value.encode('utf-8')).hexdigest()
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
 def _first(a_list, pred):
@@ -308,5 +309,18 @@ def _index_of(iterable, obj):
     return next((i for i, x in enumerate(iterable) if x == obj), -1)
 
 
+_MAX_KEY_PARTS = 4
+_ADDRESS_PART_SIZE = 16
+_EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
+
+
+@lru_cache(maxsize=128)
 def _make_config_key(key):
-    return CONFIG_NAMESPACE + _to_hash(key)
+    # split the key into 4 parts, maximum
+    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+    # compute the short hash of each part
+    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
+    # pad the parts with the empty hash, if needed
+    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
+
+    return CONFIG_NAMESPACE + ''.join(addr_parts)
