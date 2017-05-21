@@ -223,7 +223,7 @@ test_poet_families() {
 }
 
 test_config() {
-    run_docker_test ./core_transactions/config/tests/tp-config.yaml -s validator
+    run_docker_test ./families/config/tests/tp-config.yaml -s validator
     copy_coverage .coverage.config
     run_docker_test config-smoke -s integration_test
     copy_coverage .coverage.config-smoke
