@@ -33,14 +33,14 @@ services:
     expose: 
       - 40000
     command: nose2-3
-        -c /project/sawtooth-core/core_transactions/config/nose2.cfg
+        -c /project/sawtooth-core/families/config/nose2.cfg
         -v
-        -s /project/sawtooth-core/core_transactions/config/tests
+        -s /project/sawtooth-core/families/config/tests
         test_tp_config
     stop_signal: SIGKILL
     environment:
-        PYTHONPATH: "/project/sawtooth-core/core_transactions/config:\
-            /project/sawtooth-core/core_transactions/config/tests:\
+        PYTHONPATH: "/project/sawtooth-core/families/config:\
+            /project/sawtooth-core/families/config/tests:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

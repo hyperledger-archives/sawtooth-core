@@ -21,8 +21,8 @@
 /consensus/**/protobuf/
 
 /core/sawtooth_core.egg-info/
-/core_transactions/config/sawtooth_config/protobuf/
-/core_transactions/**/__pycache__/
+/families/config/sawtooth_config/protobuf/
+/families/**/__pycache__/
 
 /coverage
 /coverage/html

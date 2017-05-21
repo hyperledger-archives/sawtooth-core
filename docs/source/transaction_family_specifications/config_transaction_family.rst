@@ -104,7 +104,7 @@ following protocol buffers definition. The value returned by this  setting is
 a base64 encoded *ConfigCandidates* message:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/core_transactions/config/protos/config.proto
+	:caption: File: sawtooth-core/families/config/protos/config.proto
 
 	// Contains the vote counts for a given proposal.
 	message ConfigCandidate {
@@ -168,7 +168,7 @@ Config transaction family payloads are defined by the following protocol
 buffers code:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/core_transactions/config/protos/config.proto
+	:caption: File: sawtooth-core/families/config/protos/config.proto
 
 	// Configuration Setting Payload
 	// - Contains either a propsal or a vote.
