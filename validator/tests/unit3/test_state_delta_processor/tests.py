@@ -151,7 +151,7 @@ class StateDeltaAddSubscriberHandlerTest(unittest.TestCase):
 
 class StateDeltaUnregisterSubscriberHandlerTest(unittest.TestCase):
     def test_unregister_subscriber(self):
-        """Test that a handler will unregister a subscriber via a the requestor's
+        """Test that a handler will unregister a subscriber via a requestor's
         connection id.
         """
         mock_delta_processor = Mock()
